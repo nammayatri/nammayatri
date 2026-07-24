@@ -2,6 +2,8 @@ module API.UI.Issue where
 
 import qualified API.Types.ProviderPlatform.Management.Ride as DRide
 import qualified API.Types.ProviderPlatform.Management.Ride as PPMR
+import qualified AWS.S3 as S3
+import qualified Data.Text as T
 import Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -15,6 +17,8 @@ import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
@@ -25,19 +29,22 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Ticket as TT
-import Utils.Common.Cac.KeyNameConstants
 
 type API =
   "issue" :> TokenAuth :> IA.IssueAPI
@@ -57,24 +64,42 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId, merchantOpCityId)
         :<|> updateIssueStatus (personId, merchantId, merchantOpCityId)
         :<|> igmIssueStatus (personId, merchantId, merchantOpCityId)
-        :<|> driverChatMessageStub
-        :<|> driverChatMessagesStub
-        :<|> driverChatReadStub
-        :<|> driverChatStateStub
+        :<|> postChatMessage (personId, merchantId)
+        :<|> getChatMessages (personId, merchantId)
+        :<|> postChatRead (personId, merchantId)
+        :<|> getChatState (personId, merchantId)
 
--- Live chat is not wired on driver-app yet. These stubs exist to satisfy the
--- shared `IssueAPI` type; exposing them on the driver UI is a follow-up.
-driverChatMessageStub :: Id Domain.IssueReport -> Common.CreateChatMessageReq -> FlowHandler Common.ChatMessageItem
-driverChatMessageStub _ _ = withFlowHandlerAPI $ throwError $ InvalidRequest "Live chat is not enabled on driver-app."
+postChatMessage ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Common.CreateChatMessageReq ->
+  FlowHandler Common.ChatMessageItem
+postChatMessage (driverId, _) issueReportId req =
+  withFlowHandlerAPI $ Common.createChatMessage (cast driverId) issueReportId Common.DRIVER driverIssueHandle req
 
-driverChatMessagesStub :: Id Domain.IssueReport -> Maybe UTCTime -> Maybe Int -> FlowHandler [Common.ChatMessageItem]
-driverChatMessagesStub _ _ _ = withFlowHandlerAPI $ pure []
+getChatMessages ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  FlowHandler [Common.ChatMessageItem]
+getChatMessages (driverId, _) issueReportId mbSince mbLimit =
+  withFlowHandlerAPI $ Common.listChatMessages (cast driverId) issueReportId Common.DRIVER mbSince mbLimit
 
-driverChatReadStub :: Id Domain.IssueReport -> Common.MarkChatReadReq -> FlowHandler APISuccess
-driverChatReadStub _ _ = withFlowHandlerAPI $ pure Success
+postChatRead ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Common.MarkChatReadReq ->
+  FlowHandler APISuccess
+postChatRead (driverId, _) issueReportId req =
+  withFlowHandlerAPI $ Common.markChatRead (cast driverId) issueReportId Common.DRIVER req
 
-driverChatStateStub :: Id Domain.IssueReport -> FlowHandler Common.ChatStateRes
-driverChatStateStub _ = withFlowHandlerAPI $ pure $ Common.ChatStateRes {unread = 0, latestMessageAt = Nothing}
+getChatState ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  FlowHandler Common.ChatStateRes
+getChatState (driverId, _) issueReportId =
+  withFlowHandlerAPI $ Common.getChatState (cast driverId) issueReportId
 
 driverIssueHandle :: Common.ServiceHandle Flow
 driverIssueHandle =
@@ -102,11 +127,26 @@ driverIssueHandle =
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Nothing,
       mbFindStationByIdWithContext = Nothing,
-      -- Live chat is not yet exposed on driver-app. Leaving this hook as
-      -- `Nothing` means dashboard operator comments on driver-side issues
-      -- are persisted but no FCM push is sent to the driver.
-      mbSendChatNotification = Nothing
+      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
+      -- Nothing = never forward driver-side chat messages to the ticket
+      -- service. Driver-app doesn't use XyneSpaces today; enable this by
+      -- returning a check against MerchantServiceUsageConfig if that changes.
+      mbShouldForwardChatToTicketService = Nothing,
+      mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      findIssueConfig = \mocId issueIdentifier ->
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.DRIVER)),
+      mbUpdateTicketOnService = Nothing,
+      mbUpdateTicketStatus = Just castUpdateTicketStatus,
+      mbUpdateTicketCsat = Just castUpdateTicketCsat
     }
+
+-- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
+-- 'AWS.S3.get' produces). Same mechanism the shared IssueManagement handler
+-- uses to embed attachments as @data:@ URIs on outbound ticket calls.
+fetchMediaBase64FromS3 :: DMF.MediaFile -> Flow (Maybe Text)
+fetchMediaBase64FromS3 mf = case mf.s3FilePath of
+  Just s3Key -> Just <$> S3.get (T.unpack s3Key)
+  Nothing -> pure Nothing
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById driverId = do
@@ -286,15 +326,26 @@ castRideInfo merchantId merchantOpCityId rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.bookingStatus) [PPMR.COMPLETED, PPMR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
-castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow TIT.CreateTicketResp
-castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId) (cast merchantOpCityId)
+-- Driver-app does not fan out ticket writes to a secondary provider, so
+-- create returns the primary response paired with 'Nothing' and update
+-- ignores the trailing secondary-ticketId argument.
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, Maybe Text)
+castCreateTicket merchantId merchantOpCityId req = do
+  resp <- TT.createTicket (cast merchantId) (cast merchantOpCityId) req
+  pure (resp, Nothing)
 
-castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
-castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe Text -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicket merchantId merchantOperatingCityId _additionalTicketId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
+castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketCsat :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> Flow ()
+castUpdateTicketCsat merchantId merchantOperatingCityId = TT.updateTicketCsat (cast merchantId) (cast merchantOperatingCityId)
 
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow Common.MerchantConfig
-buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
-  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) mkCacKey >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+buildMerchantConfig _merchantId merchantOpCityId _mbPersonId = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId (cast merchantOpCityId) Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   appBackendBapInternal <- asks (.appBackendBapInternal)
   return
     Common.MerchantConfig
@@ -308,8 +359,6 @@ buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
         sensitiveWords = Nothing,
         sensitiveWordsForExactMatch = Nothing
       }
-  where
-    mkCacKey = fmap (DriverId . cast) mbPersonId
 
 issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportListRes
 issueReportDriverList (driverId, merchantId, merchantOpCityId) language = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId, cast merchantOpCityId) language driverIssueHandle Common.DRIVER

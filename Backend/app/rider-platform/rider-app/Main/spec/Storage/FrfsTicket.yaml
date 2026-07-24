@@ -4,6 +4,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   CloudType: Kernel.Types.Version
+  Version: Kernel.Types.Version
   Price: Kernel.Types.Common
   Seconds: Kernel.Types.Time
   ShortId: Kernel.Types.Id
@@ -82,6 +83,8 @@ FRFSSearch:
     vehicleNumber: Maybe Text
     isSingleMode: Maybe Bool
     cloudType : Maybe CloudType
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
 
   beamFields:
     fromStationCode:
@@ -100,6 +103,8 @@ FRFSSearch:
   beamType:
     busLocationData: Maybe Value
     cloudType : Maybe CloudType
+    clientSdkVersion: Maybe Text
+    clientBundleVersion: Maybe Text
 
   toTType:
     fromStationLat: (.lat) <$> fromStationPoint|E
@@ -107,11 +112,15 @@ FRFSSearch:
     toStationLat: (.lat) <$> toStationPoint|E
     toStationLon: (.lon) <$> toStationPoint|E
     busLocationData: Just $ toJSON busLocationData|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
 
   fromTType:
     fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
     toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
     busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
 
   sqlType:
     fromStationLat: double precision
@@ -365,6 +374,7 @@ FRFSTicketBooking:
     id: Id FRFSTicketBooking
     searchId: Id FRFSSearch
     bppOrderId: Maybe Text
+    bppPaymentId: Maybe Text
     quoteId: Id FRFSQuote
     status: FRFSTicketBookingStatus|NoRelation
     riderId: Id Person
@@ -442,6 +452,8 @@ FRFSTicketBooking:
     holdId: Maybe Text
     tripId: Maybe Text
     cloudType : Maybe CloudType
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
 
   default:
     customerCancelled: "false"
@@ -464,6 +476,8 @@ FRFSTicketBooking:
   beamType:
     busLocationData: Maybe Value
     cloudType : Maybe CloudType
+    clientSdkVersion: Maybe Text
+    clientBundleVersion: Maybe Text
 
   types:
     CashbackStatus:
@@ -474,6 +488,8 @@ FRFSTicketBooking:
     busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
     fromStationPoint: Kernel.External.Maps.Types.LatLong <$> fromStationLat <*> fromStationLon|E
     toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
+    clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
+    clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
 
   toTType:
     price: (.amount)|I
@@ -483,6 +499,8 @@ FRFSTicketBooking:
     fromStationLon: (.lon) <$> fromStationPoint|E
     toStationLat: (.lat) <$> toStationPoint|E
     toStationLon: (.lon) <$> toStationPoint|E
+    clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
+    clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
 
 
   sqlType:
@@ -536,6 +554,10 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [bppOrderId, updatedAt]
       where: id
+    updateBPPPaymentIdById:
+      kvFunction: updateWithKV
+      params: [bppPaymentId, updatedAt]
+      where: id
     updateIsFareChangedById:
       kvFunction: updateWithKV
       params: [isFareChanged, updatedAt]
@@ -581,9 +603,9 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
-    updateQuoteAndBppItemIdAndRouteStationsJson:
+    updateQuoteBppItemIdRouteStationsAndServiceTierById:
       kvFunction: updateOneWithKV
-      params: [quoteId, bppItemId, routeStationsJson]
+      params: [quoteId, bppItemId, routeStationsJson, serviceTierType]
       where: id
     updateFailureReasonById:
       kvFunction: updateOneWithKV
@@ -978,6 +1000,14 @@ FRFSConfig:
     validTillSeconds: Kernel.Prelude.Just|I
     isFRFSTestingEnabled: Kernel.Prelude.Just|I
     canUpdateExistingPaymentOrder: Kernel.Prelude.Just|I
+
+  configPilot:
+    configType: FRFSConfig
+    fetchQuery: findByMerchantOperatingCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: Maybe
+    configDomain: RIDER_CONFIG
+    queryModule: Storage.CachedQueries.FRFSConfig
 
 FRFSCancellationConfig:
   tableName: frfs_cancellation_config

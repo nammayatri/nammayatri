@@ -28,4 +28,4 @@ data Exophone = Exophone
 
 data ExophoneType = CALL_RIDE | END_RIDE | CALL_DELIVERY_SENDER | CALL_DELIVERY_RECEIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExophoneType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExophoneType))

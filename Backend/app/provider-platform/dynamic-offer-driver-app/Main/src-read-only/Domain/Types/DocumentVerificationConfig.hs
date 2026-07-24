@@ -4,6 +4,7 @@
 module Domain.Types.DocumentVerificationConfig where
 
 import Data.Aeson
+import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -25,7 +26,9 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentFlowGrouping :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
+    documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    faceMatchSourceDoc :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
@@ -35,6 +38,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     isMandatory :: Kernel.Prelude.Bool,
     isMandatoryForEnabling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    markImageValidOnValidationSkip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -111,12 +115,29 @@ data DocumentType
   | DrivingSchoolCertificate
   | PanAadhaarLinkage
   | VoterIdCard
+  | OperatorPartnerCode
+  | MedicalCertificate
+  | Rating
+  | BotApproval
+  | NomineeDetails
+  | DriverVehicleNOC
+  | FleetRegistration
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FieldInfo = FieldInfo {_type :: Domain.Types.DocumentVerificationConfig.FieldType, isMandatory :: Kernel.Prelude.Bool, name :: Kernel.Prelude.Text, regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data FieldInfo = FieldInfo
+  { _type :: Domain.Types.DocumentVerificationConfig.FieldType,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    fields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
+    isMandatory :: Kernel.Prelude.Bool,
+    name :: Kernel.Prelude.Text,
+    placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    regexValidation :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FieldType = FieldText | FieldInt | FieldDouble deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FieldType = FieldText | FieldInt | FieldDouble | FieldDropdown | FieldImage | FieldObject | FieldArray deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
   = DLValidClasses [Kernel.Prelude.Text]
@@ -127,7 +148,6 @@ data VehicleClassCheckType = Infix | Prefix | Suffix | Exact deriving (Eq, Ord, 
 
 data VehicleClassVariantMap = VehicleClassVariantMap
   { bodyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     manufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     manufacturerModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

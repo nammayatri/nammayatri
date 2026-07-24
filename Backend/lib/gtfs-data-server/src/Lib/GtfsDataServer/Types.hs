@@ -7,6 +7,8 @@ import Data.Aeson
 import Data.OpenApi ()
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Clock (addUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Kernel.External.Maps (HasCoordinates (..))
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -52,9 +54,55 @@ data RouteInfoNandi = RouteInfoNandi
     startPoint :: LatLong,
     endPoint :: LatLong,
     stopCount :: Maybe Int,
-    serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType
+    serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    encodedPolyline :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+-- | Per-stop ETA entry returned by GIMS' `bus-trip-schedule` endpoint. GIMS sends the arrival as a
+-- Unix epoch under snake_case keys, so JSON is hand-written (mirrors the rider app's `BusStopETA`).
+utcToIST :: UTCTime -> UTCTime
+utcToIST = addUTCTime 19800
+
+data BusStopETA = BusStopETA
+  { stopCode :: Text,
+    stopName :: Maybe Text,
+    arrivalTime :: UTCTime,
+    arrivalTimeUnix :: Integer,
+    etaSeconds :: Maybe Integer
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON BusStopETA where
+  parseJSON = withObject "BusStopETA" $ \v -> do
+    stopCode <- v .: "stop_id"
+    arrivalTimeUnix <- v .: "arrival_time"
+    etaSeconds <- v .:? "eta_seconds"
+    stopName <- v .:? "stop_name"
+    let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimeUnix
+    return $ BusStopETA {..}
+
+instance ToJSON BusStopETA where
+  toJSON BusStopETA {..} =
+    object
+      [ "stop_id" .= stopCode,
+        "arrival_time" .= (floor (realToFrac (utcTimeToPOSIXSeconds arrivalTime) :: Double) :: Integer),
+        "eta_seconds" .= etaSeconds,
+        "stop_name" .= stopName,
+        "arrival_time_unix" .= arrivalTimeUnix
+      ]
+
+data BusScheduleDetail = BusScheduleDetail
+  { eta :: [BusStopETA],
+    vehicle_no :: Text,
+    service_tier :: BecknV2.FRFS.Enums.ServiceTierType,
+    trip_number :: Maybe Int,
+    waybill_no :: Maybe Text,
+    is_active_trip :: Maybe Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+type BusScheduleDetails = [BusScheduleDetail]
 
 data ExtraInfo = ExtraInfo
   { fareStageNumber :: Maybe Text,
@@ -252,7 +300,8 @@ instance ToJSON GimsTripActionReq where
 
 data GimsCurrentOperationResp = GimsCurrentOperationResp
   { waybill_no :: Text,
-    number_of_trips :: Int
+    number_of_trips :: Int,
+    trip_numbers :: Maybe [Int]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -380,17 +429,34 @@ newtype GimsVerifyResp = GimsVerifyResp
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
--- | Employee login request for conductor GIMS_EMAIL_PASSWORD auth (driver-app only).
--- GIMS expects pre-hashed values: SHA256(hashSalt <> value).
+-- | Employee login request for conductor GIMS auth (driver-app only).
+-- `auth_type` selects which identifier is sent: "Email" -> email_hash (hashed,
+-- PII), "EmployeeId" -> employee_id (plain; it is a username, not a secret).
+-- Only the matching identifier is populated; omitNothingFields keeps the unused one
+-- off the wire so the existing Email contract is unchanged. The password is always
+-- pre-hashed: SHA256(hashSalt <> value).
 data GimsEmployeeLoginReq = GimsEmployeeLoginReq
   { auth_type :: Maybe Text,
-    email_hash :: Text,
+    email_hash :: Maybe Text,
+    employee_id :: Maybe Text,
     password_hash :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance ToJSON GimsEmployeeLoginReq where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromJSON GimsEmployeeLoginReq where
+  parseJSON = genericParseJSON defaultOptions
 
 instance HideSecrets GimsEmployeeLoginReq where
-  hideSecrets req = req {email_hash = "***", password_hash = "***"}
+  hideSecrets GimsEmployeeLoginReq {..} =
+    GimsEmployeeLoginReq
+      { auth_type = auth_type,
+        email_hash = "***" <$ email_hash,
+        employee_id = employee_id,
+        password_hash = "***"
+      }
 
 -- | Roles GIMS recognises for an employee. Wire form is lowercase
 -- (\"driver\" / \"conductor\"); parser is case-insensitive. Unknown values

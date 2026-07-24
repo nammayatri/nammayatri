@@ -97,6 +97,20 @@ updateIssueReopenedCount ticketId reopenedCount = do
     [Set BeamIR.reopenedCount (Just reopenedCount), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId ticketId)]
 
+updateCustomerResponse :: BeamFlow m r => Id IssueReport -> CustomerResponse -> m ()
+updateCustomerResponse issueReportId response = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Set BeamIR.customerResponse (Just response), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Is BeamIR.id (Eq $ getId issueReportId)]
+
+clearCustomerResponse :: BeamFlow m r => Id IssueReport -> m ()
+clearCustomerResponse issueReportId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Set BeamIR.customerResponse Nothing, Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
+    [Is BeamIR.id (Eq $ getId issueReportId)]
+
 updateTicketId :: BeamFlow m r => Id IssueReport -> Text -> m ()
 updateTicketId issueId ticketId = do
   now <- getCurrentTime
@@ -104,8 +118,27 @@ updateTicketId issueId ticketId = do
     [Set BeamIR.ticketId (Just ticketId), Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
     [Is BeamIR.id (Eq $ getId issueId)]
 
+-- | Persists the primary ticketId and (when the merchant has a secondary
+-- provider) its ticketId in one write.
+updateTicketIds :: BeamFlow m r => Id IssueReport -> Text -> Maybe Text -> m ()
+updateTicketIds issueId ticketId additionalTicketId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Set BeamIR.ticketId (Just ticketId),
+      Set BeamIR.additionalTicketIds additionalTicketId,
+      Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now
+    ]
+    [Is BeamIR.id (Eq $ getId issueId)]
+
 findByTicketId :: BeamFlow m r => Text -> m (Maybe IssueReport)
 findByTicketId ticketId = findOneWithKV [Is BeamIR.ticketId $ Eq (Just ticketId)]
+
+-- | Matches 'ticket_id' first; falls back to 'additional_ticket_ids'
+-- (secondary provider) when that misses.
+findByTicketIdOrAdditional :: BeamFlow m r => Text -> m (Maybe IssueReport)
+findByTicketIdOrAdditional ticketId =
+  findByTicketId ticketId
+    >>= maybe (findOneWithKV [Is BeamIR.additionalTicketIds $ Eq (Just ticketId)]) (pure . Just)
 
 updateChats :: BeamFlow m r => Id IssueReport -> [Chat] -> m ()
 updateChats issueId chats = do
@@ -137,6 +170,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             merchantId = Id <$> merchantId,
             becknIssueId = becknIssueId,
             reopenedCount = fromMaybe 0 reopenedCount,
+            customerResponse = customerResponse,
             ..
           }
 
@@ -158,10 +192,12 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.deleted = deleted,
         BeamIR.mediaFiles = getId <$> mediaFiles,
         BeamIR.ticketId = ticketId,
+        BeamIR.additionalTicketIds = additionalTicketIds,
         BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamIR.chats = chats,
         BeamIR.merchantId = getId <$> merchantId,
         BeamIR.becknIssueId = becknIssueId,
-        BeamIR.reopenedCount = Just reopenedCount
+        BeamIR.reopenedCount = Just reopenedCount,
+        BeamIR.customerResponse = customerResponse
       }

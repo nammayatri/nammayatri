@@ -5,6 +5,7 @@ module API.Types.UI.DriverOnboardingV2 where
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
+import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
@@ -23,6 +24,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import qualified Servant.Client.Core
+import qualified SharedLogic.DriverOnboarding.VehicleDocs
 import Tools.Auth
 
 data AadhaarCardReq = AadhaarCardReq
@@ -96,6 +98,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentFlowGrouping :: Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping,
+    documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -105,6 +108,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
+    rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     title :: Kernel.Prelude.Text,
     verificationProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]
   }
@@ -172,10 +176,10 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
 
 data DriverVehicleServiceTiers = DriverVehicleServiceTiers
   { airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
-    canSwitchToAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
     tiers :: [DriverVehicleServiceTier]
   }
   deriving stock (Generic)
@@ -250,6 +254,15 @@ data RateCardResp = RateCardResp
     tripCategory :: Domain.Types.Common.TripCategory
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RcVerifyStatusResp = RcVerifyStatusResp
+  { approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    documents :: [SharedLogic.DriverOnboarding.VehicleDocs.DocumentStatusItem],
+    registrationNo :: Kernel.Prelude.Text,
+    verified :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text}

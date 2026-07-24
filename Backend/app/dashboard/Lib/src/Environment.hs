@@ -16,6 +16,8 @@ module Environment where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
+import Data.Text (unpack)
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
@@ -64,7 +66,7 @@ data AppCfg = AppCfg
     registrationTokenExpiry :: Days,
     registrationTokenInactivityTimeout :: Maybe Seconds,
     updateRestrictedBppRoles :: [Text],
-    sendEmailRateLimitOptions :: APIRateLimitOptions,
+    loginRateLimitOptions :: APIRateLimitOptions,
     encTools :: EncTools,
     exotelToken :: Text,
     dataServers :: [DataServer],
@@ -83,7 +85,15 @@ data AppCfg = AppCfg
     enforceStrongPasswordPolicy :: Bool,
     inMemConfig :: InMemConfig,
     metricsPort :: Int,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    is2faMandatory :: Bool,
+    twoFaEnforcementDeadlineText :: Maybe Text, -- ISO 8601 string, parsed to UTCTime at env build time
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
+    twoFaIssuerName :: Text, -- Shown as the account name in Google Authenticator / Authy etc.
+    twoFaExemptRoles :: [Text] -- DashboardAccessType names whose users skip 2FA even when is2faMandatory=True
   }
   deriving (Generic, FromDhall)
 
@@ -111,7 +121,7 @@ data AppEnv = AppEnv
     registrationTokenExpiry :: Days,
     registrationTokenInactivityTimeout :: Maybe Seconds,
     updateRestrictedBppRoles :: [Text],
-    sendEmailRateLimitOptions :: APIRateLimitOptions,
+    loginRateLimitOptions :: APIRateLimitOptions,
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
     isShuttingDown :: Shutdown,
@@ -136,7 +146,15 @@ data AppEnv = AppEnv
     passwordExpiryDays :: Maybe Int,
     enforceStrongPasswordPolicy :: Bool,
     inMemEnv :: InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    is2faMandatory :: Bool,
+    twoFaEnforcementDeadline :: Maybe UTCTime,
+    twoFaOtpTTLInSecs :: Maybe Int,
+    twoFaMaxOtpVerifyAttempts :: Maybe Int,
+    totpStepSize :: Maybe Int,
+    totpClockSkew :: Maybe Int,
+    twoFaIssuerName :: Text,
+    twoFaExemptRoles :: [Text]
   }
   deriving (Generic)
 
@@ -179,7 +197,21 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") (readMaybe cacAclMapRaw :: Maybe [(String, [(String, String)])])
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let twoFaEnforcementDeadline = twoFaEnforcementDeadlineText >>= parseIso8601UTC
   return $ AppEnv {..}
+  where
+    parseIso8601UTC :: Text -> Maybe UTCTime
+    parseIso8601UTC t =
+      let s = unpack t
+          tryFormats [] = Nothing
+          tryFormats (f : fs) = case parseTimeM True defaultTimeLocale f s of
+            Just v -> Just v
+            Nothing -> tryFormats fs
+       in tryFormats
+            [ "%Y-%m-%dT%H:%M:%SZ",
+              "%Y-%m-%dT%H:%M:%S%QZ",
+              "%Y-%m-%d %H:%M:%S%z"
+            ]
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

@@ -24,11 +24,27 @@ export interface RemoteSessionResponse {
 export interface RegistryResponse {
   devName?: string;
   caddyPort?: number;
+  contextApiPort?: number | null;
   dir?: string;
   error?: string;
 }
 
 export type RemoteSessionKind = 'deploy' | 'start' | 'clear-data' | 'cabal-clean';
+
+export interface DevboxAssignment {
+  id?: string;
+  machine?: string;
+  host?: string;
+  sshUser?: string;
+  port?: number;
+  remoteDir?: string;
+  copyMode?: 'rsync' | 'skip';
+  resources?: { cpu?: string; ram?: string; storage?: string };
+  usage?: { cpu?: string; ram?: string; storage?: string };
+  created?: boolean;
+  repinned?: boolean;
+  error?: string;
+}
 
 export interface RemoteStatus {
   id?: string;
@@ -87,3 +103,43 @@ export const remoteSyncCaddyPort = (t: RemoteTarget): Promise<RegistryResponse> 
 
 export const remoteCabalClean = (t: RemoteTarget): Promise<RemoteSessionResponse> =>
   json('/api/remote/cabal-clean', t);
+
+export const resolveDevbox = (forceNew = false): Promise<DevboxAssignment> =>
+  json(`/api/devbox/resolve${forceNew ? '?new=1' : ''}`);
+
+export interface LogListResponse { files?: string[]; error?: string }
+export interface LogTailResponse { file?: string; content?: string; truncated?: boolean; error?: string }
+export interface LogClearResponse { cleared?: boolean; file?: string; error?: string }
+
+export const remoteLogList = (t: RemoteTarget): Promise<LogListResponse> =>
+  json('/api/remote/logs', t);
+
+export const remoteLogTail = (t: RemoteTarget & { file: string; lines?: number; full?: boolean }): Promise<LogTailResponse> =>
+  json('/api/remote/log-tail', t);
+
+export const remoteLogClear = (t: RemoteTarget & { file: string }): Promise<LogClearResponse> =>
+  json('/api/remote/log-clear', t);
+
+export interface MachineInfo {
+  name: string;
+  role: 'base' | 'worker';
+  localIp: string;
+  awsIp: string;
+  bestIp: string;
+  user: string;
+  type?: string;
+  resources: { cpu?: string; ram?: string; storage?: string };
+}
+
+export interface MachinesResponse {
+  machines: MachineInfo[];
+  myIps: string[];
+  error?: string;
+}
+
+export const fetchMachines = (): Promise<MachinesResponse> =>
+  fetch(`${LOCAL_API_BASE}/api/remote/machines`).then(r => r.json());
+
+export const setupSsh = (host: string, user: string, port?: number): Promise<{
+  status?: string; message?: string; publicKey?: string; error?: string;
+}> => json('/api/remote/setup-ssh', { host, user, port: port || 22 });

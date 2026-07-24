@@ -1,334 +1,262 @@
+-- Inspection media on the shared MediaFile table via a presigned flow (RC coupling + creator auth dropped; the
+-- RC<->file link now happens per-request at inspection submit, not at upload):
+--   uploadLink : create a MediaFile (PENDING), hand out a presigned S3 URL, schedule the cleanup job
+--   client     : PUTs the bytes directly to S3, then calls confirm
+--   confirm    : headRequest + size check; record the file hash (eTag) and mark CONFIRMED
+--   submit     : finalizeInspectionMedia re-validates (must be CONFIRMED, still present, in-size, hash unchanged)
+--                and marks COMPLETED -> confirm is mandatory and the file is re-checked before it is kept
+--   cleanup job: COMPLETED (used by a submitted inspection) is kept; anything else (never confirmed, or confirmed
+--                but never submitted) was abandoned -> delete the S3 object + the row
 module SharedLogic.MediaFileDocument
   ( mediaFileDocumentUploadLink,
     mediaFileDocumentConfirm,
     mediaFileDocumentDelete,
     mediaFileDocumentDownloadLink,
     mediaFileDocumentComplete,
+    finalizeInspectionMedia,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
 import AWS.S3 as S3
-import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
-import Data.Either (isRight)
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
-import qualified Domain.Types.Common as DCommon
-import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
-import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Prelude
-import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.MediaFileDocument as QMFD
-import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 
-mkMediaFileDocLockKey ::
-  Id DMOC.MerchantOperatingCity ->
-  Id DRC.VehicleRegistrationCertificate ->
-  DCommon.MediaFileDocumentType ->
-  Text
-mkMediaFileDocLockKey merchantOpCityId rcId mediaFileDocumentType =
-  "MediaFileDocLock:mocid-" <> merchantOpCityId.getId <> ":rcId-" <> rcId.getId <> ":mfdt-" <> show mediaFileDocumentType
-
+-- Create the MediaFile (PENDING), hand out a presigned upload URL, and schedule the completion job.
 mediaFileDocumentUploadLink ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
   Common.UploadMediaFileDocumentReq ->
   Flow Common.MediaFileDocumentResp
-mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
+mediaFileDocumentUploadLink merchantShortId opCity _requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
-  fileExtension <- validateContentType
-  rc <- QRC.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (RCNotFound req.rcNumber)
-  let mediaFileDocumentType = castMediaFileDocumentType req.mediaFileDocumentType
-      mediaFileDocLockKey = mkMediaFileDocLockKey merchantOpCity.id rc.id mediaFileDocumentType
-  eRes <- Hedis.whenWithLockRedisAndReturnValue mediaFileDocLockKey 10 $ do
-    -- if file was deleted by operator, then allow to create new one
-    existingMediaFiles <- filter (\mfd -> mfd.status /= DMFD.DELETED) <$> QMFD.findAllByMerchantOpCityIdAndRcIdAndType Nothing Nothing merchantOpCity.id rc.id mediaFileDocumentType
-    when (length existingMediaFiles > 1) $ do
-      logError $
-        "Duplicated MediaFileDocuments found: merchantOpCityId: " <> merchantOpCity.id.getId
-          <> "; rcId: "
-          <> rc.id.getId
-          <> "; mediaFileDocumentType: "
-          <> show mediaFileDocumentType
-          <> ": "
-          <> show (length existingMediaFiles)
-          <> " times"
-
-    mediaFileDocument <- case listToMaybe existingMediaFiles of
-      Nothing -> do
-        mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
-        mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
-        newMediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id mediaFileLink req
-        QMFD.create newMediaFileDocument
-        let uploadlinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
-        createJobIn @_ @'MediaFileDocumentComplete (Just merchant.id) (Just merchantOpCity.id) uploadlinkExpiredIn $
-          MediaFileDocumentCompleteJobData {mediaFileDocumentId = newMediaFileDocument.id}
-        pure newMediaFileDocument
-      Just existingMediaFile -> do
-        if existingMediaFile.creatorId == Id @DP.Person requestorId
-          then do
-            now <- getCurrentTime
-            if now < addUTCTime (fromIntegral merchant.mediaFileDocumentLinkExpires) existingMediaFile.createdAt
-              then pure existingMediaFile
-              else pure existingMediaFile{uploadLink = Nothing}
-          else pure existingMediaFile{uploadLink = Nothing} -- we can show upload link only to creator to avoid uploading by two users in the same time
-    pure $
-      Common.MediaFileDocumentResp
-        { mediaFileLink = mediaFileDocument.uploadLink,
-          mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
-          mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
-        }
-  case eRes of
-    Right res -> pure res
-    Left () -> throwError $ InvalidRequest "Media file document is locked by another user"
-  where
-    validateContentType = do
-      case req.fileType of
-        S3.Video -> case req.reqContentType of
-          "video/mp4" -> pure "mp4"
-          "video/x-msvideo" -> pure "avi"
-          "video/mpeg" -> pure "mpeg"
-          _ -> throwError $ FileFormatNotSupported req.reqContentType
-        _ -> throwError $ FileFormatNotSupported req.reqContentType
-
-castMediaFileDocumentType :: Common.MediaFileDocumentType -> DCommon.MediaFileDocumentType
-castMediaFileDocumentType = \case
-  Common.VehicleVideo -> DCommon.VehicleVideo
-
-castMediaFileDocumentStatus :: DMFD.MediaFileDocumentStatus -> Common.MediaFileDocumentStatus
-castMediaFileDocumentStatus = \case
-  DMFD.PENDING -> Common.PENDING
-  DMFD.DELETED -> Common.DELETED
-  DMFD.FAILED -> Common.FAILED
-  DMFD.CONFIRMED -> Common.CONFIRMED
-  DMFD.COMPLETED -> Common.COMPLETED
-
-createMediaPathByRcId ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
-  Id DMOC.MerchantOperatingCity ->
-  Id DRC.VehicleRegistrationCertificate ->
-  DCommon.MediaFileDocumentType ->
-  Text ->
-  m Text
-createMediaPathByRcId merchantOpCityId rcId mediaFileDocumentType extension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  fileExtension <- validateContentType req.fileType req.reqContentType
+  fileId <- generateGUID
+  filePath <- S3.createFilePath "/inspection-media/" fileId.getId req.fileType fileExtension
+  uploadUrl <- S3.generateUploadUrl (T.unpack filePath) merchant.mediaFileDocumentLinkExpires
   now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "/driver-onboarding/mocId-" <> merchantOpCityId.getId
-        <> "/rcId-"
-        <> rcId.getId
-        <> "/media/"
-        <> show mediaFileDocumentType
-        <> "/"
-        <> fileName
-        <> "."
-        <> extension
-    )
-
-buildMediaFileDocument ::
-  MonadFlow m =>
-  DMOC.MerchantOperatingCity ->
-  Id DP.Person ->
-  Text ->
-  Id DRC.VehicleRegistrationCertificate ->
-  Text ->
-  Common.UploadMediaFileDocumentReq ->
-  m DMFD.MediaFileDocument
-buildMediaFileDocument merchantOpCity creatorId s3Path rcId mediaFileLink Common.UploadMediaFileDocumentReq {..} = do
-  uuid <- generateGUID
-  now <- getCurrentTime
-  pure
-    DMFD.MediaFileDocument
-      { id = Id uuid,
-        creatorId,
-        mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType,
-        merchantId = merchantOpCity.merchantId,
-        merchantOperatingCityId = merchantOpCity.id,
-        rcId,
-        s3Path,
-        uploadLink = Just mediaFileLink,
-        status = DMFD.PENDING,
+  let fileUrl =
+        transporterConfig.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "inspection"
+          & T.replace "<FILE_PATH>" filePath
+  QMF.create
+    DMF.MediaFile
+      { id = fileId,
+        _type = req.fileType,
+        url = fileUrl,
+        s3FilePath = Just filePath,
+        status = Just DMF.PENDING,
         fileHash = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = Just now
+      }
+  -- Fire the cleanup job well after the upload window. A real inspection (upload -> confirm -> fill -> submit)
+  -- finishes long before then, so by the time it runs an un-submitted file = abandoned and is deleted from S3.
+  let uploadLinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 86400 -- ~1 day buffer
+  createJobIn @_ @'MediaFileDocumentComplete (Just merchant.id) (Just merchantOpCityId) uploadLinkExpiredIn $
+    MediaFileDocumentCompleteJobData {mediaFileId = fileId}
+  -- Map onto the old response shape: mediaFileLink = presigned upload URL, mediaFileDocumentId = the MediaFile id.
+  pure $
+    Common.MediaFileDocumentResp
+      { mediaFileLink = Just uploadUrl,
+        mediaFileDocumentId = cast fileId,
+        mediaFileDocumentStatus = Common.PENDING
       }
 
+-- Verify the presigned upload landed + is within size; record its hash and mark CONFIRMED.
 mediaFileDocumentConfirm ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
   Common.MediaFileDocumentReq ->
   Flow APISuccess
-mediaFileDocumentConfirm merchantShortId opCity requestorId req = do
-  let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
+mediaFileDocumentConfirm merchantShortId opCity _requestorId req = do
+  let fileId = cast req.mediaFileDocumentId :: Id DMF.MediaFile
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeConfirmMediaDocHitsCountKey mediaFileDocumentId) externalServiceRateLimitOptions
+  checkSlidingWindowLimitWithOptions (makeConfirmMediaHitsCountKey fileId) externalServiceRateLimitOptions
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  mediaFileDocument <- QMFD.findByPrimaryKey mediaFileDocumentId >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
-  unless (Id @DP.Person requestorId == mediaFileDocument.creatorId) $ throwError AccessDenied
+  mediaFile <- QMF.findById fileId >>= fromMaybeM (InvalidRequest "MediaFile does not exist")
 
   -- if status is PENDING, FAILED or CONFIRMED, we allow multiple reloads within rate limits, unless link will be expired
-  when (mediaFileDocument.status == DMFD.DELETED) $
-    throwError (InvalidRequest "MediaFileDocument was deleted")
-  when (mediaFileDocument.status == DMFD.COMPLETED) $
-    throwError (InvalidRequest "MediaFileDocument download was already completed")
+  when (mediaFile.status == Just DMF.DELETED) $
+    throwError (InvalidRequest "MediaFile was deleted")
+  when (mediaFile.status == Just DMF.COMPLETED) $
+    throwError (InvalidRequest "MediaFile upload was already completed")
 
-  let s3Path = T.unpack mediaFileDocument.s3Path
-  s3ObjectStatus <- catch (S3.headRequest s3Path) $ \(err :: SomeException) -> do
-    logError $ "File was not found: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
-    QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
+  s3Path <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "MediaFile has no s3 path")
+  s3ObjectStatus <- catch (S3.headRequest (T.unpack s3Path)) $ \(err :: SomeException) -> do
+    logError $ "File was not found: fileId: " <> fileId.getId <> " err: " <> show err
+    QMF.updateStatusAndHashById DMF.FAILED Nothing fileId
     throwError $ InvalidRequest "File was not found"
 
   let fileSizeInBytes = s3ObjectStatus.fileSizeInBytes
   let fileHash = S3.eTagToHash s3ObjectStatus.entityTag
-  checkVideoFileSize (Just merchantOpCityId) fileSizeInBytes mediaFileDocumentId >>= \case
+  checkVideoFileSize (Just merchantOpCityId) fileSizeInBytes fileId >>= \case
     Right () -> pure ()
     Left errMessage -> do
-      QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
-      S3.delete s3Path
+      QMF.updateStatusAndHashById DMF.FAILED Nothing fileId
+      catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) -> logWarning $ "Unable to delete oversize file: " <> show err
       throwError $ InvalidRequest errMessage
 
-  QMFD.updateStatus DMFD.CONFIRMED (Just fileHash) mediaFileDocumentId
+  QMF.updateStatusAndHashById DMF.CONFIRMED (Just fileHash) fileId
   pure Success
   where
-    makeConfirmMediaDocHitsCountKey :: Id DMFD.MediaFileDocument -> Text
-    makeConfirmMediaDocHitsCountKey mediaFileDocumentId = "ConfirmMediaDoc:MediaDocHits:" <> mediaFileDocumentId.getId <> ":hitsCount"
+    makeConfirmMediaHitsCountKey :: Id DMF.MediaFile -> Text
+    makeConfirmMediaHitsCountKey mediaFileId = "ConfirmMediaFile:Hits:" <> mediaFileId.getId <> ":hitsCount"
 
 checkVideoFileSize ::
   (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Integer ->
-  Id DMFD.MediaFileDocument ->
+  Id DMF.MediaFile ->
   m (Either Text ())
-checkVideoFileSize mbMerchantOpCityId fileSizeInBytes mediaFileDocumentId = do
-  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+checkVideoFileSize mbMerchantOpCityId fileSizeInBytes fileId = do
+  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let maxSizeInMB = fromMaybe 500 $ mbTransporterConfig >>= (.maxAllowedVideoDocSizeInMB)
       maxSizeInBytes = toInteger maxSizeInMB * 1024 * 1024
   if fileSizeInBytes > maxSizeInBytes
     then do
-      let errMessage = "Video size " <> show fileSizeInBytes <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show maxSizeInMB <> "MB)"
-      logError $ "Video upload failed: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show errMessage
+      let errMessage = "File size " <> show fileSizeInBytes <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show maxSizeInMB <> "MB)"
+      logError $ "Upload failed: fileId: " <> fileId.getId <> " err: " <> errMessage
       pure $ Left errMessage
     else pure $ Right ()
 
+finalizeInspectionMedia :: Id DMOC.MerchantOperatingCity -> Id DMF.MediaFile -> Flow ()
+finalizeInspectionMedia merchantOpCityId fileId = do
+  mediaFile <- QMF.findById fileId >>= fromMaybeM (InvalidRequest "Inspection media does not exist")
+  unless (mediaFile.status `elem` [Just DMF.CONFIRMED, Just DMF.COMPLETED]) $
+    throwError (InvalidRequest "Inspection media was not confirmed; please re-upload and confirm before submitting")
+  s3Path <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Inspection media has no s3 path")
+  s3ObjectStatus <- catch (S3.headRequest (T.unpack s3Path)) $ \(err :: SomeException) -> do
+    logError $ "Inspection media not found in S3 at submit: fileId: " <> fileId.getId <> " err: " <> show err
+    QMF.updateStatusAndHashById DMF.FAILED Nothing fileId
+    throwError (InvalidRequest "Inspection media was not found in S3")
+  checkVideoFileSize (Just merchantOpCityId) s3ObjectStatus.fileSizeInBytes fileId >>= \case
+    Right () -> pure ()
+    Left errMessage -> do
+      QMF.updateStatusAndHashById DMF.FAILED Nothing fileId
+      catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) -> logWarning $ "Unable to delete oversize media: " <> show err
+      throwError (InvalidRequest errMessage)
+  unless (Just (S3.eTagToHash s3ObjectStatus.entityTag) == mediaFile.fileHash) $
+    throwError (InvalidRequest "Inspection media changed after confirmation; please re-upload and confirm")
+  QMF.updateStatusById DMF.COMPLETED fileId
+
+-- Delete a MediaFile. Within the upload window, soft-delete (status DELETED); after it, hard delete. Then S3 delete.
 mediaFileDocumentDelete ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
   Common.MediaFileDocumentReq ->
   Flow APISuccess
-mediaFileDocumentDelete merchantShortId _opCity requestorId req = do
-  let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
-  mediaFileDocument <- QMFD.findByPrimaryKey mediaFileDocumentId >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
+mediaFileDocumentDelete merchantShortId _opCity _requestorId req = do
+  let fileId = cast req.mediaFileDocumentId :: Id DMF.MediaFile
+  mediaFile <- QMF.findById fileId >>= fromMaybeM (InvalidRequest "MediaFile does not exist")
   merchant <- findMerchantByShortId merchantShortId
-  let uploadlinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
+  let uploadLinkExpiredIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
   now <- getCurrentTime
-  if now > addUTCTime uploadlinkExpiredIn mediaFileDocument.createdAt
-    then QMFD.deleteById mediaFileDocument.id
-    else do
-      -- video upload may be in progress, so only soft delete by creator allowed
-      unless (Id @DP.Person requestorId == mediaFileDocument.creatorId) $
-        throwError (InvalidRequest "Media file document upload was not completed by another user")
-      QMFD.updateStatus DMFD.DELETED Nothing mediaFileDocumentId
-  let s3Path = T.unpack mediaFileDocument.s3Path
-  catch (S3.delete s3Path) $ \(err :: SomeException) -> do
-    logWarning $ "Unable to delete file: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
+  if now > addUTCTime uploadLinkExpiredIn mediaFile.createdAt
+    then QMF.deleteById fileId
+    else QMF.updateStatusById DMF.DELETED fileId -- upload may be in progress, so only soft delete within the window
+  whenJust mediaFile.s3FilePath $ \s3Path ->
+    catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) ->
+      logWarning $ "Unable to delete file from S3: fileId: " <> fileId.getId <> " err: " <> show err
   pure Success
 
+-- Resolve a MediaFile id to a presigned download URL.
 mediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.MediaFileDocumentType ->
   Text ->
   Text ->
   Flow Common.MediaFileDocumentResp
-mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNumber _requestorId = do
+mediaFileDocumentDownloadLink merchantShortId _opCity fileId _requestorId = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
-  rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (RCNotFound rcNumber)
-  let mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType'
-  mediaFileDocuments <- filter (\mfd -> mfd.status /= DMFD.DELETED) <$> QMFD.findAllByMerchantOpCityIdAndRcIdAndType Nothing Nothing merchantOpCity.id rc.id mediaFileDocumentType
-
-  when (length mediaFileDocuments > 1) $ do
-    logError $
-      "Duplicated MediaFileDocuments found: merchantOpCityId: " <> merchantOpCity.id.getId
-        <> "; rcId: "
-        <> rc.id.getId
-        <> "; mediaFileDocumentType: "
-        <> show mediaFileDocumentType
-        <> ": "
-        <> show (length mediaFileDocuments)
-        <> " times"
-
-  mediaFileDocument <- listToMaybe mediaFileDocuments & fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
-
-  let fileWasUploaded = mediaFileDocument.status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED]
-  mbMediaFileLink <-
+  mediaFile <- QMF.findById (Id fileId) >>= fromMaybeM (InvalidRequest "MediaFile does not exist")
+  -- Same as the original flow: only hand out a download link once the file is actually uploaded (CONFIRMED/COMPLETED).
+  let fileWasUploaded = mediaFile.status `elem` [Just DMF.CONFIRMED, Just DMF.COMPLETED]
+  mbUrl <-
     if fileWasUploaded
-      then Just <$> S3.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
+      then forM mediaFile.s3FilePath $ \s3Path -> S3.generateDownloadUrl (T.unpack s3Path) merchant.mediaFileDocumentLinkExpires
       else pure Nothing
+  -- Reuse the old response shape: mediaFileLink = presigned download URL, mediaFileDocumentStatus drives the
+  -- dashboard's "uploaded yet?" polling.
   pure $
     Common.MediaFileDocumentResp
-      { mediaFileLink = mbMediaFileLink,
-        mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
-        mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
+      { mediaFileLink = mbUrl,
+        mediaFileDocumentId = cast mediaFile.id,
+        mediaFileDocumentStatus = castMediaFileStatus mediaFile.status
       }
 
+-- Cleanup job (fires well after the upload window). A file that a submitted inspection actually used is marked
+-- COMPLETED (at submit) and kept; anything else -- never confirmed, or confirmed but never submitted -- was
+-- abandoned, so it is deleted from S3 + the row.
 mediaFileDocumentComplete ::
   (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3Env m)) =>
   Job 'MediaFileDocumentComplete ->
   m ExecutionResult
-mediaFileDocumentComplete Job {id, jobInfo, merchantOperatingCityId = mbMerchantOpCityId} = withLogTag ("JobId-" <> id.getId) $ do
-  let jobData = jobInfo.jobData
-      mediaFileDocumentId = jobData.mediaFileDocumentId
-  QMFD.findByPrimaryKey mediaFileDocumentId >>= \case
-    Nothing -> logWarning $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> " does not exist"
-    Just mediaFileDocument -> do
-      case mediaFileDocument.status of
-        status | status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do
-          when (status == DMFD.COMPLETED) $
-            logWarning $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> " already completed"
-          tryToCompleteMediaFileDocument mediaFileDocument
-        _status -> cleanMediaFileDocument mediaFileDocument "Document was not confirmed"
+mediaFileDocumentComplete Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
+  let mediaFileId = jobInfo.jobData.mediaFileId
+  QMF.findById mediaFileId >>= \case
+    Nothing -> logInfo $ "MediaFile: " <> mediaFileId.getId <> " already removed; nothing to clean"
+    Just mediaFile ->
+      case mediaFile.status of
+        Just DMF.COMPLETED -> logInfo $ "MediaFile: " <> mediaFileId.getId <> " is used by an inspection; keeping"
+        _ -> do
+          logInfo $ "Removing abandoned MediaFile: " <> mediaFileId.getId <> " (status: " <> show mediaFile.status <> ")"
+          QMF.deleteById mediaFileId
+          whenJust mediaFile.s3FilePath $ \s3Path ->
+            catch (S3.delete (T.unpack s3Path)) $ \(err :: SomeException) ->
+              logWarning $ "Unable to delete abandoned file from S3: fileId: " <> mediaFileId.getId <> " err: " <> show err
   pure Complete
-  where
-    tryToCompleteMediaFileDocument mediaFileDocument = do
-      let s3Path = T.unpack mediaFileDocument.s3Path
-      try (S3.headRequest s3Path) >>= \case
-        Right s3ObjectStatus -> do
-          let isFileHashValid = Just (eTagToHash s3ObjectStatus.entityTag) == mediaFileDocument.fileHash
-          isFileSizeValid <- isRight <$> checkVideoFileSize mbMerchantOpCityId s3ObjectStatus.fileSizeInBytes mediaFileDocument.id
-          case (isFileHashValid, isFileSizeValid) of
-            (True, True) -> QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
-            (False, _) -> cleanMediaFileDocument mediaFileDocument "File was overwritten but not confirmed"
-            (_, False) -> cleanMediaFileDocument mediaFileDocument "File size exceeds maximum limit"
-        Left (err :: SomeException) -> cleanMediaFileDocument mediaFileDocument $ "File was not found: err: " <> show err
-    cleanMediaFileDocument mediaFileDocument message = do
-      logInfo $ "Remove MediaFileDocument: " <> mediaFileDocument.id.getId <> "; status: " <> show mediaFileDocument.status <> "; message: " <> message
-      QMFD.deleteById mediaFileDocument.id
-      let s3Path = T.unpack mediaFileDocument.s3Path
-      catch (S3.delete s3Path) $ \(err :: SomeException) -> do
-        when (mediaFileDocument.status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED]) $
-          logError $ "Unable to delete file from S3: mediaFileDocumentId: " <> mediaFileDocument.id.getId <> "err: " <> show err
+
+-- Map the MediaFile upload status onto the dashboard-facing status enum (kept identical to the old flow).
+castMediaFileStatus :: Maybe DMF.MediaFileUploadStatus -> Common.MediaFileDocumentStatus
+castMediaFileStatus = \case
+  Just DMF.PENDING -> Common.PENDING
+  Just DMF.DELETED -> Common.DELETED
+  Just DMF.FAILED -> Common.FAILED
+  Just DMF.CONFIRMED -> Common.CONFIRMED
+  Just DMF.COMPLETED -> Common.COMPLETED
+  Nothing -> Common.PENDING
+
+-- Video formats match the original media_file_document flow; Image formats are added for the new
+-- driver-screenshot requirement (the old flow was video-only).
+validateContentType :: S3.FileType -> Text -> Flow Text
+validateContentType fileType reqContentType =
+  case fileType of
+    S3.Video -> case reqContentType of
+      "video/mp4" -> pure "mp4"
+      "video/x-msvideo" -> pure "avi"
+      "video/mpeg" -> pure "mpeg"
+      _ -> throwError $ FileFormatNotSupported reqContentType
+    S3.Image -> case reqContentType of
+      "image/png" -> pure "png"
+      "image/jpeg" -> pure "jpg"
+      _ -> throwError $ FileFormatNotSupported reqContentType
+    _ -> throwError $ FileFormatNotSupported reqContentType

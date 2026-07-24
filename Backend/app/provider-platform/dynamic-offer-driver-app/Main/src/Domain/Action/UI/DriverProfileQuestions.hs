@@ -23,10 +23,12 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common as KUC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Image as ImageQuery
@@ -108,7 +110,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
     genAspirations aspirations' = if null aspirations' then "" else "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
 
     genAboutMeWithAI person driverStats req' = do
-      orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      orgLLMChatCompletionConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       prompt <-
         SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig) DTL.DriverProfileGen DTL.AzureOpenAI_DriverProfileGen_1 >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show (DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig)) (show DTL.DriverProfileGen) (show DTL.AzureOpenAI_DriverProfileGen_1))
           >>= buildPrompt person driverStats req' . (.promptTemplate)

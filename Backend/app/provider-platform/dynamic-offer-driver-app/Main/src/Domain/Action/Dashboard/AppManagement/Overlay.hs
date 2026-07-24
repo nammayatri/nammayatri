@@ -35,13 +35,15 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Overlay as SQMO
 import Tools.Error
 
@@ -133,7 +135,7 @@ postOverlaySchedule :: ShortId DM.Merchant -> Context.City -> DAO.ScheduleOverla
 postOverlaySchedule merchantShortId opCity req@DAO.ScheduleOverlay {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let scheduledTime = UTCTime (utctDay now) (timeOfDayToTime req.scheduleTime)
   let jobScheduledTime =
@@ -154,6 +156,7 @@ postOverlaySchedule merchantShortId opCity req@DAO.ScheduleOverlay {..} = do
         serviceName = Nothing,
         merchantOperatingCityId = Just merchantOpCityId,
         vehicleCategory = vehicleCategory,
+        shardNum = Nothing,
         ..
       }
   pure Success

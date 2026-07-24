@@ -52,6 +52,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
 
@@ -68,7 +69,7 @@ cancel ::
   SignatureAuthResult ->
   Cancel.CancelReqV2 ->
   FlowHandler AckResponse
-cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
+cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
     transactionId <- Utils.getTransactionId reqV2.cancelReqContext
     Utils.withTransactionIdLogTag transactionId $ do
@@ -93,7 +94,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
         then do
           logError $ "Completed booking cancel request received for ride id : " <> cancelRideReq.bookingId.getId
           mbRide <- QRide.findActiveByRBId booking.id
-          void $ rideSync Nothing mbRide booking merchant
+          void $ rideSync Nothing mbRide booking merchant False
           return Ack
         else do
           fork "cancel received pushing ondc logs" do
@@ -125,9 +126,9 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                         pure buildOnCancelMessageV2
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
-              (mbCancellationBase, mbCancellationTax, mbLogicVersion, _mbOverdueCharge, _mbOverdueTax) <- maybe (return (Nothing, Nothing, Nothing, Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
+              (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
-              let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 mbCancellationTax, currency = booking.currency}) <$> mbCancellationBase
+              let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               void $ case (cancellationCharges, mbRide) of
                 (Just priceEntity, Just ride) ->
                   QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) mbLogicVersion ride.id

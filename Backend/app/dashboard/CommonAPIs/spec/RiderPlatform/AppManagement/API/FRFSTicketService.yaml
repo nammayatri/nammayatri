@@ -27,6 +27,8 @@ imports:
   LatLong: Kernel.External.Maps.Types
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  FRFSBookingPaymentAttemptsAPIRes: API.Types.UI.FRFSTicketService
+  FRFSPaymentAttemptsListAPIRes: API.Types.UI.FRFSTicketService
 
 importPackageOverrides:
   Domain.Types.Person: "rider-app"
@@ -168,6 +170,20 @@ apis:
         type: FRFSQuoteConfirmReq
       response:
         type: FRFSTicketBookingStatusAPIRes
+      helperApi:
+        - POST:
+            endpoint: /customer/{customerId}/frfs/quote/v2/{quoteId}/confirm
+            auth: ApiAuthV2
+            params:
+              customerId: Id Person
+              quoteId: Id FRFSQuote
+            query:
+              - isMockPayment: Bool
+              - requestorId: Text
+            request:
+              type: FRFSQuoteConfirmReq
+            response:
+              type: FRFSTicketBookingStatusAPIRes
 
   - GET:
       endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
@@ -177,6 +193,37 @@ apis:
         bookingId: Id FRFSTicketBooking
       response:
         type: FRFSTicketBookingStatusAPIRes
+      helperApi:
+        - GET:
+            endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
+            auth: ApiAuthV2
+            params:
+              customerId: Id Person
+              bookingId: Id FRFSTicketBooking
+            query:
+              - requestorId: Text
+            response:
+              type: FRFSTicketBookingStatusAPIRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/booking/{bookingId}/paymentAttempts
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+        bookingId: Id FRFSTicketBooking
+      response:
+        type: FRFSBookingPaymentAttemptsAPIRes
+
+  - GET:
+      endpoint: /customer/{customerId}/frfs/payment/attempts
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: FRFSPaymentAttemptsListAPIRes
 
   - GET:
       endpoint: /customer/{customerId}/frfs/route/{routeId}/seatLayout

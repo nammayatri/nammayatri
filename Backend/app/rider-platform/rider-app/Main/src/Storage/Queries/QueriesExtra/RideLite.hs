@@ -9,6 +9,7 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps
+import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -19,7 +20,7 @@ import qualified Storage.Queries.Extra.Transformers.Ride
 
 ---------------- use this function if you need the data which are here as per your domain requirement ----------------
 
-findByIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id RideLite -> m (Maybe RideLite))
+findByIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe RideLite))
 findByIdLite id = findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByRBIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe RideLite))
@@ -30,6 +31,9 @@ findActiveByRBIdLite (Kernel.Types.Id.Id rbId) = findOneWithKV [Se.And [Se.Is Be
 
 findRideByRideShortIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId RideLite -> m (Maybe RideLite))
 findRideByRideShortIdLite shortId = findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
+
+findByBPPRideIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.BPPRide -> m (Maybe RideLite)
+findByBPPRideIdLite bppRideId = findOneWithKV [Se.Is Beam.bppRideId $ Se.Eq (Kernel.Types.Id.getId bppRideId)]
 
 data RideLite = RideLite
   { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
@@ -47,7 +51,11 @@ data RideLite = RideLite
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
-    isSafetyPlus :: Kernel.Prelude.Bool
+    isSafetyPlus :: Kernel.Prelude.Bool,
+    bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
+    driverAccountId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId,
+    driverArrivalStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.DriverArrivalStatus,
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -67,5 +75,10 @@ instance FromTType' RideLiteTable RideLite where
             driversPreviousRideDropLoc = Storage.Queries.Extra.Transformers.Ride.mkLatLong driversPreviousRideDropLat driversPreviousRideDropLon,
             showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc,
             isSafetyPlus = Kernel.Prelude.fromMaybe False isSafetyPlus,
+            bppRideId = Kernel.Types.Id.Id bppRideId,
+            -- the rider can add / change / remove a tip while the ride is running, so the polling
+            -- endpoint has to be able to read it back. Built the same way as the full Ride's
+            -- fromTType' (Storage/Queries/OrphanInstances/Ride.hs) so the two never disagree.
+            tipAmount = Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) tipAmount,
             ..
           }

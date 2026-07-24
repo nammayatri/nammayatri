@@ -82,6 +82,7 @@ import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Kernel.Utils.Servant.Client ()
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
@@ -89,6 +90,8 @@ import qualified SharedLogic.CallBAP as CallBAP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -364,7 +367,10 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
   where
     ensureCallStatusExists id' callId rideId callStatus' dtmfNumberUsed merchantOperatingCityId' =
       QCallStatus.findOneByEntityId (Just $ getId rideId) >>= \case
-        Just cs -> QCallStatus.updateCallStatusCallId callId cs.id
+        Just cs ->
+          QCallStatus.findByCallSid callId >>= \case
+            Just _ -> pure ()
+            Nothing -> QCallStatus.updateCallStatusCallId callId cs.id
         Nothing -> do
           now <- getCurrentTime
           let callStatusObj =
@@ -509,7 +515,7 @@ getCallTwillioAccessToken rideId entity deviceType = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId
       createJWT id twillioCallConfig deviceType
     getCfg cityId = do
-      merchantServConfig <- QMSC.findByServiceAndCity (DMSC.CallService Call.TwillioCall) cityId >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = Nothing, serviceName = Just (DMSC.CallService Call.TwillioCall)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.CallService Call.TwillioCall) cityId)) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
       case merchantServConfig.serviceConfig of
         DMSC.CallServiceConfig config ->
           case config of
@@ -615,7 +621,7 @@ handleCallFeedback callStatus callStatusObj mbRecordingUrl callSid = do
   case (callStatusObj.merchantOperatingCityId, mbRecordingUrl, callStatus) of
     (Just merchantOpCityId, Just recordingUrl, CallTypes.COMPLETED) -> do
       when (callStatusObj.aiCallAnalyzed /= Just True && recordingUrl /= "") $ do
-        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         when (transporterConfig.liveEKD == Just True) $ do
           void $ LiveEKD.liveEKDProdLoop recordingUrl callSid "driver"
           QCallStatus.updateAiCallAnalyzed (Just True) callStatusObj.callId
@@ -685,8 +691,8 @@ addCampaignData ::
   m Ozonetel.OzonetelAddCampaignDataResp
 addCampaignData req merchantOpCityId = do
   -- Get Ozonetel config from merchant service config
-  merchantServConfig <- QMSC.findByServiceAndCity (DMSC.CallService Call.Ozonetel) merchantOpCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Call" "Ozonetel")
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.CallService Call.Ozonetel)}) (Just (maybeToList <$> QMSC.findByServiceAndCity (DMSC.CallService Call.Ozonetel) merchantOpCityId)) >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Call" "Ozonetel")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currentLocalTimeOfDay = timeToTimeOfDay $ utctDayTime localNow
   case merchantServConfig.serviceConfig of

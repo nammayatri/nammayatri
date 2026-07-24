@@ -29,10 +29,11 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Interface.Getter (TxnIdKey (..))
-import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
@@ -45,7 +46,7 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReqV2 ->
   FlowHandler AckResponse
-onConfirm _ reqV2 = withFlowHandlerBecknAPI do
+onConfirm _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
@@ -63,7 +64,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
           DOnConfirm.ValidatedBookingConfirmed bookingConfirmedReq -> pure $ bookingConfirmedReq.booking.merchantOperatingCityId.getId
         Metrics.finishMetricsBap Metrics.CONFIRM "" transactionId merchantOperatingCityId
         fork "on confirm received pushing ondc logs" do
-          booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+          booking <- QBookingLite.findByBPPBookingIdLite bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
           void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
         runInForkWithCheck
           "onConfirm request processing"

@@ -59,6 +59,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
@@ -71,10 +72,11 @@ import SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.FarePolicy as SFP
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -82,9 +84,9 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
@@ -92,7 +94,6 @@ import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 data CancelReq = CancelSearch CancelSearchReq | CancelRide CancelRideReq
   deriving (Show)
@@ -119,7 +120,7 @@ cancel ::
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
-    transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     let prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
     when prepaidSubscriptionAndWalletEnabled $ whenJust mbRide $ \ride -> releaseLien booking ride
     whenJust mbRide $ \ride -> do
@@ -154,7 +155,7 @@ cancel req merchant booking mbActiveSearchTry = do
         Just ride -> do
           driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
           fork "cancelRide - Notify driver" $
-            Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCR.source
+            Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCR.source
           isValueAddNP <- CQVAN.isValueAddNP booking.bapId
           vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
           isReallocat <- reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR False
@@ -182,16 +183,25 @@ cancel req merchant booking mbActiveSearchTry = do
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
                       mbExistingCancellationDuesDetails <- QCDD.findByRideId ride.id
-                      (charges', mbTax, mbOverdueCharge, mbOverdueTax) <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges -> return (Just cancelCharges, mbExistingCancellationDuesDetails >>= (.cancellationFeeTax), mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge), mbExistingCancellationDuesDetails >>= (.overdueCancellationTax))
+                      chargesOutcome <- case ride.cancellationFeeIfCancelled of
+                        Just cancelCharges ->
+                          return
+                            CancellationChargesOutcome
+                              { fee = Just cancelCharges,
+                                tax = mbExistingCancellationDuesDetails >>= (.cancellationFeeTax),
+                                overdueFee = mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge),
+                                overdueTax = mbExistingCancellationDuesDetails >>= (.overdueCancellationTax),
+                                commission = mbExistingCancellationDuesDetails >>= (.cancellationCommission),
+                                overdueCommission = mbExistingCancellationDuesDetails >>= (.overdueCancellationCommission)
+                              }
                         Nothing -> do
-                          (cancellationdues, tax, _mbLogicVersion, overdueCharge, overdueTax) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
-                          case cancellationdues of
-                            Just charges -> do
-                              logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges <> " tax: " <> show tax)
-                              return (Just charges, tax, overdueCharge, overdueTax)
-                            Nothing -> return (Nothing, Nothing, overdueCharge, overdueTax)
-                      let totalCharges = fromMaybe 0 charges' + fromMaybe 0 mbTax
+                          (mbOutcome, _mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
+                          case mbOutcome of
+                            Just o -> do
+                              logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show o.fee <> " tax: " <> show o.tax)
+                              return o
+                            Nothing -> return (CancellationChargesOutcome Nothing Nothing Nothing Nothing Nothing Nothing)
+                      let totalCharges = fromMaybe 0 chargesOutcome.fee + fromMaybe 0 chargesOutcome.tax
                       QRD.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
                       when (totalCharges > 0) $ do
                         QRD.updateCancellationDueRidesCount riderId.getId
@@ -203,10 +213,12 @@ cancel req merchant booking mbActiveSearchTry = do
                                   rideId = ride.id,
                                   riderId = riderId,
                                   cancellationAmount = totalCharges,
-                                  cancellationFee = charges',
-                                  cancellationFeeTax = mbTax,
-                                  overdueCancellationCharge = mbOverdueCharge,
-                                  overdueCancellationTax = mbOverdueTax,
+                                  cancellationFee = chargesOutcome.fee,
+                                  cancellationFeeTax = chargesOutcome.tax,
+                                  overdueCancellationCharge = chargesOutcome.overdueFee,
+                                  overdueCancellationTax = chargesOutcome.overdueTax,
+                                  cancellationCommission = chargesOutcome.commission,
+                                  overdueCancellationCommission = chargesOutcome.overdueCommission,
                                   currency = booking.currency,
                                   paymentStatus = DCDD.PENDING,
                                   createdAt = now,
@@ -215,7 +227,7 @@ cancel req merchant booking mbActiveSearchTry = do
                                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                                 }
                         QCDD.create cancellationDuesDetails
-                      return (charges', mbTax, mbOverdueCharge, mbOverdueTax)
+                      return (chargesOutcome.fee, chargesOutcome.tax, chargesOutcome.overdueFee, chargesOutcome.overdueTax)
                     else return (Nothing, Nothing, Nothing, Nothing)
                 Nothing -> return (Nothing, Nothing, Nothing, Nothing)
             Nothing -> return (Nothing, Nothing, Nothing, Nothing)
@@ -321,19 +333,21 @@ cancelSearch ::
   ST.SearchTry ->
   m ()
 cancelSearch _merchantId searchTry = do
-  searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  searchRequest <- QSRLite.findByIdLite searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   callWithErrorHandling searchRequest.transactionId $ do
-    -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `RideRequestAlreadyAccepted`.
+    -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `CancelSearchLockNotAcquired`.
     -- Lock Release: Any Exceptions or at end of this function.
-    unlessM (Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30) $
-      throwError RideRequestAlreadyAccepted
+    cancelSearchInitLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
+    logError $ "cancelSearchInitLock | cancelSearch acquire | txn=" <> searchRequest.transactionId <> " acquired=" <> show cancelSearchInitLockAcquired
+    unless cancelSearchInitLockAcquired $
+      throwError CancelSearchLockNotAcquired
     when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
       mbActiveBooking <- runInMasterDbAndRedis $ QRB.findByTransactionIdAndStatuses searchRequest.transactionId [SRB.NEW, SRB.TRIP_ASSIGNED]
       whenJust mbActiveBooking $ \_ ->
         throwError RideRequestAlreadyAccepted
     driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
     QST.cancelActiveTriesByRequestId searchTry.requestId
-    QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
+    QSRD.setInactiveAndPulledByIds driverSearchReqs
     QDQ.setInactiveBySRId searchTry.requestId
     for_ driverSearchReqs $ \driverReq -> do
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
@@ -343,9 +357,11 @@ cancelSearch _merchantId searchTry = do
       exep <- withTryCatch "cancelSearch:callWithErrorHandling" action
       case exep of
         Left e -> do
+          logError $ "cancelSearchInitLock | cancelSearch release (error) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           someExceptionToAPIErrorThrow e
         Right a -> do
+          logError $ "cancelSearchInitLock | cancelSearch release (success) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           pure a
 
@@ -365,7 +381,7 @@ validateCancelSearchRequest ::
   m ST.SearchTry
 validateCancelSearchRequest merchantId _ req = do
   let transactionId = req.transactionId
-  searchReq <- QSR.findByTransactionIdAndMerchantId transactionId merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId <> ",merchantId-" <> merchantId.getId)
+  searchReq <- QSRLite.findByTransactionIdAndMerchantIdLite transactionId merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId <> ",merchantId-" <> merchantId.getId)
   QST.findTryByRequestId searchReq.id >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchReq.id.getId)
 
 validateCancelRequest ::

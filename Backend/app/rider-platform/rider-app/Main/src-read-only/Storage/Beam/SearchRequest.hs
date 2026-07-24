@@ -48,6 +48,7 @@ data SearchRequestT f = SearchRequestT
     destinationStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     device :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    discoveredSpecialLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

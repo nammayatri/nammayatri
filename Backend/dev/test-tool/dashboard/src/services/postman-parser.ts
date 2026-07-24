@@ -26,7 +26,17 @@ export interface PostmanItem {
   request: {
     method: string;
     header?: Array<{ key: string; value: string }>;
-    body?: { mode: string; raw?: string };
+    body?: {
+      mode: string;
+      raw?: string;
+      formdata?: Array<{
+        key: string;
+        type?: string;
+        value?: string;
+        src?: string | string[];
+        description?: string;
+      }>;
+    };
     url: PostmanUrl | string;
   };
   response?: any[];
@@ -51,6 +61,16 @@ interface PostmanVariable {
   type?: string;
 }
 
+export interface FormdataField {
+  key: string;
+  /** 'text' fields have a resolvable value template; 'file' fields expect a File attached at runtime. */
+  type: 'text' | 'file';
+  /** For text fields: value template (may contain {{vars}}). Unused for file fields. */
+  value?: string;
+  /** Free-text hint shown in the UI next to the file picker (from Postman `description`). */
+  description?: string;
+}
+
 export interface ParsedStep {
   id: string;
   index: number;
@@ -64,6 +84,13 @@ export interface ParsedStep {
   headers: Record<string, string>;
   auth: boolean;
   bodyTemplate: string | null;
+  /**
+   * For steps whose Postman body is `mode: 'formdata'`. When set, the runtime
+   * builds a FormData object per request and axios sends it as multipart.
+   * File fields require a user-attached File at runtime; the step self-skips
+   * when any file field is missing an attachment.
+   */
+  formdataFields: FormdataField[] | null;
   testScript: string | null;
   prereqScript: string | null;
   /** Tag for grouping: driver, rider, or system */
@@ -92,6 +119,9 @@ export interface ParsedTreeNode {
 const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; stripPrefix?: string }> = {
   'baseUrl_app': { service: 'rider' },
   'baseURL_namma_P': { service: 'driver' },
+  // driver-app dashboard APIs (http://localhost:8016/dashboard) — operator/fleet/hub
+  // endpoints. Same driver service; basePath '/dashboard' is preserved from the env value.
+  'baseURL_BPP_Driver_Direct': { service: 'driver' },
   'baseUrl_lts': { service: 'lts' },
   'baseURL_BPP_Dashboard': { service: 'provider-dashboard' },
   'baseURL_BPP_Dashboard_Internal': { service: 'provider-dashboard' },
@@ -169,6 +199,15 @@ function parseItem(item: PostmanItem, index: number, envVars: Record<string, str
 
   // Body
   const bodyTemplate = item.request.body?.raw ?? null;
+  const formdataFields: FormdataField[] | null =
+    item.request.body?.mode === 'formdata' && Array.isArray(item.request.body.formdata)
+      ? item.request.body.formdata.map(f => ({
+          key: f.key,
+          type: (f.type === 'file' ? 'file' : 'text') as 'text' | 'file',
+          value: f.value,
+          description: f.description,
+        }))
+      : null;
 
   // Scripts
   const testScript = extractScript(item.event, 'test');
@@ -196,6 +235,7 @@ function parseItem(item: PostmanItem, index: number, envVars: Record<string, str
     headers,
     auth,
     bodyTemplate,
+    formdataFields,
     testScript,
     prereqScript,
     tag,

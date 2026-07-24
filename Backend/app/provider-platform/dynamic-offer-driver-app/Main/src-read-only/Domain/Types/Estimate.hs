@@ -17,7 +17,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
-  { businessDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+  { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    businessDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     commissionCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     congestionMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -51,6 +52,7 @@ data Estimate = Estimate
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     minFare :: Kernel.Types.Common.HighPrecMoney,
+    navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     personalDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -5,6 +5,8 @@ imports:
   PaymentMode: Domain.Types.PaymentMode
   RequirementsInfo: Kernel.External.Payment.Interface.Types
   Language: Kernel.External.Types
+  IndianState: Kernel.Types.Beckn.Context
+  AddressDocumentType: Dashboard.Common.Driver
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -164,6 +166,9 @@ types:
     - adminApprovalRequired: Maybe Bool
     - setIsEnabled: Maybe Bool
     - fleetName: Maybe Text
+    - address: Maybe Text
+    - addressState: Maybe IndianState
+    - addressDocumentType: Maybe AddressDocumentType
   FleetOwnerRegisterTReqV2: # hide secrets
     - firstName: Text
     - lastName: Text

@@ -1,0 +1,120 @@
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
+
+module Domain.Action.Entity
+  ( CreateEntityReq (..),
+    CreateEntityResp (..),
+    UpdateEntityReq (..),
+    ListEntityResp (..),
+    createEntity,
+    listEntity,
+    updateEntity,
+    deleteEntity,
+  )
+where
+
+import qualified "lib-dashboard" Domain.Types.Entity as DE
+import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
+import qualified "lib-dashboard" Domain.Types.Person as DP
+import Kernel.Prelude
+import Kernel.Types.APISuccess
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified "lib-dashboard" Storage.Beam.BeamFlow as BeamFlow
+import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.Queries.Entity as QE
+import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
+
+data CreateEntityReq = CreateEntityReq
+  { entityName :: Text,
+    entityShortId :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype CreateEntityResp = CreateEntityResp
+  { entityId :: Id DE.Entity
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data UpdateEntityReq = UpdateEntityReq
+  { entityName :: Maybe Text,
+    entityShortId :: Maybe Text,
+    deleted :: Maybe Bool
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype ListEntityResp = ListEntityResp {list :: [DE.Entity]}
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+createEntity :: BeamFlow.BeamFlow m r => Id DP.Person -> ShortId DMerchant.Merchant -> CreateEntityReq -> m CreateEntityResp
+createEntity actorPersonId merchantShortId req = do
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  let shortIdTyped = ShortId req.entityShortId
+  mbExisting <- QE.findByMerchantAndShortId merchant.id shortIdTyped
+  whenJust mbExisting $ \_ ->
+    throwError (InvalidRequest $ "Entity with entityShortId " <> req.entityShortId <> " already exists for this merchant")
+  entityId <- generateGUID
+  now <- getCurrentTime
+  let entity =
+        DE.Entity
+          { id = entityId,
+            merchantId = merchant.id,
+            entityName = req.entityName,
+            entityShortId = shortIdTyped,
+            deleted = False,
+            createdAt = now,
+            updatedAt = now
+          }
+  QE.create entity
+  logInfo $ "[Entity.create] actor=" <> actorPersonId.getId <> " merchant=" <> merchantShortId.getShortId <> " entityId=" <> entityId.getId <> " shortId=" <> req.entityShortId
+  pure $ CreateEntityResp entityId
+
+listEntity :: BeamFlow.BeamFlow m r => ShortId DMerchant.Merchant -> Maybe Bool -> m ListEntityResp
+listEntity merchantShortId mbIncludeDeleted = do
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  ListEntityResp <$> QE.findAllByFilters merchant.id mbIncludeDeleted
+
+-- No guard on existing.deleted: update is the only restore path (deleted=false toggles it back).
+updateEntity :: BeamFlow.BeamFlow m r => Id DP.Person -> ShortId DMerchant.Merchant -> Id DE.Entity -> UpdateEntityReq -> m APISuccess
+updateEntity actorPersonId merchantShortId entityId req = do
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  existing <- QE.findById entityId >>= fromMaybeM (InvalidRequest $ "Entity " <> entityId.getId <> " does not exist")
+  unless (existing.merchantId == merchant.id) $
+    throwError AccessDenied
+  whenJust req.entityShortId $ \newShortId -> do
+    let newShortIdTyped = ShortId newShortId
+    when (newShortIdTyped /= existing.entityShortId) $ do
+      mbDup <- QE.findByMerchantAndShortId merchant.id newShortIdTyped
+      whenJust mbDup $ \_ ->
+        throwError (InvalidRequest $ "Entity with entityShortId " <> newShortId <> " already exists for this merchant")
+  now <- getCurrentTime
+  let updated =
+        existing
+          { DE.entityName = fromMaybe existing.entityName req.entityName,
+            DE.entityShortId = maybe existing.entityShortId ShortId req.entityShortId,
+            DE.deleted = fromMaybe existing.deleted req.deleted,
+            DE.updatedAt = now
+          }
+  QE.updateByPrimaryKey updated
+  logInfo $ "[Entity.update] actor=" <> actorPersonId.getId <> " entityId=" <> entityId.getId
+  pure Success
+
+-- Soft delete: keeps person.entity_id FKs intact; row visible only via ?includeDeleted=true.
+deleteEntity :: BeamFlow.BeamFlow m r => Id DP.Person -> ShortId DMerchant.Merchant -> Id DE.Entity -> m APISuccess
+deleteEntity actorPersonId merchantShortId entityId = do
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  existing <- QE.findById entityId >>= fromMaybeM (InvalidRequest $ "Entity " <> entityId.getId <> " does not exist")
+  unless (existing.merchantId == merchant.id) $
+    throwError AccessDenied
+  now <- getCurrentTime
+  QE.updateByPrimaryKey existing {DE.deleted = True, DE.updatedAt = now}
+  logInfo $ "[Entity.delete] actor=" <> actorPersonId.getId <> " entityId=" <> entityId.getId
+  pure Success

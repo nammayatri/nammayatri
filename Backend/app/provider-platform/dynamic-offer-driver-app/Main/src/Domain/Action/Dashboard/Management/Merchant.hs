@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigFarePolicyExport,
     getMerchantConfigFarePolicyDetails,
     getMerchantConfigFareProductList,
+    postMerchantConfigFareProductSetEnabled,
     postMerchantConfigOperatingCityCreate,
     postMerchantUpdateOnboardingVehicleVariantMapping,
     postMerchantConfigSpecialLocationUpsert,
@@ -56,6 +57,8 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFailover,
     postMerchantPayoutConfigUpdate,
     postMerchantConfigUpsertPlanAndConfigSubscription,
+    getMerchantConfigVendorSplitDetailsList,
+    getMerchantConfigSubscriptionConfigList,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigVehicleServiceTier,
@@ -71,9 +74,11 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantMerchantDocumentCreate,
     postMerchantMerchantDocumentUpdate,
     postMerchantMerchantDocumentDelete,
+    getMerchantMerchantMessageCatalog,
+    postMerchantMerchantMessageUpsert,
+    deleteMerchantMerchantMessage,
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
-    buildFarePolicyUsageCount,
     getMerchantCityList,
   )
 where
@@ -81,12 +86,14 @@ where
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified "dashboard-helper-api" Dashboard.Common.Merchant as DCM
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as HM
 import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import Data.Default.Class (def)
 import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -95,7 +102,7 @@ import qualified Data.Text.Encoding as TEnc
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
-import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
@@ -134,6 +141,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleCategory as Enums
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
+import qualified Domain.Types.VendorSplitDetails as DVSD
 import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
@@ -161,6 +169,7 @@ import Kernel.Utils.Geometry
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -170,8 +179,6 @@ import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
--- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
-
 import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
@@ -195,9 +202,10 @@ import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
@@ -210,10 +218,21 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
@@ -224,6 +243,7 @@ import qualified Storage.Queries.FareProduct as SQF
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanE
@@ -232,6 +252,7 @@ import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.ValueAddNP as SQVNP
 import qualified Storage.Queries.VehicleServiceTier as QVST
+import qualified Storage.Queries.VendorSplitDetails as QVSD
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import qualified Toll.Domain.Types.Toll as Toll
 import qualified Toll.Storage.CachedQueries.Toll as CQToll
@@ -318,7 +339,7 @@ getMerchantConfigCommon :: ShortId DM.Merchant -> Context.City -> Flow Common.Me
 getMerchantConfigCommon merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
@@ -350,7 +371,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
                dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
@@ -425,7 +446,6 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
                 SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
               createJobIn @_ @'CalculateDriverFees (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: CalculateDriverFeesJobData)
               setDriverFeeCalcJobCache jobData.startTime jobData.endTime merchantOpCityId serviceName diffTimeS
-              setDriverFeeBillNumberKey merchantOpCityId 1 36000 serviceName
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Just Common.BadDebtCalculationTrigger -> do
@@ -501,8 +521,8 @@ getMerchantConfigDriverPool merchantShortId opCity reqTripDistance reqTripDistan
         distanceToMeters <$> (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
           <|> reqTripDistance
   configs <- case mbTripDistance of
-    Nothing -> CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
-    Just tripDistance -> maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing
+    Nothing -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing))
+    Just tripDistance -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing))
   pure $ mkDriverPoolConfigRes <$> configs
 
 mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
@@ -511,7 +531,6 @@ mkDriverPoolConfigRes DDPC.DriverPoolConfig {..} =
     { poolSortingType = Common.Tagged,
       minRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit minRadiusOfSearch,
       maxRadiusOfSearchWithUnit = convertMetersToDistance distanceUnit maxRadiusOfSearch,
-      radiusStepSizeWithUnit = convertMetersToDistance distanceUnit radiusStepSize,
       actualDistanceThresholdWithUnit = convertMetersToDistance distanceUnit <$> actualDistanceThreshold,
       tripDistanceWithUnit = convertMetersToDistance distanceUnit tripDistance,
       radiusShrinkValueForDriversOnRideWithUnit = convertMetersToDistance distanceUnit radiusShrinkValueForDriversOnRide,
@@ -525,7 +544,7 @@ getMerchantConfigDriverPoolList :: ShortId DM.Merchant -> Context.City -> Flow C
 getMerchantConfigDriverPoolList merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
+  configs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing))
   pure $ mkDriverPoolConfigListItem <$> configs
 
 mkDriverPoolConfigListItem :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigListItem
@@ -574,11 +593,10 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqTripDistanceValue r
   let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DVeh.castVariantToServiceTier <$> mbVariant
-  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
+  config <- getOneConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Just area, vehicleVariant = serviceTier, tripCategory = Just tripCategory}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing)) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = mkDistanceField config.minRadiusOfSearch req.minRadiusOfSearchWithUnit req.minRadiusOfSearch,
                maxRadiusOfSearch = mkDistanceField config.maxRadiusOfSearch req.maxRadiusOfSearchWithUnit req.maxRadiusOfSearch,
-               radiusStepSize = mkDistanceField config.radiusStepSize req.radiusStepSizeWithUnit req.radiusStepSize,
                driverPositionInfoExpiry = maybe config.driverPositionInfoExpiry (.value) req.driverPositionInfoExpiry,
                actualDistanceThreshold = mkOptionalDistanceField config.actualDistanceThreshold req.actualDistanceThresholdWithUnit req.actualDistanceThreshold,
                actualDistanceThresholdOnRide = mkOptionalDistanceField config.actualDistanceThresholdOnRide req.actualDistanceThresholdOnRideWithUnit req.actualDistanceThresholdOnRide,
@@ -626,7 +644,7 @@ postMerchantConfigDriverPoolCreate merchantShortId opCity reqTripDistanceValue r
   let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DVeh.castVariantToServiceTier <$> mbVariant
-  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing
+  mbConfig <- getOneConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Just area, vehicleVariant = serviceTier, tripCategory = Just tripCategory}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area (Just []) Nothing))
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance distanceUnit area serviceTier tripCategory req
   _ <- CQDPC.create newConfig
@@ -664,7 +682,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         timeBounds = Unbounded,
         minRadiusOfSearch = maybe minRadiusOfSearch distanceToMeters minRadiusOfSearchWithUnit,
         maxRadiusOfSearch = maybe maxRadiusOfSearch distanceToMeters maxRadiusOfSearchWithUnit,
-        radiusStepSize = maybe radiusStepSize distanceToMeters radiusStepSizeWithUnit,
+        radiusStepSize = Nothing,
         actualDistanceThreshold = distanceToMeters <$> actualDistanceThresholdWithUnit <|> actualDistanceThreshold,
         radiusShrinkValueForDriversOnRide = maybe radiusShrinkValueForDriversOnRide distanceToMeters radiusShrinkValueForDriversOnRideWithUnit,
         driverToDestinationDistanceThreshold = maybe driverToDestinationDistanceThreshold distanceToMeters driverToDestinationDistanceThresholdWithUnit,
@@ -723,7 +741,6 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
 
       minRadiusOfSearch :: Meters <- readCSVField idx row.minRadiusOfSearch "Min Radius Of Search"
       maxRadiusOfSearch :: Meters <- readCSVField idx row.maxRadiusOfSearch "Max Radius Of Search"
-      radiusStepSize :: Meters <- readCSVField idx row.radiusStepSize "Radius Step Size"
       driverBatchSize :: Int <- readCSVField idx row.driverBatchSize "Driver Batch Size"
       maxNumberOfBatches :: Int <- readCSVField idx row.maxNumberOfBatches "Max Number Of Batches"
       maxParallelSearchRequests :: Int <- readCSVField idx row.maxParallelSearchRequests "Max Parallel Search Requests"
@@ -763,7 +780,7 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             vehicleVariant,
             minRadiusOfSearch,
             maxRadiusOfSearch,
-            radiusStepSize,
+            radiusStepSize = Nothing,
             driverBatchSize,
             maxNumberOfBatches,
             maxParallelSearchRequests,
@@ -800,21 +817,15 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
     upsertDriverPoolConfig :: Id DMOC.MerchantOperatingCity -> DDPC.DriverPoolConfig -> Flow ()
     upsertDriverPoolConfig merchantOpCityId config = do
       mbExistingConfig <-
-        CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh
-          merchantOpCityId
-          config.tripDistance
-          config.vehicleVariant
-          config.tripCategory
-          config.area
-          (Just [])
-          Nothing
+        getOneConfig
+          (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just config.tripDistance, area = Just config.area, vehicleVariant = config.vehicleVariant, tripCategory = Just config.tripCategory})
+          (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId config.tripDistance config.vehicleVariant config.tripCategory config.area (Just []) Nothing))
       case mbExistingConfig of
         Just existingConfig -> do
           let updatedConfig =
                 existingConfig
                   { DDPC.minRadiusOfSearch = config.minRadiusOfSearch,
                     DDPC.maxRadiusOfSearch = config.maxRadiusOfSearch,
-                    DDPC.radiusStepSize = config.radiusStepSize,
                     DDPC.driverBatchSize = config.driverBatchSize,
                     DDPC.maxNumberOfBatches = config.maxNumberOfBatches,
                     DDPC.maxParallelSearchRequests = config.maxParallelSearchRequests,
@@ -856,7 +867,6 @@ data DriverPoolConfigCSVRow = DriverPoolConfigCSVRow
     vehicleVariant :: Text,
     minRadiusOfSearch :: Text,
     maxRadiusOfSearch :: Text,
-    radiusStepSize :: Text,
     driverBatchSize :: Text,
     maxNumberOfBatches :: Text,
     maxParallelSearchRequests :: Text,
@@ -897,7 +907,6 @@ instance FromNamedRecord DriverPoolConfigCSVRow where
       <*> r .: "vehicleVariant"
       <*> r .: "minRadiusOfSearch"
       <*> r .: "maxRadiusOfSearch"
-      <*> r .: "radiusStepSize"
       <*> r .: "driverBatchSize"
       <*> r .: "maxNumberOfBatches"
       <*> r .: "maxParallelSearchRequests"
@@ -975,11 +984,7 @@ getMerchantConfigOnboardingDocument :: ShortId DM.Merchant -> Context.City -> Ma
 getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- case (mbReqDocumentType, mbCategory) of
-    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId (Just [])
-    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType) (Just [])
-    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category (Just [])
-    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category (Just [])
+  configs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = castDocumentType <$> mbReqDocumentType, vehicleCategory = mbCategory}) (Just (CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
 
   pure $ mkDocumentVerificationConfigRes <$> configs
 
@@ -1035,6 +1040,7 @@ castDDocumentType = \case
   DVC.ProfilePhoto -> Common.ProfilePhoto
   DVC.PanCard -> Common.PanCard
   DVC.VehicleNOC -> Common.VehicleNOC
+  DVC.DriverVehicleNOC -> Common.DriverVehicleNOC
   DVC.BusinessLicense -> Common.BusinessLicense
   DVC.Odometer -> Common.Odometer
   DVC.AadhaarCard -> Common.AadhaarCard
@@ -1074,6 +1080,12 @@ castDDocumentType = \case
   DVC.UDYAMCertificate -> Common.UDYAMCertificate
   DVC.PanAadhaarLinkage -> Common.PanAadhaarLink
   DVC.VoterIdCard -> Common.VoterIdCard
+  DVC.OperatorPartnerCode -> Common.OperatorPartnerCode
+  DVC.MedicalCertificate -> Common.MedicalCertificate
+  DVC.Rating -> Common.Rating
+  DVC.BotApproval -> Common.BotApproval
+  DVC.NomineeDetails -> Common.NomineeDetails
+  DVC.FleetRegistration -> Common.FleetRegistration
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1088,7 +1100,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just []) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory Nothing)) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -1137,6 +1149,7 @@ castDocumentType = \case
   Common.ProfilePhoto -> DVC.ProfilePhoto
   Common.PanCard -> DVC.PanCard
   Common.VehicleNOC -> DVC.VehicleNOC
+  Common.DriverVehicleNOC -> DVC.DriverVehicleNOC
   Common.BusinessLicense -> DVC.BusinessLicense
   Common.Odometer -> DVC.Odometer
   Common.InspectionHub -> DVC.InspectionHub
@@ -1178,6 +1191,12 @@ castDocumentType = \case
   Common.UDYAMCertificate -> DVC.UDYAMCertificate
   Common.PanAadhaarLink -> DVC.PanAadhaarLinkage
   Common.VoterIdCard -> DVC.VoterIdCard
+  Common.OperatorPartnerCode -> DVC.OperatorPartnerCode
+  Common.MedicalCertificate -> DVC.MedicalCertificate
+  Common.Rating -> DVC.Rating
+  Common.BotApproval -> DVC.BotApproval
+  Common.NomineeDetails -> DVC.NomineeDetails
+  Common.FleetRegistration -> DVC.FleetRegistration
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -1192,7 +1211,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just [])
+  mbConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory Nothing))
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
   _ <- CQDVC.create newConfig
@@ -1241,6 +1260,9 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isApprovalSupported = Nothing,
         isReminderSupported = Nothing,
         onlyImageVerificationStatusLookupRequired = Nothing,
+        faceMatchSourceDoc = Nothing,
+        markImageValidOnValidationSkip = Nothing,
+        documentOnboardingStage = Nothing,
         ..
       }
   where
@@ -1298,7 +1320,7 @@ getMerchantServiceUsageConfig ::
 getMerchantServiceUsageConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   pure $ mkServiceUsageConfigRes config
 
 mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
@@ -1324,11 +1346,11 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByServiceAndCity (DMSC.MapsService service) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MapsService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MapsService service) merchantOpCityId))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
@@ -1357,11 +1379,11 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByServiceAndCity (DMSC.SmsService service) merchantOpCityId
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SmsService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.SmsService service) merchantOpCityId))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
@@ -2038,20 +2060,94 @@ getMerchantConfigFareProductList merchantShortId opCity area enabled tripCategor
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM
         (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mbSpecialLocationId = case area of
+        SL.Pickup pId _ -> Just pId.getId
+        SL.PickupDrop pId _ _ -> Just pId.getId
+        _ -> Nothing
   fareProducts <-
     SQF.findAllByMerchantOpCityIdAreaTripCategoryEnabled
       merchantOpCity.id
       area
       tripCategory
       enabled
-  pure $ Common.FareProductListRes {fareProducts = mkItem <$> fareProducts}
+  items <- mapM (mkItem merchantOpCity.id mbSpecialLocationId) fareProducts
+  pure $ Common.FareProductListRes {fareProducts = items}
   where
-    mkItem fp =
-      Common.FareProductListItem
-        { farePolicyId = fp.farePolicyId.getId,
-          timeBounds = fp.timeBounds,
-          vehicleVariant = fp.vehicleServiceTier
-        }
+    mkItem merchantOpCityId mbSpecialLocationId fp = do
+      mbVst <- CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchantOpCityId mbSpecialLocationId
+      pure
+        Common.FareProductListItem
+          { farePolicyId = fp.farePolicyId.getId,
+            timeBounds = fp.timeBounds,
+            vehicleVariant = fp.vehicleServiceTier,
+            serviceTierName = maybe "" (.name) mbVst
+          }
+
+-- Airport-ops enable/disable: flip FareProduct.enabled in place for every (area, vehicle)
+-- across all peaks/trip-categories/search-sources. FarePolicy is never touched, so fare
+-- values survive for re-enable; duplicate rows of a key are collapsed to one.
+postMerchantConfigFareProductSetEnabled ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  DCM.SetFareProductEnabledReq ->
+  Flow APISuccess
+postMerchantConfigFareProductSetEnabled merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM
+        (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  -- An empty selection must not silently report success.
+  when (null req.areas) $ throwError (InvalidRequest "areas must be non-empty")
+  when (null req.vehicleServiceTiers) $ throwError (InvalidRequest "vehicleServiceTiers must be non-empty")
+  whenJust req.tripCategories $ \tcs -> when (null tcs) $ throwError (InvalidRequest "tripCategories, if provided, must be non-empty")
+  whenJust req.searchSources $ \ss -> when (null ss) $ throwError (InvalidRequest "searchSources, if provided, must be non-empty")
+  areas <- forM req.areas $ \a ->
+    fromMaybeM (InvalidRequest $ "Invalid area: " <> a) (readMaybe (T.unpack a) :: Maybe SL.Area)
+  tiers <- forM req.vehicleServiceTiers $ \t ->
+    fromMaybeM (InvalidRequest $ "Invalid vehicleServiceTier: " <> t) (readMaybe (T.unpack t) :: Maybe ServiceTierType)
+  mbTripCats <- forM req.tripCategories $
+    mapM $ \tc ->
+      fromMaybeM (InvalidRequest $ "Invalid tripCategory: " <> tc) (readMaybe (T.unpack tc) :: Maybe TripCategory)
+  mbSources <- forM req.searchSources $
+    mapM $ \s ->
+      fromMaybeM (InvalidRequest $ "Invalid searchSource: " <> s) (readMaybe (T.unpack s) :: Maybe DFareProduct.SearchSource)
+  -- Gather every matching product, grouped into one logical config per
+  -- (tripCategory, searchSource, timeBounds) — peak + non-peak included.
+  let groupKey :: DFareProduct.FareProduct -> (Text, Text, Text)
+      groupKey p = (show p.tripCategory, show p.searchSource, show p.timeBounds)
+      matches p =
+        maybe True (p.tripCategory `elem`) mbTripCats
+          && maybe True (p.searchSource `elem`) mbSources
+  groups <-
+    fmap concat $
+      forM areas $ \area ->
+        fmap concat $
+          forM tiers $ \tier -> do
+            products <- filter matches <$> SQF.findAllByMerchantOpCityIdAreaVehicle merchantOpCity.id area tier
+            pure $ DL.groupBy (\x y -> groupKey x == groupKey y) (DL.sortOn groupKey products)
+  -- Per group, keep EXACTLY ONE row (prefer the currently-live one so its
+  -- FarePolicy/fares survive; otherwise a deterministic pick by id), set it to the
+  -- requested state, and collapse the rest. Always keeping one row is what
+  -- guarantees a later re-enable can find the config — disabling twice is a no-op.
+  let resolveGroup grp = case DL.find (.enabled) grp of
+        Just keeper -> Just (keeper, filter (\p -> p.id /= keeper.id) grp)
+        Nothing -> case DL.sortOn (\p -> p.id.getId) grp of
+          (keeper : rest) -> Just (keeper, rest)
+          [] -> Nothing
+      resolved = concatMap (\g -> maybe [] (\r -> [r]) (resolveGroup g)) groups
+      keepers = map fst resolved
+      deletions = concatMap snd resolved
+  forM_ keepers $ \k -> when (k.enabled /= req.enabled) $ SQF.updateFareProductEnabled req.enabled k.id
+  forM_ deletions (CQFProduct.delete . (.id))
+  -- Clean up fare policies left with no referencing fare product (avoid orphans),
+  -- but only when nothing else references them.
+  forM_ (DL.nub (map (.farePolicyId) deletions)) $ \fpId -> do
+    stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
+    when (null stillReferenced) $ CQFP.delete fpId
+  -- clearCache also drops the city-list key, so list/export see the new state immediately.
+  forM_ (keepers <> deletions) CQFProduct.clearCache
+  pure Success
 
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
 getMerchantConfigFarePolicyExport merchantShortId opCity = do
@@ -2274,6 +2370,15 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                 map (\s -> (showT s.timePercentage, showT s.distancePercentage, showT s.farePercentage, showT s.includeActualTimePercentage, showT s.includeActualDistPercentage)) (NE.toList details.pricingSlabs)
               _ -> []
 
+          slabsList =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.SlabsDetails details -> NE.toList details.slabs
+              _ -> []
+          ambulanceSlabsList =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.AmbulanceDetails details -> NE.toList details.slabs
+              _ -> []
+
           -- InterCity details
           (perKmOneWay, perKmRoundTrip, kmPerExtraHour, perDayMaxHour, perDayMaxMins, defaultWaitDest, stateEntryPermit) =
             case farePolicy.farePolicyDetails of
@@ -2319,7 +2424,18 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                   length pricingSlabsList,
                   length driverExtraFeeBoundsList
                 ]
-            _ -> 1
+            FarePolicy.SlabsDetails _ ->
+              maximum
+                [ 1,
+                  length slabsList,
+                  length driverExtraFeeBoundsList
+                ]
+            FarePolicy.AmbulanceDetails _ ->
+              maximum
+                [ 1,
+                  length ambulanceSlabsList,
+                  length driverExtraFeeBoundsList
+                ]
 
           -- Build a row for a given section index
           buildRow sectionIdx =
@@ -2364,6 +2480,50 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                   if sectionIdx == 0
                     then (cfpDesc, cfpFreeSecs, cfpMaxCharge, cfpMaxWaitSecs, cfpMinCharge, cfpPerMetre, cfpPerMin, cfpPercent)
                     else ("", "", "", "", "", "", "", "")
+
+                ( rowBaseDistance,
+                  rowBaseFare,
+                  rowWaitCharge,
+                  rowWaitType,
+                  rowFreeWait,
+                  rowNightCharge,
+                  rowNightType,
+                  rowPlatformFeeType,
+                  rowPlatformFeeVal,
+                  rowPfCgst,
+                  rowPfSgst,
+                  rowPerKmOneWay
+                  ) =
+                    let extractNight nsc = case nsc of
+                          Just (FarePolicy.ProgressiveNightShiftCharge val) -> (showT val, "ProgressiveNightShiftCharge")
+                          Just (FarePolicy.ConstantNightShiftCharge val) -> (showT val, "ConstantNightShiftCharge")
+                          Nothing -> ("", "")
+                        extractWait mbWci = case mbWci of
+                          Just wci -> (extractWaitingCharge wci.waitingCharge, extractWaitingChargeType wci.waitingCharge, showT wci.freeWaitingTime)
+                          Nothing -> ("0", "PerMinuteWaitingCharge", "0")
+                        extractPlatformFee mbPfi = case mbPfi of
+                          Just pfi -> case pfi.platformFeeCharge of
+                            FarePolicy.ProgressivePlatformFee val -> ("ProgressivePlatformFee", showT val, showT pfi.cgst, showT pfi.sgst)
+                            FarePolicy.ConstantPlatformFee val -> ("ConstantPlatformFee", showT val, showT pfi.cgst, showT pfi.sgst)
+                          Nothing -> ("", "", "", "")
+                     in case (slabsList, ambulanceSlabsList) of
+                          (_ : _, _) ->
+                            let slab = slabsList !! min sectionIdx (length slabsList - 1)
+                                (wc, wt, fw) = extractWait slab.waitingChargeInfo
+                                (nc, nt) = extractNight slab.nightShiftCharge
+                                (pfType, pfVal, pfCg, pfSg) = extractPlatformFee slab.platformFeeInfo
+                             in (showT slab.startDistance, showT slab.baseFare, wc, wt, fw, nc, nt, pfType, pfVal, pfCg, pfSg, perKmOneWay)
+                          -- TODO: Ambulance slabs are age-banded by `vehicleAge`, but there is no CSV
+                          -- column for it, so it is not emitted here and the import side hardcodes
+                          -- vehicleAge = 0. Multi-band ambulance policies therefore do not round-trip
+                          -- faithfully. Add a vehicleAge column (export + import) to fix.
+                          (_, _ : _) ->
+                            let slab = ambulanceSlabsList !! min sectionIdx (length ambulanceSlabsList - 1)
+                                (wc, wt, fw) = extractWait slab.waitingChargeInfo
+                                (nc, nt) = extractNight slab.nightShiftCharge
+                                (pfType, pfVal, pfCg, pfSg) = extractPlatformFee slab.platformFeeInfo
+                             in (showT slab.baseDistance, showT slab.baseFare, wc, wt, fw, nc, nt, pfType, pfVal, pfCg, pfSg, showT slab.perKmRate)
+                          _ -> (baseDist, baseFareVal, waitCharge, waitType, freeWait, nightCharge, nightType, platformFeeType, platformFeeVal, pfCgst, pfSgst, perKmOneWay)
              in FarePolicyCSVRow
                   { city = showT city,
                     vehicleServiceTier = showT fp.vehicleServiceTier,
@@ -2391,16 +2551,16 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     parkingCharge = maybe "" showT farePolicy.parkingCharge,
                     perStopCharge = maybe "" showT farePolicy.perStopCharge,
                     currency = showT farePolicy.currency,
-                    baseDistance = baseDist,
-                    baseFare = baseFareVal,
+                    baseDistance = rowBaseDistance,
+                    baseFare = rowBaseFare,
                     deadKmFare = deadKmFare,
                     pickupChargesMin = pickupMin,
                     pickupChargesMax = pickupMax,
-                    waitingCharge = waitCharge,
-                    waitingChargeType = waitType,
-                    nightShiftCharge = nightCharge,
-                    nightShiftChargeType = nightType,
-                    freeWatingTime = freeWait,
+                    waitingCharge = rowWaitCharge,
+                    waitingChargeType = rowWaitType,
+                    nightShiftCharge = rowNightCharge,
+                    nightShiftChargeType = rowNightType,
+                    freeWatingTime = rowFreeWait,
                     startDistanceDriverAddition = driverAddStart,
                     minFee = driverMinFee,
                     maxFee = driverMaxFee,
@@ -2421,10 +2581,10 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     perMetreCancellationCharge = rowCfpPerMetre,
                     perMinuteCancellationCharge = rowCfpPerMin,
                     percentageOfRideFareToBeCharged = rowCfpPercent,
-                    platformFeeChargeType = platformFeeType,
-                    platformFeeCharge = platformFeeVal,
-                    platformFeeCgst = pfCgst,
-                    platformFeeSgst = pfSgst,
+                    platformFeeChargeType = rowPlatformFeeType,
+                    platformFeeCharge = rowPlatformFeeVal,
+                    platformFeeCgst = rowPfCgst,
+                    platformFeeSgst = rowPfSgst,
                     platformFeeChargeFarePolicyLevel = maybe "" showT farePolicy.platformFee,
                     platformFeeCgstFarePolicyLevel = maybe "" showT farePolicy.cgst,
                     platformFeeSgstFarePolicyLevel = maybe "" showT farePolicy.sgst,
@@ -2446,7 +2606,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     bufferKms = rowBufKms,
                     bufferMeters = rowBufMeters,
                     perHourCharge = perHourChargeVal,
-                    perKmRateOneWay = perKmOneWay,
+                    perKmRateOneWay = rowPerKmOneWay,
                     perKmRateRoundTrip = perKmRoundTrip,
                     kmPerPlannedExtraHour = kmPerExtraHour,
                     perDayMaxHourAllowance = perDayMaxHour,
@@ -2531,12 +2691,6 @@ filterBoundedFareProductsFromSnapshot allFareProducts area vehicleServiceTier tr
         then (boundedFilter (SQF.removeCityFromTripCategory tripCategory), SQF.removeCityFromTripCategory tripCategory)
         else (results, tripCategory)
 
--- | Build a map of FarePolicyId → number of FareProducts referencing it.
--- Used to detect orphaned FarePolicies without per-product DB queries.
--- Extracted for testability — pure, no DB access.
-buildFarePolicyUsageCount :: [DFareProduct.FareProduct] -> Map.Map (Id FarePolicy.FarePolicy) Int
-buildFarePolicyUsageCount = Map.fromListWith (+) . map (\fp -> (fp.farePolicyId, 1))
-
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -2546,18 +2700,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
       flatFarePolicies <- readCsv merchant.id merchantOpCity.distanceUnit req.file merchantOpCity.id
       logTagInfo "Read file: " (show flatFarePolicies)
-      -- Pre-fetch ALL fare products for this city (enabled AND disabled) in two queries.
-      -- The combined snapshot is used for BOTH:
-      --   1. Finding old fare products to replace — disabled ones must also be replaced so
-      --      the domain stays unique (consistent with the upfront uniqueness check below).
-      --   2. Building the orphan-check usage count — a FarePolicy must not be deleted while
-      --      a disabled FareProduct still references it.
+      -- Pre-fetch ALL fare products for this city (enabled AND disabled) in two queries,
+      -- used to find old fare products to replace — disabled ones must also be replaced so
+      -- the domain stays unique (consistent with the upfront uniqueness check below).
       enabledCityFareProducts <- SQF.findAllFareProductByMerchantOpCityId merchantOpCity.id True
       disabledCityFareProducts <- SQF.findAllFareProductByMerchantOpCityId merchantOpCity.id False
       let allCityFareProducts = enabledCityFareProducts ++ disabledCityFareProducts
-      -- Usage count: how many FareProducts (any state) reference each FarePolicyId.
-      -- Threaded through the fold; decremented on delete; policy deleted when count reaches 0.
-      let farePolicyUsageCount = buildFarePolicyUsageCount allCityFareProducts
       -- Reject conflicting groups upfront: two groups with the same lookup domain
       -- (area, vehicleServiceTier, tripCategory, searchSource, timeBounds) but different
       -- enabled/disableRecompute would both create a FareProduct for the same domain,
@@ -2574,7 +2722,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               <> "Please deduplicate: "
               <> show duplicateKeys
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
-      (farePolicyErrors, _, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap, farePolicyUsageCount) groups
+      (farePolicyErrors, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
       return $
         Common.UpsertFarePolicyResp
           { unprocessedFarePolicies = farePolicyErrors,
@@ -2595,12 +2743,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       where
         fst7 (dr, c, t, tr, a, tb, ss, en, _) = (dr, c, t, tr, a, tb, ss, en)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], Map.Map Text Bool, Map.Map (Id FarePolicy.FarePolicy) Int) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool, Map.Map (Id FarePolicy.FarePolicy) Int)
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> [DFareProduct.FareProduct] -> ([Text], Map.Map Text Bool) -> [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
     processFarePolicyGroup _ _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
-    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, boundedAlreadyDeletedMap, farePolicyUsageCount) (x : xs) = do
+    processFarePolicyGroup merchantOpCity allCityFareProducts (errors, boundedAlreadyDeletedMap) (x : xs) = do
       let (disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, enabled', firstFarePolicy) = x
       if city /= opCity
-        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap, farePolicyUsageCount)
+        then return (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
         else do
           let mergeFarePolicy newId firstFarePolicy'@FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, _, _, fp) -> fp) xs
@@ -2711,7 +2859,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           newId <- generateGUID
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
-          mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing
+          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing))
           let baseFares = getAllBaseFaresFromFarePolicy finalFarePolicy
               minBaseFare = mbTransporterConfig >>= (.minBaseFare)
               allowUpdate = fromMaybe True (mbTransporterConfig >>= (.allowFarePolicyUpdateBelowMinBaseFare))
@@ -2719,7 +2867,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               belowMinMsg = "Base fare is below the minimum base fare for this city (area: " <> show area <> ", vehicleServiceTier: " <> show vehicleServiceTier <> ", tripCategory: " <> show tripCategory <> ")."
               newErrors = if anyBelowMin then errors <> [belowMinMsg] else errors
           if anyBelowMin && not allowUpdate
-            then return (newErrors, boundedAlreadyDeletedMap, farePolicyUsageCount)
+            then return (newErrors, boundedAlreadyDeletedMap)
             else do
               CQFP.create finalFarePolicy
               case finalFarePolicy.farePolicyDetails of
@@ -2769,22 +2917,18 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                                 markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                         return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
-              -- Delete old fare products. Use the in-memory usage count to decide whether the
-              -- FarePolicy itself is now orphaned (no remaining FareProducts reference it),
-              -- avoiding one DB query per old fare product.
+              -- Delete old fare products first, then per unique FarePolicy check whether
+              -- ANY FareProduct (across all cities / merchants) still references it before
+              -- deleting the policy.  A per-city in-memory count would undercount policies
+              -- shared across cities (e.g. cloned via postMerchantConfigOperatingCityCreate),
+              -- silently orphaning them.  One extra query per unique policy is cheap here.
               -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
               -- in the DB, to minimise the window where concurrent search requests could
               -- query an empty DB state and cache empty results.
-              newFarePolicyUsageCount <-
-                foldlM
-                  ( \usageCount fp -> do
-                      let currentCount = Map.findWithDefault 0 fp.farePolicyId usageCount
-                      when (currentCount <= 1) $ CQFP.delete fp.farePolicyId
-                      CQFProduct.delete fp.id
-                      return $ Map.adjust (subtract 1) fp.farePolicyId usageCount
-                  )
-                  farePolicyUsageCount
-                  oldFareProducts
+              forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
+              forM_ (DL.nub (map (.farePolicyId) oldFareProducts)) $ \fpId -> do
+                stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
+                when (null stillReferenced) $ CQFP.delete fpId
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
@@ -2797,9 +2941,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
 
-              return (newErrors, newBoundedAlreadyDeletedMap, newFarePolicyUsageCount)
+              return (newErrors, newBoundedAlreadyDeletedMap)
 
-    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId vehicleServiceTier merchanOperatingCityId (Just []) Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId vehicleServiceTier merchanOperatingCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
 
     makeFarePolicy :: Id DM.Merchant -> Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)
     makeFarePolicy merchantId merchantOpCity distanceUnit idx row = do
@@ -3114,7 +3258,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, tollTaxChargeConfig = tollTaxChargeConfig, ..})
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"
@@ -3246,7 +3390,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
+            fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
+            paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
+            fareSettlementType = request.fareSettlementType,
             ..
           }
 
@@ -3309,6 +3456,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
           }
 
@@ -3385,9 +3533,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- driver pool config
   mbDriverPoolConfigs <-
-    CQDPC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) Nothing >>= \case
+    getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) Nothing)) >>= \case
       [] -> do
-        driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId (Just []) Nothing
+        driverPoolConfigs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId baseOperatingCityId (Just []) Nothing))
         newDriverPoolConfigs <- mapM (buildPoolConfig newMerchantId newMerchantOperatingCityId now) driverPoolConfigs
         return $ Just newDriverPoolConfigs
       _ -> return Nothing
@@ -3400,16 +3548,16 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQFProduct.findAllFareProductByMerchantOpCityIdAndArea newMerchantOperatingCityId SL.Default >>= \case
           [] -> do
             fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityIdAndArea baseOperatingCityId SL.Default
-            newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
+            newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId now) fareProducts
             return $ Just newFareProducts
           _ -> return Nothing
       else return Nothing
 
   -- vehicle service tier
   mbVehicleServiceTier <-
-    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) Nothing >>= \case
+    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
       [] -> do
-        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId (Just []) Nothing
+        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId Nothing
         newVehicleServiceTiers <- mapM (buildVehicleServiceTier newMerchantId newMerchantOperatingCityId) vehicleServiceTiers
         return $ Just newVehicleServiceTiers
       _ -> return Nothing
@@ -3425,9 +3573,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- leader board configs
   mbLeaderBoardConfig <-
-    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
+    getConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, leaderBoardType = Nothing}) (Just (CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
       [] -> do
-        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
+        leaderBoardConfigs <- getConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = baseOperatingCityId.getId, leaderBoardType = Nothing}) (Just (CQLBC.findAllByMerchantOpCityId baseOperatingCityId Nothing))
         newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newMerchantId newMerchantOperatingCityId) leaderBoardConfigs
         return $ Just newLeaderBoardConfigs
       _ -> return Nothing
@@ -3461,9 +3609,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant service usage config
   mbMerchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
       Nothing -> do
-        merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId baseOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
         let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantId newMerchantOperatingCityId now merchantServiceUsageConfig
         return $ Just newMerchantServiceUsageConfig
       _ -> return Nothing
@@ -3488,27 +3636,27 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- onboarding document config
   mbDocumentVerificationConfigs <-
-    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
+    getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
       [] -> do
-        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
+        documentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId baseOperatingCityId Nothing))
         let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newMerchantId newMerchantOperatingCityId now) documentVerificationConfigs
         return $ Just newDocumentVerificationConfigs
       _ -> return Nothing
 
   -- payout config
   mbPayoutConfigs <-
-    CPC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getConfig (PayoutConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing}) (Just (CQPC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
       [] -> do
-        payoutConfigs <- CPC.findAllByMerchantOpCityId baseOperatingCityId Nothing
+        payoutConfigs <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing}) (Just (CQPC.findAllByMerchantOpCityId baseOperatingCityId Nothing))
         let newPayoutConfigs = map (buildPayoutConfig newMerchantId newMerchantOperatingCityId now) payoutConfigs
         return $ Just newPayoutConfigs
       _ -> return Nothing
 
   -- transporter config
   mbTransporterConfig <-
-    CTC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
       Nothing -> do
-        transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId baseOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest "Transporter Config not found")
         let newTransporterConfig = buildTransporterConfig newMerchantId newMerchantOperatingCityId now transporterConfig
         return $ Just newTransporterConfig
       Just _ -> return Nothing
@@ -3522,17 +3670,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- call ride exophone
   mbExophone <-
-    CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId >>= \case
+    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId))
         return $ Just exophones
       _ -> return Nothing
 
   -- issue config
   mbIssueConfig <-
-    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.DRIVER >>= \case
+    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.DRIVER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.DRIVER)) >>= \case
       Nothing -> do
-        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.DRIVER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER)) >>= fromMaybeM (InvalidRequest "Issue Config not found")
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
@@ -3612,7 +3760,16 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
         whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
-        whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
+        whenJust mbFareProducts $ \newFareProductPairs ->
+          forM_ newFareProductPairs $ \(mbClonedPolicy, fareProduct) -> do
+            whenJust mbClonedPolicy $ \cloned -> do
+              CQFP.create cloned
+              case cloned.farePolicyDetails of
+                FarePolicy.AmbulanceDetails details ->
+                  forM_ (NE.toList details.slabs) $ \slab ->
+                    QueriesFPAD.create (cloned.id, slab)
+                _ -> pure ()
+            CQFProduct.create fareProduct
         whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
         whenJust mbGoHomeConfig $ \newGoHomeConfig -> CGHC.create newGoHomeConfig
         whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
@@ -3663,7 +3820,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CPC.clearCacheById newMerchantOperatingCityId
         CQTC.clearCache newMerchantOperatingCityId
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.DRIVER
-        exoPhone <- CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId
+        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Just DExophone.CALL_RIDE}) (Just (CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId))
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Hedis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
@@ -3693,7 +3850,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             region = show req.city,
             state = req.state,
             city = req.city,
-            geom = Just req.geom
+            geom = Just req.geomGeoJson
           }
 
     buildMerchant merchantId merchantData currentTime DM.Merchant {city = _city, ..} =
@@ -3711,6 +3868,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
                 destination = Regions [show req.city]
               },
           uniqueKeyId = merchantData.uniqueKeyId,
+          gatewayAndRegistryPriorityList = maybe gatewayAndRegistryPriorityList (map castNetworkEnums) req.gatewayAndRegistryPriorityList,
           createdAt = currentTime,
           updatedAt = currentTime,
           ..
@@ -3768,15 +3926,39 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             ..
           }
 
-    buildFareProduct mId newCityId DFareProduct.FareProduct {..} = do
+    -- Clone the source FarePolicy so the new FareProduct owns its own row.
+    -- Reusing the base city's farePolicyId breaks the CSV upsert flow, which
+    -- decides orphaning from a per-city snapshot and can delete a policy still
+    -- referenced by the base city.  Returns the cloned policy (to be created
+    -- alongside the product) or Nothing if the source policy is missing.
+    buildFareProduct mId newCityId currentTime DFareProduct.FareProduct {..} = do
       newId <- generateGUID
-      return $
-        DFareProduct.FareProduct
-          { id = newId,
-            merchantId = mId,
-            merchantOperatingCityId = newCityId,
-            ..
-          }
+      mbSourcePolicy <- CQFP.findById Nothing farePolicyId
+      (mbClonedPolicy, newFarePolicyId) <- case mbSourcePolicy of
+        Nothing -> do
+          logError $ "buildFareProduct: source FarePolicy " <> farePolicyId.getId <> " not found; new FareProduct will reference the original id"
+          return (Nothing, farePolicyId)
+        Just sourcePolicy -> do
+          newFpId <- generateGUID
+          let cloned =
+                (sourcePolicy :: FarePolicy.FarePolicy)
+                  { FarePolicy.id = newFpId,
+                    FarePolicy.merchantId = Just mId,
+                    FarePolicy.merchantOperatingCityId = Just newCityId,
+                    FarePolicy.createdAt = currentTime,
+                    FarePolicy.updatedAt = currentTime
+                  }
+          return (Just cloned, newFpId)
+      return
+        ( mbClonedPolicy,
+          DFareProduct.FareProduct
+            { id = newId,
+              merchantId = mId,
+              merchantOperatingCityId = newCityId,
+              farePolicyId = newFarePolicyId,
+              ..
+            }
+        )
 
     buildVehicleServiceTier mId newCityId DVST.VehicleServiceTier {..} = do
       newId <- generateGUID
@@ -3958,8 +4140,7 @@ data VehicleVariantMappingCSVRow = VehicleVariantMappingCSVRow
     manufacturerModel :: Text,
     reviewRequired :: Text,
     vehicleModel :: Text,
-    priority :: Text,
-    enableForAirport :: Text
+    priority :: Text
   }
 
 instance FromNamedRecord VehicleVariantMappingCSVRow where
@@ -3973,7 +4154,6 @@ instance FromNamedRecord VehicleVariantMappingCSVRow where
       <*> r .: "review_required"
       <*> r .: "vehicle_model"
       <*> r .: "priority"
-      <*> r .: "enable_for_airport"
 
 postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
 postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = do
@@ -4010,8 +4190,7 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
             reviewRequired = cleanFieldToLower row.reviewRequired <&> (mapToBool . T.toLower),
             vehicleModel = Just vehicleModel,
             priority = cleanFieldToLower row.priority >>= readMaybe . T.unpack,
-            bodyType = Nothing,
-            enableForAirport = cleanFieldToLower row.enableForAirport <&> (mapToBool . T.toLower)
+            bodyType = Nothing
           }
 
     validateCategory :: Text -> Flow Enums.VehicleCategory
@@ -4033,6 +4212,15 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
       "BOAT" -> Just Enums.BOAT
       _ -> Nothing
 
+-- | Invalidate every cached read of a city's SubscriptionConfig: the per-service entry plus both
+-- UI-enabled listings, which are cached under their own keys and would otherwise keep serving the
+-- pre-update value to the driver app for the full config TTL.
+clearSubscriptionConfigCacheForCity :: Id DMOC.MerchantOperatingCity -> Plan.ServiceNames -> Flow ()
+clearSubscriptionConfigCacheForCity merchantOpCityId serviceName = do
+  CQSC.clearCacheByServiceName merchantOpCityId serviceName
+  CQSC.clearCacheByUIEnabled merchantOpCityId True
+  CQSC.clearCacheByUIEnabled merchantOpCityId False
+
 postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> Context.City -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
 postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -4041,40 +4229,38 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     Just Common.PLAN -> clearPlanCache merchantOpCity
     Just Common.SUBSCRIPTION_CONFIG -> clearSubscriptionConfigCache merchantOpCity req.serviceName
     Just Common.PLAN_TRANSLATION -> clearPlanTranslation
+    Just Common.VENDOR_SPLIT_DETAILS -> clearVendorSplitCache merchantOpCity
     Nothing -> clearPlanCache merchantOpCity
   where
     clearPlanCache merchantOpCity = do
       plans <- QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
       let plansToClearCache = filter (filterCriteriaPlan req.serviceName (Id <$> req.planId)) plans
-      forM_ plansToClearCache $ \plan -> do
-        let keysToClear =
-              [ CQPlan.makeAllPlanKey,
-                CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) (Just True),
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated) Nothing,
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing (Just True),
-                CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing Nothing,
-                CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory False,
-                CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
-                CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),
-                CQPlan.makeIdKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleCategory plan.isDeprecated,
-                SPayment.makeOfferListCacheVersionKey
-              ]
-        forM_ keysToClear $ \key -> Hedis.del key
+      forM_ plansToClearCache CQPlan.clearPlanCacheForPlan
+      Hedis.del SPayment.makeOfferListCacheVersionKey
       return Success
     clearSubscriptionConfigCache merchantOpCity mbServiceName = do
       let serviceName = maybe Plan.YATRI_SUBSCRIPTION castServiceName mbServiceName
-      let keysToClear =
-            [ CQSC.makeMerchantOpCityIdAndServiceKey merchantOpCity.id serviceName,
-              CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id True,
-              CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id False
-            ]
-      forM_ keysToClear $ \key -> Hedis.del key
+      clearSubscriptionConfigCacheForCity merchantOpCity.id serviceName
       return Success
     clearPlanTranslation = do
       pts <- SQPT.findAllByPlanId . Id =<< (pure req.planId >>= fromMaybeM (InvalidRequest $ "plan id not provided"))
       let keysToClear = map (\pt -> SCQPT.makePlanIdAndLanguageKey pt.planId pt.language) pts
-      forM_ keysToClear $ \key -> Hedis.del key
+      -- PlanTranslation is read via withCrossAppRedis (see CachedQueries.PlanTranslation),
+      Hedis.withCrossAppRedis $ forM_ keysToClear $ \key -> Hedis.del key
+      return Success
+    clearVendorSplitCache merchantOpCity = do
+      planIds <- case req.planId of
+        Just planId -> pure [Id planId]
+        Nothing -> map (\p -> p.id) <$> QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
+      forM_ planIds $ \planId -> do
+        rows <- QVSD.findAllByCityAndPlan merchantOpCity.id (Just $ getId planId)
+        let keysToClear =
+              CQVSD.makeCityAndPlanKey merchantOpCity.id planId :
+              map CQVSD.makeRowAreaKey rows
+        forM_ keysToClear $ \key -> Hedis.del key
+
+      planlessRows <- QVSD.findAllByCityAndPlan merchantOpCity.id Nothing
+      forM_ (map CQVSD.makeRowAreaKey planlessRows) $ \key -> Hedis.del key
       return Success
     filterCriteriaPlan mbServiceName mbPlanId =
       case (mbServiceName, mbPlanId) of
@@ -4093,19 +4279,19 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
   merchantOperatingCity <-
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  let mocId = merchantOperatingCity.id
   case req.action of
-    Common.UPDATE_CONFIG -> applyOperation Common.UPDATE_CONFIG mocId req
-    Common.CREATE_CONFIG -> applyOperation Common.CREATE_CONFIG mocId req
+    Common.UPDATE_CONFIG -> applyOperation Common.UPDATE_CONFIG merchantOperatingCity req
+    Common.CREATE_CONFIG -> applyOperation Common.CREATE_CONFIG merchantOperatingCity req
   where
-    applyOperation :: Common.Action -> Id DMOC.MerchantOperatingCity -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp
-    applyOperation actionType _ Common.UpsertPlanAndConfigReq {command, tableName, config} =
+    applyOperation :: Common.Action -> DMOC.MerchantOperatingCity -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp
+    applyOperation actionType merchantOpCity Common.UpsertPlanAndConfigReq {command, tableName, config} =
       case command of
         Common.VIEW_DIFF -> do
           existingConfig <- case tableName of
-            Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(val :: DSC.SubscriptionConfig) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName val.merchantOperatingCityId val.serviceName)
+            Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(k :: SubscriptionConfigKey) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Just merchantOpCity.id) k.serviceName)
             Common.PLAN -> runWithDecodeToType config tableName True (\(val :: Plan.Plan) -> QPlan.findByIdAndPaymentModeWithServiceName val.id val.paymentMode val.serviceName)
             Common.PLAN_TRANSLATION -> runWithDecodeToType config tableName True (\(val :: [PlanTrans.PlanTranslation]) -> catMaybes <$> mapM (\ele -> SQPT.findByPlanIdAndLanguage ele.planId ele.language) val)
+            Common.VENDOR_SPLIT_DETAILS -> runWithDecodeToType config tableName True (\(val :: [DVSD.VendorSplitDetails]) -> catMaybes <$> mapM (\ele -> QVSD.findByPrimaryKey ele.area ele.merchantOperatingCityId ele.vehicleVariant ele.vendorId) val)
           diffVal <- do
             case existingConfig of
               JsonVal val -> pure $ Just (jsonDiff val config)
@@ -4119,13 +4305,54 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
                 diff = diffVal
               }
         Common.COMMIT -> do
+          let resolvedMerchantId = merchantOpCity.merchantId
+              resolvedMerchantOpCityId = merchantOpCity.id
+              withResolvedPlanIds plan = plan {Plan.merchantId = resolvedMerchantId, Plan.merchantOpCityId = resolvedMerchantOpCityId}
+              withResolvedVendorSplitCity vendorSplit = vendorSplit {DVSD.merchantOperatingCityId = resolvedMerchantOpCityId}
+              withResolvedSubscriptionConfigCity subscriptionConfig = subscriptionConfig {DSC.merchantOperatingCityId = Just resolvedMerchantOpCityId}
           _ <- case (actionType, tableName) of
-            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.create
-            (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlan.create
-            (Common.CREATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ (\(val :: [PlanTrans.PlanTranslation]) -> forM_ val SQPT.create)
-            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.updateByPrimaryKey
-            (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlanE.updateByPrimaryKeyP
-            (Common.UPDATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ (\(val :: [PlanTrans.PlanTranslation]) -> forM_ val SQPT.updateByPrimaryKey)
+            (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> do
+              templates <- QSC.findAllByMerchantOpCityId (Just resolvedMerchantOpCityId)
+              template <- fromMaybeM (InvalidRequest "No existing subscription config in this city to clone as a create template") (listToMaybe (DL.sortOn (\c -> c.serviceName) templates))
+              runWithDecodeToType (mergeJsonObjects (toJSON template) config) tableName False $ \(sc :: DSC.SubscriptionConfig) -> do
+                let scToCreate = withResolvedSubscriptionConfigCity sc
+                QSC.create scToCreate
+                clearSubscriptionConfigCacheForCity resolvedMerchantOpCityId scToCreate.serviceName
+            (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
+              let planToCreate = withResolvedPlanIds plan
+              QPlan.create planToCreate
+              CQPlan.clearPlanCacheForPlan planToCreate
+            (Common.CREATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ \(val :: [PlanTrans.PlanTranslation]) -> do
+              forM_ val SQPT.create
+              Hedis.withCrossAppRedis $ forM_ val $ \pt -> Hedis.del (SCQPT.makePlanIdAndLanguageKey pt.planId pt.language)
+            (Common.CREATE_CONFIG, Common.VENDOR_SPLIT_DETAILS) -> runWithDecodeToType config tableName False $ \(val :: [DVSD.VendorSplitDetails]) -> do
+              let vendorSplitsToCreate = map withResolvedVendorSplitCity val
+              forM_ vendorSplitsToCreate QVSD.create
+              forM_ vendorSplitsToCreate clearVendorSplitRowCache
+            (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) ->
+              runWithDecodeToType config tableName False $ \(k :: SubscriptionConfigKey) -> do
+                existing <- QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName (Just resolvedMerchantOpCityId) k.serviceName >>= fromMaybeM (InvalidRequest "SubscriptionConfig not found for update")
+                void $
+                  runWithDecodeToType (mergeJsonObjects (toJSON existing) config) tableName False $ \(sc :: DSC.SubscriptionConfig) -> do
+                    let scToUpdate = withResolvedSubscriptionConfigCity sc
+                    QSC.updateByPrimaryKey scToUpdate
+                    clearSubscriptionConfigCacheForCity resolvedMerchantOpCityId scToUpdate.serviceName
+            (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False $ \(plan :: Plan.Plan) -> do
+              let planToUpdate = withResolvedPlanIds plan
+              mbOldPlan <- QPlan.findByPrimaryKey planToUpdate.id
+              QPlanE.updateByPrimaryKeyP planToUpdate
+              whenJust mbOldPlan CQPlan.clearPlanCacheForPlan
+              CQPlan.clearPlanCacheForPlan planToUpdate
+            (Common.UPDATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ \(val :: [PlanTrans.PlanTranslation]) -> do
+              forM_ val SQPT.updateByPrimaryKey
+              Hedis.withCrossAppRedis $ forM_ val $ \pt -> Hedis.del (SCQPT.makePlanIdAndLanguageKey pt.planId pt.language)
+            (Common.UPDATE_CONFIG, Common.VENDOR_SPLIT_DETAILS) -> runWithDecodeToType config tableName False $ \(val :: [DVSD.VendorSplitDetails]) ->
+              forM_ val $ \rawVendorSplit -> do
+                let vendorSplitToUpdate = withResolvedVendorSplitCity rawVendorSplit
+                mbOldRow <- QVSD.findByPrimaryKey vendorSplitToUpdate.area vendorSplitToUpdate.merchantOperatingCityId vendorSplitToUpdate.vehicleVariant vendorSplitToUpdate.vendorId
+                QVSD.updateByPrimaryKey vendorSplitToUpdate
+                whenJust mbOldRow clearVendorSplitRowCache
+                clearVendorSplitRowCache vendorSplitToUpdate
           pure
             Common.UpsertPlanAndConfigResp
               { respCode = Success,
@@ -4150,6 +4377,102 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
             else pure $ Void ()
         DAT.Error err ->
           throwError $ InvalidRequest (show err)
+    -- VendorSplit caches live in the default namespace (plain safeGet reads). Used 3× (create,
+    -- plus update's old and new rows), so kept as a helper rather than inlined.
+    clearVendorSplitRowCache :: DVSD.VendorSplitDetails -> Flow ()
+    clearVendorSplitRowCache vendorSplit = do
+      whenJust (Id <$> vendorSplit.dailyPlanId) $ \dailyPlanId -> Hedis.del (CQVSD.makeCityAndPlanKey vendorSplit.merchantOperatingCityId dailyPlanId)
+      Hedis.del (CQVSD.makeRowAreaKey vendorSplit)
+
+getMerchantConfigVendorSplitDetailsList :: ShortId DM.Merchant -> Context.City -> Flow [Common.VendorSplitDetailsAPIEntity]
+getMerchantConfigVendorSplitDetailsList merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  vendorSplits <- QVSD.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  pure $ map toVendorSplitDetailsAPIEntity vendorSplits
+  where
+    toVendorSplitDetailsAPIEntity vendorSplit =
+      Common.VendorSplitDetailsAPIEntity
+        { merchantOperatingCityId = getId vendorSplit.merchantOperatingCityId,
+          area = show vendorSplit.area,
+          vendorId = vendorSplit.vendorId,
+          vehicleVariant = show vendorSplit.vehicleVariant,
+          splitType = show vendorSplit.splitType,
+          splitValue = vendorSplit.splitValue,
+          maxVendorFeeAmount = vendorSplit.maxVendorFeeAmount,
+          dailyPlanId = vendorSplit.dailyPlanId
+        }
+
+getMerchantConfigSubscriptionConfigList :: ShortId DM.Merchant -> Context.City -> Flow [Common.SubscriptionConfigAPIEntity]
+getMerchantConfigSubscriptionConfigList merchantShortId city = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  configs <- QSC.findAllByMerchantOpCityId (Just merchantOperatingCity.id)
+  pure $ map (toSubscriptionConfigAPIEntity merchantOperatingCity.id) configs
+  where
+    toSubscriptionConfigAPIEntity mocId cfg =
+      Common.SubscriptionConfigAPIEntity
+        { merchantOperatingCityId = getId (fromMaybe mocId cfg.merchantOperatingCityId),
+          serviceName = show cfg.serviceName,
+          allowDriverFeeCalcSchedule = cfg.allowDriverFeeCalcSchedule,
+          allowDueAddition = cfg.allowDueAddition,
+          allowManualPaymentLinks = cfg.allowManualPaymentLinks,
+          enableCityBasedFeeSwitch = cfg.enableCityBasedFeeSwitch,
+          enableOffersForMembers = cfg.enableOffersForMembers,
+          enableServiceUsageChargeDefault = cfg.enableServiceUsageChargeDefault,
+          freeTrialRidesApplicable = cfg.freeTrialRidesApplicable,
+          isFreeTrialDaysApplicable = cfg.isFreeTrialDaysApplicable,
+          isSubscriptionEnabledAtCategoryLevel = cfg.isSubscriptionEnabledAtCategoryLevel,
+          isTriggeredAtEndRide = cfg.isTriggeredAtEndRide,
+          isUIEnabled = cfg.isUIEnabled,
+          sendDeepLink = cfg.sendDeepLink,
+          sendInAppFcmNotifications = cfg.sendInAppFcmNotifications,
+          useOverlayService = cfg.useOverlayService,
+          autopayEnabled = cfg.autopayEnabled,
+          enableDailyPlanVendorSplit = cfg.enableDailyPlanVendorSplit,
+          isVendorSplitEnabled = cfg.isVendorSplitEnabled,
+          showManualPlansInUI = cfg.showManualPlansInUI,
+          subscriptionDown = cfg.subscriptionDown,
+          genericBatchSizeForJobs = cfg.genericBatchSizeForJobs,
+          maxRetryCount = cfg.maxRetryCount,
+          deepLinkExpiryTimeInMinutes = cfg.deepLinkExpiryTimeInMinutes,
+          numberOfFreeTrialRides = cfg.numberOfFreeTrialRides,
+          waiveOffOfferTitle = cfg.waiveOffOfferTitle,
+          waiveOffOfferDescription = cfg.waiveOffOfferDescription,
+          defaultCityVehicleCategory = show cfg.defaultCityVehicleCategory,
+          paymentLinkChannel = show cfg.paymentLinkChannel,
+          paymentServiceName = toJSON cfg.paymentServiceName,
+          payoutServiceName = toJSON cfg.payoutServiceName,
+          partialDueClearanceMessageKey = show <$> cfg.partialDueClearanceMessageKey,
+          cgstPercentageOneTimeSecurityDeposit = toJSON cfg.cgstPercentageOneTimeSecurityDeposit,
+          sgstPercentageOneTimeSecurityDeposit = toJSON cfg.sgstPercentageOneTimeSecurityDeposit,
+          genericJobRescheduleTime = toJSON cfg.genericJobRescheduleTime,
+          genericNextJobScheduleTimeThreshold = toJSON cfg.genericNextJobScheduleTimeThreshold,
+          paymentLinkJobTime = toJSON cfg.paymentLinkJobTime,
+          manualPaymentLinkRateLimitExpirySeconds = toJSON cfg.manualPaymentLinkRateLimitExpirySeconds,
+          sendManualPaymentLinkJobMaxDelay = toJSON cfg.sendManualPaymentLinkJobMaxDelay,
+          dataEntityToSend = toJSON cfg.dataEntityToSend,
+          disabledVariantsForSubscription = toJSON cfg.disabledVariantsForSubscription,
+          eventsEnabledForWebhook = toJSON cfg.eventsEnabledForWebhook,
+          executionEnabledForVehicleCategories = toJSON cfg.executionEnabledForVehicleCategories,
+          extWebhookConfigs = toJSON (isJust cfg.extWebhookConfigs),
+          subscriptionEnabledForVehicleCategories = toJSON cfg.subscriptionEnabledForVehicleCategories,
+          vendorMigrationMappings = toJSON cfg.vendorMigrationMappings,
+          webhookConfig = toJSON cfg.webhookConfig
+        }
+
+-- Minimal decode of just the identifying key from a (possibly partial) subscription-config payload.
+data SubscriptionConfigKey = SubscriptionConfigKey {serviceName :: Plan.ServiceNames}
+  deriving (Generic)
+
+instance FromJSON SubscriptionConfigKey
+
+-- Right-biased shallow merge of two JSON objects: keys in the patch override the base.
+mergeJsonObjects :: Value -> Value -> Value
+mergeJsonObjects (DAT.Object base) (DAT.Object patch) = DAT.Object (HM.union patch base)
+mergeJsonObjects _ patch = patch
 
 jsonDiff :: Value -> Value -> Value
 jsonDiff (DAT.Object a) (DAT.Object b) =
@@ -4193,7 +4516,7 @@ configureBecknNetworkFailover merchant req = do
 
 configureMessageProviderFailover :: DMOC.MerchantOperatingCity -> Common.ConfigFailoverReq -> Flow ()
 configureMessageProviderFailover merchantOperatingCity req = do
-  merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
+  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOperatingCity.id Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   case req.priorityOrder of
     Just priorityOrder -> do
       let smsProviders = fromMaybe merchantServiceUsageConfig.smsProvidersPriorityList (nonEmpty priorityOrder.smsProviders)
@@ -4223,7 +4546,7 @@ postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.
 postMerchantPayoutConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id req.vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just req.vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCity.id req.vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
   QPC.updateConfigValues req payoutConfig merchantOpCity.id
   CPC.clearConfigCache merchantOpCity.id req.vehicleCategory
   pure Success
@@ -4242,9 +4565,15 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
   let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, createdAt = now, updatedAt = now}
       valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, createdAt = now, updatedAt = now}
       registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
-  QWLO.create whiteListOrgReq
-  SQVNP.create valueAddNpReq
-  QRMF.create registryMapFallbackReq
+  existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId bapSubId bppDomain (Id merchantId) (Id merchantOperatingCityId)
+  when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq
+  SQVNP.findByPrimaryKey bapSubId.getShortId >>= \case
+    Just existing ->
+      unless existing.enabled $
+        SQVNP.updateByPrimaryKey existing {VNP.enabled = True, VNP.updatedAt = now}
+    Nothing -> SQVNP.create valueAddNpReq
+  existingRegistryMapFallback <- QRMF.findByPrimaryKey bapSubId.getShortId bapUniqueKeyId
+  when (isNothing existingRegistryMapFallback) $ QRMF.create registryMapFallbackReq
   pure $
     Common.WhiteListOperatingCityRes
       { whiteListSuccess = True,
@@ -4268,9 +4597,9 @@ getMerchantConfigVehicleServiceTier merchantShortId opCity mbServiceTierType = d
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case mbServiceTierType of
-    Nothing -> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
+    Nothing -> CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
     Just serviceTierType ->
-      maybeToList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing Nothing
+      maybeToList <$> CQVST.findByServiceTierTypeAndCityId serviceTierType merchantOpCityId Nothing
   pure $ mkVehicleServiceTierItem <$> configs
 
 mkVehicleServiceTierItem :: DVST.VehicleServiceTier -> Common.VehicleServiceTierItem
@@ -4357,7 +4686,6 @@ validateVehicleServiceTierUpdate merchantOpCityId existing req = do
           (req.vehicleCategory <|> existing.vehicleCategory)
           merchantOpCityId
           Nothing
-          Nothing
       case existingBaseTier of
         Just base
           | base.id /= existing.id ->
@@ -4415,8 +4743,9 @@ applyVehicleServiceTierUpdate existing req =
       DVST.isEnabled = req.isEnabled <|> existing.isEnabled,
       DVST.allowedAreas = req.allowedAreas <|> existing.allowedAreas,
       DVST.specialZone = req.specialZone <|> existing.specialZone,
+      DVST.cancellationRateConfig = req.cancellationRateConfig <|> existing.cancellationRateConfig,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
-      DVST.isAirportRideEnabled = req.isAirportRideEnabled <|> existing.isAirportRideEnabled
+      DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
@@ -4455,7 +4784,7 @@ postMerchantConfigVehicleServiceTierCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
-  existingConfig <- CQVST.findByServiceTierTypeAndCityId req.serviceTierType merchantOpCityId Nothing Nothing
+  existingConfig <- CQVST.findByServiceTierTypeAndCityId req.serviceTierType merchantOpCityId Nothing
   whenJust existingConfig $ \_ ->
     throwError (InvalidRequest $ "Vehicle service tier already exists: " <> show req.serviceTierType)
 
@@ -4515,8 +4844,9 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         isEnabled = Just req.isEnabled,
         allowedAreas = req.allowedAreas,
         vehicleAgeThreshold = req.vehicleAgeThreshold,
-        isAirportRideEnabled = req.isAirportRideEnabled,
+        allowNullVehicleRating = req.allowNullVehicleRating,
         specialZone = req.specialZone,
+        cancellationRateConfig = req.cancellationRateConfig,
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         createdAt = now,
         updatedAt = now
@@ -4653,6 +4983,97 @@ postMerchantMerchantDocumentDelete ::
 postMerchantMerchantDocumentDelete merchantShortId _opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   SMD.deleteMerchantDocument (cast merchant.id) (Id req.id)
+  pure Success
+
+getMerchantMerchantMessageCatalog ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MerchantMessageCatalogType ->
+  Flow Common.MerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog _merchantShortId _opCity catalogType = do
+  let values = case catalogType of
+        Common.KEY -> map show [minBound .. maxBound :: DMM.MessageKey]
+        Common.CHANNEL -> map show [minBound .. maxBound :: DMM.MediaChannel]
+        Common.DOMAIN -> map show [minBound .. maxBound :: DMM.MessageDomain]
+  pure $ Common.MerchantMessageCatalogResp {values}
+
+postMerchantMerchantMessageUpsert ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpsertMerchantMessageReq ->
+  Flow APISuccess
+postMerchantMerchantMessageUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  channel <- traverse (\c -> readMaybe (T.unpack c) & fromMaybeM (InvalidRequest $ "Invalid channel: " <> c)) req.channel
+  domain <- traverse (\d -> readMaybe (T.unpack d) & fromMaybeM (InvalidRequest $ "Invalid domain: " <> d)) req.domain
+  mbExisting <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey req.vehicleCategory
+  now <- getCurrentTime
+  case mbExisting of
+    Nothing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure def
+          Just v -> DAT.parseMaybe A.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let merchantMessage =
+            DMM.MerchantMessage
+              { merchantId = merchant.id,
+                merchantOperatingCityId = merchantOpCity.id,
+                messageKey = messageKey,
+                message = req.message,
+                templateId = req.templateId,
+                containsUrlButton = req.containsUrlButton,
+                channel = channel,
+                domain = domain,
+                jsonData = parsedJsonData,
+                messageType = req.messageType,
+                senderHeader = req.senderHeader,
+                templateName = req.templateName,
+                vehicleCategory = req.vehicleCategory,
+                createdAt = now,
+                updatedAt = now
+              }
+      QMM.create merchantMessage
+      CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+    Just existing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure existing.jsonData
+          Just v -> DAT.parseMaybe A.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let updated =
+            existing
+              { DMM.message = req.message,
+                DMM.templateId = req.templateId,
+                DMM.containsUrlButton = req.containsUrlButton,
+                DMM.channel = channel,
+                DMM.domain = domain,
+                DMM.jsonData = parsedJsonData,
+                DMM.messageType = req.messageType,
+                DMM.senderHeader = req.senderHeader,
+                DMM.templateName = req.templateName,
+                DMM.vehicleCategory = req.vehicleCategory,
+                DMM.updatedAt = now
+              }
+      QMM.updateByPrimaryKey updated
+      CQMM.clearCache merchantOpCity.id messageKey existing.vehicleCategory
+      when (req.vehicleCategory /= existing.vehicleCategory) $
+        CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory
+  pure Success
+
+deleteMerchantMerchantMessage ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Common.VehicleCategory ->
+  Flow APISuccess
+deleteMerchantMerchantMessage merchantShortId opCity messageKeyText mbVehicleCategory = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
+  _ <- CQMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey mbVehicleCategory Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  QMM.deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCity.id messageKey mbVehicleCategory
+  CQMM.clearCache merchantOpCity.id messageKey mbVehicleCategory
   pure Success
 
 getMerchantCityList ::

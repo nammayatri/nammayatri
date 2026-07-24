@@ -22,6 +22,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
@@ -29,6 +30,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error (RoleError (..))
@@ -36,7 +38,8 @@ import Tools.Error (RoleError (..))
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
     dashboardAccessType :: Maybe DashboardAccessType,
-    description :: Text
+    description :: Text,
+    isBppSyncNeeded :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -87,6 +90,8 @@ buildRole req = do
         name = req.name,
         dashboardAccessType = fromMaybe DRole.DASHBOARD_USER req.dashboardAccessType,
         description = req.description,
+        accessibleRoles = [],
+        isBppSyncNeeded = req.isBppSyncNeeded,
         createdAt = now,
         updatedAt = now
       }
@@ -142,3 +147,29 @@ listRoles _ mbSearchString mbLimit mbOffset = do
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListRoleRes {list = res, summary = summary}
+
+-- Single API that scopes by the viewer's tier:
+--   DASHBOARD_ADMIN → delegate to the existing paginated `listRoles`; no per-admin
+--                     accessible_roles maintenance (avoids the array growing forever)
+--   anyone else     → only the role ids listed in viewer.accessibleRoles
+listRolesV2 ::
+  ( BeamFlow m r,
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  Maybe Text ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m ListRoleRes
+listRolesV2 tokenInfo mbSearchString mbLimit mbOffset = do
+  person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonDoesNotExist tokenInfo.personId.getId)
+  viewer <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  case viewer.dashboardAccessType of
+    DRole.DASHBOARD_ADMIN -> listRoles tokenInfo mbSearchString mbLimit mbOffset
+    _ -> do
+      roleList <-
+        B.runInReplica $
+          QRole.findAllWithLimitOffsetByIds mbLimit mbOffset mbSearchString viewer.accessibleRoles
+      let res = map mkRoleAPIEntity roleList
+          count = length res
+      pure $ ListRoleRes {list = res, summary = Summary {totalCount = 10000, count = count}}

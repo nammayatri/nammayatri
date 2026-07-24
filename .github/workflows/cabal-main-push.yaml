@@ -26,7 +26,7 @@ jobs:
         id: evaluate
         run: |
           echo "should_proceed=true" >> $GITHUB_OUTPUT
-  
+
   cabal-build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
@@ -59,15 +59,17 @@ jobs:
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle, cabal store and HIE cache"
+            echo "Cache key changed, busting dist-newstyle, cabal store, HIE and repl caches"
             rm -rf "$CACHE_ROOT/dist-newstyle"
-            rm -rf "$CACHE_ROOT/.cabal-dir"
+            rm -rf "$CACHE_ROOT/.cabal-dir/store"
             rm -rf "$CACHE_ROOT/hie"
+            rm -rf "$CACHE_ROOT/dist-newrepl-dashboard-check"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-dashboard-check"
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
 
       - name: Link HIE dirs to persistent cache
         run: |
@@ -107,7 +109,16 @@ jobs:
           set -o pipefail
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            mkdir -p \$CABAL_DIR
+            printf 'active-repositories: :none\n' > \$CABAL_DIR/config
+            export CABAL_CONFIG=\$CABAL_DIR/config
             cd Backend
+            # Clear cabal store to prevent stale package registrations that
+            # reference runner-local nix paths. Does not affect CI incrementality
+            # (all packages come from GHC/nix, store is redundant).
+            rm -rf \$CABAL_DIR/store
+            mkdir -p \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)
+            ghc-pkg init \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)/package.db 2>/dev/null || true
             echo \"GHC libdir: \$(ghc --print-libdir)\"
             echo '--- cabal dry-run (what it plans to rebuild) ---'
             cabal build all --dry-run 2>&1 | tail -20
@@ -158,15 +169,101 @@ jobs:
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
 
+      - name: Push build artifacts to MinIO
+
+        run: |
+          MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
+          MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
+          MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          EXCLUDES=$(cd "$CACHE_ROOT" && find dist-newstyle/build -mindepth 4 -maxdepth 4 -name "x" | sed 's|^|--exclude=|')
+
+          # Copy non-reproducible .a files referenced by addDependentFile in .hi files.
+          # record-dot-preprocessor is a GHC plugin whose .a is recorded as a
+          # compile-time dependency. Different CI runners produce different binary
+          # content for the same nix derivation. Without shipping the exact .a from
+          # this build, devbox incremental builds see [.a changed] on every module.
+          rm -rf "$CACHE_ROOT/.nix-deps"
+          mkdir -p "$CACHE_ROOT/.nix-deps"
+          cd "$CACHE_ROOT"
+          for hi in $(find dist-newstyle/build -name "*.hi" -print -quit 2>/dev/null); do
+            strings "$hi" | grep -oE '/nix/store/[^ ]+\.a$' | sort -u | while read -r dep; do
+              if [ -f "$dep" ]; then
+                rel="${dep#/}"  # strip leading /
+                mkdir -p ".nix-deps/$(dirname "$rel")"
+                cp --no-preserve=mode,ownership "$dep" ".nix-deps/$rel"
+                echo "Cached nix dep: $dep"
+              fi
+            done
+            break  # only need one .hi file
+          done
+          cd -
+
+          # Include .cabal-dir/ so devbox incremental builds see the exact
+          # same cabal state as CI (config, package DB, package index).
+          # Include .nix-deps/ for non-reproducible .a files.
+          # Exclude logs/ to save space.
+          # Exclude .cabal-dir/store — it may contain stale package registrations
+          # referencing nix store paths that don't exist on devbox, causing
+          # ghc-pkg dump to fail. GHC-provided packages are sufficient.
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' --exclude='.cabal-dir/store' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
+          echo "$GITHUB_WORKSPACE" > build-path.txt
+          echo "$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir" > cabal-dir-path.txt
+          mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
+          mc cp build-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/build-path.txt"
+          mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/cabal-dir-path.txt"
+          rm -f dist-newstyle.tar.zst build-path.txt cabal-dir-path.txt
+
+      - name: Build repl artifacts (dashboard-repl-check)
+        run: |
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            mkdir -p \$CABAL_DIR
+            printf 'active-repositories: :none\n' > \$CABAL_DIR/config
+            export CABAL_CONFIG=\$CABAL_DIR/config
+            cd Backend
+            cabal repl dashboard-repl-check \
+              --repl-options='-fno-code -fwrite-interface' \
+              --builddir=dist-newrepl-dashboard-check <<< ':quit'
+          "
+
+      - name: Push repl artifacts to MinIO
+        run: |
+          MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
+          MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
+          MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+
+          tar -I 'zstd -T0 -3' -cf dashboard-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-dashboard-check/
+          mc cp dashboard-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dashboard-check.tar.zst"
+          rm -f dashboard-check.tar.zst
+
+          tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/ .nix-deps/
+          mc cp repl-support.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/repl-support.tar.zst"
+          rm -f repl-support.tar.zst
+
+          echo "$CACHE_ROOT" > cache-root.txt
+          mc cp cache-root.txt "minio/haskell-cache/cabal-repl/${{ github.sha }}/cache-root.txt"
+          rm -f cache-root.txt
+
+      - name: Mark commit as minio-pushed
+        run: |
+          git tag "minio-pushed/${{ github.sha }}"
+          git push origin "minio-pushed/${{ github.sha }}"
+
       - name: Cleanup staging dir
         if: always()
         run: rm -rf $HOME/ny-staging/${{ github.run_id }}
-  
+
   cabal-build-times:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux
+    runs-on: x86_64_main_push
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

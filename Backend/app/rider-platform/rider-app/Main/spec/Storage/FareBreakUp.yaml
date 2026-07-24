@@ -46,6 +46,8 @@ FareBreakup:
       derive': "Generic, Show, FromJSON, ToJSON, ToSchema"
     FareBreakupEntityType:
       enum: "BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING"
+    FareComponent:
+      enum: "RIDE_FARE, TOLL, PARKING, CANCELLATION_FEE"
 
   constraints:
     bookingId: SecondaryKey

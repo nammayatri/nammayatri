@@ -25,12 +25,12 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> IntegratedBPPConfig -> API.FRFSDiscoverySearchAPIReq -> m ()
-discoverySearch merchant bapConfig integratedBPPConfig req = do
+discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> IntegratedBPPConfig -> Bool -> API.FRFSDiscoverySearchAPIReq -> m ()
+discoverySearch merchant bapConfig integratedBPPConfig storeGtfs req = do
   transactionId <- generateGUID
   let requestCity = SIBC.resolveOndcCity integratedBPPConfig req.city
   bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing requestCity
-  let redisCounter = DOnSearch.DiscoveryCounter {merchantId = merchant.id.getId, pageNo = 0, maxPageNo = 9999}
+  let redisCounter = DOnSearch.DiscoveryCounter {merchantId = merchant.id.getId, pageNo = 0, maxPageNo = 9999, integratedBppConfigId = Just integratedBPPConfig.id.getId, storeGtfs = Just storeGtfs}
   Redis.setExp (discoverySearchCounterKey (show transactionId)) redisCounter 3600
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   case integratedBPPConfig.providerConfig of
@@ -64,7 +64,12 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
           _ -> callOndcSearch networkHostUrl
     _ -> do
       onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
-      processOnSearch onSearchReq
+      if null onSearchReq.quotes
+        then do
+          logDebug $ "Quotes are null, calling Multimodal Discovery Search"
+          onSearchReq' <- Flow.multimodalDiscoverySearch merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
+          processOnSearch onSearchReq'
+        else processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do

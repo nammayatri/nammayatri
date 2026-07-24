@@ -18,8 +18,11 @@ instance FromTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
       Just
         Lib.Finance.Domain.Types.Invoice.Invoice
           { createdAt = createdAt,
+            createdBy = createdBy,
+            createdById = createdById,
             currency = currency,
             dueAt = dueAt,
+            entityReferenceId = entityReferenceId,
             id = Kernel.Types.Id.Id id,
             invoiceNumber = invoiceNumber,
             invoiceType = invoiceType,
@@ -38,10 +41,10 @@ instance FromTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             paymentMode = paymentMode,
-            paymentOrderId = paymentOrderId,
             periodEnd = periodEnd,
             periodStart = periodStart,
             referenceId = referenceId,
+            referenceInvoiceNumber = referenceInvoiceNumber,
             signedQRCode = signedQRCode,
             status = status,
             subtotal = subtotal,
@@ -52,6 +55,8 @@ instance FromTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
             supplierTaxNo = supplierTaxNo,
             taxBreakdown = taxBreakdown,
             totalAmount = totalAmount,
+            updatedBy = updatedBy,
+            updatedById = updatedById,
             updatedAt = updatedAt
           }
 
@@ -59,8 +64,11 @@ instance ToTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
   toTType' (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
     Beam.InvoiceT
       { Beam.createdAt = createdAt,
+        Beam.createdBy = createdBy,
+        Beam.createdById = createdById,
         Beam.currency = currency,
         Beam.dueAt = dueAt,
+        Beam.entityReferenceId = entityReferenceId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.invoiceNumber = invoiceNumber,
         Beam.invoiceType = invoiceType,
@@ -79,10 +87,10 @@ instance ToTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.paymentMode = paymentMode,
-        Beam.paymentOrderId = paymentOrderId,
         Beam.periodEnd = periodEnd,
         Beam.periodStart = periodStart,
         Beam.referenceId = referenceId,
+        Beam.referenceInvoiceNumber = referenceInvoiceNumber,
         Beam.signedQRCode = signedQRCode,
         Beam.status = status,
         Beam.subtotal = subtotal,
@@ -93,5 +101,7 @@ instance ToTType' Beam.Invoice Lib.Finance.Domain.Types.Invoice.Invoice where
         Beam.supplierTaxNo = supplierTaxNo,
         Beam.taxBreakdown = taxBreakdown,
         Beam.totalAmount = totalAmount,
+        Beam.updatedBy = updatedBy,
+        Beam.updatedById = updatedById,
         Beam.updatedAt = updatedAt
       }

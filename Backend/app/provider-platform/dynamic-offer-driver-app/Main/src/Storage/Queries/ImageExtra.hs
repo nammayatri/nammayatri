@@ -20,6 +20,8 @@ module Storage.Queries.ImageExtra
     filterImageByEntityIdAndImageTypeAndVerificationStatus,
     filterRecentLatestByEntityIdAndImageType,
     filterRecentByPersonRCAndImageType,
+    updateVerificationStatusByRcIdAndImageTypes,
+    deleteByPersonIdAndImageType,
   )
 where
 
@@ -43,13 +45,14 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, logDebug, logWarning)
 import Kernel.Utils.Error.Throwing
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Image as BeamI
-import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.Image ()
 import qualified Storage.Queries.Person as QP
 import Tools.Error
-import Utils.Common.Cac.KeyNameConstants
 
 -- Extra code goes here --
 findAllByEntityId ::
@@ -117,7 +120,7 @@ findRecentByRcIdAndImageTypes transporterConfig rcId imageTypes = do
 findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [DImage.Image]
 findRecentByPersonIdAndImageType personId imgType = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
   now <- getCurrentTime
   findAllWithOptionsKV
@@ -130,6 +133,15 @@ findRecentByPersonIdAndImageType personId imgType = do
 
 hoursAgo :: Int -> UTCTime -> UTCTime
 hoursAgo i now = negate (intToNominalDiffTime $ 3600 * i) `DT.addUTCTime` now
+
+deleteByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m ()
+deleteByPersonIdAndImageType personId imgType =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
+          Se.Is BeamI.imageType $ Se.Eq imgType
+        ]
+    ]
 
 findByPersonIdImageTypeAndValidationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> DImage.SelfieFetchStatus -> m (Maybe DImage.Image)
 findByPersonIdImageTypeAndValidationStatus persondId docType fetchStatus = do
@@ -171,6 +183,24 @@ updateVerificationStatusByIdAndType verificationStatus (Kernel.Types.Id.Id id) i
     [ Se.And
         [ Se.Is BeamI.id $ Se.Eq id,
           Se.Is BeamI.imageType $ Se.Eq imageType
+        ]
+    ]
+
+-- Bulk-set verificationStatus for all images of an RC matching any of the given types, in one call.
+-- Used e.g. to invalidate every vehicle inspection photo when the aggregate VehicleInspectionForm is rejected.
+updateVerificationStatusByRcIdAndImageTypes ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Documents.VerificationStatus ->
+  Id DReg.VehicleRegistrationCertificate ->
+  [DocumentType] ->
+  m ()
+updateVerificationStatusByRcIdAndImageTypes verificationStatus rcId imageTypes = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.updatedAt now]
+    [ Se.And
+        [ Se.Is BeamI.rcId $ Se.Eq (Just rcId.getId),
+          Se.Is BeamI.imageType $ Se.In imageTypes
         ]
     ]
 
@@ -229,7 +259,10 @@ data EntityImagesInfo = EntityImagesInfo
     merchantOperatingCity :: DMOC.MerchantOperatingCity,
     entityImages :: [DImage.Image],
     transporterConfig :: DTC.TransporterConfig,
-    now :: UTCTime
+    now :: UTCTime,
+    -- When True, document metadata (DL number, Aadhaar number, PAN, address proof details) is computed
+    -- and returned in status responses. Driven by the caller's query param, not merchant config.
+    enableDocumentMetadata :: Bool
   }
 
 getPersonEntityId :: EntityImagesInfo -> Maybe (Id Person)

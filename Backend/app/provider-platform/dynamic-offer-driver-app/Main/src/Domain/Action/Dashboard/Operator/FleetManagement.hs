@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -46,8 +47,9 @@ import SharedLogic.MessageBuilder
     buildFleetUnlinkSuccessMessage,
     buildOperatorJoiningMessage,
   )
-import Storage.Cac.TransporterConfig
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetMemberAssociation as QFMA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorIdWithLimitOffsetSearch)
@@ -86,10 +88,10 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
           >>= fromMaybeM (InvalidRequest $ "Person do not have a mobile number " <> person.id.getId)
       merchant <- findMerchantByShortId merchantShortId
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       let entity = IQuery.PersonEntity person
       entityImages <- IQuery.findAllByEntityId transporterConfig entity
-      let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+      let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
       let shouldActivateRc = False
           skipMessages = False -- Need translations for API response
       statusRes <-
@@ -99,6 +101,7 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,
             name = person.firstName,
+            fleetName = fleetName,
             isActive = foa.isActive,
             enabled = enabled,
             mobileCountryCode = fromMaybe "+91" person.mobileCountryCode,
@@ -149,7 +152,7 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fleetOperatorAssocList <- QFOA.findAllByFleetIdAndOperatorId (Id fleetOwnerId :: Id DP.Person) operator.id
   when (null fleetOperatorAssocList) $ throwError (InvalidRequest $ "Fleet id " <> fleetOwnerId <> " is not associated with operator")
 
@@ -226,7 +229,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
         void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
         pure personData
 
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   existingFOAssociations <- QFOA.findAllByFleetOwnerId fleetOwner.id True
   when (any (\foa -> Id foa.fleetOwnerId == fleetOwner.id && Id foa.operatorId == operator.id) existingFOAssociations)
     . throwError
@@ -242,8 +245,8 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
 
   if skipOtpVerification
     then do
-      SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
-      fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      SA.endFleetAssociationsIfAllowed merchantOpCityId transporterConfig fleetOwner
+      fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
       QFOA.create fleetOperatorAssociation
     else do
       smsCfg <- asks (.smsCfg)
@@ -278,7 +281,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   operator <- checkOperator requestorId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fleetOwner <- B.runInReplica $ QP.findById (cast req.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound (getId req.fleetOwnerId))
   unless (DCommon.checkFleetOwnerRole fleetOwner.role) $
     throwError (InvalidRequest "Invalid fleet owner")
@@ -300,10 +303,9 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
     )
     $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
-  -- Only end associations if overwriteAssociation is enabled and multi-link is not allowed
-  when (merchant.overwriteAssociation == Just True && transporterConfig.allowMultiFleetOperatorLink /= Just True) $
-    SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
-  fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+  when (transporterConfig.allowMultiFleetOperatorLink /= Just True) $ do
+    SA.endFleetAssociationsIfAllowed merchantOpCityId transporterConfig fleetOwner
+  fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
   QFOA.create fleetOperatorAssociation
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   when allowCacheDriverFlowStatus $ do

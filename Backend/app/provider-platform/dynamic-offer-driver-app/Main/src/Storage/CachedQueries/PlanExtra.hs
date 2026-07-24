@@ -169,6 +169,23 @@ clearPlanCacheByCity merchantOpCityId serviceName = do
       forM_ [Nothing, Just True, Just False] $ \mbIsFleetOwnerPlan ->
         Hedis.del (makeMerchantIdAndServiceNameKey merchantOpCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan)
 
+clearPlanCacheForPlan :: (CacheFlow m r) => Plan -> m ()
+clearPlanCacheForPlan plan = do
+  clearPlanCacheByCity plan.merchantOpCityId plan.serviceName
+  Hedis.withCrossAppRedis $ do
+    forM_ [MANUAL, AUTOPAY] $ \paymentMode ->
+      Hedis.del (makePlanIdAndPaymentModeKey plan.id paymentMode plan.serviceName)
+    forM_ [True, False] $ \isDeprecated ->
+      Hedis.del (makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName plan.vehicleCategory isDeprecated)
+    forM_ [MANUAL, AUTOPAY] $ \paymentMode ->
+      forM_ [Nothing, Just True, Just False] $ \mbIsDeprecated ->
+        Hedis.del (makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId paymentMode plan.serviceName plan.vehicleVariant mbIsDeprecated)
+  forM_ [MANUAL, AUTOPAY] $ \paymentMode ->
+    forM_ [True, False] $ \isDeprecated ->
+      Hedis.del (makeIdKey plan.merchantOpCityId paymentMode plan.serviceName plan.vehicleCategory isDeprecated)
+  forM_ [True, False] $ \isDeprecated ->
+    Hedis.del (makeCityServiceAndVehicleKey plan.merchantOpCityId plan.serviceName plan.vehicleCategory isDeprecated)
+
 makeAllPlanKey :: Text
 makeAllPlanKey = "driver-offer:CachedQueries:Plan:PlanId-ALL"
 

@@ -32,6 +32,9 @@ Notification:
 
   constraints:
     id: PrimaryKey
+    shortId: SecondaryKey
+    driverFeeId: "!SecondaryKey"
+    status: "!SecondaryKeyPartial status:NOTIFICATION_CREATED,status:PENDING"
 
   beamType:
     merchantOperatingCityId: Maybe Text

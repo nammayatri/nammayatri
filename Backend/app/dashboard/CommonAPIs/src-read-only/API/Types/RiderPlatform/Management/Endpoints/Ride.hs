@@ -306,7 +306,7 @@ newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList :<|> GetRideFlowDebugBap))
+type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRidePayoutOfferSyncHelper :<|> PostRideCancelMultiple :<|> GetRideKaptureList :<|> GetRideFlowDebugBap))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "bookingStatus" BookingStatus
@@ -354,6 +354,15 @@ type GetRidePickupRoute =
 
 type PostRideSyncMultiple = ("sync" :> ReqBody '[JSON] MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
 
+type PostRidePayoutOfferSync = ("payoutOfferSync" :> ReqBody '[JSON] MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
+
+type PostRidePayoutOfferSyncHelper =
+  ( "payoutOfferSync" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] MultipleRideSyncReq
+      :> Post
+           '[JSON]
+           Dashboard.Common.Ride.MultipleRideSyncResp
+  )
+
 type PostRideCancelMultiple = ("cancel" :> ReqBody '[JSON] MultipleRideCancelReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type GetRideKaptureList =
@@ -391,6 +400,7 @@ data RideAPIs = RideAPIs
     getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
     getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
     postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
+    postRidePayoutOfferSync :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
     postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
     getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
@@ -399,7 +409,7 @@ data RideAPIs = RideAPIs
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideInfo :<|> cancellationChargesWaiveOff :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRideCancelMultiple :<|> getRideKaptureList :<|> getRideFlowDebugBap = rideClient
+    getRideList :<|> getRideInfo :<|> cancellationChargesWaiveOff :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRidePayoutOfferSync :<|> postRideCancelMultiple :<|> getRideKaptureList :<|> getRideFlowDebugBap = rideClient
 
 data RideUserActionType
   = GET_RIDE_LIST
@@ -410,6 +420,7 @@ data RideUserActionType
   | GET_RIDE_TRIP_ROUTE
   | GET_RIDE_PICKUP_ROUTE
   | POST_RIDE_SYNC_MULTIPLE
+  | POST_RIDE_PAYOUT_OFFER_SYNC
   | POST_RIDE_CANCEL_MULTIPLE
   | GET_RIDE_KAPTURE_LIST
   | GET_RIDE_FLOW_DEBUG_BAP

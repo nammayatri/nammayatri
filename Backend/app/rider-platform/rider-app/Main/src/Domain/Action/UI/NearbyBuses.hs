@@ -14,6 +14,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import Domain.Types.RouteStopTimeTable
+import Domain.Utils (mapConcurrently)
 import qualified Environment
 import EulerHS.Prelude hiding (decodeUtf8, id)
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
@@ -25,15 +26,16 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as QRecentLocation
 import Tools.Error
@@ -48,7 +50,7 @@ postNearbyBusBooking ::
 postNearbyBusBooking (mbPersonId, _) req = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound "No person found")
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   -- let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
   -- nearbyBuses <-
   --   if req.requireNearbyBuses
@@ -96,10 +98,14 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       logDebug $ "Vehicle numbers: " <> show vehicleNumbers
       logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
 
-      busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
-        mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-          maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-        pure $ Kernel.Prelude.listToMaybe mbResult
+      busRouteMapping <-
+        mapConcurrently
+          ( \vehicleNumber -> do
+              mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
+                maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
+              pure $ Kernel.Prelude.listToMaybe mbResult
+          )
+          vehicleNumbers
 
       let successfulMappings = catMaybes busRouteMapping
 

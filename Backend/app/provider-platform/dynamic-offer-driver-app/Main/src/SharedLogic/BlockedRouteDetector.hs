@@ -49,21 +49,23 @@ data RouteServiceability = RouteServiceability
     multipleRoutes :: [Maps.RouteInfo],
     routePoints :: RoutePoints,
     routeDistance :: Meters,
-    routeDuration :: Seconds
+    routeDuration :: Seconds,
+    routeToken :: Maybe Text,
+    routeTrafficSegments :: Maybe [Maps.RouteTrafficSegment]
   }
 
 checkRouteServiceability :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> (Int, RoutePoints, Meters, Seconds) -> [Maps.RouteInfo] -> m RouteServiceability
 checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteIdx, customerPrefferedSearchRoutePoints, customerPrefferedSearchRouteDistance, customerPrefferedSearchRouteDuration) routes = do
   let route' =
         if null routes
-          then [Maps.RouteInfo (Just customerPrefferedSearchRouteDuration) Nothing (Just customerPrefferedSearchRouteDistance) (Just $ Distance (toHighPrecDistance customerPrefferedSearchRouteDistance) Meter) Nothing [] customerPrefferedSearchRoutePoints]
+          then [Maps.RouteInfo (Just customerPrefferedSearchRouteDuration) Nothing (Just customerPrefferedSearchRouteDistance) (Just $ Distance (toHighPrecDistance customerPrefferedSearchRouteDistance) Meter) Nothing [] customerPrefferedSearchRoutePoints Nothing Nothing]
           else routes
   blockedRoutes <- B.runInReplica $ findAllBlockedRoutesByMerchantOperatingCity merchantOperatingCityId
   return $ getServiceableRoute route' 0 blockedRoutes
   where
     getServiceableRoute _ _ [] = defaultCustomerPrefferedRouteServiceability False
     getServiceableRoute [] _ _ = defaultCustomerPrefferedRouteServiceability True
-    getServiceableRoute ((Maps.RouteInfo (Just duration) _ (Just distance) _ _ _ points) : rs) idx blockedRoutes = do
+    getServiceableRoute ((Maps.RouteInfo (Just duration) _ (Just distance) _ _ _ points routeToken' trafficSegments') : rs) idx blockedRoutes = do
       if isRouteServiceable points blockedRoutes
         then
           RouteServiceability
@@ -72,7 +74,9 @@ checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteId
               routeDuration = duration,
               multipleRoutes = updateEfficientRoutePosition routes idx,
               isCustomerPrefferedSearchRoute = idx == customerPrefferedSearchRouteIdx,
-              isBlockedRoute = False
+              isBlockedRoute = False,
+              routeToken = routeToken',
+              routeTrafficSegments = trafficSegments'
             }
         else getServiceableRoute rs (idx + 1) blockedRoutes
     getServiceableRoute (_ : rs) idx blockedRoutes = getServiceableRoute rs (idx + 1) blockedRoutes
@@ -88,5 +92,7 @@ checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteId
           routeDuration = customerPrefferedSearchRouteDuration,
           multipleRoutes = routes,
           isCustomerPrefferedSearchRoute = True,
-          isBlockedRoute
+          isBlockedRoute,
+          routeToken = (.routeToken) =<< listToMaybe (drop customerPrefferedSearchRouteIdx routes),
+          routeTrafficSegments = (.trafficSegments) =<< listToMaybe (drop customerPrefferedSearchRouteIdx routes)
         }

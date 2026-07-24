@@ -88,7 +88,17 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefCashbackPayoutTransfer,
     ridePaymentRefTollFare,
     ridePaymentRefTollVAT,
+    ridePaymentRefParkingCharge,
+    ridePaymentRefParkingVAT,
     ridePaymentRefRideVatOnDiscount,
+    ridePaymentRefRideFareRefund,
+    ridePaymentRefRideFareRefundVAT,
+    ridePaymentRefTollRefund,
+    ridePaymentRefTollRefundVAT,
+    ridePaymentRefParkingRefund,
+    ridePaymentRefParkingRefundVAT,
+    ridePaymentRefCancellationFeeRefund,
+    ridePaymentRefCancellationFeeRefundVAT,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -105,6 +115,7 @@ module SharedLogic.Finance.RidePayment
     upsertCoreRidePaymentLedger,
     UpsertCoreLedgerResult (..),
     settleRidePaymentLedger,
+    createSettledCashbackPayoutLeg,
     getWalletAccountByOwner,
     getWalletBalanceByOwner,
     getPayoutEligibilityData,
@@ -115,6 +126,16 @@ module SharedLogic.Finance.RidePayment
     voidRidePaymentEntriesAndInvoice,
     createTipLedger,
     regenerateRideTipInvoice,
+    createRefundInvoice,
+    createRefundRaisedLedger,
+    createRefundSucceededLedger,
+    refundSucceededAlreadyRecorded,
+    voidRefundRaisedLedger,
+    RefundComponentSplit (..),
+    refundLegRefTypes,
+    getRefundLegEntries,
+    getSettledRefundByComponent,
+    settledRefundByComponent,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
     voidRideInvoice,
@@ -139,21 +160,25 @@ import qualified Data.Aeson as Aeson
 import Data.Foldable.Extra (findM)
 import qualified Data.List as List
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Invoice (InvoiceType (Ride, RideCancellation))
 import qualified Domain.Types.Invoice as DInvType
 import qualified Domain.Types.Person
+import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo, throwError)
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
+import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 
 -- ---------------------------------------------------------------------------
 -- Reference type constants (no hardcoded strings)
@@ -192,12 +217,46 @@ ridePaymentRefTollFare = "TollFare"
 ridePaymentRefTollVAT :: Text
 ridePaymentRefTollVAT = "TollVAT"
 
+ridePaymentRefParkingCharge :: Text
+ridePaymentRefParkingCharge = "ParkingCharge"
+
+ridePaymentRefParkingVAT :: Text
+ridePaymentRefParkingVAT = "ParkingVAT"
+
 -- | Platform-absorbed VAT on the discount portion: BAP funds this via
 --   BuyerExpense → BuyerAsset, and the amount is paid across to the BPP
 --   via the buyer-external path where it settles to the driver under the
 --   BaseRide line.
 ridePaymentRefRideVatOnDiscount :: Text
 ridePaymentRefRideVatOnDiscount = "RideVatOnDiscount"
+
+-- Per-component refund reference types. One base + one VAT leg per refunded
+-- component; all-caps VAT matches the ride-side 'TollVAT'.
+ridePaymentRefRideFareRefund :: Text
+ridePaymentRefRideFareRefund = "RideFareRefund"
+
+ridePaymentRefRideFareRefundVAT :: Text
+ridePaymentRefRideFareRefundVAT = "RideFareRefundVAT"
+
+ridePaymentRefTollRefund :: Text
+ridePaymentRefTollRefund = "TollRefund"
+
+ridePaymentRefTollRefundVAT :: Text
+ridePaymentRefTollRefundVAT = "TollRefundVAT"
+
+ridePaymentRefParkingRefund :: Text
+ridePaymentRefParkingRefund = "ParkingRefund"
+
+ridePaymentRefParkingRefundVAT :: Text
+ridePaymentRefParkingRefundVAT = "ParkingRefundVAT"
+
+-- Refund of a cancellation fee. Distinct from the charge-side 'CancellationFee' /
+-- 'CancellationGST' — those record the fee, these record giving it back.
+ridePaymentRefCancellationFeeRefund :: Text
+ridePaymentRefCancellationFeeRefund = "CancellationFeeRefund"
+
+ridePaymentRefCancellationFeeRefundVAT :: Text
+ridePaymentRefCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -247,6 +306,8 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       counterpartyId = riderId,
       concernedIndividualId = Nothing,
       referenceId = referenceId,
+      entityReferenceId = Nothing,
+      entityReferenceType = Nothing,
       merchantName = merchantName,
       merchantShortId = merchantShortId,
       issuedByAddress = Nothing,
@@ -288,18 +349,20 @@ applyBookingProviderFieldsToCtx booking ctx =
 --   Expense(BUYER) → Asset(BUYER) since they represent real BAP cost, not pass-through.
 --   Returns entry IDs for later settlement + invoice ID.
 createRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (base, without tax)
   HighPrecMoney -> -- gstAmount (GST/VAT on ride fare)
   HighPrecMoney -> -- tollFare (toll charges, without tax)
   HighPrecMoney -> -- tollVatAmount (VAT on toll)
+  HighPrecMoney -> -- parkingCharge (parking charges, without tax)
+  HighPrecMoney -> -- parkingChargeVat (VAT on parking)
   HighPrecMoney -> -- platformFee (application fee / commission)
   HighPrecMoney -> -- offerDiscountAmount (charge reduction, 0 for CASHBACK)
   HighPrecMoney -> -- cashbackPayoutAmount (amount to pay back to rider, 0 for DISCOUNT)
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount (platform-absorbed VAT on the discount portion)
   m (Either FinanceError RidePaymentLedgerResult)
-createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount _rideVatAbsorbedOnDiscount = do
+createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount = do
   result <- runFinance ctx $ do
     let (riderSrc, riderDst) =
           if ctx.isOnline
@@ -310,6 +373,8 @@ createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFe
     postRiderObligation gstAmount ridePaymentRefGST
     postRiderObligation tollFare ridePaymentRefTollFare
     postRiderObligation tollVatAmount ridePaymentRefTollVAT
+    postRiderObligation parkingCharge ridePaymentRefParkingCharge
+    postRiderObligation parkingChargeVat ridePaymentRefParkingVAT
     postRiderObligation platformFee ridePaymentRefPlatformFee
 
     when (offerDiscountAmount > 0) $
@@ -325,9 +390,12 @@ createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFe
         gstAmount
         tollFare
         tollVatAmount
+        parkingCharge
+        parkingChargeVat
         platformFee
         offerDiscountAmount
         cashbackPayoutAmount
+        rideVatAbsorbedOnDiscount
   case result of
     Left err -> do
       logError $ "Failed to create ride payment ledger: " <> show err
@@ -350,18 +418,6 @@ mkDeductionLineItem desc descType amt isExt
   | amt > 0 = Just InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = - amt, lineTotal = - amt, isExternalCharge = isExt, groupId = Nothing, itemType = Just Adjustment}
   | otherwise = Nothing
 
--- | Ride-fare invoice line. Discount, when present, is captured in the
---   'RideFarePostDiscount' description so the renderer shows the post-discount
---   fare with a human-readable discount summary (no separate deduction line).
-mkRideFareLineItem :: HighPrecMoney -> Currency -> HighPrecMoney -> Maybe InvoiceLineItem
-mkRideFareLineItem amt currency discountAmount
-  | amt <= 0 = Nothing
-  | discountAmount > 0 =
-    let desc = "Ride Fare Post Discount (" <> show currency <> " " <> show discountAmount <> ")"
-        descType = RideFarePostDiscount currency discountAmount
-     in Just InvoiceLineItem {description = desc, descriptionType = Just descType, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Just Fare}
-  | otherwise = Just InvoiceLineItem {description = "Ride Fare", descriptionType = Just RideFare, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Just Fare}
-
 -- ---------------------------------------------------------------------------
 -- 1a. Upsert core ride payment ledger on amount change
 -- ---------------------------------------------------------------------------
@@ -372,6 +428,9 @@ mkRideFareLineItem amt currency discountAmount
 data UpsertCoreLedgerResult = UpsertCoreLedgerResult
   { coreEntryIds :: [Id LE.LedgerEntry],
     invoiceId :: Maybe (Id FInvoice.Invoice),
+    -- | PENDING cancellation-fee entries (a due carried into this ride's fare). Outside
+    --   'coreRidePaymentRefTypes', so callers that settle an explicit id list must include these.
+    cancellationEntryIds :: [Id LE.LedgerEntry],
     -- | Whether a fresh 'createRidePaymentLedger' was issued on this call.
     didCreate :: Bool,
     -- | Whether stale PENDING core entries were voided (amount-change recreate).
@@ -380,7 +439,7 @@ data UpsertCoreLedgerResult = UpsertCoreLedgerResult
   deriving (Show)
 
 -- | Idempotent create-or-recreate of the core rider-obligation ledger entries
---   (RideFare / GST / TollFare / TollVAT / PlatformFee / OfferDiscount /
+--   (RideFare / GST / TollFare / TollVAT / ParkingCharge / ParkingVAT / PlatformFee / OfferDiscount /
 --   CashbackPayout / RideVatOnDiscount) for a ride.
 --
 --     * No prior core entries → create fresh.
@@ -390,25 +449,27 @@ data UpsertCoreLedgerResult = UpsertCoreLedgerResult
 --       'voidRidePaymentLedger') and recreate at the new amounts.
 --     * Prior core entries but totals match → no-op.
 upsertCoreRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- rideFare (without GST, post-discount)
   HighPrecMoney -> -- gstAmount  (post-discount)
   HighPrecMoney -> -- tollFare   (without VAT)
   HighPrecMoney -> -- tollVatAmount
+  HighPrecMoney -> -- parkingCharge (without VAT)
+  HighPrecMoney -> -- parkingChargeVat
   HighPrecMoney -> -- platformFee
   HighPrecMoney -> -- offerDiscountAmount
   HighPrecMoney -> -- cashbackPayoutAmount
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
-  HighPrecMoney -> -- cancellationCharge (0 for normal ride)
-  HighPrecMoney -> -- cancellationTax (0 for normal ride)
+  HighPrecMoney -> -- cancellationCharge (a due folded into this ride's fare; 0 when there is none)
+  HighPrecMoney -> -- cancellationTax
   m UpsertCoreLedgerResult
-upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax = do
+upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax = do
   let rideId = ctx.referenceId
   existingEntries <- findRidePaymentEntries rideId
   let coreEntries = filter (\e -> e.referenceType `elem` coreRidePaymentRefTypes) existingEntries
       pendingCoreEntries = filter (\e -> e.status == LE.PENDING) coreEntries
-      newTotal = rideFare + gstAmount + tollFare + tollVatAmount + platformFee
+      newTotal = rideFare + gstAmount + tollFare + tollVatAmount + parkingCharge + parkingChargeVat + platformFee
       -- Exclude subsidy-absorbed entries (OfferDiscount / RideVatOnDiscount /
       -- CashbackPayout) from the staleness total comparison: they don't
       -- participate in the rider-obligation suspense and change independently.
@@ -425,6 +486,8 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
             gstAmount
             tollFare
             tollVatAmount
+            parkingCharge
+            parkingChargeVat
             platformFee
             offerDiscountAmount
             cashbackPayoutAmount
@@ -441,10 +504,10 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
           then do
             (newIds, mbInv) <- doCreate
             logInfo $ "Created PENDING core ride payment ledger entries for ride: " <> rideId
-            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = False}
+            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, cancellationEntryIds = [], didCreate = True, didVoidStale = False}
           else do
             logInfo $ "Core ride payment total is zero, skipping create for ride: " <> rideId
-            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = False}
+            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, cancellationEntryIds = [], didCreate = False, didVoidStale = False}
       else
         if not (null pendingCoreEntries) && newTotal /= oldTotal
           then do
@@ -461,28 +524,39 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
             if newTotal > 0
               then do
                 (newIds, mbInv) <- doCreate
-                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
+                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, cancellationEntryIds = [], didCreate = True, didVoidStale = True}
               else do
                 logInfo $ "Core ride payment total is zero, skipping create after void for ride: " <> rideId
-                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = True}
+                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, cancellationEntryIds = [], didCreate = False, didVoidStale = True}
           else do
             logInfo $ "Core ride payment ledger already up to date for ride: " <> rideId
             pure
               UpsertCoreLedgerResult
                 { coreEntryIds = map (.id) pendingCoreEntries,
                   invoiceId = Nothing,
+                  cancellationEntryIds = [],
                   didCreate = False,
                   didVoidStale = False
                 }
   -- Upsert cancellation fee entries when cancellationCharge is non-zero.
   -- Idempotent: if entries were already created (e.g. by createPendingCancellationFeeLedger
   -- before this call) the existing-entries check skips re-creation.
-  when (cancellationCharge > 0) $ do
-    let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
-    when (null cancelEntries) $ do
-      void $ createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax
-      logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
-  pure coreResult
+  cancelIds <-
+    if cancellationCharge > 0
+      then do
+        let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
+        if null cancelEntries
+          then
+            createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax >>= \case
+              Right (_mbInv, entryIds) -> do
+                logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
+                pure entryIds
+              Left err -> do
+                logError $ "Failed to create cancellation fee ledger for ride " <> rideId <> ": " <> show err
+                pure []
+          else pure (map (.id) (filter (\e -> e.status == LE.PENDING) cancelEntries))
+      else pure []
+  pure coreResult {cancellationEntryIds = cancelIds}
 
 -- ---------------------------------------------------------------------------
 -- 1b. Create SETTLED ledger entries for fully discounted rides (amount = 0)
@@ -493,17 +567,19 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
 --   create PENDING entries as usual, then immediately settle them so the
 --   ledger ends in the captured state with no outstanding rider obligation.
 createFullyDiscountedRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
-  HighPrecMoney -> -- rideFare (original, before discount)
-  HighPrecMoney -> -- gstAmount
+  HighPrecMoney -> -- rideFare (post-discount, from the ledger info — 0 for the fully-discounted portion)
+  HighPrecMoney -> -- gstAmount (post-discount)
   HighPrecMoney -> -- tollFare
   HighPrecMoney -> -- tollVatAmount
+  HighPrecMoney -> -- parkingCharge
+  HighPrecMoney -> -- parkingChargeVat
   HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- offerDiscountAmount (should equal rideFare + gstAmount + platformFee)
+  HighPrecMoney -> -- offerDiscountAmount (the full clamped gross discount)
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount (platform-absorbed VAT on the discount portion)
   m (Either FinanceError RidePaymentLedgerResult)
-createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount rideVatAbsorbedOnDiscount = do
+createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount rideVatAbsorbedOnDiscount = do
   createResult <-
     createRidePaymentLedger
       ctx
@@ -511,6 +587,8 @@ createFullyDiscountedRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAm
       gstAmount
       tollFare
       tollVatAmount
+      parkingCharge
+      parkingChargeVat
       platformFee
       offerDiscountAmount
       0 -- cashback doesn't apply to fully-discounted flow
@@ -536,6 +614,8 @@ riderObligationRefTypes =
     ridePaymentRefGST,
     ridePaymentRefTollFare,
     ridePaymentRefTollVAT,
+    ridePaymentRefParkingCharge,
+    ridePaymentRefParkingVAT,
     ridePaymentRefPlatformFee,
     ridePaymentRefTip,
     ridePaymentRefCancellationFee,
@@ -559,7 +639,7 @@ riderObligationRefTypes =
 --   'createRidePaymentLedger' and voided together with the ledger entries
 --   in 'voidRidePaymentLedger'.
 settleRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- entry IDs from createRidePaymentLedger
   Text -> -- settlement reason
@@ -590,6 +670,29 @@ settleRidePaymentLedger ctx entryIds settledReason = do
       logError $ "Failed to post settlement capture legs: " <> show err
       pure $ Left err
     Right _ -> pure $ Right ()
+
+-- | Post and settle ONLY the cashback-payout accrual leg
+--   (BuyerExpense → OwnerLiability, ref 'ridePaymentRefCashbackPayout'),
+--   leaving it in the same SETTLED / settlementStatus=NULL state that ride
+--   completion produces. This is the state the ExecuteCashRideCashbackPayout
+--   job looks for (settled + unsettled-settlementStatus). Used by the
+--   dashboard payout-offer sync to backfill the cashback entry so the payout
+--   job has something to drain. No-op when the amount is non-positive.
+createSettledCashbackPayoutLeg ::
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  FinanceCtx ->
+  HighPrecMoney ->
+  m ()
+createSettledCashbackPayoutLeg ctx cashbackPayoutAmount =
+  when (cashbackPayoutAmount > 0) $ do
+    result <- runFinance ctx $ void $ transferPending BuyerExpense OwnerLiability cashbackPayoutAmount ridePaymentRefCashbackPayout
+    case result of
+      Left err -> logError $ "Failed to create cashback payout ledger leg for " <> ctx.referenceId <> ": " <> show err
+      Right (_, entryIds) -> do
+        settleResult <- settleRidePaymentLedger ctx entryIds settledReasonRidePayment
+        case settleResult of
+          Right () -> logInfo $ "Settled cashback payout ledger leg for ride: " <> ctx.referenceId
+          Left err -> logError $ "Cashback payout ledger leg settle failed for " <> ctx.referenceId <> ": " <> show err
 
 -- ---------------------------------------------------------------------------
 -- Wallet account / payout-eligibility helpers
@@ -657,7 +760,7 @@ getPayoutEligibilityData counterparty personId = do
 --   lock TTL). Idempotent — entries already PROCESSING/PAID_OUT are
 --   left alone.
 reserveCashbackEntriesForPayout ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   Maybe Text -> -- optional PayoutRequest id (settlementId)
   m ()
@@ -673,7 +776,7 @@ reserveCashbackEntriesForPayout entryIds mbSettlementId = do
 --   PayoutFailed) or the webhook reports a terminal failure.
 --   Only flips PROCESSING entries — PAID_OUT entries are untouched.
 releaseCashbackEntriesReservation ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 releaseCashbackEntriesReservation entryIds = do
@@ -691,7 +794,7 @@ releaseCashbackEntriesReservation entryIds = do
 --   Idempotent: if all supplied entries are already PAID_OUT we no-op
 --   (and skip creating a duplicate drain transfer).
 markCashbackEntriesAsPaidOut ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   [Id LE.LedgerEntry] -> -- original cashback entry IDs (from PayoutRequest.ledgerEntryIds)
   HighPrecMoney -> -- payout amount (drives the OwnerLiability → BuyerExternal drain)
@@ -735,34 +838,46 @@ buildRidePaymentInvoiceConfig ::
   HighPrecMoney -> -- gstAmount
   HighPrecMoney -> -- tollFare
   HighPrecMoney -> -- tollVatAmount
+  HighPrecMoney -> -- parkingCharge
+  HighPrecMoney -> -- parkingChargeVat
   HighPrecMoney -> -- platformFee
-  HighPrecMoney -> -- offerDiscountAmount (for ride-fare description suffix)
+  HighPrecMoney -> -- offerDiscountAmount (rendered as its own deduction line)
   HighPrecMoney -> -- cashbackPayoutAmount (rendered as deduction line)
+  HighPrecMoney -> -- rideVatAbsorbedOnDiscount (reconstructs the pre-discount fare/tax)
   InvoiceConfig
-buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
-  InvoiceConfig
-    { invoiceType = Ride,
-      issuedToType = DInvType.RIDER,
-      issuedToId = ctx.counterpartyId,
-      issuedToName = ctx.issuedToName,
-      issuedToAddress = ctx.fromLocationAddress,
-      referenceId = Just ctx.referenceId,
-      lineItems =
-        catMaybes
-          [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
-            mkLineItem "Ride Tax" RideTax gstAmount False Tax (Just "g-ride"),
-            mkLineItem "Toll Fare" TollFare tollFare True Fare (Just "g-toll"),
-            mkLineItem "Toll Tax" TollTax tollVatAmount True Tax (Just "g-toll"),
-            mkDeductionLineItem "Cashback Offer" CashbackOffer cashbackPayoutAmount False
-          ],
-      gstBreakdown = Nothing,
-      isVat = gstAmount > 0 || tollVatAmount > 0,
-      issuedToTaxNo = Nothing,
-      issuedByTaxNo = Nothing,
-      paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
-      periodStart = Nothing,
-      periodEnd = Nothing
-    }
+buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount =
+  -- The main table shows the FULL pre-discount fare and its full VAT; the discount is a
+  -- separate negative Adjustment below the total.
+  -- Reconstruction is universal: every caller passes post-discount amounts + the clamped
+  -- gross discount + the VAT absorbed inside it (fully-discounted path included).
+  let preDiscountTax = gstAmount + rideVatAbsorbedOnDiscount
+      preDiscountFareLine = rideFare + platformFee + (offerDiscountAmount - rideVatAbsorbedOnDiscount)
+   in InvoiceConfig
+        { invoiceType = Ride,
+          issuedToType = DInvType.RIDER,
+          issuedToId = ctx.counterpartyId,
+          issuedToName = ctx.issuedToName,
+          issuedToAddress = ctx.fromLocationAddress,
+          referenceId = Just ctx.referenceId,
+          lineItems =
+            catMaybes
+              [ mkLineItem "Ride Fare" RideFare preDiscountFareLine False Fare (Just "g-ride"),
+                mkLineItem "Ride Tax" RideTax preDiscountTax False Tax (Just "g-ride"),
+                mkLineItem "Toll Fare" TollFare tollFare True Fare (Just "g-toll"),
+                mkLineItem "Toll Tax" TollTax tollVatAmount True Tax (Just "g-toll"),
+                mkLineItem "Parking Charge" ParkingCharges parkingCharge True Fare (Just "g-parking"),
+                mkLineItem "Parking Tax" ParkingChargesTax parkingChargeVat True Tax (Just "g-parking"),
+                mkDeductionLineItem "Discount" OfferDiscount offerDiscountAmount False,
+                mkDeductionLineItem "Cashback Offer" CashbackOffer cashbackPayoutAmount False
+              ],
+          gstBreakdown = Nothing,
+          isVat = preDiscountTax > 0 || tollVatAmount > 0 || parkingChargeVat > 0,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing,
+          paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
+          periodStart = Nothing,
+          periodEnd = Nothing
+        }
 
 -- ---------------------------------------------------------------------------
 -- 3. Void ledger entries when payment intent is cancelled
@@ -773,18 +888,19 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
 --   recreate the ledger — stale invoices from the previous attempt must
 --   also be marked VOIDED so dashboards / lookups don't surface them.
 voidRidePaymentLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 voidRidePaymentLedger entryIds = do
   -- Collect linked invoice IDs BEFORE voiding the entries, in case
   -- voiding cascades or otherwise disrupts the link lookup.
+  actorInfo <- asks (.actorInfo)
   mbInvoices <- forM entryIds $ \entryId -> FInvoiceService.getInvoiceForEntry entryId
   let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
   forM_ entryIds $ \entryId ->
     voidEntry entryId "PaymentIntentCancelled"
   forM_ uniqueInvoiceIds $ \invId ->
-    QInvoice.updateStatus FInvoice.Voided invId
+    QInvoice.updateStatus FInvoice.Voided (Just actorInfo.actorType) actorInfo.actorId invId
   logInfo $
     "Voided " <> show (length entryIds) <> " ride payment ledger entries and "
       <> show (length uniqueInvoiceIds)
@@ -795,7 +911,7 @@ voidRidePaymentLedger entryIds = do
 
 -- | Mark cancellation fee invoice as Paid after successful Stripe capture.
 markCancellationFeeInvoicePaid ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Maybe (Id FInvoice.Invoice) ->
   m ()
 markCancellationFeeInvoicePaid mbInvoiceId =
@@ -805,7 +921,7 @@ markCancellationFeeInvoicePaid mbInvoiceId =
 
 -- | Find and cancel the Ride invoice linked to a rideId (called when ride intent is cancelled).
 voidRideInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 voidRideInvoice rideId = do
@@ -826,7 +942,7 @@ voidRideInvoice rideId = do
 -- | Void all unsettled ledger entries for a ride then cancel the ride invoice.
 --   Single call-site for any cancellation path (cash or online, with or without fee).
 voidRidePaymentEntriesAndInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 voidRidePaymentEntriesAndInvoice rideId = do
@@ -838,21 +954,25 @@ voidRidePaymentEntriesAndInvoice rideId = do
 
 -- | Mark the Ride invoice as Paid after successful payment capture.
 markRideInvoicePaid ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 markRideInvoicePaid rideId = do
   rideEntries <- findRidePaymentEntries rideId
-  let settledEntry = find (\e -> e.referenceType == ridePaymentRefRideFare && e.status == LE.SETTLED) rideEntries
-  whenJust settledEntry $ \entry -> do
-    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
-    whenJust mbInvoice $ \inv -> do
-      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
-      logInfo $ "Marked Ride invoice as Paid for rideId: " <> rideId
+  -- Close the Ride invoice and, when a cancellation fee was also collected on this ride
+  -- (its own intent, a dues payment, or a later ride's fare), the RideCancellation invoice —
+  -- both settle through the same capture, so one commonised pass handles them.
+  forM_ [ridePaymentRefRideFare, ridePaymentRefCancellationFee] $ \refType -> do
+    let settledEntry = find (\e -> e.referenceType == refType && e.status == LE.SETTLED) rideEntries
+    whenJust settledEntry $ \entry -> do
+      mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+      whenJust mbInvoice $ \inv -> do
+        FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
+        logInfo $ "Marked invoice " <> inv.id.getId <> " (" <> refType <> ") as Paid for rideId: " <> rideId
 
 -- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
 markRideInvoiceIssued ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   m ()
 markRideInvoiceIssued rideId = do
@@ -873,7 +993,7 @@ markRideInvoiceIssued rideId = do
 --   Capture-side legs happen in settleRidePaymentLedger when chargePaymentIntent
 --   succeeds. Tip is a pure pass-through to the driver — no BAP commission.
 createTipLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- tipAmount
   m (Either FinanceError [Id LE.LedgerEntry])
@@ -886,11 +1006,155 @@ createTipLedger ctx tipAmount = do
       pure $ Left err
     Right (_, entryIds) -> pure $ Right entryIds
 
+-- ---------------------------------------------------------------------------
+-- 5. Refund ledger entries
+-- ---------------------------------------------------------------------------
+--
+-- Per refund_request (per-component refTypes RideFareRefund/TollRefund/ParkingRefund + VAT,
+-- ref = rideId, entityReference = (RefundRequest, refundRequestId)):
+-- raise → pending OwnerExpense→BuyerControl legs; success → settle them + post the kernel
+-- reversal (BuyerControl→OwnerExpense) so BAP nets to zero (pass-through); failure → void them.
+-- VOIDED legs are ignored by dedup/guards (so a retry re-raises); "done" = a SETTLED leg.
+
+-- | Every entry of one refund request: its legs plus the reversals that zero them out.
+getRefundRequestLegsWithReversals ::
+  (BeamFlow.BeamFlow m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m [LE.LedgerEntry]
+getRefundRequestLegsWithReversals refundRequestId =
+  Lib.Finance.Ledger.Service.getEntriesByEntityReference LE.RefundRequest refundRequestId.getId
+
+-- | The legs of one refund request, at whatever status they hold (PENDING when raised, SETTLED
+--   on success, VOIDED on failure); the reversals that zero them out are excluded.
+getRefundRequestLegs ::
+  (BeamFlow.BeamFlow m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m [LE.LedgerEntry]
+getRefundRequestLegs refundRequestId =
+  filter (isNothing . (.reversalOf)) <$> getRefundRequestLegsWithReversals refundRequestId
+
+-- | Per-component refund split (BAP). One base + one VAT leg per refunded component.
+data RefundComponentSplit = RefundComponentSplit
+  { component :: DFareBreakup.FareComponent,
+    fareAmount :: HighPrecMoney,
+    vatAmount :: HighPrecMoney
+  }
+  deriving (Show)
+
+-- | (base refType, VAT refType) for a refunded component.
+refundRefTypesForComponent :: DFareBreakup.FareComponent -> (Text, Text)
+refundRefTypesForComponent = \case
+  DFareBreakup.RIDE_FARE -> (ridePaymentRefRideFareRefund, ridePaymentRefRideFareRefundVAT)
+  DFareBreakup.TOLL -> (ridePaymentRefTollRefund, ridePaymentRefTollRefundVAT)
+  DFareBreakup.PARKING -> (ridePaymentRefParkingRefund, ridePaymentRefParkingRefundVAT)
+  DFareBreakup.CANCELLATION_FEE -> (ridePaymentRefCancellationFeeRefund, ridePaymentRefCancellationFeeRefundVAT)
+
+-- | Every per-component refund leg refType (base + VAT for each 'FareComponent'). Used to find
+--   every refund leg for a ride (dedup / settle / void / cap-check) — a component missing here is
+--   invisible to the cap check, so it must list all of them.
+refundLegRefTypes :: [Text]
+refundLegRefTypes =
+  [ ridePaymentRefRideFareRefund,
+    ridePaymentRefRideFareRefundVAT,
+    ridePaymentRefTollRefund,
+    ridePaymentRefTollRefundVAT,
+    ridePaymentRefParkingRefund,
+    ridePaymentRefParkingRefundVAT,
+    ridePaymentRefCancellationFeeRefund,
+    ridePaymentRefCancellationFeeRefundVAT
+  ]
+
+getRefundLegEntries :: (BeamFlow.BeamFlow m r) => Text -> m [LE.LedgerEntry]
+getRefundLegEntries rideId = concat <$> mapM (`getEntriesByReference` rideId) refundLegRefTypes
+
+-- | Total SETTLED refund amount for a ride for one component (base + VAT legs) — the
+--   ledger-driven "already refunded" that the per-component cap check compares against.
+getSettledRefundByComponent :: (BeamFlow.BeamFlow m r) => Text -> DFareBreakup.FareComponent -> m HighPrecMoney
+getSettledRefundByComponent rideId component = do
+  entries <- getRefundLegEntries rideId
+  pure $ settledRefundByComponent entries component
+
+-- | Pure part of 'getSettledRefundByComponent' — sums the SETTLED base+VAT legs for one
+--   component from pre-fetched entries, so per-component checks can share a single fetch.
+--   Zero-out reversal legs (reversalOf set) share the refType and must not double the sum.
+settledRefundByComponent :: [LE.LedgerEntry] -> DFareBreakup.FareComponent -> HighPrecMoney
+settledRefundByComponent entries component =
+  let (baseRef, vatRef) = refundRefTypesForComponent component
+   in sum [e.amount | e <- entries, e.status == LE.SETTLED, e.referenceType `elem` [baseRef, vatRef], isNothing e.reversalOf]
+
+createRefundRaisedLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
+  FinanceCtx ->
+  Id DRefundRequest.RefundRequest ->
+  [RefundComponentSplit] -> -- per-component split (always present; caller throws on no breakup)
+  m (Either FinanceError [Id LE.LedgerEntry])
+createRefundRaisedLedger ctx refundRequestId splits = do
+  existing <- getRefundRequestLegs refundRequestId
+  -- Skip VOIDED legs so a retry re-raises a fresh pending leg; a live leg de-dups a re-fire.
+  case List.find (\e -> e.status /= LE.VOIDED) existing of
+    Just e -> do
+      logInfo $ "Refund APPROVED ledger already written for refundRequest " <> refundRequestId.getId
+      pure $ Right [e.id]
+    Nothing -> do
+      result <-
+        runFinance ctx {entityReferenceId = Just refundRequestId.getId, entityReferenceType = Just LE.RefundRequest} $
+          forM_ splits $ \s -> do
+            let (baseRef, vatRef) = refundRefTypesForComponent s.component
+            void $ transferPending OwnerExpense BuyerControl s.fareAmount baseRef
+            void $ transferPending OwnerExpense BuyerControl s.vatAmount vatRef
+      case result of
+        Left err -> do
+          logError $ "Failed to create refund APPROVED ledger: " <> show err
+          pure $ Left err
+        Right (_, entryIds) -> pure $ Right entryIds
+
+createRefundSucceededLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m (Either FinanceError [Id LE.LedgerEntry])
+createRefundSucceededLedger refundRequestId = do
+  (reversals, legs) <- List.partition (isJust . (.reversalOf)) <$> getRefundRequestLegsWithReversals refundRequestId
+  let pendingLegs = filter (\e -> e.status == LE.PENDING) legs
+      hasReversal e = any (\r -> r.reversalOf == Just e.id) reversals
+  -- BAP is a pass-through, so each settled leg is zeroed out by a reversal (BuyerControl →
+  -- OwnerExpense, same refType). Runs on every REFUNDED delivery — the hooks re-deliver, and a crash
+  -- between the settle and the reversal must heal — so both halves have to tolerate a re-run:
+  -- pendingLegs is PENDING-only, and hasReversal is what stops a re-run from reversing a leg twice
+  -- (as createReversal writes a fresh row on every call; it does not dedup, so doing it this way).
+  forM_ pendingLegs $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
+  forM_ (filter (\e -> e.status /= LE.VOIDED && not (hasReversal e)) legs) $ \e ->
+    Lib.Finance.Ledger.Service.createReversal e.id "RefundSucceededZeroOut" >>= \case
+      Left err -> logError $ "Refund zero-out reversal failed for leg " <> e.id.getId <> ": " <> show err
+      Right _ -> pure ()
+  pure $ Right (map (\e -> e.id) legs)
+
+-- | True once this refund's APPROVED leg is SETTLED — the "success already done" signal that
+--   gates the one-shot REFUNDED side-effects (invoice, BPP call) against hook re-fires. The
+--   settle+zero-out itself is NOT gated on this (it self-heals in case of mid crash before reversal; see createRefundSucceededLedger).
+refundSucceededAlreadyRecorded ::
+  (BeamFlow.BeamFlow m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m Bool
+refundSucceededAlreadyRecorded refundRequestId = do
+  existing <- getRefundRequestLegs refundRequestId
+  pure $ any (\e -> e.status == LE.SETTLED) existing
+
+-- | On FAILED, void this refund's pending APPROVED leg(s) — the raised obligation never
+--   materialized. Only PENDING legs → idempotent.
+voidRefundRaisedLedger ::
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  Id DRefundRequest.RefundRequest ->
+  m ()
+voidRefundRaisedLedger refundRequestId = do
+  existing <- getRefundRequestLegs refundRequestId
+  let pendingApproved = filter (\e -> e.status == LE.PENDING) existing
+  forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.voidEntry e.id "RefundFailed"
+
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
 --   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
 --   'voidCancellationFeeLedger' / 'markDueCancellationFeeLedger' on failure.
 createPendingCancellationFeeLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney -> -- cancellationFee (without GST)
   HighPrecMoney -> -- cancellationGST
@@ -958,6 +1222,8 @@ coreRidePaymentRefTypes =
     ridePaymentRefGST,
     ridePaymentRefTollFare,
     ridePaymentRefTollVAT,
+    ridePaymentRefParkingCharge,
+    ridePaymentRefParkingVAT,
     ridePaymentRefPlatformFee,
     ridePaymentRefOfferDiscount,
     ridePaymentRefCashbackPayout,
@@ -1018,7 +1284,7 @@ findDueRidePaymentEntries rideId = do
 
 -- | Mark ledger entries as DUE (capture was attempted and failed).
 markEntriesAsDue ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->
   m ()
 markEntriesAsDue entryIds = do
@@ -1049,7 +1315,7 @@ isRidePaymentSettled rideId = do
 --   Called after chargePaymentIntent succeeds when tip was folded into the
 --   existing PI (paymentStatus was not Completed when tip was added).
 regenerateRideTipInvoice ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
   Text -> -- rideId
   HighPrecMoney -> -- tipAmount
   m ()
@@ -1101,7 +1367,8 @@ regenerateRideTipInvoice rideId tipAmount = do
             FInvoiceService.createInvoice
               InvoiceInput
                 { invoiceType = priorInv.invoiceType,
-                  paymentOrderId = priorInv.paymentOrderId,
+                  entityReferenceId = priorInv.entityReferenceId,
+                  referenceInvoiceNumber = Nothing,
                   issuedToType = priorInv.issuedToType,
                   issuedToId = priorInv.issuedToId,
                   issuedToName = priorInv.issuedToName,
@@ -1145,3 +1412,94 @@ regenerateRideTipInvoice rideId tipAmount = do
               FInvoiceService.updateInvoiceStatus priorInv.id FInvoice.Voided
               FInvoiceService.updateInvoiceStatus newInv.id FInvoice.Paid
               logInfo $ "regenerateRideTipInvoice: created RideTip invoice " <> newInv.id.getId <> " (replacing " <> priorInv.id.getId <> ") for ride " <> rideId
+
+-- | One Refund invoice per refund request — no void-prior, no cumulation. Per-component
+--   negative line items (Fare + inline Tax via a shared groupId so 'attachTaxToFares' renders
+--   the VAT inline); referenceInvoiceNumber = the parent ride invoice number.
+createRefundInvoice ::
+  (BeamFlow.BeamFlow m r, MonadFlow m, Finance.HasActorInfo m r) =>
+  Text -> -- rideId
+  Text -> -- refundsRequestId
+  [RefundComponentSplit] -> -- per-component split (always present; caller throws on no breakup)
+  m ()
+createRefundInvoice rideId refundsRequestId splits = do
+  let activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
+  -- Parent invoice: header source (customer/merchant/currency) + referenceInvoiceNumber. Prefer the
+  -- Ride invoice; fall back to RideCancellation, since a cancelled ride's Ride invoice was voided and
+  -- the fee (the only thing a cancelled ride refunds) lives on its RideCancellation invoice instead.
+  mbRideInvoice <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Ride) Nothing activeStatuses (Just 1) (Just 0)
+  mbSource <- case mbRideInvoice of
+    Just inv -> pure (Just inv)
+    Nothing -> listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.RideCancellation) Nothing activeStatuses (Just 1) (Just 0)
+  case mbSource of
+    Nothing -> logInfo $ "createRefundInvoice: no ride or cancellation invoice for ride " <> rideId <> "; skipping refund invoice"
+    Just srcInv -> do
+      let lineItems = concatMap mkRefundLineItems splits
+          anyVat = any (\s -> s.vatAmount > 0) splits
+      createRes <-
+        FInvoiceService.createInvoice
+          InvoiceInput
+            { invoiceType = DInvType.Refund,
+              entityReferenceId = Just refundsRequestId,
+              referenceInvoiceNumber = Just srcInv.invoiceNumber,
+              issuedToType = srcInv.issuedToType,
+              issuedToId = srcInv.issuedToId,
+              issuedToName = srcInv.issuedToName,
+              issuedToAddress = srcInv.issuedToAddress,
+              issuedByType = srcInv.issuedByType,
+              issuedById = srcInv.issuedById,
+              issuedByName = srcInv.issuedByName,
+              issuedByAddress = srcInv.issuedByAddress,
+              supplierName = srcInv.supplierName,
+              supplierAddress = srcInv.supplierAddress,
+              supplierGSTIN = srcInv.supplierGSTIN,
+              supplierTaxNo = srcInv.supplierTaxNo,
+              supplierId = srcInv.supplierId,
+              merchantGstin = srcInv.merchantGstin,
+              referenceId = Just rideId,
+              gstinOfParty = Nothing,
+              panOfParty = Nothing,
+              panType = Nothing,
+              counterpartyId = srcInv.issuedToId,
+              tdsRateReason = Nothing,
+              tanOfDeductee = Nothing,
+              lineItems = lineItems,
+              gstBreakdown = Nothing,
+              currency = srcInv.currency,
+              dueAt = srcInv.dueAt,
+              merchantId = srcInv.merchantId,
+              merchantOperatingCityId = srcInv.merchantOperatingCityId,
+              merchantShortId = srcInv.merchantId,
+              isVat = anyVat,
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing,
+              paymentMode = srcInv.paymentMode,
+              periodStart = srcInv.periodStart,
+              periodEnd = srcInv.periodEnd
+            }
+          []
+      case createRes of
+        Left err -> logError $ "createRefundInvoice: failed for ride " <> rideId <> ": " <> show err
+        Right newInv -> do
+          FInvoiceService.updateInvoiceStatus newInv.id FInvoice.Paid
+          logInfo $ "createRefundInvoice: created refund invoice " <> newInv.id.getId <> " for ride " <> rideId <> " refundRequest " <> refundsRequestId
+
+-- | Per-component refund invoice lines: a negative Fare + a negative inline Tax (shared
+--   groupId). Ride fare and cancellation fee are regular taxable lines; toll/parking are
+--   flagged external, mirroring the ride invoice.
+mkRefundLineItems :: RefundComponentSplit -> [InvoiceLineItem]
+mkRefundLineItems s =
+  let (fareDesc, fareType, taxDesc, taxType, gId) = refundLineItemMeta s.component
+      isExt = case s.component of DFareBreakup.RIDE_FARE -> False; DFareBreakup.CANCELLATION_FEE -> False; _ -> True
+      mkNeg desc dtype amt typ =
+        if amt > 0
+          then Just InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = isExt, groupId = Just gId, itemType = Just typ}
+          else Nothing
+   in catMaybes [mkNeg fareDesc fareType s.fareAmount Fare, mkNeg taxDesc taxType s.vatAmount Tax]
+
+refundLineItemMeta :: DFareBreakup.FareComponent -> (Text, LineItemDescription, Text, LineItemDescription, Text)
+refundLineItemMeta = \case
+  DFareBreakup.RIDE_FARE -> ("Ride Fare Refund", RideFareRefund, "Ride Fare Refund VAT", RideFareRefundTax, "g-refund-ridefare")
+  DFareBreakup.TOLL -> ("Toll Refund", TollRefund, "Toll Refund VAT", TollRefundTax, "g-refund-toll")
+  DFareBreakup.PARKING -> ("Parking Refund", ParkingRefund, "Parking Refund VAT", ParkingRefundTax, "g-refund-parking")
+  DFareBreakup.CANCELLATION_FEE -> ("Cancellation Fee Refund", CancellationFeeRefund, "Cancellation Fee Refund VAT", CancellationFeeRefundTax, "g-refund-cancellation")

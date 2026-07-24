@@ -30,10 +30,12 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError)
 import Kernel.Utils.Time
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverFee as CHDriverFee
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
 
@@ -41,7 +43,7 @@ getRevenueAllFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime 
 getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
@@ -60,7 +62,7 @@ getRevenueCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCT
 getRevenueCollectionHistory merchantShortId opCity mbFrom place mbTo volunteerId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let defaultFrom = UTCTime (utctDay now) 0
       from_ = fromMaybe defaultFrom mbFrom

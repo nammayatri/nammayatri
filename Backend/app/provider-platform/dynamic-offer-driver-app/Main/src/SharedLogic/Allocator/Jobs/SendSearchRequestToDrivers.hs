@@ -36,7 +36,10 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -54,6 +57,7 @@ import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
@@ -72,8 +76,6 @@ sendSearchRequestToDrivers ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Log m,
-    MonadFlow m,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasField "maxShards" r Int,
@@ -99,7 +101,9 @@ sendSearchRequestToDrivers ::
     ClickhouseFlow m r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "enableLtsPoolDataForPooling" r Bool
+    HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "cloudType" r (Maybe CloudType),
+    Finance.HasActorInfo m r
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -110,7 +114,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-  goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
+  goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
   tripQuoteDetailsWithoutUpgrades <- do
     let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
     estimateIds `forM` \estimateId -> do
@@ -193,7 +197,7 @@ sendSearchRequestToDrivers' ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Log m,
+    Finance.HasActorInfo m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasField "maxShards" r Int,
@@ -217,8 +221,7 @@ sendSearchRequestToDrivers' ::
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    Redis.HedisLTSFlowEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   DriverPoolConfig ->

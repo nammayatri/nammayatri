@@ -23,9 +23,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
+import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
 import qualified Storage.Queries.Person as QPerson
@@ -36,14 +35,16 @@ import Tools.Error
 getDriverVehicleQualityList ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe DVariant.VehicleVariant ->
   Maybe Int ->
   Maybe Double ->
+  Maybe Double ->
+  Maybe [DVariant.VehicleVariant] ->
   Maybe Int ->
   Int ->
   Double ->
-  DVariant.VehicleVariant ->
   Environment.Flow Common.DriverVehicleQualityListRes
-getDriverVehicleQualityList merchantShortId opCity mbLimit mbMaxVehicleRating mbOffset maxVehicleAge minDriverRating vehicleVariant = do
+getDriverVehicleQualityList merchantShortId opCity mbVehicleVariant mbLimit _mbMaxVehicleRating mbMinVehicleRating mbVehicleVariants mbOffset maxVehicleAge minDriverRating = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   now <- getCurrentTime
@@ -52,8 +53,9 @@ getDriverVehicleQualityList merchantShortId opCity mbLimit mbMaxVehicleRating mb
       limit = min 50 . fromMaybe 20 $ mbLimit
       offset = fromMaybe 0 mbOffset
       minRatingCentesimal = realToFrac minDriverRating
+      variants = maybeToList mbVehicleVariant <> fromMaybe [] mbVehicleVariants
 
-  vehicles <- B.runInReplica $ QVehicle.findEnabledByVariantCityAndManufacturingDateAfter vehicleVariant cutoffDate merchant.id merchantOpCity.id mbMaxVehicleRating limit offset
+  vehicles <- B.runInReplica $ QVehicle.findEnabledByVariantsCityAndManufacturingDateAfter variants cutoffDate merchant.id merchantOpCity.id mbMinVehicleRating limit offset
   let driverIds = map (.driverId) vehicles
 
   driverStatsList <- B.runInReplica $ QDriverStats.findAllByDriverIdList (cast <$> driverIds)
@@ -124,7 +126,7 @@ postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity req = do
   whenJust mbVehicle $ \vehicle -> do
     QVehicle.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) vehicle.driverId
     let updatedVehicle = vehicle{DVeh.vehicleRating = Just req.rating}
-    tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just updatedVehicle) Nothing Nothing vehicle.driverId _merchantOpCity.id
+    tierResults <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing (Just updatedVehicle) Nothing Nothing vehicle.driverId _merchantOpCity.id
     let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
     QVehicle.updateSelectedServiceTiers newTiers vehicle.driverId
 
@@ -145,7 +147,6 @@ buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
       vehicleAgeInMonths = mbVehicle >>= (.mYManufacturing) >>= \mfgDate -> Just $ fromIntegral (diffDays today mfgDate) `div` 30
   phoneNo <- mapM decrypt person.mobileNumber
   let driverName = person.firstName <> maybe "" (" " <>) person.lastName
-  driverInfo <- B.runInReplica $ QDI.findById (cast person.id) >>= fromMaybeM DriverInfoNotFound
   pure
     Common.DriverVehicleQualityResp
       { driverId = cast person.id,
@@ -166,6 +167,5 @@ buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
         vehicleName = mbVehicle >>= (.vehicleName),
         vehicleCapacity = mbVehicle >>= (.capacity),
         vehicleRating = mbVehicle >>= (.vehicleRating),
-        vehicleRatingRemark = mbVehicle >>= (.vehicleRatingRemark),
-        canSwitchToAirport = Just driverInfo.canSwitchToAirport
+        vehicleRatingRemark = mbVehicle >>= (.vehicleRatingRemark)
       }

@@ -19,9 +19,12 @@ module Domain.Action.UI.Maps
     Maps.GetPlaceDetailsResp,
     Maps.GetPlaceNameReq,
     Maps.GetPlaceNameResp,
+    Maps.SearchDestinationsReq,
+    Maps.SearchDestinationsResp,
     autoComplete,
     getPlaceDetails,
     getPlaceName,
+    searchDestinations,
     AutoCompleteType (..),
   )
 where
@@ -42,13 +45,14 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person as CQP
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -95,9 +99,14 @@ getPlaceDetails (personId, merchantId) entityId req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   Maps.getPlaceDetails merchantId merchantOperatingCityId entityId req
 
+searchDestinations :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.SearchDestinationsReq -> m Maps.SearchDestinationsResp
+searchDestinations (personId, merchantId) entityId req = do
+  merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
+  Maps.searchDestinations merchantId merchantOperatingCityId entityId req
+
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOperatingCityId = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   whenJust riderConfig.placeNameCacheExpiryDays $ \cacheExpiry -> do
     currentTime <- liftIO DT.getCurrentTime
     let expiryDate = DT.addUTCTime (DT.nominalDay * fromIntegral (- cacheExpiry)) currentTime

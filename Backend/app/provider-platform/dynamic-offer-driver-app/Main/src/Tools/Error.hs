@@ -18,6 +18,7 @@ import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
+import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
@@ -119,7 +120,7 @@ instance IsBaseError FareProductError where
 
 instance IsHTTPError FareProductError where
   toErrorCode NoFareProduct = "NO_FARE_PRODUCT"
-  toHttpCode NoFareProduct = E500
+  toHttpCode NoFareProduct = E400
 
 instance IsAPIError FareProductError
 
@@ -194,6 +195,7 @@ data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
   | NoPlanSelected Text
+  | NoActivePrepaidPlan Text
   | DriverAccountBlocked BlockErrorPayload
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
@@ -207,6 +209,8 @@ data DriverError
   | AccountBlocked
   | DriverActivityUpdateInProgress Text
   | InsufficientAirportBalance HighPrecMoney HighPrecMoney
+  | DriverNotEnabledForAirport
+  | DriverAirportAlreadyBlocked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -215,6 +219,7 @@ instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
   toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
   toMessage (NoPlanSelected personId) = Just $ "Driver with id = " <> personId <> " has not selected any plan"
+  toMessage (NoActivePrepaidPlan personId) = Just $ "Driver with id = " <> personId <> " has no active prepaid subscription with sufficient balance. Please recharge to go online."
   toMessage (DriverAccountBlocked _) = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
@@ -228,12 +233,15 @@ instance IsBaseError DriverError where
   toMessage AccountBlocked = Just "Account has been blocked."
   toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
   toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
+  toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides"
+  toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
     DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
     NoPlanSelected _ -> "NO_PLAN_SELECTED"
+    NoActivePrepaidPlan _ -> "NO_ACTIVE_PREPAID_PLAN"
     DriverAccountBlocked _ -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
@@ -247,10 +255,13 @@ instance IsHTTPError DriverError where
     AccountBlocked -> "ACCOUNT_BLOCKED"
     DriverActivityUpdateInProgress _ -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
     InsufficientAirportBalance _ _ -> "INSUFFICIENT_AIRPORT_BALANCE"
+    DriverNotEnabledForAirport -> "DRIVER_NOT_ENABLED_FOR_AIRPORT"
+    DriverAirportAlreadyBlocked -> "DRIVER_AIRPORT_ALREADY_BLOCKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
     NoPlanSelected _ -> E400
+    NoActivePrepaidPlan _ -> E403
     DriverAccountBlocked _ -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
@@ -264,6 +275,8 @@ instance IsHTTPError DriverError where
     AccountBlocked -> E403
     DriverActivityUpdateInProgress _ -> E409
     InsufficientAirportBalance _ _ -> E402
+    DriverNotEnabledForAirport -> E403
+    DriverAirportAlreadyBlocked -> E403
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
@@ -375,6 +388,7 @@ data DriverQuoteError
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | RideRequestAlreadyAccepted
+  | CancelSearchLockNotAcquired
   | RideRequestAlreadyAcceptedOrCancelled Text
   | DriverAlreadyQuoted Text
   | QuoteAlreadyRejected
@@ -395,6 +409,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
+  toMessage CancelSearchLockNotAcquired = Just "Cancel search could not acquire the init/cancel lock; an init or another cancel is in progress."
   toMessage (RideRequestAlreadyAcceptedOrCancelled srfd) = Just $ "Ride request already accepted by other driver or cancelled:-" <> show srfd
   toMessage (DriverAlreadyQuoted stId) = Just $ "Driver already quoted for stId:-" <> show stId
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
@@ -413,6 +428,7 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
+    CancelSearchLockNotAcquired -> "CANCEL_SEARCH_LOCK_NOT_ACQUIRED"
     RideRequestAlreadyAcceptedOrCancelled _ -> "RIDE_REQUEST_ALREADY_ACCEPTED_OR_CANCELLED"
     DriverAlreadyQuoted _ -> "DRIVER_ALREADY_QUOTED"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
@@ -430,6 +446,7 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
     RideRequestAlreadyAccepted -> E400
+    CancelSearchLockNotAcquired -> E400
     RideRequestAlreadyAcceptedOrCancelled _ -> E409
     DriverAlreadyQuoted _ -> E409
     QuoteAlreadyRejected -> E400
@@ -1009,6 +1026,7 @@ data DriverCoinError
   | NonBulkUploadCoinFunction Text
   | CoinInfoTranslationNotFound Text Text
   | NoPlanAgaintsDriver Text
+  | DriverIncentiveCoinConfigNotModified
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -1022,6 +1040,7 @@ instance IsBaseError DriverCoinError where
     CoinInfoTranslationNotFound key lang -> Just $ "Coin info translation not found for " <> key <> " in " <> lang <> " language."
     NonBulkUploadCoinFunction eventFunction -> Just ("Coin function " <> show eventFunction <> " is not bulk upload function.")
     NoPlanAgaintsDriver driverId -> Just ("No plan found against driverId " <> show driverId <> ".")
+    DriverIncentiveCoinConfigNotModified -> Just "Driver incentive coin config is not modified."
 
 instance IsHTTPError DriverCoinError where
   toErrorCode = \case
@@ -1032,6 +1051,7 @@ instance IsHTTPError DriverCoinError where
     NonBulkUploadCoinFunction _ -> "NON_BULK_UPLOAD_COIN_FUNCTION"
     CoinInfoTranslationNotFound _ _ -> "COIN_INFO_TRANSLATION_NOT_FOUND"
     NoPlanAgaintsDriver _ -> "NO_PLAN_AGAINST_DRIVER"
+    DriverIncentiveCoinConfigNotModified -> "DRIVER_INCENTIVE_COIN_CONFIG_NOT_MODIFIED"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
     InsufficientCoins _ _ -> E400
@@ -1040,6 +1060,7 @@ instance IsHTTPError DriverCoinError where
     NonBulkUploadCoinFunction _ -> E400
     CoinInfoTranslationNotFound _ _ -> E400
     NoPlanAgaintsDriver _ -> E400
+    DriverIncentiveCoinConfigNotModified -> E304
 
 instance IsAPIError DriverCoinError
 
@@ -1257,9 +1278,14 @@ data DriverOnboardingError
   | ImageLowQuality
   | ImageInvalidType Text Text
   | ImageDocumentNumberMismatch Text Text
+  | PanGstNumberMismatch
+  | GstLegalNameNotFound
   | ImageExtractionFailed
   | ImageNotFound Text
+  | ImageAccessDenied Text
   | ImageNotValid Text
+  | ImageNotBelongsToPerson Text
+  | FaceMatchFailed
   | DriverAlreadyLinked
   | DLAlreadyLinked
   | DLAlreadyUpdated
@@ -1279,8 +1305,11 @@ data DriverOnboardingError
   | RCActivationFailedPaymentDue Text
   | RCDependentDocExpired Text
   | DLInvalid
+  | PanInvalid
+  | GstInvalid
   | VehicleServiceTierNotFound Text
   | DocumentUnderManualReview Text
+  | SelfieReuploadNotAllowed Text Documents.VerificationStatus
   | DocumentAlreadyValidated Text
   | InvalidWebhookPayload Text Text
   | InvalidReviewStatus Text Text
@@ -1342,9 +1371,14 @@ instance IsBaseError DriverOnboardingError where
         then Just $ "We couldn't detect a valid " <> provided <> " in the uploaded image. Please ensure the document is clearly visible and try again."
         else Just $ "The uploaded image appears to be a " <> actual <> " instead of a " <> provided <> ". Please upload a clear photo of your " <> provided <> "."
     ImageDocumentNumberMismatch a b -> Just $ "Document number \"" <> a <> "\" in image is not matching with input \"" <> b <> "\"."
+    PanGstNumberMismatch -> Just "PAN and GST do not belong to the same entity. Please re-upload the document."
+    GstLegalNameNotFound -> Just "Legal name not found in the GSTIN verification response."
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
+    ImageAccessDenied id_ -> Just $ "Access denied for image with imageId \"" <> id_ <> "\"."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> id_ <> "\" is not valid."
+    ImageNotBelongsToPerson id_ -> Just $ "Image with imageId \"" <> id_ <> "\" belongs to another person/entity."
+    FaceMatchFailed -> Just "Face match failed. The photo on this document does not match your selfie. Please re-upload."
     DriverAlreadyLinked -> Just "Document is already linked with driver."
     DLAlreadyLinked -> Just "Driver License Is Already Linked With Another Driver."
     DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."
@@ -1364,8 +1398,16 @@ instance IsBaseError DriverOnboardingError where
     RCActivationFailedPaymentDue id_ -> Just $ "cannot activate RC for person \"" <> id_ <> "\" Due to paymentDue."
     RCDependentDocExpired detail -> Just $ "RC dependent doc not valid : " <> detail
     DLInvalid -> Just "Contact Customer Support, class of vehicles is not supported"
+    PanInvalid -> Just "Contact Customer Support, PAN card has been rejected"
+    GstInvalid -> Just "Contact Customer Support, GST certificate has been rejected"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
     DocumentUnderManualReview docName -> Just $ "Your " <> docName <> " is under manual review."
+    SelfieReuploadNotAllowed docName status ->
+      let reason = case status of
+            Documents.VALID -> "already validated"
+            Documents.MANUAL_VERIFICATION_REQUIRED -> "under manual review"
+            _ -> "under verification"
+       in Just $ "You can't update your selfie because your " <> docName <> " is " <> reason <> ". Please contact support if you need to make changes."
     DocumentAlreadyValidated docName -> Just $ "Your " <> docName <> " is already validated."
     InvalidWebhookPayload svcName errMsg -> Just $ "Unable to parse webhook payload from  " <> svcName <> ". Error: " <> errMsg
     InvalidReviewStatus svcName status -> Just $ "Invalid review status from svc : " <> svcName <> ". Value : " <> status
@@ -1423,9 +1465,14 @@ instance IsHTTPError DriverOnboardingError where
     ImageLowQuality -> "IMAGE_LOW_QUALITY"
     ImageInvalidType _ _ -> "IMAGE_INVALID_TYPE"
     ImageDocumentNumberMismatch _ _ -> "IMAGE_DOCUMENT_NUMBER_MISMATCH"
+    PanGstNumberMismatch -> "PAN_GST_NUMBER_MISMATCH"
+    GstLegalNameNotFound -> "GST_LEGAL_NAME_NOT_FOUND"
     ImageExtractionFailed -> "IMAGE_EXTRACTION_FAILED"
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
+    ImageAccessDenied _ -> "IMAGE_ACCESS_DENIED"
     ImageNotValid _ -> "IMAGE_NOT_VALID"
+    ImageNotBelongsToPerson _ -> "IMAGE_NOT_BELONGS_TO_PERSON"
+    FaceMatchFailed -> "FACE_MATCH_FAILED"
     DriverAlreadyLinked -> "DRIVER_ALREADY_LINKED"
     DLAlreadyLinked -> "DL_ALREADY_LINKED"
     DLAlreadyUpdated -> "DL_ALREADY_UPDATED"
@@ -1445,8 +1492,11 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> "RC_ACTIVATION_FAILED_PAYMENT_DUE"
     RCDependentDocExpired _ -> "RC_DEPENDENT_DOC_EXPIRED"
     DLInvalid -> "DL_INVALID"
+    PanInvalid -> "PAN_INVALID"
+    GstInvalid -> "GST_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
     DocumentUnderManualReview _ -> "DOCUMENT_UNDER_MANUAL_REVIEW"
+    SelfieReuploadNotAllowed _ _ -> "SELFIE_REUPLOAD_NOT_ALLOWED"
     DocumentAlreadyValidated _ -> "DOCUMENT_ALREADY_VALIDATED"
     InvalidWebhookPayload _ _ -> "INVALID_WEBHOOK_PAYLOAD"
     InvalidReviewStatus _ _ -> "INVALID_REVIEW_STATUS"
@@ -1502,9 +1552,14 @@ instance IsHTTPError DriverOnboardingError where
     ImageLowQuality -> E400
     ImageInvalidType _ _ -> E400
     ImageDocumentNumberMismatch _ _ -> E400
+    PanGstNumberMismatch -> E400
+    GstLegalNameNotFound -> E400
     ImageExtractionFailed -> E400
     ImageNotFound _ -> E400
+    ImageAccessDenied _ -> E403
     ImageNotValid _ -> E400
+    ImageNotBelongsToPerson _ -> E403
+    FaceMatchFailed -> E400
     DriverAlreadyLinked -> E400
     DLAlreadyLinked -> E400
     DLAlreadyUpdated -> E400
@@ -1524,8 +1579,11 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> E400
     RCDependentDocExpired _ -> E400
     DLInvalid -> E400
+    PanInvalid -> E400
+    GstInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
     DocumentUnderManualReview _ -> E400
+    SelfieReuploadNotAllowed _ _ -> E400
     DocumentAlreadyValidated _ -> E400
     InvalidWebhookPayload _ _ -> E400
     InvalidReviewStatus _ _ -> E400
@@ -2087,3 +2145,19 @@ instance IsHTTPError IntegratedBPPConfigError where
     IntegratedBPPConfigNotFound -> E404
 
 instance IsAPIError IntegratedBPPConfigError
+
+data CustomAuthError = IpHitsLimitExceeded deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomAuthError
+
+instance IsBaseError CustomAuthError where
+  toMessage = \case
+    IpHitsLimitExceeded -> Just "IP Rate Limit Exceed, Too Many Requests In Short Duration"
+
+instance IsHTTPError CustomAuthError where
+  toErrorCode = \case
+    IpHitsLimitExceeded -> "IP_HITS_LIMIT_EXCEED"
+  toHttpCode = \case
+    IpHitsLimitExceeded -> E429
+
+instance IsAPIError CustomAuthError

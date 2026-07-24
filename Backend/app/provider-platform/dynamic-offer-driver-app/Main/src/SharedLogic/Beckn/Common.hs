@@ -54,7 +54,10 @@ data DRideAssignedReq = DRideAssignedReq
     estimateId :: Maybe Text,
     isAlreadyFav :: Bool,
     favCount :: Int,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    isTierUpgrade :: Bool,
+    assignedServiceTierType :: Maybe Text,
+    assignedServiceTierName :: Maybe Text
   }
 
 data DRideStartedReq = DRideStartedReq

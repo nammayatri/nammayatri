@@ -10,6 +10,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.JourneyLeg as QJL
@@ -25,22 +26,22 @@ getJourneyIdFromBooking booking = do
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
   return $ mbJourneyLeg <&> (.journeyId)
 
-getfareBreakups :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DBooking.Booking -> Maybe DRide.Ride -> m ([DFareBreakup.FareBreakup], [DFareBreakup.FareBreakup])
+getfareBreakups :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m) => DBooking.Booking -> Maybe DRide.Ride -> m ([DFareBreakup.FareBreakup], [DFareBreakup.FareBreakup])
 getfareBreakups booking mRide = do
   case mRide of
     Just ride ->
-      case booking.status of
-        DBooking.COMPLETED -> do
-          updatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
-          estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
+      if booking.status `elem` [DBooking.COMPLETED, DBooking.CANCELLED]
+        then do
+          updatedFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback ride.id.getId DFareBreakup.RIDE (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE)
+          estimatedFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback booking.id.getId DFareBreakup.BOOKING (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING)
           let fareBreakups = if null updatedFareBreakups then estimatedFareBreakups else updatedFareBreakups
           pure (fareBreakups, estimatedFareBreakups)
-        _ -> do
+        else do
           --------- Need to remove it after fixing the status api polling in frontend ---------
-          estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
+          estimatedFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback booking.id.getId DFareBreakup.BOOKING (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING)
           pure ([], estimatedFareBreakups)
     Nothing -> do
-      estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
+      estimatedFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback booking.id.getId DFareBreakup.BOOKING (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING)
       pure ([], estimatedFareBreakups)
 
 -- | Extract ride type from booking details
@@ -54,6 +55,10 @@ getRideTypeFromBookingDetails = \case
   DBooking.MeterRideDetails _ -> SLT.METER_RIDE
   DBooking.DriverOfferDetails _ -> SLT.NORMAL
   DBooking.OneWaySpecialZoneDetails _ -> SLT.NORMAL
+  -- RideType is a closed enum with no EasyBooking value; reuse RENTAL since
+  -- EasyBooking is structurally the same shape (destination-less, quote-based)
+  -- as Rental, consistent with every other closed-enum site in this change.
+  DBooking.EasyBookingDetails _ -> SLT.RENTAL
 
 -- | Check if booking matches any of the specified ride types
 matchesRideType :: [SLT.RideType] -> DBooking.Booking -> Bool

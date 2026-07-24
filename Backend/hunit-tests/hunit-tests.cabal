@@ -27,6 +27,7 @@ flag Local
 library
   exposed-modules:
       Dashboard
+      FileManagementUnitTests
   other-modules:
       RegistrationUnitTests
       VehicleAssociationUnitTests
@@ -36,6 +37,10 @@ library
       CreateRequestUnitTests
       EmailOtpUnitTests
       MerchantDocumentUnitTests
+      MediaFileUploadStatusUnitTests
+      RewardsEvaluatorTests
+      RewardsCouponTemplatedTests
+      RewardsCouponPoolTests
   hs-source-dirs:
       src
   default-extensions:
@@ -71,6 +76,7 @@ library
       HUnit
     , aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -92,6 +98,7 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , shared-services
     , string-conversions
     , tasty
     , tasty-hspec
@@ -146,6 +153,7 @@ executable hunit-tests
       HUnit
     , aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -168,6 +176,7 @@ executable hunit-tests
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , shared-services
     , string-conversions
     , tasty
     , tasty-hspec

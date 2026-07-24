@@ -20,6 +20,7 @@ import qualified Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
+import qualified Tools.Maps
 
 data BookingT f = BookingT
   { area :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area),
@@ -29,11 +30,13 @@ data BookingT f = BookingT
     bapUri :: B.C f Kernel.Prelude.Text,
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     businessEmailDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationCommission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     coinsRewardedOnGoldTierRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     commission :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     configInExperimentVersions :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
+    customerLanguage :: B.C f (Kernel.Prelude.Maybe Tools.Maps.Language),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     displayBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -49,6 +52,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     exotelDeclinedCallStatusReceivingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fareParametersId :: B.C f Kernel.Prelude.Text,
+    fareSettlementType :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType),
     financeInvoiceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -60,6 +64,7 @@ data BookingT f = BookingT
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isPickupOrDestinationEdited :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReferredRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

@@ -9,7 +9,6 @@ where
 
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
-import qualified Dashboard.Common.MediaFileDocument
 import qualified Domain.Action.ProviderPlatform.Management.MediaFileDocument
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
@@ -69,5 +68,5 @@ postMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = withFlowH
 postMediaFileDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.postMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req
 
-getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.MediaFileDocument.MediaFileDocumentType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
-getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber
+getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
+getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo fileId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.MediaFileDocument.getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo fileId

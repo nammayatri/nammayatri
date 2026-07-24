@@ -35,6 +35,8 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler
@@ -44,7 +46,9 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverFee as QDF
@@ -63,7 +67,7 @@ data DailyStatsWithVpa = DailyStatsWithVpa
 sendDriverReferralPayoutJobData ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -80,8 +84,8 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
       schedulePayoutForDay = jobData.schedulePayoutForDay
-  payoutConfigList <- CPC.findByMerchantOpCityIdAndIsPayoutEnabled merchantOpCityId True Nothing
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  payoutConfigList <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True}) (Just (CQPC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastNthDay = addDays (fromMaybe (-1) schedulePayoutForDay) (utctDay localTime)
@@ -137,7 +141,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
 callPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
@@ -169,7 +173,7 @@ callPayout ds driverInfo payoutVpa payoutConfigList statusForRetry = do
 callPayoutHandler ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,
@@ -273,11 +277,11 @@ getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
 processScheduledRegistrationRefunds ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   [DPC.PayoutConfig] ->

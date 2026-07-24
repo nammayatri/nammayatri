@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 type API = CallBasedEndRideAPI
@@ -49,12 +50,12 @@ callBasedEndRidelHandler :: FlowServer CallBasedEndRideAPI
 callBasedEndRidelHandler = callBasedEndRide
 
 callBasedEndRide :: Text -> Text -> FlowHandler DExotelEndRide.AckResp
-callBasedEndRide callFrom_ callTo_ = withFlowHandlerAPI $ do
+callBasedEndRide callFrom_ callTo_ = withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ do
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   mobileNumberHash <- getDbHash callFrom
   exophone <- CQExophone.findByEndRidePhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
-  shandle <- EndRide.buildEndRideHandle exophone.merchantId exophone.merchantOperatingCityId Nothing
+  shandle <- EndRide.buildEndRideHandle exophone.merchantId exophone.merchantOperatingCityId Nothing False
   DExotelEndRide.callBasedEndRide shandle exophone.merchantId mobileNumberHash callFrom
   where
     dropFirstZero = T.dropWhile (== '0')

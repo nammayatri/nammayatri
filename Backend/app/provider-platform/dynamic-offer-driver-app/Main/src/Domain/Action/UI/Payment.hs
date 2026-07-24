@@ -75,6 +75,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( AccountRole (OwnerLiability, PlatformAsset),
     InvoiceConfig (..),
@@ -86,6 +87,7 @@ import Lib.Finance
     runFinance,
     transfer,
   )
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.Account ()
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -105,6 +107,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
@@ -115,6 +118,8 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverGstin as QDG
 import qualified Storage.Queries.DriverInformation as QDI
@@ -136,7 +141,6 @@ import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
-import Utils.Common.Cac.KeyNameConstants
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -206,7 +210,8 @@ getStatus ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
@@ -340,7 +345,8 @@ getStatusV2 ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Text ->
@@ -395,7 +401,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName'
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchantOperatingCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (subscriptionConfig.paymentServiceName)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchantOperatingCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'
@@ -533,7 +539,7 @@ processWalletTopupWebhook ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     Redis.HedisLTSFlowEnv r
   ) =>
   DP.Person ->
@@ -574,8 +580,7 @@ processWalletTopupWebhook driver order transactionStatus = do
         sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
 
 processPayment ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -583,7 +588,8 @@ processPayment ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -593,7 +599,7 @@ processPayment ::
   [INV.Invoice] ->
   m ()
 processPayment merchantId driver orderId sendNotification (serviceName, subsConfig) invoices = do
-  transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let mbInvoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
@@ -603,20 +609,20 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
     Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $ do
       driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
-      QDF.updateStatusByIds CLEARED driverFeeIds now
-      -- let utcTime = addUTCTime (secondsToNominalDiffTime $ -1 * transporterConfig.timeDiffFromUtc) now
+      nowUtc <- getCurrentTime
+      QDF.updateStatusByIds CLEARED driverFeeIds nowUtc
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
 
 processNonClearedDriverFees ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -629,8 +635,7 @@ processNonClearedDriverFees merchantId person driverFee = do
       pure ()
 
 processSubscriptionPurchasePayment ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -639,7 +644,8 @@ processSubscriptionPurchasePayment ::
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -655,7 +661,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         now <- getCurrentTime
         currency <- SMerchant.getCurrencyByMerchantOpCity latestPurchase.merchantOperatingCityId
         plan <- QPlan.findByPrimaryKey latestPurchase.planId >>= fromMaybeM (PlanNotFound latestPurchase.planId.getId)
-        transporterConfig <- SCTC.findByMerchantOpCityId latestPurchase.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound latestPurchase.merchantOperatingCityId.getId)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = latestPurchase.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId latestPurchase.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound latestPurchase.merchantOperatingCityId.getId)
         let (_platformFee, cgst, sgst) = SLDriverFee.calculatePlatformFeeAttr latestPurchase.planFee plan
             creditAmount = latestPurchase.planRideCredit
             paidAmount = latestPurchase.planFee
@@ -683,20 +689,15 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         merchantOperatingCity <- CQMOC.findById latestPurchase.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist latestPurchase.merchantOperatingCityId.getId)
         let issuedToAddress = Just $ show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
             issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
-        -- Fetch fleet owner GSTIN if applicable
-        gstinOfParty <-
-          if isFleetOwner
-            then do
-              mbFleetInfo <- QFOI.findByPrimaryKey person.id
-              case mbFleetInfo of
-                Just fleetInfo -> mapM decrypt fleetInfo.gstNumber
-                Nothing -> pure Nothing
-            else pure Nothing
+        mbFleetInfo <- if isFleetOwner then QFOI.findByPrimaryKey person.id else pure Nothing
+        gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
+        -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
+        let resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
         let invoiceParams =
               InvoiceCreationParams
                 { paymentOrderId = latestPurchase.paymentOrderId.getId,
                   issuedToType = if isFleetOwner then BecknInvoice.FLEET_OWNER else BecknInvoice.DRIVER,
-                  issuedToName = Just person.firstName,
+                  issuedToName = resolvedIssuedToName,
                   issuedToAddress = issuedToAddress,
                   issuedByType = "SELLER",
                   issuedById = merchantId.getId,
@@ -739,7 +740,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             person.id.getId
             creditAmount
             paidAmount
-            transporterConfig.taxConfig.subscriptionTdsRate
+            ((.rate) <$> transporterConfig.taxConfig.subscriptionTdsRate)
             subscriptionGstBreakdown
             currency
             merchantId.getId
@@ -760,7 +761,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 }
         unless isFleetOwner $
           Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
-        QSP.updateByPrimaryKey updatedPurchase
+        SubscriptionPurchaseSvc.updateSubscriptionPurchase latestPurchase updatedPurchase
         -- Schedule expiry job only if expiry was set (not queued)
         whenJust expiryDate $ \expiry -> do
           let delay = diffUTCTime expiry now
@@ -780,12 +781,12 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
           sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
 
 updatePrepaidBalanceAndExpiry ::
-  ( MonadFlow m,
-    CacheFlow m r,
+  ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -796,7 +797,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
   mbPanCard <- QPanCard.findByDriverId person.id
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist person.merchantOperatingCityId.getId)
   let totalGst = driverFee.platformFee.cgst + driverFee.platformFee.sgst
@@ -858,13 +859,13 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Finance.HasActorInfo m r
   ) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1001,7 +1002,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
   let driverFeeId = driverFee.id
   now <- getCurrentTime
   unless (notification.status == Juspay.SUCCESS) $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
@@ -1029,8 +1030,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
     QNTF.updateNotificationStatusAndResponseInfoById notificationStatus respCode respMessage notification.id
 
 processMandate ::
-  ( MonadFlow m,
-    BeamFlow m r,
+  ( BeamFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -1041,7 +1041,8 @@ processMandate ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    EncFlow m r
+    EncFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   (DP.ServiceNames, DSC.SubscriptionConfig) ->
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

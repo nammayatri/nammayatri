@@ -4,6 +4,7 @@
 
 module Storage.Queries.VehicleRegistrationCertificate (module Storage.Queries.VehicleRegistrationCertificate, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -30,12 +31,12 @@ createMany = traverse_ create
 
 findAllByFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate])
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate]))
 findAllByFleetOwnerId limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId] (Se.Desc Beam.updatedAt) limit offset
 
 findAllByFleetOwnerIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> [Kernel.Prelude.Maybe Kernel.Prelude.Text] -> m [Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate])
+  (Maybe Int -> Maybe Int -> [Kernel.Prelude.Maybe Kernel.Prelude.Text] -> m ([Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate]))
 findAllByFleetOwnerIds limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is Beam.fleetOwnerId $ Se.In fleetOwnerId] (Se.Desc Beam.createdAt) limit offset
 
 findById ::
@@ -92,6 +93,13 @@ updateOxygen ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateOxygen oxygen id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePendingChallan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.PendingChallanResult -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updatePendingChallan pendingChallan id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.pendingChallan (Data.Aeson.toJSON <$> pendingChallan), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateVehicleImageId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -127,12 +135,11 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
       Se.Set Beam.approved approved,
-      Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
-      Se.Set Beam.certificateNumberHash (certificateNumber & hash),
+      Se.Set Beam.certificateNumberEncrypted (((certificateNumber & unEncrypted . encrypted))),
+      Se.Set Beam.certificateNumberHash ((certificateNumber & hash)),
       Se.Set Beam.dateOfRegistration dateOfRegistration,
       Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
-      Se.Set Beam.enableForAirport enableForAirport,
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
@@ -141,6 +148,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.mYManufacturing mYManufacturing,
       Se.Set Beam.manufacturerModel manufacturerModel,
       Se.Set Beam.oxygen oxygen,
+      Se.Set Beam.pendingChallan (Data.Aeson.toJSON <$> pendingChallan),
       Se.Set Beam.permitExpiry permitExpiry,
       Se.Set Beam.pucExpiry pucExpiry,
       Se.Set Beam.rejectReason rejectReason,
@@ -163,6 +171,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.verified verified,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now

@@ -296,6 +296,7 @@ let RiderJobType =
       | DailyPassStatusUpdate
       | PassExpiryReminderMaster
       | SettlementReportIngestion
+      | ReconcileRewardInflight
       >
 
 let jobInfoMapx =
@@ -342,6 +343,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.DailyPassStatusUpdate, mapValue = True }
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
+      , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }
       ]
 
 let cacConfig =
@@ -438,6 +440,7 @@ in  { esqDBCfg
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
+    , s3RewardsConfig = common.s3RewardsConfig
     , searchRequestExpiry = Some +600
     , migrationPath =
       [ "dev/migrations-read-only/rider-app"
@@ -508,6 +511,7 @@ in  { esqDBCfg
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
+    , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
     , sosTrackingRateLimitOptions
@@ -528,10 +532,13 @@ in  { esqDBCfg
       , remotePath = "/tmp/remote_path"
       }
     , blackListedJobs = [] : List Text
+    , useCachedActiveRidesList = False
     , emailServiceConfig
     , masterCloudProxyConfig =
       { masterUrl = Some "http://localhost:${driverAppInternalPort}"
       , masterSecret = Some "123"
       }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
+    , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
+    , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

@@ -21,6 +21,10 @@ MerchantConfig:
     fraudRideCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     fraudAuthCountThreshold : Maybe Int
     fraudAuthCountWindow : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    authPhoneNumberCountThreshold1 : Maybe Int
+    authPhoneNumberCountWindow1 : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    authPhoneNumberCountThreshold2 : Maybe Int
+    authPhoneNumberCountWindow2 : Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     createdAt : Maybe UTCTime
     updatedAt : Maybe UTCTime
     enabled : Bool
@@ -44,6 +48,8 @@ MerchantConfig:
     fraudBookingCancelledByDriverCountWindow: json
     fraudSearchCountWindow: json
     fraudAuthCountWindow: json
+    authPhoneNumberCountWindow1: json
+    authPhoneNumberCountWindow2: json
 
   default:
     fraudBookingCancellationCountWindow: |-
@@ -62,7 +68,10 @@ MerchantConfig:
       '{"period":20, "periodType":"Minutes"}'
     enabled: "True"
 
-
-
-
+  configPilot:
+    configType: MerchantConfig
+    fetchQuery: findAllByMerchantOperatingCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.MerchantConfig
 

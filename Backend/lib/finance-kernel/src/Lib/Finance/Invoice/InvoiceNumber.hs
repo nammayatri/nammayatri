@@ -19,6 +19,7 @@ module Lib.Finance.Invoice.InvoiceNumber
     purposeDebtSettlement,
     purposeCommission,
     purposeAggregatedCommission,
+    purposeRefund,
   )
 where
 
@@ -31,7 +32,7 @@ import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, nominalDiffTim
 import Prelude (length, replicate)
 
 -- | Purpose abbreviations
-purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement, purposeCommission, purposeAggregatedCommission :: Text
+purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement, purposeCommission, purposeAggregatedCommission, purposeRefund :: Text
 purposeRideFare = "RF"
 purposeTip = "T"
 purposeRideTip = "TRF"
@@ -40,13 +41,15 @@ purposeSubscription = "S"
 purposeDebtSettlement = "DS"
 purposeCommission = "CM"
 purposeAggregatedCommission = "CMB"
+purposeRefund = "R"
 
 -- | Generate invoice number
--- Format: DDMMYY-PURPOSE-XXXXXX
--- Examples:
---   - 270426-S-000008 (subscription)
---   - 120126-RF-000001 (ride fare)
---   - 120126-TRF-000003 (ride+tip)
+-- Format: DDMMYY-PURPOSE-XXXXXX, padded to a fixed 16-character total (including both hyphens).
+-- The sequence width flexes with the purpose length so the whole number is always 16 chars.
+-- Examples (all 16 chars):
+--   - 270426-S-0000008 (subscription, 7-digit seq)
+--   - 120126-RF-000001 (ride fare, 6-digit seq)
+--   - 120126-TRF-00003 (ride+tip, 5-digit seq)
 -- Uses Redis INCR for atomic sequence (global per date, unless key suffix is used for isolation).
 -- Falls back to database query if Redis key doesn't exist.
 generateInvoiceNumber ::
@@ -64,8 +67,9 @@ generateInvoiceNumber purposeAbbr mbKeySuffix createdAt dbFallback = do
   -- Get next sequence number (Redis with database fallback, resets daily)
   seqNum <- getNextSequenceForDate dateStr mbKeySuffix createdAt dbFallback
 
-  -- Format: DDMMYY-PURPOSE-XXXXXX
-  return $ dateStr <> "-" <> purposeAbbr <> "-" <> T.pack (padLeft 6 '0' (show seqNum))
+  -- Format: DDMMYY-PURPOSE-XXXXXX, fixed at 16 chars total
+  let seqWidth = max 1 (16 - T.length dateStr - 2 - T.length purposeAbbr)
+  return $ dateStr <> "-" <> purposeAbbr <> "-" <> T.pack (padLeft seqWidth '0' (show seqNum))
 
 -- | Per-date sequence generator (resets daily). When 'mbKeySuffix' is 'Just s',
 -- the Redis key includes that suffix so the counter is isolated from the global
@@ -125,7 +129,7 @@ parseInvoiceNumberSequence invoiceNumber = do
   datePart <- listToMaybe parts
   seqPart <- listToMaybe (drop 2 parts) -- Last part is sequence
   guard (T.length datePart == 6) -- DDMMYY = 6 characters
-  guard (T.length seqPart == 6) -- XXXXXX = 6 characters
+  guard (not (T.null seqPart))
   seqNum <- readMaybe (T.unpack seqPart)
   -- Parse DDMMYY
   dd <- readMaybe (T.unpack $ T.take 2 datePart)

@@ -1,0 +1,263 @@
+imports:
+  Value: Data.Aeson
+  Integer: Kernel.Prelude
+  Double: Kernel.Prelude
+  UploadCodesReq: Dashboard.RiderPlatform.Management.Rewards
+  Person: Dashboard.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+  SponsorType: Dashboard.Common.Rewards.SponsorType
+  CouponSourceType: Dashboard.Common.Rewards.CouponSourceType
+  RedemptionTargetType: Dashboard.Common.Rewards.RedemptionTargetType
+  ClaimMode: Dashboard.Common.Rewards.ClaimMode
+  CampaignStatus: Dashboard.Common.Rewards.CampaignStatus
+  APISuccess: Kernel.Types.APISuccess
+
+module: Rewards
+
+types:
+  CreateCampaignReq:
+    - name: Text
+    - description: Maybe Text
+    - sponsorType: SponsorType
+    - sponsorName: Text
+    - sponsorLogoUrl: Maybe Text
+    - couponSourceType: CouponSourceType
+    - couponTemplate: Maybe Text
+    - redemptionTargetType: RedemptionTargetType
+    - redemptionTargetUrl: Maybe Text
+    - claimMode: ClaimMode
+    - startsAt: UTCTime
+    - endsAt: Maybe UTCTime
+    - displayOrder: Int
+    - derive: "'HideSecrets"
+
+  CreateCampaignResp:
+    - campaignId: Id RewardCampaign
+
+  EditCampaignReq:
+    - name: Maybe Text
+    - description: Maybe Text
+    - sponsorType: Maybe SponsorType
+    - sponsorName: Maybe Text
+    - sponsorLogoUrl: Maybe Text
+    - couponSourceType: Maybe CouponSourceType
+    - couponTemplate: Maybe Text
+    - redemptionTargetType: Maybe RedemptionTargetType
+    - redemptionTargetUrl: Maybe Text
+    - claimMode: Maybe ClaimMode
+    - startsAt: Maybe UTCTime
+    - endsAt: Maybe UTCTime
+    - displayOrder: Maybe Int
+    - derive: "'HideSecrets"
+
+  CreateCohortReq:
+    - name: Text
+    - description: Maybe Text
+    - displayOrder: Int
+    - eligibilityJsonLogic: Value
+    - rewardTitle: Text
+    - rewardImageUrl: Maybe Text
+    - couponValidityDays: Maybe Int
+    - presentation: Maybe Value
+    - maxUnlocksPerCohort: Maybe Int
+    - derive: "'HideSecrets"
+
+  CreateCohortResp:
+    - cohortId: Id RewardCohort
+
+  EditCohortReq:
+    - name: Maybe Text
+    - description: Maybe Text
+    - displayOrder: Maybe Int
+    - eligibilityJsonLogic: Maybe Value
+    - rewardTitle: Maybe Text
+    - rewardImageUrl: Maybe Text
+    - couponValidityDays: Maybe Int
+    - presentation: Maybe Value
+    - maxUnlocksPerCohort: Maybe Int
+    - derive: "'HideSecrets"
+
+  UploadCodesResp:
+    - uploadBatchId: Text
+
+  SetStatusReq:
+    - newStatus: CampaignStatus
+    - derive: "'HideSecrets"
+
+  CohortCount:
+    - cohortId: Id RewardCohort
+    - count: Int
+
+  CohortPoolRemaining:
+    - cohortId: Id RewardCohort
+    - remaining: Integer
+
+  RewardCampaign:
+    - id: Id RewardCampaign
+    - merchantId: Id Merchant
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - name: Text
+    - description: Maybe Text
+    - sponsorType: SponsorType
+    - sponsorName: Text
+    - sponsorLogoUrl: Maybe Text
+    - couponSourceType: CouponSourceType
+    - couponTemplate: Maybe Text
+    - redemptionTargetType: RedemptionTargetType
+    - redemptionTargetUrl: Maybe Text
+    - claimMode: ClaimMode
+    - reclaimPolicy: Maybe Value
+    - startsAt: UTCTime
+    - endsAt: Maybe UTCTime
+    - status: CampaignStatus
+    - displayOrder: Int
+    - createdBy: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  RewardCohort:
+    - id: Id RewardCohort
+    - campaignId: Id RewardCampaign
+    - name: Text
+    - description: Maybe Text
+    - displayOrder: Int
+    - eligibilityJsonLogic: Value
+    - rewardTitle: Text
+    - rewardImageUrl: Maybe Text
+    - couponValidityDays: Maybe Int
+    - presentation: Maybe Value
+    - maxUnlocksPerCohort: Maybe Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  CampaignDetails:
+    - campaign: RewardCampaign
+    - cohorts: "[RewardCohort]"
+
+  CampaignStats:
+    - totalUnlocks: Int
+    - unlocksByCohort: "[CohortCount]"
+    - poolRemainingByCohort: "[CohortPoolRemaining]"
+    - claimRate: Double
+    - expiredUnredeemedCount: Int
+
+  RewardContext:
+    - ridesLast1d: Maybe Int
+    - ridesLast3d: Maybe Int
+    - ridesLast7d: Maybe Int
+    - ridesLast30d: Maybe Int
+    - ridesLast90d: Maybe Int
+    - hasTakenValidRide: Maybe Bool
+    - isValidRide: Maybe Bool
+
+  ValidateCohortEligibilityReq:
+    - cohortId: Maybe (Id RewardCohort)
+    - eligibilityJsonLogic: Maybe Value
+    - context: Maybe RewardContext
+    - derive: "'HideSecrets"
+
+  ValidateCohortEligibilityResp:
+    - eligible: Bool
+    - result: Value
+    - errorMessage: Maybe Text
+    - usedStoredLogic: Bool
+
+apis:
+  - POST:
+      endpoint: /campaign
+      auth: ApiAuthV2
+      request:
+        type: CreateCampaignReq
+      response:
+        type: CreateCampaignResp
+
+  - PUT:
+      endpoint: /campaign/{campaignId}
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      request:
+        type: EditCampaignReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /campaign/{campaignId}/cohort
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      request:
+        type: CreateCohortReq
+      response:
+        type: CreateCohortResp
+
+  - PUT:
+      endpoint: /campaign/{campaignId}/cohort/{cohortId}
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+        cohortId: Id RewardCohort
+      request:
+        type: EditCohortReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /campaign/{campaignId}/cohort/{cohortId}/codes
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+        cohortId: Id RewardCohort
+      multipart:
+        type: UploadCodesReq
+      response:
+        type: UploadCodesResp
+
+  - POST:
+      endpoint: /campaign/{campaignId}/status
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      request:
+        type: SetStatusReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /campaign/{campaignId}
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      response:
+        type: CampaignDetails
+
+  - GET:
+      endpoint: /campaigns
+      auth: ApiAuthV2
+      response:
+        type: "[CampaignDetails]"
+
+  - GET:
+      endpoint: /campaign/{campaignId}/stats
+      auth: ApiAuthV2
+      params:
+        campaignId: Id RewardCampaign
+      response:
+        type: CampaignStats
+
+  - POST:
+      endpoint: /triggerEval/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /cohort/validateEligibility
+      auth: ApiAuthV2
+      request:
+        type: ValidateCohortEligibilityReq
+      response:
+        type: ValidateCohortEligibilityResp

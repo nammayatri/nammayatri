@@ -17,8 +17,13 @@ imports:
   Day: Data.Time
   Language: Kernel.External.Types
   CumulativeOfferResp: SharedLogic.Offer
+  Refunds: Lib.Payment.Domain.Types.Refunds
+  RefundStatus: Kernel.External.Payment.Interface
   VerificationStatus: Domain.Types.PassDetails
   Value: Data.Aeson
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+  IssueMediaUploadReq: IssueManagement.Common.UI.Issue
+  IssueMediaUploadRes: IssueManagement.Common.UI.Issue
 
 module: Pass
 types:
@@ -82,16 +87,12 @@ types:
   PassSelectReq:
     startDate: Day
     imeiNumber: Text
-    profilePicture: Text
+    profilePicture: Maybe Text
+    passPhotoMediaId: Maybe (Id MediaFile)
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
     imeiNumber: Maybe Text
-
-  PassUploadProfilePictureReq:
-    purchasedPassId: Id PurchasedPass
-    profilePicture: Text
-    imeiNumber: Text
 
   PurchasedPassAPIEntity:
     id: Id PurchasedPass
@@ -108,6 +109,7 @@ types:
     deviceMismatch: Bool
     deviceSwitchAllowed: Bool
     profilePicture: Maybe Text
+    passPhotoMediaId: Maybe (Id MediaFile)
     futureRenewals: [PurchasedPassTransactionAPIEntity]
     isPreferredSourceAndDestinationSet: Bool
     derive: "Show"
@@ -116,6 +118,16 @@ types:
     category: PassCategoryAPIEntity
     passType: PassTypeAPIEntity
     passDetails: PassAPIEntity
+    derive: "Show"
+
+  RefundAPIEntity:
+    id: Id Refunds
+    amount: HighPrecMoney
+    status: RefundStatus
+    arn: Maybe Text
+    completedAt: Maybe UTCTime
+    updatedAt: UTCTime
+    createdAt: UTCTime
     derive: "Show"
 
   PurchasedPassTransactionAPIEntity:
@@ -128,6 +140,7 @@ types:
     amount: HighPrecMoney
     status: StatusType
     passType: Maybe PassEnum
+    refunds: "[RefundAPIEntity]"
     derive: "Show"
 
   SetPassPrefSrcAndDestReq:
@@ -155,6 +168,7 @@ apis:
         deviceId: Text
         imeiNumber: Text
         profilePicture: Text
+        passPhotoMediaId: Text
       response:
         type: PassSelectionAPIEntity
 
@@ -205,6 +219,7 @@ apis:
       query:
         limit: Int
         offset: Int
+        status: Text
       response:
         type: "[PurchasedPassTransactionAPIEntity]"
 
@@ -219,12 +234,24 @@ apis:
         type: APISuccess
 
   - POST:
-      endpoint: /multimodal/pass/uploadProfilePicture
+      endpoint: /multimodal/pass/{purchasedPassId}/uploadProfilePicture
       auth: TokenAuth
-      request:
-        type: PassUploadProfilePictureReq
+      params:
+        purchasedPassId: Id PurchasedPass
+      query:
+        imeiNumber: Text
+      multipart:
+        type: IssueMediaUploadReq
       response:
-        type: APISuccess
+        type: IssueMediaUploadRes
+
+  - GET:
+      endpoint: /multimodal/pass/photo/{mediaId}
+      auth: TokenAuth
+      params:
+        mediaId: Id MediaFile
+      response:
+        type: Text
 
   - POST:
       endpoint: /multimodal/pass/set/prefSrcAndDest/{purchasedPassId}

@@ -20,6 +20,7 @@ imports:
   TripCategory: Domain.Types.Common
   VehicleCategory : BecknV2.OnDemand.Enums
   Value: Data.Aeson
+  FareSettlementType: Lib.Types.SpecialLocation
 
 Estimate:
   tableName: estimate
@@ -94,6 +95,7 @@ Estimate:
     providerCompletedRidesCount : Int
     vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierLuggageCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     vehicleCategory: Maybe VehicleCategory
     isAirConditioned: Maybe Bool
@@ -107,6 +109,9 @@ Estimate:
     driversLocation : "[LatLong]"
     specialLocationTag : Maybe Text
     specialLocationName : Maybe Text
+    fareSettlementType : Maybe FareSettlementType
+    area : Maybe Text
+    navigationInstruction : Maybe Text
     serviceTierName : Maybe Text
     serviceTierShortDesc : Maybe Text
     clientSdkVersion: Maybe Version

@@ -37,6 +37,7 @@ import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
+import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
 import Kernel.External.Verification.Interface (prepareMorthHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
@@ -55,6 +56,7 @@ import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as HttpTLS
 import Network.HTTP.Types (status408)
 import Network.Wai
 import Network.Wai.Handler.Warp
@@ -154,13 +156,15 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 10000, prepareHyperVergeHttpManager 10000),
                 Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
                 Just (Just 40000, prepareIffcoTokioHttpManager 40000),
-                Just (Just 15000, prepareMorthHttpManager 15000)
+                Just (Just 15000, prepareMorthHttpManager 15000),
+                Just (Just 150000, prepareEkatraHttpManager 150000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
-    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
+    proxyManager <- HttpTLS.newTlsManager
+    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

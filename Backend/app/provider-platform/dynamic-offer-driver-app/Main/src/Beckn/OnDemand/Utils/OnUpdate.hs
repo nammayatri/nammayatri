@@ -126,6 +126,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CONGESTION_CHARGE),
                      Just (show Enums.WAITING_OR_PICKUP_CHARGES),
                      Just (show Enums.EXTRA_TIME_FARE),
+                     Just (show Enums.RIDE_DURATION_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PET_CHARGES),
                      Just (show Enums.BUSINESS_DISCOUNT),

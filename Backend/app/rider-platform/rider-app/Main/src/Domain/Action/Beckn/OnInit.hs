@@ -25,21 +25,23 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -87,17 +89,17 @@ data OnInitRes = OnInitRes
     paymentMode :: Maybe DMPM.PaymentMode,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     driverPreference :: Maybe [Text],
-    discount :: Maybe Price
+    discount :: Maybe Price,
+    riderLanguage :: Maybe Maps.Language
   }
   deriving (Generic, Show)
 
 createFareBreakup ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> [DCommon.DFareBreakup] -> m ()
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> [DCommon.DFareBreakup] -> m ()
 createFareBreakup booking fareParams = do
-  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.INITIAL_BOOKING) fareParams
-  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.BOOKING) fareParams
-  QFareBreakup.createMany fareBreakups
-  QFareBreakup.createMany fareBreakups'
+  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.INITIAL_BOOKING) fareParams
+  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareParams
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (fareBreakups <> fareBreakups')
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r, Metrics.HasBAPMetrics m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
@@ -108,7 +110,7 @@ onInit req = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt person
-  createFareBreakup booking.id req.fareBreakups
+  createFareBreakup booking req.fareBreakups
   safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
       convertToPersonRideShareOptions = \case
@@ -134,7 +136,7 @@ onInit req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
@@ -164,6 +166,7 @@ onInit req = do
             paymentMode = booking.paymentMode,
             driverPreference = booking.driverPreference,
             discount = booking.discount,
+            riderLanguage = decRider.language,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
@@ -178,6 +181,8 @@ onInit req = do
 
     getToLocationFromBookingDetails = \case
       DRB.RentalDetails _ -> Nothing
+      -- EasyBooking is destination-less like Rental — no toLocation to report on init.
+      DRB.EasyBookingDetails _ -> Nothing
       DRB.OneWayDetails details -> Just details.toLocation
       DRB.DriverOfferDetails details -> Just details.toLocation
       DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -220,7 +225,7 @@ buildOnInitResFromBooking bookingId = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderDimensions decRider.merchantOperatingCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
@@ -254,7 +259,8 @@ buildOnInitResFromBooking bookingId = do
         paymentMode = booking.paymentMode,
         paymentInstrument = booking.paymentInstrument,
         driverPreference = booking.driverPreference,
-        discount = booking.discount
+        discount = booking.discount,
+        riderLanguage = decRider.language
       }
   where
     convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
@@ -272,6 +278,8 @@ buildOnInitResFromBooking bookingId = do
 
     getToLocationFromBookingDetails = \case
       DRB.RentalDetails _ -> Nothing
+      -- EasyBooking is destination-less like Rental — no toLocation to report on init.
+      DRB.EasyBookingDetails _ -> Nothing
       DRB.OneWayDetails details -> Just details.toLocation
       DRB.DriverOfferDetails details -> Just details.toLocation
       DRB.OneWaySpecialZoneDetails details -> Just details.toLocation

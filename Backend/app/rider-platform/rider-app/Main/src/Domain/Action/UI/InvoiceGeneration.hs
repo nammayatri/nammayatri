@@ -30,12 +30,14 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBE
 import qualified Storage.Queries.Person as QPerson
 import System.Directory (doesFileExist)
@@ -78,6 +80,7 @@ generateInvoice ::
     ServiceFlow m r,
     ClickhouseFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasField "emailServiceConfig" r Email.EmailServiceConfig
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
@@ -115,7 +118,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   let invoiceId = Id invoiceIdShort.getShortId
 
   -- Convert bookings to BookingAPIEntity (includes ride data)
-  allBookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+  allBookingAPIEntities <- mapM (\booking -> DBAPI.buildBookingAPIEntity booking person.id False) bookings
 
   -- Filter: Keep only bookings with exactly 1 completed ride
   let validBookingAPIEntities = filter hasExactlyOneRide allBookingAPIEntities
@@ -236,7 +239,7 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
   merchantOperatingCityId <- case bookingAPIEntities of
     (firstBooking : _) -> return firstBooking.merchantOperatingCityId
     [] -> throwError $ InvalidRequest "No bookings provided for invoice generation" -- This should never happen as we validate bookings exist
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
 
   -- Get fromEmail from rider config (use emailOtpConfig if available, otherwise default)
   let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig

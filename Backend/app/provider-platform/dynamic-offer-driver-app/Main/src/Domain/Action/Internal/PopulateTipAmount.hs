@@ -18,6 +18,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time
+import Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Ride
 import Environment
 import Kernel.Beam.Functions
@@ -26,6 +27,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), FinanceCtx, runFinance, transfer)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
@@ -35,15 +37,18 @@ import qualified SharedLogic.Finance.InvoiceRegeneration as InvoiceRegen
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 populateTipAmount :: Id Ride -> HighPrecMoney -> Maybe Text -> Flow APISuccess
-populateTipAmount rideId tipAmount apiKey = do
+populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let merchantId = fromMaybe booking.providerId ride.merchantId
@@ -51,12 +56,18 @@ populateTipAmount rideId tipAmount apiKey = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
+  -- ride was read before the overwrite below, so this is the tip the rider had set previously.
+  -- The rider can edit or remove the tip while the ride runs, so this endpoint is called more
+  -- than once per ride: ride.tipAmount is overwritten absolutely, but daily_stats is a running
+  -- total and must move by the difference, not by the full new amount.
+  let previousTipAmount = fromMaybe 0 ride.tipAmount
+      tipAmountDelta = tipAmount - previousTipAmount
   QRide.updateTipAmountField (Just tipAmount) ride.id
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
   case mbDailyStats of
-    Just stats -> QDailyStats.updateTipAmountByDriverId (stats.tipAmount + tipAmount) ride.driverId (utctDay localTime)
+    Just stats -> QDailyStats.updateTipAmountByDriverId (max 0 $ stats.tipAmount + tipAmountDelta) ride.driverId (utctDay localTime)
     Nothing -> logError $ "DailyStats not found during updation of tip amount for driverId : " <> show ride.driverId
 
   -- Void prior invoice document (only); preserve original ledger entries.
@@ -72,8 +83,10 @@ populateTipAmount rideId tipAmount apiKey = do
           Nothing -> logError $ "Cannot regenerate invoice for tip: missing driverInfo for ride " <> ride.id.getId
           Just _driverInfo -> do
             mbPanCard <- pure Nothing -- panCard lookup not strictly required for invoice regeneration
-            -- Tip payment is always platform-mediated via the rider's card → isOnline=True.
-            ctx <- Wallet.buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig True
+            -- A tip on an online ride is platform-mediated via the rider's card; on a cash ride
+            -- the rider hands it to the driver directly. Derive the mode the same way EndRide does.
+            isOnline <- isOnlineBooking booking transporterConfig
+            ctx <- Wallet.buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline
             -- Step 1a: reverse any prior Tips entries (handles multi-tip-update edge case)
             let priorTipsEntries = List.filter (\e -> e.referenceType == Wallet.walletReferenceTips) priorCtx.priorEntries
             forM_ priorTipsEntries $ \e -> do
@@ -81,9 +94,13 @@ populateTipAmount rideId tipAmount apiKey = do
               case rRes of
                 Left err -> logError $ "Failed to reverse prior Tips entry " <> e.id.getId <> ": " <> show err
                 Right _ -> pure ()
-            -- Step 1b: append the new Tips ledger entry (BuyerAsset -> OwnerLiability)
+            -- Step 1b: append the new Tips ledger entry.
+            -- Online: BuyerAsset -> OwnerLiability (1 leg). Cash: Control accounts, matching
+            -- the tip legs in EndRide.Internal — the money never passes through the platform.
             tipsResult <- runFinance ctx $ do
-              void $ transfer BuyerAsset OwnerLiability tipAmount Wallet.walletReferenceTips
+              if isOnline
+                then void $ transfer BuyerAsset OwnerLiability tipAmount Wallet.walletReferenceTips
+                else void $ transfer BuyerControl OwnerControl tipAmount Wallet.walletReferenceTips
             case tipsResult of
               Left err -> logError $ "Failed to create Tips ledger entry: " <> show err
               Right (_mbInvId, newEntryIds) -> do
@@ -120,6 +137,21 @@ populateTipAmount rideId tipAmount apiKey = do
 
   pure Success
   where
+    -- Mirrors the ledger write mode computed in Domain.Action.UI.Ride.EndRide.Internal so a
+    -- tip is booked through the same accounts as the fare it accompanies.
+    isOnlineBooking booking transporterConfig
+      | fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger = pure True
+      | otherwise = do
+        mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+          CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+            >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+        pure $ case mbPaymentMethod of
+          Nothing -> False -- Considering OFFLINE
+          Just paymentMethod -> case paymentMethod.paymentInstrument of
+            Cash -> False
+            BoothOnline -> False
+            _ -> True
+
     parseLineItems :: Aeson.Value -> [InvoiceI.InvoiceLineItem]
     parseLineItems v = case Aeson.fromJSON v of
       Aeson.Success xs
@@ -131,7 +163,8 @@ populateTipAmount rideId tipAmount apiKey = do
     invoiceToInput inv ctx lineItems =
       InvoiceI.InvoiceInput
         { invoiceType = inv.invoiceType,
-          paymentOrderId = inv.paymentOrderId,
+          entityReferenceId = inv.entityReferenceId,
+          referenceInvoiceNumber = Nothing,
           issuedToType = inv.issuedToType,
           issuedToId = inv.issuedToId,
           issuedToName = inv.issuedToName,

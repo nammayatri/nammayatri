@@ -22,9 +22,20 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantMessage.MerchantMessage] -> m ())
 createMany = traverse_ create
 
+deleteByMerchantOperatingCityIdAndMessageKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> m ())
+deleteByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey = do
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey
+        ]
+    ]
+
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantMessage.MerchantMessage]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOperatingCityIdAndMessageKey ::
@@ -37,6 +48,21 @@ findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey = 
           Se.Is Beam.messageKey $ Se.Eq messageKey
         ]
     ]
+
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantMessage.MerchantMessage -> m ())
+updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.containsUrlButton containsUrlButton,
+      Se.Set Beam.jsonData ((Just $ toJSON jsonData)),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.message message,
+      Se.Set Beam.messageType messageType,
+      Se.Set Beam.senderHeader senderHeader,
+      Se.Set Beam.templateId ((Just templateId)),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]
 
 instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   fromTType' (Beam.MerchantMessageT {..}) = do
@@ -61,13 +87,13 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
     Beam.MerchantMessageT
       { Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
-        Beam.jsonData = Just $ toJSON jsonData,
+        Beam.jsonData = (Just $ toJSON jsonData),
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,
         Beam.messageKey = messageKey,
         Beam.messageType = messageType,
         Beam.senderHeader = senderHeader,
-        Beam.templateId = Just templateId,
+        Beam.templateId = (Just templateId),
         Beam.updatedAt = updatedAt
       }

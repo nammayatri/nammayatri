@@ -14,7 +14,9 @@
 
 module Tools.Error (module Tools.Error, SearchCancelErrors (..)) where
 
+import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error as Tools.Error
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse
@@ -39,6 +41,20 @@ instance IsHTTPError CustomerError where
     DeviceTokenNotFound -> E400
 
 instance IsAPIError CustomerError
+
+newtype DeletedPersonError = PersonHasPendingDues HighPrecMoney
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DeletedPersonError
+
+instance IsBaseError DeletedPersonError where
+  toMessage (PersonHasPendingDues dueAmount) = Just $ "Cannot delete account with pending dues: " <> show dueAmount
+
+instance IsHTTPError DeletedPersonError where
+  toErrorCode (PersonHasPendingDues _) = "PERSON_HAS_PENDING_DUES"
+  toHttpCode (PersonHasPendingDues _) = E402
+
+instance IsAPIError DeletedPersonError
 
 data RatingError
   = InvalidRatingValue
@@ -1080,6 +1096,9 @@ data MultimodalError
   | CategoriesAndTotalPriceMismatch Text Text
   | NoSelectedCategoryFound Text
   | NoValidBusRoute Text Text
+  | BusBlocked Text -- vehicleNumber
+  | BusBlockNotAllowed Text -- personId
+  | BusBlockLimitExceeded Int -- maxLimit
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -1105,6 +1124,9 @@ instance IsBaseError MultimodalError where
     CategoriesAndTotalPriceMismatch categoriesTotalPrice totalPrice -> Just $ "Categories and total price mismatch: " <> categoriesTotalPrice <> " and " <> totalPrice
     NoSelectedCategoryFound quoteId -> Just $ "No selected category found in quote categories, quoteId : " <> quoteId
     NoValidBusRoute source dest -> Just $ "No valid bus route found between " <> source <> " and " <> dest
+    BusBlocked vehicleNumber -> Just $ "Bus " <> vehicleNumber <> " is currently blocked by checker"
+    BusBlockNotAllowed personId -> Just $ "Person " <> personId <> " is not allowed to block or unblock buses."
+    BusBlockLimitExceeded maxLimit -> Just $ "Bus block limit reached: a person can block at most " <> show maxLimit <> " buses."
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -1127,6 +1149,9 @@ instance IsHTTPError MultimodalError where
     StopDoesNotHaveLocation _ -> "STOP_DOES_NOT_HAVE_LOCATION"
     CategoriesAndTotalPriceMismatch _ _ -> "CATEGORIES_AND_TOTAL_PRICE_MISMATCH"
     NoSelectedCategoryFound _ -> "NO_SELECTED_CATEGORY_FOUND"
+    BusBlocked _ -> "BUS_BLOCKED"
+    BusBlockNotAllowed _ -> "BUS_BLOCK_NOT_ALLOWED"
+    BusBlockLimitExceeded _ -> "BUS_BLOCK_LIMIT_EXCEEDED"
 
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
@@ -1148,6 +1173,9 @@ instance IsHTTPError MultimodalError where
     StopDoesNotHaveLocation _ -> E400
     CategoriesAndTotalPriceMismatch _ _ -> E500
     NoSelectedCategoryFound _ -> E500
+    BusBlocked _ -> E403
+    BusBlockNotAllowed _ -> E403
+    BusBlockLimitExceeded _ -> E403
 
 instance IsAPIError MultimodalError
 
@@ -1311,3 +1339,53 @@ instance IsHTTPError AddBaggageError where
     AddBaggageNegativeCount -> E400
 
 instance IsAPIError AddBaggageError
+
+data SeatLayoutError
+  = SeatLayoutNotFound
+  | SeatNotFound [Text]
+  | SeatLayoutAlreadyExists
+  | SeatLayoutInUseCannotModify
+  | InvalidSeatPosition [(Int, Int)]
+  | DuplicateSeatPosition [(Int, Int)]
+  | DuplicateSeatLabel [Text]
+  | InvalidSeatLayoutDimensions
+  | InvalidSleeperSeatPosition [(Int, Int)]
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SeatLayoutError
+
+instance IsBaseError SeatLayoutError where
+  toMessage = \case
+    SeatLayoutNotFound -> Just "Seat layout not found."
+    SeatNotFound ids -> Just $ "Seats not found in this layout: " <> T.intercalate ", " ids
+    SeatLayoutAlreadyExists -> Just "A seat layout with the given ID already exists."
+    SeatLayoutInUseCannotModify -> Just "Seat layout is currently assigned to vehicles and cannot be modified or deleted."
+    InvalidSeatPosition positions -> Just $ "Seats out of bounds: " <> T.intercalate ", " (map show positions)
+    DuplicateSeatPosition positions -> Just $ "Duplicate seat positions: " <> T.intercalate ", " (map show positions)
+    DuplicateSeatLabel labels -> Just $ "Duplicate seat labels: " <> T.intercalate ", " labels
+    InvalidSeatLayoutDimensions -> Just "Seat layout dimensions must be at least 1x1."
+    InvalidSleeperSeatPosition positions -> Just $ "Sleeper seat overlaps/out-of-bounds at: " <> T.intercalate ", " (map show positions)
+
+instance IsHTTPError SeatLayoutError where
+  toErrorCode = \case
+    SeatLayoutNotFound -> "SEAT_LAYOUT_NOT_FOUND"
+    SeatNotFound _ -> "SEAT_NOT_FOUND"
+    SeatLayoutAlreadyExists -> "SEAT_LAYOUT_ALREADY_EXISTS"
+    SeatLayoutInUseCannotModify -> "SEAT_LAYOUT_IN_USE_CANNOT_MODIFY"
+    InvalidSeatPosition _ -> "INVALID_SEAT_POSITION"
+    DuplicateSeatPosition _ -> "DUPLICATE_SEAT_POSITION"
+    DuplicateSeatLabel _ -> "DUPLICATE_SEAT_LABEL"
+    InvalidSeatLayoutDimensions -> "INVALID_SEAT_LAYOUT_DIMENSIONS"
+    InvalidSleeperSeatPosition _ -> "INVALID_SLEEPER_SEAT_POSITION"
+  toHttpCode = \case
+    SeatLayoutNotFound -> E400
+    SeatNotFound _ -> E400
+    SeatLayoutAlreadyExists -> E409
+    SeatLayoutInUseCannotModify -> E409
+    InvalidSeatPosition _ -> E400
+    DuplicateSeatPosition _ -> E400
+    DuplicateSeatLabel _ -> E400
+    InvalidSeatLayoutDimensions -> E400
+    InvalidSleeperSeatPosition _ -> E400
+
+instance IsAPIError SeatLayoutError

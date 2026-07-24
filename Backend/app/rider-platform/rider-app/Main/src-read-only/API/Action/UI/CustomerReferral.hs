@@ -42,6 +42,12 @@ type API =
       :<|> TokenAuth
       :> "referralPayout"
       :> "history"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
       :> Get
            '[JSON]
            API.Types.UI.CustomerReferral.PayoutHistory
@@ -85,8 +91,15 @@ getReferralVerifyVpa ::
   )
 getReferralVerifyVpa a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getReferralVerifyVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getReferralPayoutHistory :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.CustomerReferral.PayoutHistory)
-getReferralPayoutHistory a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getReferralPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getReferralPayoutHistory ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.FlowHandler API.Types.UI.CustomerReferral.PayoutHistory
+  )
+getReferralPayoutHistory a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getReferralPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postPayoutVpaUpsert ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

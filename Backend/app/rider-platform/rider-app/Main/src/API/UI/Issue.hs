@@ -3,12 +3,14 @@
 module API.UI.Issue where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as DRR
+import qualified AWS.S3 as S3
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import Beckn.ACL.IGM.Utils
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums as OnDemandSpec
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
 import qualified Domain.Action.UI.Sos as Sos
@@ -31,7 +33,9 @@ import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
@@ -39,6 +43,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
+import qualified Kernel.External.Ticket.Types as TicketTypes
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -46,6 +51,7 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallIGMBPP as CallBPP
@@ -56,10 +62,13 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Getter (getConfig)
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -123,8 +132,42 @@ customerIssueHandle =
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Just castFindFRFSTicketBookingById,
       mbFindStationByIdWithContext = Just castFindStationByIdWithContext,
-      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload)
+      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload),
+      mbShouldForwardChatToTicketService = Just isXyneTicketService,
+      mbFetchMediaBase64 = Just fetchMediaBase64FromS3,
+      findIssueConfig = \mocId issueIdentifier ->
+        getConfig (IssueConfigDimensions {merchantOperatingCityId = mocId.getId, identifier = show issueIdentifier}) (Just (CQIssueConfig.findByMerchantOpCityId mocId Common.CUSTOMER)),
+      mbUpdateTicketOnService = Just castUpdateTicketOnService,
+      mbUpdateTicketStatus = Just castUpdateTicketStatus,
+      mbUpdateTicketCsat = Just castUpdateTicketCsat
     }
+
+-- | Fetch a MediaFile's bytes directly from S3 (returning the base64 payload
+-- 'AWS.S3.get' produces). Used by the shared handler to embed attachments as
+-- @data:@ URIs on outbound ticket calls so Xyne (or any HTTP-fetch-based
+-- provider) doesn't have to hit rider-app's TokenAuth-protected
+-- @/v2/issue/media@ endpoint. Returns 'Nothing' when the MediaFile row lacks
+-- an S3 object key (e.g. inbound Xyne CDN attachments) — the caller then
+-- falls back to @mediaFile.url@.
+fetchMediaBase64FromS3 :: DMF.MediaFile -> Flow (Maybe Text)
+fetchMediaBase64FromS3 mf = case mf.s3FilePath of
+  Just s3Key -> Just <$> S3.get (T.unpack s3Key)
+  Nothing -> pure Nothing
+
+-- | Forward customer chat messages to the ticket service whenever XyneSpaces
+-- is part of the merchant's issue-ticket fan-out (primary OR secondary).
+-- Zendesk / Kapture receive dashboard-side updates and doubling up their
+-- comment threads would duplicate content on every customer message, but
+-- Xyne always needs the message appended via its threadId API, even when it
+-- is running alongside another provider as a secondary.
+isXyneTicketService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Flow Bool
+isXyneTicketService _merchantId mocId = do
+  mbUsage <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId (cast mocId)))
+  pure $ maybe False xyneInUse mbUsage
+  where
+    xyneInUse c =
+      c.issueTicketService == TicketTypes.XyneSpaces
+        || TicketTypes.XyneSpaces `elem` fromMaybe [] c.additionalIssueTicketServices
 
 castFindFRFSTicketBookingById :: Id Common.FRFSTicketBooking -> Flow (Maybe Common.FRFSTicketBooking)
 castFindFRFSTicketBookingById ticketBookingId = do
@@ -374,11 +417,20 @@ castRideInfo merchantId _ rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRR.COMPLETED, DRR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
-castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow TIT.CreateTicketResp
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, Maybe Text)
 castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
 
-castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe Text -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketOnService :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TicketTypes.IssueTicketService -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
+castUpdateTicketOnService merchantId merchantOperatingCityId = TT.updateTicketOnService (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketStatus :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketStatusReq -> Flow ()
+castUpdateTicketStatus merchantId merchantOperatingCityId = TT.updateTicketStatus (cast merchantId) (cast merchantOperatingCityId)
+
+castUpdateTicketCsat :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketCsatReq -> Flow ()
+castUpdateTicketCsat merchantId merchantOperatingCityId = TT.updateTicketCsat (cast merchantId) (cast merchantOperatingCityId)
 
 castKaptureGetTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.GetTicketReq -> Flow [TIT.GetTicketResp]
 castKaptureGetTicket merchantId merchantOperatingCityId = TT.kaptureGetTicket (cast merchantId) (cast merchantOperatingCityId)
@@ -399,7 +451,7 @@ reportIssue driverOfferBaseUrl driverOfferApiKey bppRideId issueReportType = do
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow MerchantConfig
 buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId (cast merchantOpCityId))) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   return
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
@@ -454,7 +506,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
     throwError $ InvalidRequest "Only one issue can be raised at a time."
 
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   mbIGMReq <- case (req.rideId, req.ticketBookingId) of
     (Just rideId, _) -> buildOnDemandIGMIssueReq rideId
@@ -639,7 +691,7 @@ postChatMessage ::
   Common.CreateChatMessageReq ->
   FlowHandler Common.ChatMessageItem
 postChatMessage (personId, _) issueReportId req =
-  withFlowHandlerAPI $ Common.createChatMessage (cast personId) issueReportId CUSTOMER req
+  withFlowHandlerAPI $ Common.createChatMessage (cast personId) issueReportId CUSTOMER customerIssueHandle req
 
 getChatMessages ::
   (Id SP.Person, Id DM.Merchant) ->

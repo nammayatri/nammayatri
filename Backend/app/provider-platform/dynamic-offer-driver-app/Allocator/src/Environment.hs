@@ -49,6 +49,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
@@ -98,7 +99,10 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
+    activeDriversListKeyShards :: Int,
+    enableDriverFeeShardedFanOut :: Bool,
     maxNotificationShards :: Int,
+    gateNotifiedKeyShards :: Int,
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
     eventStreamMap :: [EventStreamMap],
@@ -148,7 +152,8 @@ data HandlerEnv = HandlerEnv
     emailServiceConfig :: EmailServiceConfig,
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -179,6 +184,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  enableDriverFeeShardedFanOut <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "ENABLE_DRIVER_FEE_SHARDED_FAN_OUT"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
@@ -208,6 +214,7 @@ buildHandlerEnv HandlerCfg {..} = do
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in job handler
   return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

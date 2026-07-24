@@ -5,6 +5,7 @@ module Domain.Types.SearchTry where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
@@ -34,6 +35,7 @@ data SearchTry = SearchTry
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Text,
+    paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     preferSafetyPlus :: Kernel.Prelude.Bool,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,

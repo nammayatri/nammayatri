@@ -23,6 +23,19 @@ types:
     orderShortId: Text
     derive: "Show"
 
+  MarshalPersonReq:
+    merchantShortId: Text
+    mobileNumber: Text
+    mobileCountryCode: Text
+    firstName: Maybe Text
+    lastName: Maybe Text
+    email: Maybe Text
+    derive: "Show"
+
+  MarshalPersonResp:
+    recordType: NewType
+    customerId: Id Person
+
 apis:
   - POST:
       endpoint: /multimodal/parking/book
@@ -33,4 +46,13 @@ apis:
         type: ParkingBookingReq
       response:
         type: ParkingBookingResponse
+  - POST:
+      endpoint: /multimodal/parking/marshal/create
+      auth: NoAuth
+      headers:
+        api-key: Text
+      request:
+        type: MarshalPersonReq
+      response:
+        type: MarshalPersonResp
 

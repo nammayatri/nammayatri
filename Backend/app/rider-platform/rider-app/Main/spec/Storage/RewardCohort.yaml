@@ -1,0 +1,44 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RewardCampaign: Domain.Types.RewardCampaign
+  Value: Data.Aeson
+
+RewardCohort:
+  tableName: reward_cohort
+  derives: "Generic, Show, Eq"
+  fields:
+    id: Id RewardCohort
+    campaignId: Id RewardCampaign
+    name: Text
+    description: Maybe Text
+    displayOrder: Int
+    eligibilityJsonLogic: Value
+    rewardTitle: Text
+    rewardImageUrl: Maybe Text
+    couponValidityDays: Maybe Int
+    maxUnlocksPerCohort: Maybe Int
+    presentation: Maybe Value
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    id: PrimaryKey
+    campaignId: "!SecondaryKey"
+  sqlType:
+    eligibilityJsonLogic: jsonb
+    presentation: jsonb
+  fromTType:
+    eligibilityJsonLogic: Kernel.Prelude.identity|I
+    presentation: Kernel.Prelude.identity|I
+  toTType:
+    eligibilityJsonLogic: Kernel.Prelude.identity|I
+    presentation: Kernel.Prelude.identity|I
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByCampaign:
+      kvFunction: findAllWithKV
+      where: campaignId
+  extraOperations:
+    - EXTRA_QUERY_FILE

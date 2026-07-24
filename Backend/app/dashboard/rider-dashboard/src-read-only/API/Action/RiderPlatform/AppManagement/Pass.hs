@@ -19,6 +19,8 @@ import qualified "rider-app" Domain.Types.PurchasedPass
 import qualified "rider-app" Domain.Types.PurchasedPassPayment
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
+import qualified "shared-services" IssueManagement.Common.UI.Issue
+import qualified "shared-services" IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -31,10 +33,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> PostPassCustomerPassRestore))
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> postPassCustomerPassRestore merchantId city
+handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city
 
 type GetPassCustomerAvailablePasses =
   ( ApiAuth
@@ -100,6 +102,14 @@ type PostPassCustomerPassUpdateProfilePicture =
       :> API.Types.Dashboard.AppManagement.Pass.PostPassCustomerPassUpdateProfilePicture
   )
 
+type GetPassCustomerPassPhoto =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS / 'API.Types.Dashboard.AppManagement.Pass.GET_PASS_CUSTOMER_PASS_PHOTO)
+      :> API.Types.Dashboard.AppManagement.Pass.GetPassCustomerPassPhoto
+  )
+
 type PostPassCustomerPassRestore =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
@@ -114,8 +124,8 @@ getPassCustomerAvailablePasses merchantShortId opCity apiTokenInfo customerId la
 getPassCustomerPurchasedPasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity])
 getPassCustomerPurchasedPasses merchantShortId opCity apiTokenInfo customerId language status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerPurchasedPasses merchantShortId opCity apiTokenInfo customerId language status
 
-getPassCustomerTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity])
-getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset
+getPassCustomerTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity])
+getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerTransactions merchantShortId opCity apiTokenInfo customerId limit offset status
 
 postPassCustomerActivateToday :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment) -> Kernel.Prelude.Maybe Data.Time.Day -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber purchasedPassPaymentId startDay = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerActivateToday merchantShortId opCity apiTokenInfo customerId passNumber purchasedPassPaymentId startDay
@@ -129,8 +139,11 @@ getPassCustomerPaymentStatus merchantShortId opCity apiTokenInfo customerId orde
 postPassCustomerPassResetDeviceSwitchCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo customerId passId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerPassResetDeviceSwitchCount merchantShortId opCity apiTokenInfo customerId passId
 
-postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> API.Types.Dashboard.AppManagement.Pass.UpdateProfilePictureReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPassCustomerPassUpdateProfilePicture :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> IssueManagement.Common.UI.Issue.IssueMediaUploadReq -> Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes)
 postPassCustomerPassUpdateProfilePicture merchantShortId opCity apiTokenInfo customerId purchasedPassId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerPassUpdateProfilePicture merchantShortId opCity apiTokenInfo customerId purchasedPassId req
+
+getPassCustomerPassPhoto :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Kernel.Prelude.Text)
+getPassCustomerPassPhoto merchantShortId opCity apiTokenInfo customerId mediaId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.getPassCustomerPassPhoto merchantShortId opCity apiTokenInfo customerId mediaId
 
 postPassCustomerPassRestore :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassRestore merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Pass.postPassCustomerPassRestore merchantShortId opCity apiTokenInfo customerId

@@ -142,6 +142,7 @@ GoHomeConfig:
     ignoreWaypointsTill : Meters
     addStartWaypointAt : Meters
     newLocAllowedRadius : Meters
+    blockedHomeSpecialLocationIds : "Maybe [Text]"
     distanceUnit: DistanceUnit
     createdAt : UTCTime
     updatedAt : UTCTime
@@ -198,8 +199,11 @@ GoHomeConfig:
     addStartWaypointAt: "3000"
     newLocAllowedRadius: "20"
 
-
-
+  configPilot:
+    configType: GoHomeConfig
+    fetchQuery: getGoHomeConfigFromDB
+    returnType: Maybe
+    queryModule: Storage.CachedQueries.GoHomeConfig
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
 

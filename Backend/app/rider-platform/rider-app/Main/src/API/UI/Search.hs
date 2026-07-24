@@ -94,6 +94,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyLeg.Taxi as JLT
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
@@ -105,12 +106,13 @@ import SharedLogic.Search as DSearch
 import qualified SharedLogic.SyncSearchDispatch as SSD
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchRequestLite
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
@@ -222,6 +224,8 @@ getDoMultimodalSearch = \case
   DSearch.DeliverySearch DSearch.OneWaySearchReq {doMultimodalSearch} -> doMultimodalSearch
   DSearch.PTSearch DSearch.PublicTransportSearchReq {doMultimodalSearch} -> doMultimodalSearch
   DSearch.FixedRouteSearch DSearch.FixedRouteSearchReq {doMultimodalSearch} -> doMultimodalSearch
+  -- EasyBooking has no multimodal search concept (destination-less, single-tier only).
+  DSearch.EasyBookingSearch DSearch.EasyBookingSearchReq {} -> Nothing
 
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> FlowHandler SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch
@@ -235,7 +239,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --BEGIN
   whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
-    mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
+    mbSReq <- QSearchRequestLite.findLastSearchRequestInKVLite personId
     shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
     when shouldCancelPrevSearch $ do
       fork "handle multiple search request issue" $ do
@@ -255,7 +259,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing
   inlineResults <- dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
   fork "Multimodal Search" $ do
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let mbDoMultimodalSearch = getDoMultimodalSearch req
     if riderConfig.makeMultiModalSearch && (isNothing mbDoMultimodalSearch || fromMaybe False mbDoMultimodalSearch)
       then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType mbNewServiceTiers)
@@ -284,7 +288,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   shouldSync <-
     if fromMaybe False mbEnableSyncSearch
       then do
-        mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId})
+        mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId))
         let mbSyncCfg = mbRiderConfig >>= (.syncSearchDispatchConfig)
             mbFromSpecialLocId = Id <$> dSearchRes.searchRequest.fromSpecialLocationId
         pure $ SSD.shouldDispatchSync mbSyncCfg req mbFromSpecialLocId
@@ -393,8 +397,8 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     whenJust mbImeiNumber $ \imeiNumber -> do
       encryptedImeiNumber <- encrypt imeiNumber
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
-    dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing) "DSearch.search multimodalSearchHandler"
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
     JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers) "multiModalSearch"
 
@@ -406,6 +410,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       mbUserPreferredServiceTier =
         case req' of
           DSearch.PTSearch DSearch.PublicTransportSearchReq {..} -> userPreferredServiceTier
+          _ -> Nothing
+      mbOriginStopIntegratedBppConfigId =
+        case req' of
+          DSearch.PTSearch DSearch.PublicTransportSearchReq {originStopIntegratedBppConfigId} -> originStopIntegratedBppConfigId
           _ -> Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
@@ -447,8 +455,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       else do
         let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
         destination <- extractDest searchRequest.toLocation
+        mbOriginIBC <-
+          case mbOriginStopIntegratedBppConfigId of
+            Just _ -> SIBC.findMaybeIntegratedBPPConfig mbOriginStopIntegratedBppConfigId merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
+            Nothing -> pure mbIntegratedBPPConfig
         -- Get stop information if integrated BPP config is available
-        fromStopInfo <- case (mbIntegratedBPPConfig, searchRequest.originStopCode) of
+        fromStopInfo <- case (mbOriginIBC, searchRequest.originStopCode) of
           (Just integratedBPPConfig, Just originStopCode) ->
             OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBPPConfig
           _ ->
@@ -655,15 +667,18 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             then do
               -- Call OSRM for taxi/auto (car) distance/duration, fallback to proportional duration if it fails
               res <-
-                withTryCatch "getMultimodalWalkDistance:calculateLegProportionalDuration" $
-                  Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
-                    Maps.GetDistanceReq
-                      { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
-                        destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
-                        travelMode = Just Maps.CAR,
-                        sourceDestinationMapping = Nothing,
-                        distanceUnit = Meter
-                      }
+                JMU.measureLatency
+                  ( withTryCatch "getMultimodalWalkDistance:calculateLegProportionalDuration" $
+                      Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
+                        Maps.GetDistanceReq
+                          { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
+                            destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
+                            travelMode = Just Maps.CAR,
+                            sourceDestinationMapping = Nothing,
+                            distanceUnit = Meter
+                          }
+                  )
+                  "getMultimodalWalkDistance calculateLegProportionalDuration"
               case res of
                 Right distResp -> do
                   let newDistance = if distResp.distance > 0 then convertMetersToDistance Meter distResp.distance else leg.distance
@@ -1044,7 +1059,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --BEGIN
   whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
-    mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
+    mbSReq <- QSearchRequestLite.findLastSearchRequestInKVLite personId
     shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
     when shouldCancelPrevSearch $ do
       fork "handle multiple search request issue" $ do
@@ -1068,7 +1083,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   fork "Multimodal Search" $ do
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $ throwError $ InvalidRequest "Multimodal not supported currently for Ny Regular" -------- will support multimodal in future
   return $
     SearchResp

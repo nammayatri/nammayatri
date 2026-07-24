@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD COLUMN start_cnt integer N
 ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD COLUMN update_home_location_after_sec integer NOT NULL default 2592000;
 ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.go_home_config ADD COLUMN blocked_home_special_location_ids text[] ;

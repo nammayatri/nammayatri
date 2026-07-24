@@ -1,6 +1,7 @@
 module API.UI
   ( API,
     handler,
+    uiApiPrefix,
   )
 where
 
@@ -18,6 +19,7 @@ import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
+import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Insurance as Insurance
@@ -35,6 +37,7 @@ import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.Rewards as Rewards
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.RiderPreferences as RiderPreferences
@@ -45,7 +48,9 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
+import qualified API.Action.UI.ZendeskSdkToken as ZendeskSdkToken
 import qualified API.UI.AadhaarVerification as AadhaarVerification
+import qualified API.UI.Aarokya as Aarokya
 import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
@@ -82,13 +87,24 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified Data.Text as T
+import qualified Database.Persist.Sql as Persist
+import qualified Database.Redis as Redis
+import qualified Database.Redis.Cluster as RedisCluster
 import Environment
 import EulerHS.Prelude
-import Kernel.Utils.Servant.Server (healthCheck)
+import GHC.TypeLits (symbolVal)
 import Servant
+import System.Timeout (timeout)
+
+-- for multi-cloud proxy
+type UIAPIPrefix = "v2"
+
+uiApiPrefix :: Text
+uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
 
 type API =
-  "v2"
+  UIAPIPrefix
     :> ( Get '[JSON] Text
            :<|> Registration.API
            :<|> Profile.API
@@ -125,6 +141,8 @@ type API =
            :<|> HotSpot.API
            :<|> Disability.API
            :<|> AadhaarVerification.API
+           :<|> File.API
+           :<|> Aarokya.API
            :<|> Issue.API
            :<|> TicketService.API
            :<|> FinanceInvoice.API
@@ -158,6 +176,7 @@ type API =
            :<|> RiderPreferences.API
            :<|> NYRegular.API
            :<|> Offers.API
+           :<|> Rewards.API
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
            :<|> Pass.API
@@ -169,11 +188,57 @@ type API =
            :<|> SVP.API
            :<|> ChangeServiceTier.API
            :<|> AddBaggage.API
+           :<|> ZendeskSdkToken.API
        )
+
+-- Healthcheck for every datastore connection the app holds, so a pod with any
+-- broken connection (e.g. a stale cluster shard map caching a dead node) fails
+-- its probe and gets restarted instead of serving errors. For clustered redis
+-- we PING every master of the cached shard map: a plain PING only reaches the
+-- shard owning slot 0 and would miss dead nodes for other slots.
+allConnectionsHealthCheck :: FlowHandler Text
+allConnectionsHealthCheck = do
+  env <- asks (.appEnv)
+  let redisEnvs =
+        [ ("clusterRedis", Just env.hedisClusterEnv),
+          ("secondaryClusterRedis", env.secondaryHedisClusterEnv)
+        ]
+      dbEnvs = [("db", env.esqDBEnv), ("replicaDb", env.esqDBReplicaEnv)]
+  dbErrors <- liftIO $ catMaybes <$> forM dbEnvs (\(name, dbEnv) -> runCheck name (checkDb dbEnv))
+  redisErrors <- liftIO $ catMaybes <$> forM redisEnvs (\(name, mbHedisEnv) -> maybe (pure Nothing) (runCheck name . checkRedis) mbHedisEnv)
+  case dbErrors <> redisErrors of
+    [] -> pure "Healthy"
+    errors -> do
+      let msg = "HealthCheck failed: " <> intercalate ", " errors
+      liftIO $ putStrLn @String msg
+      throwM err503 {errBody = encodeUtf8 msg}
+  where
+    perCheckTimeoutUs = 2000000
+    runCheck :: String -> IO Bool -> IO (Maybe String)
+    runCheck name check = do
+      (result :: Either SomeException (Maybe Bool)) <- try $ timeout perCheckTimeoutUs check
+      pure $ case result of
+        Right (Just True) -> Nothing
+        Right (Just False) -> Just (name <> ": check failed")
+        Right Nothing -> Just (name <> ": timed out")
+        Left err -> Just (name <> ": " <> show err)
+    checkDb dbEnv = do
+      (result :: [Persist.Single Int]) <- Persist.runSqlPool (Persist.rawSql "SELECT 1" []) dbEnv.connPool
+      pure $ not (null result)
+    checkRedis hedisEnv = case hedisEnv.hedisConnection of
+      Redis.ClusteredConnection _ clusterConn -> do
+        replies <- RedisCluster.requestMasterNodes clusterConn ["PING"]
+        pure $ not (null replies) && all isPong replies
+      nonClusteredConn -> do
+        res <- Redis.runRedis nonClusteredConn Redis.ping
+        pure $ res == Right Redis.Pong
+    isPong = \case
+      Redis.SingleLine "PONG" -> True
+      _ -> False
 
 handler :: FlowServer API
 handler =
-  healthCheck
+  allConnectionsHealthCheck
     :<|> Registration.handler
     :<|> Profile.handler
     :<|> RidePayment.handler
@@ -209,6 +274,8 @@ handler =
     :<|> HotSpot.handler
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
+    :<|> File.handler
+    :<|> Aarokya.handler
     :<|> Issue.handler
     :<|> TicketService.handler
     :<|> FinanceInvoice.handler
@@ -242,6 +309,7 @@ handler =
     :<|> RiderPreferences.handler
     :<|> NYRegular.handler
     :<|> Offers.handler
+    :<|> Rewards.handler
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
     :<|> Pass.handler
@@ -253,3 +321,4 @@ handler =
     :<|> SVP.handler
     :<|> ChangeServiceTier.handler
     :<|> AddBaggage.handler
+    :<|> ZendeskSdkToken.handler

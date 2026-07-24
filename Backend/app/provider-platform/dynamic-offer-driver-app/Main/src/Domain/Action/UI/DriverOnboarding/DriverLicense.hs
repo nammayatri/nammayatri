@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
     verifyDL,
     onVerifyDL,
     cacheExtractedDl,
+    cacheExtractedDlName,
     onVerifyDLHandler,
     convertUTCTimetoDate,
   )
@@ -36,6 +37,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as Domain
 import qualified Domain.Types.DriverPanCard as DPan
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -61,10 +63,13 @@ import Kernel.Types.Validation
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -78,7 +83,6 @@ import Tools.Error
 import qualified Tools.Ticket as TT
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
@@ -123,7 +127,7 @@ validateDriverDLReqRegexFlow now DriverDLReq {..} =
 
 isDLNumberFormatValid :: DTO.DocumentVerificationConfig -> Text -> Flow Bool
 isDLNumberFormatValid documentVerificationConfig normalizedDLNumber =
-  VC.validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
+  validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
 
 verifyDL ::
   DPan.VerifiedBy ->
@@ -136,8 +140,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
   now <- getCurrentTime
-  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
-  let regexRules = VC.getRegexRulesFromDocumentConfig documentVerificationConfig
+  documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR req.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  let regexRules = getRegexRulesFromDocumentConfig documentVerificationConfig
       hasRegexRules = not (null regexRules)
   if hasRegexRules
     then runRequestValidation (validateDriverDLReqRegexFlow now) req
@@ -147,12 +151,12 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let normalizedDLNumber = VC.normalizeDocumentNumber driverLicenseNumber
   checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
   unless checkDLFormat $
     throwError (InvalidRequest "DL number format is not valid")
-  (nameOnTheCard, dateOfBirth) <-
+  (extractedNameOnCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
       then return (nameOnCardFromSdk, Nothing)
       else
@@ -179,10 +183,15 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                     unless (extractDLNumber == dlNumber) $
                       throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
                     let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
-                    void $ VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
+                    void $ compareDateOfBirth extractedDob (Just driverDateOfBirth)
                     return (_nameOnCard, extractedDL.dateOfBirth)
                   Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
+  cachedNameOnCard <- getCachedExtractedDlName person.id
+  let nameOnTheCard =
+        case extractedNameOnCard of
+          Just n | not (T.null n) -> Just n
+          _ -> cachedNameOnCard
   decryptedPanNumber <- mapM decrypt driverInfo.panNumber
   decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
   decryptedDlNumber <- mapM decrypt driverInfo.dlNumber
@@ -200,16 +209,28 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
             logInfo $ "Ticket: " <> show ticket
             return ()
+  let runDlFaceMatch = do
+        -- Reuse the category-aware documentVerificationConfig resolved above (was a category-agnostic lookup).
+        dlFaceOutcome <- runDocFaceMatch person documentVerificationConfig imageId1 Nothing (Just driverLicenseNumber)
+        when (dlFaceOutcome == FMFail) $ throwError FaceMatchFailed
   let runBody = do
-        when (VC.isNameCompareRequired transporterConfig verifyBy) $
-          VC.validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
-        mdriverLicense <- Query.findByDLNumber driverLicenseNumber
-        case mdriverLicense of
+        when (isNameCompareRequired transporterConfig verifyBy) $
+          validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+        mbExistingLicense <- Query.findByDLNumber driverLicenseNumber
+        -- let mdriverLicense =
+        --       mbExistingLicense >>= \dl ->
+        --         if dl.verificationStatus == Documents.INVALID
+        --           then Nothing
+        --           else Just dl
+        case mbExistingLicense of
           Just driverLicense -> do
+            logTagInfo "verifyDL" $ "found existing DL record | dlNumber=" <> maskText driverLicenseNumber <> " | id=" <> driverLicense.id.getId <> " | verificationStatus=" <> show driverLicense.verificationStatus
+            when (driverLicense.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+              throwError $ DocumentUnderManualReview "DL"
             when (driverLicense.driverId /= personId) $
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
                 then do
-                  mDriverDL <- Query.findByDriverId personId
+                  mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
                   whenJust mDriverDL $ \_ -> throwImageError imageId1 DriverAlreadyLinked
                 else do
                   -- Fleet-aware duplicate check: single query for both drivers' fleet associations
@@ -228,21 +249,26 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwError $ DocumentAlreadyValidated "DL"
+            runDlFaceMatch
             if documentVerificationConfig.doStrictVerifcation
               then do
-                when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
+                when (driverLicense.verificationStatus == Documents.INVALID) $
+                  if transporterConfig.enableBotFlow == Just True
+                    then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
+                    else throwError DLInvalid
                 verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
-            mDriverDL <- Query.findByDriverId personId
+            mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
             when (isJust mDriverDL) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwImageError imageId1 DriverAlreadyLinked
+            runDlFaceMatch
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
-  if VC.isNameCompareRequired transporterConfig verifyBy
-    then Redis.withWaitOnLockRedisWithExpiry (VC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   return Success
   where
@@ -275,7 +301,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
           classification = Ticket.DRIVER,
           rideDescription = Nothing,
           becknIssueId = Nothing,
-          ticketContext = Just Ticket.IssueTicket
+          ticketContext = Just Ticket.IssueTicket,
+          xyneChannelId = Nothing
         }
 
     makeVerifyDLHitsCountKey :: Text -> Text
@@ -322,7 +349,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
         documentNumber = encryptedDL,
         issueDateOnDoc = dateOfIssue,
         driverDateOfBirth = Just driverDateOfBirth,
-        docType = DTO.DriverLicense,
+        docType = docTypeToText DTO.DriverLicense,
         status = "pending",
         idfyResponse = Nothing,
         retryCount = Just 0,
@@ -391,7 +418,7 @@ onVerifyDL verificationReq output serviceName = do
             _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyDL. Name of provider : " <> show serviceName)
           pure Ack
         else do
-          documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
+          documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR verificationReq.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
           onVerifyDLHandler person output.licenseNumber (output.t_validity_to <|> output.nt_validity_to) output.covs output.driverName output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 
@@ -405,14 +432,23 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
 
   case mDriverLicense of
     Just driverLicense -> do
-      Query.upsert driverLicense
+      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
+      -- Promote non-terminal images before resolution so MANUAL_VERIFICATION_REQUIRED doesn't read as FMDeferred.
+      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
+          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+      -- Record stays PENDING until the face match passes; reuses a recorded result when the match already ran.
+      finalStatus <-
+        if driverLicense.verificationStatus == Documents.VALID
+          then resolveFaceMatchVerificationStatus person documentVerificationConfig imageId1 Nothing dlNumber
+          else pure driverLicense.verificationStatus
+      Query.upsert driverLicense {Domain.verificationStatus = finalStatus}
+      let docImageInvalid = any (\mbImg -> (mbImg >>= (.verificationStatus)) == Just Documents.INVALID) [image1, image2]
+      when docImageInvalid $ Query.updateVerificationStatus Documents.INVALID imageId1
       case person.role of
         Person.DRIVER -> do
           DriverInfo.updateDlNumber mEncryptedDL person.id
         _ -> pure ()
-      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-      when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-        mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
       case driverLicense.driverName of
         Just name_ -> void $ Person.updateName name_ person.id
         Nothing -> pure ()
@@ -501,6 +537,19 @@ cacheExtractedDl personId extractedDL operatingCity = do
   let key = dlCacheKey personId
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   Redis.setExp key (extractedDL, operatingCity) authTokenCacheExpiry
+
+dlNameCacheKey :: Id Person.Person -> Text
+dlNameCacheKey personId =
+  "providerPlatform:dlNameCacheKey:" <> personId.getId
+
+cacheExtractedDlName :: Id Person.Person -> Maybe Text -> Flow ()
+cacheExtractedDlName personId (Just name) | not (T.null name) = do
+  authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
+  Redis.setExp (dlNameCacheKey personId) name authTokenCacheExpiry
+cacheExtractedDlName _ _ = return ()
+
+getCachedExtractedDlName :: Id Person.Person -> Flow (Maybe Text)
+getCachedExtractedDlName personId = Redis.safeGet (dlNameCacheKey personId)
 
 dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> VerificationReqRecord -> Person.Person -> Flow AckResponse
 dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do

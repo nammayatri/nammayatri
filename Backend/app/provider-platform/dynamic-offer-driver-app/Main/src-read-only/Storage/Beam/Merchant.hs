@@ -20,6 +20,8 @@ data MerchantT f = MerchantT
   { businessId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     city :: B.C f Kernel.Types.Beckn.Context.City,
+    cloudBaseUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

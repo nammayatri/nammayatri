@@ -49,6 +49,8 @@ module Tools.Payment
     roundToTwoDecimalPlaces,
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
+    substituteVehicleTypeInOfferSKU,
+    mkOfferBasket,
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
     offerList,
@@ -112,12 +114,15 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Payment.Domain.Types.PaymentOrder
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import System.Environment as SE
 
 -- RideBooking (BoothOnline / Kaali-Peeli): uses Paytm EDC from shared-kernel (PaytmEDCConfig).
@@ -220,7 +225,7 @@ runWithServiceConfigAndServiceName func merchantId merchantOperatingCityId mbPla
     Nothing -> return Nothing
   paymentServiceName <- getPaymentServiceByType paymentServiceType
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just paymentServiceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just paymentServiceName}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (paymentServiceName)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show rideBookingPaymentService))
   case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> func (overrideMockUrlIfNeeded vsc mbIsMockPayment) mRoutingId req
@@ -280,10 +285,10 @@ runWithServiceConfig1 ::
   req ->
   m resp
 runWithServiceConfig1 func getCfg merchantId merchantOperatingCityId paymentMode req = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
   merchantPaymentServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.PaymentService paymentService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.PaymentService paymentService)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req
@@ -300,10 +305,10 @@ runWithServiceConfig2 ::
   req2 ->
   m resp
 runWithServiceConfig2 func getCfg merchantId merchantOperatingCityId paymentMode req1 req2 = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
   merchantPaymentServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.PaymentService paymentService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.PaymentService paymentService)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req1 req2
@@ -321,10 +326,10 @@ runWithServiceConfig3 ::
   req3 ->
   m resp
 runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId paymentMode req1 req2 req3 = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg merchantConfig) (fromMaybe DMPM.LIVE paymentMode)
   merchantPaymentServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.PaymentService paymentService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.PaymentService paymentService)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService paymentService)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show paymentService))
   case merchantPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
@@ -572,7 +577,7 @@ getIsSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServiceTyp
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> Payment.isSplitEnabled vsc
@@ -611,7 +616,7 @@ useDomainOffers merchantId merchantOperatingCityId mbPlaceId paymentServiceType 
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> Payment.getUseDomainOffers vsc
@@ -650,7 +655,7 @@ getIsPercentageSplit merchantId merchantOperatingCityId mbPlaceId paymentService
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> Payment.isPercentageSplit vsc
@@ -689,7 +694,7 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> Payment.isRefundSplitEnabled vsc
@@ -728,7 +733,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
@@ -777,7 +782,7 @@ fetchGatewayReferenceId merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> Payment.getGatewayReferenceId vsc
@@ -810,25 +815,26 @@ fetchOfferSKUConfig ::
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id TicketPlace) ->
   PaymentServiceType ->
-  m (Maybe Text)
+  m (Maybe Text, Maybe Text) -- (adult SKU, child SKU)
 fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType = do
   placeBasedConfig <- case mbPlaceId of
     Just id -> CQPBSC.findByPlaceIdAndServiceName id (DMSC.PaymentService Payment.Juspay)
     Nothing -> return Nothing
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (getPaymentServiceByType paymentServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (getPaymentServiceByType paymentServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   return $ case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig.serviceConfig of
-    Just (DMSC.PaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.MetroPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.BusPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.BbpsPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.PassPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.ParkingPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    Just (DMSC.MembershipPaymentServiceConfig vsc) -> Payment.offerSKUConfig vsc
-    _ -> Nothing
+    Just (DMSC.PaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.MetroPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.BusPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.BbpsPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.MultiModalPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.PassPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.ParkingPaymentServiceConfig vsc) -> mkSKUPair vsc
+    Just (DMSC.MembershipPaymentServiceConfig vsc) -> mkSKUPair vsc
+    _ -> (Nothing, Nothing)
   where
+    mkSKUPair vsc = (Payment.offerSKUConfig vsc, Payment.childOfferSKUConfig vsc)
     getPaymentServiceByType = \case
       Normal -> DMSC.PaymentService Payment.Juspay
       Wallet -> DMSC.JuspayWalletService Payment.Juspay
@@ -843,11 +849,39 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
       STCL -> DMSC.MembershipPaymentService Payment.Juspay
 
+offerSKUVehicleServiceTierTypePlaceholder :: Text
+offerSKUVehicleServiceTierTypePlaceholder = MessageBuilder.templateText "VEHICLE_SERVICE_TIER_TYPE"
+
+offerSKUVehicleTypePlaceholder :: Text
+offerSKUVehicleTypePlaceholder = MessageBuilder.templateText "VEHICLE_TYPE"
+
+substituteVehicleTypeInOfferSKU :: (Show a, Show b) => a -> Maybe b -> Maybe Text -> Maybe Text
+substituteVehicleTypeInOfferSKU vehicleType mbVehicleServiceTierType =
+  fmap
+    ( T.replace offerSKUVehicleTypePlaceholder (T.pack (show vehicleType))
+        . T.replace offerSKUVehicleServiceTierTypePlaceholder (maybe "" (T.pack . show) mbVehicleServiceTierType)
+    )
+
+mkOfferBasket ::
+  (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  HighPrecMoney ->
+  Int ->
+  m [Payment.Basket]
+mkOfferBasket merchantId merchantOperatingCityId mbPlaceId paymentServiceType amount quantity = do
+  (mbOfferSKUProductId, _mbChildOfferSKUProductId) <- fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType
+  pure $ case mbOfferSKUProductId of
+    Just offerSKUProductId -> [Payment.Basket {Payment.id = offerSKUProductId, Payment.unitPrice = amount, Payment.quantity = quantity}]
+    Nothing -> [Payment.Basket {Payment.id = "no_basket", Payment.unitPrice = 0, Payment.quantity = quantity}]
+
 loadLoyaltyProgramMap ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  m (Maybe (Map.Map Text FAccount.CounterpartyType))
+  m (Maybe (Map.Map Text (FAccount.CounterpartyType, Maybe HighPrecMoney)))
 loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
   mbCfg <-
     getOneConfig
@@ -857,9 +891,10 @@ loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
             serviceName = Just (DMSC.JuspayWalletService Payment.Juspay)
           }
       )
+      (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.JuspayWalletService Payment.Juspay)))
   pure $ case mbCfg of
     Just cfg -> case cfg.serviceConfig of
       DMSC.JuspayWalletServiceConfig (Payment.JuspayConfig jcfg) ->
-        Map.mapMaybe (readMaybe . T.unpack) <$> jcfg.loyaltyProgramMap
+        Map.mapMaybe (\e -> (,) <$> readMaybe (T.unpack e.programType) <*> pure e.conversionRate) <$> jcfg.loyaltyProgramMap
       _ -> Nothing
     Nothing -> Nothing

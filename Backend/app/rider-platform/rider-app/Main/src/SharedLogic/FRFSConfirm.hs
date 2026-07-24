@@ -44,6 +44,7 @@ import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common hiding (mkPrice)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -56,13 +57,14 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -88,7 +90,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   riderConfig <-
-    getConfig (RiderDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId integratedBppConfig.merchantOperatingCityId))
       >>= fromMaybeM
         (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
   isMultiInitAllowed <-
@@ -278,10 +280,11 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 then do
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                       totalPrice = fareParameters.totalPrice
+                      mbNewServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-                  void $ QFRFSTicketBooking.updateQuoteAndBppItemIdAndRouteStationsJson quote.id quote.bppItemId quote.routeStationsJson booking.id
+                  void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
                   void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice}
+                  return $ booking {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.serviceTierType = mbNewServiceTierType}
                 else return booking
             pure (rider, updatedBooking)
         )
@@ -310,10 +313,26 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       let mbRouteName = mbFirstRouteStation <&> (.longName)
       let mbServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
 
+      -- Derive the real scheduled departure time for the trip so time-tiered logic
+      -- (e.g. cancellation charges in ExternalBPP/Flow/Common.hs) is measured against the
+      -- actual bus departure rather than the booking creation time. Bus-only: metro/subway
+      -- have no waybill schedule and leave firstTripId Nothing, so they fall back to `now`.
+      bookingStartTime <-
+        case (firstTripId, mbRouteCode) of
+          (Just tripId, Just routeCode) -> do
+            mbScheduledStartTime <- getScheduledTripStartTime tripId routeCode quote'.fromStationCode integratedBppConfig
+            case mbScheduledStartTime of
+              Just scheduledStartTime -> pure scheduledStartTime
+              Nothing -> do
+                logWarning $ "buildAndCreateBooking: no scheduled departure resolved for tripId=" <> tripId <> ", falling back to booking time for startTime"
+                pure now
+          _ -> pure now
+
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
                 bppOrderId = Nothing,
+                bppPaymentId = Nothing,
                 quoteId = id,
                 status = DFRFSTicketBooking.NEW,
                 createdAt = now,
@@ -333,7 +352,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
                 journeyOnInitDone = Nothing,
-                startTime = Just now, -- TODO
+                startTime = Just bookingStartTime,
                 isFareChanged = Just isFareChanged,
                 integratedBppConfigId = quote.integratedBppConfigId,
                 googleWalletJWTUrl = Nothing,
@@ -365,6 +384,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 fromStopIdx = mbHoldCtxForAll <&> (\(_, f, _) -> f),
                 toStopIdx = mbHoldCtxForAll <&> (\(_, _, t) -> t),
                 cloudType = cloudType,
+                clientSdkVersion = rider.clientSdkVersion,
+                clientBundleVersion = rider.clientBundleVersion,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -415,6 +436,38 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
           pure finalTtl
 
+    -- Resolve the scheduled departure time for a bus trip from the live waybill schedule.
+    -- Prefers the rider's boarding stop (matched on stop code); falls back to the trip's
+    -- earliest stop when the boarding stop is not present. Returns Nothing when the schedule
+    -- is unavailable or empty so callers can fall back safely.
+    getScheduledTripStartTime ::
+      ( MonadFlow m,
+        ServiceFlow m r,
+        HasShortDurationRetryCfg r c,
+        HasBAPMetrics m r
+      ) =>
+      Text -> -- tripId (format: waybillNo-tripNumber)
+      Text -> -- routeCode
+      Text -> -- boarding stop code
+      DIBC.IntegratedBPPConfig ->
+      m (Maybe UTCTime)
+    getScheduledTripStartTime tripId routeCode boardingStopCode integratedBPPConfig = do
+      let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+      mbSchedule <- withTryCatch "getScheduledTripStartTime:getBusTripSchedule" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBPPConfig)
+      case mbSchedule of
+        Left err -> do
+          logWarning $ "getScheduledTripStartTime: failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
+          pure Nothing
+        Right schedule ->
+          case concatMap (.eta) schedule of
+            [] -> do
+              logWarning $ "getScheduledTripStartTime: empty schedule for tripId=" <> tripId
+              pure Nothing
+            allEtas -> do
+              let mbBoardingEta = listToMaybe (filter (\e -> e.stopCode == boardingStopCode) allEtas)
+                  chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
+              pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
+
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId = do
   when (null selectedQuoteCategories) $ throwError $ NoSelectedCategoryFound quote.id.getId
@@ -422,14 +475,18 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed) <- confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId
   (mbJourneyId, _) <- getAllJourneyFrfsBookings dConfirmRes
-  when (isNothing mbJourneyId) $
+  when (isNothing mbJourneyId) $ do
     fork "FRFS buildJourneyAndLeg" $ buildJourneyAndLeg dConfirmRes fareParameters
+    -- Sync vehicle/driver data synchronously (NOT forked). A forked sync races with the confirm/on_init writes,
+    -- which rewrite the whole booking row in KV and clobber the driver fields. Running it inline lets the
+    -- subsequent sequential KV updates re-read the row and carry these fields forward.
+    syncFRFSBookingVehicleData dConfirmRes integratedBppConfig
   merchantOperatingCity <- getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
   now <- getCurrentTime
   when isMultiInitAllowed $ do
-    bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
     -- Add default TTL of 30 seconds or the value provided in the config
@@ -482,6 +539,72 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           integratedBppConfigId = booking.integratedBppConfigId,
           ..
         }
+
+-- | Sync live vehicle + driver/conductor data onto the frfs_ticket_booking row.
+-- Runs synchronously (NOT forked) from the confirm flow. A forked version raced with the confirm/on_init
+-- booking writes: KV updates rewrite the whole row, so a concurrent write from a stale snapshot clobbered the
+-- driver fields in Redis (Postgres kept them, since the drainer applies column-scoped UPDATEs). Running inline
+-- lets the subsequent sequential KV updates re-read and carry these fields forward.
+syncFRFSBookingVehicleData ::
+  ( HasBAPMetrics m r,
+    EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DFTB.FRFSTicketBooking ->
+  DIBC.IntegratedBPPConfig ->
+  m ()
+syncFRFSBookingVehicleData booking integratedBppConfig = do
+  let mbRouteStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
+      mbRouteStation = listToMaybe =<< mbRouteStations
+  routeLiveInfo <-
+    case (mbRouteStation, booking.vehicleNumber) of
+      (Just routeStation, Just vehicleNumber) -> do
+        eRouteLiveInfo <- withTryCatch "syncFRFSBookingVehicleData:getLiveRouteInfo" (JourneyUtils.getLiveRouteInfo integratedBppConfig vehicleNumber routeStation.code)
+        case eRouteLiveInfo of
+          Left err -> do
+            logWarning $ "Failed to fetch live route info for vehicleNumber=" <> vehicleNumber <> ": " <> show err
+            pure Nothing
+          Right info -> pure info
+      _ -> return Nothing
+  -- Enrich driver/conductor from waybill metadata when live tracking lacks them
+  mbWaybillMeta <-
+    case booking.tripId of
+      Nothing -> pure Nothing
+      Just tripId -> do
+        let (waybillNo, _) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+        meta <- withTryCatch "syncFRFSBookingVehicleData:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
+        case meta of
+          Left err -> do
+            logWarning $ "Failed to fetch waybill metadata for waybillNo=" <> waybillNo <> ": " <> show err
+            pure Nothing
+          Right m -> pure $ Just m
+  -- Best-effort enrichment: fall back to the booking's already-persisted values when live-tracking / waybill data
+  -- is unavailable, so a missing lookup never erases previously-enriched columns (e.g. on an idempotent re-confirm).
+  let effectiveDriverId = (mbWaybillMeta >>= (.driver_id)) <|> (routeLiveInfo >>= (.busDriverId)) <|> booking.driverId
+      effectiveDriverName = (mbWaybillMeta >>= (.driverName)) <|> booking.driverName
+      effectiveDriverMobileNumber = (mbWaybillMeta >>= (.driverMobileNumber)) <|> booking.driverMobileNumber
+      effectiveConductorId = (routeLiveInfo >>= (.busConductorId)) <|> booking.conductorId
+      effectiveFinalBoardedVehicleNumber = booking.vehicleNumber <|> booking.finalBoardedVehicleNumber
+      effectiveFinalBoardedVehicleNumberSource = (routeLiveInfo <&> \_ -> DJL.UserSpotBooked) <|> booking.finalBoardedVehicleNumberSource
+      effectiveFinalBoardedWaybillId = (routeLiveInfo >>= (.waybillId)) <|> booking.finalBoardedWaybillId
+      effectiveFinalBoardedScheduleNo = (routeLiveInfo >>= (.scheduleNo)) <|> booking.finalBoardedScheduleNo
+      effectiveFinalBoardedDepotNo = (routeLiveInfo >>= (.depot)) <|> booking.finalBoardedDepotNo
+      effectiveFinalBoardedServiceTierType = (routeLiveInfo <&> (.serviceType)) <|> booking.finalBoardedVehicleServiceTierType
+  QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
+    effectiveFinalBoardedVehicleNumber
+    effectiveFinalBoardedVehicleNumberSource
+    effectiveFinalBoardedWaybillId
+    effectiveFinalBoardedScheduleNo
+    effectiveFinalBoardedDepotNo
+    effectiveFinalBoardedServiceTierType
+    effectiveConductorId
+    effectiveDriverId
+    effectiveDriverName
+    effectiveDriverMobileNumber
+    booking.id
 
 buildJourneyAndLeg ::
   ( HasBAPMetrics m r,
@@ -605,6 +728,29 @@ buildJourneyAndLeg booking fareParameters = do
         (Just routeStation, Just vehicleNumber) -> JourneyUtils.getLiveRouteInfo integratedBppConfig vehicleNumber routeStation.code
         _ -> return Nothing
 
+    -- Platform codes are only carried by trip-stop data (Station / route-stop-mapping lookups don't have them),
+    -- so fetch the route's example trip and read the per-stop platform code from it.
+    mbTrip <-
+      case mbRouteStation of
+        Just routeStation -> OTPRest.getExampleTrip integratedBppConfig routeStation.code
+        Nothing -> return Nothing
+    let fromStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.fromStationCode >>= (.platformCode)
+        toStopPlatformCode = mbTrip >>= \trip -> OTPRest.findTripStopByStopCode trip booking.toStationCode >>= (.platformCode)
+        fromStopDetail =
+          MultiModalStopDetails
+            { stopCode = Just booking.fromStationCode,
+              platformCode = fromStopPlatformCode,
+              name = booking.fromStationName,
+              gtfsId = Just booking.fromStationCode
+            }
+        toStopDetail =
+          MultiModalStopDetails
+            { stopCode = Just booking.toStationCode,
+              platformCode = toStopPlatformCode,
+              name = booking.toStationName,
+              gtfsId = Just booking.toStationCode
+            }
+
     let journeyLeg =
           DJL.JourneyLeg
             { id = journeyLegGuid,
@@ -621,8 +767,8 @@ buildJourneyAndLeg booking fareParameters = do
                 duration >>= \duration' ->
                   Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
               toDepartureTime = Nothing,
-              fromStopDetails = Nothing,
-              toStopDetails = Nothing,
+              fromStopDetails = Just fromStopDetail,
+              toStopDetails = Just toStopDetail,
               routeDetails =
                 [ DRD.RouteDetails
                     { agencyGtfsId = Just integratedBppConfig.feedKey,
@@ -637,7 +783,7 @@ buildJourneyAndLeg booking fareParameters = do
                       fromStopCode = Just booking.fromStationCode,
                       fromStopGtfsId = Just booking.fromStationCode,
                       fromStopName = booking.fromStationName,
-                      fromStopPlatformCode = Nothing,
+                      fromStopPlatformCode = fromStopPlatformCode,
                       id = journeyRouteDetailsId,
                       journeyLegId = journeyLegGuid.getId,
                       legStartTime = Just booking.createdAt,
@@ -661,7 +807,7 @@ buildJourneyAndLeg booking fareParameters = do
                       toStopCode = Just booking.toStationCode,
                       toStopGtfsId = Just booking.toStationCode,
                       toStopName = booking.toStationName,
-                      toStopPlatformCode = Nothing,
+                      toStopPlatformCode = toStopPlatformCode,
                       trackingStatus = Nothing,
                       trackingStatusLastUpdatedAt = Just now,
                       merchantId = Just booking.merchantId,
@@ -703,40 +849,11 @@ buildJourneyAndLeg booking fareParameters = do
               providerRouteId = Nothing
             }
 
+    -- NOTE: vehicle/driver sync onto frfs_ticket_booking is done synchronously in postFrfsQuoteV2ConfirmUtil
+    -- (see syncFRFSBookingVehicleData) so it isn't clobbered by concurrent confirm/on_init KV whole-row writes.
     QLocation.createMany [fromLocation, toLocation]
     QJourney.create journey
     QJourneyLeg.create journeyLeg
-    -- Sync journey leg data to frfs_ticket_booking for analytics
-    fork "FRFS Analytics: sync vehicle data to ticket booking" $ do
-      -- Enrich driver/conductor from waybill metadata when live tracking lacks them
-      mbWaybillMeta <-
-        case booking.tripId of
-          Nothing -> pure Nothing
-          Just tripId -> do
-            let (waybillNo, _) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
-            meta <- withTryCatch "buildJourneyAndLeg:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
-            case meta of
-              Left err -> do
-                logWarning $ "Failed to fetch waybill metadata for waybillNo=" <> waybillNo <> ": " <> show err
-                pure Nothing
-              Right m -> pure $ Just m
-
-      let effectiveDriverId = (mbWaybillMeta >>= (.driver_id)) <|> journeyLeg.busDriverId
-          effectiveDriverName = mbWaybillMeta >>= (.driverName)
-          effectiveDriverMobileNumber = mbWaybillMeta >>= (.driverMobileNumber)
-
-      QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
-        journeyLeg.finalBoardedBusNumber
-        journeyLeg.finalBoardedBusNumberSource
-        journeyLeg.finalBoardedWaybillId
-        journeyLeg.finalBoardedScheduleNo
-        journeyLeg.finalBoardedDepotNo
-        journeyLeg.finalBoardedBusServiceTierType
-        journeyLeg.busConductorId
-        effectiveDriverId
-        effectiveDriverName
-        effectiveDriverMobileNumber
-        booking.searchId.getId
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId
 

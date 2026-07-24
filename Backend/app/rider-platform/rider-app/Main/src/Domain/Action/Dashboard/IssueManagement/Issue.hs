@@ -38,6 +38,7 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueChatMessage,
     getIssueChatMessages,
     postIssueChatRead,
+    postIssueChatUpload,
   )
 where
 
@@ -57,6 +58,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -132,7 +134,7 @@ putIssueUpdate ::
   IssueManagement.Common.Dashboard.Issue.IssueUpdateByUserReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 putIssueUpdate (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req =
-  DIssue.issueUpdate (Kernel.Types.Id.ShortId merchantShortId) city (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle req
+  DIssue.issueUpdate (Kernel.Types.Id.ShortId merchantShortId) city (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle Common.CUSTOMER req
 
 postIssueComment ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -154,6 +156,14 @@ getIssueMedia ::
   Kernel.Prelude.Text ->
   Environment.Flow Kernel.Prelude.Text
 getIssueMedia (Kernel.Types.Id.ShortId merchantShortId) _ = DIssue.issueFetchMedia (Kernel.Types.Id.ShortId merchantShortId)
+
+postIssueChatUpload ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
+  Environment.Flow IssueManagement.Common.UI.Issue.IssueMediaUploadRes
+postIssueChatUpload (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.issueChatUpload (Kernel.Types.Id.ShortId merchantShortId) city dashboardIssueHandle req Common.CUSTOMER
 
 postIssueTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -399,14 +409,25 @@ postIssueChatMessage ::
   Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
   IssueManagement.Common.Dashboard.Issue.SendChatMessageByUserReq ->
   Environment.Flow IssueManagement.Common.UI.Issue.ChatMessageItem
-postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req =
-  DIssue.sendDashboardChatMessage
-    (Kernel.Types.Id.ShortId merchantShortId)
-    city
-    (Kernel.Types.Id.cast issueReportId)
-    dashboardIssueHandle
-    Common.CUSTOMER
-    req
+postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportId req = do
+  res <-
+    DIssue.sendDashboardChatMessage
+      (Kernel.Types.Id.ShortId merchantShortId)
+      city
+      (Kernel.Types.Id.cast issueReportId)
+      dashboardIssueHandle
+      Common.CUSTOMER
+      req
+  mbIssueReport <- QIR.findById (Kernel.Types.Id.cast issueReportId)
+  Kernel.Prelude.whenJust mbIssueReport $ \issueReport ->
+    DAI.forwardChatToTicketServiceAs
+      "Control Centre Agent"
+      issueReport
+      Common.CUSTOMER
+      dashboardIssueHandle
+      req.message
+      (Kernel.Prelude.fromMaybe [] req.mediaFileIds)
+  pure res
 
 getIssueChatMessages ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

@@ -245,3 +245,19 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN discount_amount double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN business_email_domain text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_pickup_or_destination_edited boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN fare_settlement_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN customer_language text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN cancellation_commission double precision ;

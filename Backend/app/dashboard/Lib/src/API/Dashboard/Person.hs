@@ -16,6 +16,7 @@ module API.Dashboard.Person where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Domain.Action.Dashboard.Person as DPerson
+import qualified Domain.Action.Dashboard.Roles as DRoles
 import qualified Domain.Action.Dashboard.Transaction as DTransaction
 import Domain.Types.AccessMatrix
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -122,6 +123,13 @@ type API =
              :<|> "changePasswordAfterExpiry"
                :> ReqBody '[JSON] DPerson.ChangePasswordAfterExpiryReq
                :> Post '[JSON] APISuccess
+             :<|> "roles"
+               :> "list"
+               :> DashboardAuth 'DASHBOARD_USER
+               :> QueryParam "searchString" Text
+               :> QueryParam "limit" Integer
+               :> QueryParam "offset" Integer
+               :> Get '[JSON] DRoles.ListRoleRes
          )
     :<|> "release"
       :> ( DashboardAuth 'DASHBOARD_RELEASE_ADMIN
@@ -163,6 +171,7 @@ handler =
              :<|> changePassword
              :<|> getAccessMatrix
              :<|> changePasswordAfterExpiry
+             :<|> listRolesForUser
          )
     :<|> ( registerRelease
              :<|> getProductSpecInfo
@@ -221,6 +230,10 @@ changePasswordAfterExpiry req =
 getAccessMatrix :: BeamFlow' => TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
 getAccessMatrix =
   withFlowHandlerAPI' . DPerson.getAccessMatrix
+
+listRolesForUser :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
+listRolesForUser tokenInfo mbSearchString mbLimit mbOffset =
+  withFlowHandlerAPI' (DRoles.listRolesV2 tokenInfo mbSearchString mbLimit mbOffset)
 
 changeEmailByAdmin :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeEmailByAdminReq -> FlowHandler APISuccess
 changeEmailByAdmin tokenInfo personId req =

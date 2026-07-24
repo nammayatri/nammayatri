@@ -36,12 +36,16 @@ data IssueReportT f = IssueReportT
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
     ticketId :: B.C f (Maybe Text),
+    -- | Ticket id from the (at most one) secondary provider; NULL when the
+    -- merchant only writes to a single ticket provider.
+    additionalTicketIds :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime,
     chats :: B.C f [Domain.Chat],
     merchantId :: B.C f (Maybe Text),
     becknIssueId :: B.C f (Maybe Text),
-    reopenedCount :: B.C f (Maybe Int)
+    reopenedCount :: B.C f (Maybe Int),
+    customerResponse :: B.C f (Maybe Domain.CustomerResponse)
   }
   deriving (Generic, B.Beamable)
 
@@ -53,6 +57,6 @@ instance B.Table IssueReportT where
 
 type IssueReport = IssueReportT Identity
 
-$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId]])
+$(enableKVPG ''IssueReportT ['id] [['personId], ['categoryId], ['ticketId], ['shortId], ['additionalTicketIds]])
 
 $(mkTableInstancesGenericSchema ''IssueReportT "issue_report")

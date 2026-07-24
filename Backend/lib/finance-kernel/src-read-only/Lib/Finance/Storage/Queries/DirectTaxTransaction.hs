@@ -46,6 +46,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTrans
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.counterpartyId counterpartyId,
+      Se.Set Beam.createdBy createdBy,
+      Se.Set Beam.createdById createdById,
       Se.Set Beam.grossAmount grossAmount,
       Se.Set Beam.invoiceNumber invoiceNumber,
       Se.Set Beam.merchantId merchantId,
@@ -63,6 +65,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTrans
       Se.Set Beam.tdsTreatment tdsTreatment,
       Se.Set Beam.transactionDate transactionDate,
       Se.Set Beam.transactionType transactionType,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -74,6 +78,8 @@ instance FromTType' Beam.DirectTaxTransaction Lib.Finance.Domain.Types.DirectTax
         Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction
           { counterpartyId = counterpartyId,
             createdAt = createdAt,
+            createdBy = createdBy,
+            createdById = createdById,
             grossAmount = grossAmount,
             id = Kernel.Types.Id.Id id,
             invoiceNumber = invoiceNumber,
@@ -92,6 +98,8 @@ instance FromTType' Beam.DirectTaxTransaction Lib.Finance.Domain.Types.DirectTax
             tdsTreatment = tdsTreatment,
             transactionDate = transactionDate,
             transactionType = transactionType,
+            updatedBy = updatedBy,
+            updatedById = updatedById,
             updatedAt = updatedAt
           }
 
@@ -100,6 +108,8 @@ instance ToTType' Beam.DirectTaxTransaction Lib.Finance.Domain.Types.DirectTaxTr
     Beam.DirectTaxTransactionT
       { Beam.counterpartyId = counterpartyId,
         Beam.createdAt = createdAt,
+        Beam.createdBy = createdBy,
+        Beam.createdById = createdById,
         Beam.grossAmount = grossAmount,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.invoiceNumber = invoiceNumber,
@@ -118,5 +128,7 @@ instance ToTType' Beam.DirectTaxTransaction Lib.Finance.Domain.Types.DirectTaxTr
         Beam.tdsTreatment = tdsTreatment,
         Beam.transactionDate = transactionDate,
         Beam.transactionType = transactionType,
+        Beam.updatedBy = updatedBy,
+        Beam.updatedById = updatedById,
         Beam.updatedAt = updatedAt
       }

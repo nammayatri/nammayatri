@@ -347,3 +347,29 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN disabled_reason
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_airport boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enable_for_airport text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN first_verified_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN preferred_map_provider text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN vehicle_unsafe_violation_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN unhygienic_vehicle_violation_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN airport_block_expiry_time timestamp with time zone ;

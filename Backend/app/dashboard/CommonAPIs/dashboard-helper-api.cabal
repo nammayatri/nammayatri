@@ -26,6 +26,7 @@ flag Local
 
 library
   exposed-modules:
+      API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
       Dashboard.Common
       Dashboard.Common.Booking
       Dashboard.Common.Driver
@@ -34,6 +35,11 @@ library
       Dashboard.Common.FinanceManagement
       Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
+      Dashboard.Common.Rewards.CampaignStatus
+      Dashboard.Common.Rewards.ClaimMode
+      Dashboard.Common.Rewards.CouponSourceType
+      Dashboard.Common.Rewards.RedemptionTargetType
+      Dashboard.Common.Rewards.SponsorType
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
@@ -51,9 +57,11 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Operator.Driver
       Dashboard.ProviderPlatform.Operator.Registration
       Dashboard.RiderPlatform.Management.FRFSTicket
       Dashboard.RiderPlatform.Management.Merchant
+      Dashboard.RiderPlatform.Management.Rewards
       Dashboard.RiderPlatform.Management.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Fleet
@@ -103,6 +111,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.Endpoints.System
@@ -122,6 +131,7 @@ library
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.System
@@ -149,6 +159,8 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Merchant
       API.Types.RiderPlatform.Management.Endpoints.NammaTag
       API.Types.RiderPlatform.Management.Endpoints.Offer
+      API.Types.RiderPlatform.Management.Endpoints.Payout
+      API.Types.RiderPlatform.Management.Endpoints.Rewards
       API.Types.RiderPlatform.Management.Endpoints.Ride
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
@@ -160,6 +172,8 @@ library
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
       API.Types.RiderPlatform.Management.Offer
+      API.Types.RiderPlatform.Management.Payout
+      API.Types.RiderPlatform.Management.Rewards
       API.Types.RiderPlatform.Management.Ride
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia
@@ -221,6 +235,7 @@ library
     , extra
     , finance-kernel
     , hashable
+    , lens
     , mobility-core
     , openapi3
     , payment

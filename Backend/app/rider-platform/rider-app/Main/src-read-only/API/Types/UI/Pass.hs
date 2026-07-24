@@ -15,10 +15,13 @@ import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile
+import qualified Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Payment.Domain.Types.Refunds
 import Servant
 import qualified SharedLogic.Offer
 import Tools.Auth
@@ -61,7 +64,12 @@ data PassInfoAPIEntity = PassInfoAPIEntity {passCategory :: PassCategoryAPIEntit
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassSelectReq = PassSelectReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, startDate :: Data.Time.Day}
+data PassSelectReq = PassSelectReq
+  { imeiNumber :: Data.Text.Text,
+    passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
+    profilePicture :: Data.Maybe.Maybe Data.Text.Text,
+    startDate :: Data.Time.Day
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -87,10 +95,6 @@ data PassTypeAPIEntity = PassTypeAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassUploadProfilePictureReq = PassUploadProfilePictureReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data PassVerifyReq = PassVerifyReq
   { autoActivated :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     currentLat :: Data.Maybe.Maybe Kernel.Prelude.Double,
@@ -113,6 +117,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     lastVerifiedVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     passEntity :: PassDetailsAPIEntity,
     passNumber :: Data.Text.Text,
+    passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
     purchaseDate :: Data.Time.Day,
     startDate :: Data.Time.Day,
@@ -130,8 +135,21 @@ data PurchasedPassTransactionAPIEntity = PurchasedPassTransactionAPIEntity
     passCode :: Data.Text.Text,
     passName :: Data.Maybe.Maybe Data.Text.Text,
     passType :: Data.Maybe.Maybe Domain.Types.PassType.PassEnum,
+    refunds :: [RefundAPIEntity],
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RefundAPIEntity = RefundAPIEntity
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    arn :: Data.Maybe.Maybe Data.Text.Text,
+    completedAt :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime,
+    id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds,
+    status :: Kernel.External.Payment.Interface.RefundStatus,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

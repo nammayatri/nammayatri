@@ -14,6 +14,53 @@ WEBHOOK_URL = "http://localhost:8016/service/idfy/verification"
 WEBHOOK_SECRET = "xxxxxxx"
 CALLBACK_DELAY = 0.5
 
+# Court Record Check (CRC) webhook is merchant/city-scoped and uses the
+# Verification_Idfy secret. Hardcoded for the local NY Bangalore test env
+# (the async submit body carries only group_id=driverId, not merchant/city).
+# Routed via caddy (8016), which proxies the webhook path to the driver-app.
+CRC_WEBHOOK_URL = "http://localhost:8016/NAMMA_YATRI_PARTNER/Bangalore/service/idfy/verification"
+CRC_WEBHOOK_SECRET = "test-secret"
+
+
+def _send_crc_callback(request_id, group_id, task_id):
+    """Send a Court Record Check webhook callback to BPP after a delay."""
+    import time
+    import urllib.request
+    time.sleep(CALLBACK_DELAY)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    payload = {
+        "action": "court_record_check",
+        "completed_at": now,
+        "created_at": now,
+        "group_id": group_id,
+        "request_id": request_id,
+        "result": {
+            "source_output": {
+                "case_details_link": "https://example.com/cases/" + group_id,
+                "number_of_cases": 0,
+                "report_download_link": "https://example.com/report/" + group_id,
+                "risk_summary": "No pending cases found",
+                "risk_type": "low",
+                "status": "completed",
+            },
+        },
+        "status": "completed",
+        "task_id": task_id,
+        "type": "ind_court_record",
+    }
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        CRC_WEBHOOK_URL,
+        data=body,
+        headers={"Content-Type": "application/json", "Authorization": CRC_WEBHOOK_SECRET},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            log.info(f"CRC callback sent for {request_id} (driver {group_id}): {resp.status}")
+    except Exception as e:
+        log.error(f"CRC callback failed for {request_id}: {e}")
+
 
 def _send_rc_callback(request_id, group_id, task_id, rc_number):
     """Send an RC verification webhook callback to BPP after a delay."""
@@ -67,6 +114,12 @@ def _send_rc_callback(request_id, group_id, task_id, rc_number):
 
 
 def handle(handler, path, body):
+    # Document-onboarding Idfy endpoints (image extract/validate + selfie face-compare) need real
+    # payloads, not gridline's generic ack/verified fallback — delegate them to the idfy mock so the
+    # PAN/Aadhaar onboarding + face-match flow works when Verification_Idfy is routed to /gridline.
+    if any(s in path for s in ("/extract_image", "/extract/", "/validate_image", "/validate/", "/compare")):
+        from services import idfy
+        return idfy.handle(handler, path, body)
     path_ids = extract_path_ids(path)
     override_status, extra = handler._get_override("gridline", *path_ids)
 
@@ -95,6 +148,23 @@ def handle(handler, path, body):
             threading.Thread(
                 target=_send_rc_callback,
                 args=(request_id, group_id, task_id, rc_number),
+                daemon=True,
+            ).start()
+
+        # For Court Record Check, send a CRC webhook callback after a delay
+        if "ind_court_record" in path:
+            parsed_body = {}
+            if body:
+                try:
+                    text = body.decode("utf-8") if isinstance(body, bytes) else body
+                    parsed_body = json.loads(text)
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            group_id = parsed_body.get("group_id", "mock-group")
+            task_id = parsed_body.get("task_id", "mock-task")
+            threading.Thread(
+                target=_send_crc_callback,
+                args=(request_id, group_id, task_id),
                 daemon=True,
             ).start()
         return

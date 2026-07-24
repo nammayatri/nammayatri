@@ -30,9 +30,16 @@ data IssueReport = IssueReport
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     ticketId :: Maybe Text,
+    -- | Ticket id issued by the (at most one) secondary third-party provider
+    -- (e.g. primary Zendesk + mirrored XyneSpaces). Same shape as 'ticketId'.
+    additionalTicketIds :: Maybe Text,
     chats :: [Chat],
     merchantId :: Maybe (Id Merchant),
     becknIssueId :: Maybe Text,
-    reopenedCount :: Int
+    reopenedCount :: Int,
+    -- | Last response the customer gave to a post-resolution satisfaction prompt.
+    -- ACCEPT  : customer marked the resolution satisfactory (issue moved to CLOSED).
+    -- ESCALATE: customer was not satisfied (drove the reopen-prompt branch).
+    customerResponse :: Maybe CustomerResponse
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)

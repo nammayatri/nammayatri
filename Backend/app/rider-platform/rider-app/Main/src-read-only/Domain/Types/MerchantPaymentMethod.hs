@@ -5,7 +5,6 @@
 module Domain.Types.MerchantPaymentMethod (module Domain.Types.MerchantPaymentMethod, module ReExport) where
 
 import Data.Aeson
-import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Extra.MerchantPaymentMethod as ReExport
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
@@ -14,7 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
+data MerchantPaymentMethod = MerchantPaymentMethod
   { collectedBy :: Domain.Types.Extra.MerchantPaymentMethod.PaymentCollector,
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod,
@@ -25,14 +24,4 @@ data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
     priority :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic)
-
-type MerchantPaymentMethod = MerchantPaymentMethodD 'Safe
-
-instance FromJSON (MerchantPaymentMethodD 'Unsafe)
-
-instance ToJSON (MerchantPaymentMethodD 'Unsafe)
-
-instance FromJSON (MerchantPaymentMethodD 'Safe)
-
-instance ToJSON (MerchantPaymentMethodD 'Safe)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

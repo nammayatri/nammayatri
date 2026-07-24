@@ -8,12 +8,12 @@ where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as CR
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.BecknConfig as SQBC
 
 data BecknConfigDimensions = BecknConfigDimensions
@@ -33,23 +33,18 @@ instance ConfigDimensions BecknConfigDimensions where
   type ConfigTypeOf BecknConfigDimensions = 'BecknConfig
   type ConfigValueTypeOf BecknConfigDimensions = [DBC.BecknConfig]
   getConfigType _ = BecknConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    let mId = a.merchantId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfgs <- SQBC.findByMerchantId (Just (Id mId))
-      let filtered = filterByDimensions a cfgs
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs =
-    let foundCfg = filter matchesDimsMocId cfgs
-     in if null foundCfg
-          then maybeToList . listToMaybe $ filter matchesDims cfgs
-          else foundCfg
-    where
-      matchesDimsMocId c =
-        matchesDims c
-          && c.merchantOperatingCityId == Just (Id dims.merchantOperatingCityId)
-      matchesDims c =
-        maybe True (\d -> c.domain == d) dims.domain
-          && maybe True (\vc -> c.vehicleCategory == vc) dims.vehicleCategory
+  getConfigList a =
+    CR.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG BecknConfig)
+      (Id a.merchantOperatingCityId)
+      (SQBC.findByMerchantId (Just (Id a.merchantId)))
+      [ CR.DimMatcher (\dims -> Just dims.merchantOperatingCityId) (fmap (.getId) . (.merchantOperatingCityId)) (==),
+        CR.DimMatcher (.domain) (Just . (.domain)) (==),
+        CR.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
+      ]
+      ( Just
+          [ CR.DimMatcher (.domain) (Just . (.domain)) (==),
+            CR.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
+          ]
+      )

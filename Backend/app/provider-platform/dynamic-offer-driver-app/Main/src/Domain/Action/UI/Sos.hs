@@ -46,6 +46,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Logging
 import Kernel.Utils.Servant.Client (withShortRetry)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.Sos
@@ -58,6 +59,7 @@ import qualified SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Sos ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -184,7 +186,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue =
       disposition = disposition,
       queue = queue,
       becknIssueId = Nothing,
-      ticketContext = Just Ticket.SOSAlert
+      ticketContext = Just Ticket.SOSAlert,
+      xyneChannelId = Nothing
     }
   where
     sosIssueDescription = \case
@@ -244,7 +247,7 @@ callUpdateTicket person sosDetails mbComment = do
           TicketTools.updateTicket
             person.merchantId
             person.merchantOperatingCityId
-            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
+            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
       pure Kernel.Types.APISuccess.Success
     Nothing -> pure Kernel.Types.APISuccess.Success
 
@@ -264,7 +267,7 @@ postSosCreate (mbPersonId, _merchantId, _merchantOperatingCityId) req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (personId == ride.driverId) $ throwError $ InvalidRequest "Ride does not belong to this person"
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let enableSupportForSafety = fromMaybe False transporterConfig.enableSupportForSafety
       kaptureDisposition = transporterConfig.kaptureDisposition
       kaptureQueue = transporterConfig.kaptureQueue
@@ -318,7 +321,7 @@ uploadMedia :: Id SafetyDSos.Sos -> Id Person.Person -> SOSVideoUploadReq -> Env
 uploadMedia sosId personId SOSVideoUploadReq {..} = do
   sosDetails <- runInReplica $ SafetySos.findSosById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   fileSize <- L.runIO $ withFile payload ReadMode hFileSize
   when (fileSize > fromIntegral transporterConfig.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
@@ -336,7 +339,10 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
             _type = fileType,
             url = fileUrl,
             s3FilePath = Just filePath,
-            createdAt = now
+            status = Just DMF.COMPLETED,
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = Just now
           }
   result <- withTryCatch "S3:put:uploadSosMedia" $ S3.put (T.unpack filePath) mediaFile
   case result of
@@ -380,7 +386,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "updateTicket:sendSosTracking" $
                   withShortRetry $
-                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}}
+                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = Nothing, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $

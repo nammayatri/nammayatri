@@ -106,7 +106,7 @@ postKaptureCloseTicket ::
   Environment.Flow API.APISuccess
 postKaptureCloseTicket (personId, _, _) ticketId = do
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  _ <- updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "", ticketId = ticketId, status = TIT.Solved, rideDescription = Nothing, issueDetails = Nothing}
+  _ <- updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "", ticketId = ticketId, status = TIT.Solved, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
   pure API.Success
 
 getGetAllActiveTickets ::

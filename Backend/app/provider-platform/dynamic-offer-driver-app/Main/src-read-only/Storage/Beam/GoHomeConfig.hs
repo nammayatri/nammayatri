@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data GoHomeConfigT f = GoHomeConfigT
   { activeTime :: B.C f Kernel.Prelude.Int,
     addStartWaypointAt :: B.C f Kernel.Prelude.Int,
+    blockedHomeSpecialLocationIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     cancellationCnt :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     destRadiusMeters :: B.C f Kernel.Prelude.Int,

@@ -4,12 +4,14 @@
 
 module Storage.Queries.FleetOwnerInformation (module Storage.Queries.FleetOwnerInformation, module ReExport) where
 
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -43,6 +45,24 @@ updateFleetOwnerVerifiedStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
 updateFleetOwnerVerifiedStatus verified fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.verified verified, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+updateFleetType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetOwnerInformation.FleetType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFleetType fleetType fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.fleetType fleetType, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+updateLocalAddressDetails ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateLocalAddressDetails address addressState addressDocumentType fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.address address,
+      Se.Set Beam.addressState addressState,
+      Se.Set Beam.addressDocumentType addressDocumentType,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegistrationOrderId payoutRegistrationOrderId fleetOwnerPersonId = do

@@ -16,6 +16,9 @@ module Storage.Beam.Common where
 
 import qualified Database.Beam as B
 import Kernel.Prelude (Generic)
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
+import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
@@ -29,6 +32,7 @@ import Storage.Beam.DriverOperatorAssociation
 import Storage.Beam.DriverRCAssociation
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
+import Storage.Beam.Finance ()
 import Storage.Beam.FleetBadge
 import Storage.Beam.FleetBadgeAssociation
 import Storage.Beam.FleetBookingAssignments
@@ -57,6 +61,7 @@ import Storage.Beam.Ride
 import Storage.Beam.RideDetails
 import Storage.Beam.RiderDetails
 import Storage.Beam.Route
+import Storage.Beam.SubscriptionPurchase
 import Storage.Beam.TripTransaction
 import Storage.Beam.Vehicle
 import Storage.Beam.VehicleRegistrationCertificate
@@ -108,7 +113,11 @@ atlasDB =
         fleetBookingInformation = fleetBookingInformationTable,
         fleetRcDailyStats = fleetRcDailyStatsTable,
         communication = communicationTable,
-        commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable
+        commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable,
+        subscriptionPurchase = subscriptionPurchaseTable,
+        indirectTaxTransaction = BeamITT.indirectTaxTransactionTable,
+        financeLedgerEntry = BeamLE.ledgerEntryTable,
+        pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable
       }
 
 data AtlasDB f = AtlasDB
@@ -155,6 +164,10 @@ data AtlasDB f = AtlasDB
     fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
     fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT),
     communication :: f (B.TableEntity CommunicationT),
-    commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT)
+    commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT),
+    subscriptionPurchase :: f (B.TableEntity SubscriptionPurchaseT),
+    indirectTaxTransaction :: f (B.TableEntity BeamITT.IndirectTaxTransactionT),
+    financeLedgerEntry :: f (B.TableEntity BeamLE.LedgerEntryT),
+    pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT)
   }
   deriving (Generic, B.Database be)

@@ -4,6 +4,7 @@
 
 module Storage.Queries.CommonDriverOnboardingDocuments where
 
+import qualified Domain.Types.CommonDocumentData
 import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.Image
@@ -27,12 +28,12 @@ createMany = traverse_ create
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
 findByDriverIdAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
 findByDriverIdAndDocumentType driverId documentType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId), Se.Is Beam.documentType $ Se.Eq documentType]]
 
 findById ::
@@ -61,7 +62,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.documentData documentData,
+    [ Se.Set Beam.documentData (Domain.Types.CommonDocumentData.renderCommonDocumentData documentData),
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId <$> documentImageId),
       Se.Set Beam.documentType documentType,
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
@@ -78,7 +79,7 @@ instance FromTType' Beam.CommonDriverOnboardingDocuments Domain.Types.CommonDriv
     pure $
       Just
         Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments
-          { documentData = documentData,
+          { documentData = Domain.Types.CommonDocumentData.parseCommonDocumentDataSafe documentType documentData,
             documentImageId = Kernel.Types.Id.Id <$> documentImageId,
             documentType = documentType,
             driverId = Kernel.Types.Id.Id <$> driverId,
@@ -94,7 +95,7 @@ instance FromTType' Beam.CommonDriverOnboardingDocuments Domain.Types.CommonDriv
 instance ToTType' Beam.CommonDriverOnboardingDocuments Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments where
   toTType' (Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments {..}) = do
     Beam.CommonDriverOnboardingDocumentsT
-      { Beam.documentData = documentData,
+      { Beam.documentData = Domain.Types.CommonDocumentData.renderCommonDocumentData documentData,
         Beam.documentImageId = Kernel.Types.Id.getId <$> documentImageId,
         Beam.documentType = documentType,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,

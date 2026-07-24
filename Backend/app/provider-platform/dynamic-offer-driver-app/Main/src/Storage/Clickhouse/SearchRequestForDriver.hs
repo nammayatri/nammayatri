@@ -18,6 +18,7 @@ module Storage.Clickhouse.SearchRequestForDriver where
 import qualified Data.HashMap.Strict as HM
 import Data.Hashable (Hashable)
 import qualified Data.List.NonEmpty as NE
+import Data.Time.Calendar (Day)
 import qualified Domain.Types.Common as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -263,6 +264,38 @@ findByDriverId driverId from to limit offset = do
                     CH.&&. srfd.createdAt <=. CH.DateTime to
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
+findSearchRequestStatsByDay ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
+  m [(Day, Maybe DI.SearchRequestForDriverResponse, Int)]
+findSearchRequestStatsByDay driverId from to = do
+  CH.findAll $
+    CH.select_
+      ( \(srfdId, day, response) -> do
+          CH.groupBy (day, response) $ \(dayAgg, responseAgg) -> do
+            let cnt = CH.count_ (CH.distinct srfdId)
+            (dayAgg, responseAgg, cnt)
+      )
+      $ CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+        CH.emptyFilter $
+          CH.subSelect_ $
+            CH.select_
+              ( \srfd -> do
+                  CH.groupBy srfd.id $ \idAgg -> do
+                    let dayAgg = flip CH.argMax srfd.createdAt $ CH.toDate srfd.createdAt
+                        responseAgg = flip CH.argMax srfd.createdAt srfd.response
+                    (idAgg, dayAgg, responseAgg)
+              )
+              $ CH.filter_
+                ( \srfd ->
+                    srfd.driverId CH.==. driverId
+                      CH.&&. srfd.createdAt >=. CH.DateTime from
+                      CH.&&. srfd.createdAt <=. CH.DateTime to
+                )
+                (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
 findByDriverIdForInfo ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

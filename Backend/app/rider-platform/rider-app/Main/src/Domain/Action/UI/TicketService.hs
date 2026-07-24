@@ -52,6 +52,7 @@ import Kernel.Types.Time
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
@@ -67,8 +68,8 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BusinessHour as QBH
 import qualified Storage.Queries.MerchantOperatingCity as QMO
 import qualified Storage.Queries.Person as QP
@@ -85,6 +86,7 @@ import qualified Storage.Queries.TicketBookingServiceCategory as QTBSC
 import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
 import qualified Storage.Queries.TicketSubPlace as QTicketSubPlace
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
@@ -295,7 +297,10 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
         Just availableSeats -> Just $ availableSeats - (maybe 0 (.booked) mSeatM) - (maybe 0 (.blocked) mSeatM)
 
 postTicketPlacesBook :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
+postTicketPlacesBook (mbPersonId, merchantId) placeId req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req
+
+postTicketPlacesBookWithActor :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.TicketBookingReq -> Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
+postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
@@ -331,6 +336,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits) False False
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
@@ -354,7 +360,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_
@@ -730,7 +737,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           }
     mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
     mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
-      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})) merchantOperatingCityId
+      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))) merchantOperatingCityId
       let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
       localTime <- getLocalCurrentTime timeDiffFromUtc
       let visitDate_ = fromMaybe (utctDay localTime) visitDate
@@ -773,7 +780,9 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             isApiCallSuccess = Nothing,
             idAssignedByServiceProvider = Nothing,
             initiatedBy = Nothing,
+            referenceType = Nothing, -- Juspay does not report a reference type
             completedAt = Nothing,
+            actualRefundedAmount = Just amount,
             createdAt = now,
             updatedAt = now,
             ..
@@ -850,7 +859,7 @@ getTicketPlaceBookings (_mbPersonId, _merchantId') placeId mbLimit mbOffset book
 
         mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
         mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
-          mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})) merchantOperatingCityId
+          mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))) merchantOperatingCityId
           let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
           localTime <- getLocalCurrentTime timeDiffFromUtc
           let visitDate_ = fromMaybe (utctDay localTime) visitDate
@@ -1327,7 +1336,10 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
 
 -- Direct booking handler that supports both cash and online payments
 postTicketPlacesDirectBook :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.DirectTicketBookingReq -> Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
-postTicketPlacesDirectBook (_mbPersonId, merchantId) mbRequestorId placeId req = do
+postTicketPlacesDirectBook (mbPersonId, merchantId) mbRequestorId placeId req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ postTicketPlacesDirectBookWithActor (mbPersonId, merchantId) mbRequestorId placeId req
+
+postTicketPlacesDirectBookWithActor :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Text -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.UI.TicketService.DirectTicketBookingReq -> Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
+postTicketPlacesDirectBookWithActor (_mbPersonId, merchantId) mbRequestorId placeId req = do
   -- Find or create person using the same pattern as Registration.hs
   personId <- findOrCreatePersonForDirectBooking merchantId req
 
@@ -1352,7 +1364,7 @@ postTicketPlacesDirectBook (_mbPersonId, merchantId) mbRequestorId placeId req =
           }
     DTTB.ONLINE -> do
       -- For online payment, use existing booking flow
-      createOrderResp <- postTicketPlacesBook (Just personId, merchantId) placeId ticketBookingReq
+      createOrderResp <- postTicketPlacesBookWithActor (Just personId, merchantId) placeId ticketBookingReq
       -- Get the booking details to return booking short id
       merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
       ticketBookings <- QTB.getAllBookingsByPersonIdAndStatus (Just 1) (Just 0) personId merchantOpCity.id DTTB.Pending
@@ -1894,7 +1906,7 @@ cancelTBSPeopleCategory visitDate startTime PeopleCategoryCancellationInfo {..} 
   where
     calculateCancellationChargesForPeopleCategory :: DTB.TicketBookingPeopleCategory -> Int -> [Domain.Types.ServicePeopleCategory.CancellationCharge] -> Environment.Flow HighPrecMoney
     calculateCancellationChargesForPeopleCategory tBSPeopleCategory noOfTicketToCancel cancellationCharges' = do
-      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})) tBSPeopleCategory.merchantOperatingCityId
+      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))) tBSPeopleCategory.merchantOperatingCityId
       let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
       istCurrentTime <- getLocalCurrentTime timeDiffFromUtc
       let visitDateTime = UTCTime visitDate (timeOfDayToTime startTime)

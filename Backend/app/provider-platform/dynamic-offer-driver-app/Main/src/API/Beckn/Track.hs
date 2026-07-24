@@ -37,7 +37,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.Queries.Booking as QRB
+import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
 type API =
@@ -53,7 +53,7 @@ track ::
   SignatureAuthResult ->
   Track.TrackReqV2 ->
   FlowHandler AckResponse
-track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI do
+track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.trackReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "track APIV2 Flow" $ "Reached:-" <> show reqV2
@@ -68,14 +68,12 @@ track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBe
     city <- Utils.getContextCity trackContext
     country <- Utils.getContextCountry trackContext
 
-    dTrackRes <- DTrack.track transporterId dTrackReq
+    dTrackRes <- DTrack.track transporterId bapId dTrackReq
 
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
     let becknOnTrackMessage = ACL.mkOnTrackMessageV2 dTrackRes
     logTagInfo "track APIV2 Flow" $ "Sending OnTrack APIV2" <> show becknOnTrackMessage
-    booking <- QRB.findById dTrackReq.bookingId >>= fromMaybeM (BookingNotFound dTrackReq.bookingId.getId)
-    let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) dTrackRes.vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
     fork "track received pushing ondc logs" do
       void $ pushLogs "track" (toJSON reqV2) transporterId.getId "MOBILITY"
     ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601

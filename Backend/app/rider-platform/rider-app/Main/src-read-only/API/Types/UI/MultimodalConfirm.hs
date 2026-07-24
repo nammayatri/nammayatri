@@ -60,6 +60,10 @@ data AvailableRoute = AvailableRoute
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BlockedVehiclesResp = BlockedVehiclesResp {blockedVehicleNumbers :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ChangeStopsReq = ChangeStopsReq
   { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legOrder :: Kernel.Prelude.Int,
@@ -226,9 +230,11 @@ data LegStatus = LegStatus
 data LiveVehicleInfo = LiveVehicleInfo
   { currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
+    isUpcomingTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,
     number :: Kernel.Prelude.Text,
     position :: Kernel.External.Maps.Types.LatLong,
+    previousRouteId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -279,6 +285,10 @@ data MultimodalUserPreferences = MultimodalUserPreferences
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassingRoutes = PassingRoutes {routeCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -339,8 +349,13 @@ data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, rout
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RouteETAResp = RouteETAResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA], isLastStop :: Kernel.Prelude.Bool, isLive :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RouteServiceabilityReq = RouteServiceabilityReq
-  { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -390,10 +405,6 @@ data SingleQRReq = SingleQRReq {provider :: Lib.JourneyModule.Types.Provider, ti
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data StationAPIEntity = StationAPIEntity {stopCode :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data StopRouteResp = StopRouteResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA], routeCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

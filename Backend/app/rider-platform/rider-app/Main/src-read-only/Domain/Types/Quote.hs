@@ -20,11 +20,13 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Quote = Quote
-  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -37,6 +39,7 @@ data Quote = Quote
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
+    fareSettlementType :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType,
     id :: Kernel.Types.Id.Id Domain.Types.Quote.Quote,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -45,6 +48,7 @@ data Quote = Quote
     itemId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,
     quoteBreakupList :: [Domain.Types.QuoteBreakup.QuoteBreakup],
@@ -62,6 +66,7 @@ data Quote = Quote
     validTill :: Kernel.Prelude.UTCTime,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleServiceTierLuggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
@@ -93,6 +98,7 @@ data QuoteAPIDetails
   | OneWaySpecialZoneAPIDetails Domain.Action.UI.SpecialZoneQuote.SpecialZoneQuoteAPIEntity
   | DeliveryAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | MeterRideAPIDetails Domain.Types.Quote.MeterRideQuoteAPIDetails
+  | EasyBookingAPIDetails Domain.Types.RentalDetails.RentalDetailsAPIEntity
   deriving (Generic, Show)
 
 data QuoteDetails
@@ -104,6 +110,7 @@ data QuoteDetails
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   | DeliveryDetails Domain.Types.DriverOffer.DriverOffer
   | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
+  | EasyBookingDetails Domain.Types.RentalDetails.RentalDetails
   deriving (Generic, Show)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)

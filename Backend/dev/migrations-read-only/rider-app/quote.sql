@@ -119,3 +119,35 @@ ALTER TABLE atlas_app.quote ADD COLUMN special_location_support_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN quote_breakup_list_json json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN fare_settlement_type text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN area text ;
+ALTER TABLE atlas_app.quote ADD COLUMN vehicle_service_tier_luggage_capacity integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN navigation_instruction text ;

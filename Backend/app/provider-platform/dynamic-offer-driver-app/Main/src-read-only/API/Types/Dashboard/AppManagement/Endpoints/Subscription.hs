@@ -11,7 +11,7 @@ import qualified "this" Domain.Action.UI.Payment
 import qualified "this" Domain.Action.UI.Plan
 import qualified Domain.Types.DriverFee
 import qualified Domain.Types.DriverPlan
-import qualified Domain.Types.Invoice
+import qualified "this" Domain.Types.Invoice
 import qualified Domain.Types.Plan
 import qualified "this" Domain.Types.SubscriptionPurchase
 import EulerHS.Prelude hiding (id, state)
@@ -45,9 +45,16 @@ newtype WaiveOffReq = WaiveOffReq {waiveOffEntities :: [Domain.Types.DriverPlan.
 instance Kernel.Types.HideSecrets.HideSecrets WaiveOffReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("plan" :> (GetSubscriptionListPlan :<|> PutSubscriptionSelectPlan :<|> PutSubscriptionSuspendPlan :<|> PostSubscriptionSubscribePlan :<|> GetSubscriptionCurrentPlan :<|> GetSubscriptionListPlanV2 :<|> PutSubscriptionSelectPlanV2 :<|> PutSubscriptionSuspendPlanV2 :<|> PostSubscriptionSubscribePlanV2 :<|> GetSubscriptionCurrentPlanV2 :<|> GetSubscriptionOrderStatus :<|> GetSubscriptionDriverPaymentHistoryAPIV2 :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2 :<|> PostSubscriptionCollectManualPayments :<|> PostSubscriptionFeeWaiveOff :<|> GetSubscriptionPurchaseList))
+type API = ("plan" :> (GetSubscriptionListPlanHelper :<|> PutSubscriptionSelectPlanHelper :<|> PutSubscriptionSuspendPlanHelper :<|> PostSubscriptionSubscribePlanHelper :<|> GetSubscriptionCurrentPlanHelper :<|> GetSubscriptionListPlanV2Helper :<|> PutSubscriptionSelectPlanV2Helper :<|> PutSubscriptionSuspendPlanV2Helper :<|> PostSubscriptionSubscribePlanV2Helper :<|> GetSubscriptionCurrentPlanV2Helper :<|> GetSubscriptionOrderStatusHelper :<|> GetSubscriptionDriverPaymentHistoryAPIV2Helper :<|> GetSubscriptionDriverPaymentHistoryEntityDetailsV2Helper :<|> PostSubscriptionCollectManualPaymentsHelper :<|> PostSubscriptionFeeWaiveOffHelper :<|> GetSubscriptionPurchaseListHelper))
 
 type GetSubscriptionListPlan = (Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "list" :> Get '[JSON] Domain.Action.UI.Plan.PlanListAPIRes)
+
+type GetSubscriptionListPlanHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "list" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Plan.PlanListAPIRes
+  )
 
 type PutSubscriptionSelectPlan =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
@@ -58,7 +65,25 @@ type PutSubscriptionSelectPlan =
       :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
+type PutSubscriptionSelectPlanHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "planId"
+           (Kernel.Types.Id.Id Domain.Types.Plan.Plan)
+      :> "select"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 type PutSubscriptionSuspendPlan = (Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "suspend" :> Put '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PutSubscriptionSuspendPlanHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "suspend"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostSubscriptionSubscribePlan =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
@@ -69,7 +94,26 @@ type PostSubscriptionSubscribePlan =
       :> Post '[JSON] Domain.Action.UI.Plan.PlanSubscribeRes
   )
 
+type PostSubscriptionSubscribePlanHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "planId"
+           (Kernel.Types.Id.Id Domain.Types.Plan.Plan)
+      :> "subscribe"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Post
+           '[JSON]
+           Domain.Action.UI.Plan.PlanSubscribeRes
+  )
+
 type GetSubscriptionCurrentPlan = (Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> Get '[JSON] Domain.Action.UI.Plan.CurrentPlanRes)
+
+type GetSubscriptionCurrentPlanHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Plan.CurrentPlanRes
+  )
 
 type GetSubscriptionListPlanV2 =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
@@ -78,6 +122,17 @@ type GetSubscriptionListPlanV2 =
            Domain.Types.Plan.ServiceNames
       :> "v2"
       :> "list"
+      :> Get '[JSON] Domain.Action.UI.Plan.PlanListAPIRes
+  )
+
+type GetSubscriptionListPlanV2Helper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "serviceName"
+           Domain.Types.Plan.ServiceNames
+      :> "v2"
+      :> "list"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
       :> Get '[JSON] Domain.Action.UI.Plan.PlanListAPIRes
   )
 
@@ -94,6 +149,22 @@ type PutSubscriptionSelectPlanV2 =
            Kernel.Types.APISuccess.APISuccess
   )
 
+type PutSubscriptionSelectPlanV2Helper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "planId"
+           (Kernel.Types.Id.Id Domain.Types.Plan.Plan)
+      :> Capture "serviceName" Domain.Types.Plan.ServiceNames
+      :> "v2"
+      :> "select"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Put
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 type PutSubscriptionSuspendPlanV2 =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
       :> Capture
@@ -101,6 +172,17 @@ type PutSubscriptionSuspendPlanV2 =
            Domain.Types.Plan.ServiceNames
       :> "v2"
       :> "suspend"
+      :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
+type PutSubscriptionSuspendPlanV2Helper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "serviceName"
+           Domain.Types.Plan.ServiceNames
+      :> "v2"
+      :> "suspend"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
       :> Put '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
@@ -120,11 +202,39 @@ type PostSubscriptionSubscribePlanV2 =
            Domain.Action.UI.Plan.PlanSubscribeRes
   )
 
+type PostSubscriptionSubscribePlanV2Helper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "planId"
+           (Kernel.Types.Id.Id Domain.Types.Plan.Plan)
+      :> Capture "serviceName" Domain.Types.Plan.ServiceNames
+      :> "v2"
+      :> "subscribe"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           PlanSubscribeReq
+      :> Post
+           '[JSON]
+           Domain.Action.UI.Plan.PlanSubscribeRes
+  )
+
 type GetSubscriptionCurrentPlanV2 =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> Capture "serviceName" Domain.Types.Plan.ServiceNames
       :> Get
            '[JSON]
            Domain.Action.UI.Plan.CurrentPlanRes
+  )
+
+type GetSubscriptionCurrentPlanV2Helper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "serviceName"
+           Domain.Types.Plan.ServiceNames
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get '[JSON] Domain.Action.UI.Plan.CurrentPlanRes
   )
 
 type GetSubscriptionOrderStatus =
@@ -134,6 +244,18 @@ type GetSubscriptionOrderStatus =
            (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice)
       :> "status"
       :> Get '[JSON] Domain.Action.UI.Payment.PaymentStatusResp
+  )
+
+type GetSubscriptionOrderStatusHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "orderId"
+           (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice)
+      :> "status"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Payment.PaymentStatusResp
   )
 
 type GetSubscriptionDriverPaymentHistoryAPIV2 =
@@ -150,6 +272,31 @@ type GetSubscriptionDriverPaymentHistoryAPIV2 =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Driver.HistoryEntityV2
+  )
+
+type GetSubscriptionDriverPaymentHistoryAPIV2Helper =
+  ( Capture
+      "driverId"
+      (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> "payments"
+      :> "history"
+      :> "v2"
+      :> Capture "serviceName" Domain.Types.Plan.ServiceNames
+      :> QueryParam
+           "paymentMode"
+           Domain.Types.Invoice.InvoicePaymentMode
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            Domain.Action.UI.Driver.HistoryEntityV2
@@ -172,6 +319,26 @@ type GetSubscriptionDriverPaymentHistoryEntityDetailsV2 =
            Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2
   )
 
+type GetSubscriptionDriverPaymentHistoryEntityDetailsV2Helper =
+  ( Capture
+      "driverId"
+      (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> "payments"
+      :> "history"
+      :> "v2"
+      :> Capture "serviceName" Domain.Types.Plan.ServiceNames
+      :> Capture
+           "invoiceId"
+           (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice)
+      :> "entity"
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2
+  )
+
 type PostSubscriptionCollectManualPayments =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
       :> Capture
@@ -182,7 +349,24 @@ type PostSubscriptionCollectManualPayments =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
+type PostSubscriptionCollectManualPaymentsHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver)
+      :> Capture
+           "serviceName"
+           Domain.Types.Plan.ServiceNames
+      :> "collect"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           CollectManualPaymentsReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 type PostSubscriptionFeeWaiveOff = ("waiveOff" :> "fee" :> ReqBody '[JSON] WaiveOffReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostSubscriptionFeeWaiveOffHelper = ("waiveOff" :> "fee" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] WaiveOffReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type GetSubscriptionPurchaseList =
   ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "subscriptionPurchases"
@@ -198,23 +382,40 @@ type GetSubscriptionPurchaseList =
            Domain.Action.UI.Plan.SubscriptionPurchaseListRes
   )
 
+type GetSubscriptionPurchaseListHelper =
+  ( Capture "driverId" (Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver) :> "subscriptionPurchases"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "status"
+           Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Action.UI.Plan.SubscriptionPurchaseListRes
+  )
+
 data SubscriptionAPIs = SubscriptionAPIs
-  { getSubscriptionListPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanListAPIRes,
-    putSubscriptionSelectPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    putSubscriptionSuspendPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postSubscriptionSubscribePlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanSubscribeRes,
-    getSubscriptionCurrentPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.CurrentPlanRes,
-    getSubscriptionListPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanListAPIRes,
-    putSubscriptionSelectPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    putSubscriptionSuspendPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postSubscriptionSubscribePlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.ServiceNames -> PlanSubscribeReq -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanSubscribeRes,
-    getSubscriptionCurrentPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.CurrentPlanRes,
-    getSubscriptionOrderStatus :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> EulerHS.Types.EulerClient Domain.Action.UI.Payment.PaymentStatusResp,
-    getSubscriptionDriverPaymentHistoryAPIV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoicePaymentMode -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntityV2,
-    getSubscriptionDriverPaymentHistoryEntityDetailsV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2,
-    postSubscriptionCollectManualPayments :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> CollectManualPaymentsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postSubscriptionFeeWaiveOff :: WaiveOffReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getSubscriptionPurchaseList :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.SubscriptionPurchaseListRes
+  { getSubscriptionListPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanListAPIRes,
+    putSubscriptionSelectPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    putSubscriptionSuspendPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postSubscriptionSubscribePlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanSubscribeRes,
+    getSubscriptionCurrentPlan :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.CurrentPlanRes,
+    getSubscriptionListPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanListAPIRes,
+    putSubscriptionSelectPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    putSubscriptionSuspendPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postSubscriptionSubscribePlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> PlanSubscribeReq -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.PlanSubscribeRes,
+    getSubscriptionCurrentPlanV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.CurrentPlanRes,
+    getSubscriptionOrderStatus :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Payment.PaymentStatusResp,
+    getSubscriptionDriverPaymentHistoryAPIV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoicePaymentMode -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntityV2,
+    getSubscriptionDriverPaymentHistoryEntityDetailsV2 :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2,
+    postSubscriptionCollectManualPayments :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> CollectManualPaymentsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postSubscriptionFeeWaiveOff :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> WaiveOffReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getSubscriptionPurchaseList :: Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.SubscriptionPurchase.SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Action.UI.Plan.SubscriptionPurchaseListRes
   }
 
 mkSubscriptionAPIs :: (Client EulerHS.Types.EulerClient API -> SubscriptionAPIs)

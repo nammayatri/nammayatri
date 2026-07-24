@@ -281,6 +281,7 @@ let registryMap =
 let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
+      | UnblockAirportDriver
       | UnblockSoftBlockedDriver
       | SoftBlockNotifyDriver
       | SendPDNNotificationToDriver
@@ -322,11 +323,15 @@ let AllocatorJobType =
       | ScheduledTDSDistribution
       | IffcoTokioInsurance
       | AggregatedCommissionInvoiceCreation
+      | TriggerSpecialZoneNotify
+      | SAPPGSettlementDispatch
+      | SAPSubscriptionPurchaseDispatch
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
+      , { mapKey = AllocatorJobType.UnblockAirportDriver, mapValue = False }
       , { mapKey = AllocatorJobType.UnblockSoftBlockedDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SoftBlockNotifyDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SupplyDemand, mapValue = True }
@@ -388,6 +393,11 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.AggregatedCommissionInvoiceCreation
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.TriggerSpecialZoneNotify, mapValue = True }
+      , { mapKey = AllocatorJobType.SAPSubscriptionPurchaseDispatch
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.SAPPGSettlementDispatch, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
@@ -527,6 +537,7 @@ in  { esqDBCfg
     , maxShards = +5
     , maxNotificationShards = +128
     , gateNotifiedKeyShards = +16
+    , activeDriversListKeyShards = +16
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
@@ -569,8 +580,11 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
+    , imageExtractionTimeoutSec = +20
     , masterCloudProxyConfig =
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
     , rideEventsPublisherCfg
+    , xyneWebhookSigningSecret = "<XYNE_WEBHOOK_SIGNING_SECRET>"
+    , xyneWebhookBearerToken = "<XYNE_WEBHOOK_BEARER_TOKEN>"
     }

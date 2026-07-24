@@ -17,13 +17,25 @@ findLastByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
+findLastByRequestId (Id searchRequest) = findAllWithKVAndConditionalDB [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Just (Se.Desc BeamST.searchRepeatCounter)) <&> listToMaybe
 
 findAllByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   m [SearchTry]
-findAllByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) Nothing Nothing
+findAllByRequestId (Id searchRequest) = findAllWithKVAndConditionalDB [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Just (Se.Desc BeamST.searchRepeatCounter))
+
+findRecentByRequestIds ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id SearchRequest] ->
+  Int ->
+  m [SearchTry]
+findRecentByRequestIds requestIds limit =
+  findAllWithOptionsKV
+    [Se.Is BeamST.requestId $ Se.In (getId <$> requestIds)]
+    (Se.Desc BeamST.createdAt)
+    (Just limit)
+    Nothing
 
 findTryByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -40,15 +52,13 @@ findActiveTryByQuoteId ::
   Text ->
   m (Maybe SearchTry)
 findActiveTryByQuoteId quoteId =
-  findAllWithOptionsKV
+  findAllWithKVAndConditionalDB
     [ Se.And
         [ Se.Is BeamST.estimateId $ Se.Eq quoteId,
           Se.Is BeamST.status $ Se.Eq ACTIVE
         ]
     ]
-    (Se.Desc BeamST.createdAt)
-    (Just 1)
-    Nothing
+    (Just (Se.Desc BeamST.createdAt))
     <&> listToMaybe
 
 getSearchTryStatusAndValidTill ::

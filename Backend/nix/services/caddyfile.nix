@@ -1,13 +1,13 @@
-# Renders a Caddyfile from `ports.nix` (or the resolved overlay generated
-# by resolve-ports.sh). Pure builtins — no pkgs / no lib — so it can be
-# evaluated cheaply via `nix-instantiate --eval --raw`.
+# Renders a Caddyfile from a `ports` attrset. Pure builtins — no pkgs / no lib
+# — so it can be evaluated cheaply via `nix eval --raw`.
 #
-# Usage from a shell hook, AFTER resolve-ports.sh has written
-# data/ports-resolved.nix:
+# The run-mobility-stack-dev preflight passes the resolved ports read from this
+# checkout's devbox-registry.json slice:
 #
-#   nix-instantiate --eval --raw --impure --expr \
+#   nix eval --raw --impure --expr \
 #     "import $FLAKE_ROOT/Backend/nix/services/caddyfile.nix { \
-#        ports = import \"$RESOLVED_FILE\"; }" > data/Caddyfile
+#        ports = (builtins.fromJSON (builtins.readFile \"$REGISTRY\")).users.\"$DEVBOX_KEY\".ports; }" \
+#     > data/Caddyfile
 #
 # The Caddyfile provides a single reverse-proxy entry point so developers on
 # the devbox (via Tailscale) only need to know one port to reach any backend
@@ -36,17 +36,22 @@ let
     "test-context-api"
     "metabase"
     "victoria-metrics"
+    "db-manager-frontend"
+    "db-manager-backend"
   ];
 
   caddyPort = ports.caddy-reverse-proxy or (throw "caddy-reverse-proxy port not defined in ports.nix");
 
   routeBlock = svc:
     if ports ? ${svc}
-    then ''
-      	handle_path /${svc}/* {
-      		reverse_proxy 127.0.0.1:${toString ports.${svc}}
-      	}
-    ''
+    then
+      let
+        addr = "127.0.0.1:${toString ports.${svc}}";
+        proxy =
+          if svc == "db-manager-backend"
+          then "reverse_proxy ${addr} {\n\t\t\theader_up -Origin\n\t\t}"
+          else "reverse_proxy ${addr}";
+      in "\thandle_path /${svc}/* {\n\t\t${proxy}\n\t}\n"
     else
     # builtins.trace prints to stderr at eval time, mirroring the old
     # `echo "  WARN: skipping $svc — not in ports file" >&2`.

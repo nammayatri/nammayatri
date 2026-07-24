@@ -70,6 +70,7 @@ import Kernel.Types.Confidence
 import Kernel.Types.Id
 import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -97,16 +98,20 @@ data Pricing = Pricing
     tipOptions :: Maybe [Int],
     currency :: Currency,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
-    qar :: Maybe Double
+    qar :: Maybe Double,
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -927,8 +932,8 @@ tfItemDescriptor booking =
         descriptorName = Just $ show booking.vehicleServiceTier
       }
 
-convertEstimateToPricing :: Maybe Text -> Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
-convertEstimateToPricing _specialLocationName specialLocationSupportNumber (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
+convertEstimateToPricing :: Maybe Text -> Maybe Text -> Maybe SL.FareSettlementType -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertEstimateToPricing _specialLocationName specialLocationSupportNumber fareSettlementType (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
@@ -939,14 +944,15 @@ convertEstimateToPricing _specialLocationName specialLocationSupportNumber (DEst
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
+      vehicleServiceTierLuggageCapacity = serviceTier.luggageCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       qar = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARCity,
       ..
     }
 
-convertQuoteToPricing :: Maybe Text -> Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
-convertQuoteToPricing specialLocationName specialLocationSupportNumber (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
+convertQuoteToPricing :: Maybe Text -> Maybe Text -> Maybe SL.FareSettlementType -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettlementType (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
@@ -959,6 +965,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber (DQuote.Q
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
+      vehicleServiceTierLuggageCapacity = serviceTier.luggageCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
@@ -982,12 +989,14 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
+      vehicleServiceTierLuggageCapacity = serviceTier.luggageCapacity,
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
       specialLocationName = Nothing,
       specialLocationSupportNumber = Nothing,
+      fareSettlementType = Nothing,
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
@@ -995,6 +1004,8 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
       personalDiscount = fareParams.personalDiscount,
+      area = Nothing,
+      navigationInstruction = Nothing,
       ..
     }
 
@@ -1005,17 +1016,20 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
         [ Tags.SPECIAL_LOCATION_TAG Tags.~=? pricing.specialLocationTag,
           Tags.SPECIAL_LOCATION_NAME Tags.~=? pricing.specialLocationName,
           Tags.SPECIAL_LOCATION_SUPPORT_NUMBER Tags.~=? pricing.specialLocationSupportNumber,
-          Tags.BUSINESS_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.businessDiscount)),
-          Tags.PERSONAL_DISCOUNT Tags.~=? (guardVNP (show <$> pricing.personalDiscount)),
+          Tags.FARE_SETTLEMENT_TYPE Tags.~=? (show <$> pricing.fareSettlementType),
+          Tags.PICKUP_AREA Tags.~=? pricing.area,
+          Tags.PICKUP_NAVIGATION_INSTRUCTION Tags.~=? pricing.navigationInstruction,
+          Tags.BUSINESS_DISCOUNT Tags.~=? guardVNP (show <$> pricing.businessDiscount),
+          Tags.PERSONAL_DISCOUNT Tags.~=? guardVNP (show <$> pricing.personalDiscount),
           Tags.DISTANCE_TO_NEAREST_DRIVER_METER Tags.~=? (show . double2Int . realToFrac <$> pricing.distanceToNearestDriver),
-          Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute)),
-          Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? (guardVNP (show <$> pricing.isBlockedRoute)),
-          Tags.TOLL_NAMES Tags.~=? (guardVNP (show <$> pricing.tollNames)),
-          Tags.TIP_OPTIONS Tags.~=? (guardVNP (show <$> pricing.tipOptions)),
-          Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? (guardVNP (getDuration pricing.distanceToNearestDriver 25)),
-          Tags.SMART_TIP_SUGGESTION Tags.~=? (guardVNP (show <$> pricing.smartTipSuggestion)),
+          Tags.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE Tags.~=? guardVNP (show <$> pricing.isCustomerPrefferedSearchRoute),
+          Tags.IS_BLOCKED_SEARCH_ROUTE Tags.~=? guardVNP (show <$> pricing.isBlockedRoute),
+          Tags.TOLL_NAMES Tags.~=? guardVNP (show <$> pricing.tollNames),
+          Tags.TIP_OPTIONS Tags.~=? guardVNP (show <$> pricing.tipOptions),
+          Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? guardVNP (getDuration pricing.distanceToNearestDriver 25),
+          Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (show <$> pricing.smartTipSuggestion),
           Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
-          Tags.QAR Tags.~=? (guardVNP (show <$> pricing.qar))
+          Tags.QAR Tags.~=? guardVNP (show <$> pricing.qar)
         ]
   where
     getDuration :: Maybe Meters -> Int -> Maybe Text
@@ -1241,6 +1255,16 @@ mkIsSafetyPlusTagGroupV2 isSafetyPlus =
   Tags.buildTagGroups
     [ Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus)
     ]
+
+mkTierUpgradeTagGroupV2 :: Bool -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
+mkTierUpgradeTagGroupV2 isTierUpgrade mbAssignedTierType mbAssignedTierName
+  | not isTierUpgrade = Nothing
+  | otherwise =
+    Tags.buildTagGroups
+      [ Tags.IS_TIER_UPGRADE ~= show isTierUpgrade,
+        Tags.ASSIGNED_SERVICE_TIER_TYPE ~=? mbAssignedTierType,
+        Tags.ASSIGNED_SERVICE_TIER_NAME ~=? mbAssignedTierName
+      ]
 
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkForwardBatchTagGroupV2 previousRideDropLocation' =

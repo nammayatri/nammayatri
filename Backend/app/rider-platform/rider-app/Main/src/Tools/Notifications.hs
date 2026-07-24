@@ -27,8 +27,10 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.Journey
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
@@ -61,6 +63,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (getCurrentTime)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
@@ -74,23 +77,30 @@ import SharedLogic.Quote
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
+import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PD
-import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSearchReqLite
+import qualified Storage.Queries.Transformers.Booking as TBooking
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
+import qualified Tools.Whatsapp as Whatsapp
 import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
@@ -163,9 +173,9 @@ runWithServiceConfig ::
   liveActivityReq ->
   m resp
 runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req liveActivityReq = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantNotificationServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.NotificationService $ getCfg merchantConfig)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.NotificationService $ getCfg merchantConfig)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.NotificationService $ getCfg merchantConfig)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig msc -> func msc req liveActivityReq (clearDeviceToken personId)
@@ -313,7 +323,7 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   -- Check if vehicle number matches any special vehicle notification config
   let matchedSpecialVehicleConfig = case riderConfig.specialVehicleNotificationConfigs of
@@ -437,6 +447,31 @@ newtype RideStartedParam = RideStartedParam
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype ServiceTierChangedParam = ServiceTierChangedParam
+  { serviceTierName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+notifyOnServiceTierChange ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  Text ->
+  m ()
+notifyOnServiceTierChange booking newServiceTierName = do
+  let personId = booking.riderId
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product booking.id.getId (ServiceTierChangedParam newServiceTierName)
+      dynamicParams = ServiceTierChangedParam newServiceTierName
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "SERVICE_TIER_CHANGED" identity)
+    dynamicParams
+    entity
+    booking.tripCategory
+    [("serviceTierName", newServiceTierName)]
+    (Just booking.configInExperimentVersions)
+    Nothing
+
 newtype TripAssignedData = TripAssignedData
   { tripCategory :: Maybe TripCategory
   }
@@ -517,13 +552,15 @@ notifyOnRideCompleted ::
   SRB.Booking ->
   SRide.Ride ->
   [Person.Person] ->
+  HighPrecMoney ->
   m ()
-notifyOnRideCompleted booking ride otherParties = do
+notifyOnRideCompleted booking ride otherParties rideDiscountAmount = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
       mbTotalFare = ride.totalFare
-      totalFare = fromMaybe booking.estimatedFare mbTotalFare
+      grossTotalFare = fromMaybe booking.estimatedFare mbTotalFare
+      totalFare = Price.modifyPrice grossTotalFare (\amt -> max 0 (amt - rideDiscountAmount))
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product rideId.getId ()
       dynamicParams = RideCompleteParam driverName $ show totalFare.amountInt
@@ -577,7 +614,7 @@ notifyOnRideCompleted booking ride otherParties = do
 
   fork "Create Post ride safety job" $ do
     safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
     let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> RideShareOptions
         convertToPersonRideShareOptions = \case
@@ -713,6 +750,8 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParti
       toLocationDestination = do
         destinationAdd <- case booking.bookingDetails of
           SRB.RentalDetails _ -> Nothing
+          -- Destination-less like Rental — no toLocation to show in the notification.
+          SRB.EasyBookingDetails _ -> Nothing
           SRB.OneWayDetails details -> Just details.toLocation
           SRB.DriverOfferDetails details -> Just details.toLocation
           SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -889,6 +928,8 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
       toLocationDestination = do
         destinationAdd <- case booking.bookingDetails of
           SRB.RentalDetails _ -> Nothing
+          -- Destination-less like Rental — no toLocation to show in the notification.
+          SRB.EasyBookingDetails _ -> Nothing
           SRB.OneWayDetails details -> Just details.toLocation
           SRB.DriverOfferDetails details -> Just details.toLocation
           SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
@@ -975,7 +1016,7 @@ notifyOnQuoteReceived ::
   DQuote.Quote ->
   m ()
 notifyOnQuoteReceived quote = do
-  searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
+  searchRequest <- QSearchReqLite.findByIdLite quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
   let entity = Notification.Entity Notification.Product quote.requestId.getId ()
       dynamicParams = EmptyDynamicParam
@@ -1335,7 +1376,7 @@ notifyRideStartToEmergencyContacts ::
   m ()
 notifyRideStartToEmergencyContacts booking ride = do
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = rider.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = rider.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId rider.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   personENList <- DPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
   let followingContacts = filter (\contact -> checkSafetySettingConstraint (DPDEN.fromSafetyRideShare <$> contact.shareTripWithEmergencyContactOption) riderConfig now) personENList
@@ -1474,6 +1515,20 @@ notifyPersonOnEvents person entityData notifType = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
+notifyRiderPayoutStatus ::
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Person ->
+  Text ->
+  HighPrecMoney ->
+  m ()
+notifyRiderPayoutStatus person pnKey amount = do
+  mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow person.merchantOperatingCityId pnKey Nothing Nothing person.language []
+  whenJust mbMerchantPN $ \merchantPN ->
+    when merchantPN.shouldTrigger $ do
+      let params = [("amount", show amount)]
+          entityData = NotifReq {title = buildTemplate params merchantPN.title, message = buildTemplate params merchantPN.body}
+      notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   let entity = Notification.Entity Notification.Product person.id.getId ()
@@ -1537,12 +1592,12 @@ notifyToAllBookingParties persons tripCategory notikey =
 notifyOnTripUpdate ::
   ServiceFlow m r =>
   SRB.Booking ->
-  SRide.Ride ->
+  Maybe SRide.Ride ->
   Maybe (Text, Text) ->
   m ()
-notifyOnTripUpdate booking ride err = do
+notifyOnTripUpdate booking mbRide err = do
   let personId = booking.riderId
-      rideId = ride.id
+      entityId = maybe booking.id.getId (.id.getId) mbRide
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   (title, body) <- case err of
@@ -1558,7 +1613,7 @@ notifyOnTripUpdate booking ride err = do
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product rideId.getId (),
+            entity = Notification.Entity Notification.Product entityId (),
             body,
             title,
             dynamicParams = EmptyDynamicParam,
@@ -1567,7 +1622,7 @@ notifyOnTripUpdate booking ride err = do
             sound = notificationSound
           }
       toLocationDestination = do
-        loc <- ride.toLocation
+        loc <- maybe (TBooking.getToLocation booking.bookingDetails) (.toLocation) mbRide
         let addr = loc.address
         addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
       liveActivityReq =
@@ -1585,10 +1640,10 @@ notifyOnTripUpdate booking ride err = do
                           bookingInfo =
                             Just $
                               FCMType.BookingInfo
-                                { vehicleColor = ride.vehicleColor,
-                                  vehicleName = Just ride.vehicleModel,
-                                  vehicleNumber = Just ride.vehicleNumber,
-                                  vehicleVariant = Just (show ride.vehicleVariant),
+                                { vehicleColor = mbRide >>= (.vehicleColor),
+                                  vehicleName = (.vehicleModel) <$> mbRide,
+                                  vehicleNumber = (.vehicleNumber) <$> mbRide,
+                                  vehicleVariant = Just (show (maybe (VehicleVariant.castServiceTierToVariant booking.vehicleServiceTierType) (.vehicleVariant) mbRide)),
                                   source = Nothing,
                                   destination = toLocationDestination,
                                   estimatedFare = Just (show booking.estimatedFare)
@@ -1775,6 +1830,105 @@ notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
     Nothing
     Nothing
 
+notifyRewardUnlock ::
+  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+notifyRewardUnlock person rewardTitle sponsorName couponCode = do
+  let (fcmKey, whatsappMessageKey, templateParams, whatsappVariables) =
+        rewardUnlockNotificationConfig rewardTitle sponsorName couponCode
+      entity = Notification.Entity Notification.Person person.id.getId EmptyDynamicParam
+  dynamicNotifyPerson
+    person
+    (createNotificationReq fcmKey identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    templateParams
+    Nothing
+    Nothing
+  when (person.whatsappNotificationEnrollStatus == Just Whatsapp.OPT_IN) $ do
+    mbMobileNumber <- mapM decrypt person.mobileNumber
+    let mbPhoneNumber = (<>) <$> person.mobileCountryCode <*> mbMobileNumber
+    case mbPhoneNumber of
+      Nothing ->
+        logInfo $
+          "rewards.unlock.whatsapp.skipped riderId="
+            <> person.id.getId
+            <> " reason=noPhone"
+      Just phoneNumber -> do
+        mbMerchantMessage <-
+          CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId whatsappMessageKey Nothing
+        case mbMerchantMessage of
+          Nothing ->
+            logInfo $
+              "rewards.unlock.whatsapp.skipped riderId="
+                <> person.id.getId
+                <> " reason=noTemplate key="
+                <> show whatsappMessageKey
+          Just merchantMessage
+            | T.null merchantMessage.templateId ->
+              logInfo $
+                "rewards.unlock.whatsapp.skipped riderId="
+                  <> person.id.getId
+                  <> " reason=emptyTemplateId key="
+                  <> show whatsappMessageKey
+          Just merchantMessage -> do
+            result <-
+              try @_ @SomeException $
+                Whatsapp.whatsAppSendMessageWithTemplateIdAPI
+                  person.merchantId
+                  person.merchantOperatingCityId
+                  ( Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+                      phoneNumber
+                      merchantMessage.templateId
+                      whatsappVariables
+                      Nothing
+                      Nothing
+                  )
+            case result of
+              Right resp
+                | resp._response.status == "success" ->
+                  logInfo $
+                    "rewards.unlock.whatsapp.sent riderId="
+                      <> person.id.getId
+                      <> " key="
+                      <> show whatsappMessageKey
+              Right resp ->
+                logError $
+                  "rewards.unlock.whatsapp.failed riderId="
+                    <> person.id.getId
+                    <> " key="
+                    <> show whatsappMessageKey
+                    <> " status="
+                    <> resp._response.status
+              Left e ->
+                logError $
+                  "rewards.unlock.whatsapp.failed riderId="
+                    <> person.id.getId
+                    <> " key="
+                    <> show whatsappMessageKey
+                    <> " err="
+                    <> show e
+
+rewardUnlockNotificationConfig ::
+  Text ->
+  Text ->
+  Text ->
+  (Text, DMM.MessageKey, [(Text, Text)], [Maybe Text])
+rewardUnlockNotificationConfig rewardTitle sponsorName couponCode =
+  ( "REWARD_UNLOCK",
+    DMM.WHATSAPP_REWARD_UNLOCK,
+    [ ("rewardTitle", rewardTitle),
+      ("sponsorName", sponsorName),
+      ("couponCode", couponCode)
+    ],
+    [Just rewardTitle, Just sponsorName, Just couponCode]
+  )
+
 notifyRiderOnEKDLiveCallFeedback ::
   ServiceFlow m r =>
   SRB.Booking ->
@@ -1804,6 +1958,7 @@ data BusNotificationType
   = TRIP_STARTED
   | APPROACHING
   | AT_STOP
+  | TRACKING_AVAILABLE_ON_START
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data BusNotificationEntityData = BusNotificationEntityData
@@ -1848,3 +2003,112 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
     [("vehicleNumber", vehicleNumber), ("routeName", routeName)]
     Nothing
     Nothing
+  -- Secondary channel: WhatsApp for opted-in riders (additive, best-effort).
+  -- The `trip_tracking_enabled` template carries a static deep link, so no variables are passed.
+  sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_BUS_TRIP_STARTED []
+
+-- | Best-effort opt-in WhatsApp template send. Sends only when the rider is enrolled (`OPT_IN`) and a
+-- non-empty template is configured for the given key in their operating city. Any miss (no phone /
+-- no template / empty templateId / provider error) degrades to a log line and never throws into the
+-- caller, so it is safe to run alongside a push notification.
+sendWhatsAppTemplateIfOptedIn ::
+  ServiceFlow m r =>
+  Person.Person ->
+  DMM.MessageKey ->
+  [Maybe Text] ->
+  m ()
+sendWhatsAppTemplateIfOptedIn person messageKey variables = do
+  logInfo $ "whatsapp.enter key=" <> show messageKey <> " riderId=" <> person.id.getId <> " cityId=" <> person.merchantOperatingCityId.getId <> " enrollStatus=" <> show person.whatsappNotificationEnrollStatus
+  if person.whatsappNotificationEnrollStatus /= Just Whatsapp.OPT_IN
+    then logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=notOptedIn"
+    else do
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      let mbPhoneNumber = (<>) <$> person.mobileCountryCode <*> mbMobileNumber
+      case mbPhoneNumber of
+        Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noPhone"
+        Just phoneNumber -> do
+          mbMerchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing
+          case mbMerchantMessage of
+            Just merchantMessage
+              | not (T.null merchantMessage.templateId) -> do
+                logInfo $ "whatsapp.sending key=" <> show messageKey <> " riderId=" <> person.id.getId <> " templateId=" <> merchantMessage.templateId <> " containsUrlButton=" <> show merchantMessage.containsUrlButton <> " numVars=" <> show (length variables)
+                result <-
+                  try @_ @SomeException $
+                    Whatsapp.whatsAppSendMessageWithTemplateIdAPI
+                      person.merchantId
+                      person.merchantOperatingCityId
+                      ( Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+                          phoneNumber
+                          merchantMessage.templateId
+                          variables
+                          Nothing
+                          (Just merchantMessage.containsUrlButton)
+                      )
+                case result of
+                  Right resp
+                    | resp._response.status == "success" ->
+                      logInfo $ "whatsapp.sent key=" <> show messageKey <> " riderId=" <> person.id.getId
+                  Right resp ->
+                    logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " status=" <> resp._response.status <> " resp=" <> show resp
+                  Left err ->
+                    logError $ "whatsapp.failed key=" <> show messageKey <> " riderId=" <> person.id.getId <> " err=" <> show err
+            Just merchantMessage -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=emptyTemplateId templateId=" <> show merchantMessage.templateId
+            Nothing -> logInfo $ "whatsapp.skipped key=" <> show messageKey <> " riderId=" <> person.id.getId <> " reason=noMerchantMessageRow"
+
+-- | On FRFS shuttle booking confirmation (payment fulfillment success), send the reassurance:
+-- push `SHUTTLE_TRACKING_ON_START` (carries journeyId) + opt-in WhatsApp `shuttle_booking_confirmation`
+-- ("thanks for booking, live tracking appears once your trip starts"). Gated on the booking's service
+-- tier being in RiderConfig.busTrackingNotificationTiers (per-city feature flag).
+-- Returns True when it handled a shuttle booking, so the caller SUPPRESSES the generic
+-- FULFILLMENT_SUCCESS push; returns False for non-shuttle bookings (caller sends the generic push).
+-- Best-effort; never throws.
+notifyShuttleBookingConfirmed ::
+  ServiceFlow m r =>
+  Id Person ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  m Bool
+notifyShuttleBookingConfirmed personId bookingId = do
+  mbBooking <- QFRFSTicketBooking.findById bookingId
+  case mbBooking of
+    Nothing -> pure False
+    Just booking -> do
+      mbRiderConfig <- CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId
+      let allowedTiers = fromMaybe [] (mbRiderConfig >>= (.busTrackingNotificationTiers))
+          isShuttle = maybe False (`elem` allowedTiers) booking.serviceTierType
+      if not isShuttle
+        then pure False
+        else do
+          person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
+          let routeName = fromMaybe "" booking.routeName
+              entityData =
+                BusNotificationEntityData
+                  { tripId = Nothing,
+                    vehicleNumber = "",
+                    routeId = routeName,
+                    stopCode = Nothing,
+                    stopName = Nothing,
+                    notificationType = TRACKING_AVAILABLE_ON_START,
+                    journeyId = mbJourneyId <&> (.getId)
+                  }
+              entity = Notification.Entity Notification.Product person.id.getId entityData
+          -- Push (primary): shuttle-only booking-confirmed + tracking-on-start reassurance.
+          dynamicNotifyPerson
+            person
+            (createNotificationReq "SHUTTLE_TRACKING_ON_START" identity)
+            EmptyDynamicParam
+            entity
+            Nothing
+            [("routeName", routeName)]
+            Nothing
+            Nothing
+          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation` expects 5 vars,
+          -- in order: name, source, destination, departure, vehicle. Non-empty fallbacks because
+          -- Meta rejects empty template variables (drops the whole message).
+          let riderName = fromMaybe "Rider" person.firstName
+              origin = fromMaybe "" booking.fromStationName
+              destination = fromMaybe "" booking.toStationName
+              departure = maybe "" showTimeIst booking.startTime
+              vehicle = fromMaybe "your shuttle" booking.vehicleNumber
+          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just riderName, Just origin, Just destination, Just departure, Just vehicle]
+          pure True

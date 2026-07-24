@@ -15,12 +15,13 @@ import qualified ExternalBPP.Flow as Flow
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-init :: (FRFSConfirmFlow m r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m ()
+init :: (FRFSConfirmFlow m r c, HasMasterCloudForwarder r, Finance.HasActorInfo m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Bool -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbEnableOffer = do
   Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking

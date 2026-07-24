@@ -12,6 +12,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   FRFSSearch: Domain.Types.FRFSSearch
   VehicleCategory: BecknV2.FRFS.Enums
@@ -23,6 +24,7 @@ imports:
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
   RouteStopInfo: SharedLogic.FRFSUtils
+  RouteDetail: Domain.Types.RouteDetailsAPI
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
@@ -71,6 +73,7 @@ types:
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
+    routeDetails: "Maybe [RouteDetail]" # Per-sub-leg transit route details for interchange journeys, in the same shape as the multimodal journey response; created alongside the journey/leg in the discovery flow.
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -179,6 +182,49 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
+  FRFSRefundAttemptAPI:
+    id: Text
+    status: Text
+    refundAmount: HighPrecMoney
+    actualRefundedAmount: Maybe HighPrecMoney
+    errorCode: Maybe Text
+    errorMessage: Maybe Text
+    arn: Maybe Text
+    completedAt: Maybe UTCTime
+    createdAt: UTCTime
+    derive: "Show"
+
+  FRFSPaymentAttemptWithRefundsAPI:
+    id: Text
+    transactionId: Text
+    status: Text
+    amount: HighPrecMoney
+    currency: Currency
+    gatewayName: Maybe Text
+    respCode: Maybe Text
+    respMessage: Maybe Text
+    bankErrorCode: Maybe Text
+    bankErrorMessage: Maybe Text
+    createdAt: UTCTime
+    refunds: "[FRFSRefundAttemptAPI]"
+    derive: "Show"
+
+  FRFSPaymentOrderAttemptsAPI:
+    orderId: Text
+    paymentShortId: Text
+    domain: Maybe Text
+    transactions: "[FRFSPaymentAttemptWithRefundsAPI]"
+    derive: "Show"
+
+  FRFSBookingPaymentAttemptsAPIRes:
+    bookingId: Id FRFSTicketBooking
+    orders: "[FRFSPaymentOrderAttemptsAPI]"
+    derive: "Show"
+
+  FRFSPaymentAttemptsListAPIRes:
+    orders: "[FRFSPaymentOrderAttemptsAPI]"
+    derive: "Show"
+
   FRFSVehicleServiceTierAPI:
     _type: ServiceTierType
     providerCode: Text
@@ -200,6 +246,43 @@ types:
     vehicleServiceTier: Maybe FRFSVehicleServiceTierAPI
     priceWithCurrency: PriceAPIEntity
     sequenceNum: Maybe Int
+    derive: "Show"
+
+  FRFSGtfsStopAPI:
+    code: Text
+    name: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteAPI:
+    code: Text
+    shortName: Text
+    vehicleType: Maybe Text
+    variant: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsRouteStopAPI:
+    routeCode: Text
+    stopCode: Text
+    sequenceNum: Int
+    stopType: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsFareAPI:
+    code: Text
+    name: Maybe Text
+    providerCode: Maybe Text
+    validityDuration: Maybe Text
+    derive: "Show,Eq"
+
+  FRFSGtfsRes:
+    integratedBppConfigId: Id IntegratedBPPConfig
+    ready: Bool
+    routes: [FRFSGtfsRouteAPI]
+    stops: [FRFSGtfsStopAPI]
+    routeStops: [FRFSGtfsRouteStopAPI]
+    fares: [FRFSGtfsFareAPI]
     derive: "Show"
 
   FRFSTicketAPI:
@@ -232,6 +315,7 @@ types:
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
+    routeDetails: Maybe Text # Route long name for the route boarded at this stop.
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text
@@ -315,6 +399,7 @@ types:
   FRFSRouteServiceabilityReq:
     startStopCode: Text
     endStopCode: Text
+    allowUpcomingTrips: Maybe Bool
 
   ActiveRouteRes:
     routeId: Text

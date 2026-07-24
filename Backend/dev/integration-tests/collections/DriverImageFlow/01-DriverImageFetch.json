@@ -1,0 +1,191 @@
+{
+  "info": {
+    "name": "Driver Image Fetch Flow",
+    "description": "Tests the unified driver-side GET /driver/profile/photo/media?imageId={imageId} endpoint. Pre-steps upload images via validateImage so that S3 paths are real. Tests: own-image fetch, fleet-owner image fetch via association, non-existent image, and cross-merchant access denial. The endpoint returns the raw base64 string (JSON-encoded Text), not an object.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Upload Image as Driver",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{doc_image_base64}}\", \"imageType\": \"AadhaarCard\"}"
+        },
+        "url": {
+          "raw": "{{bpp_url}}/driver/register/validateImage",
+          "host": ["{{bpp_url}}"],
+          "path": ["driver", "register", "validateImage"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Upload succeeds (200)', function () { pm.response.to.have.status(200); });",
+              "pm.test('imageId returned', function () { pm.expect(d.imageId).to.be.a('string'); });",
+              "pm.environment.set('uploaded_image_id', d.imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload Image as Fleet Owner",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "token", "value": "{{fleet_owner_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{doc_image_base64}}\", \"imageType\": \"AadhaarCard\"}"
+        },
+        "url": {
+          "raw": "{{bpp_url}}/driver/register/validateImage",
+          "host": ["{{bpp_url}}"],
+          "path": ["driver", "register", "validateImage"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Upload succeeds (200)', function () { pm.response.to.have.status(200); });",
+              "pm.test('imageId returned', function () { pm.expect(d.imageId).to.be.a('string'); });",
+              "pm.environment.set('fleet_owner_image_id', d.imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fetch Own Image",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{bpp_url}}/driver/profile/photo/media?imageId={{uploaded_image_id}}",
+          "host": ["{{bpp_url}}"],
+          "path": ["driver", "profile", "photo", "media"],
+          "query": [
+            { "key": "imageId", "value": "{{uploaded_image_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var b64 = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('base64 body is a string', function () { pm.expect(b64).to.be.a('string'); });",
+              "pm.test('base64 body is not empty', function () { pm.expect(b64.length).to.be.above(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fetch Fleet Owner Image (via association)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{bpp_url}}/driver/profile/photo/media?imageId={{fleet_owner_image_id}}",
+          "host": ["{{bpp_url}}"],
+          "path": ["driver", "profile", "photo", "media"],
+          "query": [
+            { "key": "imageId", "value": "{{fleet_owner_image_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var b64 = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('base64 body is a string', function () { pm.expect(b64).to.be.a('string'); });",
+              "pm.test('base64 body is not empty', function () { pm.expect(b64.length).to.be.above(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fetch Non-existent Image (should return 400)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{bpp_url}}/driver/profile/photo/media?imageId=00000000-0000-0000-0000-000000000000",
+          "host": ["{{bpp_url}}"],
+          "path": ["driver", "profile", "photo", "media"],
+          "query": [
+            { "key": "imageId", "value": "00000000-0000-0000-0000-000000000000" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error code is IMAGE_NOT_FOUND', function () { pm.expect(d.errorCode).to.eql('IMAGE_NOT_FOUND'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fetch Image - Cross-merchant (should return 403)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{other_merchant_driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{bpp_url}}/driver/profile/photo/media?imageId={{uploaded_image_id}}",
+          "host": ["{{bpp_url}}"],
+          "path": ["driver", "profile", "photo", "media"],
+          "query": [
+            { "key": "imageId", "value": "{{uploaded_image_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 403', function () { pm.response.to.have.status(403); });",
+              "pm.test('Error code is IMAGE_ACCESS_DENIED', function () { pm.expect(d.errorCode).to.eql('IMAGE_ACCESS_DENIED'); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

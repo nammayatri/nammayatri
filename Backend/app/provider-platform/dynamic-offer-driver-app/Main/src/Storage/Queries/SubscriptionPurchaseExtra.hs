@@ -3,17 +3,23 @@ module Storage.Queries.SubscriptionPurchaseExtra where
 import Data.List (partition, sortBy)
 import Data.Ord (comparing)
 import qualified Data.Set as Set
+import qualified Database.Beam as B
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
 
@@ -230,6 +236,24 @@ findAllByMerchantOpCityIdWithFilters merchantOpCityId mbServiceName mbStatus mbF
     maxLimit = 20
     defaultLimit = 10
 
+-- | Paid subscription purchases (ACTIVE / EXPIRED / EXHAUSTED) whose purchaseTimestamp falls in the date range.
+findPurchasedByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m [SubscriptionPurchase]
+findPurchasedByDateRange merchantOpCityId startTime endTime =
+  sortBy (comparing (.purchaseTimestamp))
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId,
+            Se.Is Beam.status $ Se.In [ACTIVE, EXPIRED, EXHAUSTED],
+            Se.Is Beam.purchaseTimestamp $ Se.GreaterThanOrEq startTime,
+            Se.Is Beam.purchaseTimestamp $ Se.LessThanOrEq endTime
+          ]
+      ]
+
 -- | Find ACTIVE subscription purchases for a merchant operating city whose purchaseTimestamp falls in the date range
 findActiveByDateRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -250,17 +274,21 @@ findActiveByDateRange merchantOpCityId startTime endTime =
 
 -- | Update the expiryDate and startDate for a specific subscription purchase.
 -- Used when activating a queued purchase's expiry timer (deferred FIFO logic).
+-- Called via SharedLogic.Finance.SubscriptionPurchase.activateSubscriptionPurchaseExpiry (audit)
 updateExpiryAndStartDateById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Finance.ActorInfo ->
   Id SubscriptionPurchase ->
   m ()
-updateExpiryAndStartDateById newExpiryDate newStartDate purchaseId = do
+updateExpiryAndStartDateById newExpiryDate newStartDate actorInfo purchaseId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.expiryDate newExpiryDate,
       Se.Set Beam.startDate newStartDate,
+      Se.Set Beam.updatedBy (Just actorInfo.actorType),
+      Se.Set Beam.updatedById actorInfo.actorId,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId purchaseId)]
@@ -273,3 +301,89 @@ findByFinanceInvoiceId ::
   m (Maybe SubscriptionPurchase)
 findByFinanceInvoiceId invoiceId =
   findOneWithKV [Se.Is Beam.financeInvoiceId $ Se.Eq (Just (Kernel.Types.Id.getId invoiceId))]
+
+findSubscriptionPurchasesWithTaxByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  m [(Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, UTCTime)]
+findSubscriptionPurchasesWithTaxByDateRange merchantOpCityId startTime endTime mbSubscriptionId mbLimit mbOffset = do
+  let limitVal = fromIntegral $ fromMaybe 20 mbLimit
+      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\(sp, _itt) -> (B.desc_ sp.purchaseTimestamp, B.desc_ sp.id)) $
+                B.filter_'
+                  ( \(sp, _itt) ->
+                      sp.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+                        B.&&?. B.sqlBool_ (sp.status B./=. B.val_ PENDING)
+                        B.&&?. B.sqlBool_ (sp.status B./=. B.val_ FAILED)
+                        B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.>=. B.val_ startTime)
+                        B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.<=. B.val_ endTime)
+                        B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\subId -> sp.id B.==?. B.val_ subId) mbSubscriptionId
+                  )
+                  do
+                    sp <- B.all_ (BeamCommon.subscriptionPurchase BeamCommon.atlasDB)
+                    itt <-
+                      B.join_
+                        (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
+                        (\itt -> itt.referenceId B.==. sp.id B.&&. itt.transactionType B.==. B.val_ ITTDomain.Subscription)
+                    pure (sp, itt)
+  case res of
+    Right rows -> pure $ map (\(sp, itt) -> (Beam.id sp, Beam.planFee sp, BeamITT.cgstAmount itt, BeamITT.sgstAmount itt, BeamITT.igstAmount itt, BeamITT.taxableValue itt, Beam.purchaseTimestamp sp)) rows
+    Left err -> do
+      L.logError ("findSubscriptionPurchasesWithTaxByDateRange" :: Text) $ "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
+      pure []
+
+findSubscriptionTotalsByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Int)
+findSubscriptionTotalsByDateRange merchantOpCityId startTime endTime = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_
+            ( \(sp, itt) ->
+                ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ sp.planFee,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.cgstAmount,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.sgstAmount,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.igstAmount,
+                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.taxableValue,
+                  B.as_ @Int B.countAll_
+                )
+            )
+            $ B.filter_'
+              ( \(sp, _) ->
+                  sp.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+                    B.&&?. B.sqlBool_ (sp.status B./=. B.val_ PENDING)
+                    B.&&?. B.sqlBool_ (sp.status B./=. B.val_ FAILED)
+                    B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.>=. B.val_ startTime)
+                    B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.<=. B.val_ endTime)
+              )
+              do
+                sp <- B.all_ (BeamCommon.subscriptionPurchase BeamCommon.atlasDB)
+                itt <-
+                  B.join_
+                    (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
+                    (\itt -> itt.referenceId B.==. sp.id B.&&. itt.transactionType B.==. B.val_ ITTDomain.Subscription)
+                pure (sp, itt)
+  case res of
+    Right [row] -> pure row
+    Right _ -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)
+    Left err -> do
+      L.logError ("findSubscriptionTotalsByDateRange" :: Text) $ "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
+      pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)

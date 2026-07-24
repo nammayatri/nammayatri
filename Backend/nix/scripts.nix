@@ -32,6 +32,16 @@ _:
       # + config-sync-server).
       localTestDashboardPorts = [ 7070 7083 8090 ];
       killLocalTestDashboardPortsScript = killPortsSnippet localTestDashboardPorts;
+      # Python interpreter with the deps that Backend/dev/config-sync needs
+      # (see config-sync/requirements.txt). Used by the `import-config-data` script.
+      configSyncPython = pkgs.python3.withPackages (ps: with ps; [
+        boto3
+        psycopg2
+        requests
+        rich
+        python-dotenv
+        websockets
+      ]);
     in
     {
       mission-control.scripts = {
@@ -46,6 +56,169 @@ _:
             fi
             set -x
             ${lib.getExe pkgs.ghcid} -c "cabal repl $1"
+          '';
+        };
+
+        run-cabal-build-devbox = {
+          category = "Backend";
+          description = "Auto-assign a dev-box worker and run cache-restore + cabal build all remotely, streaming output here. Flags: --reassign (pick a fresh box), --clean/--no-clean (skip the cabal-clean prompt).";
+          cdToProjectRoot = false;
+          exec = ''
+            export PATH="${lib.makeBinPath (with pkgs; [ curl jq rsync openssh git coreutils ])}:$PATH"
+            set -euo pipefail
+
+            REPO_ROOT=$(git -C "''${FLAKE_ROOT}" rev-parse --show-toplevel)
+            BASE_API="''${BASE_API:-http://34.100.155.111:8787}"
+            # Same pin file the test dashboard's local-api writes — so , run-cabal-build-devbox
+            # and the dashboard's Deploy/Start land on the SAME machine + /tmp/<id>/nammayatri.
+            ID_FILE="$REPO_ROOT/.devbox-id.json"
+
+            # ── flags ──
+            REASSIGN=0; CLEAN_ARG=""
+            for a in "$@"; do
+              case "$a" in
+                --reassign) REASSIGN=1 ;;
+                --clean)    CLEAN_ARG=1 ;;
+                --no-clean) CLEAN_ARG=0 ;;
+              esac
+            done
+
+            # ── cabal clean? wipe dist-newstyle so cache-restore pulls a fresh
+            #    CI cache; default No = build on the existing dist-newstyle. ──
+            if [ -n "$CLEAN_ARG" ]; then
+              CLEAN="$CLEAN_ARG"
+            else
+              printf 'Run cabal clean first (wipe dist-newstyle for a fresh cache-restore)? [y/N]: ' >&2
+              read -r DO_CLEAN
+              CLEAN=0
+              case "$DO_CLEAN" in [yY]|[yY][eE][sS]) CLEAN=1 ;; esac
+            fi
+
+            # ── auto-assign dev-box: reuse the machine pinned in .devbox-id.json,
+            #    else auto-pick the registered dev-box with the LOWEST RAM usage.
+            #    The developer id is derived from $USER + machine (no prompt).
+            #    --reassign, or a pinned machine that has left the fleet, forces a
+            #    fresh pick (and a new id). Machine is pinned by NAME; its IP is
+            #    re-resolved live every run, so DHCP changes don't break it. ──
+            PIN_MACHINE=""
+            if [ "$REASSIGN" -eq 0 ] && [ -f "$ID_FILE" ]; then
+              PIN_MACHINE=$(jq -r '.machine // ""' "$ID_FILE" 2>/dev/null || true)
+            fi
+
+            STATUS=$(curl -fsS --max-time 5 "$BASE_API/api/status") \
+              || { echo "base station API unreachable at $BASE_API" >&2; exit 1; }
+            SELROW=$(printf '%s' "$STATUS" | jq -r --arg pin "$PIN_MACHINE" '
+              [ .workers[]
+                | select(.type=="dev-box")
+                | { name:(.name//""), lip:(.localIp//""), aip:(.awsIp//""), user:(.username//""),
+                    pct:( (.usage.ram // "") as $r
+                          | if ($r|test("[0-9.]+%"))
+                            then ($r|capture("(?<p>[0-9.]+)%").p|tonumber) else 100 end ) } ]
+              | ( map(select(.name==$pin)) | .[0] ) as $pinned
+              | ( $pinned // (sort_by(.pct) | .[0]) ) as $sel
+              | if $sel==null then empty
+                else [ $sel.name, $sel.lip, $sel.aip, $sel.user,
+                       (if $pinned then "pin" else "auto" end) ] | join("|") end
+            ')
+            if [ -z "$SELROW" ]; then
+              echo "No dev-box machines registered at $BASE_API/api/status" >&2; exit 1
+            fi
+            IFS='|' read -r NAME LOCAL_IP AWS_IP RUSER PICKMODE <<<"$SELROW"
+            HOST="''${LOCAL_IP:-$AWS_IP}"
+            PORT=22
+            if [ -z "$HOST" ]; then echo "dev-box '$NAME' has no reachable IP" >&2; exit 1; fi
+
+            # ── developer id: reuse the pinned id, else mint <user>-<machine>-<rand6> ──
+            DEV_ID=""
+            if [ "$PICKMODE" = "pin" ] && [ -f "$ID_FILE" ]; then
+              DEV_ID=$(jq -r '.id // ""' "$ID_FILE" 2>/dev/null || true)
+            fi
+            if [ -z "''${DEV_ID:-}" ]; then
+              LOCAL_USER=$(printf '%s' "''${USER:-dev}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')
+              [ -z "$LOCAL_USER" ] && LOCAL_USER=dev
+              MSLUG=$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | tr -s '-')
+              MSLUG="''${MSLUG#-}"; MSLUG="''${MSLUG%-}"; MSLUG="''${MSLUG:0:24}"
+              RAND=$(head -c3 /dev/urandom | od -An -tx1 | tr -d ' \n')
+              DEV_ID="$LOCAL_USER-$MSLUG-$RAND"
+              jq -n --arg id "$DEV_ID" --arg m "$NAME" --arg su "$RUSER" \
+                    --arg lu "$LOCAL_USER" --arg ca "$(date +%Y-%m-%dT%H:%M:%S)" \
+                '{id:$id, machine:$m, sshUser:$su, localUser:$lu, createdAt:$ca}' > "$ID_FILE"
+              echo "Auto-assigned dev-box: $NAME (lowest RAM usage) → id $DEV_ID [pinned in .devbox-id.json]" >&2
+            else
+              echo "Using pinned dev-box: $NAME → id $DEV_ID [.devbox-id.json]" >&2
+            fi
+            REMOTE_DIR="/tmp/$DEV_ID/nammayatri"
+            echo "Target: $RUSER@$HOST:$REMOTE_DIR  port=$PORT" >&2
+
+            # ── ssh key discovery; generate a key if the user has none ──
+            SSH_KEY=""
+            for k in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_rsa" "$HOME/.ssh/id_ecdsa"; do
+              if [ -f "$k" ]; then SSH_KEY="$k"; break; fi
+            done
+            SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o GSSAPIAuthentication=no -o ConnectTimeout=10 -p "$PORT")
+            if [ -n "$SSH_KEY" ]; then SSH_OPTS+=(-i "$SSH_KEY"); fi
+            # key-only preflight; if it fails, generate a key (when absent) then copy it up.
+            if ! ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" 'echo ok' >/dev/null 2>&1; then
+              if [ -z "$SSH_KEY" ]; then
+                echo "No SSH key found in ~/.ssh — generating an ed25519 key pair ..." >&2
+                mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+                ssh-keygen -t ed25519 -N "" -f "$HOME/.ssh/id_ed25519" -C "$DEV_ID@devbox" >&2
+                SSH_KEY="$HOME/.ssh/id_ed25519"
+                SSH_OPTS+=(-i "$SSH_KEY")
+              fi
+              echo "Authorizing your SSH key on $RUSER@$HOST (enter the $RUSER password when prompted) ..." >&2
+              if ! ssh-copy-id -i "$SSH_KEY.pub" -p "$PORT" "$RUSER@$HOST"; then
+                echo "ssh-copy-id failed. Run manually: ssh-copy-id -i $SSH_KEY.pub -p $PORT $RUSER@$HOST" >&2
+                exit 1
+              fi
+              if ! ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" 'echo ok' >/dev/null 2>&1; then
+                echo "SSH key still not authorized on $RUSER@$HOST after ssh-copy-id." >&2
+                exit 1
+              fi
+              echo "SSH key authorized on $RUSER@$HOST." >&2
+            fi
+
+            # ── nearest 'minio-pushed'-tagged commit, from LOCAL git ──
+            git -C "$REPO_ROOT" fetch --quiet origin 'refs/tags/minio-pushed/*:refs/tags/minio-pushed/*' 2>/dev/null || true
+            git -C "$REPO_ROOT" fetch --quiet origin main 2>/dev/null || true
+            BASE="HEAD"
+            MB=$(git -C "$REPO_ROOT" merge-base origin/main HEAD 2>/dev/null || true)
+            if [ -n "$MB" ]; then BASE="$MB"; fi
+            CACHE_SHA=""
+            while IFS= read -r sha; do
+              if git -C "$REPO_ROOT" rev-parse -q --verify "refs/tags/minio-pushed/$sha" >/dev/null 2>&1; then
+                CACHE_SHA="$sha"; break
+              fi
+            done < <(git -C "$REPO_ROOT" log --format=%H -n 30 "$BASE" 2>/dev/null)
+            echo "cache commit: ''${CACHE_SHA:-<none — remote builds from scratch>}" >&2
+
+            # ── (iii) rsync deploy (same excludes as the dashboard) ──
+            RSYNC_SSH="ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=10 -p $PORT"
+            if [ -n "$SSH_KEY" ]; then RSYNC_SSH="$RSYNC_SSH -i $SSH_KEY"; fi
+            echo "Deploying $REPO_ROOT -> $RUSER@$HOST:$REMOTE_DIR ..." >&2
+            rsync -az --delete --info=progress2 \
+              -e "$RSYNC_SSH" \
+              --rsync-path "mkdir -p $REMOTE_DIR && rsync" \
+              --exclude data --exclude node_modules --exclude dist-newstyle --exclude dist \
+              --exclude .direnv --exclude _build --exclude result --exclude 'result-*' \
+              --exclude .cabal-dir --exclude .git --exclude .hie --exclude hie \
+              --exclude .nix-deps --exclude .ci-project-root --exclude .ci-cabal-dir \
+              --exclude cabal.project.local \
+              --exclude 'Frontend/android-native' --exclude 'Frontend/ios' \
+              --exclude 'Frontend/build' --exclude 'Frontend/dist' \
+              "$REPO_ROOT/" "$RUSER@$HOST:$REMOTE_DIR/"
+
+            # ── (iv) minimal 1-commit repo + write Backend/.ci-cache-sha ──
+            # git-ignore the devbox-only build artifacts BEFORE `git add -A`, so
+            # `nix develop` copies only real source to the store (hie/ alone is
+            # ~400MB of tiny files and stalls the copy otherwise).
+            ssh "''${SSH_OPTS[@]}" -o BatchMode=yes "$RUSER@$HOST" \
+              "cd $REMOTE_DIR && rm -rf .git && git init -q && printf '%s\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' '.cabal-dir/' '.ci-project-root' '.ci-cabal-dir' '.ci-cache-sha' > .git/info/exclude && git add -A && GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy git commit -q -m deploy --allow-empty 2>/dev/null || true; mkdir -p Backend && printf '%s' '$CACHE_SHA' > Backend/.ci-cache-sha"
+
+            # ── (v) cache-restore + cabal build all, streamed here via ssh -tt ──
+            echo "== running cache-restore + cabal build all on $NAME ==" >&2
+            ssh -tt "''${SSH_OPTS[@]}" "$RUSER@$HOST" \
+              "bash $REMOTE_DIR/Backend/nix/devbox/remote-run.sh $REMOTE_DIR/Backend $CLEAN"
           '';
         };
 
@@ -223,31 +396,61 @@ _:
           category = "Backend";
           description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
-            export DEV=1
-            # Free up ports from previous run FIRST — so resolve-ports.sh
-            # sees them as free and can reuse the same ports.
+            # errexit + pipefail for the whole preflight (matches sibling scripts).
+            # nounset is intentionally omitted — this legacy block has guarded
+            # optional refs (''${VAR:-}) but wasn't audited for a hard set -u.
+            set -eo pipefail
+            # NOTE: DEV is intentionally NOT exported. Only the location-tracking-service
+            # reads it: with DEV=1 the LTS skips /internal/auth and uses the raw `token`
+            # header as the driver id, which breaks real apps/emulators (they send a
+            # registration token, so drivers never enter the geo pool and never get
+            # nearbyRideRequest). Integration-test collections now send {{driver_token}}
+            # to the LTS, so they work in authenticated (non-DEV) mode too.
+            REGISTRY="/tmp/devbox-registry.json"
+            DEVBOX_KEY=""
+            if [[ -f "''${FLAKE_ROOT}/.devbox-id.json" ]]; then
+              DEVBOX_KEY=$(${pkgs.jq}/bin/jq -r '.id // ""' "''${FLAKE_ROOT}/.devbox-id.json" 2>/dev/null || true)
+            fi
+            if [[ -z "$DEVBOX_KEY" ]]; then
+              DEVBOX_KEY=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+            fi
+            if [[ -z "$DEVBOX_KEY" ]]; then
+              DEVBOX_KEY="local-$(id -un 2>/dev/null || echo dev)"
+            fi
+            # Exported for: resolve-ports (self-exclusion), the Caddyfile eval,
+            # and nammayatri.nix (module + test-context-api) — all key off these.
+            DEVBOX_REGISTRY_FILE="$REGISTRY"
+            export DEVBOX_KEY DEVBOX_REGISTRY_FILE
+
+            # Kill this workspace's stale process-compose first (it has no port,
+            # so the port kill below can't reach it, but it respawns children
+            # onto the ports we free). cwd under FLAKE_ROOT scopes it to us.
+            _pcs=$(${pkgs.procps}/bin/pgrep -x process-compose 2>/dev/null || true)
+            _superseded=""
+            for p in $_pcs; do
+              cwd=$(readlink /proc/"$p"/cwd 2>/dev/null || true)
+              case "$cwd" in
+                "''${FLAKE_ROOT}"*)
+                  echo "── Pre-flight: superseding stale stack (process-compose pid $p) ──"
+                  kill -TERM "$p" 2>/dev/null || true
+                  _superseded=1
+                  ;;
+              esac
+            done
+            [[ -n "$_superseded" ]] && sleep 3
+
+            # Free up ports from the PREVIOUS run FIRST — so resolve-ports sees
+            # them free and can reuse the same numbers. The previous run's ports
+            # live in our registry slice (devbox-registry.json[KEY]).
             echo "── Pre-flight: freeing stale service ports ──"
-            RESOLVED_FILE="''${FLAKE_ROOT}/data/ports-resolved.nix"
-            # Collect ports to kill from ports-resolved.nix or devbox-registry.json.
             PORTS_TO_KILL=""
-            if [[ -f "$RESOLVED_FILE" ]]; then
-              while IFS= read -r line; do
-                if [[ "$line" =~ ^[[:space:]]*[a-zA-Z][a-zA-Z0-9_-]*[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
-                  PORTS_TO_KILL="$PORTS_TO_KILL ''${BASH_REMATCH[1]}"
-                fi
-              done < "$RESOLVED_FILE"
-            else
-              # Fallback: read ports from devbox-registry.json if ports-resolved.nix
-              # doesn't exist yet (e.g. first re-deploy after a crash).
-              REGISTRY="/tmp/devbox-registry.json"
-              if [[ -f "$REGISTRY" ]]; then
-                # Derive dev name from FLAKE_ROOT: /tmp/<devname>/nammayatri → <devname>
-                DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
-                if [[ -n "$DEV_NAME" ]]; then
-                  echo "ports-resolved.nix not found, falling back to devbox-registry.json (dev: $DEV_NAME)"
-                  PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r ".users[\"$DEV_NAME\"].ports // {} | to_entries[].value" "$REGISTRY" 2>/dev/null || true)
-                fi
-              fi
+            if [[ -f "$REGISTRY" ]]; then
+              # For redis-cluster-* ports also emit the cluster-bus port
+              # (client-port + 10000, e.g. 30040 -> 40040): a stale node can
+              # survive holding only that and block the next cluster startup.
+              PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r --arg me "$DEVBOX_KEY" \
+                '.users[$me].ports // {} | to_entries[] | if (.key | startswith("redis-cluster")) then "\(.value)\n\(.value + 10000)" else "\(.value)" end' \
+                "$REGISTRY" 2>/dev/null || true)
             fi
             # Kill only processes whose cwd is under our FLAKE_ROOT.
             for port in $PORTS_TO_KILL; do
@@ -267,63 +470,69 @@ _:
                 esac
               done
             done
-            # Resolve ports.nix with available free ports so multiple
-            # backend instances on the same devbox don't collide.
+
+            # ── Acquire an exclusive lock so concurrent startups on the same
+            #    devbox serialise their resolve-ports + registry-write (prevents
+            #    two developers resolving to the same ports). fd-based: released
+            #    automatically if the process exits on error or signal. ──
+            LOCKFILE="/tmp/devbox-ports.lock"
+            exec 9>"$LOCKFILE"
+            ${pkgs.util-linux}/bin/flock 9
+            echo "── Pre-flight: acquired devbox port lock ──"
+
+            # ── Resolve free ports. resolve-ports prints the resolved map as
+            #    JSON on stdout (diagnostics go to stderr). ──
             echo "── Pre-flight: resolving free ports ──"
-            ${lib.getExe resolvePorts}
-            if [[ ! -f "$RESOLVED_FILE" ]]; then
-              echo "ERROR: resolve-ports did not produce $RESOLVED_FILE" >&2
+            PORTS_JSON=$(${lib.getExe resolvePorts})
+            if ! echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -e 'type == "object" and length > 0' >/dev/null 2>&1; then
+              echo "ERROR: resolve-ports did not produce a valid ports JSON object" >&2
               exit 1
             fi
-            # Write resolved ports to devbox-registry.json so other tools
-            # (dashboard, other developers) can discover our ports.
-            REGISTRY="/tmp/devbox-registry.json"
-            DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
-            if [[ -n "$DEV_NAME" ]]; then
-              echo "── Pre-flight: updating devbox-registry.json (dev: $DEV_NAME) ──"
-              # Parse ports-resolved.nix into a JSON object: {"name": port, ...}
-              PORTS_JSON="{"
-              first=true
-              while IFS= read -r line; do
-                if [[ "$line" =~ ^[[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*)[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
-                  name="''${BASH_REMATCH[1]}"
-                  port="''${BASH_REMATCH[2]}"
-                  if [[ "$first" == true ]]; then first=false; else PORTS_JSON+=","; fi
-                  PORTS_JSON+="\"$name\":$port"
-                fi
-              done < "$RESOLVED_FILE"
-              PORTS_JSON+="}"
-              # Extract caddy port
-              CADDY_PORT=$(echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -r '.["caddy-reverse-proxy"] // empty' 2>/dev/null || true)
-              # Read existing registry or create empty one
-              if [[ -f "$REGISTRY" ]]; then
-                REG=$(cat "$REGISTRY")
-              else
-                REG='{"users":{}}'
-              fi
-              # Update this developer's entry with dir, ports, and caddyPort
-              REG=$(echo "$REG" | ${pkgs.jq}/bin/jq \
-                --arg dev "$DEV_NAME" \
-                --arg dir "''${FLAKE_ROOT}" \
-                --argjson ports "$PORTS_JSON" \
-                --argjson caddy "''${CADDY_PORT:-null}" \
-                '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
-              echo "$REG" > "$REGISTRY"
-            fi
-            # Generate Caddyfile from resolved ports for single-entry-point access.
-            # Service list lives in Backend/nix/services/caddyfile.nix; we
-            # evaluate it via nix-instantiate so the source-of-truth is Nix,
-            # not a shell array. Falls back to the base ports.nix if the
-            # resolved overlay isn't on disk yet.
+
+            # ── Record our slice in the registry so nammayatri.nix, the
+            #    Caddyfile, the dashboard and other developers can read it.
+            #    ATOMIC (temp + rename): a concurrent reader — our own Nix eval,
+            #    or another dev's preflight — never sees a half-written file.
+            #    We touch only .users[KEY]; every other entry is preserved. ──
+            echo "── Pre-flight: updating devbox-registry.json (key: $DEVBOX_KEY) ──"
+            CADDY_PORT=$(echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -r '.["caddy-reverse-proxy"] // empty' 2>/dev/null || true)
+            if [[ -f "$REGISTRY" ]]; then REG=$(cat "$REGISTRY"); else REG='{"users":{}}'; fi
+            REG=$(echo "$REG" | ${pkgs.jq}/bin/jq \
+              --arg dev "$DEVBOX_KEY" \
+              --arg dir "''${FLAKE_ROOT}" \
+              --argjson ports "$PORTS_JSON" \
+              --argjson caddy "''${CADDY_PORT:-null}" \
+              '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
+            # temp + rename = atomic; set -eo pipefail aborts if either fails.
+            printf '%s\n' "$REG" > "$REGISTRY.tmp.$$"
+            mv -f "$REGISTRY.tmp.$$" "$REGISTRY"
+
+            # ── Release the devbox port lock now that the registry is written. ──
+            ${pkgs.util-linux}/bin/flock -u 9
+            exec 9>&-
+            echo "── Pre-flight: released devbox port lock ──"
+
+            # ── Generate the Caddyfile from our registry slice (single entry
+            #    point). Service list is the source of truth in caddyfile.nix.
+            #    The expression is single-quoted so the key never enters the Nix
+            #    source text: it reads FLAKE_ROOT / DEVBOX_REGISTRY_FILE /
+            #    DEVBOX_KEY via getEnv (same, injection-proof mechanism as
+            #    nammayatri.nix) and falls back to base ports.nix if the registry
+            #    file is missing. ──
             echo "── Pre-flight: generating Caddyfile ──"
-            CADDY_PORTS_FILE="$RESOLVED_FILE"
-            if [[ ! -f "$CADDY_PORTS_FILE" ]]; then
-              CADDY_PORTS_FILE="''${FLAKE_ROOT}/Backend/nix/services/ports.nix"
-            fi
             mkdir -p "''${FLAKE_ROOT}/data"
-            nix eval --raw --impure --expr \
-              "import ''${FLAKE_ROOT}/Backend/nix/services/caddyfile.nix { ports = import $CADDY_PORTS_FILE; }" \
-              > "''${FLAKE_ROOT}/data/Caddyfile"
+            # shellcheck disable=SC2016  # single quotes intentional: the expr is Nix, not shell
+            nix eval --raw --impure --expr '
+              let root = builtins.getEnv "FLAKE_ROOT";
+                  base = import (/. + (root + "/Backend/nix/services/ports.nix"));
+                  registryPath = builtins.getEnv "DEVBOX_REGISTRY_FILE";
+                  devKey = builtins.getEnv "DEVBOX_KEY";
+                  ports =
+                    if registryPath != "" && devKey != "" && builtins.pathExists (/. + registryPath)
+                    then (builtins.fromJSON (builtins.readFile (/. + registryPath))).users.''${devKey}.ports or base
+                    else base;
+              in import (/. + (root + "/Backend/nix/services/caddyfile.nix")) { inherit ports; }
+            ' > "''${FLAKE_ROOT}/data/Caddyfile"
             if [[ ! -s "''${FLAKE_ROOT}/data/Caddyfile" ]]; then
               echo "ERROR: Caddyfile generation produced an empty file" >&2
               exit 1
@@ -337,9 +546,6 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            # Tell nammayatri.nix where to find the resolved ports file.
-            # --impure lets builtins.getEnv read this at Nix evaluation time.
-            export PORTS_RESOLVED_FILE="$RESOLVED_FILE"
             # -S NAME forces stable sort by process name (no re-ordering on status change)
             nix run --impure .#run-mobility-stack-dev -- -S NAME "$@"
           '';
@@ -436,6 +642,23 @@ _:
               rm -rf -- "$p"
             done
             echo "Done."
+          '';
+        };
+
+        import-config-data = {
+          category = "Backend";
+          description = "Import config data from a remote env into the local DB (config-sync). Source env defaults to master; override with CONFIG_SYNC_FROM=prod|prod_international. Extra args pass through (e.g. --dry-run, --force-fetch).";
+          exec = ''
+            set -euo pipefail
+            FROM_ENV="''${CONFIG_SYNC_FROM:-master}"
+            cd "''${FLAKE_ROOT}/Backend/dev/config-sync"
+            # The connection/patch config files are gitignored; seed them from
+            # the checked-in templates on first run.
+            [ -f assets/environments.json ] || cp assets/environments.json.example assets/environments.json
+            [ -f assets/patches.json ] || cp assets/patches.json.example assets/patches.json
+            echo "── Importing config data: $FROM_ENV → local ──"
+            ${configSyncPython}/bin/python3 config_transfer.py import --from "$FROM_ENV" --to local --fetch \
+              --fetch-url "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/''${FROM_ENV}_to_local/v2" "$@"
           '';
         };
 

@@ -47,6 +47,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Types.SpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
@@ -54,8 +55,10 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Tools.Utils (convertTags)
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
+import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.DynamicLogic as TDL
 import Utils.Common.CacUtils
@@ -139,7 +142,7 @@ instance Default DriverPoolConfig where
         onRideBatchSplitConfig = [], -- Define default value
         onRideRadiusConfig = [], -- Define default value
         radiusShrinkValueForDriversOnRide = Common.Meters 200,
-        radiusStepSize = Common.Meters 50,
+        radiusStepSize = Nothing,
         scheduleTryTimes = [1, 2, 3],
         singleBatchProcessTime = Common.Seconds 120,
         thresholdToIgnoreActualDistanceThreshold = Nothing,
@@ -171,8 +174,8 @@ getDriverPoolConfigFromDB ::
   DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
 getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist searchRepeatType searchRepeatCounter stickeyKey sreq = do
-  configs <- CDP.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions Nothing --- Rupak: Change this
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  configs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CDP.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions Nothing))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs

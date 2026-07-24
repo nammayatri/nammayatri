@@ -31,6 +31,8 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Payout.Registration as Registration
@@ -39,7 +41,9 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as DrInfo
@@ -48,6 +52,7 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
@@ -70,7 +75,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
   dInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let dailyEarnings = map parseDailyEarnings earnings
   mbRegistrationOrder <- maybe (return Nothing) QOrder.findById (Id <$> dInfo.payoutRegistrationOrderId)
   let d2dEarnings = filter (\e -> e.d2dReferralCounts > 0) earnings
@@ -149,7 +154,7 @@ postPayoutDeleteVpa (mbPersonId, _merchantId, merchantOpCityId) = do
       -- Reset refund tracking so re-registration (₹2 payment) can be refunded again
       mbVehicle <- QVeh.findById personId
       let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-      mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
+      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing))
       when (maybe False (\pc -> pc.vpaVerificationMode == DPC.PAYMENT_BASED) mbPayoutConfig) $
         DrInfo.updatePayoutRegAmountRefunded Nothing personId
   pure Kernel.Types.APISuccess.Success
@@ -162,11 +167,11 @@ postPayoutUpdateVpa ::
     API.Types.UI.ReferralPayout.UpdatePayoutVpaReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postPayoutUpdateVpa (mbPersonId, _merchantId, merchantOpCityId) req = do
+postPayoutUpdateVpa (mbPersonId, _merchantId, merchantOpCityId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout is Not Enabled"
   unless (payoutConfig.vpaVerificationMode == DPC.API_BASED) $
     throwError $ InvalidRequest "VPA update via API is not enabled. Please use the registration payment flow."
@@ -202,13 +207,23 @@ getPayoutRegistration ::
     ) ->
     Environment.Flow DD.ClearDuesRes
   )
-getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
+getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
+  getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId)
+
+getPayoutRegistrationWithActor ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.Flow DD.ClearDuesRes
+  )
+getPayoutRegistrationWithActor (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let isFleetOwner = DCommon.checkFleetOwnerRole person.role
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout Registration is Not Enabled"
   when (payoutConfig.vpaVerificationMode == DPC.API_BASED) $
     throwError $ InvalidRequest "Use /payout/update/vpa to register your VPA"
@@ -223,7 +238,7 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
 
   -- Get MerchantServiceConfig to check if split is enabled
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity paymentServiceName merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just paymentServiceName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity paymentServiceName merchantOpCityId))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payment" (show paymentServiceName))
   let isSplitEnabled = case merchantServiceConfig.serviceConfig of
         DEMSC.PaymentServiceConfig vsc -> Payment.isSplitEnabled vsc
@@ -261,7 +276,7 @@ postPayoutCreateOrder ::
     API.Types.UI.ReferralPayout.CreatePayoutOrderReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
+postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
@@ -284,7 +299,7 @@ mkCreatePayoutServiceReq currency payoutServiceFlow API.Types.UI.ReferralPayout.
     }
 
 getPayoutOrderStatus ::
-  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
+  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c, ServiceFlow m r, Finance.HasActorInfo m r) =>
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
@@ -292,13 +307,13 @@ getPayoutOrderStatus ::
     Data.Text.Text ->
     m Payout.PayoutOrderStatusResp
   )
-getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = do
+getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
   let payoutOrderStatusReq = Payout.PayoutStatusServiceReq {orderId = orderId, mbExpand = payoutConfig.expand}
       shouldUpdate current new = current /= new
       onUpdate newStatus _statusResp = do

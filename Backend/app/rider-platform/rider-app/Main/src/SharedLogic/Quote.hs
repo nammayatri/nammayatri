@@ -19,6 +19,7 @@ import qualified Domain.Types.Trip as DTC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Offer as SOffer
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
@@ -40,17 +41,21 @@ data QuoteAPIEntity = QuoteAPIEntity
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
     specialLocationTag :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     quoteFareBreakup :: [QuoteBreakupAPIEntity],
     agencyCompletedRidesCount :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    vehicleServiceTierLuggageCapacity :: Maybe Int,
     tripCategory :: Maybe DTC.TripCategory,
     customerOffers :: Maybe SOffer.CumulativeOfferResp,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
     validTill :: UTCTime,
-    vehicleIconUrl :: Maybe Text
+    vehicleIconUrl :: Maybe Text,
+    area :: Maybe Text,
+    navigationInstruction :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -124,6 +129,7 @@ mkQuoteAPIDetails tollCharges = \case
      in DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   InterCityDetails details -> InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
+  EasyBookingDetails details -> EasyBookingAPIDetails $ DRentalDetails.mkRentalDetailsAPIEntity details tollCharges
 
 mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =

@@ -25,7 +25,7 @@ DriverPoolConfig:
     merchantOperatingCityId: Id MerchantOperatingCity
     minRadiusOfSearch: Meters
     maxRadiusOfSearch: Meters
-    radiusStepSize: Meters
+    radiusStepSize: Maybe Meters
     driverPositionInfoExpiry: Maybe Seconds
     actualDistanceThreshold: Maybe Meters
     maxDriverQuotesRequired: Int
@@ -103,12 +103,25 @@ DriverPoolConfig:
     enableForwardBatching: "false"
     maxParallelSearchRequestsOnRide: "1"
     selfRequestIfRiderIsDriver: "false"
+    radiusStepSize: "500"
 
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV
       where: merchantOperatingCityId
       orderBy: tripDistance
+
+  configPilot:
+    configType: DriverPoolConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just []) Nothing"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.DriverPoolConfig
+    filterDimensions:
+      - tripDistance
+      - area
+      - vehicleVariant
+      - tripCategory
 
 MerchantState:
   tableName: merchant_state

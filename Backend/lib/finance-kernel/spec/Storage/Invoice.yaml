@@ -9,6 +9,7 @@ imports:
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
   InvoiceType: Domain.Types.Invoice
   IssuedToType: Domain.Types.Invoice
+  ActorType: Lib.Finance.Core.Types
 
 Invoice:
   tableName: finance_invoice
@@ -19,26 +20,28 @@ Invoice:
       enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
       derive: "HttpInstance"
 
+  # NOTE: Mask sensitive values in invoiceToAuditValue (Invoice.Service)
   fields:
     id: Id Invoice
     invoiceNumber: Text
     invoiceType: InvoiceType
-    paymentOrderId: Maybe Text
+    entityReferenceId: Maybe Text
     issuedToType: IssuedToType
     issuedToId: Text
-    issuedToName: Maybe Text
-    issuedToAddress: Maybe Text
+    issuedToName: Maybe Text # SENSITIVE
+    issuedToAddress: Maybe Text # SENSITIVE
     issuedByType: Text
     issuedById: Text
     issuedByName: Maybe Text
     issuedByAddress: Maybe Text
     supplierName: Maybe Text
     supplierAddress: Maybe Text
-    supplierGSTIN: Maybe Text
-    supplierTaxNo: Maybe Text
+    supplierGSTIN: Maybe Text # SENSITIVE
+    supplierTaxNo: Maybe Text # SENSITIVE
     supplierId: Maybe Text
     merchantGstin: Maybe Text
     referenceId: Maybe Text
+    referenceInvoiceNumber: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney
     taxBreakdown: Maybe Value
@@ -52,9 +55,15 @@ Invoice:
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime
-    irn : Maybe Text
-    signedQRCode : Maybe Text
+    irn : Maybe Text # SENSITIVE
+    signedQRCode : Maybe Text # SENSITIVE
     paymentMode: Maybe Text
+
+    # --- Audit ---
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
 
   sqlType:
     lineItems: jsonb
@@ -63,7 +72,7 @@ Invoice:
     id: PrimaryKey
     invoiceNumber: "!SecondaryKey"
     issuedToId: "!SecondaryKey"
-    paymentOrderId: "!SecondaryKey"
+    entityReferenceId: "!SecondaryKey"
     supplierId: "!SecondaryKey"
     referenceId: "!SecondaryKey"
 
@@ -83,12 +92,12 @@ Invoice:
 
     updateStatus:
       kvFunction: updateWithKV
-      params: [status]
+      params: [status, updatedBy, updatedById]
       where: id
 
     updateIrnAndSignedQRByInvoiceId:
       kvFunction: updateWithKV
-      params: [irn, signedQRCode]
+      params: [irn, signedQRCode, updatedBy, updatedById]
       where: id
 
     findByReferenceId:

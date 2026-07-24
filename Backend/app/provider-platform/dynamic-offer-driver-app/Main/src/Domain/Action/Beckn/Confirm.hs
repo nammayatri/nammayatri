@@ -31,6 +31,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -40,6 +41,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
@@ -60,6 +62,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
@@ -79,7 +82,8 @@ data DConfirmReq = DConfirmReq
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
     driverPreference :: Maybe [Text],
-    customerDiscountAmount :: Maybe HighPrecMoney
+    customerDiscountAmount :: Maybe HighPrecMoney,
+    customerLanguage :: Maybe Maps.Language
   }
 
 data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
@@ -226,6 +230,7 @@ handler merchant req validatedQuote = do
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
       whenJust req.paymentId $ QRB.updatePaymentId booking.id
       whenJust req.customerDiscountAmount $ QRB.updateDiscountAmount booking.id
+      whenJust req.customerLanguage $ QRB.updateCustomerLanguage booking.id
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do
@@ -276,7 +281,8 @@ validateRequest ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Finance.HasActorInfo m r
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
@@ -318,6 +324,11 @@ validateRequest subscriber transporterId req now = do
     Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
     OneWay MeterRide -> getMeterRideQuoteDetails booking transporter
+    -- FIX: this case previously had no EasyBooking branch (only a catch-all), so it silently
+    -- fell through to "UNSUPPORTED TYPE CATEGORY" at confirm time — same generic, static-quote
+    -- handling as Rental's static-offer branch above (EasyBooking is QuoteBased just like it).
+    -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
+    EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
   where
     getDriverQuoteDetails booking transporter = do
@@ -338,7 +349,7 @@ validateRequest subscriber transporterId req now = do
 
     getMeterRideQuoteDetails booking transporter = do
       quote <- getQuote booking transporter
-      searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+      searchReq <- QSRLite.findByIdLite quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       driverIdForSearch <- searchReq.driverIdForSearch & fromMaybeM (InvalidRequest $ "Driver Id for search not found for meter ride searchId: " <> quote.searchRequestId.getId)
       driver <- QPerson.findById driverIdForSearch >>= fromMaybeM (PersonNotFound driverIdForSearch.getId)
       return (transporter, MeterRideQuote driver quote)

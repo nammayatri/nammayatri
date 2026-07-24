@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Merchant where
 
+import qualified Data.Text
 import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
@@ -19,6 +20,7 @@ import Storage.Queries.Transformers.Merchant
 
 instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
   fromTType' (Beam.MerchantT {..}) = do
+    cloudBaseUrl' <- (Kernel.Prelude.pure . (Kernel.Prelude.>>= Kernel.Prelude.parseBaseUrl)) cloudBaseUrl
     driverOfferBaseUrl' <- Kernel.Prelude.parseBaseUrl driverOfferBaseUrl
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
@@ -32,6 +34,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             bapId = bapId,
             bapUniqueKeyId = bapUniqueKeyId,
             cipherText = cipherText,
+            cloudBaseUrl = cloudBaseUrl',
+            cloudType = (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack)) cloudType,
             country = country,
             createdAt = createdAt,
             defaultCity = city,
@@ -82,6 +86,8 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.bapId = bapId,
         Beam.bapUniqueKeyId = bapUniqueKeyId,
         Beam.cipherText = cipherText,
+        Beam.cloudBaseUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl cloudBaseUrl,
+        Beam.cloudType = Kernel.Prelude.fmap Kernel.Prelude.show cloudType,
         Beam.country = country,
         Beam.createdAt = createdAt,
         Beam.city = defaultCity,

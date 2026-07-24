@@ -23,6 +23,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.Person as QP
 import Tools.Whatsapp as Whatsapp
 
@@ -31,7 +32,7 @@ newtype OptAPIRequest = OptAPIRequest
   }
   deriving (Show, Eq, Generic, ToSchema, FromJSON, ToJSON)
 
-whatsAppOptAPI :: ServiceFlow m r => Id DP.Person -> OptAPIRequest -> m APISuccess
+whatsAppOptAPI :: (ServiceFlow m r, BeamFlow m r) => Id DP.Person -> OptAPIRequest -> m APISuccess
 whatsAppOptAPI personId OptAPIRequest {..} = do
   DP.Person {..} <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")

@@ -9,6 +9,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -26,6 +27,20 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchasedPassPayment.PurchasedPassPayment] -> m ())
 createMany = traverse_ create
+
+findAllByPersonIdAndStatuses ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> [Domain.Types.PurchasedPass.StatusType] -> m [Domain.Types.PurchasedPassPayment.PurchasedPassPayment])
+findAllByPersonIdAndStatuses limit offset personId status = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
 findAllByPersonIdWithFilters ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -101,6 +116,17 @@ findOneByPaymentOrderId ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.PurchasedPassPayment.PurchasedPassPayment))
 findOneByPaymentOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
+updatePassPhotoMediaIdByPurchasedPassIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> [Domain.Types.PurchasedPass.StatusType] -> m ())
+updatePassPhotoMediaIdByPurchasedPassIdAndStatus passPhotoMediaId purchasedPassId status = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.passPhotoMediaId (Kernel.Types.Id.getId <$> passPhotoMediaId),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId), Se.Is Beam.status $ Se.In status]]
+
 updatePersonIdByPurchasedPassId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
 updatePersonIdByPurchasedPassId personId purchasedPassId = do
   _now <- getCurrentTime
@@ -164,6 +190,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.passCode passCode,
       Se.Set Beam.passEnum passEnum,
       Se.Set Beam.passName passName,
+      Se.Set Beam.passPhotoMediaId (Kernel.Types.Id.getId <$> passPhotoMediaId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),

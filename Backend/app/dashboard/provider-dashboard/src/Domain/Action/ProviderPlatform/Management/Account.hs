@@ -43,7 +43,7 @@ import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
   ( PersonError (PersonDoesNotExist),
-    RoleError (RoleDoesNotExist),
+    RoleError (RoleConversionNotAllowed, RoleDoesNotExist),
   )
 
 getAccountFetchUnverifiedAccounts ::
@@ -145,24 +145,11 @@ putAccountUpdateRole ::
 putAccountUpdateRole merchantShortId opCity apiTokenInfo personId' roleId' = do
   let personId = Kernel.Types.Id.cast personId'
       roleId = Kernel.Types.Id.cast roleId'
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  QP.updatePersonRole personId role
-  let mbAccessType =
-        case role.dashboardAccessType of
-          r | r `elem` [DRole.RENTAL_FLEET_OWNER, DRole.FLEET_OWNER] -> Just Common.FLEET_OWNER
-          DRole.DASHBOARD_OPERATOR -> Just Common.DASHBOARD_OPERATOR
-          _ -> Nothing
-  whenJust mbAccessType \accessType -> do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-    _ <-
-      SharedLogic.Transaction.withTransactionStoring transaction $
-        API.Client.ProviderPlatform.Management.callManagementAPI
-          checkedMerchantId
-          opCity
-          (.accountDSL.putAccountUpdateRole)
-          personId'
-          accessType
-    pure ()
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
+    throwError RoleConversionNotAllowed
+  _ <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  QP.updatePersonRole personId newRole
   pure Kernel.Types.APISuccess.Success

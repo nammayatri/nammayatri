@@ -134,7 +134,7 @@ buildMapsServiceConfig ::
 buildMapsServiceConfig = \case
   GoogleConfigUpdateReq GoogleCfgUpdateReq {..} -> do
     googleKey' <- encrypt googleKey
-    pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', ..}
+    pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', googleGeocodeUrl = Nothing, ..}
   OSRMConfigUpdateReq OSRMCfgUpdateReq {..} -> do
     pure . Maps.OSRMConfig $ Maps.OSRMCfg {radiusDeviation = (distanceToMeters <$> radiusDeviationWithUnit) <|> radiusDeviation, ..}
   MMIConfigUpdateReq MMICfgUpdateReq {..} -> do
@@ -203,7 +203,11 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googleRouteConfig :: Maps.GoogleRouteConfig,
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
-    googleAutocompleteParams :: Maybe [Text]
+    useNewPlaceDetails :: Maybe Bool,
+    googleAutocompleteParams :: Maybe [Text],
+    mobilityBillingUrl :: Maybe BaseUrl,
+    useRouteMatrix :: Maybe Bool,
+    googleRouteMatrixCfg :: Maybe Maps.GoogleRouteMatrixCfg
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -443,7 +447,7 @@ buildVerificationServiceConfig = \case
     accountId' <- encrypt accountId
     apiKey' <- encrypt apiKey
     secret' <- encrypt secret
-    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', ..}
+    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', faceCompareRetryLimit = Nothing, ..}
 
 instance ToJSON VerificationServiceConfigUpdateReq where
   toJSON = genericToJSON (updateVerificationReqOptions updateVerificationReqConstructorModifier)
@@ -491,13 +495,15 @@ data IdfyCfgUpdateReq = IdfyCfgUpdateReq
   { accountId :: Text,
     apiKey :: Text,
     secret :: Text,
-    url :: BaseUrl
+    url :: BaseUrl,
+    faceCompareRetryLimit :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
-  { url :: BaseUrl
+data IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
+  { url :: BaseUrl,
+    faceCompareRetryLimit :: Maybe Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON)
@@ -617,7 +623,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     baseRequestMerchant :: Maybe Text,
     replicateFareProducts :: Maybe Bool,
     issueCategorySourceMerchant :: Maybe Text,
-    issueCategorySourceCity :: Maybe Context.City
+    issueCategorySourceCity :: Maybe Context.City,
+    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -648,6 +655,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "replicateFareProducts" form
       <*> parseMaybeInput "issueCategorySourceMerchant" form
       <*> parseMaybeInput "issueCategorySourceCity" form
+      <*> parseMaybeInput "gatewayAndRegistryPriorityList" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -675,6 +683,7 @@ newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
   { geom :: Text,
+    geomGeoJson :: Text,
     city :: Context.City,
     state :: Context.IndianState,
     country :: Context.Country,
@@ -695,7 +704,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     baseRequestMerchant :: Maybe Text,
     replicateFareProducts :: Maybe Bool,
     issueCategorySourceMerchant :: Maybe Text,
-    issueCategorySourceCity :: Maybe Context.City
+    issueCategorySourceCity :: Maybe Context.City,
+    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -713,7 +723,9 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe SLT.RenderType
+    render :: Maybe SLT.RenderType,
+    paymentModes :: Maybe [SLT.PaymentMode],
+    fareSettlementType :: Maybe SLT.FareSettlementType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -730,6 +742,8 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "isQueueEnabled" form
       <*> parseMaybeInput "supportNumber" form
       <*> parseMaybeInput "render" form
+      <*> parseMaybeInput "paymentModes" form
+      <*> parseMaybeInput "fareSettlementType" form
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -750,7 +764,9 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe SLT.RenderType
+    render :: Maybe SLT.RenderType,
+    paymentModes :: Maybe [SLT.PaymentMode],
+    fareSettlementType :: Maybe SLT.FareSettlementType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -854,8 +870,7 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     reviewRequired :: Maybe Bool,
     vehicleModel :: Text,
     bodyType :: Maybe Text,
-    priority :: Maybe Int,
-    enableForAirport :: Maybe Bool
+    priority :: Maybe Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -993,7 +1008,9 @@ data UpsertTollReq = UpsertTollReq
     tollStartGates :: [TollGateAPIEntity],
     tollEndGates :: [TollGateAPIEntity],
     isAutoRickshawAllowed :: Bool,
-    isTwoWheelerAllowed :: Maybe Bool
+    isTwoWheelerAllowed :: Maybe Bool,
+    isAutoRickshawTollChargeApplicable :: Maybe Bool,
+    isTwoWheelerTollChargeApplicable :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1010,6 +1027,8 @@ data TollAPIEntity = TollAPIEntity
     tollEndGates :: [TollGateAPIEntity],
     isAutoRickshawAllowed :: Bool,
     isTwoWheelerAllowed :: Maybe Bool,
+    isAutoRickshawTollChargeApplicable :: Maybe Bool,
+    isTwoWheelerTollChargeApplicable :: Maybe Bool,
     merchantId :: Maybe Text,
     merchantOperatingCityId :: Maybe Text
   }
@@ -1103,4 +1122,19 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets WhiteListOperatingCityReq where
+  hideSecrets = identity
+
+-- Airport-ops: enable/disable a vehicle for a special location (all gates/areas, trip categories,
+-- search sources) across ALL time bounds. String lists are parsed to domain types in the handler.
+data SetFareProductEnabledReq = SetFareProductEnabledReq
+  { enabled :: Bool,
+    areas :: [Text],
+    vehicleServiceTiers :: [Text],
+    tripCategories :: Maybe [Text],
+    searchSources :: Maybe [Text]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SetFareProductEnabledReq where
   hideSecrets = identity

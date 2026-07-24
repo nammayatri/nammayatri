@@ -39,6 +39,53 @@ import Tools.Error
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
+findByVerifiedAndApprovedAndEnabled ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Int ->
+  Int ->
+  Maybe [Text] ->
+  m [DriverInformation]
+findByVerifiedAndApprovedAndEnabled merchantOpCityId isVerified mbApproved mbEnabled mbFrom mbTo limit offset finalPersonIds = do
+  case finalPersonIds of
+    Just [] -> pure []
+    _ -> do
+      let approvedClauses = case mbApproved of
+            Nothing -> []
+            Just True ->
+              [ Se.Is BeamDI.approved (Se.Eq (Just True))
+              ]
+            Just False ->
+              [ Se.Or
+                  [ Se.Is BeamDI.approved (Se.Eq Nothing),
+                    Se.Is BeamDI.approved (Se.Eq (Just False))
+                  ]
+              ]
+      let enabledClauses = case mbEnabled of
+            Nothing -> []
+            Just True ->
+              [ Se.Is BeamDI.enabled (Se.Eq True)
+              ]
+            Just False ->
+              [ Se.Is BeamDI.enabled (Se.Not (Se.Eq True))
+              ]
+      let clauses =
+            [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+              Se.Is BeamDI.verified (Se.Eq isVerified)
+            ]
+              <> approvedClauses
+              <> enabledClauses
+              <> maybe [] (\from -> [Se.Is BeamDI.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
+              <> maybe [] (\to -> [Se.Is BeamDI.updatedAt (Se.LessThanOrEq to)]) mbTo
+              <> maybe [] (\pIds -> [Se.Is BeamDI.driverId (Se.In pIds)]) finalPersonIds
+
+      findAllWithOptionsKV [Se.And clauses] (Se.Desc BeamDI.updatedAt) (Just limit) (Just offset)
+
 -- | Disable a driver as part of a fleet-disable cascade. Flips `enabled` to
 --   False and stamps `disabledReasonFlag = FleetDisabled` so the matching
 --   re-enable cascade can find the rows it created. Kept separate from
@@ -78,6 +125,29 @@ clearFleetCascadeAndEnable driverId = do
     ]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set True}
+
+updateVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateVerifiedState driverId isVerified = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.verified isVerified,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
+
+-- | Set `verified` and `approved` in a single write (`approved` only when given). Leaves `enabled` untouched.
+--   On transition to verified, stamps `firstVerifiedAt` once (race-free).
+updateVerifiedAndApprovedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Bool -> m ()
+updateVerifiedAndApprovedState driverId isVerified isApproved = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [ Se.Set BeamDI.verified isVerified,
+        Se.Set BeamDI.updatedAt now
+      ]
+        <> ([Se.Set BeamDI.approved isApproved | isJust isApproved])
+    )
+    [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
+  when isVerified $ stampFirstVerifiedAtIfNull driverId
 
 updateDisabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.DisabledReasonFlag -> Id Person.Driver -> m ()
 updateDisabledReasonFlag mbReason driverId = do
@@ -126,8 +196,8 @@ findAllByEnabledAtInWindow merchantOpCityId from to = do
         ]
     ]
 
-updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Driver -> Bool -> Maybe Bool -> m ()
-updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
+updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Driver -> Bool -> Maybe Bool -> Maybe Bool -> m ()
+updateEnabledVerifiedState (Id driverId) isEnabled isVerified isApproved = do
   now <- getCurrentTime
   enabledAt <- getEnabledAt (Id driverId)
   updateOneWithKV
@@ -135,6 +205,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.verified (fromJust isVerified) | isJust isVerified])
+        <> ([Se.Set BeamDI.approved isApproved | isJust isApproved])
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
@@ -187,7 +258,8 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
             blockedBy = blockedBy,
             requestorId = Just dashboardUserName,
             actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            blockReasonFlag = Just blockReasonFlag
+            blockReasonFlag = Just blockReasonFlag,
+            specialZoneId = Nothing
           }
 
   QDBT.create driverBlockDetails
@@ -238,7 +310,8 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
             actionType = Just $ if isBlocked then DTDBT.BLOCK else DTDBT.UNBLOCK,
-            requestorId = Nothing
+            requestorId = Nothing,
+            specialZoneId = Nothing
           }
 
   QDBT.create driverBlockDetails
@@ -398,6 +471,21 @@ updateApproved approved driverId = do
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
+-- | Stamp `firstVerifiedAt = now` only if it is currently NULL — atomic, so concurrent status
+--   polls cannot double-stamp / overwrite the first-verification timestamp.
+stampFirstVerifiedAtIfNull :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
+stampFirstVerifiedAtIfNull driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.firstVerifiedAt (Just now),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDI.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamDI.firstVerifiedAt $ Se.Eq Nothing
+        ]
+    ]
+
 updateDlNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()
 updateDlNumber dlNumber driverId = do
   now <- getCurrentTime
@@ -547,9 +635,10 @@ updateDriverInformation ::
   Maybe DriverInfo.AddressDocumentType ->
   Maybe Text ->
   Maybe Text ->
+  Maybe DriverInfo.MapProvider ->
   Id Person.Person ->
   m ()
-updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship driverId = do
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled rideRequestVolumeEnabled onboardingAs address addressDocumentType nomineeName nomineeRelationship preferredMapProvider driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
@@ -573,6 +662,7 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
       Se.Set BeamDI.addressDocumentType addressDocumentType,
       Se.Set BeamDI.nomineeName nomineeName,
       Se.Set BeamDI.nomineeRelationship nomineeRelationship,
+      Se.Set BeamDI.preferredMapProvider preferredMapProvider,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
@@ -677,14 +767,86 @@ updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity c
         LTSSync.canSwitchToIntraCity = LTSSync.Set canSwitchToIntraCity
       }
 
-updateAirportSwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
-updateAirportSwitch canSwitchToAirport driverId = do
+data AirportBlockLogInfo = AirportBlockLogInfo
+  { blockedBy :: DTDBT.BlockedBy,
+    reason :: Maybe Text,
+    specialZoneId :: Maybe Text,
+    requestorId :: Maybe Text,
+    merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+
+updateAirportSwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => DriverInfo.AirportRestrictionType -> Maybe UTCTime -> Maybe AirportBlockLogInfo -> Id Person.Person -> m ()
+updateAirportSwitch enableForAirport mbBlockExpiryTime mbLogInfo driverId = do
   now <- getCurrentTime
+  let blockExpiryTime = case enableForAirport of
+        DriverInfo.BLOCKED -> mbBlockExpiryTime
+        _ -> Nothing
   updateOneWithKV
-    [ Se.Set BeamDI.canSwitchToAirport (Just canSwitchToAirport),
+    [ Se.Set BeamDI.enableForAirport (Just enableForAirport),
+      Se.Set BeamDI.airportBlockExpiryTime blockExpiryTime,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.enableForAirport = LTSSync.Set (Just enableForAirport)}
+  Kernel.Prelude.whenJust mbLogInfo $ \logCtx -> do
+    let mbAction = case enableForAirport of
+          DriverInfo.BLOCKED -> Just (DTDBT.BLOCK, logCtx.reason, blockExpiryTime)
+          DriverInfo.ENABLED -> Just (DTDBT.UNBLOCK, logCtx.reason, Nothing)
+          DriverInfo.DISABLED -> Nothing
+    Kernel.Prelude.whenJust mbAction $ \(actionType, logReason, logLiftTime) ->
+      logAirportBlockTransaction driverId actionType logReason logLiftTime logCtx.specialZoneId logCtx.blockedBy logCtx.requestorId logCtx.merchantId logCtx.merchantOperatingCityId
+
+logAirportBlockTransaction ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person.Person ->
+  DTDBT.ActionType ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  DTDBT.BlockedBy ->
+  Maybe Text ->
+  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+logAirportBlockTransaction driverId actionType mbReason mbBlockLiftTime mbSpecialZoneId blockedBy mbRequestorId merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  uid <- generateGUID
+  let blockTimeInHours = mbBlockLiftTime <&> \liftTime -> max 0 (floor (diffUTCTime liftTime now / 3600))
+  QDBT.create $
+    DTDBT.DriverBlockTransactions
+      { blockLiftTime = mbBlockLiftTime,
+        blockReason = mbReason,
+        blockTimeInHours = blockTimeInHours,
+        driverId = driverId,
+        id = uid,
+        reasonCode = Nothing,
+        reportedAt = now,
+        merchantId = Just merchantId,
+        createdAt = now,
+        updatedAt = now,
+        merchantOperatingCityId = Just merchantOperatingCityId,
+        blockedBy = blockedBy,
+        requestorId = mbRequestorId,
+        actionType = Just actionType,
+        blockReasonFlag = Nothing,
+        specialZoneId = mbSpecialZoneId
+      }
+
+isAirportEligible :: UTCTime -> DriverInfo.DriverInformation -> Bool
+isAirportEligible now di = case di.enableForAirport of
+  DriverInfo.ENABLED -> True
+  DriverInfo.DISABLED -> False
+  DriverInfo.BLOCKED -> maybe False (now >=) di.airportBlockExpiryTime
+
+resolveAirportRestriction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => UTCTime -> DriverInfo.DriverInformation -> m DriverInfo.AirportRestrictionType
+resolveAirportRestriction now di =
+  if di.enableForAirport == DriverInfo.BLOCKED && isAirportEligible now di
+    then do
+      updateAirportSwitch DriverInfo.ENABLED Nothing Nothing di.driverId
+      pure DriverInfo.ENABLED
+    else pure di.enableForAirport
 
 updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
 updateForwardBatchingEnabled forwardBatchingEnabled driverId = do

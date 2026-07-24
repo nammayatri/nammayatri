@@ -109,10 +109,15 @@ module SharedLogic.Finance.Wallet
     resolveIsOnlineFromBooking,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
+    walletReferenceCommissionVATOnline,
+    walletReferenceCommissionVATCash,
+    walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionVAT,
     walletReferenceVATOnline,
     walletReferenceVATCash,
     walletReferenceD2DReferral,
     walletReferenceAirportCashRecharge,
+    walletReferenceAirportCashWithdrawal,
     walletReferenceAirportEntryFeeGST,
     walletReferenceAirportEntryFee,
     walletReferenceVATInput,
@@ -121,12 +126,30 @@ module SharedLogic.Finance.Wallet
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
     walletReferenceDeductedAtPaymentByPlatform,
+    walletReferenceRideFareRefund,
+    walletReferenceRideFareRefundVAT,
+    walletReferenceTollRefund,
+    walletReferenceTollRefundVAT,
+    walletReferenceParkingRefund,
+    walletReferenceParkingRefundVAT,
+    walletReferenceRideFareRefundCommission,
+    walletReferenceRideFareRefundCommissionVAT,
+    walletReferenceCancellationFeeRefund,
+    walletReferenceCancellationFeeRefundVAT,
+    walletReferenceCancellationRefundCommission,
+    walletReferenceCancellationRefundCommissionVAT,
+    walletReferenceCancellationOverdueBenefitRefund,
+    walletReferenceCancellationOverdueBenefitRefundTax,
+    splitGrossByVatPct,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
     computeEffectiveTdsRate,
+    applyThresholdBenefit,
+    selectTds,
+    panAadhaarLinkTdsEnabled,
     estimateWalletDeductions,
     formatStripeAddress,
   )
@@ -150,6 +173,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -217,6 +241,19 @@ walletReferenceCommissionOnline = "CommissionOnline"
 walletReferenceCommissionCash :: Text
 walletReferenceCommissionCash = "CommissionCash"
 
+walletReferenceCommissionVATOnline :: Text
+walletReferenceCommissionVATOnline = "CommissionVATOnline"
+
+walletReferenceCommissionVATCash :: Text
+walletReferenceCommissionVATCash = "CommissionVATCash"
+
+-- Commission on a cancellation fee (no Online/Cash suffix — matches the cancellation ref family).
+walletReferenceCancellationCommission :: Text
+walletReferenceCancellationCommission = "CancellationCommission"
+
+walletReferenceCancellationCommissionVAT :: Text
+walletReferenceCancellationCommissionVAT = "CancellationCommissionVAT"
+
 walletReferenceDeductedAtPaymentByPlatform :: Text
 walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
 
@@ -250,6 +287,10 @@ walletReferenceD2DReferral = "D2DReferral"
 walletReferenceAirportCashRecharge :: Text
 walletReferenceAirportCashRecharge = "AirportCashRecharge"
 
+-- | Reference type for airport booth cash withdrawal/reversal (debit; idempotent by referenceId)
+walletReferenceAirportCashWithdrawal :: Text
+walletReferenceAirportCashWithdrawal = "AirportCashWithdrawal"
+
 -- | Reference type for airport entry fee GST ledger entry at EndRide (third party GST)
 walletReferenceAirportEntryFeeGST :: Text
 walletReferenceAirportEntryFeeGST = "AirportEntryFeeGST"
@@ -260,6 +301,55 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
+
+-- Per-component refund refTypes. Same string values as the BAP side
+-- (SharedLogic.Finance.RidePayment) so cap/settlement reconcile across BAP+BPP.
+-- All-caps VAT matches the ride-side 'TollVAT'.
+walletReferenceRideFareRefund :: Text
+walletReferenceRideFareRefund = "RideFareRefund"
+
+walletReferenceRideFareRefundVAT :: Text
+walletReferenceRideFareRefundVAT = "RideFareRefundVAT"
+
+walletReferenceTollRefund :: Text
+walletReferenceTollRefund = "TollRefund"
+
+walletReferenceTollRefundVAT :: Text
+walletReferenceTollRefundVAT = "TollRefundVAT"
+
+walletReferenceParkingRefund :: Text
+walletReferenceParkingRefund = "ParkingRefund"
+
+walletReferenceParkingRefundVAT :: Text
+walletReferenceParkingRefundVAT = "ParkingRefundVAT"
+
+-- BPP-only: the platform's commission slice on a Case-2 ride-fare refund.
+walletReferenceRideFareRefundCommission :: Text
+walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
+
+walletReferenceRideFareRefundCommissionVAT :: Text
+walletReferenceRideFareRefundCommissionVAT = "RideFareRefundCommissionVAT"
+
+-- Refund of a cancellation fee (driver-side legs).
+walletReferenceCancellationFeeRefund :: Text
+walletReferenceCancellationFeeRefund = "CancellationFeeRefund"
+
+walletReferenceCancellationFeeRefundVAT :: Text
+walletReferenceCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
+
+-- The platform's commission slice given back on a driver-deducted cancellation-fee refund.
+walletReferenceCancellationRefundCommission :: Text
+walletReferenceCancellationRefundCommission = "CancellationRefundCommission"
+
+walletReferenceCancellationRefundCommissionVAT :: Text
+walletReferenceCancellationRefundCommissionVAT = "CancellationRefundCommissionVAT"
+
+-- The platform-kept overdue benefit given back on a driver-deducted cancellation-fee refund.
+walletReferenceCancellationOverdueBenefitRefund :: Text
+walletReferenceCancellationOverdueBenefitRefund = "CancellationOverdueBenefitRefund"
+
+walletReferenceCancellationOverdueBenefitRefundTax :: Text
+walletReferenceCancellationOverdueBenefitRefundTax = "CancellationOverdueBenefitRefundTax"
 
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
@@ -285,6 +375,10 @@ walletCreditRefs =
     walletReferenceCustomerCancellationGST,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
+    walletReferenceCommissionVATOnline,
+    walletReferenceCommissionVATCash,
+    walletReferenceCancellationCommission,
+    walletReferenceCancellationCommissionVAT,
     walletReferenceWalletIncentive,
     walletReferenceVATOnline,
     walletReferenceVATCash,
@@ -306,6 +400,17 @@ walletTransferFromMerchantRefs =
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash
   ]
+
+-- | Split a VAT-inclusive gross into (base, vat); the rate is inclusive ("25.5" ⇒ vat = gross × 25.5/125.5).
+--   Neither side is rounded: renderers derive the shown VAT % from the stored pair, and rounding
+--   one side skews it (25.5 prints as 25.65). Nothing / non-positive rate ⇒ (gross, 0).
+splitGrossByVatPct :: Maybe Double -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitGrossByVatPct mbPct gross = case mbPct of
+  Just pct
+    | pct > 0 ->
+      let vat = HighPrecMoney (gross.getHighPrecMoney * (toRational pct / toRational (100 + pct)))
+       in (gross - vat, vat)
+  _ -> (gross, 0)
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 
@@ -429,7 +534,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         mbMerchantOpCity <&> \city ->
           show city.city <> ", " <> show city.state <> ", " <> show city.country
   -- Resolve supplier info (fleet owner or driver) and detect LDC custom rate
-  let configDefaultTdsRate = transporterConfig.taxConfig.defaultTdsRate
+  let configDefaultTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
   (sName, sGSTIN, sVatNumber, sAddress, sId, hasCustomRate) <- case ride.fleetOwnerId of
     Just fleetOwnerId -> do
       mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
@@ -468,6 +573,8 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         counterpartyId = cId,
         concernedIndividualId = Just ride.driverId.getId,
         referenceId = booking.id.getId,
+        entityReferenceId = Nothing,
+        entityReferenceType = Nothing,
         merchantName = mName,
         merchantShortId = mShortId,
         issuedByAddress = address,
@@ -548,6 +655,8 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         counterpartyId = cId,
         concernedIndividualId = Just ride.driverId.getId,
         referenceId = booking.id.getId,
+        entityReferenceId = Nothing,
+        entityReferenceType = Nothing,
         merchantName = Nothing,
         merchantShortId = Nothing,
         issuedByAddress = Nothing,
@@ -569,7 +678,7 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
@@ -629,6 +738,8 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
                     status = SETTLED,
                     referenceType = referenceType,
                     referenceId = referenceId,
+                    entityReferenceId = Nothing,
+                    entityReferenceType = Nothing,
                     metadata = metadata,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
@@ -707,39 +818,77 @@ getPayoutEligibilityData accountId cutoff now = do
 -- | Mark a list of wallet ledger entries as paid out.
 --   Called by the payout webhook handler after successful disbursement.
 settleWalletEntries ::
-  (BeamFlow m r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LedgerEntry] -> -- entry IDs to settle
   Text -> -- PayoutRequest ID
   m ()
 settleWalletEntries entryIds payoutRequestId =
   markEntriesAsPaidOut entryIds payoutRequestId
 
--- | Resolve the effective TDS rate for a driver/fleet owner.
---   If PAN is invalid/missing → invalidPanTdsRate.
---   If PAN is valid → custom rate (from driverInfo/fleetOwnerInfo) or config default.
+-- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
+-- model). Keyed off the cohort config being present (individualNotLinked).
+panAadhaarLinkTdsEnabled :: DTC.TaxConfig -> Bool
+panAadhaarLinkTdsEnabled taxConfig = isJust taxConfig.individualNotLinked
+
+selectTds ::
+  Maybe DPanCard.DriverPanCard ->
+  DTC.TaxConfig ->
+  Maybe DTC.TdsConfig
+selectTds mbPanCard taxConfig
+  | not (panAadhaarLinkTdsEnabled taxConfig) = Nothing
+  | otherwise =
+    let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+        isBusiness = (mbPanCard >>= (.docType)) == Just DPanCard.BUSINESS
+        isPanLinkedToAadhaar =
+          maybe False (\pan -> pan.panAadhaarLinkage == Just DPanCard.PAN_AADHAAR_LINKED) mbPanCard
+     in if not hasValidPan
+          then Just taxConfig.invalidPanTdsRate
+          else
+            if isBusiness
+              then taxConfig.businessTds
+              else
+                if isPanLinkedToAadhaar
+                  then taxConfig.individualLinked
+                  else taxConfig.individualNotLinked
+
 computeEffectiveTdsRate ::
   Maybe DPanCard.DriverPanCard -> -- PAN card info
-  Maybe Double -> -- custom TDS rate (driverInfo.tdsRate or fleetOwnerInfo.tdsRate)
-  Maybe Double -> -- config defaultTdsRate
-  Double -> -- invalidPanTdsRate
+  Maybe Double -> -- materialized TDS rate from driverInfo.tdsRate / fleetOwnerInfo.tdsRate
+  DTC.TaxConfig -> -- merchant tax config
   Maybe Double -- effective rate
-computeEffectiveTdsRate mbPanCard mbCustomRate configDefaultTdsRate invalidPanTdsRate_ =
-  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-      panType = mbPanCard >>= (.docType)
-      panTypeEligible = case panType of
-        Just DPanCard.BUSINESS -> True
-        _ -> True
-      isPanValid = hasValidPan && panTypeEligible
-   in if isPanValid
-        then case mbCustomRate of
-          Just _ -> mbCustomRate
-          Nothing -> configDefaultTdsRate
-        else Just invalidPanTdsRate_
+computeEffectiveTdsRate mbPanCard mbCustomRate taxConfig =
+  case selectTds mbPanCard taxConfig of
+    -- PAN-Aadhaar-link TDS: prefer the materialized rate, fall back to the
+    -- cohort-selected rate.
+    Just tds -> Just (fromMaybe tds.rate mbCustomRate)
+    Nothing -> legacyTdsRate
+  where
+    hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+    -- Legacy TDS (merchant hasn't enabled PAN-Aadhaar-link TDS): valid PAN →
+    -- defaultTdsRate.rate (or custom override); invalid PAN → invalidPanTdsRate.rate.
+    legacyTdsRate =
+      if hasValidPan
+        then mbCustomRate <|> ((.rate) <$> taxConfig.defaultTdsRate)
+        else Just taxConfig.invalidPanTdsRate.rate
 
--- | Estimate wallet deductions (TDS only) for a given baseFare.
---   GST (govtCharges) comes from fareParams at ride end, not recalculated here.
---   At allocation time, rideFare = searchTry.baseFare (already excludes GST).
---   tdsRate is a fractional Double (e.g. 0.01 for 1%).
+applyThresholdBenefit ::
+  DTC.TaxConfig ->
+  Maybe HighPrecMoney ->
+  Maybe DPanCard.DriverPanCard ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  HighPrecMoney
+applyThresholdBenefit taxConfig mbCumulative mbPanCard currentBase rawAmount =
+  case (selectTds mbPanCard taxConfig, mbCumulative) of
+    (Nothing, _) -> rawAmount
+    (_, Nothing) -> rawAmount
+    (Just tds, Just cumulative) -> case tds.thresholdAmount of
+      Nothing -> rawAmount
+      Just thresh ->
+        if cumulative + currentBase <= thresh
+          then 0
+          else rawAmount
+
 estimateWalletDeductions ::
   Maybe Double -> -- effective TDS rate
   HighPrecMoney -> -- baseFare (rideFare at allocation time, which is already baseFare)

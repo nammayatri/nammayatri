@@ -398,6 +398,7 @@ data UserActionType
   | EXEMPT_DRIVER_FEE
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
   | WHITELIST_MERCHANT_OPERATING_CITY
+  | DASHBOARD_USER_BULK_CREATE
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
   | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType

@@ -22,12 +22,14 @@ module Domain.Action.UI.DriverOnboarding.IdfyWebhook
 where
 
 import qualified Data.Text as T
+import qualified Domain.Action.UI.DriverOnboarding.CourtRecordCheck as CourtRecordCheck
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamCard
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.IdfyVerification as DIdfyVerification
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
@@ -45,16 +47,19 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import Storage.Queries.Person as QP
@@ -82,6 +87,7 @@ oldIdfyWebhookHandler secret val = do
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
         Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.EkatraConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -98,10 +104,10 @@ idfyWebhookHandler merchantShortId secret val = do
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.VerificationService merchantServiceUsageConfig.verificationService)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId))
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do
@@ -115,6 +121,7 @@ idfyWebhookHandler merchantShortId secret val = do
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
         Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.EkatraConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -134,10 +141,10 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
   let merchantId = merchant.id
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Just merchantId.getId, serviceName = Just (DMSC.VerificationService merchantServiceUsageConfig.verificationService)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.VerificationService merchantServiceUsageConfig.verificationService) merchantOpCityId))
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do
@@ -151,38 +158,58 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
         Verification.DigiLockerConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
         Verification.TtenVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy -> Tten verfication config"
         Verification.MorthConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.EkatraConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify (Idfy.VerificationResponse rsp) respDump = do
-  logInfo $ "IdfyWebhook.onVerify: received webhook rsp=" <> show rsp <> " respDump=" <> respDump
-  verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  -- Log only safe metadata; the raw payload (rsp/respDump) can carry PII and is already
+  -- persisted to the verification request via IVQuery.updateResponse below.
   logInfo $
-    "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
-      <> " driverId="
-      <> verificationReq.driverId.getId
-      <> " docType="
-      <> show verificationReq.docType
+    "IdfyWebhook.onVerify: received webhook requestId=" <> rsp.request_id
+      <> " groupId="
+      <> rsp.group_id
+      <> " action="
+      <> rsp.action
       <> " status="
-      <> verificationReq.status
-      <> "Response="
-      <> show rsp
-  IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
-  let resultStatus = getResultStatus rsp.result
-  logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
-  if resultStatus == Just "source_down"
-    then do
-      logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
-      handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+      <> rsp.status
+  case rsp.result of
+    Just (Idfy.CRCResult resSrcOp) -> do
+      logInfo $ "IdfyWebhook.onVerify: CRC result -> storing court record for driverId(group_id)=" <> rsp.group_id
+      CourtRecordCheck.onVerifyCRC (Id rsp.group_id) resSrcOp.source_output
       return Ack
-    else do
-      mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
-      logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
-      ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
-      logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
-      void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
-      return ack_
+    _
+      | rsp._type == "ind_court_record" -> do
+        -- Failed CRC (no CRCResult) has no idfy_verification row; record on driver_identity_info instead of throwing.
+        logWarning $ "IdfyWebhook.onVerify: CRC callback without result for driverId(group_id)=" <> rsp.group_id <> " status=" <> rsp.status
+        CourtRecordCheck.onVerifyCRCError (Id rsp.group_id) ("Idfy CRC failed: status=" <> rsp.status)
+        return Ack
+      | otherwise -> do
+        verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError $ "Verification request not found for requestId=" <> rsp.request_id)
+        person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+        logInfo $
+          "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
+            <> " driverId="
+            <> verificationReq.driverId.getId
+            <> " docType="
+            <> verificationReq.docType
+            <> " status="
+            <> verificationReq.status
+        IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
+        let resultStatus = getResultStatus rsp.result
+        logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
+        if resultStatus == Just "source_down"
+          then do
+            logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
+            handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+            return Ack
+          else do
+            mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
+            logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
+            ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
+            logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
+            void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+            return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text
     getResultStatus mbResult =
@@ -193,12 +220,13 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
         Just (Idfy.UdyamAadhaarResult (Idfy.SourceOutput o)) -> o.status
         Just (Idfy.RCResult (Idfy.ExtractionOutput o)) -> o.status
         _ -> Nothing
-    verifyDocument person verificationReq rslt mbRemPriorityList =
+    verifyDocument person verificationReq rslt mbRemPriorityList = do
+      verificationReqRecord <- fromMaybeM (InternalError $ "Non-document idfy_verification row routed to webhook, requestId=" <> verificationReq.requestId <> ", docType=" <> verificationReq.docType) (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
       case rslt of
         Idfy.RCResult resExtOp ->
           RC.onVerifyRC
             person
-            (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq))
+            (Just verificationReqRecord)
             (Idfy.convertRCOutputToRCVerificationResponse resExtOp.extraction_output)
             mbRemPriorityList
             (Just verificationReq.imageExtractionValidation)
@@ -210,12 +238,12 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             Nothing
         Idfy.DLResult resSrcOp ->
           DL.onVerifyDL
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
             VT.Idfy
         Idfy.PanResult resSrcOp ->
           PanCard.onVerifyPan
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertPanOutputToPanVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.GstResult resSrcOp -> do
@@ -226,25 +254,25 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
               <> " sourceOutputStatus="
               <> show (resSrcOp.source_output.status)
           GstCard.onVerifyGst
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.BankAccountResult _ -> pure Ack
         Idfy.PanAadhaarLinkResult resSrcOp ->
           PanCard.onVerifyPanAadhaarLink
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertPanAadhaarLinkOutputToPanAadhaarLinkVerification resSrcOp.source_output)
             VT.Idfy
         Idfy.UdyamAadhaarResult resSrcOp ->
           UdyamCard.onVerifyUdyam
-            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            verificationReqRecord
             (Idfy.convertUdyamAadhaarOutputToUdyamAadhaarVerification resSrcOp.source_output)
             VT.Idfy
         _ -> pure Ack
 
 handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()
 handleIdfySourceDown person retryFunc verificationReq = do
-  unless (verificationReq.docType == DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
+  unless (verificationReq.docType == docTypeToText DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
   mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl -> if mbpl == Just [] then return Nothing else return mbpl
   rcNum <- decrypt verificationReq.documentNumber
   flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
@@ -258,7 +286,7 @@ handleIdfySourceDown person retryFunc verificationReq = do
             Verification.AsyncResp res -> do
               now <- getCurrentTime
               case res.requestor of
-                VT.Idfy -> IVQuery.create =<< RC.mkIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
+                VT.Idfy -> IVQuery.create =<< SLogicOnboarding.mkRCIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
                 VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
                 _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
               CQO.setVerificationPriorityList person.id resp'.remPriorityList

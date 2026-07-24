@@ -28,10 +28,11 @@ import Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PickupInstructions as QPI
 import Tools.Error
@@ -166,7 +167,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   logDebug $ "PickupInstructions: Received POST request - personId: " <> show personId.getId <> ", lat: " <> show req.lat <> ", lon: " <> show req.lon
   logDebug $ "PickupInstructions: Raw instruction field: " <> show req.instruction
@@ -313,7 +314,10 @@ createMediaFileEntry fileUrl filePath = do
         _type = S3.Audio,
         url = fileUrl,
         s3FilePath = Just filePath,
-        createdAt = now
+        status = Just DMF.COMPLETED,
+        fileHash = Nothing,
+        createdAt = now,
+        updatedAt = Just now
       }
 
 getPickupinstructionsClosest ::

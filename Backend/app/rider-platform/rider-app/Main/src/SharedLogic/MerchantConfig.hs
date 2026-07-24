@@ -27,7 +27,10 @@ module SharedLogic.MerchantConfig
     customerAuthBlock,
     blockCustomerByIP,
     updateCustomerAuthCountersByIP,
+    decrementCustomerAuthCountersByIP,
     isIPBlocked,
+    updateCustomerAuthCountersByPhone,
+    checkAuthLimitExceededByPhone,
   )
 where
 
@@ -44,10 +47,11 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.Person as CHP
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
@@ -93,6 +97,12 @@ updateCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCriticalC
   where
     incrementCount ind = SWC.incrementWindowCount (mkAuthCounterKey ind clientIP)
 
+decrementCustomerAuthCountersByIP :: (CacheFlow m r, MonadFlow m) => Text -> [DMC.MerchantConfig] -> m ()
+decrementCustomerAuthCountersByIP clientIP merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+  mapM_ (\mc -> whenJust mc.fraudAuthCountWindow $ \window -> decrementCount mc.id.getId window) merchantConfigs
+  where
+    decrementCount ind = SWC.decrementWindowCount (mkAuthCounterKey ind clientIP)
+
 updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m ()
 updateTotalRidesCounters rider = do
   totalRidesCount <- getTotalRidesCountForEndRide rider
@@ -130,7 +140,7 @@ anyFraudDetected riderId merchantOperatingCityId mSearchReq = checkFraudDetected
 
 checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> Maybe DSR.SearchRequest -> m (Maybe DMC.MerchantConfig)
 checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSearchReq = Redis.withNonCriticalCrossAppRedis $ do
-  useFraudDetection <- maybe False (.useFraudDetection) <$> getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  useFraudDetection <- maybe False (.useFraudDetection) <$> getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId))
   if useFraudDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
     else pure Nothing
@@ -235,3 +245,41 @@ isIPBlocked clientIP = Redis.withNonCriticalCrossAppRedis $ do
       let blockKey = "Customer:IPBlocked:" <> clientIP
       blockResult <- Redis.get blockKey
       return $ isJust (blockResult :: Maybe Text)
+
+-- | Redis key for the phone-number-hashed auth sliding-window counter.
+-- The phone number is passed as a hash (never the raw number) so no PII is stored in Redis.
+mkPhoneAuthCounterKey :: Text -> Text -> Text
+mkPhoneAuthCounterKey windowTag phoneNumberHash = "Customer:PhoneAuthCount:" <> phoneNumberHash <> ":" <> windowTag
+
+-- | Increment both configured phone-number auth sliding windows using the first
+-- merchant config (if any). No-op for a window that is not configured (Nothing).
+updateCustomerAuthCountersByPhone :: (CacheFlow m r, MonadFlow m) => Text -> [DMC.MerchantConfig] -> m ()
+updateCustomerAuthCountersByPhone phoneNumberHash merchantConfigs = Redis.withNonCriticalCrossAppRedis $
+  whenJust (listToMaybe merchantConfigs) $ \mc -> do
+    whenJust mc.authPhoneNumberCountWindow1 $ SWC.incrementWindowCount (mkPhoneAuthCounterKey "W1" phoneNumberHash)
+    whenJust mc.authPhoneNumberCountWindow2 $ SWC.incrementWindowCount (mkPhoneAuthCounterKey "W2" phoneNumberHash)
+
+-- | Returns @Just resetSeconds@ (the tripped window's length in seconds) when the phone
+-- number has already reached a configured sliding-window auth limit; @Nothing@ otherwise.
+-- Only the first merchant config (if any) is consulted.
+-- A window is enforced only when BOTH its threshold and window options are configured.
+checkAuthLimitExceededByPhone :: (CacheFlow m r, MonadFlow m) => [DMC.MerchantConfig] -> Text -> m (Maybe Int)
+checkAuthLimitExceededByPhone merchantConfigs phoneNumberHash = Redis.withNonCriticalCrossAppRedis $
+  case listToMaybe merchantConfigs of
+    Nothing -> pure Nothing
+    Just mc -> do
+      r1 <- windowExceeded "W1" mc.authPhoneNumberCountWindow1 mc.authPhoneNumberCountThreshold1
+      case r1 of
+        Just _ -> pure r1
+        Nothing -> windowExceeded "W2" mc.authPhoneNumberCountWindow2 mc.authPhoneNumberCountThreshold2
+  where
+    windowExceeded windowTag mbWindow mbThreshold =
+      case (mbWindow, mbThreshold) of
+        (Just window, Just threshold) -> do
+          authCount <- SWC.getCurrentWindowCount (mkPhoneAuthCounterKey windowTag phoneNumberHash) window
+          if authCount >= fromIntegral threshold
+            then do
+              logInfo $ "Phone-number auth rate limit hit for window " <> windowTag <> " with count " <> show authCount
+              pure $ Just (fromIntegral window.period * fromIntegral (SWC.convertPeriodTypeToSeconds window.periodType) :: Int)
+            else pure Nothing
+        _ -> pure Nothing

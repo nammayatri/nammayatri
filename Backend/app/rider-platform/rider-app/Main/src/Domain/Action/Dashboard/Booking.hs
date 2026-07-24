@@ -159,7 +159,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
             DRide.CANCELLED -> DBooking.CANCELLED
       unless (bookingNewStatus == booking.status) $ do
         cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) booking.distanceUnit bookingId booking.riderId
-        QBooking.updateStatus bookingId bookingNewStatus
+        QBooking.updateStatus booking.riderId bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
       let updBooking = booking{status = bookingNewStatus}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
@@ -168,7 +168,7 @@ bookingSync merchant merchantOpCityId reqBookingId = do
       void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
     Nothing -> do
       cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCodeWithNoRide Nothing booking.distanceUnit bookingId booking.riderId
-      QBooking.updateStatus bookingId DBooking.CANCELLED
+      QBooking.updateStatus booking.riderId bookingId DBooking.CANCELLED
       QBCR.upsert cancellationReason
       let updBooking = booking{status = DBooking.CANCELLED}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}

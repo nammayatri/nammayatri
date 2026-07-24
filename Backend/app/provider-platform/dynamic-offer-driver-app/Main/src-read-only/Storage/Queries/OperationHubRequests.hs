@@ -45,6 +45,13 @@ findOneByRequestStatusAndRegistrationNo ::
   (Domain.Types.OperationHubRequests.RequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
 findOneByRequestStatusAndRegistrationNo requestStatus registrationNo = do findOneWithKV [Se.And [Se.Is Beam.requestStatus $ Se.Eq requestStatus, Se.Is Beam.registrationNo $ Se.Eq registrationNo]]
 
+updateInspectionResponse ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe [Domain.Types.OperationHubRequests.InspectionResponseItem] -> Kernel.Types.Id.Id Domain.Types.OperationHubRequests.OperationHubRequests -> m ())
+updateInspectionResponse inspectionResponse id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.inspectionResponse (Kernel.Prelude.toJSON <$> inspectionResponse), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusWithDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.OperationHubRequests.RequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.OperationHubRequests.OperationHubRequests -> m ())
@@ -71,6 +78,7 @@ updateByPrimaryKey (Domain.Types.OperationHubRequests.OperationHubRequests {..})
     [ Se.Set Beam.creatorId (Kernel.Types.Id.getId creatorId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.fulfilledAt fulfilledAt,
+      Se.Set Beam.inspectionResponse (Kernel.Prelude.toJSON <$> inspectionResponse),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.operationHubId (Kernel.Types.Id.getId operationHubId),

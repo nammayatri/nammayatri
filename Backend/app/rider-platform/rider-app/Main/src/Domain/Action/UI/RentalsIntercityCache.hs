@@ -21,13 +21,14 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Types.SpecialLocation as LSS
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (RiderError (..))
 
@@ -42,7 +43,7 @@ rentalsIntercityCache personId merchantId req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show person.merchantOperatingCityId)
   checkForServiceable <- SVC.checkServiceability fetchOriginSuccessor (personId, merchantId) req.currentLatLong False False
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let checkForSpecialLocation = isJust checkForServiceable.specialLocation
       specialLocationId = fmap (.id) checkForServiceable.specialLocation
       cityCenterLatLong = Just $ LatLong {lat = merchantOperatingCity.lat, lon = merchantOperatingCity.long}

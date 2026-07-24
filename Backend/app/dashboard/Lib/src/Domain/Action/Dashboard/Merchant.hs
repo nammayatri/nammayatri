@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Merchant where
 
 import Dashboard.Common
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant
@@ -26,6 +27,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
@@ -45,7 +47,6 @@ import Tools.Error
 
 data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq
   { shortId :: Text,
-    is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Text,
@@ -62,7 +63,6 @@ data CreateMerchantWithAdminReq = CreateMerchantWithAdminReq
 
 data CreateMerchantReq = CreateMerchantReq
   { shortId :: Text,
-    is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
     domain :: Text,
@@ -100,11 +100,11 @@ createMerchantWithAdmin tokenInfo req = do
   person <- buildPersonCreateReq req role
   decPerson <- decrypt person
   QP.create person
-  merchant <- buildMerchant CreateMerchantReq {shortId = req.shortId, is2faMandatory = req.is2faMandatory, defaultOperatingCity = req.defaultOperatingCity, supportedOperatingCities = req.supportedOperatingCities, domain = req.domain, website = req.website}
+  merchant <- buildMerchant CreateMerchantReq {shortId = req.shortId, defaultOperatingCity = req.defaultOperatingCity, supportedOperatingCities = req.supportedOperatingCities, domain = req.domain, website = req.website}
   QMerchant.create merchant
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
-  pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}])
+  pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) Nothing Nothing
 
 createMerchant ::
   (BeamFlow m r, EncFlow m r) =>
@@ -134,7 +134,6 @@ buildMerchant req = do
       { id = uid,
         shortId = ShortId req.shortId :: ShortId DMerchant.Merchant,
         serverNames = [],
-        is2faMandatory = req.is2faMandatory,
         defaultOperatingCity = req.defaultOperatingCity,
         supportedOperatingCities = req.supportedOperatingCities,
         domain = Just req.domain,
@@ -147,14 +146,7 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
-        trackLoginLogoutForRoles = [],
-        twoFactorMandatoryForRoles = [],
-        twoFaOtpTTLInSecs = Nothing,
-        twoFaMaxOtpVerifyAttempts = Nothing,
-        totpStepSize = Nothing,
-        totpClockSkew = Nothing,
-        emailOtpTTLInSecs = Nothing,
-        emailMaxOtpVerifyAttempts = Nothing
+        trackLoginLogoutForRoles = []
       }
 
 changeMerchantEnableState ::
@@ -202,7 +194,7 @@ listMerchants _ mbLimit mbOffset mbShortId = do
   pure ListMerchantResp {list = list, summary = Summary {totalCount = 10000, count = length list}}
 
 createUserForMerchant ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  (BeamFlow m r, EncFlow m r, CoreMetrics m, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int], HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   DPerson.CreatePersonReq ->
   m DPerson.CreatePersonRes
@@ -243,5 +235,9 @@ buildPersonCreateReq req role = do
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
         rejectedBy = Nothing,
-        language = Nothing
+        language = Nothing,
+        secretKey = Nothing,
+        is2faEnabled = False,
+        tokenNoHash = Nothing,
+        entityId = Nothing
       }

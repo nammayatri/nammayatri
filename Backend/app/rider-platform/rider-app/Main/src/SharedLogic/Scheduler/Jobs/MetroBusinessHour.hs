@@ -12,12 +12,12 @@ import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRCR
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 
 updateMetroBusinessHour ::
   ( EsqDBFlow m r,
@@ -38,7 +38,7 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let tomorrow = Time.addDays 1 (Time.utctDay now)
 
   -- Get rider config first to access timeDiffFromUtc
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (QRCR.findByMerchantOperatingCityId merchantOpCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig -- Default to IST (UTC+5:30)
       tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes

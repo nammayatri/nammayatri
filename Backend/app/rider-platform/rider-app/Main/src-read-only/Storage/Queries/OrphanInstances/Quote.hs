@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Version
 import qualified SharedLogic.Type
 import qualified Storage.Beam.Quote as Beam
-import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
 instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
@@ -25,7 +24,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
-    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId merchantId
+    merchantOperatingCityId' <- Storage.Queries.Transformers.Quote.backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     quoteBreakupList' <- Storage.Queries.Transformers.Quote.loadQuoteBreakupList quoteBreakupListJson id
     quoteDetails' <- Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
@@ -33,7 +32,8 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     pure $
       Just
         Domain.Types.Quote.Quote
-          { backendAppVersion = backendAppVersion,
+          { area = area,
+            backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             clientBundleVersion = clientBundleVersion',
@@ -46,6 +46,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             estimatedFare = Kernel.Types.Common.mkPrice currency estimatedFare,
             estimatedPickupDuration = estimatedPickupDuration,
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
+            fareSettlementType = fareSettlementType,
             id = Kernel.Types.Id.Id id,
             isAirConditioned = isAirConditioned,
             isBlockedRoute = isBlockedRoute,
@@ -54,6 +55,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             itemId = itemId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
+            navigationInstruction = navigationInstruction,
             providerId = providerId,
             providerUrl = providerUrl',
             quoteBreakupList = quoteBreakupList',
@@ -65,12 +67,13 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             specialLocationName = specialLocationName,
             specialLocationSupportNumber = specialLocationSupportNumber,
             specialLocationTag = specialLocationTag,
-            tollChargesInfo = mkTollChargesInfo tollCharges tollNames currency,
+            tollChargesInfo = Storage.Queries.Transformers.Quote.mkTollChargesInfo tollCharges tollNames currency,
             tripCategory = tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
             vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+            vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
           }
@@ -78,7 +81,8 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
 instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
   toTType' (Domain.Types.Quote.Quote {..}) = do
     Beam.QuoteT
-      { Beam.backendAppVersion = backendAppVersion,
+      { Beam.area = area,
+        Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
@@ -103,6 +107,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.estimatedFare = (.amount) estimatedFare,
         Beam.estimatedPickupDuration = estimatedPickupDuration,
         Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
+        Beam.fareSettlementType = fareSettlementType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isBlockedRoute = isBlockedRoute,
@@ -111,6 +116,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.itemId = itemId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.navigationInstruction = navigationInstruction,
         Beam.providerId = providerId,
         Beam.providerUrl = Kernel.Prelude.showBaseUrl providerUrl,
         Beam.quoteBreakupListJson = Storage.Queries.Transformers.Quote.encodeQuoteBreakupList quoteBreakupList,
@@ -128,6 +134,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.validTill = validTill,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
+        Beam.vehicleServiceTierLuggageCapacity = vehicleServiceTierLuggageCapacity,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType
       }

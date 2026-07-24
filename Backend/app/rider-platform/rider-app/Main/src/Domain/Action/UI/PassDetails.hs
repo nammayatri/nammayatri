@@ -56,12 +56,13 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.TryException (withTryCatch)
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import qualified Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import qualified Storage.Queries.PassDetails as QPassDetails
@@ -182,7 +183,7 @@ computeValidTill ::
   Id.Id DMOC.MerchantOperatingCity ->
   Environment.Flow Data.Time.UTCTime
 computeValidTill now moid = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) (Just (CQRC.findByMerchantOperatingCityId moid)) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
   let durationDays = maybe 365 (.validityDurationDays) riderConfig.studentPassVerifyConfig
   pure $ Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
 
@@ -228,7 +229,7 @@ processRouteDetails moid routeDetails = do
   case Kernel.Prelude.listToMaybe integratedBPPConfigs of
     Nothing -> pure (Nothing, [], Nothing)
     Just integratedBPPConfig -> do
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) (Just (CQRC.findByMerchantOperatingCityId moid)) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
       (allRouteIds, allRoutePairs, totalStages) <- foldM (processOneRouteDetail riderConfig integratedBPPConfig) ([], [], 0) dedupedRouteDetails
       pure (Just (L.nub allRouteIds), allRoutePairs, Just totalStages)
 
@@ -518,7 +519,10 @@ postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
         _type = s3FileType,
         url = fileUrl,
         s3FilePath = Just s3FilePath,
-        createdAt = now
+        status = Just DMF.COMPLETED,
+        fileHash = Nothing,
+        createdAt = now,
+        updatedAt = Just now
       }
   pure $ PassDetailsAPI.UploadDocumentResp {documentId}
 

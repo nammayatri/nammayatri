@@ -22,6 +22,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as BeamMOC
 import Kernel.Types.HideSecrets (HideSecrets (..))
 import qualified "lib-dashboard" Storage.Beam.AccessMatrix as BeamAM
+import qualified "lib-dashboard" Storage.Beam.Entity as BeamE
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
 import qualified "lib-dashboard" Storage.Beam.Person as BeamP
@@ -30,6 +31,9 @@ import qualified "lib-dashboard" Storage.Beam.Role as BeamR
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
 
 instance HasSchemaName BeamAM.AccessMatrixT where
+  schemaName _ = T.pack "atlas_bap_dashboard"
+
+instance HasSchemaName BeamE.EntityT where
   schemaName _ = T.pack "atlas_bap_dashboard"
 
 instance HasSchemaName BeamM.MerchantT where

@@ -31,6 +31,7 @@ module SharedLogic.FareCalculator
     countFullFareOfParamsDetails,
     calculateFareParameters,
     calculateCommission,
+    calculateCancellationCommission,
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
@@ -73,11 +74,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfo as DGI
 import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | Full quotation.breakup for a 'FareParameters': display tags followed by
 --   the canonical eight-tag summary. Callers who want finer control can
@@ -1074,7 +1077,7 @@ calculateFareParameters params = do
   -- Check if V2 features are enabled via TransporterConfig
   isV2Enabled <- case params.merchantOperatingCityId of
     Just merchantOpCityId -> do
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       let v2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) transporterConfig
       logDebug $ "FareCalculator: TransporterConfig for merchantOpCityId " <> merchantOpCityId.getId <> " - enableFareCalculatorV2: " <> show (transporterConfig >>= (.enableFareCalculatorV2)) <> ", V2 enabled: " <> show v2Enabled
       pure v2Enabled
@@ -1213,7 +1216,7 @@ applyAirportEntryFee ::
 applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, params.pickupGateId) of
   (Just merchantOperatingCityId, Just gateIdText) -> do
     transporterConfig <-
-      SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
         >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     if not (fromMaybe False transporterConfig.airportEntryFeeEnabled)
       then pure fareParams
@@ -1396,6 +1399,24 @@ calculateCommission fareParams mbFarePolicy = do
       case farePolicy.commissionChargeConfig of
         Just config -> do
           commAmount <- computeConfiguredCharge "commissionCharge" componentMap (Just config)
+          pure $ if commAmount > 0 then Just commAmount else Nothing
+        Nothing -> pure Nothing
+
+-- | Commission on the CustomerCancellationChargeComponent alone — a past cancellation due folded
+--   into this ride's fare — at its own configured rate. GROSS (ALV-inclusive); split at emission.
+--   Config invariant: the component must appear in exactly one of the two commission configs —
+--   keep it out of commissionChargeConfig.appliesOn or the due is commissioned twice.
+--   Controlled entirely by the (Maybe) cancellationCommissionChargeConfig on the fare policy:
+--   absent config => Nothing, so estimate, payout, stored values and the ledger booking stay consistent.
+calculateCancellationCommission :: MonadFlow m => FareParameters -> Maybe FullFarePolicy -> m (Maybe HighPrecMoney)
+calculateCancellationCommission fareParams mbFarePolicy = do
+  case mbFarePolicy of
+    Nothing -> pure Nothing
+    Just farePolicy -> do
+      let componentMap = buildComponentMap fareParams
+      case farePolicy.cancellationCommissionChargeConfig of
+        Just config -> do
+          commAmount <- computeConfiguredCharge "cancellationCommissionCharge" componentMap (Just config)
           pure $ if commAmount > 0 then Just commAmount else Nothing
         Nothing -> pure Nothing
 

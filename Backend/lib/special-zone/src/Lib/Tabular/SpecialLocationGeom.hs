@@ -27,6 +27,8 @@ deriving instance Read Domain.GatesInfo
 derivePersistField "Domain.GatesInfo"
 derivePersistField "Domain.SpecialLocationType"
 derivePersistField "Domain.RenderType"
+derivePersistField "Domain.PaymentMode"
+derivePersistField "Domain.FareSettlementType"
 
 mkPersist
   defaultSqlSettings
@@ -43,12 +45,15 @@ mkPersist
       geom Text Maybe
       geomGeoJson Text Maybe
       render Domain.RenderType Maybe
+      fetchAllGateFareProduct Bool Maybe
       priority Int
       enabled Bool
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
       enforceTollRoute Bool Maybe
       supportNumber Text Maybe
+      paymentModes (PostgresList Domain.PaymentMode) Maybe
+      fareSettlementType Domain.FareSettlementType Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -61,6 +66,7 @@ instance ToTType SpecialLocationGeomT Domain.SpecialLocation where
       { id = getId id,
         gates = PostgresList gates,
         linkedLocationsIds = PostgresList $ map (.getId) linkedLocationsIds,
+        paymentModes = PostgresList <$> paymentModes,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         merchantId = getId <$> merchantId,
         isOpenMarketEnabled = Just isOpenMarketEnabled,

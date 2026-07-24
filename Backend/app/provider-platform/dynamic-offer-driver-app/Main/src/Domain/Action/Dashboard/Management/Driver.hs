@@ -66,6 +66,12 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateRCInvalidStatusByRCNumber,
     getDriverAirportPreference,
     postDriverAirportPreference,
+    getDriverSearchRequestStats,
+    getDriverIdentityInfo,
+    postDriverIdentityInfoUpdate,
+    postDriverAssociationChange,
+    castToCommon,
+    castFromCommon,
   )
 where
 
@@ -85,12 +91,14 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Common as DCommon
+import Domain.Action.Dashboard.Common.AddressDocumentType (castFromCommon, castToCommon)
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.Common as DI
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -117,12 +125,14 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -130,6 +140,9 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
+import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociation, checkFleetDriverAssociation, checkFleetOperatorAssociation, isAssociationBetweenTwoPerson)
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -141,24 +154,25 @@ import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DriverBlockTransactions as QDBT
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
-import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverProfileQuestions as QDriverProfileQuestions
 import qualified Storage.Queries.DriverRCAssociation as QDriverRCAssociation
 import qualified Storage.Queries.DriverReferral as QDriverReferral
-import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
-import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeSdkLogs as QHyperVergeSdkLogs
 import qualified Storage.Queries.HyperVergeVerification as QHyperVergeVerification
@@ -171,6 +185,7 @@ import Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Status as QDocStatus
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Auth as Auth
 import Tools.Error
 
@@ -179,7 +194,7 @@ getDriverDocumentsInfo merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let onboardingTryLimit = transporterConfig.onboardingTryLimit
   drivers <- B.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant merchantOpCity Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
@@ -343,7 +358,7 @@ postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> 
 postDriverDisable merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -371,7 +386,7 @@ postDriverAcRestrictionUpdate merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
   checkAndUpdateAirConditioned True req.isWorking personId merchantOpCityId cityVehicleServiceTiers req.downgradeReason True
   logTagInfo "dashboard -> updateACUsageRestriction : " (show personId)
   pure Success
@@ -517,7 +532,7 @@ postDriverUnlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver ->
 postDriverUnlinkDL merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -535,7 +550,7 @@ postDriverUnlinkAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driv
 postDriverUnlinkAadhaar merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -776,7 +791,7 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity driverId req = do
     (Nothing, Just _) -> do
       void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId vehicleCategory
     (Just dp, Nothing) -> do
-      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let enableServiceUsageCharge = dp.enableServiceUsageCharge
       when (enableServiceUsageCharge /= req.serviceChargeEligibility) $ do
         QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName req.serviceChargeEligibility personId serviceName
@@ -800,7 +815,7 @@ toggleDriverSubscriptionByService ::
   Flow ()
 toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle mbVehicleNo mbVehicleCategory = do
   (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
-  transporterConfig <- CTC.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId mOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if toToggle
     then do
       planToAssign <- getPlanId mbPlanToAssign
@@ -863,9 +878,12 @@ postDriverUpdateVehicleVariant _merchantShortId _opCity _ req = do
 
 updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
 updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
+  -- Compute service tiers against the NEW variant: callers pass the vehicle read before the
+  -- variant change is persisted, so override it in-memory before fetching eligible tiers.
+  let updatedVehicle = vehicle {DVeh.variant = variant} :: DVeh.Vehicle
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
-  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId (Just []) Nothing
-  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just vehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
+  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction AutoSelectedVariants Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> serviceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
@@ -913,8 +931,8 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
   pure Success
 
 ---------------------------------------------------------------------
-postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
-postDriverClearFee _merchantShortId _opCity driverId req = do
+postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
+postDriverClearFee _merchantShortId _opCity mbRequestorId driverId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1078,8 +1096,8 @@ postDriverUpdateVehicleManufacturing merchantShortId opCity reqDriverId Common.U
   pure Success
 
 ---------------------------------------------------------------------
-postDriverRefundByPayout :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RefundByPayoutReq -> Flow APISuccess
-postDriverRefundByPayout merchantShortId _opCity driverId req = do
+postDriverRefundByPayout :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Common.RefundByPayoutReq -> Flow APISuccess
+postDriverRefundByPayout merchantShortId _opCity driverId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Id @DP.Person) <$> mbRequestorId) $ do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -1227,47 +1245,6 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
 
   let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestorId) mbEntityId
   DDriver.findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
-
-isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
-isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
-  case (requestedPersonDetails.role, personDetails.role) of
-    (DP.OPERATOR, DP.DRIVER) -> checkFleetDriverAndDriverOperatorAssociation personDetails.id requestedPersonDetails.id
-    (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
-    (DP.OPERATOR, DP.FLEET_BUSINESS) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
-    (DP.OPERATOR, DP.OPERATOR) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
-    (DP.FLEET_OWNER, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.FLEET_OWNER, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
-    (DP.FLEET_BUSINESS, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.FLEET_BUSINESS, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.ADMIN, _) -> return True
-    _ -> return False
-
-checkFleetDriverAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
-checkFleetDriverAssociation fleetId driverId = do
-  mbAssoc <- QFleetDriver.findByDriverIdAndFleetOwnerId driverId fleetId.getId True
-  return $ isJust mbAssoc
-
-checkFleetOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
-checkFleetOperatorAssociation fleetId operatorId = do
-  mbAssoc <- QFleetOperator.findByFleetIdAndOperatorId fleetId.getId operatorId.getId True
-  return $ isJust mbAssoc
-
-checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
-checkDriverOperatorAssociation driverId operatorId = do
-  mbAssoc <- QDriverOperator.findByDriverIdAndOperatorId driverId operatorId True
-  return $ isJust mbAssoc
-
-checkFleetDriverAndDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
-checkFleetDriverAndDriverOperatorAssociation driverId operatorId = do
-  isDriverOperatorAssociated <- checkDriverOperatorAssociation driverId operatorId
-  if isDriverOperatorAssociated
-    then return True
-    else do
-      QFleetDriver.findByDriverId driverId True >>= \case
-        Just fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
-        Nothing -> return False
 
 getDriverEarnings :: ShortId DM.Merchant -> Context.City -> Day -> Day -> Common.EarningType -> Id Common.Driver -> Text -> Flow Common.EarningPeriodStatsRes
 getDriverEarnings merchantShortId opCity from to earningType dId requestorId = do
@@ -1438,7 +1415,7 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   forM_ req.selected_service_tiers $ \serviceTier -> do
-    CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
+    CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   let currentTiers = vehicle.selectedServiceTiers
       newTiers = nub $ currentTiers ++ req.selected_service_tiers
@@ -1503,11 +1480,47 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
         Just tier -> Right tier
         Nothing -> Left $ "Invalid service tier: " <> tierText
 
-getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.AirportPreferenceRes
-getDriverAirportPreference _merchantShortId _opCity driverId = do
-  let personId = cast @Common.Driver @DP.Person driverId
-  driverInfo <- B.runInReplica $ QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-  pure Common.AirportPreferenceRes {canSwitchToAirport = Just driverInfo.canSwitchToAirport}
+getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.AirportPreferenceRes
+getDriverAirportPreference merchantShortId _opCity mbPhoneNumber mbVehicleNumber mbSpecialZoneId = do
+  merchant <- findMerchantByShortId merchantShortId
+  driver <- case (mbPhoneNumber, mbVehicleNumber) of
+    (Just phoneNumber, _) -> do
+      mobileNumberHash <- getDbHash phoneNumber
+      QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+    (_, Just vehicleNumber) -> do
+      vehicle <- QVehicle.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      unless (vehicle.merchantId == merchant.id) $ throwError (VehicleDoesNotExist vehicleNumber)
+      QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
+    _ -> throwError $ InvalidRequest "Either phoneNumber or vehicleNumber must be provided"
+  driverInfo <- B.runInReplica $ QDriverInfo.findById driver.id >>= fromMaybeM DriverInfoNotFound
+  now <- getCurrentTime
+  effectiveRestriction <- QDriverInfo.resolveAirportRestriction now driverInfo
+  let effBlockExpiry = if effectiveRestriction == DrInfo.BLOCKED then driverInfo.airportBlockExpiryTime else Nothing
+  blockHistory <- forM mbSpecialZoneId $ \specialZoneId -> do
+    history <- QDBT.findByDriverIdAndSpecialZoneId (cast driver.id) (Just specialZoneId)
+    pure $ map toHistoryItem $ sortOn (Down . (\h -> h.reportedAt)) history
+  pure
+    Common.AirportPreferenceRes
+      { driverId = cast driver.id,
+        driverName = driver.firstName <> maybe "" (" " <>) driver.lastName,
+        enableForAirport = castAirportRestrictionToCommon effectiveRestriction,
+        blockExpiryTime = effBlockExpiry,
+        blockHistory = blockHistory
+      }
+  where
+    castAirportRestrictionToCommon :: DrInfo.AirportRestrictionType -> Common.AirportRestrictionType
+    castAirportRestrictionToCommon DrInfo.ENABLED = Common.ENABLED
+    castAirportRestrictionToCommon DrInfo.DISABLED = Common.DISABLED
+    castAirportRestrictionToCommon DrInfo.BLOCKED = Common.BLOCKED
+    toHistoryItem :: DTDBT.DriverBlockTransactions -> Common.AirportBlockHistoryItem
+    toHistoryItem h =
+      Common.AirportBlockHistoryItem
+        { blockReason = h.blockReason,
+          blockLiftTime = h.blockLiftTime,
+          blockedBy = h.requestorId,
+          actionType = show <$> h.actionType,
+          reportedAt = h.reportedAt
+        }
 
 postDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AirportPreferenceReq -> Flow APISuccess
 postDriverAirportPreference merchantShortId opCity driverId req = do
@@ -1516,12 +1529,146 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  QDriverInfo.updateAirportSwitch req.canSwitchToAirport personId
   now <- getCurrentTime
-  let airportDisabledTag = Yudhishthira.addTagExpiry (Yudhishthira.mkTagNameValue (LYT.TagName "AirportRides") (LYT.TextValue "Disabled")) Nothing now
+  when (req.enableForAirport == Common.BLOCKED) $ do
+    driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+    effective <- QDriverInfo.resolveAirportRestriction now driverInfo
+    when (effective == DrInfo.BLOCKED) $ throwError DriverAirportAlreadyBlocked
+  let airportLogInfo =
+        QDriverInfo.AirportBlockLogInfo
+          { blockedBy = DTDBT.Dashboard,
+            reason = if req.enableForAirport == Common.BLOCKED then req.blockReason else Just "MANUAL_UNBLOCK",
+            specialZoneId = req.specialZoneId,
+            requestorId = req.requestorId,
+            merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId
+          }
+  QDriverInfo.updateAirportSwitch (castAirportRestrictionToDomain req.enableForAirport) req.blockExpiryTime (Just airportLogInfo) personId
+  when (req.enableForAirport == Common.BLOCKED) $
+    whenJust req.blockExpiryTime $ \expiry ->
+      JC.createJobIn @_ @'UnblockAirportDriver (Just merchant.id) (Just merchantOpCityId) (diffUTCTime expiry now) $
+        UnblockAirportDriverRequestJobData {driverId = cast personId, specialZoneId = req.specialZoneId}
+  let mbAirportBlockValidityHours = req.blockExpiryTime <&> \expiry -> Hours (floor (diffUTCTime expiry now / 3600))
+  let airportDisabledTag = Yudhishthira.addTagExpiry (Yudhishthira.mkTagNameValue (LYT.TagName "AirportRides") (LYT.TextValue "Disabled")) mbAirportBlockValidityHours now
   let withoutTag = Yudhishthira.removeTagNameValue driver.driverTag airportDisabledTag
-  let updatedTags = if req.canSwitchToAirport then withoutTag else withoutTag <> [airportDisabledTag]
+  let updatedTags = if req.enableForAirport == Common.ENABLED then withoutTag else withoutTag <> [airportDisabledTag]
   unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
     QPerson.updateDriverTag (Just updatedTags) personId
   logTagInfo "dashboard -> updateAirportPreference : " (show personId)
+  pure Success
+  where
+    castAirportRestrictionToDomain :: Common.AirportRestrictionType -> DrInfo.AirportRestrictionType
+    castAirportRestrictionToDomain Common.ENABLED = DrInfo.ENABLED
+    castAirportRestrictionToDomain Common.DISABLED = DrInfo.DISABLED
+    castAirportRestrictionToDomain Common.BLOCKED = DrInfo.BLOCKED
+
+---------------------------------------------------------------------
+getDriverSearchRequestStats :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Day -> Maybe Day -> Flow Common.DriverSearchRequestStatsRes
+getDriverSearchRequestStats merchantShortId opCity driverId mbFromDate mbToDate = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  now <- getCurrentTime
+  let today = utctDay now
+      maxWindowDays = 30
+      defaultFromDay = addDays (negate maxWindowDays) today
+      fromDay = fromMaybe defaultFromDay mbFromDate
+      toDay = fromMaybe today mbToDate
+  when (toDay < fromDay) $
+    throwError $ InvalidRequest "toDate must be >= fromDate"
+  when (diffDays toDay fromDay > maxWindowDays) $
+    throwError $ InvalidRequest ("Date range cannot exceed " <> show maxWindowDays <> " days")
+  let from = UTCTime fromDay 0
+      to = UTCTime (addDays 1 toDay) 0
+  rows <- CHSearchRequestForDriver.findSearchRequestStatsByDay personId from to
+  pure $ Common.DriverSearchRequestStatsRes {stats = map toStats rows}
+  where
+    toStats (day, mbResp, cnt) =
+      Common.DriverSearchRequestDailyStats
+        { day = day,
+          response = castResponse <$> mbResp,
+          count = cnt
+        }
+    castResponse :: DI.SearchRequestForDriverResponse -> Common.SearchRequestForDriverResponse
+    castResponse DI.Accept = Common.Accept
+    castResponse DI.Reject = Common.Reject
+    castResponse DI.Pulled = Common.Pulled
+
+getDriverIdentityInfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.Driver ->
+  Text ->
+  Flow Common.DriverIdentityInfoRes
+getDriverIdentityInfo merchantShortId _opCity driverId requestorId = do
+  _ <- findMerchantByShortId merchantShortId
+  let personId = cast driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbRequestor <- QPerson.findById (Id requestorId)
+  whenJust mbRequestor $ \requestor -> do
+    isValid <- isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError AccessDenied
+  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+  mbIdentityInfo <- QDII.findByDriverId personId
+  let info = DIInfo.getIdentityInfo mbIdentityInfo driverInfo
+  pure
+    Common.DriverIdentityInfoRes
+      { driverId = driverId,
+        nomineeName = info.nomineeName,
+        nomineeRelationship = info.nomineeRelationship,
+        nomineeDob = info.nomineeDob,
+        address = info.address,
+        addressDocumentType = castToCommon <$> info.addressDocumentType,
+        addressState = info.addressState
+      }
+
+postDriverIdentityInfoUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.Driver ->
+  Text ->
+  Common.UpdateDriverIdentityInfoReq ->
+  Flow APISuccess
+postDriverIdentityInfoUpdate merchantShortId opCity driverId requestorId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbRequestor <- QPerson.findById (Id requestorId)
+  whenJust mbRequestor $ \requestor -> do
+    isValid <- isAssociationBetweenTwoPerson requestor driver
+    unless isValid $ throwError AccessDenied
+  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+  Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
+    mbExisting <- QDII.findByDriverId personId
+    void $
+      DIInfo.upsertDriverIdentityInfo
+        mbExisting
+        personId
+        merchant.id
+        merchantOpCityId
+        driverInfo
+        req.nomineeName
+        req.nomineeRelationship
+        req.nomineeDob
+        req.address
+        (castFromCommon <$> req.addressDocumentType)
+        req.addressState
+  pure Success
+
+postDriverAssociationChange :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.ChangeAssociationReq -> Flow APISuccess
+postDriverAssociationChange merchantShortId opCity requestorId subjectId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  case req.changeType of
+    Common.ChangeFleetDriver -> throwError (InvalidRequest "ChangeFleetDriver is not supported via this API; use the fleet driver removal API instead")
+    _ -> do
+      operatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
+      let changeType = case req.changeType of
+            Common.ChangeFleetOperator -> SA.ChangeFleetOperator
+            _ -> SA.ChangeDriverOperator
+      SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
   pure Success

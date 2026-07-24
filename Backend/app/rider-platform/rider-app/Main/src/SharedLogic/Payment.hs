@@ -41,6 +41,8 @@ import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -63,10 +65,11 @@ import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -105,7 +108,7 @@ getLoyaltyInfo ::
 getLoyaltyInfo customerId merchantId merchantOperatingCityId = do
   resp <- LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId
   mbProgramMap <- TPayment.loadLoyaltyProgramMap merchantId merchantOperatingCityId
-  let resolveProgramType pid = T.pack . show <$> (Map.lookup pid =<< mbProgramMap)
+  let resolveProgramType pid = T.pack . show . fst <$> (Map.lookup pid =<< mbProgramMap)
   pure $ map (WalletSummary.toLoyaltyProgramSummary resolveProgramType) (fromMaybe [] resp.programs)
 
 -- | Type alias for fulfillment status handler function
@@ -153,7 +156,8 @@ orderStatusHandler ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FulfillmentStatusHandler m ->
@@ -194,7 +198,8 @@ orderStatusHandlerWithRefunds ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   FulfillmentStatusHandler m ->
   DOrder.PaymentServiceType ->
@@ -260,7 +265,18 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               DPayment.FulfillmentPending -> do
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentSucceeded -> TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentSucceeded -> do
+                -- FRFS shuttle bookings get a dedicated shuttle-only reassurance (push + opt-in WhatsApp),
+                -- gated on RiderConfig.busTrackingNotificationTiers. The status handler's domain entity id is
+                -- the journeyId (not a booking id), so resolve the booking(s) from the payment order and
+                -- notify per booking. handledByShuttle = True if any shuttle booking was notified, so the
+                -- generic FULFILLMENT_SUCCESS push still fires for everything else.
+                bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
+                handledByShuttle <-
+                  fmap or $
+                    mapM (\bp -> TNotifications.notifyShuttleBookingConfirmed personId bp.frfsTicketBookingId) bookingPayments
+                unless handledByShuttle $
+                  TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_SUCCESS paymentOrder.id personId paymentService
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
@@ -268,7 +284,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
             fork "Invalidate Offer List Cache" $ do
               person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
               let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
-              invalidateOfferListCache person merchantOperatingCityId paymentService (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+              invalidateOfferListCache person merchantOperatingCityId (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
             fork "increment rider spend" $
               Redis.runInMasterCloudRedisCellWithCrossAppRedis $
                 SWC.incrementByValue
@@ -337,7 +353,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
       case paymentStatusResponse.status of
         Payment.CHARGED -> do
           purchasedPassPayment <- QPurchasedPassPayment.findByPrimaryKey (Id transactionId) >>= fromMaybeM (InvalidRequest $ "Purchase pass payment not found for id: " <> transactionId)
-          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId, merchantId = purchasedPassPayment.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS)}) >>= fromMaybeM (InternalError "Beckn Config not found")
+          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = purchasedPassPayment.merchantOperatingCityId.getId, merchantId = purchasedPassPayment.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback purchasedPassPayment.merchantOperatingCityId purchasedPassPayment.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.BUS))) >>= fromMaybeM (InternalError "Beckn Config not found")
           mkPassReconEntry bapConfig purchasedPassPayment
         _ -> return ()
       where
@@ -467,6 +483,14 @@ refundStatusHandler paymentOrder paymentServiceType = do
           QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundFailed paymentOrder.id
           when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
             QPurchasedPass.updateStatusById DPurchasedPass.RefundFailed purchasedPass.id
+        Payment.REFUND_PENDING -> do
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrder.id
+          when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+            QPurchasedPass.updateStatusById DPurchasedPass.RefundPending purchasedPass.id
+        Payment.MANUAL_REVIEW -> do
+          QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundInitiated paymentOrder.id
+          when (purchasedPass.status == DPurchasedPass.Pending && purchasedPass.startDate == purchasedPassPayment.startDate && purchasedPass.endDate == purchasedPassPayment.endDate) $ do
+            QPurchasedPass.updateStatusById DPurchasedPass.RefundInitiated purchasedPass.id
         _ ->
           case refund.isApiCallSuccess of
             Nothing -> do
@@ -508,7 +532,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     EncFlow m r,
@@ -533,7 +557,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
     processRefund ::
       ( EsqDBFlow m r,
         CacheFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
         EncFlow m r,
@@ -546,7 +570,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       m ()
     processRefund person paymentOrder paymentServiceType = do
       let merchantOperatingCityId = fromMaybe person.merchantOperatingCityId (cast <$> paymentOrder.merchantOperatingCityId)
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
       mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId refundsOrderCall
@@ -578,7 +602,8 @@ markRefundPendingAndSyncOrderStatus ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id Person.Person ->
@@ -626,7 +651,8 @@ syncOrderStatus ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   FulfillmentStatusHandler m ->
   Id Merchant.Merchant ->
@@ -752,8 +778,11 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
               r.clampedDiscount
               cashback
               r.rideVatAbsorbedOnDiscount
-              0 -- cancellationCharge (not applicable for normal ride)
-              0 -- cancellationTax
+              -- A cancelled ride's own fee arrives as a base+tax pair. A due carried into a LATER
+              -- ride's fare arrives gross in the tax-exclusive slot with cancellationTax = 0, since
+              -- the BPP tracks such dues as one running total.
+              breakupPostDiscount.cancellationFeeTaxExclusive
+              breakupPostDiscount.cancellationTax
               ctx
       pure (Just info)
   where
@@ -792,6 +821,14 @@ getOrderIdForRide rideId = do
   mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
   pure $ (.id) <$> mbOrder
 
+-- | Inverse of getOrderIdForRide: a refund_request's orderId is a payment_order id, NOT a ride id.
+--   payment_order.id is an independently generated GUID; the rideId lives on the order's
+--   domainEntityId — never cast the order GUID to a ride GUID.
+getRideIdForOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DOrder.PaymentOrder -> m (Maybe (Id Ride.Ride))
+getRideIdForOrder orderId = do
+  mbOrder <- QPaymentOrder.findById orderId
+  pure $ Id <$> ((.domainEntityId) =<< mbOrder)
+
 -- | Retrieve ALL payment orders for a ride (ride PI + tip PI).
 --   Useful for capture, refund, and status operations that need to act on all orders.
 getAllOrdersForRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride.Ride -> m [DOrder.PaymentOrder]
@@ -809,7 +846,8 @@ type MakePaymentIntentConstraints m r c =
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   )
 
 makePaymentIntent ::
@@ -875,6 +913,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 basket = Nothing,
                 paymentRules = Nothing,
                 webhookUrl = Just nwAddress,
+                udf1 = Nothing,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,
@@ -897,6 +936,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             ledgerInfo.gstAmount
             ledgerInfo.tollFare
             ledgerInfo.tollVatAmount
+            ledgerInfo.parkingCharge
+            ledgerInfo.parkingChargeVat
             ledgerInfo.platformFee
             ledgerInfo.offerDiscountAmount
             ledgerInfo.cashbackPayoutAmount
@@ -912,7 +953,8 @@ cancelPaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -935,7 +977,8 @@ chargePaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -978,6 +1021,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
         case result of
           Right () -> do
             logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason
+            -- markRideInvoicePaid now closes both the Ride and (if any) RideCancellation invoice.
             RidePaymentFinance.markRideInvoicePaid rideId.getId
           Left err -> logError $ "Failed to settle ledger entries for ride " <> rideId.getId <> ": " <> show err
       else do
@@ -989,12 +1033,12 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
 
 -- | Unified refund wrapper. Uses refundPaymentService under the hood.
 makeRefundPayment ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1005,24 +1049,25 @@ makeRefundPayment merchantId merchantOpCityId paymentMode refundReq = do
   let refundCall = TPayment.refundPayment merchantId merchantOpCityId paymentMode Nothing
   DPayment.refundPaymentService refundReq refundCall
 
--- | Unified refund status check. Replaces refreshStripeRefund.
+-- | Refresh status for the given Refunds row. Nothing in mbRefundsId = no attempt yet → no refresh.
 getRefundStatusForOrder ::
-  ( MonadFlow m,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Finance.HasActorInfo m r
   ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id DOrder.PaymentOrder ->
+  Maybe (Id DRefunds.Refunds) ->
   m (Maybe Payment.RefundPaymentResp)
-getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId = do
+getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId mbRefundsId = do
   let getRefundStatusCall = TPayment.getRefundStatus merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.getRefundStatusService orderId commonMerchantOperatingCityId getRefundStatusCall
+  DPayment.getRefundStatusService orderId mbRefundsId commonMerchantOperatingCityId getRefundStatusCall
 
 paymentErrorHandler ::
   ( EncFlow m r,
@@ -1120,7 +1165,7 @@ getDuesForPerson ::
   Person.Person ->
   m APIRidePayment.GetDueAmountResp
 getDuesForPerson person = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let excludedPurposes = fromMaybe [] (riderConfig >>= (.duesExcludedPaymentPurposes))
   mbLatestRideBooking <- QRide.findMostRecentRideForRider person.id
   case mbLatestRideBooking of
@@ -1339,7 +1384,8 @@ capturePendingPaymentIfExists ::
     EncFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Person.Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1383,7 +1429,7 @@ capturePendingPaymentIfExists person merchantOperatingCityId = do
                   throwError $ InvalidRequest "You have pending dues from a previous ride. Please clear your dues before booking a new ride."
 
 zeroEffectivePaymentDueToOffer ::
-  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r) =>
+  (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, FinanceBeamFlow.BeamFlow m r, HasKafkaProducer r, Finance.HasActorInfo m r) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Ride.Ride ->
@@ -1407,13 +1453,15 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
         li.gstAmount
         li.tollFare
         li.tollVatAmount
+        li.parkingCharge
+        li.parkingChargeVat
         li.platformFee
         discountAmount
         li.rideVatAbsorbedOnDiscount
     case result of
       Right _ -> logInfo $ "Created SETTLED ledger for fully discounted ride: " <> rideId.getId
       Left err -> logError $ "Failed to create fully discounted ledger: " <> show err
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId))
     let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
     when enableRideHailingOffers $ do
       mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE

@@ -48,8 +48,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
@@ -60,12 +62,15 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
@@ -103,7 +108,7 @@ initializeRide ::
 initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId = do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
@@ -169,7 +174,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission
+  cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -191,10 +197,12 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 
   if booking.isScheduled
     then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
-    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken EmptyDynamicParam
+    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) EmptyDynamicParam
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
+
+  fork "FleetEngine: create trip on ride assigned" $ FleetEngine.notifyTripCreated booking ride
 
   notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
@@ -220,7 +228,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           ]
 
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
-      rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
+      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent}) (Just (SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions))
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 recomputeRideFinancialsForFareUpdate ::
@@ -233,6 +241,7 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
   newFareParams <- QFP.findById newFareParamsId >>= fromMaybeM (FareParametersNotFound newFareParamsId.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   newCommission <- FC.calculateCommission newFareParams mbFarePolicy
+  newCancellationCommission <- FC.calculateCancellationCommission newFareParams mbFarePolicy
   let currentDiscount = ride.discountAmount
   rawDiscountAmount <-
     if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare
@@ -253,10 +262,10 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
             pure currentDiscount
       else pure currentDiscount
   let newDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
-  QRide.updateCommissionAndDiscount newCommission newDiscount ride.id
+  QRide.updateCommissionAndDiscount newCommission newCancellationCommission newDiscount ride.id
 
 releaseLien ::
-  ( MonadFlow m,
+  ( Finance.HasActorInfo m r,
     CacheFlow m r,
     EsqDBFlow m r,
     MonadCatch m
@@ -269,7 +278,7 @@ releaseLien booking ride = do
     let (counterpartyType, ownerId) = case ride.fleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, ride.driverId.getId)
-    mbTransporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+    mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing))
     let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
         mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
@@ -422,7 +431,7 @@ buildRideDetails ::
 buildRideDetails booking ride driver vehicle = do
   now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea)
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea)
   let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails
@@ -458,8 +467,9 @@ buildRide ::
   Maybe Bool ->
   Maybe (Id Person) ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -560,6 +570,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isPickupOrDestinationEdited = Just False,
         isInsured = booking.isInsured,
         commission = commission,
+        cancellationCommission = cancellationCommission,
         discountAmount = booking.discountAmount,
         driverGpsTurnedOff = Nothing,
         insuredAmount = booking.insuredAmount,
@@ -589,10 +600,10 @@ deactivateExistingQuotes :: Id DTMM.MerchantOperatingCity -> Id Merchant -> Id P
 deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId estimatedFare mbTransporterConfig = do
   driverSearchReqs <- QSRD.findAllActiveBySTId searchTryId SReqD.Active
   QDQ.setInactiveBySTId searchTryId
-  QSRD.setInactiveBySTId searchTryId
+  QSRD.setInactiveBySTId (Just driverSearchReqs) searchTryId.getId
   transporterConfig <- case mbTransporterConfig of
     Just transporterConfig -> pure transporterConfig
-    Nothing -> SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig
   return driverSearchReqs
 

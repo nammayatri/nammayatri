@@ -14,11 +14,13 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data QuoteT f = QuoteT
-  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -43,6 +45,7 @@ data QuoteT f = QuoteT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    fareSettlementType :: B.C f (Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType),
     id :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -51,6 +54,7 @@ data QuoteT f = QuoteT
     itemId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,
     providerUrl :: B.C f Kernel.Prelude.Text,
     quoteBreakupListJson :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
@@ -68,6 +72,7 @@ data QuoteT f = QuoteT
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleServiceTierLuggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f Domain.Types.ServiceTierType.ServiceTierType
   }

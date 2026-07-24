@@ -44,7 +44,8 @@ handler = onSearch
 
 onSearch :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
 onSearch mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
-  req <- case decodeOnSearchReq reqBS of
+  reqBS' <- Utils.decompressGzipBody reqBS
+  req <- case decodeOnSearchReq reqBS' of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
   mbForwarded <- Forwarding.maybeForwardOnSearch mbMerchantId authResult req reqBS
@@ -67,6 +68,9 @@ processOnSearch req = do
           fork "FRFS discovery on_search processing" $ do
             Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
               DOnSearch.discoveryOnSearch onSearchReq
+          when (discoveryCounter.storeGtfs == Just True) $
+            whenJust discoveryCounter.integratedBppConfigId $ \ibcId ->
+              fork "FRFS discovery GTFS store" $ DOnSearch.storeDiscoveryGtfs ibcId req
           fork "FRFS discovery onSearch logs" $ do
             void $ pushLogs "discovery_on_search" (toJSON req) onSearchReq.merchantId "PUBLIC_TRANSPORT"
         pure Utils.ack

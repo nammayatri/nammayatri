@@ -9,6 +9,8 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.ChallanSearch.Interface.Types as ChallanSearchInterface
+import qualified Kernel.External.ChallanSearch.Types as ChallanSearch
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
@@ -65,6 +67,7 @@ getConfigJSON = \case
     Verification.DigiLockerConfig cfg -> toJSON cfg
     Verification.TtenVerificationConfig cfg -> toJSON cfg
     Verification.MorthConfig cfg -> toJSON cfg
+    Verification.EkatraConfig cfg -> toJSON cfg
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig cfg -> toJSON cfg
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -102,6 +105,7 @@ getConfigJSON = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> toJSON cfg
     Ticket.ZendeskConfig cfg -> toJSON cfg
+    Ticket.XyneSpacesConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig cfg -> toJSON cfg
     Notification.PayTMConfig cfg -> toJSON cfg
@@ -130,6 +134,7 @@ getConfigJSON = \case
   Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> toJSON cfg
+  Domain.SAPServiceConfig sapCfg -> toJSON sapCfg
   Domain.SettlementServiceConfig settlementCfg -> toJSON settlementCfg
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig cfg -> toJSON cfg
@@ -137,6 +142,9 @@ getConfigJSON = \case
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
     Payment.PaytmEDCConfig cfg -> toJSON cfg
+  Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
+    ChallanSearchInterface.SignzyChallanSearch cfg -> toJSON cfg
+  Domain.FleetEngineServiceConfig cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -169,6 +177,7 @@ getServiceName = \case
     Verification.DigiLockerConfig _ -> Domain.VerificationService Verification.DigiLocker
     Verification.TtenVerificationConfig _ -> Domain.VerificationService Verification.Tten
     Verification.MorthConfig _ -> Domain.VerificationService Verification.Morth
+    Verification.EkatraConfig _ -> Domain.VerificationService Verification.Ekatra
   Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
     Verification.SafetyPortalConfig _ -> Domain.DriverBackgroundVerificationService Verification.SafetyPortal
   Domain.CallServiceConfig callCfg -> case callCfg of
@@ -188,6 +197,7 @@ getServiceName = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> Domain.IssueTicketService Ticket.Zendesk
+    Ticket.XyneSpacesConfig _ -> Domain.IssueTicketService Ticket.XyneSpaces
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig _ -> Domain.NotificationService Notification.FCM
     Notification.PayTMConfig _ -> Domain.NotificationService Notification.PayTM
@@ -216,10 +226,14 @@ getServiceName = \case
   Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> Domain.PartnerSdkService Domain.Aarokya
+  Domain.SAPServiceConfig _ -> Domain.SAPService Domain.Journal
   Domain.SettlementServiceConfig settlementCfg -> Domain.SettlementService settlementCfg.settlementService
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
   Domain.AirportReachargeServiceConfig paymentCfg -> Domain.AirportReachargeService $ getPaymentServiceConfigJson paymentCfg
+  Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
+    ChallanSearchInterface.SignzyChallanSearch _ -> Domain.ChallanSearchService ChallanSearch.Signzy
+  Domain.FleetEngineServiceConfig _ -> Domain.FleetEngineService Domain.GoogleFleetEngine
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -268,6 +282,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.VerificationService Verification.DigiLocker -> Domain.VerificationServiceConfig . Verification.DigiLockerConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Tten -> Domain.VerificationServiceConfig . Verification.TtenVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Morth -> Domain.VerificationServiceConfig . Verification.MorthConfig <$> eitherValue configJSON
+  Domain.VerificationService Verification.Ekatra -> Domain.VerificationServiceConfig . Verification.EkatraConfig <$> eitherValue configJSON
   Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> eitherValue configJSON
   Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> eitherValue configJSON
   Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> eitherValue configJSON
@@ -284,6 +299,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> eitherValue configJSON
+  Domain.IssueTicketService Ticket.XyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.XyneSpacesConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON
@@ -301,6 +317,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
   Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> eitherValue configJSON
+  Domain.SAPService Domain.Journal -> Domain.SAPServiceConfig <$> eitherValue configJSON
   Domain.SettlementService svc ->
     case eitherValue configJSON of
       Right cfg
@@ -315,6 +332,8 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
       Left err -> Left err
   Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
   Domain.AirportReachargeService paymentServiceName -> Domain.AirportReachargeServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.ChallanSearchService ChallanSearch.Signzy -> Domain.ChallanSearchServiceConfig . ChallanSearchInterface.SignzyChallanSearch <$> eitherValue configJSON
+  Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

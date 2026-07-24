@@ -99,6 +99,7 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
@@ -109,6 +110,7 @@ import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
@@ -656,7 +658,9 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           distanceWithUnit = Nothing,
           boundingBox = Nothing,
           snappedWaypoints = [],
-          points = []
+          points = [],
+          routeToken = Nothing,
+          trafficSegments = Nothing
         }
 
     makeDriverPoolWithActualDistResult (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
@@ -706,6 +710,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     govtCharges :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    airportEntryFee :: Maybe HighPrecMoney,
+    isAirportRequest :: Bool,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
@@ -854,6 +860,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             govtCharges,
             tollCharges,
             parkingCharge,
+            airportEntryFee,
+            isAirportRequest,
             isValueAddNP,
             onlinePayment,
             now,
@@ -1150,7 +1158,7 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pickup driverPoolResults searchInfo = do
   let pickupLatLong = getCoordinates pickup
-  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $
@@ -1201,7 +1209,7 @@ computeActualDistanceOneToOneSrcAndDestMapping ::
   DST.CurrentSearchInfo ->
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults searchInfo = do
-  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporter <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
     withShortRetry $
       Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just $ getId searchInfo.searchTry.id) $
@@ -1254,7 +1262,9 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
           staticDuration = route'.staticDuration,
           points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,
-          boundingBox = route'.boundingBox
+          boundingBox = route'.boundingBox,
+          routeToken = route'.routeToken,
+          trafficSegments = route'.trafficSegments
         }
 
     filterInitPoints (x1 : x2 : xs) = if highPrecMetersToMeters (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs

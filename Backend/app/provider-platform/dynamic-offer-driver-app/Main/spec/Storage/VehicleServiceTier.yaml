@@ -10,6 +10,7 @@ imports:
   Months: Kernel.Types.Time
   Value: Data.Aeson
   SpecialZone: Dashboard.Common
+  CancellationRateConfig: Dashboard.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -25,7 +26,6 @@ VehicleServiceTier:
     isAirConditioned: Maybe Bool
     isIntercityEnabled: Maybe Bool
     isRentalsEnabled: Maybe Bool
-    isAirportRideEnabled: Maybe Bool
     oxygen: Maybe Double
     ventilator: Maybe Int
     luggageCapacity: Maybe Int
@@ -34,6 +34,7 @@ VehicleServiceTier:
     baseVehicleServiceTier : Maybe Bool
     fareAdditionPerKmOverBaseServiceTier : Maybe Int
     vehicleRating: Maybe Double
+    allowNullVehicleRating: Maybe Bool
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     allowedVehicleVariant: '[VehicleVariant]'
@@ -49,6 +50,7 @@ VehicleServiceTier:
     allowedAreas: Maybe [Area]
     vehicleAgeThreshold: Maybe Months
     specialZone: Maybe SpecialZone
+    cancellationRateConfig: Maybe CancellationRateConfig
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
@@ -59,6 +61,7 @@ VehicleServiceTier:
     allowedAreas: text[]
     vehicleAgeThreshold: int
     specialZone: "json"
+    cancellationRateConfig: "json"
   default:
     priority: '0'
     isEnabled: 'true'
@@ -69,15 +72,19 @@ VehicleServiceTier:
     vehicleIconUrl: Maybe Text
     allowedAreas: Maybe [Text]
     specialZone: Maybe Value
+    cancellationRateConfig: Maybe Value
   fromTType:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText))|I
     specialZone: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< specialZone|E
+    cancellationRateConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateConfig|E
   toTType:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText))|I
     specialZone: Kernel.Prelude.toJSON <$> specialZone|E
+    cancellationRateConfig: Kernel.Prelude.toJSON <$> cancellationRateConfig|E
   constraints:
     id: PrimaryKey
   queries:

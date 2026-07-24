@@ -6,8 +6,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo as Common
 import qualified Data.List as DL
-import Domain.Types.Common
-import Domain.Types.MediaFileDocument
+import qualified Domain.Types.DocumentReminderHistory as DRH
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleInfo as DVI
 import qualified Environment
@@ -17,9 +16,8 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.MediaFileDocument as QMFD
-import Storage.Queries.VehicleInfo (create, deleteAllByRcId, findAllByRcId)
+import qualified Storage.Queries.EntityInfo as QEI
+import Storage.Queries.VehicleInfo (create, deleteAllByRcId)
 import Storage.Queries.VehicleRegistrationCertificateExtra (findLastVehicleRCWrapper)
 import Tools.Error
 
@@ -28,17 +26,20 @@ getVehicleInfoList ::
   Kernel.Types.Beckn.Context.City ->
   Text ->
   Environment.Flow Common.VehicleExtraInformation
-getVehicleInfoList merchantShortId opCity vrcNo = do
+getVehicleInfoList merchantShortId _opCity vrcNo = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   rc <- findLastVehicleRCWrapper vrcNo >>= fromMaybeM (VehicleDoesNotExist vrcNo)
-  vehicleInfo <- map convertVehicleInfoToVehicleInfoAPIEntity <$> findAllByRcId rc.id
-  mediaFileDocument <- QMFD.findOneByCityRcTypeAndStatus merchantOpCityId rc.id VehicleVideo [CONFIRMED, COMPLETED]
-  pure $ Common.VehicleExtraInformation {rcNo = vrcNo, vehicleInfo = vehicleInfo, mediaUploaded = isJust mediaFileDocument}
+  entityInfos <- QEI.findAllByEntityIdAndType rc.id.getId DRH.RC merchant.id
+  let vehicleInfo = map convertEntityInfoToVehicleInfoAPIEntity entityInfos
+      mediaUploaded = any (isJust . (.mediaFileId)) entityInfos
+  pure $ Common.VehicleExtraInformation {rcNo = vrcNo, vehicleInfo = vehicleInfo, mediaUploaded = mediaUploaded}
   where
-    convertVehicleInfoToVehicleInfoAPIEntity DVI.VehicleInfo {..} =
+    convertEntityInfoToVehicleInfoAPIEntity ei =
       Common.VehicleInfoAPIEntity
-        { ..
+        { questionId = ei.questionId,
+          question = ei.question,
+          answer = ei.answer,
+          mediaFileId = ei.mediaFileId
         }
 
 postVehicleInfoUpdate ::

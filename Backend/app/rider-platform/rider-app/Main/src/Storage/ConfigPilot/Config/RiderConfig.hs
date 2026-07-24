@@ -1,40 +1,39 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.ConfigPilot.Config.RiderConfig
-  ( RiderDimensions (..),
-  )
-where
+module Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..)) where
 
-import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.RiderConfig as DT
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
+import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as SQ
 
-data RiderDimensions = RiderDimensions
+data RiderConfigDimensions = RiderConfigDimensions
   { merchantOperatingCityId :: Text
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 instance ConfigTypeInfo 'RiderConfig where
-  type DimensionsFor 'RiderConfig = RiderDimensions
+  type DimensionsFor 'RiderConfig = RiderConfigDimensions
   configTypeValue = RiderConfig
   sConfigType = SRiderConfig
 
-instance ConfigDimensions RiderDimensions where
-  type ConfigTypeOf RiderDimensions = 'RiderConfig
-  type ConfigValueTypeOf RiderDimensions = Maybe DRC.RiderConfig
+instance ConfigDimensions RiderConfigDimensions where
+  type ConfigTypeOf RiderConfigDimensions = 'RiderConfig
+  type ConfigValueTypeOf RiderConfigDimensions = Maybe DT.RiderConfig
   getConfigType _ = RiderConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfg <- QRC.findByMerchantOperatingCityId (Id mocId)
-      case cfg of
-        Nothing -> pure Nothing
-        Just c -> do
-          let configWrapper = LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}
-          Just <$> getConfigImpl a configWrapper (LYT.RIDER_CONFIG RiderConfig) (Id mocId)
+  getConfigList a =
+    listToMaybe
+      <$> LCP.resolveConfigList
+        a
+        (LYT.RIDER_CONFIG RiderConfig)
+        (Id a.merchantOperatingCityId)
+        (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
+        (([] :: [LCP.DimMatcher RiderConfigDimensions DT.RiderConfig]))
+        Nothing

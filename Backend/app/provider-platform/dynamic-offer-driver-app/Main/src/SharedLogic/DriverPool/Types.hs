@@ -83,7 +83,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     score :: Maybe A.Value,
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
-    isTollRouteEligible :: Bool
+    isTollRouteEligible :: Bool,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -149,6 +150,7 @@ data DriverPoolResult = DriverPoolResult
     isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
     driverGender :: Maybe Person.Gender,
     vehicleNumber :: Maybe Text,
+    fleetOwnerId :: Maybe Text,
     -- On-ride forward batching fields (Nothing for non-on-ride drivers)
     onRide :: Maybe Bool,
     previousRideDropLat :: Maybe Double,
@@ -191,6 +193,7 @@ instance Default DriverPoolResult where
         isTollRouteEligible = True,
         driverGender = Nothing,
         vehicleNumber = Nothing,
+        fleetOwnerId = Nothing,
         onRide = Nothing,
         previousRideDropLat = Nothing,
         previousRideDropLon = Nothing,
@@ -229,7 +232,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     maxRideDistance :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
     isTollRouteEligible :: Bool, -- True if driver is not blocked for toll routes
-    vehicleNumber :: Maybe Text
+    vehicleNumber :: Maybe Text,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

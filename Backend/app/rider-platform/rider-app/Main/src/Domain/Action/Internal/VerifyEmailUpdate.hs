@@ -17,10 +17,13 @@ import qualified Storage.Queries.Person as QPerson
 
 data VerifyEmailUpdateReq = VerifyEmailUpdateReq
   { email :: Text,
-    personId :: Text
+    requesteeId :: Text,
+    requestorId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+-- No requestor-requestee association check here for now — fleet/operator associations
+-- exist only on the BPP side. TODO: add the association logic based on future usecases
 verifyEmailUpdate ::
   Maybe Text ->
   Text ->
@@ -31,13 +34,13 @@ verifyEmailUpdate apiKey merchantShortIdText req = do
   dashboardToken <- asks (.dashboardToken)
   unless (Just dashboardToken == apiKey) $
     throwError (AuthBlocked "Invalid Rider App dashboard token")
-  let personId = Id req.personId
+  let requesteeId = Id req.requesteeId
       email = T.toLower req.email
-  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound req.personId)
+  void $ QPerson.findById requesteeId >>= fromMaybeM (PersonNotFound req.requesteeId)
   mbExisting <- QPerson.findByEmailAndMerchantId merchant.id email
   whenJust mbExisting $ \existing ->
-    when (existing.id /= personId) $
+    when (existing.id /= requesteeId) $
       throwError (InvalidRequest "Email already registered by another user")
   encEmail <- encrypt email
-  QPerson.updateEmailByPersonId personId encEmail
+  QPerson.updateEmailByPersonId requesteeId encEmail
   pure Success

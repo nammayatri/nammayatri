@@ -10,7 +10,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.ConfigPilot.Interface.Getter (PersonIdKey (..), TxnIdKey (..))
+import Lib.ConfigPilot.Interface.Getter (PersonIdKey (..), TxnIdKey (..))
 
 withFlowHandlerAPIPersonId :: Id Person.Person -> Flow a -> FlowHandler a
 withFlowHandlerAPIPersonId personId action = withFlowHandlerAPI $ do

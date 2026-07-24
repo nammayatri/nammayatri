@@ -6,7 +6,9 @@ module Lib.Finance.Settlement.Ingestion
   )
 where
 
+import qualified Data.Aeson as Aeson
 import qualified EulerHS.Language as L
+import Kernel.Beam.Functions (ToTType' (..))
 import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Settlement.Interface (parseAndEnrichPaymentSettlementCsv)
 import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..))
@@ -16,12 +18,58 @@ import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common (logInfo, logWarning)
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Servant.Client (HasRequestId)
+import Lib.Finance.Audit.Interface (AuditInput (..))
+import qualified Lib.Finance.Audit.Service as Audit
+import Lib.Finance.Core.Types (ActorInfo, HasActorInfo)
+import Lib.Finance.Domain.Types.AuditEntry (AuditAction (..))
+import qualified Lib.Finance.Domain.Types.AuditEntry as AuditDomain
+import Lib.Finance.Domain.Types.PgPaymentSettlementReport (PgPaymentSettlementReport (..))
+import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import Lib.Finance.Domain.Types.SettlementFileInfo (SettlementFileStatus (..))
 import Lib.Finance.Settlement.Fetch (SftpFetchMeta (..), fetchSettlementCsv)
 import qualified Lib.Finance.Settlement.Transformer as Transformer
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReport as QPgReport
 import qualified Lib.Finance.Storage.Queries.SettlementFileInfo as QSFI
+import qualified Lib.Finance.Utils.SensitiveData as SD
+
+pgPaymentSettlementReportToAuditValue :: PgPaymentSettlementReport -> Aeson.Value
+pgPaymentSettlementReportToAuditValue =
+  Aeson.toJSON . toTType' @BeamPgReport.PgPaymentSettlementReport . hidePgPaymentSettlementReportSensitiveFields
+  where
+    hidePgPaymentSettlementReportSensitiveFields :: PgPaymentSettlementReport -> PgPaymentSettlementReport
+    hidePgPaymentSettlementReportSensitiveFields PgPaymentSettlementReport {..} =
+      PgPaymentSettlementReport
+        { cardNumber = SD.maskCardNumber <$> cardNumber,
+          rawData = Nothing,
+          ..
+        }
+
+auditPgPaymentSettlementReportCreate ::
+  BeamFlow.BeamFlow m r =>
+  ActorInfo ->
+  PgPaymentSettlementReport ->
+  m ()
+auditPgPaymentSettlementReportCreate actorInfo report = do
+  auditResult <-
+    Audit.logAudit
+      AuditInput
+        { entityType = AuditDomain.PgPaymentSettlementReport,
+          entityId = report.id.getId,
+          action = Created,
+          actorType = actorInfo.actorType,
+          actorId = actorInfo.actorId,
+          beforeState = Nothing,
+          afterState = Just $ pgPaymentSettlementReportToAuditValue report,
+          merchantId = report.merchantId,
+          merchantOperatingCityId = report.merchantOperatingCityId
+        }
+  case auditResult of
+    Left err ->
+      logWarning $
+        "Failed to audit PgPaymentSettlementReport (Created): " <> show err
+    Right _ -> pure ()
 
 data IngestionResult = IngestionResult
   { totalParsed :: Int,
@@ -40,14 +88,16 @@ ingestPaymentSettlementReport ::
     Metrics.CoreMetrics m,
     L.MonadFlow m,
     HasRequestId r,
-    MonadReader r m
+    MonadReader r m,
+    HasActorInfo m r
   ) =>
   SettlementServiceConfig ->
   Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   m IngestionResult
-ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId = do
+ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId resolveOrderType = do
   logInfo $ "Starting settlement report ingestion for merchant: " <> merchantId
   fetchResult <- fetchSettlementCsv cfg merchantId merchantOperatingCityId
   case fetchResult of
@@ -110,7 +160,7 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
                       parseErrors = [],
                       storeErrors = []
                     }
-          else storeParseResult merchantId merchantOperatingCityId parseResult
+          else storeParseResult merchantId merchantOperatingCityId cfg.bankCode resolveOrderType parseResult
       finalizeSftpFileCursor mbSftpMeta parseHadNoReports
       pure result
 
@@ -154,12 +204,15 @@ finalizeSftpFileCursor mbMeta parseHadNoReports = do
         logInfo $ "finalizeSftpFileCursor: updateStatus done meta=" <> show meta -- here we need to fix even if the parser breaks it marks it as completed
 
 storeParseResult ::
-  (BeamFlow.BeamFlow m r) =>
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   Text ->
   Text ->
+  Maybe Text ->
+  (Text -> m (Maybe Dom.OrderType, Maybe Bool, Maybe Text)) ->
   ParsePaymentSettlementResult ->
   m IngestionResult
-storeParseResult merchantId merchantOperatingCityId parseResult = do
+storeParseResult merchantId merchantOperatingCityId mbBankCode resolveOrderType parseResult = do
+  actorInfo <- asks (.actorInfo)
   logInfo $
     "Parse complete. Total rows: " <> show (totalRows parseResult)
       <> ", Failed: "
@@ -171,10 +224,12 @@ storeParseResult merchantId merchantOperatingCityId parseResult = do
     logWarning $ "Parse errors: " <> show (errors parseResult)
 
   results <- forM (reports parseResult) $ \report -> do
-    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing report
+    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode resolveOrderType report
     result <- try @_ @SomeException $ QPgReport.create pgReport
     case result of
-      Right _ -> pure (Just pgReport, Nothing)
+      Right _ -> do
+        auditPgPaymentSettlementReportCreate actorInfo pgReport
+        pure (Just pgReport, Nothing)
       Left err -> pure (Nothing, Just $ "Store error for orderId " <> report.orderId <> ": " <> show err)
 
   let stored = length [() | (Just _, _) <- results]

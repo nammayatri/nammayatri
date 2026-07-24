@@ -20,6 +20,7 @@ imports:
   Ride: Domain.Types.Ride
   VerifiedBy: Domain.Types.DriverPanCard
   DocsVerificationStatus: Dashboard.Common
+  CRCVerificationResponse: Kernel.External.Verification.Types
 module: Driver
 
 apis:
@@ -297,6 +298,7 @@ types:
     - enabled: Bool
     - blocked: Bool
     - blockedReason: Maybe Text
+    - blockLiftTime: Maybe UTCTime
     - verified: Bool
     - subscribed: Bool
     - canDowngradeToSedan: Bool
@@ -359,6 +361,11 @@ types:
     - upiId: Maybe Text
     - fleetOwnerId: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
+    - courtRecord: Maybe CourtRecordResult
+    - approved: Maybe Bool
+  CourtRecordResult:
+    - result: Maybe CRCVerificationResponse
+    - errorMessage: Maybe Text
   DriverAssociationInfo:
     - personId: Id Person
     - name: Maybe Text
@@ -404,6 +411,7 @@ types:
     - requestorId : Maybe Text
     - blockReasonFlag : Maybe Text
     - actionType: Maybe ActionType
+    - specialZoneId : Maybe Text
   DriverRCAssociationAPIEntity:
     - associatedOn: UTCTime
     - associatedTill: Maybe UTCTime

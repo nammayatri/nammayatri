@@ -17,11 +17,13 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.GenericPretty
+import qualified Lib.Types.SpecialLocation
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
-  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     boostSearchPreSelectionServiceTierConfig :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
     bppEstimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate,
@@ -42,6 +44,7 @@ data Estimate = Estimate
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
+    fareSettlementType :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.FareSettlementType,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     insuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -52,6 +55,7 @@ data Estimate = Estimate
     itemId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    navigationInstruction :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nightShiftInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.NightShiftInfo,
     personalDiscountInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.PersonalDiscountInfo,
     providerCompletedRidesCount :: Kernel.Prelude.Int,
@@ -78,6 +82,7 @@ data Estimate = Estimate
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleServiceTierLuggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
     waitingCharges :: Domain.Types.Estimate.WaitingCharges

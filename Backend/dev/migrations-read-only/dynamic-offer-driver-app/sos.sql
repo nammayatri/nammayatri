@@ -23,3 +23,8 @@ ALTER TABLE atlas_driver_offer_bpp.sos ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.sos ADD COLUMN external_status_history text ;
 ALTER TABLE atlas_driver_offer_bpp.sos ADD COLUMN external_reference_status text ;
 ALTER TABLE atlas_driver_offer_bpp.sos ADD COLUMN external_reference_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.sos ADD COLUMN requester_id text ;

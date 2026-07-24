@@ -16,6 +16,7 @@ module API where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.Internal.SyncSearch as InternalSyncSearch
@@ -40,12 +41,14 @@ import qualified Kernel.External.Payout.Stripe.Webhook as Stripe
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 
 type DriverOfferAPI =
   MainAPI
@@ -61,6 +64,7 @@ type DriverOfferAPI =
 type MainAPI =
   UI.API
     -- :<|> Beckn.API -- TODO : Revert after 2.x release
+    :<|> FleetEngineToken.API
     :<|> Idfy.IdfyWebhookAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Idfy.IdfyWebhookAPI
@@ -117,6 +121,7 @@ mainServer :: AppEnv -> FlowServer MainAPI
 mainServer env =
   UI.handler
     -- :<|> Beckn.handler -- TODO : Revert after 2.x release
+    :<|> FleetEngineToken.handler
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
     :<|> idfyWebhookV2Handler
@@ -196,7 +201,7 @@ juspayWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 juspayWebhookHandler merchantShortId secret value' =
-  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId Nothing Nothing secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payment.juspayWebhookHandler merchantShortId Nothing Nothing secret value'
 
 juspayWebhookHandlerV2 ::
   ShortId DM.Merchant ->
@@ -206,7 +211,7 @@ juspayWebhookHandlerV2 ::
   Aeson.Value ->
   FlowHandler AckResponse
 juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret webhookPayload =
-  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret webhookPayload
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret webhookPayload
 
 safetyWebhookHandler ::
   ShortId DM.Merchant ->
@@ -245,7 +250,7 @@ juspayPayoutWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 juspayPayoutWebhookHandler merchantShortId secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing Nothing secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing Nothing secret value'
 
 juspayPayoutWebhookHandlerV2 ::
   ShortId DM.Merchant ->
@@ -255,14 +260,14 @@ juspayPayoutWebhookHandlerV2 ::
   Value ->
   FlowHandler AckResponse
 juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
 
 stripePayoutWebhookHandler ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
   Maybe Plan.ServiceNames ->
   Maybe Text ->
-  Stripe.RawByteString ->
+  RawByteString ->
   FlowHandler AckResponse
 stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
   withFlowHandlerAPI . Payout.stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
@@ -272,7 +277,7 @@ stripeTestPayoutWebhookHandler ::
   Maybe Context.City ->
   Maybe Plan.ServiceNames ->
   Maybe Text ->
-  Stripe.RawByteString ->
+  RawByteString ->
   FlowHandler AckResponse
 stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
   withFlowHandlerAPI . Payout.stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader

@@ -16,6 +16,7 @@ import qualified Data.List as DL
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
@@ -108,7 +109,9 @@ data NearestDriversReq = NearestDriversReq
     excludeDriverIds :: [Id Person.Driver],
     prevAttemptedDriverIds :: [Id Person.Driver],
     applyParallelRequestFilter :: Bool,
-    maxParallelSearchRequests :: Int
+    maxParallelSearchRequests :: Int,
+    airportEntryFee :: Maybe HighPrecMoney,
+    isAirportRequest :: Bool
   }
 
 -- | A driver location candidate sorted by straight-line distance, with the
@@ -162,7 +165,7 @@ fetchSortedLTSCandidates NearestDriversReq {..} = do
 processCandidatesChunk ::
   (BeamFlow m r, MonadFlow m, MonadTime m, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   NearestDriversReq ->
-  ([Id Person.Driver] -> m [DPD.DriverPoolData]) ->
+  (Bool -> Bool -> [Id Person.Driver] -> m [DPD.DriverPoolData]) ->
   [SortedLTSCandidate] ->
   m [NearestDriversResult]
 processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
@@ -175,7 +178,7 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
       else pure chunk
   -- Pool-data MGET for chunk survivors only.
   let chunkDriverIds = (.driverId) . driverLoc <$> filteredChunk
-  poolDataList <- fetchPoolData chunkDriverIds
+  poolDataList <- fetchPoolData onlinePayment isPrepaidEnabled chunkDriverIds
   let poolDataMap = HashMap.fromList $ (\dpd -> (dpd.driverId, dpd)) <$> poolDataList
       cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       results = concat $ mapMaybe (buildDriverResult req poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
@@ -185,7 +188,7 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
 getNearestDrivers ::
   (BeamFlow m r, MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversReq ->
-  ([Id Person.Driver] -> m [DPD.DriverPoolData]) ->
+  (Bool -> Bool -> [Id Person.Driver] -> m [DPD.DriverPoolData]) ->
   m [NearestDriversResult]
 getNearestDrivers req fetchPoolData = do
   candidates <- fetchSortedLTSCandidates req
@@ -204,6 +207,7 @@ buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap loc
   guard $ dpd.subscribed
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
+  when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED
   when dpd.onRide $ do
     guard dpd.forwardBatchingEnabled
     guard $ dpd.hasRideStarted == Just True
@@ -316,36 +320,55 @@ filterByWalletBalance ::
   Bool ->
   [NearestDriversResult] ->
   m [NearestDriversResult]
-filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results
-  | not isPrepaidEnabled = pure results
-  | otherwise = do
-    results' <- case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
-      (Just fare, Just _) ->
-        filterM
-          ( \r -> do
-              let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
-                  (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
-              mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-              pure $ maybe False (>= (fare + threshold)) mbBalance
-          )
-          results
-      _ -> pure results
-    case minWalletAmountForCashRides of
-      Just minAmt | shouldCheckCashWallet paymentInstrument -> do
-        let estimatedDeductions = estimateDeductionsFromConfig taxConfig rideFare govtCharges tollCharges parkingCharge
-            requiredBalance = minAmt + estimatedDeductions
-        filterM
-          ( \r -> do
-              let (counterpartyType, ownerId, _) = resolveOwnerAndThreshold r
-              mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
-              pure $ maybe False (>= requiredBalance) mbBalance
-          )
-          results'
-      _ -> pure results'
+filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
+  afterPrepaid <-
+    if isPrepaidEnabled
+      then case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
+        (Just fare, Just _) ->
+          filterM
+            ( \r -> do
+                let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
+                    (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
+                mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
+                pure $ maybe False (>= (fare + threshold)) mbBalance
+            )
+            results
+        _ -> pure results
+      else pure results
+  let cashRequirement =
+        case minWalletAmountForCashRides of
+          Just minAmt
+            | isPrepaidEnabled && shouldCheckCashWallet paymentInstrument ->
+              Just (minAmt + estimateDeductionsFromConfig taxConfig rideFare govtCharges tollCharges parkingCharge)
+          _ -> Nothing
+      airportRequirement = case airportEntryFee of
+        Just fee | fee > 0 -> Just fee
+        _ -> Nothing
+  if isNothing cashRequirement && isNothing airportRequirement
+    then pure afterPrepaid
+    else filterM (passesLiabilityGates cashRequirement airportRequirement) afterPrepaid
   where
     resolveOwnerAndThreshold r = case r.fleetOwnerId of
       Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
+
+    checkBalance (counterpartyType, ownerId) required = do
+      mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
+      pure $ maybe False (>= required) mbBalance
+
+    passesLiabilityGates cashReq airportReq r = do
+      let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
+          cashAccount = (cashCp, cashOwner)
+          airportAccount = (counterpartyDriver, r.driverId.getId)
+      case (cashReq, airportReq) of
+        (Nothing, Nothing) -> pure True
+        (Just c, Nothing) -> checkBalance cashAccount c
+        (Nothing, Just a) -> checkBalance airportAccount a
+        (Just c, Just a)
+          | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
+          | otherwise -> do
+            cashOk <- checkBalance cashAccount c
+            if cashOk then checkBalance airportAccount a else pure False
 
 shouldCheckCashWallet :: Maybe MP.PaymentInstrument -> Bool
 shouldCheckCashWallet = \case
@@ -364,5 +387,5 @@ estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkin
           tollAmount = fromMaybe 0 tollCharges_
           parkingAmount = fromMaybe 0 parkingCharge_
           baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-          tdsRate = Just taxConfig.invalidPanTdsRate
+          tdsRate = Just taxConfig.invalidPanTdsRate.rate
        in gstAmount + estimateWalletDeductions tdsRate baseFare

@@ -63,7 +63,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.businessDiscount businessDiscount,
+    [ Se.Set Beam.area area,
+      Se.Set Beam.businessDiscount businessDiscount,
       Se.Set Beam.commissionCharges commissionCharges,
       Se.Set Beam.congestionMultiplier congestionMultiplier,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
@@ -102,6 +103,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.minFare (Kernel.Prelude.roundToIntegral minFare),
       Se.Set Beam.minFareAmount (Kernel.Prelude.Just minFare),
+      Se.Set Beam.navigationInstruction navigationInstruction,
       Se.Set Beam.personalDiscount personalDiscount,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.smartTipReason smartTipReason,
@@ -127,7 +129,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     pure $
       Just
         Domain.Types.Estimate.Estimate
-          { businessDiscount = businessDiscount,
+          { area = area,
+            businessDiscount = businessDiscount,
             commissionCharges = commissionCharges,
             congestionMultiplier = congestionMultiplier,
             createdAt = createdAt,
@@ -161,6 +164,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             minFare = Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare,
+            navigationInstruction = navigationInstruction,
             personalDiscount = personalDiscount,
             requestId = Kernel.Types.Id.Id requestId,
             smartTipReason = smartTipReason,
@@ -181,7 +185,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
 instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   toTType' (Domain.Types.Estimate.Estimate {..}) = do
     Beam.EstimateT
-      { Beam.businessDiscount = businessDiscount,
+      { Beam.area = area,
+        Beam.businessDiscount = businessDiscount,
         Beam.commissionCharges = commissionCharges,
         Beam.congestionMultiplier = congestionMultiplier,
         Beam.createdAt = createdAt,
@@ -222,6 +227,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.minFare = Kernel.Prelude.roundToIntegral minFare,
         Beam.minFareAmount = Kernel.Prelude.Just minFare,
+        Beam.navigationInstruction = navigationInstruction,
         Beam.personalDiscount = personalDiscount,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.smartTipReason = smartTipReason,

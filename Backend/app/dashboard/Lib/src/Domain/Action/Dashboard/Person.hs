@@ -14,8 +14,10 @@
 
 module Domain.Action.Dashboard.Person where
 
+import qualified API.Types.UnifiedDashboard.Management.Person as BPPPerson
 import Dashboard.Common
 import Data.Char (isDigit, isLower, isUpper)
+import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -32,6 +34,7 @@ import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
@@ -43,6 +46,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
@@ -52,6 +56,7 @@ import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import Tools.Error
+import qualified Tools.InternalClient as InternalClient
 
 data ListPersonRes = ListPersonRes
   { list :: [DP.PersonAPIEntity],
@@ -196,11 +201,17 @@ newtype CreatePersonRes = CreatePersonRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createPerson ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
-createPerson _ personEntity = do
+createPerson tokenInfo personEntity = do
   runRequestValidation validateCreatePerson personEntity
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -219,11 +230,38 @@ createPerson _ personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  person <- buildPerson personEntity (role.dashboardAccessType)
+  personId <-
+    if DRole.isBppSyncRole role
+      then do
+        merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+        roleName <- driverRoleName role.dashboardAccessType
+        let createReq =
+              BPPPerson.CreatePersonReq
+                { email = Just personEntity.email,
+                  firstName = personEntity.firstName,
+                  lastName = personEntity.lastName,
+                  mobileCountryCode = personEntity.mobileCountryCode,
+                  mobileNumber = personEntity.mobileNumber,
+                  password = Nothing,
+                  roleName = roleName
+                }
+        res <- InternalClient.callBPPInternalCreatePerson (getShortId merchant.shortId) tokenInfo.city createReq
+        pure $ cast res.personId
+      else generateGUID
+  person <- buildPerson personId personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
-  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
+  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing Nothing Nothing
   QP.create person
   return $ CreatePersonRes personAPIEntity
+
+driverRoleName :: MonadFlow m => DRole.DashboardAccessType -> m Text
+driverRoleName role = case role of
+  DRole.FLEET_OWNER -> pure "FLEET_OWNER"
+  DRole.RENTAL_FLEET_OWNER -> pure "FLEET_OWNER"
+  DRole.DASHBOARD_OPERATOR -> pure "OPERATOR"
+  DRole.DASHBOARD_ADMIN -> pure "ADMIN"
+  DRole.MERCHANT_ADMIN -> pure "ADMIN"
+  other -> throwError $ InternalError $ "Role is marked bpp-sync but has no driver-app mapping: " <> show other
 
 listPerson ::
   (BeamFlow m r, EncFlow m r) =>
@@ -239,7 +277,7 @@ listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
-    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant)
+    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant) Nothing Nothing
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
@@ -261,9 +299,12 @@ assignRole ::
   Id DRole.Role ->
   m APISuccess
 assignRole _ personId roleId = do
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  QP.updatePersonRole personId role
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
+    throwError RoleConversionNotAllowed
+  QP.updatePersonRole personId newRole
   pure Success
 
 assignMerchantCityAccess ::
@@ -406,16 +447,12 @@ buildMerchantAccess :: BeamFlow m r => Id DP.Person -> Id DMerchant.Merchant -> 
 buildMerchantAccess personId merchantId merchantShortId city = do
   uid <- generateGUID
   now <- getCurrentTime
-  existingAccesses <- QAccess.findByPersonIdAndMerchantId personId merchantId
-  let existing2fa = listToMaybe $ filter (.is2faEnabled) existingAccesses
   return $
     DAccess.MerchantAccess
       { id = Id uid,
         personId = personId,
         merchantId = merchantId,
         merchantShortId = merchantShortId,
-        secretKey = (.secretKey) =<< existing2fa,
-        is2faEnabled = maybe False (.is2faEnabled) existing2fa,
         createdAt = now,
         operatingCity = city
       }
@@ -429,13 +466,18 @@ profile tokenInfo = do
   role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
+  mbEntity <- case encPerson.entityId of
+    Just eId -> Just <$> (QEntity.findById eId >>= fromMaybeM (InvalidRequest $ "Entity " <> eId.getId <> " referenced by person " <> tokenInfo.personId.getId <> " does not exist"))
+    Nothing -> pure Nothing
+  let mbEntityId = mbEntity <&> (.id)
+      mbEntityName = mbEntity <&> (.entityName)
   case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
     merchantAccessList' -> do
       let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
       let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
       let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
-      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
+      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity) mbEntityId mbEntityName
 
 updateProfile ::
   BeamFlow m r =>
@@ -543,9 +585,8 @@ deletePerson _ personId = do
   QP.deletePerson personId
   pure Success
 
-buildPerson :: (EncFlow m r) => CreatePersonReq -> DRole.DashboardAccessType -> m SP.Person
-buildPerson req dashboardAccessType = do
-  pid <- generateGUID
+buildPerson :: (EncFlow m r) => Id SP.Person -> CreatePersonReq -> DRole.DashboardAccessType -> m SP.Person
+buildPerson pid req dashboardAccessType = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   --TODO write query to make existing email in person table to lower case
@@ -572,7 +613,11 @@ buildPerson req dashboardAccessType = do
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
         rejectedBy = Nothing,
-        language = Nothing
+        language = Nothing,
+        secretKey = Nothing,
+        is2faEnabled = False,
+        tokenNoHash = Nothing,
+        entityId = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq

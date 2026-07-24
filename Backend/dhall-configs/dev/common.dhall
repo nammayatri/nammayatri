@@ -21,6 +21,7 @@ let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 let googleRouteConfig =
       { computeAlternativeRoutes = False
       , routePreference = "TRAFFIC_AWARE_OPTIMAL"
+      , extraComputations = None (List Text)
       , url = "https://routes.googleapis.com/"
       }
 
@@ -80,6 +81,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , kafkaCompression = globalCommon.kafkaCompression
     , s3Config = sec.s3Config
     , s3PublicConfig = sec.s3PublicConfig
+    , s3RewardsConfig = sec.s3RewardsConfig
     , slackToken = sec.slackToken
     , signatureExpiry = globalCommon.signatureExpiry
     , httpClientOptions = globalCommon.httpClientOptions

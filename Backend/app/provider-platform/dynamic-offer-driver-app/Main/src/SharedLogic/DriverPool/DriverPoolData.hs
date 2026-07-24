@@ -2,6 +2,7 @@ module SharedLogic.DriverPool.DriverPoolData
   ( DriverPoolData (..),
     getDriverPoolDataBatch,
     setDriverPoolData,
+    setDriverPoolDataByCloud,
     driverPoolDataKey,
     defaultDriverPoolData,
     mkParallelSearchRequestKey,
@@ -15,6 +16,7 @@ import Data.List (nubBy)
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Merchant (Merchant)
@@ -27,8 +29,8 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (Device, Version)
-import Kernel.Utils.Common
+import Kernel.Types.Version (CloudType (..), Device, Version)
+import Kernel.Utils.Common hiding (ActorType (UNKNOWN))
 import qualified Lib.Yudhishthira.Types as LYT
 
 -- | The full driver pool data record stored in Redis (later LTS).
@@ -46,7 +48,9 @@ data DriverPoolData = DriverPoolData
     latestScheduledPickup :: Maybe Maps.LatLong,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     goHomeStatus :: Maybe DDGR.DriverGoHomeRequestStatus,
-    totalRides :: Int,
+    -- | Dead field, kept as Maybe so existing on-disk JSON records that carry
+    -- a value still deserialise. New records leave it Nothing.
+    totalRides :: Maybe Int,
     variant :: VehicleVariant,
     selectedServiceTiers :: [ServiceTierType],
     -- Class 1 (preferences)
@@ -56,6 +60,7 @@ data DriverPoolData = DriverPoolData
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    enableForAirport :: Maybe DI.AirportRestrictionType,
     forwardBatchingEnabled :: Bool,
     isSpecialLocWarrior :: Bool,
     tollRouteBlockedTill :: Maybe UTCTime,
@@ -77,7 +82,9 @@ data DriverPoolData = DriverPoolData
     clientConfigVersion :: Maybe Version,
     vehicleTags :: Maybe [Text],
     mYManufacturing :: Maybe Days.Day,
-    safetyPlusEnabled :: Bool,
+    -- | Dead field, kept as Maybe so existing on-disk JSON records that carry
+    -- a value still deserialise. New records leave it Nothing.
+    safetyPlusEnabled :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
     -- On-ride / forward batching fields
     driverTripEndLocation :: Maybe Maps.LatLong,
@@ -88,6 +95,7 @@ data DriverPoolData = DriverPoolData
     luggageCapacity :: Maybe Int,
     vehicleRating :: Maybe Double,
     registrationNo :: Text,
+    cloudType :: Maybe CloudType,
     -- | Monotonic schema version stamped by the cold-start builder and by
     -- migrators in 'SharedLogic.DriverPool.DriverPoolMigrations'. 'Nothing'
     -- means the entry was written before this field existed (treated as 0,
@@ -166,7 +174,7 @@ defaultDriverPoolData dId =
       latestScheduledPickup = Nothing,
       deviceToken = Nothing,
       goHomeStatus = Nothing,
-      totalRides = 0,
+      totalRides = Just 0,
       variant = AUTO_RICKSHAW,
       selectedServiceTiers = [],
       enabled = False,
@@ -175,6 +183,7 @@ defaultDriverPoolData dId =
       canSwitchToRental = False,
       canSwitchToInterCity = False,
       canSwitchToIntraCity = False,
+      enableForAirport = Nothing,
       forwardBatchingEnabled = False,
       isSpecialLocWarrior = False,
       tollRouteBlockedTill = Nothing,
@@ -196,7 +205,7 @@ defaultDriverPoolData dId =
       clientConfigVersion = Nothing,
       vehicleTags = Nothing,
       mYManufacturing = Nothing,
-      safetyPlusEnabled = False,
+      safetyPlusEnabled = Just False,
       fleetOwnerId = Nothing,
       driverTripEndLocation = Nothing,
       hasRideStarted = Nothing,
@@ -205,11 +214,13 @@ defaultDriverPoolData dId =
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
       registrationNo = "",
+      cloudType = Nothing,
       schemaVersion = Nothing
     }
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.
--- via syncDriverPoolDataToLTS. No need to expire and rebuild frequently.
+-- Always writes to the primary cloud. Use 'setDriverPoolDataByCloud' when the
+-- write should be routed to the driver's own cloud.
 setDriverPoolData ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
@@ -219,3 +230,22 @@ setDriverPoolData ::
   m ()
 setDriverPoolData dpd = do
   Redis.withLTSRedis $ Redis.setExp (driverPoolDataKey dpd.driverId) dpd (2592000 * 12) -- 1 year
+
+-- | Cloud-aware write: routes the SET to primary or secondary LTS Redis
+-- depending on whether the driver's cloudType matches the deployment's.
+-- If both are equal (or both Nothing) → primary; otherwise → secondary.
+setDriverPoolDataByCloud ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Maybe CloudType ->
+  DriverPoolData ->
+  m ()
+setDriverPoolDataByCloud deploymentCloudType dpd = do
+  let driverCloud = dpd.cloudType
+      key = driverPoolDataKey dpd.driverId
+      expiry = 2592000 * 12 -- 1 year
+  if deploymentCloudType == Just (fromMaybe GCP driverCloud)
+    then Redis.withLTSRedis $ Redis.setExp key dpd expiry
+    else Redis.withSecondaryLTSRedis $ Redis.setExp key dpd expiry

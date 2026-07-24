@@ -13,6 +13,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry
+import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
 data MerchantD (s :: UsageSafety) = Merchant
@@ -23,6 +24,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     bapId :: Kernel.Prelude.Text,
     bapUniqueKeyId :: Kernel.Prelude.Text,
     cipherText :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
+    cloudBaseUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
+    cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     country :: Kernel.Types.Beckn.Context.Country,
     createdAt :: Kernel.Prelude.UTCTime,
     defaultCity :: Kernel.Types.Beckn.Context.City,
@@ -63,7 +66,7 @@ data MerchantD (s :: UsageSafety) = Merchant
   }
   deriving (Generic, Show)
 
-type Merchant = MerchantD 'Safe
+type Merchant = MerchantD ('Safe)
 
 instance FromJSON (MerchantD 'Unsafe)
 

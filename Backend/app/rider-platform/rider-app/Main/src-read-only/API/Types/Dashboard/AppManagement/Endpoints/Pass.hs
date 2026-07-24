@@ -4,6 +4,7 @@
 module API.Types.Dashboard.AppManagement.Endpoints.Pass where
 
 import qualified "this" API.Types.UI.Pass
+import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
@@ -13,8 +14,11 @@ import qualified "this" Domain.Types.PurchasedPass
 import qualified "this" Domain.Types.PurchasedPassPayment
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
+import qualified "shared-services" IssueManagement.Common.UI.Issue
+import qualified "shared-services" IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
@@ -31,14 +35,7 @@ data PurchasedPassSelectReq = PurchasedPassSelectReq {startDay :: Kernel.Prelude
 instance Kernel.Types.HideSecrets.HideSecrets PurchasedPassSelectReq where
   hideSecrets = Kernel.Prelude.identity
 
-data UpdateProfilePictureReq = UpdateProfilePictureReq {profilePicture :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets UpdateProfilePictureReq where
-  hideSecrets = Kernel.Prelude.identity
-
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelect :<|> GetPassCustomerPaymentStatus :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> PostPassCustomerPassRestore))
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelectHelper :<|> GetPassCustomerPaymentStatusHelper :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore))
 
 type GetPassCustomerAvailablePasses =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "availablePasses"
@@ -64,7 +61,10 @@ type GetPassCustomerTransactions =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> Get '[JSON] [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
+      :> QueryParam "status" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
   )
 
 type PostPassCustomerActivateToday =
@@ -93,6 +93,21 @@ type PostPassCustomerPassSelect =
       :> Post '[JSON] API.Types.UI.Pass.PassSelectionAPIEntity
   )
 
+type PostPassCustomerPassSelectHelper =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "pass"
+      :> Capture
+           "passId"
+           (Kernel.Types.Id.Id Domain.Types.Pass.Pass)
+      :> "select"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           PurchasedPassSelectReq
+      :> Post
+           '[JSON]
+           API.Types.UI.Pass.PassSelectionAPIEntity
+  )
+
 type GetPassCustomerPaymentStatus =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "payment"
       :> Capture
@@ -100,6 +115,18 @@ type GetPassCustomerPaymentStatus =
            (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
       :> "status"
       :> Get '[JSON] Lib.Payment.Domain.Action.PaymentStatusResp
+  )
+
+type GetPassCustomerPaymentStatusHelper =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "payment"
+      :> Capture
+           "orderId"
+           (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
+      :> "status"
+      :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Lib.Payment.Domain.Action.PaymentStatusResp
   )
 
 type PostPassCustomerPassResetDeviceSwitchCount =
@@ -117,12 +144,20 @@ type PostPassCustomerPassUpdateProfilePicture =
            "purchasedPassId"
            (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass)
       :> "updateProfilePicture"
-      :> ReqBody
-           '[JSON]
-           UpdateProfilePictureReq
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           IssueManagement.Common.UI.Issue.IssueMediaUploadReq
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           IssueManagement.Common.UI.Issue.IssueMediaUploadRes
+  )
+
+type GetPassCustomerPassPhoto =
+  ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "pass" :> "photo"
+      :> Capture
+           "mediaId"
+           (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
+      :> Get '[JSON] Kernel.Prelude.Text
   )
 
 type PostPassCustomerPassRestore = ("customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "pass" :> "restore" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -130,19 +165,26 @@ type PostPassCustomerPassRestore = ("customer" :> Capture "customerId" (Kernel.T
 data PassAPIs = PassAPIs
   { getPassCustomerAvailablePasses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PassInfoAPIEntity],
     getPassCustomerPurchasedPasses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PurchasedPassAPIEntity],
-    getPassCustomerTransactions :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity],
+    getPassCustomerTransactions :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity],
     postPassCustomerActivateToday :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment) -> Kernel.Prelude.Maybe Data.Time.Day -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPassCustomerPassSelect :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> PurchasedPassSelectReq -> EulerHS.Types.EulerClient API.Types.UI.Pass.PassSelectionAPIEntity,
-    getPassCustomerPaymentStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> EulerHS.Types.EulerClient Lib.Payment.Domain.Action.PaymentStatusResp,
+    postPassCustomerPassSelect :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> PurchasedPassSelectReq -> EulerHS.Types.EulerClient API.Types.UI.Pass.PassSelectionAPIEntity,
+    getPassCustomerPaymentStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.Domain.Action.PaymentStatusResp,
     postPassCustomerPassResetDeviceSwitchCount :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPassCustomerPassUpdateProfilePicture :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> UpdateProfilePictureReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPassCustomerPassUpdateProfilePicture ::
+      Kernel.Types.Id.Id Domain.Types.Person.Person ->
+      Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
+      ( Data.ByteString.Lazy.ByteString,
+        IssueManagement.Common.UI.Issue.IssueMediaUploadReq
+      ) ->
+      EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.IssueMediaUploadRes,
+    getPassCustomerPassPhoto :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
     postPassCustomerPassRestore :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPassAPIs :: (Client EulerHS.Types.EulerClient API -> PassAPIs)
 mkPassAPIs passClient = (PassAPIs {..})
   where
-    getPassCustomerAvailablePasses :<|> getPassCustomerPurchasedPasses :<|> getPassCustomerTransactions :<|> postPassCustomerActivateToday :<|> postPassCustomerPassSelect :<|> getPassCustomerPaymentStatus :<|> postPassCustomerPassResetDeviceSwitchCount :<|> postPassCustomerPassUpdateProfilePicture :<|> postPassCustomerPassRestore = passClient
+    getPassCustomerAvailablePasses :<|> getPassCustomerPurchasedPasses :<|> getPassCustomerTransactions :<|> postPassCustomerActivateToday :<|> postPassCustomerPassSelect :<|> getPassCustomerPaymentStatus :<|> postPassCustomerPassResetDeviceSwitchCount :<|> postPassCustomerPassUpdateProfilePicture :<|> getPassCustomerPassPhoto :<|> postPassCustomerPassRestore = passClient
 
 data PassUserActionType
   = GET_PASS_CUSTOMER_AVAILABLE_PASSES
@@ -153,6 +195,7 @@ data PassUserActionType
   | GET_PASS_CUSTOMER_PAYMENT_STATUS
   | POST_PASS_CUSTOMER_PASS_RESET_DEVICE_SWITCH_COUNT
   | POST_PASS_CUSTOMER_PASS_UPDATE_PROFILE_PICTURE
+  | GET_PASS_CUSTOMER_PASS_PHOTO
   | POST_PASS_CUSTOMER_PASS_RESTORE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

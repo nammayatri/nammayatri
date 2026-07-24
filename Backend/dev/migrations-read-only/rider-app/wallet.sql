@@ -16,3 +16,9 @@ ALTER TABLE atlas_app.wallet ADD COLUMN program_type text NOT NULL;
 ALTER TABLE atlas_app.wallet ADD COLUMN topup_earned double precision NOT NULL;
 ALTER TABLE atlas_app.wallet ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.wallet ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.wallet ADD COLUMN conversion_rate double precision ;

@@ -50,7 +50,9 @@ dependencies:
   - mtl
   - transformers
   - yudhishthira
+  - beckn-services
   - beckn-spec
+  - shared-services
 
 default-extensions:
   - ConstraintKinds
@@ -86,6 +88,7 @@ library:
   source-dirs: src
   exposed-modules:
     - Dashboard
+    - FileManagementUnitTests
   other-modules:
     - RegistrationUnitTests
     - VehicleAssociationUnitTests
@@ -95,6 +98,10 @@ library:
     - CreateRequestUnitTests
     - EmailOtpUnitTests
     - MerchantDocumentUnitTests
+    - MediaFileUploadStatusUnitTests
+    - RewardsEvaluatorTests
+    - RewardsCouponTemplatedTests
+    - RewardsCouponPoolTests
 
 executables:
   hunit-tests:

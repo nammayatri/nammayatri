@@ -72,7 +72,6 @@ import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Stripe.Types.Common as Stripe
-import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Wallet as Wallet
 import Kernel.Prelude hiding (head)
@@ -82,7 +81,9 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Servant (RawByteString (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -91,6 +92,7 @@ import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
+import qualified Lib.Types.SpecialLocation as SL
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -99,9 +101,9 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMapping
@@ -111,7 +113,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
 import Tools.Metrics
-import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 
@@ -139,6 +140,7 @@ createOrder (personId, merchantId) rideId = do
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount [] isPercentageSplitEnabled False
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   nwAddress <- asks (.nwAddress)
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -162,7 +164,8 @@ createOrder (personId, merchantId) rideId = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -182,7 +185,10 @@ createRideBookingPaymentOrder booking = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   paymentOrderId <- generateGUID
   orderShortId <- generateShortId
-  let amount = booking.estimatedTotalFare.amount
+  let amount =
+        if booking.fareSettlementType == Just SL.CommissionOnly
+          then fromMaybe 0 booking.commission
+          else booking.estimatedTotalFare.amount
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False
@@ -202,6 +208,7 @@ createRideBookingPaymentOrder booking = do
       pure $ Just mapping.terminalId
     Nothing -> pure Nothing
 
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -225,7 +232,8 @@ createRideBookingPaymentOrder booking = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -335,7 +343,7 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                   eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
                   case eitherCancelResult of
                     Right dCancelRes -> do
-                      void $ QRideB.updateStatus booking.id SRB.CANCELLED
+                      void $ QRideB.updateStatus booking.riderId booking.id SRB.CANCELLED
                       void $ QBPL.makeAllInactiveByBookingId booking.id
                       void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
                       logInfo $ "PaytmEDC poll: Successfully cancelled booking " <> bookingIdText <> " due to poll failures"
@@ -543,7 +551,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
     Nothing -> return Nothing
   merchantServiceConfig' <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (getPaymentServiceByType mbServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
   (,merchantOperatingCity) <$> case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
@@ -781,20 +789,11 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
       refundsId <- (Id @DRefunds.Refunds <$>) $ refundInfo.refundsId & fromMaybeM (InvalidRequest "refundsId not found")
       Redis.whenWithLockRedis (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
         void $ DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
-        -- Void pending ledger entries on successful refund (reversal)
-        when (refundInfo.status == Payment.REFUND_SUCCESS) $
-          withRideIdFromOrder orderId $ \rideId ->
-            voidPendingLedgerEntries rideId ("refund webhook for order: " <> orderId.getId)
         QRefundRequest.findByRefundsId (Just refundsId) >>= \case
           Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
           Just refundRequest -> do
             let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
-            unless (refundRequest.status == updStatus) $ do
-              QRefundRequest.updateRefundStatus updStatus refundRequest.id
-              let updRefundRequest = refundRequest{status = updStatus}
-              let rideId = cast @DOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
-              QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
-              Notify.notifyRefunds updRefundRequest
+            DRidePayment.processRefundResult refundRequest updStatus Nothing
       pure Ack
     DPayment.OrderTxnWebhookData (_mbOrderShortId, orderTxn) -> do
       ackResp <- DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
@@ -832,24 +831,10 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
       pure ackResp
     _ -> DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData
 
--- | Look up rideId from a payment order's domainEntityId and run an action with it.
-withRideIdFromOrder :: Id DOrder.PaymentOrder -> (Text -> Flow ()) -> Flow ()
-withRideIdFromOrder orderId action = do
-  mbOrder <- QOrder.findById orderId
-  whenJust mbOrder $ \order -> withRideIdFromOrderObj order action
-
 withRideIdFromOrderObj :: DOrder.PaymentOrder -> (Text -> Flow ()) -> Flow ()
 withRideIdFromOrderObj order action =
   whenJust order.domainEntityId $ \rideId ->
     unless (Data.Text.null rideId) $ action rideId
-
--- | Void all unsettled (PENDING or DUE) ledger entries for a ride.
-voidPendingLedgerEntries :: Text -> Text -> Flow ()
-voidPendingLedgerEntries rideId reason = do
-  pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId
-  unless (null pendingEntries) $ do
-    RidePaymentFinance.voidRidePaymentLedger (map (.id) pendingEntries)
-    logInfo $ "Voided " <> show (length pendingEntries) <> " pending ledger entries for ride: " <> rideId <> " reason: " <> reason
 
 ----------------------------------------- wallet apis -----------------------------------------------------
 
@@ -875,6 +860,7 @@ postWalletRecharge (personId, merchantId) req = do
                       }
                 }
           }
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -898,7 +884,8 @@ postWalletRecharge (personId, merchantId) req = do
             basket = Nothing,
             paymentRules = Just paymentRules,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

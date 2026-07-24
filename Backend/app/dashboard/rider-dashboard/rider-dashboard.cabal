@@ -28,8 +28,12 @@ library
   exposed-modules:
       API
       API.BharatTaxi.User
+      API.Entity
+      API.Person
       API.RiderPlatform
       App
+      Domain.Action.Entity
+      Domain.Action.Person
       Domain.Action.RiderPlatform.AppManagement.Customer
       Domain.Action.RiderPlatform.AppManagement.EDCMachine
       Domain.Action.RiderPlatform.AppManagement.EventManagement
@@ -39,6 +43,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.Passetto
       Domain.Action.RiderPlatform.AppManagement.PassOrganization
       Domain.Action.RiderPlatform.AppManagement.Payment
+      Domain.Action.RiderPlatform.AppManagement.SeatLayout
       Domain.Action.RiderPlatform.AppManagement.StopRouteDetails
       Domain.Action.RiderPlatform.AppManagement.TicketDashboard
       Domain.Action.RiderPlatform.AppManagement.Tickets
@@ -56,6 +61,8 @@ library
       Domain.Action.RiderPlatform.Management.Merchant
       Domain.Action.RiderPlatform.Management.NammaTag
       Domain.Action.RiderPlatform.Management.Offer
+      Domain.Action.RiderPlatform.Management.Payout
+      Domain.Action.RiderPlatform.Management.Rewards
       Domain.Action.RiderPlatform.Management.Ride
       Domain.Action.RiderPlatform.Management.Sos
       Domain.Action.RiderPlatform.Management.SosMedia
@@ -85,6 +92,7 @@ library
       API.Action.RiderPlatform.AppManagement.Passetto
       API.Action.RiderPlatform.AppManagement.PassOrganization
       API.Action.RiderPlatform.AppManagement.Payment
+      API.Action.RiderPlatform.AppManagement.SeatLayout
       API.Action.RiderPlatform.AppManagement.StopRouteDetails
       API.Action.RiderPlatform.AppManagement.TicketDashboard
       API.Action.RiderPlatform.AppManagement.Tickets
@@ -104,6 +112,8 @@ library
       API.Action.RiderPlatform.Management.Merchant
       API.Action.RiderPlatform.Management.NammaTag
       API.Action.RiderPlatform.Management.Offer
+      API.Action.RiderPlatform.Management.Payout
+      API.Action.RiderPlatform.Management.Rewards
       API.Action.RiderPlatform.Management.Ride
       API.Action.RiderPlatform.Management.Sos
       API.Action.RiderPlatform.Management.SosMedia

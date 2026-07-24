@@ -32,6 +32,8 @@ library
       ConfigPilotFrontend.Types
       Email.OTP.API
       Email.OTP.Types
+      FileManagement.Common.UI.File
+      FileManagement.Domain.Action.UI.File
       IssueManagement.API.Beckn.Issue
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils
@@ -49,6 +51,7 @@ library
       IssueManagement.Domain.Action.Beckn.OnIssueStatus
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
+      IssueManagement.Domain.Action.UI.XyneWebhook
       IssueManagement.Domain.Types.Issue.ChatMessage
       IssueManagement.Domain.Types.Issue.Comment
       IssueManagement.Domain.Types.Issue.IGMConfig
@@ -94,6 +97,7 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      IssueManagement.Utils.Html
       MerchantDocuments.Domain.Action.UI.MerchantDocument
       MerchantDocuments.Domain.Types.Common
       MerchantDocuments.Storage.BeamFlow

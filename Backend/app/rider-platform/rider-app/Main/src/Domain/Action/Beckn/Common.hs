@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Action.Rewards.Consumer as RewardsConsumer
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
@@ -83,6 +84,8 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -99,12 +102,15 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
@@ -121,27 +127,32 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CQRRNC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.ClientPersonInfo as QCP
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
@@ -152,7 +163,6 @@ import qualified Tools.EventTracking as ET
 import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
-import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP
 import qualified Tools.SMS as Sms
 import qualified Tools.Ticket as Ticket
@@ -174,7 +184,9 @@ data BookingDetails = BookingDetails
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
     otp :: Text,
-    isInitiatedByCronJob :: Bool
+    isInitiatedByCronJob :: Bool,
+    isTierUpgrade :: Bool,
+    assignedServiceTierName :: Maybe Text
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -341,6 +353,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
       (toLocation, stops) = case booking.bookingDetails of
         DRB.OneWayDetails details -> (Just details.toLocation, details.stops)
         DRB.RentalDetails _ -> (Nothing, [])
+        -- EasyBooking is destination-less like Rental: no toLocation, no stops.
+        DRB.EasyBookingDetails _ -> (Nothing, [])
         DRB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
         DRB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
         DRB.InterCityDetails details -> (Just details.toLocation, [])
@@ -359,6 +373,11 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
           <$> bookingDetails.driverImage
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   cloudType <- asks (.cloudType)
+  mbSafetySettings <- QSafetySettings.findByPersonId (cast booking.riderId)
+  let isMeterRide = case booking.bookingDetails of
+        DRB.MeterRideDetails _ -> True
+        _ -> False
+      enableOtpLessRide = Just $ isMeterRide || fromMaybe False (mbSafetySettings >>= (.enableOtpLessRide))
   return
     DRide.Ride
       { id = guid,
@@ -427,6 +446,9 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
+        isTierUpgrade = Just isTierUpgrade,
+        assignedServiceTierName = assignedServiceTierName,
+        rideTags = Nothing,
         ..
       }
 
@@ -449,7 +471,8 @@ rideAssignedReqHandler ::
     HasKafkaProducer r,
     HasFlowEnv m r '["isMetroTestTransaction" ::: Bool],
     HasField "blackListedJobs" r [Text],
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -488,14 +511,14 @@ rideAssignedReqHandler req = do
     Nothing -> assignRideUpdate req {booking = booking} mbMerchant rideStatus now
   where
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
-      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent})
+      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent}) (Just (CQRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent (Just [])))
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now)
     assignRideUpdate ::
       ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
         HasField "storeRidesTimeLimit" r Int,
         CacheFlow m r,
         EsqDBFlow m r,
-        MonadFlow m,
+        Finance.HasActorInfo m r,
         EncFlow m r,
         EsqDBReplicaFlow m r,
         HasLongDurationRetryCfg r c,
@@ -525,14 +548,15 @@ rideAssignedReqHandler req = do
           bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
       when (bookingDiscountAmount > 0) $ do
         guid <- generateGUID
-        QFareBreakup.create
-          DFareBreakup.FareBreakup
-            { id = guid,
-              entityId = booking.id.getId,
-              entityType = DFareBreakup.BOOKING,
-              amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
-              description = "OFFER_DISCOUNT"
-            }
+        let offerDiscountFareBreakup =
+              DFareBreakup.FareBreakup
+                { id = guid,
+                  entityId = booking.id.getId,
+                  entityType = DFareBreakup.BOOKING,
+                  amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
+                  description = "OFFER_DISCOUNT"
+                }
+        SFareBreakupInfo.addFareBreakupInfoItems booking.id.getId DFareBreakup.BOOKING [SFareBreakupInfo.fareBreakupToItem offerDiscountFareBreakup] (Just booking.merchantId) (Just booking.merchantOperatingCityId)
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {driverAccountId = onlineDriverAccountId, ..} -> do
@@ -620,7 +644,7 @@ rideAssignedReqHandler req = do
                       financeCtx = ledgerCtx
                     }
                   mbLedgerInfo
-          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
+          result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount
           case result of
             Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
             Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
@@ -632,7 +656,7 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+      QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
@@ -647,7 +671,7 @@ rideAssignedReqHandler req = do
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
       notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
         fork "Sending Dashboard Ride Flow Booking Details" $ do
           sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
@@ -655,7 +679,7 @@ rideAssignedReqHandler req = do
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         fork "Sending Delivery Details SMS to Sender And Receiver" $ do
-          mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+          mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
           senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
           receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
           senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
@@ -727,10 +751,10 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   QPFS.clearCache booking.riderId
   when (updRideForStartReq.isInsured) $ fork "create insurance" $ SI.createInsurance updRideForStartReq
   now <- getCurrentTime
-  rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME})
+  rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME}) (Just (CQRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME (Just [])))
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   fork "convert pending non-ride sos to ride sos on ride start" $ convertNonRideSosToRide person riderConfig
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
@@ -744,7 +768,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
     _ -> pure ()
   where
     sendDeliveryDetailsToReceiver riderConfig = fork "Sending Delivery Details SMS to Receiver" $ do
-      mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+      mbExoPhone <- getOneConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
       senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
       receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
       receiverPerson <- QP.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
@@ -773,7 +797,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
 
     sendRideEndOTPMessage person = fork "sending ride end otp sms" $ do
       let merchantOperatingCityId = booking.merchantOperatingCityId
-      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       if merchantConfig.enableDashboardSms
         then do
           case endOtp_ of
@@ -805,8 +829,8 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
               case sos.ticketId of
                 Just existingTicketId ->
                   void $
-                    withTryCatch "updateSosTicket:autoConvertSos" $
-                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing}
+                    withTryCatch "updateTicket:autoConvertSos" $
+                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing, requesterId = sos.requesterId, ticketContext = Just TIT.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
                 Nothing -> do
                   let trackLink = case riderConfig.sosTrackingLink of
                         Just sosLink -> Text.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId
@@ -816,7 +840,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                     withTryCatch "createTicket:autoConvertSos" $
                       Ticket.createTicket person.merchantId person.merchantOperatingCityId $
                         SIVR.mkTicket person phoneNumber [trackLink] (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
-                  whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
+                  whenJust (either (const Nothing) (Just . (.ticketId) . fst) ticketResponse) $ \newTicketId ->
                     void $ SafetySos.updateSosTicketId sos (Just newTicketId)
           Just SafetyDSos.LiveTracking -> do
             SafetyQSos.updateStatus SafetyDSos.Resolved sos.id
@@ -835,7 +859,7 @@ rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     ClickhouseFlow m r,
@@ -864,7 +888,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
       Nothing -> return ()
   fork "updating total rides count" $ SMC.updateTotalRidesCounters person
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
   let driverPhoneNumber = fromMaybe driverMobileNumber mbDriverPhoneNumber
@@ -882,76 +906,57 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
         Nothing -> totalFare.amount
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
-  -- Persist offer details in Ride OfferEntity table for fast lookup in rideList
-  mbRideOfferEntity <-
-    case booking.selectedOfferId of
-      Just offerId -> do
-        mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket booking.merchantId person.id booking.merchantOperatingCityId DOrder.RideHailing (show booking.vehicleServiceTierType) offerBasePrice offerId fareCtx (Just ride) (Just booking) Nothing
-        case mbOfferDetails of
-          Just (offerDetails, computed) -> do
-            rideOfferId <- generateGUID
-            now <- getCurrentTime
-            pure $
-              Just $
-                DOfferEntity.OfferEntity
-                  { id = rideOfferId,
-                    entityId = ride.id.getId,
-                    entityType = DOfferEntity.RIDE,
-                    offerId = offerDetails.offerId,
-                    offerCode = offerDetails.offerCode,
-                    offerTitle = offerDetails.offerTitle,
-                    offerDescription = offerDetails.offerDescription,
-                    offerTnc = offerDetails.offerTnc,
-                    offerSponsoredBy = offerDetails.offerSponsoredBy,
-                    autoApply = offerDetails.autoApply,
-                    isHidden = offerDetails.isHidden,
-                    discountAmount = computed.discountAmount,
-                    payoutAmount = computed.payoutAmount,
-                    amountSaved = computed.amountSaved,
-                    postOfferAmount = computed.postOfferAmount,
-                    merchantId = booking.merchantId,
-                    merchantOperatingCityId = booking.merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          Nothing -> pure Nothing
-      Nothing -> pure Nothing
-  whenJust mbRideOfferEntity $ \rideOfferEntity -> do
-    QOfferEntity.create rideOfferEntity
-  let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
-      ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
+  -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
+  -- fare params, so it carries no commission or tax) but it is part of what the rider owes.
+  -- `fare` stays the fare the policy computed; `totalFare` is what is actually collected.
+  let totalFareWithTip = mkPrice (Just totalFare.currency) (totalFare.amount + maybe 0 (.amount) ride.tipAmount)
   let rideCommission = maybe booking.commission Just commission
       updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
-             totalFare = Just totalFare,
+             totalFare = Just totalFareWithTip,
              chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
+             rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
              commission = rideCommission
             }
+  -- Persist offer details in Ride OfferEntity table for fast lookup in rideList,
+  -- apply the offer for cash rides, and schedule the cashback-payout job when
+  -- the offer carries a payout.
+  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
+  mbOfferStatsInput <- if onlinePayment then pure Nothing else Just <$> SPayment.buildOfferStatsInput person
+  mbRideOfferEntity <- SOffer.processRideOffer mbOfferStatsInput booking person updRide offerBasePrice fareCtx
+  let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
+      ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  let vehicleCat = Utils.mapServiceTierToCategory booking.vehicleServiceTierType
   fork "update first ride info" $ do
-    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
-    case mbPersonFirstRideInfo of
+    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just vehicleCat
+    -- Per-category count incl. this ride; reuses the cached count (O(N) query only on cache miss).
+    catRideCount <- case mbPersonFirstRideInfo of
       Just personFirstRideInfo -> do
-        QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
+        let newCount = personFirstRideInfo.rideCount + 1
+        QCP.updateHasTakenValidRideCount newCount booking.riderId $ Just vehicleCat
+        pure newCount
       Nothing -> do
-        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (Utils.getListOfServiceTireTypes $ Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
-        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
+        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (Utils.getListOfServiceTireTypes vehicleCat)
+        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId vehicleCat (totalCount + 1)
         QCP.create personClientInfo
         when (totalCount == 0) $ do
-          Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
+          Notify.notifyFirstRideEvent booking.riderId vehicleCat booking.tripCategory
           fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
             customerReferralPayout ride totalFare.currency isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
+        pure (totalCount + 1)
+    ET.trackVehicleRideCompletedEvents booking.merchantId booking.merchantOperatingCityId booking.riderId vehicleCat catRideCount totalFare.amount
 
   when (not person.hasTakenValidRide && fromMaybe 0 person.totalRidesCount == 0) $
     fork "event_tracking: first_ride_completed" $
@@ -962,19 +967,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       addOffersNammaTags updRide person
 
   -- we should create job for collecting money from customer
-  let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
-      applicationFeeAmount' = fromMaybe 0 rideCommission
+  let applicationFeeAmount' = fromMaybe 0 rideCommission
 
   if not onlinePayment
     then do
-      whenJust booking.selectedOfferId $ \offerId -> whenJust mbRideOfferEntity $ \rideOfferEntity -> when riderConfig.enableRideHailingOffers $ do
-        useDomainOffers <- TPayment.useDomainOffers booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing
-        let applyOfferCall = TPayment.offerApply booking.merchantId booking.merchantOperatingCityId Nothing DOrder.RideHailing Nothing person.clientSdkVersion
-        offerStatsInput <- SPayment.buildOfferStatsInput person
-        let mbProduct = Just (show booking.vehicleServiceTierType, totalFare.amount)
-        void $
-          withTryCatch "applyOfferWithoutPayment:cashRide" $
-            DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
       let riderName = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
           mbInvCfg = riderConfig.invoiceConfig
           cashLedgerCtx =
@@ -1011,16 +1007,23 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           cashLedgerInfo.gstAmount
           cashLedgerInfo.tollFare
           cashLedgerInfo.tollVatAmount
+          cashLedgerInfo.parkingCharge
+          cashLedgerInfo.parkingChargeVat
           cashLedgerInfo.platformFee
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount
           cashLedgerInfo.rideVatAbsorbedOnDiscount
-          0 -- cancellationCharge (not applicable at ride-end)
-          0 -- cancellationTax
-      unless (null upsertRes.coreEntryIds) $ do
-        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
+          cashLedgerInfo.cancellationCharge
+          cashLedgerInfo.cancellationTax
+      -- Cash settles the ids given to it, where the online capture re-queries every unsettled entry
+      -- on the ride. So the carried cancellation entries must be listed here or they stay PENDING.
+      let settleableIds = upsertRes.coreEntryIds <> upsertRes.cancellationEntryIds
+      unless (null settleableIds) $ do
+        settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx settleableIds RidePaymentFinance.settledReasonRidePayment
         case settleResult of
-          Right () -> logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
+          Right () -> do
+            RidePaymentFinance.markRideInvoicePaid ride.id.getId
+            logInfo $ "Cash ride BAP ledger settled for ride: " <> ride.id.getId <> " invoiceId=" <> show upsertRes.invoiceId
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
       -- Online Ride End branch → isOnline=True.
@@ -1084,36 +1087,34 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           logDebug $ "Scheduling execute payment intent job for order: " <> show scheduleAfter
           createJobIn @_ @'ExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (executePaymentIntentJobData :: ExecutePaymentIntentJobData)
 
-  let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
-  when (ridePayoutAmount > 0) $ do
-    payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
-    case payoutCfg of
-      Just payoutConfig -> do
-        let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = person.id}
-            scheduleAfter = Kernel.Utils.Common.secondsToNominalDiffTime (fromIntegral payoutConfig.scheduleCashbackPayoutAfter)
-        createJobIn @_ @'ExecuteCashRideCashbackPayout (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter cashbackPayoutJobData
-      Nothing -> do
-        logError $ "No payout config found for vehicle category - for offers: " <> show vehicleCategory <> " merchant operating city: " <> booking.merchantOperatingCityId.getId
-        pure ()
+  -- Schedule the cashback-payout job after the ledger leg has been created above.
+  SOffer.scheduleCashbackPayoutJob booking updRide person.id ridePayoutAmount
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   whenJust person.totalRidesCount $ \rideCount ->
     fork "event_tracking: ride_completed" $
-      ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.RideCompleted (getId booking.riderId) (rideCount + 1))
+      ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.RideCompleted (getId booking.riderId) (rideCount + 1) totalFare.amount)
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.COMPLETED) $
     void $ do
       sendRideEndMessage booking
-      QRB.updateStatus booking.id DRB.COMPLETED
+      QRB.updateStatus booking.riderId booking.id DRB.COMPLETED
       QBPL.makeAllInactiveByBookingId booking.id
   now <- getCurrentTime
-  rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.END_TIME})
+  rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.END_TIME}) (Just (CQRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.END_TIME (Just [])))
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRide (fromMaybe now rideEndTime))
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  fork "Increment completed count + evaluate rewards" $ do
+    void $ CCR.incrementCompletedCount booking.riderId 1
+    RewardsConsumer.evaluateRewardsIfEnabled
+      booking.riderId
+      booking.merchantOperatingCityId
+      (fromMaybe now rideEndTime)
+      isValidRide
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do
@@ -1128,7 +1129,12 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
           ]
       else pure []
-  QFareBreakup.createMany (breakups <> offerDiscountBreakup)
+  -- The tip rides in on the Beckn quote breakup as BUYER_ADDITIONAL_AMOUNT — the BPP emits that line
+  -- whenever ride.tipAmount > 0. We store it as-is, so the fare breakup the rider app shows is exactly
+  -- the one the driver sent: single source on the wire, no local reconstruction. (Tips added after the
+  -- ride has already completed don't arrive on a fresh quote; those are written directly in
+  -- Domain.Action.UI.RidePayment under the same title.)
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
@@ -1153,7 +1159,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   fork "mark pending sos as not resolved on ride end" $ do
     SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
-    Notify.notifyOnRideCompleted booking updRide otherParties
+    Notify.notifyOnRideCompleted booking updRide otherParties rideDiscountAmount
+  EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
     buildFareBreakup rideId DFareBreakup {..} = do
@@ -1301,7 +1308,7 @@ cancellationTransaction ::
     CacheFlow m r,
     EsqDBFlow m r,
     ClickhouseFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
@@ -1323,7 +1330,7 @@ cancellationTransaction ::
   m ()
 cancellationTransaction booking mbRide cancellationSource cancellationFee cancellationFeeTax immediateCharge = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
   fork "incrementing fraud counters" $ do
     case mbRide of
       Just ride -> do
@@ -1344,7 +1351,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.CANCELLED) $
     void $ do
-      QRB.updateStatus booking.id DRB.CANCELLED
+      QRB.updateStatus booking.riderId booking.id DRB.CANCELLED
       QBPL.makeAllInactiveByBookingId booking.id
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
   whenJust mbRide $ \ride -> void $ do
@@ -1354,7 +1361,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
     fork "mark pending sos as not resolved on ride cancel" $
       SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError "RiderConfig not found")
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
       logDebug $ "[CancellationSettlement] cancellationFee present: " <> show fee.amount <> " immediateCharge=" <> show immediateCharge <> " settleCancellationFeeBeforeNextRide=" <> show riderConfig.settleCancellationFeeBeforeNextRide <> " mbRide=" <> show (fmap (.id) mbRide)
@@ -1399,10 +1406,18 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                   _ -> return ()
                 syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
             else do
-              let scheduleAfter = riderConfig.cancellationPaymentDelay
-                  cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, cancellationTax = cancellationTax, rideId = ride.id}
-              logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
-              createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
+              -- Manual due: do NOT capture. Cancel/void the ride payment, create a pending
+              -- cancellation due and sync it to the BPP; the rider clears it before the next ride.
+              logDebug $ "[CancellationSettlement] immediateCharge=false, creating manual cancellation due for rideId=" <> ride.id.getId
+              if ride.onlinePayment
+                then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+                else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
+              dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
+              case dueLedgerResp of
+                Right (_mbInvoiceId, pendingEntryIds) ->
+                  RidePaymentFinance.markEntriesAsDue pendingEntryIds
+                _ -> return ()
+              syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
         (_, Just ride) -> do
           when ride.onlinePayment $ do
             logInfo $ "Cancel payment intent due to rider configs: rideId: " <> ride.id.getId
@@ -1429,6 +1444,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           let callAtemptByDriver = isJust mbCallStatus
               currentTime = floor $ utcTimeToPOSIXSeconds now
               rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+              bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
               driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> ride.driverArrivalTime
               tagData =
                 Y.CancelRideTagData
@@ -1438,6 +1454,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                     callAtemptByDriver,
                     currentTime,
                     rideCreatedTime,
+                    bookingCreatedTime,
                     merchantOperatingCityId = booking.merchantOperatingCityId,
                     driverArrivalTime
                   }
@@ -1719,7 +1736,7 @@ sendRideEndMessage bk = case bk.tripCategory of
 customerReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r
@@ -1735,7 +1752,7 @@ customerReferralPayout ::
 customerReferralPayout ride currency isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
-  mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory merchantOperatingCityId vehicleCategory (Just [])))
   case mbPayoutConfig of
     Just payoutConfig -> do
       whenJust person_.referredByCustomer $ \referredByCustomerId -> do
@@ -1914,7 +1931,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
 updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
 updateAndNotifyDriverArrivalStatus booking ride newStatus =
   Redis.withWaitOnLockRedisWithExpiry (driverArrivalStatusLockKey ride.id.getId) 5 30 $ do
-    freshRide <- QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
+    freshRide <- QRideLite.findByIdLite ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
     let isHigherStatus = maybe True (newStatus >) freshRide.driverArrivalStatus
     when (freshRide.status /= DRide.INPROGRESS && isHigherStatus) $ do
       void $ QRide.updateDriverArrivalStatus (Just newStatus) ride.id
@@ -1932,6 +1949,8 @@ createRecentLocationForTaxi booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing
+        -- No recent-location entry for EasyBooking either — no destination to record.
+        DRB.EasyBookingDetails _ -> Nothing
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation

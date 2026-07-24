@@ -37,7 +37,7 @@ deleteAllByEntityIdAndType entityId entityType merchantId = do
 
 findAllByEntityIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.EntityInfo.EntityInfo]))
+  (Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.EntityInfo.EntityInfo])
 findAllByEntityIdAndType entityId entityType merchantId = do
   findAllWithKV
     [ Se.And
@@ -57,6 +57,7 @@ updateByPrimaryKey (Domain.Types.EntityInfo.EntityInfo {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.answer answer,
+      Se.Set Beam.mediaFileId mediaFileId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.question question,
@@ -73,6 +74,7 @@ instance FromTType' Beam.EntityInfo Domain.Types.EntityInfo.EntityInfo where
             createdAt = createdAt,
             entityId = entityId,
             entityType = entityType,
+            mediaFileId = mediaFileId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             question = question,
@@ -87,6 +89,7 @@ instance ToTType' Beam.EntityInfo Domain.Types.EntityInfo.EntityInfo where
         Beam.createdAt = createdAt,
         Beam.entityId = entityId,
         Beam.entityType = entityType,
+        Beam.mediaFileId = mediaFileId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.question = question,

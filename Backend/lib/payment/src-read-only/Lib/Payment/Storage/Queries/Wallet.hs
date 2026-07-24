@@ -31,8 +31,8 @@ findByPersonAndProgram personId programType = do findOneWithKV [Se.And [Se.Is Be
 
 syncFromLoyaltyInfo ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Wallet.Wallet -> m ())
-syncFromLoyaltyInfo availableBalance lifetimeEarned lifetimeBurned topupEarned cashbackEarned id = do
+  (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Wallet.Wallet -> m ())
+syncFromLoyaltyInfo availableBalance lifetimeEarned lifetimeBurned topupEarned cashbackEarned conversionRate id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.availableBalance availableBalance,
@@ -40,6 +40,7 @@ syncFromLoyaltyInfo availableBalance lifetimeEarned lifetimeBurned topupEarned c
       Se.Set Beam.lifetimeBurned lifetimeBurned,
       Se.Set Beam.topupEarned topupEarned,
       Se.Set Beam.cashbackEarned cashbackEarned,
+      Se.Set Beam.conversionRate conversionRate,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -75,6 +76,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.Wallet.Wallet {..}) = do
     [ Se.Set Beam.accountId (Kernel.Types.Id.getId accountId),
       Se.Set Beam.availableBalance availableBalance,
       Se.Set Beam.cashbackEarned cashbackEarned,
+      Se.Set Beam.conversionRate conversionRate,
       Se.Set Beam.currency currency,
       Se.Set Beam.lifetimeBurned lifetimeBurned,
       Se.Set Beam.lifetimeEarned lifetimeEarned,
@@ -96,6 +98,7 @@ instance FromTType' Beam.Wallet Lib.Payment.Domain.Types.Wallet.Wallet where
           { accountId = Kernel.Types.Id.Id accountId,
             availableBalance = availableBalance,
             cashbackEarned = cashbackEarned,
+            conversionRate = conversionRate,
             createdAt = createdAt,
             currency = currency,
             id = Kernel.Types.Id.Id id,
@@ -116,6 +119,7 @@ instance ToTType' Beam.Wallet Lib.Payment.Domain.Types.Wallet.Wallet where
       { Beam.accountId = Kernel.Types.Id.getId accountId,
         Beam.availableBalance = availableBalance,
         Beam.cashbackEarned = cashbackEarned,
+        Beam.conversionRate = conversionRate,
         Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.id = Kernel.Types.Id.getId id,

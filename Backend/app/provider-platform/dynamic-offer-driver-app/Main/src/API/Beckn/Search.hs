@@ -44,6 +44,7 @@ import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Tools.ActorInfo as ActorInfo
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -85,7 +86,7 @@ search ::
   SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI $ do
+search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   bapUri <- Utils.getContextBapUri reqV2.searchReqContext
   redirectMap <- asks (.bapHostRedirectMap)
   case shouldRedirectBapHost redirectMap bapUri of
@@ -100,7 +101,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         city <- Utils.getContextCity context
         merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
         unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
-        moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InternalError $ "Operating City" <> show city <> "not supported or not found ")
+        moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
         void $ Utils.validateSearchContext context transporterId moc.id
         dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
         msgId <- Utils.getMessageId context

@@ -7,11 +7,13 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DocsVerificationStatus
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.FleetOwnerInformation
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 import qualified Tools.Error
@@ -22,6 +24,10 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     aadhaarNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     aadhaarNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     aadhaarNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    addressDocumentType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType),
+    addressState :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState),
+    approved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoPayStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.DriverAutoPayStatus),
     blockReasonFlag :: B.C f (Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag),
     blocked :: B.C f Kernel.Prelude.Bool,

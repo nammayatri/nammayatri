@@ -20,6 +20,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Queries.GateInfo as QGateInfo
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
@@ -28,6 +29,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 data FareProducts = FareProducts
   { fareProducts :: [DFareProduct.FareProduct],
@@ -35,6 +37,7 @@ data FareProducts = FareProducts
     specialLocationName :: Maybe Text,
     specialLocationTag :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
+    fareSettlementType :: Maybe SL.FareSettlementType,
     mbPickupDropArea :: Maybe SL.Area
   }
 
@@ -109,22 +112,51 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                   specialLocationName = Just pickupSpecialLocation.locationName,
                   specialLocationTag = Just specialLocationTag,
                   specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
+                  fareSettlementType = pickupSpecialLocation.fareSettlementType,
                   mbPickupDropArea = Nothing
                 }
 
-    getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
-      mbPickupGate <- QGateInfo.findGateInfoByLatLongWithinRadius pickupSpecialLocation.id fromLocationLatLong 2000.0
-      let mbPickupGateId = (.id.getId) <$> mbPickupGate
-          area = SL.Pickup pickupSpecialLocation.id mbPickupGateId
-          specialLocationName = pickupSpecialLocation.locationName
-      fareProducts <- getFareProducts area
+    getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag =
+      if pickupSpecialLocation.fetchAllGateFareProduct == Just True
+        then fetchAllGateFareProducts pickupSpecialLocation specialLocationTag
+        else do
+          mbPickupGate <- QGateInfo.findGateInfoByLatLongWithinRadius pickupSpecialLocation.id fromLocationLatLong 2000.0
+          let mbPickupGateId = (.id.getId) <$> mbPickupGate
+              area = SL.Pickup pickupSpecialLocation.id mbPickupGateId
+              specialLocationName = pickupSpecialLocation.locationName
+          fareProducts <- getFareProducts area
+          return $
+            FareProducts
+              { fareProducts,
+                area = area,
+                specialLocationName = Just specialLocationName,
+                specialLocationTag = Just specialLocationTag,
+                specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
+                fareSettlementType = pickupSpecialLocation.fareSettlementType,
+                mbPickupDropArea = Nothing
+              }
+    fetchAllGateFareProducts pickupSpecialLocation specialLocationTag = do
+      let slId = pickupSpecialLocation.id
+          parentArea = SL.Pickup slId Nothing
+      gatesWithGeom <- QGateInfo.gatesAtSpecialLocation slId
+      let gates = map fst gatesWithGeom
+          gateAreas = map (\gate -> SL.Pickup slId (Just gate.id.getId)) gates
+      allAreaFPs <-
+        concat
+          <$> forM (parentArea : gateAreas) \fpArea ->
+            QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory fpArea
+      when (null allAreaFPs) $
+        logInfo $ "fetchAllGateFareProducts: no fare products for slId=" <> slId.getId <> " tripCategory=" <> show tripCategory
+      fareProducts <- mapM getBoundedOrDefaultFareProduct allAreaFPs
+      -- Search-context area is the parent (no gate baked); each FP carries its own gate area on itself.
       return $
         FareProducts
           { fareProducts,
-            area = area,
-            specialLocationName = Just specialLocationName,
+            area = parentArea,
+            specialLocationName = Just pickupSpecialLocation.locationName,
             specialLocationTag = Just specialLocationTag,
             specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
+            fareSettlementType = pickupSpecialLocation.fareSettlementType,
             mbPickupDropArea = Nothing
           }
     getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
@@ -138,6 +170,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationName = Just specialLocationName,
             specialLocationTag = Just specialLocationTag,
             specialLocationSupportNumber = dropSpecialLocation.supportNumber,
+            fareSettlementType = dropSpecialLocation.fareSettlementType,
             mbPickupDropArea = Nothing
           }
 
@@ -151,6 +184,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             specialLocationName = Nothing,
             specialLocationTag = Nothing,
             specialLocationSupportNumber = Nothing,
+            fareSettlementType = Nothing,
             mbPickupDropArea = Nothing
           }
 
@@ -204,7 +238,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
 getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
 getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
-  mbTransporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbTransporterConfig
   currentIstTime <- getLocalCurrentTime timeDiffFromUtc
   case listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime) of

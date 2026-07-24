@@ -700,3 +700,88 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sync_search_dispatch_config jsonb 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN student_pass_verify_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_rewards_management boolean ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_edit_location_without_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN enable_edit_location_without_ride SET DEFAULT true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN special_location_tier_order_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN non_allowed_override_fleet_no_service_tiers json ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN immediate_capture_rider_cancellation_fee boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN immediate_capture_driver_cancellation_fee boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_payment_refunds boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_notification_tiers text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [] USING bus_tracking_notification_tiers::text[];

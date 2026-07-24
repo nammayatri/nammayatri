@@ -31,10 +31,12 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (convertUTCTimetoDate, parseDateTime, removeSpaceAndDash)
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -78,13 +80,15 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
   logDebug $ "DocumentRegistration.validateDocument: Image validated successfully, imageId=" <> show imageId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  isImageValidationRequired <- case person.role of
-    Person.FLEET_OWNER -> do
-      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
-      return $ maybe True (.isImageValidationRequired) docConfigs
-    _ -> do
-      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing
-      return $ maybe True (.isImageValidationRequired) docConfigs
+  isImageValidationRequired <-
+    if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+      then do
+        -- Role-aware fleet config (in-mem cached); default to requiring validation when none exists.
+        mbDocConfig <- SStatus.findFleetDocVerificationConfig merchantOpCityId imageType person.role
+        return $ maybe True (.isImageValidationRequired) mbDocConfig
+      else do
+        docConfigs <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Just (fromMaybe CAR vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing))
+        return $ maybe True (.isImageValidationRequired) docConfigs
   logDebug $ "DocumentRegistration.validateDocument: isImageValidationRequired=" <> show isImageValidationRequired
   if not isImageValidationRequired
     then do
@@ -100,6 +104,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
               let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedDL.dateOfBirth)
               let nameOnCard = extractedDL.nameOnCard
               DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
+              DL.cacheExtractedDlName personId nameOnCard
               logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
               pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard}
             Nothing ->

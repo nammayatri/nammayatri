@@ -19,16 +19,17 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleServiceTier = VehicleServiceTier
   { airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    cancellationRateConfig :: Kernel.Prelude.Maybe Dashboard.Common.CancellationRateConfig,
     defaultForVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isRentalsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

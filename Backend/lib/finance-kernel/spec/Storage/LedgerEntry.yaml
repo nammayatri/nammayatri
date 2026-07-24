@@ -7,6 +7,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Value: Data.Aeson
   Account: Lib.Finance.Domain.Types.Account
+  ActorType: Lib.Finance.Core.Types
 
 LedgerEntry:
   tableName: finance_ledger_entry
@@ -25,6 +26,13 @@ LedgerEntry:
       enum: "UNSETTLED,PROCESSING,PAID_OUT"
       derive: "HttpInstance"
 
+    # Sub-domain entity an entry belongs to, when referenceId (the ride) is not selective
+    # enough on its own — e.g. the legs of one refund request among the ride's many.
+    EntityReferenceType:
+      enum: "RefundRequest"
+      derive: "HttpInstance"
+
+  # NOTE: Mask sensitive values in ledgerEntryToAuditValue (Ledger.Service)
   fields:
     id: Id LedgerEntry
     timestamp: UTCTime
@@ -37,10 +45,12 @@ LedgerEntry:
     status: EntryStatus
     referenceType: Text
     referenceId: Text
+    entityReferenceId: Maybe Text
+    entityReferenceType: Maybe EntityReferenceType
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
-    metadata: Maybe Value
+    metadata: Maybe Value # SENSITIVE
     fromStartingBalance: Maybe HighPrecMoney
     toStartingBalance: Maybe HighPrecMoney
     fromEndingBalance: Maybe HighPrecMoney
@@ -53,12 +63,19 @@ LedgerEntry:
     createdAt: UTCTime
     reconciliationStatus: Maybe Value
 
+    # --- Audit ---
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+
   constraints:
     id: PrimaryKey
     fromAccountId: SecondaryKey
     toAccountId: SecondaryKey
     concernedIndividualId: "!SecondaryKey"
     referenceId: "!SecondaryKey"
+    entityReferenceId: SecondaryKey
     ownerId: "!SecondaryKey"
     settlementId: "!SecondaryKey"
 
@@ -71,6 +88,11 @@ LedgerEntry:
       kvFunction: findAllWithKV
       where:
         and: [referenceType, referenceId]
+
+    findByEntityReference:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityReferenceType, entityReferenceId]
 
     findByReferenceAndToAccount:
       kvFunction: findAllWithKV
@@ -100,22 +122,22 @@ LedgerEntry:
 
     updateStatus:
       kvFunction: updateWithKV
-      params: [status]
+      params: [status, updatedBy, updatedById]
       where: id
 
     updateSettled:
       kvFunction: updateWithKV
-      params: [status, settledAt]
+      params: [status, settledAt, updatedBy, updatedById]
       where: id
 
     updateVoided:
       kvFunction: updateWithKV
-      params: [status, voidReason]
+      params: [status, voidReason, updatedBy, updatedById]
       where: id
 
     updateSettlementStatus:
       kvFunction: updateWithKV
-      params: [settlementStatus, settlementId, settlementTimestamp]
+      params: [settlementStatus, settlementId, settlementTimestamp, updatedBy, updatedById]
       where: id
 
   extraIndexes:

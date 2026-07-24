@@ -40,6 +40,8 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -49,6 +51,9 @@ import SharedLogic.Finance.Wallet
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
@@ -62,7 +67,7 @@ import qualified Tools.Payout as TPayout
 sendScheduledBatchPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -80,7 +85,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
       category = jobData.payoutCategory
 
   -- Load config
-  mbConfig <- QSPC.findByMerchantOpCityIdAndCategory merchantOpCityId category
+  mbConfig <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, isEnabled = Nothing, payoutCategory = Just category}) (Just (maybeToList <$> QSPC.findByMerchantOpCityIdAndCategory merchantOpCityId category))
   case mbConfig of
     Nothing -> do
       logWarning $ "No ScheduledPayoutConfig found for " <> show category <> " in city " <> merchantOpCityId.getId
@@ -99,7 +104,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
 processCategory ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -132,7 +137,7 @@ processCategory config jobData = do
 processWalletPayouts ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
@@ -148,8 +153,9 @@ processWalletPayouts ::
 processWalletPayouts config jobData = do
   let merchantId = jobData.merchantId
       merchantOpCityId = jobData.merchantOperatingCityId
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let walletEnabled = transporterConfig.driverWalletConfig.enableWalletPayout
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout -- TODO :: This also can be (||), but not changing it for now.
   if not walletEnabled
     then do
       logInfo "Wallet payouts disabled at transporter level"
@@ -208,7 +214,7 @@ processWalletPayouts config jobData = do
 processOneWalletPayout ::
   ( EncFlow m r,
     CacheFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     BeamFlow m r,

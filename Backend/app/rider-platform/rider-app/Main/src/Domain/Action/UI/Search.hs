@@ -59,6 +59,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -73,17 +74,19 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Toll.SharedLogic.TollsDetector as TollsDetector
-import Tools.DynamicLogic (getConfigVersionMapForStickiness)
+-- import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import qualified Tools.Maps as Maps
@@ -157,6 +160,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        city = Nothing,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -178,6 +182,32 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
+        city = Nothing,
+        ..
+      }
+  -- New EasyBooking category: destination-less like Rental, but no stops/route fields to fill.
+  EasyBookingSearch EasyBookingSearchReq {..} ->
+    SearchDetails
+      { riderPreferredOption = DRPO.EasyBooking,
+        roundTrip = False,
+        stops = [],
+        hasStops = Nothing,
+        returnTime = Nothing,
+        driverIdentifier_ = Nothing,
+        routeCode = Nothing,
+        destinationStopCode = Nothing,
+        originStopCode = Nothing,
+        platformType = Nothing,
+        vehicleCategory = Nothing,
+        currentLocation = Nothing,
+        busLocationData = [],
+        fromSpecialLocationId = Nothing,
+        toSpecialLocationId = Nothing,
+        enforceTollRoute = Nothing,
+        fareParametersInRateCard = Nothing,
+        placeNameSource = Nothing,
+        recentLocationId = Nothing,
+        city = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -196,6 +226,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
+        city = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -217,6 +248,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        city = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -238,6 +270,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        city = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -262,6 +295,7 @@ extractSearchDetails now = \case
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
         enforceTollRoute = Nothing,
+        city = Nothing,
         ..
       }
   FixedRouteSearch FixedRouteSearchReq {..} ->
@@ -291,6 +325,7 @@ extractSearchDetails now = \case
         recentLocationId = Nothing,
         fromSpecialLocationId = Just fromSpecialLocationId,
         toSpecialLocationId = Just toSpecialLocationId,
+        city = Nothing,
         enforceTollRoute = Nothing
       }
 
@@ -348,7 +383,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   let sourceLatLong = origin.gps
   let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
-  originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
+  originCity <- case city of
+    Just c -> return c
+    Nothing -> Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
   unless (justMultimodalSearch || null stopsLatLong) $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
@@ -364,16 +401,22 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   searchRequestId <- generateGUID
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
-  configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
-  riderCfg <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOperatingCityId) -- TODO: we aren't using it as such for now, will put proper values later
+  riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
   whenJust numberOfLuggages $ \n ->
     whenJust riderCfg.maxNumberOfLuggages $ \maxN ->
       when (n > maxN) $ throwError (InvalidRequest $ "Number of luggages exceeds maximum allowed: " <> show maxN)
-  RouteDetails {..} <- getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
+  (RouteDetails {..}, mbDiscoveredSpecialLocId) <- getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
+  let enrichedOrigin = SearchReqLocation {gps = origin.gps, address = fromLocation.address}
+      enrichedStops =
+        zipWith
+          (\stopLoc loc -> SearchReqLocation {gps = stopLoc.gps, address = loc.address})
+          stops
+          stopLocations
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
   searchRequest <-
     buildSearchRequest
@@ -417,6 +460,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       busLocationData
       fromSpecialLocationId
       toSpecialLocationId
+      mbDiscoveredSpecialLocId
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -460,6 +504,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         duration = shortestRouteDuration,
         taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber numberOfLuggages (searchRequest.fromSpecialLocationId) (searchRequest.toSpecialLocationId) emailDomain businessEmailDomain,
         riderGender = Just (show person.gender),
+        origin = enrichedOrigin,
+        stops = enrichedStops,
         ..
       }
   where
@@ -560,33 +606,38 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       RiderConfig ->
       Maybe Bool ->
       SearchReq ->
-      m RouteDetails
+      m (RouteDetails, Maybe Text)
     getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide = \case
       OneWaySearch oneWayReq -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.enforceTollRoute
       AmbulanceSearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
       InterCitySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
+      EasyBookingSearch easyBookingReq -> processEasyBookingSearch person easyBookingReq originCity
       DeliverySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
       PTSearch _ -> do
-        return $
-          RouteDetails
-            { longestRouteDistance = Nothing,
-              shortestRouteDistance = Nothing,
-              shortestRouteDuration = Nothing,
-              shortestRouteStaticDuration = Nothing,
-              shortestRouteInfo = Nothing,
-              multipleRoutes = Nothing
-            }
+        return
+          ( RouteDetails
+              { longestRouteDistance = Nothing,
+                shortestRouteDistance = Nothing,
+                shortestRouteDuration = Nothing,
+                shortestRouteStaticDuration = Nothing,
+                shortestRouteInfo = Nothing,
+                multipleRoutes = Nothing
+              },
+            Nothing
+          )
       FixedRouteSearch _ -> do
-        return $
-          RouteDetails
-            { longestRouteDistance = Just 0,
-              shortestRouteDistance = Just 0,
-              shortestRouteDuration = Just 0,
-              shortestRouteStaticDuration = Just 0,
-              shortestRouteInfo = Nothing,
-              multipleRoutes = Nothing
-            }
+        return
+          ( RouteDetails
+              { longestRouteDistance = Just 0,
+                shortestRouteDistance = Just 0,
+                shortestRouteDuration = Just 0,
+                shortestRouteStaticDuration = Just 0,
+                shortestRouteInfo = Nothing,
+                multipleRoutes = Nothing
+              },
+            Nothing
+          )
 
     processOneWaySearch ::
       SearchRequestFlow m r =>
@@ -599,7 +650,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       RiderConfig ->
       Maybe Bool ->
       Maybe Bool ->
-      m RouteDetails
+      m (RouteDetails, Maybe Text)
     processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderConfig isMeterRide mbEnforceTollRoute = do
       destinationLatLong <- case lastMaybe stopsLatLong of
         Just latLong -> return (Just latLong)
@@ -615,19 +666,36 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           else return $ sourceLatLong : stopsLatLong
       calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute
 
-    processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m RouteDetails
+    processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text)
     processRentalSearch person rentalReq stopsLatLong originCity = do
       case stopsLatLong of
-        [] -> return $ RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])) Nothing
+        [] -> return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing, Nothing)
         (stop : _) -> do
           stopCity <- Serviceability.validateServiceability stop [] person
           unless (stopCity == originCity) $ throwError RideNotServiceable
-          return $ RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])) Nothing
+          return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing, Nothing)
+
+    -- No destination, no rider-given distance/duration estimate at all — the quote shown
+    -- will just be the base fare from the regular (Progressive) fare policy; the real fare
+    -- gets computed from actual GPS distance at end-ride.
+    processEasyBookingSearch :: SearchRequestFlow m r => DPerson.Person -> EasyBookingSearchReq -> Context.City -> m (RouteDetails, Maybe Text)
+    processEasyBookingSearch _person _easyBookingReq _originCity =
+      return
+        ( RouteDetails
+            { longestRouteDistance = Nothing,
+              shortestRouteDistance = Nothing,
+              shortestRouteDuration = Nothing,
+              shortestRouteStaticDuration = Nothing,
+              shortestRouteInfo = Nothing,
+              multipleRoutes = Nothing
+            },
+          Nothing
+        )
 
     updateRideSearchHotSpot :: SearchRequestFlow m r => DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> m ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
       fork "ride search geohash frequencyUpdater" $ do
-        HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
+        HotSpotConfig {..} <- getOneConfig (HotSpotConfigDimensions {merchantOperatingCityId = "", merchantId = merchant.id.getId}) (Just (QHotSpotConfig.findConfigByMerchantId merchant.id)) >>= fromMaybeM (InternalError "config not found for merchant")
         when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
           let mbHotSpotConfig = Just $ HotSpotConfig {..}
           mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
@@ -636,7 +704,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
     fraudCheck :: SearchRequestFlow m r => DPerson.Person -> DMOC.MerchantOperatingCity -> SearchRequest.SearchRequest -> m ()
     fraudCheck person merchantOperatingCity searchRequest = do
-      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId person.merchantOperatingCityId (Just [])))
       SMC.updateSearchFraudCounters person.id merchantConfigs
       mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
       whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id)
@@ -683,8 +751,9 @@ buildSearchRequest ::
   [BusLocation] ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -764,7 +833,7 @@ calculateDistanceAndRoutes ::
   Id SearchRequest.SearchRequest ->
   [LatLong] ->
   Maybe Bool -> -- mbEnforceTollRoute, echoed from the serviceability response by the UI
-  m RouteDetails
+  m (RouteDetails, Maybe Text)
 calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute = do
   let request =
         Maps.GetRoutesReq
@@ -772,8 +841,11 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
             calcPoints = True,
             mode = Just Maps.CAR
           }
+      sourceLatLong = NE.head (NE.fromList latLongs)
+  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
+  let mbSpecialLocationEnforceToll = (QSpecialLocation.filterGates mbSpecialLocation True) >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
-  let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag
+  let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll
       isAvoidTollEffective = if mustEnforceToll then False else riderConfig.isAvoidToll
   routeResponse <- Maps.getRoutes (Just isAvoidTollEffective) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
@@ -788,4 +860,5 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
       shortestRouteDistance = (.distance) =<< shortestRouteInfo
       shortestRouteDuration = (.duration) =<< shortestRouteInfo
       shortestRouteStaticDuration = (.staticDuration) =<< shortestRouteInfo
-  return $ RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition finalRoutes shortestRouteIndex, ..}
+      mbDiscoveredSpecialLocId = fmap (.id.getId) mbSpecialLocation
+  return (RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition finalRoutes shortestRouteIndex, ..}, mbDiscoveredSpecialLocId)

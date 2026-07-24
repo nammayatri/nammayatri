@@ -9,6 +9,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Tools.Beam.UtilsTH
 
@@ -16,7 +17,11 @@ data LedgerEntryT f = LedgerEntryT
   { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     concernedIndividualId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     currency :: (B.C f Kernel.Types.Common.Currency),
+    entityReferenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    entityReferenceType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType)),
     entryType :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType),
     fromAccountId :: (B.C f Kernel.Prelude.Text),
     fromEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
@@ -38,6 +43,8 @@ data LedgerEntryT f = LedgerEntryT
     toAccountId :: (B.C f Kernel.Prelude.Text),
     toEndingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     toStartingBalance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    updatedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     voidReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
@@ -49,6 +56,6 @@ instance B.Table LedgerEntryT where
 
 type LedgerEntry = LedgerEntryT Identity
 
-$(enableKVPG (''LedgerEntryT) [('id)] [[('concernedIndividualId)], [('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
+$(enableKVPG (''LedgerEntryT) [('id)] [[('concernedIndividualId)], [('entityReferenceId)], [('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
 
 $(mkTableInstancesGenericSchema (''LedgerEntryT) "finance_ledger_entry")

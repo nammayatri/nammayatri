@@ -33,7 +33,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.backendAppVersion backendAppVersion,
+    [ Se.Set Beam.area area,
+      Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.billingCategory (Kernel.Prelude.Just billingCategory),
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
@@ -57,6 +58,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
       Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),
+      Se.Set Beam.fareSettlementType fareSettlementType,
       Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
@@ -64,6 +66,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.itemId itemId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.navigationInstruction navigationInstruction,
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerUrl (Kernel.Prelude.showBaseUrl providerUrl),
       Se.Set Beam.quoteBreakupListJson (Storage.Queries.Transformers.Quote.encodeQuoteBreakupList quoteBreakupList),
@@ -81,6 +84,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleServiceTierAirConditioned vehicleServiceTierAirConditioned,
+      Se.Set Beam.vehicleServiceTierLuggageCapacity vehicleServiceTierLuggageCapacity,
       Se.Set Beam.vehicleServiceTierSeatingCapacity vehicleServiceTierSeatingCapacity,
       Se.Set Beam.vehicleVariant vehicleServiceTierType
     ]

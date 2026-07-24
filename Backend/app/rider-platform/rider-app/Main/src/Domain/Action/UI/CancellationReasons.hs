@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.CancellationReasons (getRideBookingCancellationReasons) where
+module Domain.Action.UI.CancellationReasons (getRideBookingCancellationReasons, getCancellationReasonsForBooking) where
 
 import qualified API.Types.UI.CancellationReasons as API
 import qualified Data.Char as Char
@@ -26,8 +26,10 @@ import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Translations as CQTranslations
-import qualified Storage.Queries.Booking as QRB
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -39,15 +41,22 @@ getRideBookingCancellationReasons ::
   Maybe Lang.Language ->
   Flow [API.CancellationReasonEntity]
 getRideBookingCancellationReasons _authInfo bookingId mbLang = do
-  booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  mbActiveRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
+  booking <- B.runInReplica $ QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  getCancellationReasonsForBooking booking mbLang
+
+getCancellationReasonsForBooking ::
+  QBookingLite.BookingLite ->
+  Maybe Lang.Language ->
+  Flow [API.CancellationReasonEntity]
+getCancellationReasonsForBooking booking mbLang = do
+  mbActiveRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
   let merchantOperatingCityId = booking.merchantOperatingCityId
       hasRideAssigned = isJust mbActiveRide
       isAC = fromMaybe False booking.isAirConditioned
       language = fromMaybe Lang.ENGLISH mbLang
   configs <- CancelLogic.computeCancellationReasons (cast merchantOperatingCityId) hasRideAssigned isAC
   forM configs $ \CancelLogic.CancellationReasonConfig {code, iconUrl} -> do
-    mbTranslation <- CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache (cast merchantOperatingCityId) code language
+    mbTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (getId merchantOperatingCityId), messageKey = code, language = Just language}) (Just (CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache (cast merchantOperatingCityId) code language))
     let resolvedText = maybe (mkDefaultText code) (.message) mbTranslation
     pure $ API.CancellationReasonEntity {code = code, iconUrl = iconUrl, text = resolvedText}
   where

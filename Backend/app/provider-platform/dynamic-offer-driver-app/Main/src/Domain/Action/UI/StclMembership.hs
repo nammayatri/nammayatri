@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as LibPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.Common as LibPayment
@@ -37,10 +38,13 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.Payment
 import Storage.Beam.Payment ()
-import qualified Storage.Cac.TransporterConfig as SCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 import qualified Utils.Common.Cac.KeyNameConstants as CCK
 
@@ -71,7 +75,7 @@ postSubmitApplication ::
     APITypes.MembershipApplicationReq ->
     Environment.Flow PaymentTypes.CreateOrderResp
   )
-postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
+postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   -- Extract and validate driver ID
   driverId <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
@@ -104,7 +108,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- Fetch gatewayReferenceId from merchant service config
   mbGatewayReferenceId <- do
-    mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
+    mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId))
     case mbServiceConfig of
       Just serviceConfig -> case serviceConfig.serviceConfig of
         DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
@@ -137,7 +141,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)
@@ -227,7 +232,7 @@ postBuyAdditionalShares ::
     APITypes.TopUpSharesReq ->
     Environment.Flow PaymentTypes.CreateOrderResp
   )
-postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = do
+postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   driverId <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
   when (req.numberOfShares <= 0) $
@@ -235,7 +240,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
 
   -- Per-MOC tunables, with module-level defaults if stclConfig (or any inner field) is unset.
   transporterConfig <-
-    SCT.findByMerchantOpCityId merchantOperatingCityId (Just (CCK.DriverId (cast driverId)))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   let stclCfg = transporterConfig.stclConfig
       maxSharesPerDriver = fromMaybe defaultMaxSharesPerDriver (stclCfg >>= (.maxSharesPerDriver))
@@ -267,7 +272,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
     decryptedMobile <- decrypt mbMobileNumber
 
     mbGatewayReferenceId <- do
-      mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
+      mbServiceConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.MembershipPaymentService PaymentService.Juspay)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId))
       case mbServiceConfig of
         Just serviceConfig -> case serviceConfig.serviceConfig of
           DMSC.MembershipPaymentServiceConfig paymentServiceConfig ->
@@ -328,7 +333,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   basket = Nothing,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
-                  paymentFilter = Nothing
+                  paymentFilter = Nothing,
+                  udf1 = Nothing
                 }
         SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
       Nothing -> do
@@ -377,7 +383,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   basket = Nothing,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
-                  paymentFilter = Nothing
+                  paymentFilter = Nothing,
+                  udf1 = Nothing
                 }
 
         createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
@@ -412,7 +419,7 @@ putUpdateApplication ::
     APITypes.UpdateMembershipApplicationReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = do
+putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 
   -- Edits apply to every SUBMITTED and PENDING allotment for this driver so dashboard queries don't
@@ -490,7 +497,7 @@ getMembership ::
     ) ->
     Environment.Flow APITypes.MembershipDetailsResp
   )
-getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
+getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = ActorInfo.withMbPersonIdActorInfo mbDriverId $ do
   -- Extract and validate driver ID from authentication token
   driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
 

@@ -1,0 +1,59 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+VehicleActionHistory:
+  tableName: vehicle_action_history
+
+  fields:
+    id: Id VehicleActionHistory
+    dispatcherId: Id Person
+    action: VehicleActionType
+    currentVehicle: Text
+    replacedVehicle: Maybe Text
+    driverCode: Maybe Text
+    conductorCode: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    depotId: Maybe Text
+    reasonTag: Text
+    reasonContent: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    waybillNo: Maybe Text
+
+  types:
+    VehicleActionType:
+      enum: "DISPATCHER, BLOCKER"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleActionType>
+
+  sqlType:
+    action: text
+
+  constraints:
+    id: PrimaryKey
+    dispatcherId: SecondaryKey
+    action: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByDispatcherIdAndAction:
+      kvFunction: findAllWithOptionsDb
+      where:
+        and: [dispatcherId, action]
+      orderBy:
+        field: createdAt
+        order: desc
+
+  default:
+    updatedAt: 'CURRENT_TIMESTAMP'
+    createdAt: 'CURRENT_TIMESTAMP'
+
+  extraOperations:
+    - GENERATE_INDEXES

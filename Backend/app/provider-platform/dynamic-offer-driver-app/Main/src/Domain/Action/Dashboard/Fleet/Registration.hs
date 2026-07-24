@@ -59,6 +59,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
@@ -66,6 +67,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -153,7 +155,7 @@ getOperatorIdFromReferralCode (Just refCode) = do
 
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DP.Person
 createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
@@ -163,9 +165,13 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
         if transporterConfig.enableManualDocumentStatusCheck == Just True
           then Just DDVS.ADMIN_PENDING
           else Nothing
-  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
+      -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
+      -- recomputeFleetVerifiedAndEnabled), so register as not-enabled. Legacy (non-BOT) keeps the
+      -- existing default-enabled behavior.
+      mbEnabled' = if transporterConfig.enableBotFlow == Just True then Just False else mbEnabled
+  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
-    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId DomainRC.defaultAssociationEnd
     QFOA.create fleetOperatorAssData
     let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
     when allowCacheDriverFlowStatus $ do
@@ -237,7 +243,11 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             ticketPlaceId = mbTicketPlaceId,
             merchantOperatingCityId = mbMerchantOperatingCityId,
             payoutRegistrationOrderId = Nothing,
-            docsVerificationStatus = mbDocsVerificationStatus
+            docsVerificationStatus = mbDocsVerificationStatus,
+            address = Nothing,
+            addressState = Nothing,
+            addressDocumentType = Nothing,
+            approved = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
@@ -307,7 +317,8 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       registrationLat = Nothing,
       registrationLon = Nothing,
       otpChannel = Nothing,
-      password = Nothing
+      password = Nothing,
+      employeeId = Nothing
     }
 
 fleetOwnerVerify ::

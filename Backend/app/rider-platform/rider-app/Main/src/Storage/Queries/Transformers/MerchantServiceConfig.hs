@@ -15,6 +15,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Stripe.Config as Stripe
@@ -72,6 +73,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> valueToMaybe configJSON
+    Domain.IssueTicketService Ticket.XyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.XyneSpacesConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -94,6 +96,9 @@ getServiceConfigFromDomain serviceName configJSON = do
       Just cfg | cfg.settlementService == svc -> Just $ Domain.SettlementServiceConfig cfg
       _ -> Nothing
     Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> valueToMaybe configJSON
+    Domain.EventTrackingService EventTracking.Clevertap -> Domain.EventTrackingServiceConfig . EventTrackingInterface.ClevertapConfig <$> valueToMaybe configJSON
+    Domain.FleetEngineService Domain.GoogleFleetEngine -> Domain.FleetEngineServiceConfig <$> valueToMaybe configJSON
+    Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -160,6 +165,7 @@ getServiceNameConfigJson = \case
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
     Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
+    Ticket.XyneSpacesConfig cfg -> (Domain.IssueTicketService Ticket.XyneSpaces, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)
     Tokenize.GullakTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Gullak, toJSON cfg)
@@ -188,6 +194,10 @@ getServiceNameConfigJson = \case
   Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
+    EventTrackingInterface.ClevertapConfig cfg -> (Domain.EventTrackingService EventTracking.Clevertap, toJSON cfg)
+  Domain.FleetEngineServiceConfig cfg -> (Domain.FleetEngineService Domain.GoogleFleetEngine, toJSON cfg)
+  Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
+    PartnerSdk.AarokyaPartnerSdkConfig cfg -> (Domain.PartnerSdkService Domain.Aarokya, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case

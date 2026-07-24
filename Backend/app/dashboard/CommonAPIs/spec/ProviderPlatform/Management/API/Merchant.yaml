@@ -4,6 +4,7 @@ imports:
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
   MandatoryValue: Kernel.Types.Value
   OptionalValue: Kernel.Types.Value
+  Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   VehicleVariant: Dashboard.Common
   VehicleCategory: Dashboard.Common
@@ -22,6 +23,7 @@ imports:
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
   UpsertDriverPoolConfigCsvReq: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
+  SetFareProductEnabledReq: Dashboard.Common.Merchant
   SpecialLocation: Lib.Types.SpecialLocation
   SpecialLocationFull: Lib.Queries.SpecialLocation
   UpsertSpecialLocationReq: Dashboard.Common.Merchant
@@ -52,6 +54,7 @@ imports:
   TripCategory: Dashboard.Common
   Months: Kernel.Types.Time
   SpecialZone: Dashboard.Common
+  CancellationRateConfig: Dashboard.Common
   Language: Kernel.External.Types
 
 module: Merchant
@@ -370,6 +373,13 @@ apis:
         enabled: Bool
       response:
         type: FareProductListRes
+  - POST: # FareProductSetEnabledAPI
+      endpoint: /config/fareProduct/setEnabled
+      auth: ApiAuthV2
+      request:
+        type: SetFareProductEnabledReq
+      response:
+        type: APISuccess
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth: ApiAuthV2
@@ -567,6 +577,16 @@ apis:
         type: UpsertPlanAndConfigResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_PLAN_AND_SUBSCRIPTION_CONFIG
+  - GET: # ListVendorSplitDetails for the operating city
+      endpoint: /config/vendorSplitDetails/list
+      auth: ApiAuthV2
+      response:
+        type: "[VendorSplitDetailsAPIEntity]"
+  - GET: # ListSubscriptionConfigs for the operating city
+      endpoint: /config/subscriptionConfig/list
+      auth: ApiAuthV2
+      response:
+        type: "[SubscriptionConfigAPIEntity]"
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -690,6 +710,32 @@ apis:
         type: DeleteMerchantDocumentReq
       response:
         type: APISuccess
+  - GET: # MerchantMessageCatalogAPI
+      endpoint: /merchantMessage/catalog
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - catalogType: MerchantMessageCatalogType
+      response:
+        type: MerchantMessageCatalogResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT GET_MERCHANT_MESSAGE_CATALOG
+  - POST: # MerchantMessageUpsertAPI
+      endpoint: /merchantMessage/upsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertMerchantMessageReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_MERCHANT_MESSAGE
+  - DELETE: # MerchantMessageDeleteAPI
+      endpoint: /merchantMessage/{messageKey}
+      auth: ApiAuthV2
+      params:
+        messageKey: Text
+      query:
+        vehicleCategory: VehicleCategory
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_MERCHANT_MESSAGE
   - GET:
       endpoint: /cityList
       auth: NoAuth
@@ -779,10 +825,8 @@ types:
   DriverPoolConfigItem:
     - minRadiusOfSearch: Meters
     - maxRadiusOfSearch: Meters
-    - radiusStepSize: Meters
     - minRadiusOfSearchWithUnit: Distance
     - maxRadiusOfSearchWithUnit: Distance
-    - radiusStepSizeWithUnit: Distance
     - driverPositionInfoExpiry: Maybe Seconds
     - actualDistanceThreshold: Maybe Meters
     - actualDistanceThresholdOnRide: Maybe Meters
@@ -811,10 +855,8 @@ types:
   DriverPoolConfigUpdateReq:
     - minRadiusOfSearch: Maybe (MandatoryValue Meters)
     - maxRadiusOfSearch: Maybe (MandatoryValue Meters)
-    - radiusStepSize: Maybe (MandatoryValue Meters)
     - minRadiusOfSearchWithUnit: Maybe (MandatoryValue Distance)
     - maxRadiusOfSearchWithUnit: Maybe (MandatoryValue Distance)
-    - radiusStepSizeWithUnit: Maybe (MandatoryValue Distance)
     - driverPositionInfoExpiry: Maybe (OptionalValue Seconds)
     - actualDistanceThreshold: Maybe (OptionalValue Meters)
     - actualDistanceThresholdOnRide: Maybe (OptionalValue Meters)
@@ -834,10 +876,8 @@ types:
   DriverPoolConfigCreateReq:
     - minRadiusOfSearch: Meters
     - maxRadiusOfSearch: Meters
-    - radiusStepSize: Meters
     - minRadiusOfSearchWithUnit: Maybe Distance
     - maxRadiusOfSearchWithUnit: Maybe Distance
-    - radiusStepSizeWithUnit: Maybe Distance
     - driverPositionInfoExpiry: Maybe Seconds
     - actualDistanceThreshold: Maybe Meters
     - actualDistanceThresholdOnRide: Maybe Meters
@@ -885,7 +925,6 @@ types:
   DriverPoolConfigListItem:
     - minRadiusOfSearch: Meters
     - maxRadiusOfSearch: Meters
-    - radiusStepSize: Meters
     - driverPositionInfoExpiry: Maybe Seconds
     - actualDistanceThreshold: Maybe Meters
     - maxDriverQuotesRequired: Int
@@ -973,7 +1012,7 @@ types:
   VehicleClassCheckType:
     - enum: "Infix, Prefix, Suffix, Exact"
   DocumentType:
-    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard"
+    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration"
     - derive: "HttpInstance"
   DocumentFlowGrouping:
     - enum: "COMMON, STANDARD"
@@ -1079,6 +1118,7 @@ types:
     - farePolicyId: Text
     - timeBounds: TimeBound
     - vehicleVariant: ServiceTierType
+    - serviceTierName: Text
   FareProductListRes:
     - fareProducts: "[FareProductListItem]"
   WaitingChargeInfoAPIEntity:
@@ -1146,13 +1186,76 @@ types:
   Command:
     - enum: "COMMIT,VIEW_DIFF"
   TableName:
-    - enum: "SUBSCRIPTION_CONFIG,PLAN,PLAN_TRANSLATION"
+    - enum: "SUBSCRIPTION_CONFIG,PLAN,PLAN_TRANSLATION,VENDOR_SPLIT_DETAILS"
   UpsertPlanAndConfigResp:
     - respCode: APISuccess
     - executedAction: Action
     - executedCommand: Command
     - error_resp : Maybe Text
     - diff : Maybe Value
+  VendorSplitDetailsAPIEntity:
+    - merchantOperatingCityId: Text
+    - area: Text
+    - vendorId: Text
+    - vehicleVariant: Text
+    - splitType: Text
+    - splitValue: Double
+    - maxVendorFeeAmount: Maybe HighPrecMoney
+    - dailyPlanId: Maybe Text
+  SubscriptionConfigAPIEntity:
+    - merchantOperatingCityId: Text
+    - serviceName: Text
+    # bools
+    - allowDriverFeeCalcSchedule: Bool
+    - allowDueAddition: Bool
+    - allowManualPaymentLinks: Bool
+    - enableCityBasedFeeSwitch: Bool
+    - enableOffersForMembers: Bool
+    - enableServiceUsageChargeDefault: Bool
+    - freeTrialRidesApplicable: Bool
+    - isFreeTrialDaysApplicable: Bool
+    - isSubscriptionEnabledAtCategoryLevel: Bool
+    - isTriggeredAtEndRide: Bool
+    - isUIEnabled: Bool
+    - sendDeepLink: Bool
+    - sendInAppFcmNotifications: Bool
+    - useOverlayService: Bool
+    # maybe bools
+    - autopayEnabled: Maybe Bool
+    - enableDailyPlanVendorSplit: Maybe Bool
+    - isVendorSplitEnabled: Maybe Bool
+    - showManualPlansInUI: Maybe Bool
+    - subscriptionDown: Maybe Bool
+    # ints
+    - genericBatchSizeForJobs: Int
+    - maxRetryCount: Int
+    - deepLinkExpiryTimeInMinutes: Maybe Int
+    - numberOfFreeTrialRides: Maybe Int
+    # text
+    - waiveOffOfferTitle: Text
+    - waiveOffOfferDescription: Text
+    # enums (rendered as selects; carried as their string form)
+    - defaultCityVehicleCategory: Text
+    - paymentLinkChannel: Text
+    - paymentServiceName: Value
+    - payoutServiceName: Value
+    - partialDueClearanceMessageKey: Maybe Text
+    # money / durations / arrays / nested objects — raw JSON (exact round-trip)
+    - cgstPercentageOneTimeSecurityDeposit: Value
+    - sgstPercentageOneTimeSecurityDeposit: Value
+    - genericJobRescheduleTime: Value
+    - genericNextJobScheduleTimeThreshold: Value
+    - paymentLinkJobTime: Value
+    - manualPaymentLinkRateLimitExpirySeconds: Value
+    - sendManualPaymentLinkJobMaxDelay: Value
+    - dataEntityToSend: Value
+    - disabledVariantsForSubscription: Value
+    - eventsEnabledForWebhook: Value
+    - executionEnabledForVehicleCategories: Value
+    - extWebhookConfigs: Value
+    - subscriptionEnabledForVehicleCategories: Value
+    - vendorMigrationMappings: Value
+    - webhookConfig: Value
   VehicleServiceTierRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]
@@ -1185,8 +1288,9 @@ types:
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
     - vehicleAgeThreshold: Maybe Months
-    - isAirportRideEnabled: Maybe Bool
     - specialZone: Maybe SpecialZone
+    - cancellationRateConfig: Maybe CancellationRateConfig
+    - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
     - shortDescription: Maybe Text
@@ -1216,8 +1320,9 @@ types:
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
     - specialZone: Maybe SpecialZone
+    - cancellationRateConfig: Maybe CancellationRateConfig
     - vehicleAgeThreshold: Maybe Months
-    - isAirportRideEnabled: Maybe Bool
+    - allowNullVehicleRating: Maybe Bool
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
@@ -1250,8 +1355,9 @@ types:
     - allowedAreas: Maybe [Area]
     - derive: "'HideSecrets"
     - vehicleAgeThreshold: Maybe Months
-    - isAirportRideEnabled: Maybe Bool
     - specialZone: Maybe SpecialZone
+    - cancellationRateConfig: Maybe CancellationRateConfig
+    - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierListRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]
@@ -1302,6 +1408,24 @@ types:
     - derive: "'HideSecrets"
   DeleteMerchantDocumentReq:
     - id: Text
+    - derive: "'HideSecrets"
+  MerchantMessageCatalogType:
+    - enum: "KEY,CHANNEL,DOMAIN"
+    - derive: "HttpInstance"
+  MerchantMessageCatalogResp:
+    - values: "[Text]"
+  UpsertMerchantMessageReq:
+    - messageKey: Text
+    - message: Text
+    - templateId: Text
+    - containsUrlButton: Bool
+    - channel: Maybe Text
+    - domain: Maybe Text
+    - jsonData: Maybe Value
+    - messageType: Maybe Text
+    - senderHeader: Maybe Text
+    - templateName: Maybe Text
+    - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CityListResp:
     - supportedCities: [City]

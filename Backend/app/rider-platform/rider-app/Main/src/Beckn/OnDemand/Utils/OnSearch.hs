@@ -36,6 +36,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Error
 
 getProviderName :: MonadFlow m => Spec.OnSearchReq -> m Text
@@ -53,7 +54,7 @@ getQuoteFulfillmentId item =
     >>= listToMaybe
     & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
 
-getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant, Maybe Int)
+getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant, Maybe Int, Maybe Int)
 getVehicleVariant provider item = do
   let vehicle =
         item.itemFulfillmentIds >>= listToMaybe
@@ -62,10 +63,11 @@ getVehicleVariant provider item = do
       variant' = vehicle >>= (.vehicleVariant)
       category = vehicle >>= (.vehicleCategory)
       capacity = vehicle >>= (.vehicleCapacity)
+      luggageCapacity = vehicle >>= (.vehicleLuggageCapacity)
   let variant = map T.toUpper variant'
       mbDVehVariant = Common.parseVehicleVariant category variant
   vehicleVariant <- mbDVehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show category <> ",vehicle variant:-" <> show variant)
-  pure (vehicleVariant, capacity)
+  pure (vehicleVariant, capacity, luggageCapacity)
 
 isValidVehVariant :: MonadFlow m => Spec.Fulfillment -> m Bool
 isValidVehVariant fulfillment = do
@@ -454,11 +456,20 @@ buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
   return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
 
+getPickupArea :: Spec.Item -> Maybe Text
+getPickupArea item = Utils.getTagV2 Tag.INFO Tag.PICKUP_AREA item.itemTags
+
+getPickupNavigationInstruction :: Spec.Item -> Maybe Text
+getPickupNavigationInstruction item = Utils.getTagV2 Tag.INFO Tag.PICKUP_NAVIGATION_INSTRUCTION item.itemTags
+
 getSpecialLocationName :: Spec.Item -> Maybe Text
 getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME item.itemTags
 
 getspecialLocationSupportNumber :: Spec.Item -> Maybe Text
 getspecialLocationSupportNumber item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_SUPPORT_NUMBER item.itemTags
+
+getFareSettlementType :: Spec.Item -> Maybe SL.FareSettlementType
+getFareSettlementType item = Utils.getTagV2 Tag.INFO Tag.FARE_SETTLEMENT_TYPE item.itemTags >>= readMaybe
 
 getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
 getIsCustomerPrefferedSearchRoute item = do

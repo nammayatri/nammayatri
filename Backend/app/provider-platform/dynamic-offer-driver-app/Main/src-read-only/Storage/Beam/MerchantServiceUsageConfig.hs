@@ -11,6 +11,7 @@ import qualified Domain.Types.UtilsTH
 import qualified Kernel.External.AadhaarVerification.Types
 import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
+import qualified Kernel.External.ChallanSearch.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
@@ -29,6 +30,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
     backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     categoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    challanProvidersPriorityList :: B.C f (Kernel.Prelude.Maybe [Kernel.External.ChallanSearch.Types.ChallanSearchService]),
     createBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     createPayoutOrder :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -36,6 +38,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     dashboardPanVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     dashboardUdyamVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     driverBackgroundVerificationService :: B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService,
+    faceMatchService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     faceVerificationService :: B.C f Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
@@ -49,6 +52,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     gstVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
+    imageExtractionProvidersPriorityList :: B.C f (Kernel.Prelude.Maybe [Kernel.External.Verification.Types.VerificationService]),
     initiateCall :: B.C f Kernel.External.Call.CallService,
     issueTicketService :: B.C f Kernel.External.Ticket.Types.IssueTicketService,
     llmChatCompletion :: B.C f (Kernel.Prelude.Maybe ChatCompletion.Types.LLMChatCompletionService),

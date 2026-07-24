@@ -12,21 +12,23 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 
 data RefundsT f = RefundsT
-  { arn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    completedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    errorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    errorMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    idAssignedByServiceProvider :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    initiatedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    isApiCallSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    orderId :: B.C f Kernel.Prelude.Text,
-    refundAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
-    shortId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Kernel.External.Payment.Interface.RefundStatus,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { actualRefundedAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    arn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    completedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    errorCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    errorMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    id :: (B.C f Kernel.Prelude.Text),
+    idAssignedByServiceProvider :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    initiatedBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    isApiCallSuccess :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    orderId :: (B.C f Kernel.Prelude.Text),
+    referenceType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    refundAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    shortId :: (B.C f Kernel.Prelude.Text),
+    status :: (B.C f Kernel.External.Payment.Interface.RefundStatus),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +38,6 @@ instance B.Table RefundsT where
 
 type Refunds = RefundsT Identity
 
-$(enableKVPG ''RefundsT ['id] [['orderId], ['shortId]])
+$(enableKVPG (''RefundsT) [('id)] [[('orderId)], [('shortId)]])
 
-$(mkTableInstancesGenericSchema ''RefundsT "refunds")
+$(mkTableInstancesGenericSchema (''RefundsT) "refunds")

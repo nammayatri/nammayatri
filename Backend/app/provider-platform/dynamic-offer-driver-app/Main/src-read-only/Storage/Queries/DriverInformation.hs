@@ -231,10 +231,20 @@ updateTripEndLocation driverTripEndLocation driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateUnhygienicVehicleViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateUnhygienicVehicleViolationCount unhygienicVehicleViolationCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.unhygienicVehicleViolationCount unhygienicVehicleViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateUpgradedTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateUpgradedTiers ruleBasedUpgradeTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateVehicleUnsafeViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVehicleUnsafeViolationCount vehicleUnsafeViolationCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.vehicleUnsafeViolationCount vehicleUnsafeViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWeeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
@@ -258,6 +268,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.addressDocumentType addressDocumentType,
       Se.Set Beam.adminId (Kernel.Types.Id.getId <$> adminId),
       Se.Set Beam.airConditionScore airConditionScore,
+      Se.Set Beam.airportBlockExpiryTime airportBlockExpiryTime,
       Se.Set Beam.approved approved,
       Se.Set Beam.autoPayStatus autoPayStatus,
       Se.Set Beam.availableUpiApps availableUpiApps,
@@ -269,7 +280,6 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
       Se.Set Beam.canDowngradeToTaxi canDowngradeToTaxi,
-      Se.Set Beam.canSwitchToAirport (Kernel.Prelude.Just canSwitchToAirport),
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.canSwitchToIntraCity (Kernel.Prelude.Just canSwitchToIntraCity),
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
@@ -286,9 +296,11 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
       Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
       Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount,
+      Se.Set Beam.enableForAirport (Kernel.Prelude.Just enableForAirport),
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
       Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag,
+      Se.Set Beam.firstVerifiedAt firstVerifiedAt,
       Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.hasRideStarted hasRideStarted,
@@ -326,6 +338,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.payoutVpaBankAccount payoutVpaBankAccount,
       Se.Set Beam.payoutVpaStatus payoutVpaStatus,
+      Se.Set Beam.preferredMapProvider preferredMapProvider,
       Se.Set Beam.preferredPrimarySpecialLocId (Kernel.Types.Id.getId <$> preferredPrimarySpecialLocId),
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
       Se.Set Beam.referralCode referralCode,
@@ -347,6 +360,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.totalReferred totalReferred,
       Se.Set Beam.tripDistanceMaxThreshold tripDistanceMaxThreshold,
       Se.Set Beam.tripDistanceMinThreshold tripDistanceMinThreshold,
+      Se.Set Beam.unhygienicVehicleViolationCount unhygienicVehicleViolationCount,
+      Se.Set Beam.vehicleUnsafeViolationCount vehicleUnsafeViolationCount,
       Se.Set Beam.verified verified,
       Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
       Se.Set Beam.weeklyExtraKms weeklyExtraKms,

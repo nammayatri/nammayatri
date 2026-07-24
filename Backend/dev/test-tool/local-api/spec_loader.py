@@ -49,13 +49,16 @@ def _coerce_ports(raw: Any) -> List[dict]:
     for p in raw or []:
         if not isinstance(p, dict) or "name" not in p or "port" not in p:
             raise SpecError(f"port entry must have name+port: {p!r}")
-        out.append({
+        entry = {
             "name": str(p["name"]),
             "port": int(p["port"]),
             "protocol": p.get("protocol", "http"),
             "allowOverride": bool(p.get("allowOverride", False)),
             "openInBrowser": bool(p.get("openInBrowser", False)),
-        })
+        }
+        if p.get("registryKey"):
+            entry["registryKey"] = str(p["registryKey"])
+        out.append(entry)
     return out
 
 

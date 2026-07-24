@@ -12,6 +12,14 @@ import qualified Lib.Finance.Storage.Beam.LedgerEntry as Beam
 import Lib.Finance.Storage.Queries.LedgerEntry ()
 import qualified Sequelize as Se
 
+findByIds ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Kernel.Types.Id.Id Domain.LedgerEntry] ->
+  m [Domain.LedgerEntry]
+findByIds [] = pure []
+findByIds entryIds =
+  findAllWithKV [Se.Is Beam.id $ Se.In (map Kernel.Types.Id.getId entryIds)]
+
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -26,6 +34,23 @@ findByReferenceIn referenceTypes referenceId =
         ]
     ]
 
+findByReferenceTypesAndDateRange ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Text] ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [Domain.LedgerEntry]
+findByReferenceTypesAndDateRange referenceTypes merchantOperatingCityId startTime endTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.In referenceTypes,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.timestamp $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.timestamp $ Se.LessThanOrEq endTime
+        ]
+    ]
+
 -- | Find ALL ledger entries by referenceId (no referenceType filter)
 findAllByReferenceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -33,6 +58,24 @@ findAllByReferenceId ::
   m ([Domain.LedgerEntry])
 findAllByReferenceId refId =
   findAllWithKV [Se.Is Beam.referenceId $ Se.Eq refId]
+
+findLatestByAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account ->
+  m (Maybe Domain.LedgerEntry)
+findLatestByAccount accountId =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Or
+            [ Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId accountId),
+              Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId accountId)
+            ]
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 1)
+    (Just 0)
+    <&> listToMaybe
 
 findByAccountsWithOptions ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>

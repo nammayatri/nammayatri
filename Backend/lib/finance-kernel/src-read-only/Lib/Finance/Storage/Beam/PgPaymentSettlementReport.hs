@@ -9,23 +9,31 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import Tools.Beam.UtilsTH
 
 data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
-  { bankId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+  { bankCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    bankId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cardNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cardType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     chargebackId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     disputeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     disputeType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType)),
     id :: (B.C f Kernel.Prelude.Text),
+    isValidSubscriptionPurchase :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     orderId :: (B.C f Kernel.Prelude.Text),
+    orderType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.OrderType)),
     paymentGateway :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     paymentMethod :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.PaymentMethod)),
     paymentMethodSubType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -51,6 +59,7 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     settlementId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementMode :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementMode)),
     settlementType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.SettlementType)),
+    subscriptionPurchaseId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     txnAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
     txnDate :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     txnId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -58,6 +67,8 @@ data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
     txnType :: (B.C f Lib.Finance.Domain.Types.PgPaymentSettlementReport.TxnType),
     uniqueSplitId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),
+    updatedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     utr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     vendorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
   }

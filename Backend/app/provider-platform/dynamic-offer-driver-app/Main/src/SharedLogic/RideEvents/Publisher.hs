@@ -21,16 +21,18 @@ import Environment (RideEventsPublisherCfg)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.Hedis.Config (HedisFlow)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (logError, logInfo)
+import qualified Lib.Finance.Core.Types as Finance
 
 -- | Best-effort publish: never throws. On failure, logs and returns.
 publishRideEnded ::
   ( HedisFlow m r,
     HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg),
-    MonadTime m,
-    MonadIO m
+    Metrics.CoreMetrics m,
+    Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
   Ride.Ride ->
@@ -38,13 +40,14 @@ publishRideEnded ::
   Bool ->
   m ()
 publishRideEnded booking ride mbRiderDetailsId isValid = do
+  actorInfo <- asks (.actorInfo)
   mbCfg <- asks (.rideEventsPublisherCfg)
   case mbCfg of
     Nothing -> pure ()
     Just cfg -> do
       result <- try @_ @SomeException $ do
         now <- getCurrentTime
-        let event = buildEvent now booking ride mbRiderDetailsId isValid
+        let event = buildEvent now booking ride mbRiderDetailsId isValid actorInfo
         let rideIdT = ride.id.getId
         let shardId = hash rideIdT `mod` cfg.shardCount
         let streamName = cfg.streamPrefix <> show shardId
@@ -52,8 +55,10 @@ publishRideEnded booking ride mbRiderDetailsId isValid = do
         void $ Hedis.xAdd streamName "*" [("payload", payload)]
         logInfo $ "ride-events.published rideId=" <> rideIdT <> " stream=" <> streamName
       case result of
-        Right () -> pure ()
-        Left e -> logError $ "ride-events.publish-failed rideId=" <> ride.id.getId <> " err=" <> show e
+        Right () -> Metrics.incrementGenericMetrics "ride_events_published"
+        Left e -> do
+          logError $ "ride-events.publish-failed rideId=" <> ride.id.getId <> " err=" <> show e
+          Metrics.incrementGenericMetrics "ride_events_publish_failed"
 
 buildEvent ::
   UTCTime ->
@@ -61,8 +66,9 @@ buildEvent ::
   Ride.Ride ->
   Maybe (Id RD.RiderDetails) ->
   Bool ->
+  Finance.ActorInfo ->
   RideEndedEvent
-buildEvent now booking ride mbRiderDetailsId isValid =
+buildEvent now booking ride mbRiderDetailsId isValid actorInfo =
   RideEndedEvent
     { schemaVer = schemaVersion,
       eventTimestamp = now,
@@ -85,5 +91,6 @@ buildEvent now booking ride mbRiderDetailsId isValid =
       customerExtraFee = Nothing,
       currency = show booking.currency,
       fleetOwnerId = getId <$> ride.fleetOwnerId,
-      isValidRide = isValid
+      isValidRide = isValid,
+      actorInfo = Just actorInfo
     }

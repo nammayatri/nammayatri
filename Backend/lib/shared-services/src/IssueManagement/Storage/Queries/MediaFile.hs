@@ -15,6 +15,7 @@
 
 module IssueManagement.Storage.Queries.MediaFile where
 
+import qualified Data.Text as DT
 import qualified Data.Time as T
 import IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
@@ -34,6 +35,20 @@ findAllIn mfList = findAllWithKV [Is BeamMF.id $ In $ getId <$> mfList]
 deleteById :: BeamFlow m r => Id MediaFile -> m ()
 deleteById (Id mediaFileId) = deleteWithKV [Is BeamMF.id (Eq mediaFileId)]
 
+updateStatusById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Id MediaFile -> m ()
+updateStatusById newStatus (Id mediaFileId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.updatedAt (Just $ T.utcToLocalTime T.utc now)]
+    [Is BeamMF.id $ Eq mediaFileId]
+
+updateStatusAndHashById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Maybe Text -> Id MediaFile -> m ()
+updateStatusAndHashById newStatus fileHash (Id mediaFileId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.fileHash fileHash, Set BeamMF.updatedAt (Just $ T.utcToLocalTime T.utc now)]
+    [Is BeamMF.id $ Eq mediaFileId]
+
 instance FromTType' BeamMF.MediaFile MediaFile where
   fromTType' BeamMF.MediaFileT {..} = do
     pure $
@@ -43,7 +58,10 @@ instance FromTType' BeamMF.MediaFile MediaFile where
             _type = fileType,
             url = url,
             s3FilePath = s3FilePath,
-            createdAt = T.localTimeToUTC T.utc createdAt
+            status = status >>= readMaybe . DT.unpack,
+            fileHash = fileHash,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc <$> updatedAt
           }
 
 instance ToTType' BeamMF.MediaFile MediaFile where
@@ -53,5 +71,10 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.fileType = _type,
         BeamMF.url = url,
         BeamMF.s3FilePath = s3FilePath,
-        BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
+        BeamMF.status = DT.pack . show <$> status,
+        BeamMF.fileHash = fileHash,
+        BeamMF.createdAt = T.utcToLocalTime T.utc createdAt,
+        -- The column is NOT NULL, so never write a NULL: a domain-level Nothing
+        -- only ever means "legacy KV entry", for which createdAt is the best value.
+        BeamMF.updatedAt = Just $ T.utcToLocalTime T.utc (fromMaybe createdAt updatedAt)
       }

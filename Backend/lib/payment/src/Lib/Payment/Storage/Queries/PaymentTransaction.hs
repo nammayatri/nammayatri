@@ -92,6 +92,14 @@ findAllByOrderId (Id orderId) =
     Nothing
     Nothing
 
+findAllByOrderIds :: BeamFlow m r => [Id PaymentOrder] -> m [PaymentTransaction]
+findAllByOrderIds orderIds =
+  findAllWithOptionsKV
+    [Se.Is BeamPT.orderId $ Se.In (map getId orderIds)]
+    (Se.Desc BeamPT.createdAt)
+    Nothing
+    Nothing
+
 findNewTransactionByOrderId :: BeamFlow m r => Id PaymentOrder -> m (Maybe PaymentTransaction)
 findNewTransactionByOrderId (Id orderId) =
   findAllWithOptionsKV

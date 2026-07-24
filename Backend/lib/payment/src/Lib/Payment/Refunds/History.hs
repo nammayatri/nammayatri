@@ -9,6 +9,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Finance.Storage.Queries.StateTransition as QTransition
@@ -20,7 +21,7 @@ import Lib.Payment.Payout.History as PayoutHelper
 -- History & state helpers
 -- ---------------------------------------------------------------------------
 recordRefundsHistory ::
-  (FinanceBeamFlow.BeamFlow m r) =>
+  (FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   Id MerchantOperatingCity ->
   Maybe Payment.RefundStatus ->
   Payment.RefundStatus ->
@@ -29,6 +30,7 @@ recordRefundsHistory ::
   m ()
 recordRefundsHistory merchantOperatingCityId mbFromStatus toStatus mbMessage refunds = do
   now <- getCurrentTime
+  actorInfo <- asks (.actorInfo)
   transitionId <- Id <$> generateGUID
   let mbFromState = toPaymentState <$> mbFromStatus
       toState = toPaymentState toStatus
@@ -43,8 +45,8 @@ recordRefundsHistory merchantOperatingCityId mbFromStatus toStatus mbMessage ref
             toState = toState,
             event = toPaymentEvent toStatus,
             eventData = eventData',
-            actorType = "SYSTEM",
-            actorId = Nothing,
+            actorType = actorInfo.actorType,
+            actorId = actorInfo.actorId,
             merchantId = refunds.merchantId,
             merchantOperatingCityId = merchantOperatingCityId.getId,
             createdAt = now,

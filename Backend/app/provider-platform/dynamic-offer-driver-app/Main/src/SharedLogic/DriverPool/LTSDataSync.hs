@@ -10,6 +10,7 @@ where
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Driver, Gender)
 import Domain.Types.ServiceTierType (ServiceTierType)
@@ -19,7 +20,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (Device, Version)
+import Kernel.Types.Version (CloudType (..), Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -48,7 +49,6 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     latestScheduledPickup :: SetField (Maybe Maps.LatLong),
     deviceToken :: SetField (Maybe FCM.FCMRecipientToken),
     goHomeStatus :: SetField (Maybe DDGR.DriverGoHomeRequestStatus),
-    totalRides :: SetField Int,
     variant :: SetField VehicleVariant,
     selectedServiceTiers :: SetField [ServiceTierType],
     -- Class 1 fields (sync, driver DB authoritative)
@@ -58,6 +58,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     canSwitchToRental :: SetField Bool,
     canSwitchToInterCity :: SetField Bool,
     canSwitchToIntraCity :: SetField Bool,
+    enableForAirport :: SetField (Maybe DI.AirportRestrictionType),
     forwardBatchingEnabled :: SetField Bool,
     isSpecialLocWarrior :: SetField Bool,
     tollRouteBlockedTill :: SetField (Maybe UTCTime),
@@ -79,7 +80,6 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     clientConfigVersion :: SetField (Maybe Version),
     vehicleTags :: SetField (Maybe [Text]),
     mYManufacturing :: SetField (Maybe Days.Day),
-    safetyPlusEnabled :: SetField Bool,
     fleetOwnerId :: SetField (Maybe Text),
     -- On-ride / forward batching fields
     driverTripEndLocation :: SetField (Maybe Maps.LatLong),
@@ -89,7 +89,8 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     airConditioned :: SetField (Maybe Bool),
     luggageCapacity :: SetField (Maybe Int),
     vehicleRating :: SetField (Maybe Double),
-    registrationNo :: SetField Text
+    registrationNo :: SetField Text,
+    cloudType :: SetField (Maybe CloudType)
   }
 
 emptyUpdate :: DriverPoolDataUpdate
@@ -104,7 +105,6 @@ emptyUpdate =
       latestScheduledPickup = Unchanged,
       deviceToken = Unchanged,
       goHomeStatus = Unchanged,
-      totalRides = Unchanged,
       variant = Unchanged,
       selectedServiceTiers = Unchanged,
       enabled = Unchanged,
@@ -113,6 +113,7 @@ emptyUpdate =
       canSwitchToRental = Unchanged,
       canSwitchToInterCity = Unchanged,
       canSwitchToIntraCity = Unchanged,
+      enableForAirport = Unchanged,
       forwardBatchingEnabled = Unchanged,
       isSpecialLocWarrior = Unchanged,
       tollRouteBlockedTill = Unchanged,
@@ -134,7 +135,6 @@ emptyUpdate =
       clientConfigVersion = Unchanged,
       vehicleTags = Unchanged,
       mYManufacturing = Unchanged,
-      safetyPlusEnabled = Unchanged,
       fleetOwnerId = Unchanged,
       driverTripEndLocation = Unchanged,
       hasRideStarted = Unchanged,
@@ -142,12 +142,15 @@ emptyUpdate =
       airConditioned = Unchanged,
       luggageCapacity = Unchanged,
       vehicleRating = Unchanged,
-      registrationNo = Unchanged
+      registrationNo = Unchanged,
+      cloudType = Unchanged
     }
 
 -- | Synchronously update driver pool data in Redis/LTS.
 -- MERGE semantics: only fields marked 'Set' are written; 'Unchanged' fields
 -- keep their existing values.
+-- Writes are routed to the correct cloud based on the driver's cloudType:
+-- if it matches the deployment's cloudType → primary, otherwise → secondary.
 -- If no LTS entry exists yet, the update is skipped — cold-start initialisation
 -- is the responsibility of getOrBuildDriverPoolDataBatch (called at pool-query
 -- time), which builds the full entry from DB and populates LTS. Any field
@@ -163,21 +166,41 @@ syncDriverPoolDataToLTS ::
   DriverPoolDataUpdate ->
   m ()
 syncDriverPoolDataToLTS driverId update = do
+  deploymentCloudType <- asks (.cloudType)
   Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 3 10 $ do
     mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
     case mbExisting of
       Just existing -> do
         let merged = applyUpdate update existing
-        DPD.setDriverPoolData merged
+        cleanupOldCloudKey deploymentCloudType existing merged
+        DPD.setDriverPoolDataByCloud deploymentCloudType merged
       Nothing -> do
         mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
         case mbExisting' of
           Just existing' -> do
             let merged = applyUpdate update existing'
-            DPD.setDriverPoolData merged
-            Redis.withSecondaryLTSRedis $ Redis.del (DPD.driverPoolDataKey driverId)
+            cleanupOldCloudKey deploymentCloudType existing' merged
+            DPD.setDriverPoolDataByCloud deploymentCloudType merged
           Nothing ->
             logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+
+-- | When a driver's cloudType changes, the key in the old cloud becomes orphaned.
+-- Delete it so reads don't return stale data.
+cleanupOldCloudKey ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Maybe CloudType ->
+  DPD.DriverPoolData ->
+  DPD.DriverPoolData ->
+  m ()
+cleanupOldCloudKey deploymentCloudType old new =
+  when (old.cloudType /= new.cloudType) $ do
+    let key = DPD.driverPoolDataKey old.driverId
+    if deploymentCloudType == Just (fromMaybe GCP old.cloudType)
+      then Redis.withLTSRedis $ Redis.del key
+      else Redis.withSecondaryLTSRedis $ Redis.del key
 
 driverPoolSyncLockKey :: Id Driver -> Text
 driverPoolSyncLockKey driverId = "driver-pool-sync-lock:" <> driverId.getId
@@ -196,7 +219,6 @@ applyUpdate u d =
       DPD.latestScheduledPickup = applyField u.latestScheduledPickup d.latestScheduledPickup,
       DPD.deviceToken = applyField u.deviceToken d.deviceToken,
       DPD.goHomeStatus = applyField u.goHomeStatus d.goHomeStatus,
-      DPD.totalRides = applyField u.totalRides d.totalRides,
       DPD.variant = applyField u.variant d.variant,
       DPD.selectedServiceTiers = applyField u.selectedServiceTiers d.selectedServiceTiers,
       DPD.enabled = applyField u.enabled d.enabled,
@@ -205,6 +227,7 @@ applyUpdate u d =
       DPD.canSwitchToRental = applyField u.canSwitchToRental d.canSwitchToRental,
       DPD.canSwitchToInterCity = applyField u.canSwitchToInterCity d.canSwitchToInterCity,
       DPD.canSwitchToIntraCity = applyField u.canSwitchToIntraCity d.canSwitchToIntraCity,
+      DPD.enableForAirport = applyField u.enableForAirport d.enableForAirport,
       DPD.forwardBatchingEnabled = applyField u.forwardBatchingEnabled d.forwardBatchingEnabled,
       DPD.isSpecialLocWarrior = applyField u.isSpecialLocWarrior d.isSpecialLocWarrior,
       DPD.tollRouteBlockedTill = applyField u.tollRouteBlockedTill d.tollRouteBlockedTill,
@@ -226,7 +249,6 @@ applyUpdate u d =
       DPD.clientConfigVersion = applyField u.clientConfigVersion d.clientConfigVersion,
       DPD.vehicleTags = applyField u.vehicleTags d.vehicleTags,
       DPD.mYManufacturing = applyField u.mYManufacturing d.mYManufacturing,
-      DPD.safetyPlusEnabled = applyField u.safetyPlusEnabled d.safetyPlusEnabled,
       DPD.fleetOwnerId = applyField u.fleetOwnerId d.fleetOwnerId,
       DPD.driverTripEndLocation = applyField u.driverTripEndLocation d.driverTripEndLocation,
       DPD.hasRideStarted = applyField u.hasRideStarted d.hasRideStarted,
@@ -234,7 +256,8 @@ applyUpdate u d =
       DPD.airConditioned = applyField u.airConditioned d.airConditioned,
       DPD.luggageCapacity = applyField u.luggageCapacity d.luggageCapacity,
       DPD.vehicleRating = applyField u.vehicleRating d.vehicleRating,
-      DPD.registrationNo = applyField u.registrationNo d.registrationNo
+      DPD.registrationNo = applyField u.registrationNo d.registrationNo,
+      DPD.cloudType = applyField u.cloudType d.cloudType
     }
 
 -- | Apply a single field update: Set overwrites, Unchanged keeps current.

@@ -24,3 +24,8 @@ updateEstimatedDistanceAndFare ::
 updateEstimatedDistanceAndFare estimatedFare estimatedDistance id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.estimatedFare estimatedFare, Se.Set Beam.estimatedDistance estimatedDistance, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateIsPickupOrDestinationEdited :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
+updateIsPickupOrDestinationEdited isPickupOrDestinationEdited id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isPickupOrDestinationEdited isPickupOrDestinationEdited, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

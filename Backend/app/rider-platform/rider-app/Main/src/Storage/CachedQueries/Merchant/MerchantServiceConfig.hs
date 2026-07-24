@@ -14,10 +14,6 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantServiceConfig
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ Use Storage.ConfigPilot.Config.MerchantServiceConfig (getConfig) instead for reads."
-    #-}
   ( create,
     findByMerchantOpCityIdAndService,
     clearCache,
@@ -44,6 +40,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
+import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
@@ -184,6 +181,7 @@ getServiceName msc = case msc.serviceConfig of
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> IssueTicketService Ticket.Zendesk
+    Ticket.XyneSpacesConfig _ -> IssueTicketService Ticket.XyneSpaces
   IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
   TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
@@ -217,6 +215,10 @@ getServiceName msc = case msc.serviceConfig of
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
   EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
+    EventTrackingInterface.ClevertapConfig _ -> EventTrackingService EventTracking.Clevertap
+  FleetEngineServiceConfig _ -> FleetEngineService GoogleFleetEngine
+  PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
+    PartnerSdk.AarokyaPartnerSdkConfig _ -> PartnerSdkService Aarokya
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

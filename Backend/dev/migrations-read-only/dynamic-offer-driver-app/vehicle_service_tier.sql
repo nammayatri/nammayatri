@@ -439,3 +439,17 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ALTER COLUMN special_zon
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN allow_null_vehicle_rating boolean ;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN cancellation_rate_config json ;
+

@@ -23,6 +23,7 @@ import Data.Time.Clock (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified EulerHS.Language as L
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
@@ -31,16 +32,22 @@ import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), Settlemen
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.Id (Id (..))
+import Kernel.Types.Id (Id (..), ShortId (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPO
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), SettlementReportIngestionJobData (..))
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import qualified Storage.Queries.SubscriptionPurchase as QSP
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int
@@ -64,7 +71,8 @@ runSettlementReportIngestionJob ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
     JobCreatorEnv r,
-    HasSchemaName SchedulerJobT
+    HasSchemaName SchedulerJobT,
+    Finance.HasActorInfo m r
   ) =>
   Job 'SettlementReportIngestion ->
   m ExecutionResult
@@ -97,7 +105,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                   else Nothing
           serviceResult <-
             try @_ @SomeException $
-              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId
+              ingestPaymentSettlementReport settlementSvcCfg mbJuspayCfgForService merchantId.getId merchantOperatingCityId.getId resolveOrderType
           case serviceResult of
             Left err -> do
               logError $ "Settlement ingestion for " <> show settlementSvcCfg.settlementService <> " threw exception: " <> show err
@@ -126,6 +134,24 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
           logWarning "Some settlement services had failures, but scheduling next run anyway"
           pure Complete
   where
+    resolveOrderType ::
+      (BeamFlow m r, EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+      Text ->
+      m (Maybe PgDom.OrderType, Maybe Bool, Maybe Text)
+    resolveOrderType orderId = do
+      mbPaymentOrder <- QPO.findByShortId (ShortId orderId)
+      case mbPaymentOrder of
+        Nothing -> do
+          logWarning $ "No payment order found for orderId: " <> orderId
+          pure (Nothing, Nothing, Nothing)
+        Just po -> do
+          mbSubPurchase <- QSP.findByPaymentOrderId po.id
+          case mbSubPurchase of
+            Just sp ->
+              pure (Just PgDom.SUBSCRIPTION, Just $ sp.status /= DSP.PENDING && sp.status /= DSP.FAILED, Just sp.id.getId)
+            Nothing ->
+              pure (Just PgDom.PAYOUT_REGISTRATION, Just False, Nothing)
+
     getSettlementConfigs ::
       (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
       Id DM.Merchant ->
@@ -134,7 +160,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     getSettlementConfigs _mId mOpCityId = do
       let allSettlementServices = [minBound .. maxBound] :: [SettlementService]
       configs <- forM allSettlementServices $ \service -> do
-        mbConfig <- CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId
+        mbConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just (DMSC.SettlementService service)}) (Just (maybeToList <$> CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId))
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
@@ -148,7 +174,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       DMSC.ServiceName ->
       m (Maybe JuspayOrderStatusConfig)
     getJuspayOrderStatusConfig mOpCityId svcName = do
-      mbCfg <- CQMSC.findByServiceAndCity svcName mOpCityId
+      mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mOpCityId.getId, merchantId = Nothing, serviceName = Just svcName}) (Just (maybeToList <$> CQMSC.findByServiceAndCity svcName mOpCityId))
       case mbCfg >>= extractPaymentServiceConfig . (.serviceConfig) of
         Just (Payment.JuspayConfig juspayCfg) ->
           pure . Just $

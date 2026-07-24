@@ -39,6 +39,15 @@ findByGstNumberAndNotInValid personId = do
         ]
     ]
 
+findValidByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverGstin)
+findValidByDriverId driverId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId.getId,
+          Se.Is Beam.verificationStatus $ Se.Eq Documents.VALID
+        ]
+    ]
+
 findGSTInByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverGstin)
 findGSTInByDriverId personId = do
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq personId.getId]
@@ -65,7 +74,12 @@ upsertGstinRecord a@DriverGstin {..} =
           Se.Set Beam.documentImageId1 documentImageId1.getId,
           Se.Set Beam.gstinHash (gstin & hash),
           Se.Set Beam.updatedAt now,
-          Se.Set Beam.verificationStatus verificationStatus
+          Se.Set Beam.verificationStatus verificationStatus,
+          Se.Set Beam.verifiedBy verifiedBy
         ]
         [Se.Is Beam.driverId $ Se.Eq driverId.getId]
     Nothing -> createWithKV a
+
+deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Documents.VerificationStatus -> m ()
+deleteByDriverIdAndStatus driverId status =
+  deleteWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId.getId, Se.Is Beam.verificationStatus $ Se.Eq status]]

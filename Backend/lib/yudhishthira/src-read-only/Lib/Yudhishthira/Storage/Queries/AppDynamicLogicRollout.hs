@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m ([Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 findByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]))
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   findAllWithKV
     [ Se.And
@@ -43,7 +43,7 @@ findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
 
 findRunningByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]))
 findRunningByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   findAllWithKV
     [ Se.And

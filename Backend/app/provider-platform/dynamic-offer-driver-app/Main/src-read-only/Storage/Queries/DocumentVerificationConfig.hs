@@ -4,7 +4,6 @@
 
 module Storage.Queries.DocumentVerificationConfig (module Storage.Queries.DocumentVerificationConfig, module ReExport) where
 
-import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.MerchantOperatingCity
@@ -57,8 +56,10 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.disableWarning disableWarning,
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
       Se.Set Beam.documentCategory documentCategory,
-      Se.Set Beam.documentFieldsJSON (Data.Aeson.toJSON <$> documentFields),
+      Se.Set Beam.documentFieldsJSON (mkDocumentFieldsJSON documentFields),
       Se.Set Beam.documentFlowGrouping documentFlowGrouping,
+      Se.Set Beam.documentOnboardingStage documentOnboardingStage,
+      Se.Set Beam.faceMatchSourceDoc faceMatchSourceDoc,
       Se.Set Beam.filterForOldApks filterForOldApks,
       Se.Set Beam.isApprovalSupported isApprovalSupported,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
@@ -68,6 +69,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.isMandatory isMandatory,
       Se.Set Beam.isMandatoryForEnabling isMandatoryForEnabling,
       Se.Set Beam.isReminderSupported isReminderSupported,
+      Se.Set Beam.markImageValidOnValidationSkip markImageValidOnValidationSkip,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,

@@ -1,0 +1,316 @@
+{
+  "info": {
+    "name": "Rewards Dashboard CRUD",
+    "description": "BAP rider-dashboard Rewards APIs: campaign lifecycle (create → cohort → pool upload → activate → read → edit → pause → end).\n\nEnvironments: Local_NY_Bangalore (NAMMA_YATRI), Local_BT_Delhi (BHARAT_TAXI).\n\nPrerequisites: see RewardsFlow/Rules.md. ./run-tests.sh rewards auto-seeds rewards-dashboard-setup.sql + rider-dashboard.sql.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "if (!pm.collectionVariables.get('_test_rewards_suffix')) {",
+          "  var suffix = String(Math.floor(100000 + Math.random() * 899999));",
+          "  pm.collectionVariables.set('_test_rewards_suffix', suffix);",
+          "  var now = new Date();",
+          "  var ends = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);",
+          "  pm.collectionVariables.set('_test_starts_at', now.toISOString());",
+          "  pm.collectionVariables.set('_test_ends_at', ends.toISOString());",
+          "  pm.collectionVariables.set('_test_campaign_name', 'INT_TEST_REWARDS_' + suffix);",
+          "  console.log('Rewards test suffix:', suffix);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": "{{bap_dashboard_url}}/user/switchMerchantAndCity"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('bap_dashboard_token', d.authToken);",
+              "pm.test('BAP switch OK', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Campaign (Pool)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{_test_campaign_name}}\",\n  \"description\": \"Integration test rewards campaign\",\n  \"sponsorType\": \"Internal\",\n  \"sponsorName\": \"{{bap_short_id}}\",\n  \"sponsorLogoUrl\": null,\n  \"couponSourceType\": \"Pool\",\n  \"couponTemplate\": null,\n  \"redemptionTargetType\": \"Internal\",\n  \"redemptionTargetUrl\": null,\n  \"claimMode\": \"AutoClaim\",\n  \"startsAt\": \"{{_test_starts_at}}\",\n  \"endsAt\": \"{{_test_ends_at}}\",\n  \"displayOrder\": 1\n}"
+        },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rewards_campaign_id', d.campaignId);",
+              "pm.test('Create campaign 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('campaignId returned', function () { pm.expect(d.campaignId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Add Cohort",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Always eligible\",\n  \"description\": \"Matches all riders in integration test\",\n  \"displayOrder\": 1,\n  \"eligibilityJsonLogic\": true,\n  \"rewardTitle\": \"Test reward title\",\n  \"rewardImageUrl\": null,\n  \"couponValidityDays\": 30,\n  \"presentation\": null\n}"
+        },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/cohort"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rewards_cohort_id', d.cohortId);",
+              "pm.test('Create cohort 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('cohortId returned', function () { pm.expect(d.cohortId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload Coupon Codes (CSV)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "codesCsv",
+              "type": "text",
+              "value": "code\nINTTEST_{{_test_rewards_suffix}}_A\nINTTEST_{{_test_rewards_suffix}}_B\nINTTEST_{{_test_rewards_suffix}}_C"
+            }
+          ]
+        },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/cohort/{{rewards_cohort_id}}/codes"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Upload codes 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('uploadBatchId returned', function () { pm.expect(d.uploadBatchId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activate Campaign",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"newStatus\": \"Active\"}" },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Activate campaign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Campaign Details",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Get campaign 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Campaign is Active', function () { pm.expect(d.campaign.status).to.eql('Active'); });",
+              "pm.test('Has one cohort', function () { pm.expect(d.cohorts).to.be.an('array').with.lengthOf(1); });",
+              "pm.test('Cohort name matches', function () { pm.expect(d.cohorts[0].name).to.eql('Always eligible'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Campaigns",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaigns"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var campaigns = pm.response.json();",
+              "var name = pm.collectionVariables.get('_test_campaign_name');",
+              "var found = campaigns.find(function (c) { return c.campaign.name === name; });",
+              "pm.test('List campaigns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Created campaign present in list', function () { pm.expect(found).to.not.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Campaign Stats",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/stats"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Get stats 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Pool remaining for cohort', function () {",
+              "  pm.expect(d.poolRemainingByCohort).to.be.an('array').with.lengthOf(1);",
+              "  pm.expect(d.poolRemainingByCohort[0].remaining).to.be.at.least(3);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Edit Campaign",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"description\": \"Updated by integration test\", \"displayOrder\": 2}" },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Edit campaign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pause Campaign",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"newStatus\": \"Paused\"}" },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Pause campaign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "End Campaign",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bap_dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"newStatus\": \"Ended\"}" },
+        "url": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rewards/campaign/{{rewards_campaign_id}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('End campaign 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

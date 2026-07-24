@@ -15,6 +15,7 @@
 module App.Server where
 
 import API
+import App.CrossCloudProxy (crossCloudProxy)
 import Environment
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.Init
@@ -22,12 +23,14 @@ import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Monitoring.Prometheus.Servant ()
 import qualified Kernel.Utils.Servant.Server as BU
+import qualified Network.HTTP.Client as Http
 import Servant
 import Tools.Auth
 
-run :: Env -> Application
-run = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
+run :: Http.Manager -> Env -> Application
+run proxyManager = withModifiedEnv' driverOfferAPI $ \modifiedEnv ->
   BU.run driverOfferAPI (driverOfferServer modifiedEnv.appEnv) context modifiedEnv
+    & crossCloudProxy proxyManager modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version driverOfferAPI

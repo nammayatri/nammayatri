@@ -47,6 +47,7 @@ import Kernel.External.Maps.Types
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -55,12 +56,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
+import qualified Lib.Types.SpecialLocation as SL
+import qualified SharedLogic.ActiveDriversList as ADL
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -72,9 +77,11 @@ import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.Payment ()
-import Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
@@ -82,7 +89,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
 
@@ -124,10 +130,10 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r)
 
 driverStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -138,7 +144,7 @@ driverStartRide handle rideId req =
     pure result
 
 dashboardStartRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -149,7 +155,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -164,12 +170,12 @@ startRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
             Redis.unlockRedis mkLockKey
             logDebug $ "Start ride for RideId: " <> rideId.getId <> " Unlocked"
         )
-    else throwError (InternalError "Start ride inprogress")
+    else throwError (InvalidRequest "Start ride already in progress, please wait")
   where
     mkLockKey = "StartTransaction:RID:-" <> rideId.getId
 
 startRideHandler ::
-  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -179,7 +185,7 @@ startRideHandler ServiceHandle {..} rideId req = do
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
   (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
       (pure (False, False))
@@ -201,7 +207,7 @@ startRideHandler ServiceHandle {..} rideId req = do
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist ride.id.getId)
 
-  if (isInProgress ride.status)
+  if isInProgress ride.status
     then pure APISuccess.Success
     else do
       unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("This ride cannot be started" <> Text.pack (show ride.status))
@@ -234,7 +240,7 @@ startRideHandler ServiceHandle {..} rideId req = do
             return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
           else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
-      rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
+      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME}) (Just (CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions))
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
 
       void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
@@ -246,6 +252,8 @@ startRideHandler ServiceHandle {..} rideId req = do
 
       fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
+      fork "startRide - Complete pickup zone request and add driver to active list" $ do
+        ADL.addDriverToActiveList driverId (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)
       fork "startRide - Complete pickup zone request" $
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driverId booking.id.getId booking.pickupGateId (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
       if isInterCityTrip booking.tripCategory || isRentalTrip booking.tripCategory
@@ -259,6 +267,7 @@ startRideHandler ServiceHandle {..} rideId req = do
         ( booking.isDashboardRequest
             && isRideOtpTrip booking.tripCategory
             && fromMaybe False transporterConfig.payoutRideMoneyToDriver
+            && booking.fareSettlementType /= Just SL.CommissionOnly
         )
         $ do
           -- Checking iff duplicate is there.
@@ -268,7 +277,10 @@ startRideHandler ServiceHandle {..} rideId req = do
             when (isNothing existingPayout && isNothing existingScheduledPayout) $ do
               mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
               commission <- FC.calculateCommission booking.fareParams mbFarePolicy
-              let payoutAmountBase = maybe booking.estimatedFare (\c -> booking.estimatedFare - c) commission
+              cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
+              -- The payout base is the fare minus every commission the platform takes: ride AND cancellation.
+              let totalCommission = fromMaybe 0 commission + fromMaybe 0 cancellationCommission
+                  payoutAmountBase = if totalCommission > 0 then booking.estimatedFare - totalCommission else booking.estimatedFare
                   payoutAmount =
                     toHighPrecMoney
                       (roundToIntegral (getHighPrecMoney payoutAmountBase) :: Integer)

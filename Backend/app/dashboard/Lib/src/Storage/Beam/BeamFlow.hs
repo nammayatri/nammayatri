@@ -18,6 +18,7 @@ import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Storage.Beam.AccessMatrix as BeamAM
+import qualified Storage.Beam.Entity as BeamE
 import qualified Storage.Beam.Merchant as BeamM
 import qualified Storage.Beam.MerchantAccess as BeamMA
 import qualified Storage.Beam.Person as BeamP
@@ -34,6 +35,7 @@ type BeamFlow m r =
 
 type BeamFlow' =
   ( HasSchemaName BeamAM.AccessMatrixT,
+    HasSchemaName BeamE.EntityT,
     HasSchemaName BeamM.MerchantT,
     HasSchemaName BeamMA.MerchantAccessT,
     HasSchemaName BeamP.PersonT,

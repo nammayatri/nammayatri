@@ -13,7 +13,29 @@ port returns a constant distance/duration. If a test needs specific values for
 a city pair, install an explicit `POST /mock/override` rule on service "google".
 """
 
+import os
+import urllib.request
+import json as _json
 from urllib.parse import parse_qs, urlparse
+
+
+def _osrm_base_url():
+    return os.environ.get("OSRM_HOST", "http://localhost:5001")
+
+
+def _osrm_table(coords):
+    # coords = list of "lat,lon" strings
+    # OSRM expects lon,lat order
+    coord_str = ";".join(
+        f"{lon},{lat}" for lat, lon in (c.split(",") for c in coords)
+    )
+    url = f"{_osrm_base_url()}/table/v1/driving/{coord_str}?annotations=duration,distance"
+    try:
+        with urllib.request.urlopen(url, timeout=2) as resp:
+            data = _json.loads(resp.read())
+        return data.get("distances"), data.get("durations")
+    except Exception:
+        return None, None
 
 
 def _qp(handler):
@@ -25,14 +47,43 @@ def _distance_matrix(handler):
     origins = (qp.get("origins", [""])[0] or "").split("|")
     destinations = (qp.get("destinations", [""])[0] or "").split("|")
 
-    def el():
+    # Try OSRM /table for real road distances.
+    # Feed origins first then destinations; slice the origin rows and
+    # destination columns out of the resulting N×N matrix.
+    # Falls back to hardcoded 5000m if OSRM is unreachable.
+    all_coords = origins + destinations
+    distances, durations = _osrm_table(all_coords)
+
+    def el(dist_val, dur_val):
+        d = round(dist_val) if dist_val is not None else 5000
+        t = round(dur_val) if dur_val is not None else 600
+        return {
+            "distance": {"text": f"{d} m", "value": d},
+            "duration": {"text": f"{t // 60} mins", "value": t},
+            "status": "OK",
+        }
+
+    def fallback_el():
         return {
             "distance": {"text": "5 km", "value": 5000},
             "duration": {"text": "10 mins", "value": 600},
             "status": "OK",
         }
 
-    rows = [{"elements": [el() for _ in destinations]} for _ in origins]
+    n_orig = len(origins)
+    rows = []
+    for i in range(n_orig):
+        elements = []
+        for j in range(len(destinations)):
+            dest_col = n_orig + j
+            try:
+                dist_val = distances[i][dest_col] if distances else None
+                dur_val = durations[i][dest_col] if durations else None
+                elements.append(el(dist_val, dur_val))
+            except (TypeError, IndexError):
+                elements.append(fallback_el())
+        rows.append({"elements": elements})
+
     return {
         "destination_addresses": destinations,
         "origin_addresses": origins,
@@ -155,10 +206,28 @@ def _snap_to_road(handler):
     }
 
 
+def _compute_routes(handler):
+    """Google Routes API v2 (POST /directions/v2:computeRoutes). Response shape differs
+    entirely from the classic Directions API — LTS/driver-app consume distanceMeters,
+    duration and polyline.encodedPolyline."""
+    return {
+        "routes": [
+            {
+                "distanceMeters": 5000,
+                "duration": "600s",
+                "staticDuration": "600s",
+                "polyline": {"encodedPolyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"},
+            }
+        ]
+    }
+
+
 def handle(handler, path, body):
     if handler.command == "GET" and (path.endswith("/maps") or path.endswith("/maps/") or path.endswith("/health")):
         return handler._json({"status": "UP", "service": "mock-google"})
 
+    if "computeRoutes" in path or "/directions/v2" in path:
+        return handler._json(_compute_routes(handler))
     if "/distancematrix" in path:
         return handler._json(_distance_matrix(handler))
     if "/directions" in path:

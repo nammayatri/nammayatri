@@ -27,6 +27,7 @@ imports:
   DeviceType: Kernel.Types.Version
   BillingCategory: SharedLogic.Type
   Value: Data.Aeson
+  FareSettlementType: Lib.Types.SpecialLocation
 
 Quote:
   dataName: quote
@@ -34,7 +35,9 @@ Quote:
 
   types:
     QuoteDetails:
-      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails
+      # EasyBookingDetails reuses RentalDetails's shape — both are destination-less quotes,
+      # so no new quote-details type/table was needed.
+      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, MeterRideDetails MeterRideQuoteDetails, EasyBookingDetails RentalDetails
       derive': Generic,Show
 
     OneWayQuoteDetails:
@@ -46,7 +49,10 @@ Quote:
       quoteId: Text
 
     QuoteAPIDetails:
-      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails
+      # EasyBookingAPIDetails reuses RentalDetailsAPIEntity's shape (same pattern as
+      # AmbulanceAPIDetails/DeliveryAPIDetails sharing DriverOfferAPIEntity above) but gets
+      # its own fareProductType tag ("EASY_BOOKING", see Tools/JSON.hs) instead of "RENTAL".
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, MeterRideAPIDetails MeterRideQuoteAPIDetails, EasyBookingAPIDetails RentalDetailsAPIEntity
       derive': Generic,Show
 
     OneWayQuoteAPIDetails:
@@ -84,6 +90,7 @@ Quote:
     merchantId : Id Merchant
     vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
+    vehicleServiceTierLuggageCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     isAirConditioned: Maybe Bool
     serviceTierName: Maybe Text
@@ -92,6 +99,9 @@ Quote:
     specialLocationTag : Maybe Text
     specialLocationName : Maybe Text
     specialLocationSupportNumber : Maybe Text
+    fareSettlementType : Maybe FareSettlementType
+    area : Maybe Text
+    navigationInstruction : Maybe Text
     clientBundleVersion : Maybe Version
     clientSdkVersion : Maybe Version
     clientConfigVersion : Maybe Version
@@ -159,11 +169,11 @@ Quote:
 
   fromTType:
     providerUrl: parseBaseUrl|MI
-    tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
+    tollChargesInfo: Storage.Queries.Transformers.Quote.mkTollChargesInfo tollCharges tollNames currency|E
     quoteBreakupList: Storage.Queries.Transformers.Quote.loadQuoteBreakupList quoteBreakupListJson id|EM
     quoteDetails: (Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)|EM
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
-    merchantOperatingCityId: (backfillMOCId merchantOperatingCityId merchantId)|EM
+    merchantOperatingCityId: (Storage.Queries.Transformers.Quote.backfillMOCId merchantOperatingCityId merchantId)|EM
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
     estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
     updatedAt: Kernel.Prelude.fromMaybe createdAt|I

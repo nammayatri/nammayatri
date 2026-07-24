@@ -22,14 +22,15 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..), FullBusData (..), utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -53,8 +54,8 @@ defaultBusTrackingConfigFRFS =
 
 nearbyBusKeyFRFS :: Maybe Text -> Text
 nearbyBusKeyFRFS mbRedisPrefix = case mbRedisPrefix of
-  Just prefix -> prefix <> ":bus_locations"
-  Nothing -> "bus_locations"
+  Just prefix | prefix /= "" -> prefix <> ":bus_locations"
+  _ -> "bus_locations"
 
 topVehicleCandidatesKeyFRFS :: Text -> Text
 topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
@@ -116,7 +117,7 @@ processBusLegState
   integratedBppConfig
   mbBookedVehicleNumber = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do
@@ -280,15 +281,13 @@ getVehicleMetadata :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, H
 getVehicleMetadata vehicleNumbers integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
-  cloudType <- asks (.cloudType)
-  case cloudType of
-    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
-    _ -> CQMMB.withCrossAppRedisNew $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
+  Hedis.runInMultiCloudLTSRedisForMaybeList $ Hedis.hmGet (vehicleMetaKey redisPrefix) vehicleNumbers
   where
     vehicleMetaKey :: Maybe Text -> Text
     vehicleMetaKey mbRedisPrefix = case mbRedisPrefix of
-      Just prefix -> prefix <> ":bus_metadata_v2"
+      Just prefix | prefix /= "" -> prefix <> ":bus_metadata_v2"
       _ -> "bus_metadata_v2"
 
 getBusLiveInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) => Text -> DIBC.IntegratedBPPConfig -> m (Maybe BusDataWithRoutesInfo)
@@ -299,12 +298,10 @@ getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
   let nearbyBusSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyBusSearchRadius
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
-  cloudType <- asks (.cloudType)
   busesBS <-
-    mapM (pure . decodeUtf8) =<< case cloudType of
-      Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
-      _ -> CQMMB.withCrossAppRedisNew $ Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km")
+    mapM (pure . decodeUtf8) =<< Hedis.runInMultiCloudLTSRedisForList (Hedis.geoSearch (nearbyBusKeyFRFS redisPrefix) (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
   logDebug $ "getNearbyBusesFRFS: busesBS: " <> show busesBS
   buses <-
     if null busesBS

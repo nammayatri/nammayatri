@@ -67,6 +67,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -76,9 +77,9 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -284,7 +285,10 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
         Nothing -> do
           callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus') merchantOperatingCityId merchantId
           void $ QCallStatus.create callStatusObj
-        Just cs -> QCallStatus.updateCallStatusCallId callId cs.id
+        Just cs ->
+          QCallStatus.findByCallSid callId >>= \case
+            Just _ -> pure ()
+            Nothing -> QCallStatus.updateCallStatusCallId callId cs.id
 
     buildCallStatus id exotelCallId rideId exoStatus merchantOperatingCityId merchantId = do
       now <- getCurrentTime
@@ -447,7 +451,7 @@ getCallTwillioAccessToken rideId entity deviceType = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId
       createJWT id twillioCallConfig deviceType
     getCfg cityId mercId = do
-      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = mercId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = mercId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService mercId cityId (DMSC.CallService Call.TwillioCall))) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
       case merchantServConfig.serviceConfig of
         DMSC.CallServiceConfig config ->
           case config of

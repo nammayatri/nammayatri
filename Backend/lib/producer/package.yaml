@@ -89,6 +89,10 @@ dependencies:
   - rider-app
   - yudhishthira
   - unordered-containers
+  - warp
+  - wai
+  - http-types
+  - unliftio
 
 ghc-options:
   - -Wall

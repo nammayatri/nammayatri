@@ -1,0 +1,96 @@
+imports:
+  Id: Kernel.Types.Id
+  CoinsConfig: Domain.Types.Coins.CoinsConfig
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
+  TripCategoryType: Lib.DriverCoins.Types
+  VehicleCategory: Domain.Types.VehicleCategory
+  ServiceTierType: Domain.Types.Common
+  TimeBound: Kernel.Types.TimeBound
+  Text: Data.Text
+
+module: DriverIncentiveCoins
+
+# -----------------------------------------------------------------------------
+# GET /coins/incentiveConfig  (cacheable config — use with ETag / If-None-Match)
+# Returns active coin config(s) for the logged-in driver. No Redis ride counts.
+#
+# - Client sends Header If-None-Match with previously received ETag.
+# - Response includes Header ETag (quoted SHA-256 of payload).
+# - If client ETag matches current payload hash → HTTP 304 (Not Modified).
+# - Redis hash cleared on CoinsConfig create/update (dashboard).
+#
+# Handler logic:
+# 1. Load person (driver tags) + current vehicle category.
+# 2. Parse Incentive tag(s): "Incentive#<value>".
+#    Value may have multiple functions joined by "&" — use ALL segments.
+#    Example: Incentive#DriverIncentiveCohortRidesCompleted 2&DriverIncentiveCohortRidesCompleted 5
+#    → both eventFunctions.
+# 3. For each DriverIncentiveCohortRidesCompleted N:
+#    query active EndRide configs (city + merchant + vehicleCategory + eventFunction).
+#    Prefer real timeBounds if any exist (even outside peak); else unbounded/null.
+#    If no config for that eventFunction → skip (do not fail the whole list).
+# 4. If driver has NO Incentive tag with DriverIncentiveCohortRidesCompleted:
+#    return all active EndRide configs whose eventFunction is RidesCompleted X
+#    (same city / merchant / vehicleCategory), one preferred row per eventFunction.
+# 5. ridesThreshold = N from DriverIncentiveCohortRidesCompleted N or RidesCompleted N.
+# 6. Response list may have 0..N items.
+# 7. ETag: hash of full response list.
+#
+# -----------------------------------------------------------------------------
+# GET /coins/incentiveRideCount  (volatile — call whenever UI needs progress)
+# Works for ALL drivers (tagged or not), same config selection as incentiveConfig.
+#
+# Handler logic:
+# 1–4. Same tag parse + config selection as incentiveConfig (to know window):
+#      tagged → DriverIncentiveCohortRidesCompleted configs;
+#      no tag → RidesCompleted X configs.
+# 5. Always read Redis (missing key → 0 / Nothing, never fail):
+#    - dayValidRideCount  ← DriverValidRideCount:DriverId:<id>
+#      (created on valid ride completion for every driver)
+#    - timeBoundValidRideCount ← :Window:TimeBound:<day>:<start>-<end>
+#      when first selected config has a matching peak for "now";
+#      Nothing if no config / unbounded / outside peak / key missing.
+# 6. progressValidRideCount:
+#      active peak window → timeBoundValidRideCount (or 0)
+#      else → dayValidRideCount
+
+types:
+  DriverIncentiveCoinConfigItem:
+    id: Id CoinsConfig
+    eventFunction: DriverCoinsFunctionType
+    eventName: Text
+    coins: Int
+    expirationAt: Maybe Int
+    active: Bool
+    vehicleCategory: Maybe VehicleCategory
+    tripCategoryType: Maybe TripCategoryType
+    serviceTierType: Maybe ServiceTierType
+    timeBounds: Maybe TimeBound
+    # From DriverIncentiveCohortRidesCompleted N or RidesCompleted N → N
+    ridesThreshold: Int
+
+  DriverIncentiveRideCountRes:
+    # Redis: DriverValidRideCount:DriverId:<id> (day / unbounded path)
+    dayValidRideCount: Int
+    # Redis: ...:Window:TimeBound:<weekday>:<start>-<end> for this config's
+    # active peak at request time; Nothing if unbounded or outside peak
+    timeBoundValidRideCount: Maybe Int
+    # Count that applies to the selected config (use for milestone progress)
+    progressValidRideCount: Int
+
+apis:
+  - GET:
+      endpoint: /coins/incentiveConfig
+      auth: TokenAuth PROVIDER_TYPE
+      headers:
+        If-None-Match: Text
+      response:
+        type: "[DriverIncentiveCoinConfigItem]"
+      responseHeaders:
+        - ETag: Text
+
+  - GET:
+      endpoint: /coins/incentiveRideCount
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: DriverIncentiveRideCountRes

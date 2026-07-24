@@ -3,6 +3,7 @@ module Domain.Action.UI.CustomerReferral where
 import API.Types.UI.CustomerReferral
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Internal.Payout as DPayout
+import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
 import qualified Domain.Types.Person as Person
@@ -20,6 +21,8 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Action as DP
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -27,10 +30,11 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as PStats
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TPayout
@@ -75,13 +79,30 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
       logDebug $ "verify vpa resp : " <> show response
       pure $ VpaResp {vpa = response.vpa, isValid = response.status == "VALID"}
 
-getReferralPayoutHistory :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Flow PayoutHistory
-getReferralPayoutHistory (mbPersonId, _mbMerchantId) = do
+getReferralPayoutHistory :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Int -> Maybe Int -> Flow PayoutHistory
+getReferralPayoutHistory (mbPersonId, _mbMerchantId) mbLimit mbOffset = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  payoutOrders <- QPayoutOrder.findAllByCustomerId personId.getId
-  let history = map getPayoutOrderDetails payoutOrders
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  payoutOrders <- QPayoutOrder.findAllByCustomerIdWithLimitOffset mbLimit mbOffset personId.getId
+  refreshedOrders <- forM payoutOrders $ \payoutOrder ->
+    if isPayoutOrderTerminal payoutOrder.status
+      then pure payoutOrder
+      else do
+        void $
+          withTryCatch ("getReferralPayoutHistory:refreshPayoutStatus:" <> payoutOrder.orderId) $ do
+            payoutConfig <-
+              getOneConfig
+                (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+                (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
+                >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" person.merchantOperatingCityId.getId)
+            let payoutStatusServiceReq = DP.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
+                payoutOrderStatusCall = TPayout.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
+            DP.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq payoutOrderStatusCall
+        QPayoutOrder.findByOrderId payoutOrder.orderId <&> fromMaybe payoutOrder
+  let history = map getPayoutOrderDetails refreshedOrders
   pure $ PayoutHistory {..}
   where
+    isPayoutOrderTerminal status = UIPayout.isPayoutOrderSuccess status || UIPayout.isPayoutStatusFailed status
     getPayoutOrderDetails payoutOrder =
       PayoutItem
         { amount = payoutOrder.amount.amount,
@@ -92,7 +113,7 @@ getReferralPayoutHistory (mbPersonId, _mbMerchantId) = do
         }
 
 postPayoutVpaUpsert :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> UpdatePayoutVpaReq -> Flow APISuccess
-postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
+postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = ActorInfo.withMbPersonIdActorInfo mbPersonId $ do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just req.vpa) personId
@@ -103,7 +124,7 @@ postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
 processBacklogReferralPayout ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m,
+    Finance.HasActorInfo m r,
     EncFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r
@@ -114,7 +135,7 @@ processBacklogReferralPayout ::
   m ()
 processBacklogReferralPayout personId vpa merchantOpCityId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
   personStats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   let toPayReferredByReward = personStats.referredByEarnings > 0 && isNothing personStats.referredByEarningsPayoutStatus
       toPayBacklogAmount = personStats.backlogPayoutAmount > 0 && isNothing personStats.backlogPayoutStatus

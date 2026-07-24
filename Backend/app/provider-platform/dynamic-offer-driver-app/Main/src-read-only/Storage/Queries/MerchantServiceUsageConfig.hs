@@ -13,6 +13,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payout.Types
 import qualified Kernel.External.SMS.Types
+import qualified Kernel.External.Verification.Types
 import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -85,6 +86,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             autoComplete = autoComplete,
             backgroundVerification = backgroundVerification,
             categoryBasedVerificationPriorityList = Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList,
+            challanProvidersPriorityList = challanProvidersPriorityList,
             createBankAccount = createBankAccount,
             createPayoutOrder = fromMaybe Kernel.External.Payout.Types.Juspay createPayoutOrder,
             createdAt = createdAt,
@@ -92,6 +94,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             dashboardPanVerificationService = dashboardPanVerificationService,
             dashboardUdyamVerificationService = dashboardUdyamVerificationService,
             driverBackgroundVerificationService = driverBackgroundVerificationService,
+            faceMatchService = Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy faceMatchService,
             faceVerificationService = faceVerificationService,
             getBankAccount = getBankAccount,
             getDistances = getDistances,
@@ -105,6 +108,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getRoutes = getRoutes,
             getTripRoutes = getTripRoutes,
             gstVerificationService = gstVerificationService,
+            imageExtractionProvidersPriorityList = imageExtractionProvidersPriorityList,
             initiateCall = initiateCall,
             issueTicketService = issueTicketService,
             llmChatCompletion = Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI llmChatCompletion,
@@ -134,6 +138,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.autoComplete = autoComplete,
         Beam.backgroundVerification = backgroundVerification,
         Beam.categoryBasedVerificationPriorityList = Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList,
+        Beam.challanProvidersPriorityList = challanProvidersPriorityList,
         Beam.createBankAccount = createBankAccount,
         Beam.createPayoutOrder = Kernel.Prelude.Just createPayoutOrder,
         Beam.createdAt = createdAt,
@@ -141,6 +146,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.dashboardPanVerificationService = dashboardPanVerificationService,
         Beam.dashboardUdyamVerificationService = dashboardUdyamVerificationService,
         Beam.driverBackgroundVerificationService = driverBackgroundVerificationService,
+        Beam.faceMatchService = Kernel.Prelude.Just faceMatchService,
         Beam.faceVerificationService = faceVerificationService,
         Beam.getBankAccount = getBankAccount,
         Beam.getDistances = getDistances,
@@ -154,6 +160,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getRoutes = getRoutes,
         Beam.getTripRoutes = getTripRoutes,
         Beam.gstVerificationService = gstVerificationService,
+        Beam.imageExtractionProvidersPriorityList = imageExtractionProvidersPriorityList,
         Beam.initiateCall = initiateCall,
         Beam.issueTicketService = issueTicketService,
         Beam.llmChatCompletion = Kernel.Prelude.Just llmChatCompletion,

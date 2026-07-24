@@ -33,6 +33,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -44,6 +46,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
@@ -54,8 +57,7 @@ import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
 sendScheduledRideAssignedOnUpdate ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -90,7 +92,8 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -118,7 +121,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           mbDriver <- runInReplica $ QP.findById driverId
           mbBooking <- QBooking.findById bookingId
           mbVehicle <- runInReplica $ QVeh.findById driverId
-          mbtransporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
+          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing))
           let mbScheduledPickupTime = driverInfo.latestScheduledBooking
           case (mbDriver, mbVehicle, mbBooking, mbtransporterConfig, mbScheduledPickupTime) of
             (Just driver, Just vehicle, Just booking, Just transporterConfig, Just scheduledPickupTime) -> do
@@ -127,9 +130,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                   merchantId = booking.providerId
                   merchantOperatingCityId = booking.merchantOperatingCityId
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocationByCloudType [driverId] driver.cloudType
+                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocation [driverId]
                 case driverLocations of
-                  Left _err -> do
+                  Left err -> do
+                    logError $ "driversLocation:callPayout failed: " <> show err
                     return Nothing
                   Right locations -> return $ listToMaybe locations
               case mbCurrentDriverLocation of
@@ -179,7 +183,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           now <- getCurrentTime
           mbActiveRide <- QRide.getActiveByDriverId driverId
           mbVehicle <- runInReplica $ QVeh.findById driverId
-          mbtransporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
+          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing))
           result <- runMaybeT $ do
             activeRide <- MaybeT $ return mbActiveRide
             scheduledPickup <- MaybeT $ return (driverInfo.latestScheduledPickup)
@@ -197,9 +201,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated because any one of the above values are Nothing"
             Just (dropLoc, merchantId, scheduledPickup, transporterConfig, _vehicle, scheduledPickupTime) -> do
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocationByCloudType [driverId] (mbActiveRide >>= (.cloudType))
+                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocation [driverId]
                 case driverLocations of
-                  Left _err -> do
+                  Left err -> do
+                    logError $ "driversLocation:sendScheduledRideAssignedOnUpdate failed: " <> show err
                     return Nothing
                   Right locations -> return $ listToMaybe locations
               case mbCurrentDriverLocation of
@@ -263,8 +268,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
       return $ expectedEndTime > scheduledPickupTimeWithGraceTime
 
 cancelOrReallocate ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -299,7 +303,8 @@ cancelOrReallocate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
-    CH.ClickhouseFlow m r
+    CH.ClickhouseFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   DRide.Ride ->
   Text ->
@@ -313,7 +318,7 @@ cancelOrReallocate ride cReason isForceReallocation req = do
             additionalInfo = Nothing,
             doCancellationRateBasedBlocking = Nothing
           }
-  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation
+  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation False
   pure ()
 
 data Result a b = APIFailed | DistanceResp (GetDistanceResp a b)

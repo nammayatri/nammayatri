@@ -37,6 +37,7 @@ updateByPrimaryKey (Domain.Types.GoHomeConfig.GoHomeConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.activeTime activeTime,
       Se.Set Beam.addStartWaypointAt (Kernel.Types.Common.getMeters addStartWaypointAt),
+      Se.Set Beam.blockedHomeSpecialLocationIds blockedHomeSpecialLocationIds,
       Se.Set Beam.cancellationCnt cancellationCnt,
       Se.Set Beam.destRadiusMeters destRadiusMeters,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
@@ -62,6 +63,7 @@ instance FromTType' Beam.GoHomeConfig Domain.Types.GoHomeConfig.GoHomeConfig whe
         Domain.Types.GoHomeConfig.GoHomeConfig
           { activeTime = activeTime,
             addStartWaypointAt = Kernel.Types.Common.Meters addStartWaypointAt,
+            blockedHomeSpecialLocationIds = blockedHomeSpecialLocationIds,
             cancellationCnt = cancellationCnt,
             createdAt = createdAt,
             destRadiusMeters = destRadiusMeters,
@@ -86,6 +88,7 @@ instance ToTType' Beam.GoHomeConfig Domain.Types.GoHomeConfig.GoHomeConfig where
     Beam.GoHomeConfigT
       { Beam.activeTime = activeTime,
         Beam.addStartWaypointAt = Kernel.Types.Common.getMeters addStartWaypointAt,
+        Beam.blockedHomeSpecialLocationIds = blockedHomeSpecialLocationIds,
         Beam.cancellationCnt = cancellationCnt,
         Beam.createdAt = createdAt,
         Beam.destRadiusMeters = destRadiusMeters,

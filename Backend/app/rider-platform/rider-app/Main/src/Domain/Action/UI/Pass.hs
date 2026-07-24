@@ -13,6 +13,8 @@ module Domain.Action.UI.Pass
     postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
     postMultimodalPassUploadProfilePicture,
+    getMultimodalPassPhoto,
+    fetchPassPhotoFromS3,
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
@@ -20,6 +22,7 @@ module Domain.Action.UI.Pass
 where
 
 import qualified API.Types.UI.Pass as PassAPI
+import qualified AWS.S3 as S3
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
@@ -27,6 +30,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -43,6 +47,11 @@ import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import qualified Domain.Types.RiderConfig
 import qualified Environment
 import qualified EulerHS.Prelude as EHS
+import qualified IssueManagement.Common.UI.Issue as IssueCommon
+import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import qualified JsonLogic
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
@@ -60,11 +69,16 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as FRFSJourneyUtils
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -72,14 +86,18 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
+import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
 import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassExtra as QPass
@@ -88,6 +106,7 @@ import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
@@ -107,7 +126,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  passCategories <- CQPassCategory.findAllByMerchantOperatingCityId person.merchantOperatingCityId
+  passCategories <- getConfig (PassCategoryDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, configId = Nothing}) (Just (CQPassCategory.findAllByMerchantOperatingCityId person.merchantOperatingCityId))
   when (null passCategories) $
     logError $ "getMultimodalPassAvailablePasses: no pass categories for mocId " <> person.merchantOperatingCityId.getId
 
@@ -144,9 +163,10 @@ postMultimodalPassSelectUtil ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id.Id DMF.MediaFile) ->
   Maybe DT.Day ->
   Environment.Flow PassAPI.PassSelectionAPIEntity
-postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbStartDay = do
+postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
@@ -155,12 +175,12 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
 
   -- Check if user has all required documents
   unless isDashboard $ do
-    validateRequiredDocuments mbProfilePicture person pass.documentsRequired
+    validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person pass.documentsRequired
   mbDeviceId <- if isDashboard then return Nothing else Just <$> getDeviceId person mbDeviceIdParam mbImeiParam
 
   -- Use Redis lock to prevent race condition when purchasing pass
   let lockKey = mkPassPurchaseLockKey personId pass.passTypeId
-  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture) >>= \case
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId) >>= \case
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
@@ -174,7 +194,8 @@ purchasePassWithPayment ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EsqDBReplicaFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    Finance.HasActorInfo m r
   ) =>
   Bool ->
   DP.Person ->
@@ -184,8 +205,9 @@ purchasePassWithPayment ::
   Maybe DT.Day ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id.Id DMF.MediaFile) ->
   m PassAPI.PassSelectionAPIEntity
-purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture = do
+purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId = do
   -- Check if pass is already purchased and active
   now <- getCurrentTime
   purchasedPassPaymentId <- generateGUID
@@ -193,7 +215,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   paymentOrderShortId <- generateShortId
   let deviceId = fromMaybe defaultDashboardDeviceId mbDeviceId
 
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   passNumber <- getNextPassNumber
@@ -205,7 +227,6 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         Just DPass.FullSaving -> (Just DPurchasedPass.FullSaving, Nothing)
         Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
         Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
-
   mbSamePassDevice <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
   -- If there is no pass for the same device, try to find an existing Pending pass to reuse across devices and set it as mbSamePass
   mbSamePass <-
@@ -220,6 +241,19 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
             return $ Just pendingPass
           Nothing -> return Nothing
+
+  -- restricting user from buying new pass in switched device before swtiching..
+  unless isDashboard $ do
+    otherTypePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId pass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+    let isOtherActivePass p = maybe True (\samePass -> p.id /= samePass.id) mbSamePass
+    whenJust (listToMaybe (filter isOtherActivePass otherTypePasses)) $ \otherPass -> do
+      passes <- CQPass.findAllByPassTypeIdAndEnabled pass.passTypeId True
+      let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
+            Just pc -> pc.maxSwitchCount
+            Nothing -> 1
+      if otherPass.deviceSwitchCount < maxSwitchCount
+        then throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device. Please switch it to this device instead of buying a new pass")
+        else throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device and the device switch limit has been reached")
 
   passType <- CQPassType.findById pass.passTypeId
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
@@ -256,6 +290,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   maxValidDays = pass.maxValidDays,
                   deviceSwitchCount = 0,
                   profilePicture = mbProfilePicture <|> person.profilePicture,
+                  passPhotoMediaId = mbPassPhotoMediaId,
                   deviceId = deviceId,
                   status = initialStatus,
                   merchantId = pass.merchantId,
@@ -291,6 +326,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passEnum = passType >>= (.passEnum),
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
+            passPhotoMediaId = mbPassPhotoMediaId,
             createdAt = now,
             updatedAt = now
           }
@@ -300,7 +336,6 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
       then do
         customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
         customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-
         -- Get split settlement details
         let itemDetails =
               [ PaymentVendorSplits.ItemDetail
@@ -313,8 +348,10 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled False
+        basket <- TPayment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase pass.amount 1
         staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
         nwAddress <- asks (.nwAddress)
+        udf1 <- SLUtils.getPersonUdf1 person
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
@@ -335,10 +372,11 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   metadataGatewayReferenceId = Nothing,
                   webhookUrl = Just nwAddress,
                   splitSettlementDetails,
-                  basket = Nothing,
+                  basket = Just basket,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
-                  paymentFilter = Nothing
+                  paymentFilter = Nothing,
+                  udf1 = udf1
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
@@ -381,10 +419,12 @@ postMultimodalPassSelect ::
     Maybe Text ->
     Maybe Text ->
     Maybe Text ->
+    Maybe Text ->
     Maybe DT.Day ->
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
-postMultimodalPassSelect = postMultimodalPassSelectUtil False
+postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbPassPhotoMediaIdParam mbProfilePicture =
+  ActorInfo.withMbPersonIdActorInfo mbPersonId . postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam)
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -395,25 +435,30 @@ postMultimodalPassV2Select ::
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
 postMultimodalPassV2Select (mbPersonId, merchantId) passId req =
-  postMultimodalPassSelect (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) (Just req.profilePicture) (Just req.startDate)
+  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate)
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
 mkPassPurchaseLockKey personId passTypeId =
   "PassPurchase:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
 
--- Validate that the person has all required documents for the pass
-validateRequiredDocuments :: (MonadFlow m) => Maybe Text -> DP.Person -> [DPass.PassDocumentType] -> m ()
-validateRequiredDocuments mbProfilePicture person requiredDocs = do
-  let missingDocs = filter (not . hasDocument mbProfilePicture person) requiredDocs
+-- Validate that the person has all required documents for the pass.
+-- Profile picture is intentionally NOT mandatory at select time: it's consumed
+-- if the client sends it, but its absence does not fail the purchase. The pass
+-- moves to PhotoPending after payment and the user can upload the photo later
+-- (uploadProfilePicture). Other documents (e.g. Aadhaar) remain mandatory.
+validateRequiredDocuments :: (MonadFlow m) => Maybe Text -> Maybe (Id.Id DMF.MediaFile) -> DP.Person -> [DPass.PassDocumentType] -> m ()
+validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person requiredDocs = do
+  let mandatoryDocs = filter (/= DPass.ProfilePicture) requiredDocs
+      missingDocs = filter (not . hasDocument mbProfilePicture mbPassPhotoMediaId person) mandatoryDocs
   unless (null missingDocs) $ do
     let missingDocNames = show missingDocs
     throwError $ InvalidRequest $ "Missing required documents: " <> missingDocNames
 
 -- Check if person has a specific document
-hasDocument :: Maybe Text -> DP.Person -> DPass.PassDocumentType -> Bool
-hasDocument mbProfilePicture person docType = case docType of
-  DPass.ProfilePicture -> isJust (mbProfilePicture <|> person.profilePicture)
+hasDocument :: Maybe Text -> Maybe (Id.Id DMF.MediaFile) -> DP.Person -> DPass.PassDocumentType -> Bool
+hasDocument mbProfilePicture mbPassPhotoMediaId person docType = case docType of
+  DPass.ProfilePicture -> isJust mbPassPhotoMediaId || isJust (mbProfilePicture <|> person.profilePicture)
   DPass.Aadhaar -> person.aadhaarVerified
 
 -- Check if two date ranges overlap
@@ -528,9 +573,9 @@ buildPassAPIEntity mbLanguage person pass = do
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let moid = person.merchantOperatingCityId
-  nameTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language
-  benefitTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language
-  descriptionTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language
+  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "name") language))
+  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "benefitDescription") language))
+  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey pass.id "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey pass.id "description") language))
   let name = maybe pass.name (Just . (.message)) nameTranslation
   let benefitDescription = maybe pass.benefitDescription (.message) benefitTranslation
   let description = maybe pass.description (Just . (.message)) descriptionTranslation
@@ -591,9 +636,9 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let passId = Id.cast purchasedPass.id :: Id.Id DPass.Pass
   let moid = purchasedPass.merchantOperatingCityId
-  nameTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language
-  benefitTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language
-  descriptionTranslation <- QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "description") language
+  nameTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "name", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "name") language))
+  benefitTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "benefitDescription", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "benefitDescription") language))
+  descriptionTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Just (moid.getId), messageKey = mkPassMessageKey passId "description", language = Just language}) (Just (QT.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache moid (mkPassMessageKey passId "description") language))
 
   let name = maybe purchasedPass.passName (Just . (.message)) nameTranslation
   let benefitDescription = maybe purchasedPass.benefitDescription (.message) benefitTranslation
@@ -648,7 +693,7 @@ checkEligibility logics personData = do
 
 -- Build PurchasedPass API Entity
 buildPurchasedPassAPIEntity ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, IssueManagement.Storage.BeamFlow.BeamFlow m r) =>
   Maybe Lang.Language ->
   DP.Person ->
   Maybe Text ->
@@ -658,7 +703,7 @@ buildPurchasedPassAPIEntity ::
 buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = do
   let deviceMismatch = maybe False (\deviceId -> purchasedPass.deviceId /= deviceId && purchasedPass.deviceId /= defaultDashboardDeviceId) mbDeviceId -- Nothing only for dashboard
   passType <- B.runInReplica $ QPassType.findById purchasedPass.passTypeId >>= fromMaybeM (PassTypeNotFound purchasedPass.passTypeId.getId)
-  passCategory <- B.runInReplica $ QPassCategory.findById passType.passCategoryId >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
+  passCategory <- getOneConfig (PassCategoryDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, configId = Just passType.passCategoryId.getId}) (Just (maybeToList <$> B.runInReplica (QPassCategory.findById passType.passCategoryId))) >>= fromMaybeM (PassCategoryNotFound passType.passCategoryId.getId)
   futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PreBooked purchasedPass.endDate
 
   let tripsLeft = case purchasedPass.maxValidTrips of
@@ -682,6 +727,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
+  futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities futureRenewals
   return $
     PassAPI.PurchasedPassAPIEntity
       { id = purchasedPass.id,
@@ -695,11 +741,12 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         deviceMismatch,
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
         profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
+        passPhotoMediaId = purchasedPass.passPhotoMediaId,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
         expiryDate = purchasedPass.endDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
-        futureRenewals = buildPurchasedPassPaymentAPIEntity <$> futureRenewals
+        futureRenewals = futureRenewalEntities
       }
 
 -- Webhook Handler for Pass Payment Status Updates
@@ -713,14 +760,14 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
-  mbRiderConfig <- maybe (pure Nothing) (\purchasedPass -> getConfig (RiderDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId})) mbPurchasedPass
+  mbRiderConfig <- maybe (pure Nothing) (\purchasedPass -> getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))) mbPurchasedPass
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture) (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId) (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
@@ -770,6 +817,9 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
               QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
+              -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
+              -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
+              -- it onto the pass at each transition — so the webhook never races the upload for it.
               when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= today && purchasedPassPayment.endDate >= today) $
                 QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
           case purchasedPassPayment.status of
@@ -825,52 +875,62 @@ updatePurchasedPass ::
   DT.Day ->
   UTCTime ->
   m (DPurchasedPass.PurchasedPass, Maybe DPurchasedPassPayment.PurchasedPassPayment, Bool)
+-- Reconcile the pass against its latest payment term, lazily activating a PhotoPending pass once
+-- its photo is attached. uploadProfilePicture is attach-only and writes the media id onto the
+-- payment row (never the pass row), so this read path owns both the PhotoPending -> Active/PreBooked
+-- transition and the normal term-based reconcile. Date-expired PhotoPending passes fall through to
+-- the expiry fallback below.
+updatePurchasedPass purchasedPass _today now
+  | purchasedPass.status /= DPurchasedPass.PhotoPending && diffUTCTime now purchasedPass.updatedAt <= 300 =
+    return (purchasedPass, Nothing, False)
 updatePurchasedPass purchasedPass today now = do
-  if diffUTCTime now purchasedPass.updatedAt <= 300
-    then return (purchasedPass, Nothing, False)
-    else do
-      latestPreBookedPayments <-
-        QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
-          (Just 1)
-          (Just 0)
-          purchasedPass.id
-          [DPurchasedPass.PreBooked, DPurchasedPass.Active]
-          today
+  latestPayments <-
+    QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+      (Just 1)
+      (Just 0)
+      purchasedPass.id
+      [DPurchasedPass.PreBooked, DPurchasedPass.Active, DPurchasedPass.PhotoPending]
+      today
 
-      case listToMaybe latestPreBookedPayments of
-        Just firstPreBookedPayment ->
-          let newStatus
-                | firstPreBookedPayment.endDate < today = DPurchasedPass.Expired
-                | firstPreBookedPayment.startDate <= today = DPurchasedPass.Active
-                | otherwise = DPurchasedPass.PreBooked
+  case listToMaybe latestPayments of
+    Just firstPayment
+      | firstPayment.status == DPurchasedPass.PhotoPending,
+        Nothing <- firstPayment.passPhotoMediaId ->
+        return (purchasedPass, Nothing, False)
+    Just firstPayment ->
+      let newStatus
+            | firstPayment.endDate < today = DPurchasedPass.Expired
+            | firstPayment.startDate <= today = DPurchasedPass.Active
+            | otherwise = DPurchasedPass.PreBooked
 
-              newPass =
-                purchasedPass
-                  { DPurchasedPass.startDate = firstPreBookedPayment.startDate,
-                    DPurchasedPass.endDate = firstPreBookedPayment.endDate,
-                    DPurchasedPass.status = newStatus,
-                    DPurchasedPass.usedTripCount = Just 0,
-                    DPurchasedPass.deviceSwitchCount = 0,
-                    DPurchasedPass.updatedAt = now
-                  }
+          newPass =
+            purchasedPass
+              { DPurchasedPass.startDate = firstPayment.startDate,
+                DPurchasedPass.endDate = firstPayment.endDate,
+                DPurchasedPass.status = newStatus,
+                DPurchasedPass.passPhotoMediaId = firstPayment.passPhotoMediaId <|> purchasedPass.passPhotoMediaId,
+                DPurchasedPass.usedTripCount = Just 0,
+                DPurchasedPass.deviceSwitchCount = 0,
+                DPurchasedPass.updatedAt = now
+              }
 
-              newPassPayment =
-                firstPreBookedPayment
-                  { DPurchasedPassPayment.status = newStatus,
-                    DPurchasedPassPayment.updatedAt = now
-                  }
+          newPassPayment =
+            firstPayment
+              { DPurchasedPassPayment.status = newStatus,
+                DPurchasedPassPayment.updatedAt = now
+              }
 
-              hasChanged =
-                purchasedPass.status /= newStatus
-                  || firstPreBookedPayment.status /= newStatus
-           in return (newPass, Just newPassPayment, hasChanged)
-        Nothing ->
-          let newPass =
-                purchasedPass
-                  { DPurchasedPass.status = DPurchasedPass.Expired,
-                    DPurchasedPass.updatedAt = now
-                  }
-           in return (newPass, Nothing, True)
+          hasChanged =
+            purchasedPass.status /= newStatus
+              || firstPayment.status /= newStatus
+       in return (newPass, Just newPassPayment, hasChanged)
+    Nothing ->
+      let newPass =
+            purchasedPass
+              { DPurchasedPass.status = DPurchasedPass.Expired,
+                DPurchasedPass.updatedAt = now
+              }
+       in return (newPass, Nothing, True)
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -908,7 +968,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just s -> Just [s]
         Nothing -> Nothing
 
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -920,15 +980,18 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   -- without relying on read replica synchronization
   updatedPassEntities <- forM passEntities $ \purchasedPass -> do
     (updatedPass, mbPayment, shouldUpdateDB) <- updatePurchasedPass purchasedPass today now
-
+    QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
     when shouldUpdateDB $ do
-      QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
       case (updatedPass.status, mbPayment) of
         (DPurchasedPass.Expired, _) ->
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
         (_, Just firstPreBookedPayment) -> do
           QPurchasedPassPayment.updateStatusByOrderId updatedPass.status firstPreBookedPayment.orderId
           QPurchasedPass.updatePurchaseData purchasedPass.id updatedPass.startDate updatedPass.endDate updatedPass.status updatedPass.benefitDescription updatedPass.benefitType updatedPass.benefitValue updatedPass.passAmount
+          -- Project the activating term's photo onto the pass. whenJust-guarded so a photo-less
+          -- renewal payment can't null out an existing pass photo.
+          whenJust firstPreBookedPayment.passPhotoMediaId $ \paymentPhotoMediaId ->
+            QPurchasedPass.updatePassPhotoMediaIdById (Just paymentPhotoMediaId) purchasedPass.id
         _ -> return ()
 
     return updatedPass
@@ -971,7 +1034,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
@@ -997,7 +1060,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       then do
         case (passVerifyReq.currentLat, passVerifyReq.currentLon) of
           (Just lat, Just lon) -> do
-            riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+            riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
               [] -> throwAndReleaseSlot (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
@@ -1056,14 +1119,14 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       case mbStudentPassDetails of
         Nothing -> pure $ Just DPassVerifyTransaction.NOT_VERIFIED
         Just passDetails -> do
-          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           pure $ Just $ verifyStudentPass passDetails vehicleInfo.routeCode routeStopMapping riderConfig
     _ -> pure Nothing
 
   let sourceStop =
         getNearestStop routeStopMapping passVerifyReq.currentLat passVerifyReq.currentLon
-          <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
-      destinationStop = (safeTail routeStopMapping) <&> (.stopCode)
+          <|> (listToMaybe routeStopMapping <&> (.stopCode))
+      destinationStop = safeTail routeStopMapping <&> (.stopCode)
   id <- generateGUID
   now <- getCurrentTime
   let passVerifyTransaction =
@@ -1187,8 +1250,7 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   deviceId <- getDeviceId person req.deviceId req.imeiNumber
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
-
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -1273,27 +1335,112 @@ getMultimodalPassTransactions ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow [PassAPI.PurchasedPassTransactionAPIEntity]
   )
-getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam = do
+getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam mbStatusParam = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
   let limit = fromMaybe 10 mbLimitParam
   let offset = fromMaybe 0 mbOffsetParam
-  allPurchasedPassTransactions <- QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
-  return $ map buildPurchasedPassPaymentAPIEntity allPurchasedPassTransactions
+  -- status is a comma-separated list (e.g. "Active,PreBooked"); unparseable tokens are dropped.
+  let statuses = maybe [] (mapMaybe (readMaybe . T.unpack . T.strip) . T.splitOn ",") mbStatusParam
+  allPurchasedPassTransactions <- case statuses of
+    [] -> QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
+    _ -> QPurchasedPassPayment.findAllByPersonIdAndStatuses (Just limit) (Just offset) personId statuses
+  buildPurchasedPassPaymentAPIEntities allPurchasedPassTransactions
 
-buildPurchasedPassPaymentAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> PassAPI.PurchasedPassTransactionAPIEntity
-buildPurchasedPassPaymentAPIEntity purchasedPassPayment =
+buildPurchasedPassPaymentAPIEntities ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [DPurchasedPassPayment.PurchasedPassPayment] ->
+  m [PassAPI.PurchasedPassTransactionAPIEntity]
+buildPurchasedPassPaymentAPIEntities payments = do
+  refundMap <- fetchRefundsForPayments payments
+  return $ map (mkPurchasedPassPaymentAPIEntity refundMap) payments
+
+mkPurchasedPassPaymentAPIEntity ::
+  Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
+  DPurchasedPassPayment.PurchasedPassPayment ->
   PassAPI.PurchasedPassTransactionAPIEntity
-    { id = purchasedPassPayment.id,
-      startDate = purchasedPassPayment.startDate,
-      endDate = purchasedPassPayment.endDate,
-      status = purchasedPassPayment.status,
-      amount = purchasedPassPayment.amount,
-      passName = purchasedPassPayment.passName,
-      passCode = purchasedPassPayment.passCode,
-      passType = purchasedPassPayment.passEnum,
-      createdAt = purchasedPassPayment.createdAt
+mkPurchasedPassPaymentAPIEntity refundMap purchasedPassPayment =
+  let refunds = Map.findWithDefault [] purchasedPassPayment.orderId refundMap
+      computedStatus = computePassStatusFromRefunds purchasedPassPayment.status refunds
+   in PassAPI.PurchasedPassTransactionAPIEntity
+        { id = purchasedPassPayment.id,
+          startDate = purchasedPassPayment.startDate,
+          endDate = purchasedPassPayment.endDate,
+          status = computedStatus,
+          amount = purchasedPassPayment.amount,
+          passName = purchasedPassPayment.passName,
+          passCode = purchasedPassPayment.passCode,
+          passType = purchasedPassPayment.passEnum,
+          createdAt = purchasedPassPayment.createdAt,
+          refunds = refunds
+        }
+
+-- Derives status from the most-recently-updated refund row. Retries land as
+-- new refund rows, so the latest row supersedes earlier failed attempts.
+computePassStatusFromRefunds :: DPurchasedPass.StatusType -> [PassAPI.RefundAPIEntity] -> DPurchasedPass.StatusType
+computePassStatusFromRefunds originalStatus refunds
+  | null refunds = originalStatus
+  | otherwise =
+    let latest = foldr1 pickLatest refunds
+     in mapStatus latest.status
+  where
+    pickLatest r acc = if r.updatedAt >= acc.updatedAt then r else acc
+    mapStatus PaymentInterface.REFUND_PENDING = DPurchasedPass.RefundPending
+    mapStatus PaymentInterface.REFUND_SUCCESS = DPurchasedPass.Refunded
+    mapStatus PaymentInterface.REFUND_FAILURE = DPurchasedPass.RefundFailed
+    mapStatus PaymentInterface.MANUAL_REVIEW = DPurchasedPass.RefundInitiated
+    mapStatus _ = originalStatus
+
+isRefundStatus :: DPurchasedPass.StatusType -> Bool
+isRefundStatus DPurchasedPass.RefundInitiated = True
+isRefundStatus DPurchasedPass.RefundPending = True
+isRefundStatus DPurchasedPass.Refunded = True
+isRefundStatus DPurchasedPass.RefundFailed = True
+isRefundStatus _ = False
+
+fetchRefundsForPayments ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [DPurchasedPassPayment.PurchasedPassPayment] ->
+  m (Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity])
+fetchRefundsForPayments payments = do
+  let refundPayments = filter (isRefundStatus . (.status)) payments
+      orderIds = map (.orderId) refundPayments
+  if null orderIds
+    then return Map.empty
+    else do
+      paymentOrders <- QPaymentOrder.findAllByIds orderIds
+      let foundOrderIds = map (.id) paymentOrders
+          missingOrderIds = filter (`notElem` foundOrderIds) orderIds
+      forM_ missingOrderIds $ \missingId ->
+        logError $ "Missing payment order for pass payment, paymentOrderId: " <> missingId.getId
+      let shortIdMap = Map.fromList $ map (\po -> (po.shortId, po.id)) paymentOrders
+          allShortIds = map (.shortId) paymentOrders
+      if null allShortIds
+        then return Map.empty
+        else do
+          allRefunds <- QRefunds.findAllByOrderIds allShortIds
+          let refundsByOrderId =
+                foldl'
+                  ( \acc refund -> case Map.lookup refund.orderId shortIdMap of
+                      Just payOrderId -> Map.insertWith (++) payOrderId [buildRefundAPIEntity refund] acc
+                      Nothing -> acc
+                  )
+                  Map.empty
+                  allRefunds
+          return refundsByOrderId
+
+buildRefundAPIEntity :: DRefunds.Refunds -> PassAPI.RefundAPIEntity
+buildRefundAPIEntity refund =
+  PassAPI.RefundAPIEntity
+    { id = refund.id,
+      amount = refund.refundAmount,
+      status = refund.status,
+      arn = refund.arn,
+      completedAt = refund.completedAt,
+      updatedAt = refund.updatedAt,
+      createdAt = refund.createdAt
     }
 
 getDeviceId :: DP.Person -> Maybe Text -> Maybe Text -> Environment.Flow Text
@@ -1331,13 +1478,13 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
   unless isDashboard $ do
     personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
     unless (purchasedPass.personId == personId) $ throwError AccessDenied
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
   normalizedMbStartDate <- case mbStartDate of
     Just d | d == today -> return Nothing
-    Just d | (d < today && not isDashboard) -> throwError (PassActivationNotReady purchasedPass.id.getId "Cannot schedule pass for a past date")
+    Just d | d < today && not isDashboard -> throwError (PassActivationNotReady purchasedPass.id.getId "Cannot schedule pass for a past date")
     _ -> return mbStartDate
 
   case normalizedMbStartDate of
@@ -1389,38 +1536,62 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
     QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
   return APISuccess.Success
 
+-- | Upload a pass photo to S3 and attach the media id to the pass. Attach-only: it can run
+-- concurrently with the payment webhook, so status transitions are owned elsewhere (payment
+-- handler for Pending, pass-list reconcile for PhotoPending).
 postMultimodalPassUploadProfilePicture ::
   ( ( Maybe (Id.Id DP.Person),
       Id.Id DM.Merchant
     ) ->
-    PassAPI.PassUploadProfilePictureReq ->
-    Environment.Flow APISuccess.APISuccess
+    Id.Id DPurchasedPass.PurchasedPass ->
+    Maybe Text ->
+    IssueCommon.IssueMediaUploadReq ->
+    Environment.Flow IssueCommon.IssueMediaUploadRes
   )
-postMultimodalPassUploadProfilePicture (mbCallerPersonId, _merchantId) req = do
+-- imeiNumber is accepted but unused: device binding is owned by select/switchDeviceId.
+postMultimodalPassUploadProfilePicture (mbCallerPersonId, merchantId) purchasedPassId _mbImeiNumber req = do
   personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
-  purchasedPass <- QPurchasedPass.findById req.purchasedPassId >>= fromMaybeM (PurchasedPassNotFound req.purchasedPassId.getId)
+  purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
 
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
 
-  unless (purchasedPass.status == DPurchasedPass.PhotoPending) $
-    throwError (InvalidRequest "Pass is not in PhotoPending status")
+  -- Allowed while a purchase is in flight (fresh buy, renewal on an Active pass, renewal of an
+  -- Expired pass), a photo is owed, or a paid future term exists (PreBooked — lets the user change
+  -- the photo for a renewed term) — not as an anytime photo swap on a live pass.
+  let photoAttachable s = s `elem` [DPurchasedPass.Pending, DPurchasedPass.PhotoPending, DPurchasedPass.PreBooked]
+  paymentRows <- QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
+  unless (photoAttachable purchasedPass.status || any (photoAttachable . (.status)) paymentRows) $
+    throwError (InvalidRequest "Pass has no purchase in progress and is not awaiting a photo")
 
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId})
-  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
-  istTime <- getLocalCurrentTime timeDiffFromUtc
-  let today = DT.utctDay istTime
-  let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
-  QPurchasedPass.updateStatusById newStatus purchasedPass.id
-  QPurchasedPass.updateProfilePictureById (Just req.profilePicture) purchasedPass.id
-  QPurchasedPass.updateDeviceIdById req.imeiNumber purchasedPass.deviceSwitchCount purchasedPass.id
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  uploadRes <- IssueAction.mediaUploadToS3 merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern req "pass-photo" personId.getId
+  let mediaId = uploadRes.fileId
 
-  -- Update purchasedPassPayment table as well
-  purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
-  forM_ purchasedPassPayments $ \payment -> do
-    QPurchasedPassPayment.updateStatusAndProfilePictureByOrderId newStatus (Just req.profilePicture) payment.orderId
+  -- Attach-only: write the media id to the attachable payment row(s), never to the pass row. The
+  -- pass-list reconcile (updatePurchasedPass) is the single owner that projects the payment row's
+  -- photo onto the pass when its term activates — so an unpaid renewal or a stale Pending row
+  -- can't overwrite the photo on a currently-live pass, and a photo changed on a paid future
+  -- (PreBooked) term takes effect only when that term starts.
+  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id [DPurchasedPass.Pending, DPurchasedPass.PhotoPending, DPurchasedPass.PreBooked]
 
-  return APISuccess.Success
+  return uploadRes
 
+-- | Fetch a pass photo's raw content from S3 by its media id, for rendering.
+-- Only the owner (whose id is embedded in the S3 path) may fetch it.
+getMultimodalPassPhoto ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DMF.MediaFile ->
+    Environment.Flow Text
+  )
+getMultimodalPassPhoto (mbCallerPersonId, _merchantId) mediaId = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  fetchPassPhotoFromS3 personId mediaId
+
+-- | Attach an already-uploaded pass-photo media id to a pass (used by the
+-- dashboard after it uploads the image to S3). Stores the media id on the pass
+-- and its active/pending payment rows.
 postMultimodalPassUpdateProfilePictureUtil ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -1429,18 +1600,29 @@ postMultimodalPassUpdateProfilePictureUtil ::
   Id.Id DP.Person ->
   Id.Id DM.Merchant ->
   Id.Id DPurchasedPass.PurchasedPass ->
-  Text ->
+  Id.Id DMF.MediaFile ->
   m APISuccess.APISuccess
-postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId profilePicture = do
+postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId mediaId = do
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   unless (purchasedPass.merchantId == merchantId) $ throwError AccessDenied
-  QPurchasedPass.updateProfilePictureById (Just profilePicture) purchasedPass.id
+  QPurchasedPass.updatePassPhotoMediaIdById (Just mediaId) purchasedPass.id
 
   let validStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
-  QPurchasedPassPayment.updateProfilePictureByPurchasedPassIdAndStatus (Just profilePicture) purchasedPass.id validStatuses
+  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id validStatuses
 
   return APISuccess.Success
+
+-- | Fetch a pass photo's raw content from S3 by media id, verifying the file
+-- belongs to the given person (their id is embedded in the S3 path). Shared by
+-- the customer GET endpoint and the dashboard render flow.
+fetchPassPhotoFromS3 :: Id.Id DP.Person -> Id.Id DMF.MediaFile -> Environment.Flow Text
+fetchPassPhotoFromS3 personId mediaId = do
+  mediaFile <- QMediaFile.findById mediaId >>= fromMaybeM (InvalidRequest "Pass photo not found")
+  s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Pass photo has no associated S3 path")
+  when (T.isInfixOf ".." s3FilePath) $ throwError (InvalidRequest "filePath must not contain path-traversal sequences")
+  unless (T.isInfixOf ("pass-photo/" <> personId.getId <> "/") s3FilePath) $ throwError AccessDenied
+  S3.get (T.unpack s3FilePath)
 
 postMultimodalPassSetPrefSrcAndDest ::
   ( ( Maybe (Id.Id DP.Person),

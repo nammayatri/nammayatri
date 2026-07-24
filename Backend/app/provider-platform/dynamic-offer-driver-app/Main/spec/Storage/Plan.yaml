@@ -145,7 +145,7 @@ Plan:
 
   sqlType:
     maxAmount: integer
-    registrationAmount: integer
+    registrationAmount: numeric(30,2)
     maxCreditLimit: integer
     freeRideCount: integer
     merchantOpCityId: text

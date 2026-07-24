@@ -13,6 +13,7 @@ imports:
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Value: Data.Aeson
+  ActorType: Lib.Finance.Core.Types
 
 PgPaymentSettlementReport:
   tableName: pg_payment_settlement_report
@@ -40,7 +41,7 @@ PgPaymentSettlementReport:
       derive: "HttpInstance"
 
     PaymentMethod:
-      enum: "UPI,CREDIT_CARD,DEBIT_CARD,NETBANKING,WALLET"
+      enum: "UPI,CREDIT_CARD,DEBIT_CARD,NETBANKING,WALLET,CASH_CARD,BHARAT_QR,EMI,NEFT,UPI_CREDIT,ENACH,CBDC,UPI_PREPAID_WALLET,UPI_CREDIT_LINE,BANK_TRANSFER,COMMERCIAL_CARD,PAY_LATER,INTERNATIONAL_CARD"
       derive: "HttpInstance"
 
 
@@ -52,8 +53,13 @@ PgPaymentSettlementReport:
       enum: "PENDING,MATCHED,MISMATCHED,MANUAL_REVIEW,IGNORED,SETTLED"
       derive: "HttpInstance"
 
+    OrderType:
+      enum: "SUBSCRIPTION,PAYOUT_REGISTRATION"
+      derive: "HttpInstance"
+
   # ---------------------------------------------------------------------------
   # Fields
+  # NOTE: Mask sensitive values in pgPaymentSettlementReportToAuditValue (Settlement.Ingestion)
   # ---------------------------------------------------------------------------
   fields:
     id: Id PgPaymentSettlementReport
@@ -86,6 +92,9 @@ PgPaymentSettlementReport:
     pgApprovalCode : Maybe Text                    # PG approval code
     paymentMethod: Maybe PaymentMethod             # UPI | CREDIT_CARD | ...
     paymentMethodSubType: Maybe Text               # e.g. "UPI-Bank Account", "VISA Debit"
+    bankCode: Maybe Text                           # Bank code from PG report
+    cardType: Maybe Text                           # e.g. "VISA", "MASTERCARD"
+    cardNumber: Maybe Text                         # Masked card number SENSITIVE
 
     # --- Settlement details ---
     settlementType: Maybe SettlementType           # CREDIT | DEBIT
@@ -118,12 +127,23 @@ PgPaymentSettlementReport:
     disputeId: Maybe Text                          # PG dispute / chargeback ID
     disputeType: Maybe DisputeType                 # FRAUD | CONSUMER | PROCESSING_ERROR | OTHER
 
+    # --- Order classification ---
+    orderType: Maybe OrderType                     # SUBSCRIPTION | PAYOUT_REGISTRATION
+    isValidSubscriptionPurchase: Maybe Bool
+    subscriptionPurchaseId: Maybe Text
+
     # --- Reconciliation result ---
     reconStatus: ReconStatus                       # Set to UNMATCHED on ingest; updated by recon job
     reconMessage: Maybe Text                       # Mismatch notes / error details
 
     # --- Raw PG report row ---
-    rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging
+    rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging SENSITIVE
+
+    # --- Audit ---
+    createdBy: Maybe ActorType                     # Who created this record
+    createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+    updatedBy: Maybe ActorType                     # Who updated this record
+    updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
 
     # --- Multi-tenancy ---
     merchantId: Text
@@ -164,7 +184,7 @@ PgPaymentSettlementReport:
 
     updateReconStatus:
       kvFunction: updateOneWithKV
-      params: [reconStatus, reconMessage, updatedAt]
+      params: [reconStatus, reconMessage, updatedBy, updatedById, updatedAt]
       where: id
 
 

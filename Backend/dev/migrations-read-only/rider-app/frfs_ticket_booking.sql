@@ -192,3 +192,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN driver_mobile_number text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN client_sdk_version text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN client_bundle_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_payment_id text ;

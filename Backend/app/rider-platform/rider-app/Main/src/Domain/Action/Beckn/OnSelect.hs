@@ -26,7 +26,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
@@ -47,8 +46,8 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -100,7 +99,7 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
 
 data OnSelectValidatedReq = OnSelectValidatedReq
   { estimate :: DEstimate.Estimate,
-    searchRequest :: DSearchRequest.SearchRequest,
+    searchRequest :: QSRLite.SearchRequestLite,
     person :: DPerson.Person,
     bppEstimateId :: Id DEstimate.BPPEstimate,
     providerInfo :: ProviderInfo,
@@ -172,10 +171,10 @@ buildSelectedQuote ::
   DEstimate.Estimate ->
   ProviderInfo ->
   UTCTime ->
-  DSearchRequest.SearchRequest ->
+  QSRLite.SearchRequestLite ->
   QuoteInfo ->
   m DQuote.Quote
-buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {quoteBreakupList = quoteBreakupInfos, ..} = do
+buildSelectedQuote estimate providerInfo now req@QSRLite.SearchRequestLite {..} QuoteInfo {quoteBreakupList = quoteBreakupInfos, ..} = do
   uid <- generateGUID
   quoteDetails_ <- buildDriverQuoteDetails tripCategory
   quoteBreakups <- DOnSearch.buildQuoteBreakUp quoteBreakupInfos uid req.merchantId req.merchantOperatingCityId
@@ -203,14 +202,18 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
             isAirConditioned = estimate.isAirConditioned,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
+            vehicleServiceTierLuggageCapacity = estimate.vehicleServiceTierLuggageCapacity,
             specialLocationName = estimate.specialLocationName,
             specialLocationSupportNumber = Nothing,
+            fareSettlementType = estimate.fareSettlementType,
             quoteBreakupList = quoteBreakups,
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
             isSafetyPlus = quoteDetails.isSafetyPlus,
             billingCategory = billingCategory,
             selectedOfferId = estimate.selectedOfferId,
+            area = estimate.area,
+            navigationInstruction = estimate.navigationInstruction,
             ..
           }
   pure quote
@@ -224,7 +227,7 @@ buildDriverOffer ::
   MonadFlow m =>
   Id DEstimate.Estimate ->
   DriverOfferQuoteDetails ->
-  DSearchRequest.SearchRequest ->
+  QSRLite.SearchRequestLite ->
   TripCategory ->
   m DDriverOffer.DriverOffer
 buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest tripCategory = do
@@ -250,7 +253,7 @@ validateRequest :: DOnSelectReq -> Flow OnSelectValidatedReq
 validateRequest DOnSelectReq {..} = do
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> bppEstimateId.getId)
   searchRequest <-
-    QSR.findById estimate.requestId
+    QSRLite.findByIdLite estimate.requestId
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
   let personId = searchRequest.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

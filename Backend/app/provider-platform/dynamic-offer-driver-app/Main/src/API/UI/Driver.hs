@@ -44,6 +44,7 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common as DI
 import Domain.Types.DriverFee (DriverFeeStatus)
 import qualified Domain.Types.DriverHomeLocation as DDHL
+import qualified Domain.Types.Image as DImage
 import Domain.Types.Invoice (InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -60,6 +61,7 @@ import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
 
 type API =
@@ -172,7 +174,8 @@ type API =
                            :> Post '[JSON] APISuccess
                            :<|> "media"
                              :> TokenAuth
-                             :> MandatoryQueryParam "filePath" Text
+                             :> QueryParam "filePath" Text
+                             :> QueryParam "imageId" (Id DImage.Image)
                              :> Get '[JSON] Text
                        )
               )
@@ -311,13 +314,13 @@ handler =
     :<|> marketingEventsPostLogin
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> FlowHandler DDriver.DriverInformationRes
-getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI $ DDriver.getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo
+getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing mbFleetInfo
 
 marketingEventsPostLogin :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DRegistration.MarketEventReq -> FlowHandler APISuccess
 marketingEventsPostLogin auth req = withFlowHandlerAPI $ DRegistration.marketingEventsPostLogin auth req
 
 setActivity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
-setActivity (personId, driverId, merchantOpCityId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId, merchantOpCityId) isActive
+setActivity (personId, driverId, merchantOpCityId) isActive = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId . DDriver.setActivity (personId, driverId, merchantOpCityId) isActive
 
 activateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> FlowHandler APISuccess
 activateGoHomeFeature (personId, driverId, merchantOpCityId) homeLocationId = withFlowHandlerAPI . DDriver.activateGoHomeFeature (personId, driverId, merchantOpCityId) homeLocationId
@@ -338,7 +341,7 @@ deleteHomeLocation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOpera
 deleteHomeLocation (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.deleteHomeLocation (personId, driverId, merchantOpCityId)
 
 updateDriver :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
-updateDriver personId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice = withFlowHandlerAPI . DDriver.updateDriver personId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice
+updateDriver tokenInfo@(personId, _, _) mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId . DDriver.updateDriver tokenInfo mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice
 
 getNearbySearchRequests ::
   (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -374,8 +377,8 @@ getStatsAllTime = withFlowHandlerAPI . DDriver.getStatsAllTime
 updateMetaData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.MetaDataReq -> FlowHandler APISuccess
 updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
 
-fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
-fetchDriverPhoto ids = withFlowHandlerAPI . DDriver.fetchDriverPhoto ids
+fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id DImage.Image) -> FlowHandler Text
+fetchDriverPhoto ids mbFilePath mbImageId = withFlowHandlerAPI $ DDriver.fetchDriverPhoto ids mbFilePath mbImageId
 
 uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
 uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req
@@ -384,7 +387,7 @@ driverProfileImagesUpload :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.Mercha
 driverProfileImagesUpload ids = withFlowHandlerAPI . DDriver.driverProfileImagesUpload ids
 
 verifyVpaStatus :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-verifyVpaStatus ids = withFlowHandlerAPI $ DDriver.verifyVpaStatus ids
+verifyVpaStatus ids@(personId, _, _) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.verifyVpaStatus ids
 
 validate :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber
@@ -402,7 +405,7 @@ getDriverPayments :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperat
 getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION
 
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.ClearDuesRes
-clearDriverDues authInfo serviceName = withFlowHandlerAPI $ DDriver.clearDriverDues authInfo (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName) Nothing Nothing
+clearDriverDues authInfo@(personId, _, _) serviceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.clearDriverDues authInfo (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName) Nothing Nothing
 
 getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.HistoryEntityV2
 getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset serviceName = withFlowHandlerAPI $ DDriver.getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName)
@@ -426,7 +429,7 @@ acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantO
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId
 
 getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
-getInformationV2 (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI $ DDriver.getInformationV2 (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req
+getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req
 
 getEarnings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> FlowHandler DCommon.EarningPeriodStatsRes
 getEarnings (personId, merchantId, merchantOpCityId) from to earningType = withFlowHandlerAPI $ DDriver.getEarnings (personId, merchantId, merchantOpCityId) from to earningType

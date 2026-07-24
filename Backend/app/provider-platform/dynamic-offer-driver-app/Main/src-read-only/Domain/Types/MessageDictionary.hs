@@ -11,7 +11,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MessageDictionary = MessageDictionary
-  { id :: Kernel.Types.Id.Id Domain.Types.MessageDictionary.MessageDictionary,
+  { eligibilityLogic :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    id :: Kernel.Types.Id.Id Domain.Types.MessageDictionary.MessageDictionary,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageKey :: Kernel.Prelude.Text,
@@ -23,4 +24,4 @@ data MessageDictionary = MessageDictionary
 
 data MessageType = CancellationReason deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageType)

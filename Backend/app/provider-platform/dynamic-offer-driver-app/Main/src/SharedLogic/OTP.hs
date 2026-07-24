@@ -31,8 +31,10 @@ import Kernel.Sms.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
@@ -90,7 +92,7 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> do
       receiverEmail <- mbEmail & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "Email OTP config not found for merchantOperatingCityId:- " <> merchantOpCityId.getId)
       emailServiceConfig <- asks (.emailServiceConfig)
       withLogTag ("personId_" <> getId personId) $ do
@@ -120,4 +122,5 @@ sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCit
     Person.EMAIL -> pure EMAIL
     Person.AADHAAR -> pure SMS -- Default to SMS, though this will fail anyway
     Person.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "OTP not applicable for GIMS_EMAIL_PASSWORD authentication"
+    Person.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "OTP not applicable for GIMS_EMPLOYEE_ID_PASSWORD authentication"
   sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash

@@ -3,10 +3,12 @@
 
 module Storage.Queries.OrphanInstances.OperationHubRequests where
 
+import qualified Data.Aeson
 import qualified Domain.Types.OperationHubRequests
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -21,6 +23,7 @@ instance FromTType' Beam.OperationHubRequests Domain.Types.OperationHubRequests.
             driverId = Kernel.Types.Id.Id <$> driverId,
             fulfilledAt = fulfilledAt,
             id = Kernel.Types.Id.Id id,
+            inspectionResponse = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< inspectionResponse,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             operationHubId = Kernel.Types.Id.Id operationHubId,
@@ -40,6 +43,7 @@ instance ToTType' Beam.OperationHubRequests Domain.Types.OperationHubRequests.Op
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.fulfilledAt = fulfilledAt,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.inspectionResponse = Kernel.Prelude.toJSON <$> inspectionResponse,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.operationHubId = Kernel.Types.Id.getId operationHubId,

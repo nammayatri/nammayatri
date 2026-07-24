@@ -43,6 +43,9 @@ module Domain.Action.Dashboard.Merchant
     postMerchantRiderConfigEstimatesOrderUpdate,
     postMerchantConfigMerchantCreate,
     postMerchantConfigDebugLogUpdate,
+    getMerchantMerchantMessageCatalog,
+    postMerchantMerchantMessageUpsert,
+    deleteMerchantMerchantMessage,
   )
 where
 
@@ -50,9 +53,11 @@ import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merch
 import qualified BecknV2.FRFS.Enums as FRFS
 import Control.Applicative
 import qualified Data.Aeson as JSON
+import qualified Data.Aeson.Types as DAT
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
+import Data.Default.Class
 import qualified Data.List as DL
 import Data.List.Extra (notNull)
 import qualified Data.Map.Strict as Map
@@ -66,6 +71,7 @@ import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.BusinessHour
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO
+import qualified Domain.Types.HotSpotConfig as DHSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -78,6 +84,7 @@ import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
 import Domain.Types.TicketPlace hiding (Fee (..))
 import Domain.Types.TicketService
+import qualified Domain.Types.ValueAddNP as DValueAddNP
 import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
@@ -105,6 +112,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -129,6 +138,7 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.HotSpotConfig as HSC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -137,16 +147,20 @@ import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMP
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
+import Storage.ConfigPilot.Config.IssueConfig (IssueConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantPaymentMethod (MerchantPaymentMethodDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE
 import qualified Storage.Queries.Geometry as QGeo
 import qualified Storage.Queries.GeometryGeom as QGEO
+import qualified Storage.Queries.HotSpotConfig as QHSC
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.MerchantMessage as QMM
 import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.ServiceCategory as SQSC
@@ -155,6 +169,7 @@ import qualified Storage.Queries.ServicePeopleCategory as SQSPC
 import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
+import qualified Storage.Queries.ValueAddNP as QValueAddNP
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import qualified Toll.Domain.Types.Toll as Toll
 import qualified Toll.Storage.CachedQueries.Toll as CQToll
@@ -226,7 +241,7 @@ getMerchantServiceUsageConfig ::
   Flow Common.ServiceUsageConfigRes
 getMerchantServiceUsageConfig merchantShortId city = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  config <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
+  config <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   pure $ mkServiceUsageConfigRes config
 
 mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
@@ -253,6 +268,7 @@ buildMerchantServiceConfig merchantId merchantOperatingCityId serviceConfig = do
       { merchantId,
         serviceConfig,
         merchantOperatingCityId,
+        runInCloud = Nothing,
         updatedAt = now,
         createdAt = now
       }
@@ -309,7 +325,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
     when (Common.mapsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.MapsService service)}
       void $
-        listToMaybe <$> getConfig mscDims
+        listToMaybe <$> getConfig mscDims (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantOperatingCity.merchantId merchantOperatingCity.id (DMSC.MapsService service)))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -342,7 +358,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
     when (Common.smsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.SmsService service)}
       void $
-        listToMaybe <$> getConfig mscDims
+        listToMaybe <$> getConfig mscDims (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantOperatingCity.merchantId merchantOperatingCity.id (DMSC.SmsService service)))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -410,7 +426,10 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render,
+            fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
+            paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
+            fareSettlementType = request.fareSettlementType,
             ..
           }
 
@@ -474,6 +493,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
           }
 
@@ -523,6 +543,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           _ -> return Nothing
       _ -> return Nothing
 
+  -- hot spot config (only for a new merchant, copied from base merchant; keyed by merchant id)
+  mbHotSpotConfig <-
+    case mbNewMerchant of
+      Just _ ->
+        HSC.findConfigByMerchantId newMerchantId >>= \case
+          Just _ -> return Nothing
+          Nothing -> do
+            baseHotSpotConfig <- HSC.findConfigByMerchantId baseRequestedCityMerchant.id
+            return $ (\cfg -> cfg {DHSC.id = Id newMerchantId.getId}) <$> baseHotSpotConfig
+      Nothing -> return Nothing
+
   cityAlreadyCreated <- CQMOC.findByMerchantIdAndCity newMerchantId req.city
   newMerchantOperatingCityId <-
     case cityAlreadyCreated of
@@ -550,36 +581,37 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant payment method
   mbMerchantPaymentMethods <-
-    CQMPM.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, configId = Nothing}) (Just (CQMPM.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId baseOperatingCityId
+        merchantPaymentMethods <- getConfig (MerchantPaymentMethodDimensions {merchantOperatingCityId = baseOperatingCityId.getId, configId = Nothing}) (Just (CQMPM.findAllByMerchantOperatingCityId baseOperatingCityId))
         newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newMerchantId newMerchantOperatingCityId now) merchantPaymentMethods
         return $ Just newMerchantPaymentMethods
       _ -> return Nothing
 
   -- merchant service usage config
   mbMerchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       Nothing -> do
-        merchantServiceUsageConfig <- CQMSUC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        merchantServiceUsageConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId baseOperatingCityId)) >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
         let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantId newMerchantOperatingCityId now merchantServiceUsageConfig
         return $ Just newMerchantServiceUsageConfig
       _ -> return Nothing
 
   -- merchant service config
+
   mbMerchantServiceConfig <-
     SQMSC.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
       [] -> do
-        merchantServiceConfigs <- SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId
+        merchantServiceConfigs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, merchantId = baseRequestedCityMerchant.id.getId, serviceName = Nothing}) (Just (SQMSC.findAllByMerchantOperatingCityId baseOperatingCityId))
         let newMerchantServiceConfigs = map (buildMerchantServiceConfigs newMerchantId newMerchantOperatingCityId now) merchantServiceConfigs
         return $ Just newMerchantServiceConfigs
       _ -> return Nothing
 
   -- rider_config
   mbRiderConfig <- do
-    getConfig (RiderDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) (Just (QRC.findByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       Nothing -> do
-        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) (Just (QRC.findByMerchantOperatingCityId baseOperatingCityId)) >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -610,17 +642,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- exophone
   mbExophone <-
-    CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId >>= \case
+    getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId)) >>= \case
       [] -> do
-        exophones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
+        exophones <- getConfig (ExophoneDimensions {merchantOperatingCityId = baseOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId))
         return $ Just exophones
       _ -> return Nothing
 
   -- issue config
   mbIssueConfig <-
-    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.CUSTOMER >>= \case
+    getConfig (IssueConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.CUSTOMER)) >>= \case
       Nothing -> do
-        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- getConfig (IssueConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, identifier = show ICommon.CUSTOMER}) (Just (CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.CUSTOMER)) >>= fromMaybeM (InvalidRequest "Issue Config not found")
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
@@ -725,6 +757,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     ( do
         whenJust mbGeometry $ \geometry -> QGeo.create geometry
         whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
+        whenJust mbHotSpotConfig $ \hotSpotConfig -> QHSC.create hotSpotConfig
         whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
         whenJust mbMerchantMessages $ \merchantMessages -> mapM_ CQMM.create merchantMessages
         whenJust mbMerchantPaymentMethods $ \mPM -> mapM_ CQMPM.create mPM
@@ -760,7 +793,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         QRC.clearCache newMerchantOperatingCityId
         CADLR.clearDomainCache (cast newMerchantOperatingCityId) LYT.CANCELLATION_REASONS
         CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
-        exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+        exoPhone <- getConfig (ExophoneDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, phoneNumber = Nothing, callService = Nothing}) (Just (CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId))
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Redis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
@@ -803,7 +836,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             region = show req.city,
             state = req.state,
             city = req.city,
-            geom = Just req.geom
+            geom = Just req.geomGeoJson
           }
 
     buildMerchant merchantId merchantData currentTime DM.Merchant {..} = do
@@ -824,6 +857,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           bapId = T.replace id.getId merchantId.getId bapId,
           bapUniqueKeyId = merchantData.uniqueKeyId,
           driverOfferMerchantId = merchantData.networkParticipantId,
+          gatewayAndRegistryPriorityList = maybe gatewayAndRegistryPriorityList (map castNetworkEnums) req.gatewayAndRegistryPriorityList,
           createdAt = currentTime,
           updatedAt = currentTime,
           ..
@@ -1050,55 +1084,55 @@ data TicketConfigCSVRow = TicketConfigCSVRow
   deriving (Show)
 
 instance FromNamedRecord TicketConfigCSVRow where
-  parseNamedRecord r =
-    TicketConfigCSVRow
-      <$> r .: "name"
-      <*> r .: "city"
-      <*> r .: "allow_same_day_booking"
-      <*> r .: "description"
-      <*> r .: "open_timings"
-      <*> r .: "close_timing"
-      <*> r .: "place_type"
-      <*> r .: "short_desc"
-      <*> r .: "gallery"
-      <*> r .: "icon_url"
-      <*> r .: "lat"
-      <*> r .: "lon"
-      <*> r .: "map_image_url"
-      <*> r .: "status"
-      <*> r .: "terms_and_conditions"
-      <*> r .: "terms_and_conditions_url"
-      <*> r .: "svc"
-      <*> r .: "svc_short_desc"
-      <*> r .: "svc_operational_days"
-      <*> r .: "svc_start_date"
-      <*> r .: "svc_end_date"
-      <*> r .: "svc_max_verification"
-      <*> r .: "svc_expiry_type"
-      <*> r .: "svc_expiry_value"
-      <*> r .: "svc_expiry_time"
-      <*> r .: "svc_allow_future_booking"
-      <*> r .: "svc_allow_cancellation"
-      <*> r .: "business_hour_type"
-      <*> r .: "business_hour_slot_time"
-      <*> r .: "business_hour_start_time"
-      <*> r .: "business_hour_end_time"
-      <*> r .: "svc_category_allowed_seats"
-      <*> r .: "svc_category_available_seats"
-      <*> r .: "svc_category_description"
-      <*> r .: "svc_category_name"
-      <*> r .: "people_category_name"
-      <*> r .: "people_category_description"
-      <*> r .: "price_amount"
-      <*> r .: "price_currency"
-      <*> r .: "pricing_type"
-      <*> r .: "peak_timings"
-      <*> r .: "peak_days"
-      <*> r .: "cancellation_type"
-      <*> r .: "cancellation_time"
-      <*> r .: "cancellation_fee"
-      <*> r .: "vendor_split_details"
-      <*> r .: "booking_closing_time"
+  parseNamedRecord r = do
+    name <- r .: "name"
+    city <- r .: "city"
+    allowSameDayBooking <- r .: "allow_same_day_booking"
+    description <- r .: "description"
+    openTimings <- r .: "open_timings"
+    closeTimings <- r .: "close_timing"
+    placeType <- r .: "place_type"
+    shortDesc <- r .: "short_desc"
+    gallery <- r .: "gallery"
+    iconUrl <- r .: "icon_url"
+    lat <- r .: "lat"
+    lon <- r .: "lon"
+    mapImageUrl <- r .: "map_image_url"
+    status <- r .: "status"
+    termsAndConditions <- r .: "terms_and_conditions"
+    termsAndConditionsUrl <- r .: "terms_and_conditions_url"
+    svc <- r .: "svc"
+    svcShortDesc <- r .: "svc_short_desc"
+    svcOperationalDays <- r .: "svc_operational_days"
+    svcStartDate <- r .: "svc_start_date"
+    svcEndDate <- r .: "svc_end_date"
+    svcMaxVerification <- r .: "svc_max_verification"
+    svcExpiryType <- r .: "svc_expiry_type"
+    svcExpiryValue <- r .: "svc_expiry_value"
+    svcExpiryTime <- r .: "svc_expiry_time"
+    svcAllowFutureBooking <- r .: "svc_allow_future_booking"
+    svcAllowCancellation <- r .: "svc_allow_cancellation"
+    businessHourType <- r .: "business_hour_type"
+    businessHourSlotTime <- r .: "business_hour_slot_time"
+    businessHourStartTime <- r .: "business_hour_start_time"
+    businessHourEndTime <- r .: "business_hour_end_time"
+    svcCategoryAllowedSeats <- r .: "svc_category_allowed_seats"
+    svcCategoryAvailableSeats <- r .: "svc_category_available_seats"
+    svcCategoryDescription <- r .: "svc_category_description"
+    svcCategoryName <- r .: "svc_category_name"
+    peopleCategoryName <- r .: "people_category_name"
+    peopleCategoryDescription <- r .: "people_category_description"
+    priceAmount <- r .: "price_amount"
+    priceCurrency <- r .: "price_currency"
+    pricingType <- r .: "pricing_type"
+    peakTimings <- r .: "peak_timings"
+    peakDays <- r .: "peak_days"
+    cancellationType <- r .: "cancellation_type"
+    cancellationTime <- r .: "cancellation_time"
+    cancellationFee <- r .: "cancellation_fee"
+    vendorSplitDetails <- r .: "vendor_split_details"
+    businessBookingClosingTime <- r .: "booking_closing_time"
+    pure TicketConfigCSVRow {..}
 
 postMerchantTicketConfigUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTicketConfigReq -> Flow Common.UpsertTicketConfigResp
 postMerchantTicketConfigUpsert merchantShortId opCity request = do
@@ -1467,6 +1501,11 @@ parseJsonMap mbT = do
   t <- mbT >>= cleanField
   JSON.decodeStrict (TE.encodeUtf8 t)
 
+parseJsonTextMap :: Maybe Text -> Maybe (Map.Map Text Text)
+parseJsonTextMap mbT = do
+  t <- mbT >>= cleanField
+  JSON.decodeStrict (TE.encodeUtf8 t)
+
 parseBoolMap :: Maybe Text -> Maybe (Map.Map Text Bool)
 parseBoolMap mbT = do
   t <- mbT >>= cleanField
@@ -1479,6 +1518,15 @@ parseGateTags fieldValue =
     Just tags ->
       let tagList = filter (not . T.null) $ map T.strip $ T.splitOn "," tags
        in if null tagList then Nothing else Just tagList
+
+-- | Resolve the payment-modes CSV cell, throwing on an invalid token. Returns 'Nothing' when the cell is omitted/blank so the
+--   merge step can distinguish "not provided" (preserve existing / default on create)
+--   from an explicit value. Parsing/normalization live in 'SL.parsePaymentModes'.
+resolvePaymentModes :: Int -> Maybe Text -> Flow (Maybe [SL.PaymentMode])
+resolvePaymentModes idx mbFieldValue =
+  case SL.parsePaymentModes mbFieldValue of
+    Left badToken -> throwError $ InvalidRequest $ "Invalid payment mode: " <> badToken <> " at row: " <> show idx
+    Right mbModes -> pure mbModes
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -1517,56 +1565,66 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoMinDriverThresholdsJson :: Maybe Text,
     gateInfoMaxDriverThresholdsJson :: Maybe Text,
     gateInfoDemandThresholdsJson :: Maybe Text,
+    gateInfoNavigationInstructionsJson :: Maybe Text,
     gateInfoId :: Maybe Text,
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    fetchAllGateFareProduct :: Maybe Text,
+    enableQueueFilter :: Maybe Text,
+    paymentModes :: Maybe Text,
+    fareSettlementType :: Maybe Text
   }
   deriving (Show)
 
 instance FromNamedRecord SpecialLocationCSVRow where
-  parseNamedRecord r =
-    SpecialLocationCSVRow
-      <$> r .: "city"
-      <*> r .: "location_name"
-      <*> r .: "enabled"
-      <*> r .: "location_file_name"
-      <*> r .: "location_type"
-      <*> r .: "category"
-      <*> r .: "gate_info_name"
-      <*> r .: "gate_info_file_name"
-      <*> r .: "gate_info_lat"
-      <*> r .: "gate_info_lon"
-      <*> r .: "gate_info_default_driver_extra"
-      <*> r .: "gate_info_address"
-      <*> r .: "gate_info_has_geom"
-      <*> r .: "gate_info_can_queue_up_on_gate"
-      <*> r .: "gate_info_type"
-      <*> r .: "gate_info_tags"
-      <*> r .: "gate_info_walk_description"
-      <*> r .: "priority"
-      <*> r .: "pickup_priority"
-      <*> r .: "drop_priority"
-      <*> r .: "special_location_id"
-      <*> optional (r .: "is_queue_enabled")
-      <*> optional (r .: "support_number")
-      <*> optional (r .: "gate_info_entry_fee_amount")
-      <*> optional (r .: "gate_info_min_driver_threshold")
-      <*> optional (r .: "gate_info_demand_threshold")
-      <*> optional (r .: "gate_info_notification_cooldown_in_sec")
-      <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
-      <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
-      <*> optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
-      <*> optional (r .: "gate_info_max_driver_threshold")
-      <*> optional (r .: "gate_info_min_driver_thresholds")
-      <*> optional (r .: "gate_info_max_driver_thresholds")
-      <*> optional (r .: "gate_info_demand_thresholds")
-      <*> optional (r .: "gate_info_id")
-      <*> optional (r .: "gate_info_notification_active_till_in_sec")
-      <*> optional (r .: "enforce_toll_route")
-      <*> optional (r .: "render")
-      <*> optional (r .: "enable_queue_filter")
+  -- do-notation (not a single <$>/<*> chain) so GHC typechecks the fields linearly
+  -- instead of quadratically; the long applicative chain made this module take >15 min.
+  parseNamedRecord r = do
+    city <- r .: "city"
+    locationName <- r .: "location_name"
+    enabled <- r .: "enabled"
+    locationFileName <- r .: "location_file_name"
+    locationType <- r .: "location_type"
+    category <- r .: "category"
+    gateInfoName <- r .: "gate_info_name"
+    gateInfoFileName <- r .: "gate_info_file_name"
+    gateInfoLat <- r .: "gate_info_lat"
+    gateInfoLon <- r .: "gate_info_lon"
+    gateInfoDefaultDriverExtra <- r .: "gate_info_default_driver_extra"
+    gateInfoAddress <- r .: "gate_info_address"
+    gateInfoHasGeom <- r .: "gate_info_has_geom"
+    gateInfoCanQueueUpOnGate <- r .: "gate_info_can_queue_up_on_gate"
+    gateInfoType <- r .: "gate_info_type"
+    gateInfoGateTags <- r .: "gate_info_tags"
+    gateInfoWalkDescription <- r .: "gate_info_walk_description"
+    priority <- r .: "priority"
+    pickupPriority <- r .: "pickup_priority"
+    dropPriority <- r .: "drop_priority"
+    specialLocationId <- r .: "special_location_id"
+    isQueueEnabled <- optional (r .: "is_queue_enabled")
+    supportNumber <- optional (r .: "support_number")
+    gateInfoEntryFeeAmount <- optional (r .: "gate_info_entry_fee_amount")
+    gateInfoMinDriverThreshold <- optional (r .: "gate_info_min_driver_threshold")
+    gateInfoDemandThreshold <- optional (r .: "gate_info_demand_threshold")
+    gateInfoNotificationCooldownInSec <- optional (r .: "gate_info_notification_cooldown_in_sec")
+    gateInfoMaxRideSkipsBeforeQueueRemoval <- optional (r .: "gate_info_max_ride_skips_before_queue_removal")
+    gateInfoPickupZoneArrivalTimeoutInSec <- optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
+    gateInfoPickupRequestResponseTimeoutInSec <- optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
+    gateInfoMaxDriverThreshold <- optional (r .: "gate_info_max_driver_threshold")
+    gateInfoMinDriverThresholdsJson <- optional (r .: "gate_info_min_driver_thresholds")
+    gateInfoMaxDriverThresholdsJson <- optional (r .: "gate_info_max_driver_thresholds")
+    gateInfoDemandThresholdsJson <- optional (r .: "gate_info_demand_thresholds")
+    gateInfoNavigationInstructionsJson <- optional (r .: "gate_info_navigation_instructions")
+    gateInfoId <- optional (r .: "gate_info_id")
+    gateInfoNotificationActiveTillInSec <- optional (r .: "gate_info_notification_active_till_in_sec")
+    enforceTollRoute <- optional (r .: "enforce_toll_route")
+    render <- optional (r .: "render")
+    fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
+    enableQueueFilter <- optional (r .: "enable_queue_filter")
+    paymentModes <- optional (r .: "payment_modes")
+    fareSettlementType <- optional (r .: "fare_settlement_type")
+    pure SpecialLocationCSVRow {..}
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1620,7 +1678,10 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
           mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
+          mbFareSettlementType :: Maybe DSL.FareSettlementType = readMaybeCSVField idx (fromMaybe "" row.fareSettlementType) "Payment Collection Mode"
+          mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
+      resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
       gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
@@ -1661,7 +1722,10 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 isQueueEnabled = mbIsQueueEnabled,
                 enforceTollRoute = mbEnforceTollRoute,
                 render = mbRender,
-                supportNumber = supportNumber
+                fetchAllGateFareProduct = mbFetchAllGateFareProduct,
+                supportNumber = supportNumber,
+                paymentModes = resolvedPaymentModes,
+                fareSettlementType = mbFareSettlementType
               }
           gateInfo =
             DGI.GateInfo
@@ -1684,6 +1748,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
                 maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
                 demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
+                navigationInstructions = parseJsonTextMap row.gateInfoNavigationInstructionsJson,
                 defaultMinDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMinDriverThreshold) "Gate Info (min_driver_threshold)",
                 defaultMaxDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxDriverThreshold) "Gate Info (max_driver_threshold)",
                 defaultDemandThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoDemandThreshold) "Gate Info (demand_threshold)",
@@ -1750,9 +1815,11 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       QSL.clearSpecialZoneInMemCache
 
     mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
-    mergeSpecialLocationWithExisting new Nothing = new
+    mergeSpecialLocationWithExisting new Nothing =
+      new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
     mergeSpecialLocationWithExisting new (Just old) =
-      new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled
+      new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+          DSL.paymentModes = new.paymentModes <|> old.paymentModes
          }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
@@ -1762,6 +1829,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
           DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
           DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
+          DGI.navigationInstructions = new.navigationInstructions <|> old.navigationInstructions,
           DGI.defaultMinDriverThreshold = new.defaultMinDriverThreshold <|> old.defaultMinDriverThreshold,
           DGI.defaultMaxDriverThreshold = new.defaultMaxDriverThreshold <|> old.defaultMaxDriverThreshold,
           DGI.defaultDemandThreshold = new.defaultDemandThreshold <|> old.defaultDemandThreshold,
@@ -1921,7 +1989,22 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
             createdAt = now,
             updatedAt = now
           }
-  QWLO.create whiteListOrgReq
+  existingWhiteListOrg <- QWLO.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId req.bppSubscriberId bppSubDomain (Id merchantId) (Id merchantOperatingCityId)
+  when (isNothing existingWhiteListOrg) $ QWLO.create whiteListOrgReq
+
+  let bppSubscriberId = req.bppSubscriberId.getShortId
+  QValueAddNP.findByPrimaryKey bppSubscriberId >>= \case
+    Just existing ->
+      unless existing.enabled $
+        QValueAddNP.updateByPrimaryKey existing {DValueAddNP.enabled = True, DValueAddNP.updatedAt = now}
+    Nothing ->
+      QValueAddNP.create
+        DValueAddNP.ValueAddNP
+          { enabled = True,
+            subscriberId = bppSubscriberId,
+            createdAt = now,
+            updatedAt = now
+          }
 
   pure $
     Common.WhiteListOperatingCityRes
@@ -1996,7 +2079,7 @@ getMerchantRiderConfigEstimatesOrder merchantShortId city = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
   riderConfig <-
-    getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (QRC.findByMerchantOperatingCityId merchantOperatingCity.id))
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   pure $
@@ -2017,7 +2100,7 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
   riderConfig <-
-    getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (QRC.findByMerchantOperatingCityId merchantOperatingCity.id))
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   let updatedConfig =
@@ -2059,4 +2142,77 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   _merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOperatingCity.id) req
+  pure Success
+
+getMerchantMerchantMessageCatalog ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.RiderMerchantMessageCatalogResp
+getMerchantMerchantMessageCatalog _merchantShortId _city = do
+  let values = map show [minBound .. maxBound :: DMM.MessageKey]
+  pure $ Common.RiderMerchantMessageCatalogResp {values}
+
+postMerchantMerchantMessageUpsert ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpsertRiderMerchantMessageReq ->
+  Flow APISuccess
+postMerchantMerchantMessageUpsert merchantShortId city req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  messageKey <- readMaybe (T.unpack req.messageKey) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> req.messageKey)
+  mbExisting <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing
+  now <- getCurrentTime
+  case mbExisting of
+    Nothing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure def
+          Just v -> DAT.parseMaybe JSON.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let merchantMessage =
+            DMM.MerchantMessage
+              { merchantId = merchant.id,
+                merchantOperatingCityId = merchantOpCity.id,
+                messageKey = messageKey,
+                message = req.message,
+                templateId = req.templateId,
+                containsUrlButton = req.containsUrlButton,
+                jsonData = parsedJsonData,
+                messageType = req.messageType,
+                senderHeader = req.senderHeader,
+                createdAt = now,
+                updatedAt = now
+              }
+      QMM.create merchantMessage
+      CQMM.clearCache merchantOpCity.id messageKey
+    Just existing -> do
+      parsedJsonData <-
+        case req.jsonData of
+          Nothing -> pure existing.jsonData
+          Just v -> DAT.parseMaybe JSON.parseJSON v & fromMaybeM (InvalidRequest "Invalid jsonData payload")
+      let updated =
+            existing
+              { DMM.message = req.message,
+                DMM.templateId = req.templateId,
+                DMM.containsUrlButton = req.containsUrlButton,
+                DMM.jsonData = parsedJsonData,
+                DMM.messageType = req.messageType,
+                DMM.senderHeader = req.senderHeader,
+                DMM.updatedAt = now
+              }
+      QMM.updateByPrimaryKey updated
+      CQMM.clearCache merchantOpCity.id messageKey
+  pure Success
+
+deleteMerchantMerchantMessage ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow APISuccess
+deleteMerchantMerchantMessage merchantShortId city messageKeyText = do
+  merchantOpCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
+  messageKey <- readMaybe (T.unpack messageKeyText) & fromMaybeM (InvalidRequest $ "Invalid messageKey: " <> messageKeyText)
+  _ <- CQMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey Nothing >>= fromMaybeM (InvalidRequest $ "MerchantMessage not found for messageKey: " <> show messageKey)
+  QMM.deleteByMerchantOperatingCityIdAndMessageKey merchantOpCity.id messageKey
+  CQMM.clearCache merchantOpCity.id messageKey
   pure Success

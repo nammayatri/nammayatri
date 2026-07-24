@@ -16,6 +16,9 @@ imports:
   Value: Data.Aeson
   VehicleVariant: Domain.Types.VehicleVariant
   IssueSubCategory: IGM.Enums
+  Language: Kernel.External.Types
+  IssueConfig: IssueManagement.Domain.Types.Issue.IssueConfig
+  # Old types
   IssueCategoryRes: IssueManagement.Common.Dashboard.Issue
   IssueCategoryListRes: IssueManagement.Common.Dashboard.Issue
   IssueReportListResponse: IssueManagement.Common.Dashboard.Issue
@@ -37,11 +40,38 @@ imports:
   UpdateIssueOptionReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageReq: IssueManagement.Common.Dashboard.Issue
   UpsertIssueMessageRes: IssueManagement.Common.Dashboard.Issue
+  # New Admin Content Management types
+  IssueCategoryDetailRes: IssueManagement.Common.Dashboard.Issue
+  IssueMessageDetailRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionDetailRes: IssueManagement.Common.Dashboard.Issue
+  IssueMessageListRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionListDRes: IssueManagement.Common.Dashboard.Issue
+  IssueCategoryFlowPreviewRes: IssueManagement.Common.Dashboard.Issue
+  MessageFlowNode: IssueManagement.Common.Dashboard.Issue
+  MessagePreview: IssueManagement.Common.Dashboard.Issue
+  OptionFlowNode: IssueManagement.Common.Dashboard.Issue
+  IssueTranslationListRes: IssueManagement.Common.Dashboard.Issue
+  IssueTranslationItem: IssueManagement.Common.Dashboard.Issue
+  BulkUpsertTranslationsReq: IssueManagement.Common.Dashboard.Issue
+  IssueConfigRes: IssueManagement.Common.Dashboard.Issue
+  UpdateIssueConfigReq: IssueManagement.Common.Dashboard.Issue
+  ReorderIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
+  ReorderIssueOptionReq: IssueManagement.Common.Dashboard.Issue
+  ReorderIssueMessageReq: IssueManagement.Common.Dashboard.Issue
+  DetailedTranslationRes: IssueManagement.Common.Dashboard.Issue
+  CopyIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
+  CopyIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  CopyAllIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  FailedCategoryCopy: IssueManagement.Common.Dashboard.Issue
+  CopyAllIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
   # Live chat types
   SendChatMessageReq: IssueManagement.Common.Dashboard.Issue
   SendChatMessageByUserReq: IssueManagement.Common.Dashboard.Issue
   MarkChatReadByUserReq: IssueManagement.Common.Dashboard.Issue
   ChatMessageItem: IssueManagement.Common.UI.Issue
+  # Operator-side chat upload — reuses the consumer-side /v2/issue/upload contract.
+  IssueMediaUploadReq: IssueManagement.Common.UI.Issue
+  IssueMediaUploadRes: IssueManagement.Common.UI.Issue
 
 module: Issue
 
@@ -116,6 +146,17 @@ apis:
       migrate:
         endpoint: IssueAPI IssueUpdateEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE ISSUE_UPDATE
+  # Operator-side media upload for live chat. POST a multipart file, get back a
+  # MediaFile id, then send that id in the next /chat/message body. Mirrors the
+  # driver-side /v2/issue/upload but goes through dashboard auth.
+  - POST: # IssueChatUploadAPI
+      endpoint: /upload
+      name: PostIssueChatUpload
+      auth: ApiAuthV2
+      multipart:
+        type: IssueMediaUploadReq
+      response:
+        type: IssueMediaUploadRes
   - POST:  # IssueAddCommentAPI
       endpoint: /{issueId}/comment
       auth: ApiAuthV2
@@ -214,6 +255,187 @@ apis:
       migrate:
         endpoint: IssueAPI UpsertIssueMessageEndpoint
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE
+
+  - GET: # GetCategoryDetailAPI
+      endpoint: /category/{categoryId}/detail
+      name: GetIssueCategoryDetail
+      auth: ApiAuthV2
+      params:
+        categoryId: Id IssueCategory
+      query:
+        - language: Language
+      response:
+        type: IssueCategoryDetailRes
+
+  - GET: # GetOptionDetailAPI
+      endpoint: /option/{optionId}/detail
+      name: GetIssueOptionDetail
+      auth: ApiAuthV2
+      params:
+        optionId: Id IssueOption
+      query:
+        - language: Language
+      response:
+        type: IssueOptionDetailRes
+
+  - GET: # GetMessageDetailAPI
+      endpoint: /message/{messageId}/detail
+      name: GetIssueMessageDetail
+      auth: ApiAuthV2
+      params:
+        messageId: Id IssueMessage
+      query:
+        - language: Language
+      response:
+        type: IssueMessageDetailRes
+
+  - GET: # ListMessagesAPI
+      endpoint: /message/list
+      name: GetIssueMessageList
+      auth: ApiAuthV2
+      query:
+        - categoryId: (Id IssueCategory)
+        - optionId: (Id IssueOption)
+        - isActive: Bool
+        - language: Language
+      response:
+        type: IssueMessageListRes
+
+  - GET: # ListOptionsAPI
+      endpoint: /option/list
+      name: GetIssueOptionList
+      auth: ApiAuthV2
+      query:
+        - categoryId: (Id IssueCategory)
+        - messageId: (Id IssueMessage)
+        - isActive: Bool
+        - language: Language
+      response:
+        type: IssueOptionListDRes
+
+  - DELETE: # DeleteCategoryAPI
+      endpoint: /category/{categoryId}/delete
+      name: DeleteIssueCategory
+      auth: ApiAuthV2
+      params:
+        categoryId: Id IssueCategory
+      response:
+        type: APISuccess
+
+  - DELETE: # DeleteOptionAPI
+      endpoint: /option/{optionId}/delete
+      name: DeleteIssueOption
+      auth: ApiAuthV2
+      params:
+        optionId: Id IssueOption
+      response:
+        type: APISuccess
+
+  - DELETE: # DeleteMessageAPI
+      endpoint: /message/{messageId}/delete
+      name: DeleteIssueMessage
+      auth: ApiAuthV2
+      params:
+        messageId: Id IssueMessage
+      response:
+        type: APISuccess
+
+  - GET: # PreviewCategoryFlowAPI
+      endpoint: /category/{categoryId}/preview
+      name: GetIssueCategoryFlowPreview
+      auth: ApiAuthV2
+      params:
+        categoryId: Id IssueCategory
+      query:
+        - language: Language
+      response:
+        type: IssueCategoryFlowPreviewRes
+
+  - GET: # GetTranslationsAPI
+      endpoint: /translation/list
+      name: GetIssueTranslations
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - sentence: Text
+      response:
+        type: IssueTranslationListRes
+
+  - POST: # BulkUpsertTranslationsAPI
+      endpoint: /translation/bulk
+      name: PostIssueBulkUpsertTranslations
+      auth: ApiAuthV2
+      request:
+        type: BulkUpsertTranslationsReq
+      response:
+        type: APISuccess
+
+  - GET: # GetIssueConfigAPI
+      endpoint: /config
+      name: GetIssueConfig
+      auth: ApiAuthV2
+      response:
+        type: IssueConfigRes
+
+  - POST: # UpdateIssueConfigAPI
+      endpoint: /config/update
+      name: PostIssueConfigUpdate
+      auth: ApiAuthV2
+      request:
+        type: UpdateIssueConfigReq
+      response:
+        type: APISuccess
+
+  - POST: # ReorderCategoriesAPI
+      endpoint: /category/reorder
+      name: PostIssueCategoryReorder
+      auth: ApiAuthV2
+      request:
+        type: ReorderIssueCategoryReq
+      response:
+        type: APISuccess
+
+  - POST: # ReorderOptionsAPI
+      endpoint: /option/reorder
+      name: PostIssueOptionReorder
+      auth: ApiAuthV2
+      request:
+        type: ReorderIssueOptionReq
+      response:
+        type: APISuccess
+
+  - POST: # ReorderMessagesAPI
+      endpoint: /message/reorder
+      name: PostIssueMessageReorder
+      auth: ApiAuthV2
+      request:
+        type: ReorderIssueMessageReq
+      response:
+        type: APISuccess
+
+  - POST: # CopyIssueCategoryAPI
+      endpoint: /category/copy
+      name: PostIssueCategoryCopy
+      auth: ApiAuthV2
+      request:
+        type: CopyIssueCategoryReq
+      response:
+        type: CopyIssueCategoryRes
+
+  - POST: # CopyAllDefaultIssueCategoryAPI
+      endpoint: /category/copyAllDefault
+      name: PostIssueCategoryDefaultCopy
+      auth: ApiAuthV2
+      response:
+        type: CopyAllIssueCategoryRes
+
+  - POST: # CopyAllIssueCategoryAPI
+      endpoint: /category/copyAll
+      name: PostIssueCategoryAllCopy
+      auth: ApiAuthV2
+      request:
+        type: CopyAllIssueCategoryReq
+      response:
+        type: CopyAllIssueCategoryRes
 
   # Live chat endpoints
   - POST:  # PostIssueChatMessageAPI

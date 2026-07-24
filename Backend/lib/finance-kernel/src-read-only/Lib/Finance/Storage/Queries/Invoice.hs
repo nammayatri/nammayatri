@@ -12,6 +12,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Invoice
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.Invoice as Beam
@@ -38,13 +39,24 @@ findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq
 
 updateIrnAndSignedQRByInvoiceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
-updateIrnAndSignedQRByInvoiceId irn signedQRCode id = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updateIrnAndSignedQRByInvoiceId irn signedQRCode updatedBy updatedById id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.irn irn, Se.Set Beam.signedQRCode signedQRCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV
+    [ Se.Set Beam.irn irn,
+      Se.Set Beam.signedQRCode signedQRCode,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
-updateStatus status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateStatus ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updateStatus status updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedBy updatedBy, Se.Set Beam.updatedById updatedById, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -53,8 +65,11 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.currency currency,
+    [ Se.Set Beam.createdBy createdBy,
+      Se.Set Beam.createdById createdById,
+      Se.Set Beam.currency currency,
       Se.Set Beam.dueAt dueAt,
+      Se.Set Beam.entityReferenceId entityReferenceId,
       Se.Set Beam.invoiceNumber invoiceNumber,
       Se.Set Beam.invoiceType invoiceType,
       Se.Set Beam.irn irn,
@@ -72,10 +87,10 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.paymentMode paymentMode,
-      Se.Set Beam.paymentOrderId paymentOrderId,
       Se.Set Beam.periodEnd periodEnd,
       Se.Set Beam.periodStart periodStart,
       Se.Set Beam.referenceId referenceId,
+      Se.Set Beam.referenceInvoiceNumber referenceInvoiceNumber,
       Se.Set Beam.signedQRCode signedQRCode,
       Se.Set Beam.status status,
       Se.Set Beam.subtotal subtotal,
@@ -86,6 +101,8 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.supplierTaxNo supplierTaxNo,
       Se.Set Beam.taxBreakdown taxBreakdown,
       Se.Set Beam.totalAmount totalAmount,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

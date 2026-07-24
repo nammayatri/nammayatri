@@ -13,7 +13,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data EstimateT f = EstimateT
-  { businessDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+  { area :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    businessDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     commissionCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     congestionMultiplier :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -54,6 +55,7 @@ data EstimateT f = EstimateT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     minFare :: B.C f Kernel.Types.Common.Money,
     minFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    navigationInstruction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personalDiscount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
     smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

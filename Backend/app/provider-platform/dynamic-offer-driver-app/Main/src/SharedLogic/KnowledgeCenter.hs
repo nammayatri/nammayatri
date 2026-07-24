@@ -23,16 +23,18 @@ import qualified Domain.Types.Extra.TransporterConfig as Extra
 import qualified Domain.Types.KnowledgeCenter as DKC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.TransporterConfig (TransporterConfig, TransporterConfigD (..))
+import Domain.Types.TransporterConfig (TransporterConfig (..))
 import EulerHS.Types (base64Decode)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.KnowledgeCenter as QKC
 import Tools.Error
 
@@ -48,7 +50,7 @@ knowledgeCenterSopList ::
   m [(Text, [(Text, Text)])]
 knowledgeCenterSopList merchantShortId opCity mbMerchantOperatingCityId mbSopType = do
   (_merchant, mocId) <- resolveMerchantAndCity merchantShortId opCity mbMerchantOperatingCityId
-  transporterConfig <- CCT.findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CCT.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
   let filteredTypes = case mbSopType of
         Nothing -> sopTypes
@@ -162,7 +164,7 @@ knowledgeCenterUploadImage ::
   m (Maybe (Id DKC.KnowledgeCenter))
 knowledgeCenterUploadImage merchantShortId opCity sopType mbImageBase64 mbDocumentName mbFileExtension mbMocId = do
   (merchant, merchantOpCityId) <- resolveMerchantAndCity merchantShortId opCity mbMocId
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CCT.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
 
   case mbImageBase64 of
@@ -235,7 +237,7 @@ knowledgeCenterRenameSopType merchantShortId opCity newSopType oldSopType =
     then pure Success
     else do
       (_merchant, mocId) <- resolveMerchantAndCity merchantShortId opCity Nothing
-      transporterConfig <- CCT.findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CCT.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
       let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
       when (newSopType `elem` sopTypes) $
         throwError $ InvalidRequest "SOP type already exists; choose a different name or merge documents first"
@@ -277,7 +279,7 @@ knowledgeCenterDeleteBySopType merchantShortId opCity sopType = do
     catch (S3.delete (T.unpack r.s3Path)) $ \(err :: SomeException) ->
       logWarning $ "KnowledgeCenter: S3 delete failed for " <> r.s3Path <> ": " <> show err
   QKC.deleteBySopTypeAndMerchantOperatingCityId sopType mocId
-  transporterConfig <- CCT.findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CCT.findByMerchantOpCityId mocId Nothing)) >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let sopTypes = Extra.unKnowledgeCenterSopTypesConfig transporterConfig.knowledgeCenterSopTypes
   when (sopType `elem` sopTypes) $ do
     let updatedSopTypes = filter (/= sopType) sopTypes

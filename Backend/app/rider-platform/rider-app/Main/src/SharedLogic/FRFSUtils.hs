@@ -78,6 +78,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -118,6 +119,15 @@ import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 
+frfsGtfsCacheKey :: Text -> Text
+frfsGtfsCacheKey ibcId = "frfs:gtfs:" <> ibcId
+
+frfsGtfsPagesKey :: Text -> Text
+frfsGtfsPagesKey ibcId = "frfs:gtfs:pages:" <> ibcId
+
+frfsGtfsCacheTtlSec :: Int
+frfsGtfsCacheTtlSec = 3600
+
 adjustCfgMapForPreferredTier ::
   Ord Spec.ServiceTierType =>
   Maybe Spec.ServiceTierType ->
@@ -148,7 +158,7 @@ mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Mayb
 mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do
   pOrgStation <- maybe (pure Nothing) (\pOrgId -> CQPOS.findByStationCodeAndPOrgId code pOrgId |<|>| CQPOS.findByStationCodeAndPOrgId id.getId pOrgId) mbPOrgId
   let pOrgStationName = pOrgStation <&> (.name)
-  pure $ APITypes.FRFSStationAPI {name = Just $ fromMaybe name pOrgStationName, routeCodes = Nothing, stationType = Nothing, color = Nothing, sequenceNum = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, ..}
+  pure $ APITypes.FRFSStationAPI {name = Just $ fromMaybe name pOrgStationName, routeCodes = Nothing, stationType = Nothing, color = Nothing, routeDetails = Nothing, sequenceNum = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, ..}
 
 mkTBPStatusAPI :: DTBP.FRFSTicketBookingPaymentStatus -> APITypes.FRFSBookingPaymentStatusAPI
 mkTBPStatusAPI = \case
@@ -835,7 +845,8 @@ createPaymentOrder ::
     ServiceFlow m r,
     FinanceBeamFlow.BeamFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
@@ -865,6 +876,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
         _ -> False
   splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
@@ -888,7 +900,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             basket = basket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing
+            paymentFilter = Nothing,
+            udf1 = udf1
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
@@ -1103,10 +1116,11 @@ createBasketFromBookings ::
   m [Payment.Basket]
 createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType mbEnableOffer = do
   logDebug $ "mbEnableOffer: " <> show mbEnableOffer
-  let dummyBasket =
+  let totalAmount = sum $ map (\booking -> booking.totalPrice.amount) allJourneyBookings
+      dummyBasket =
         [ Payment.Basket
             { Payment.id = "no_basket",
-              Payment.unitPrice = 0,
+              Payment.unitPrice = totalAmount,
               Payment.quantity = 1
             }
         ]
@@ -1119,25 +1133,30 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
           -- offer valid only for single mode booking (not handled for multimodal right now)
           quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-          mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+          (mbAdultOfferSKUProductId', mbChildOfferSKUProductId') <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+          let mbAdultOfferSKUProductId = Payment.substituteVehicleTypeInOfferSKU booking.vehicleType booking.serviceTierType mbAdultOfferSKUProductId'
+              mbChildOfferSKUProductId = Payment.substituteVehicleTypeInOfferSKU booking.vehicleType booking.serviceTierType mbChildOfferSKUProductId'
           let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
               adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
               childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
               adultUnitPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amount)
               childUnitPrice = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.unitPrice.amount)
-          case (mbOfferSKUProductId, adultQuantity, childQuantity, adultUnitPrice, childUnitPrice) of
-            (Just offerSKUProductId, Just adultQuantity', childQuantity', Just adultUnitPrice', _) -> do
-              if adultQuantity' == 1 && fromMaybe 0 childQuantity' == 0
-                then
-                  return $
-                    [ Payment.Basket
-                        { Payment.id = offerSKUProductId,
-                          Payment.unitPrice = adultUnitPrice',
-                          Payment.quantity = adultQuantity'
-                        }
-                    ]
-                else return dummyBasket
-            _ -> return dummyBasket
+              -- separate basket line per category, each keyed by its own offer SKU id
+              mkBasket mbOfferSKUProductId mbQuantity mbUnitPrice =
+                case (mbQuantity, mbUnitPrice) of
+                  (Just quantity', Just unitPrice')
+                    | quantity' > 0 ->
+                      [ Payment.Basket
+                          { Payment.id = fromMaybe "no_basket" mbOfferSKUProductId,
+                            Payment.unitPrice = unitPrice',
+                            Payment.quantity = quantity'
+                          }
+                      ]
+                  _ -> []
+              adultBasket = mkBasket mbAdultOfferSKUProductId adultQuantity adultUnitPrice
+              childBasket = mkBasket mbChildOfferSKUProductId childQuantity childUnitPrice
+              baskets = adultBasket <> childBasket
+          return $ if null baskets then dummyBasket else baskets
         _ -> return dummyBasket
 
 -- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit

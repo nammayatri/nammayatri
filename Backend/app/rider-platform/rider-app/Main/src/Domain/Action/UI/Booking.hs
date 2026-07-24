@@ -28,6 +28,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Pass as DPass
+import qualified Domain.Action.UI.Ride as DRide
 import Domain.Action.UI.Serviceability
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
@@ -47,6 +48,7 @@ import qualified Domain.Types.PassType
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as DTR
+import qualified Domain.Types.RideStatus as SRide
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pack, safeHead)
@@ -59,20 +61,28 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType (GCP))
+import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
+import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.Serviceability as Serviceability
 import SharedLogic.Type as SLT
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -103,14 +113,14 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
-bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
+bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow SRB.BookingAPIEntity
+bookingStatus bookingId (personId, _merchantId) mbDontNeedFareBreakup = runInMultiCloud $ do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
-  SRB.buildBookingAPIEntity booking booking.riderId
+  SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
 bookingStatusPolling bookingId _ = runInMultiCloud $ do
@@ -122,7 +132,7 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just booking.merchantId) "MOBILITY" (Just booking.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
   confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -158,7 +168,7 @@ callOnStatus currBooking = do
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
   case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
     (Just timeDiffThreshold, Just estimatedEndDuration) -> do
       now <- getCurrentTime
@@ -176,11 +186,34 @@ checkBookingsForStatus [] = pure ()
 
 getBookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
 getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+  useCachedActiveRidesList <- asks (.useCachedActiveRidesList)
+  getBookingListImpl useCachedActiveRidesList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+
+getBookingListImpl :: Bool -> (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
+getBookingListImpl True (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+  let mbFromDate = millisecondsToUTC <$> mbFromDate'
+      mbToDate = millisecondsToUTC <$> mbToDate'
+  mbActiveRbIds <- QRB.getActiveRideAvailableFromCacheKey personId
+  case mbActiveRbIds of
+    Just activeRbIds -> do
+      case activeRbIds of
+        [singleRideWhichIsMostOfTheTime] -> do
+          mbBookings <- QR.findBookingDetialsByBookingId singleRideWhichIsMostOfTheTime
+          case mbBookings of
+            Nothing -> do
+              otherActiveParties <- QR.findOtherActivePartyBooking (Just personId) mbBookingStatus mbClientId mbFromDate mbToDate
+              case otherActiveParties of
+                [] -> getBookingListImpl False (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+                bxs -> return (bxs, bxs)
+            Just booking -> return ([booking], [booking])
+        _ -> getBookingListImpl False (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+    Nothing -> return ([], [])
+getBookingListImpl _ (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
   logInfo $ "getBookingList: Executing query for personId=" <> show mbPersonId <> ", merchantId=" <> show merchantId <> ", onlyActive=" <> show mbOnlyActive
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   let mbOnlyDashboard = if onlyDashboard then Just True else Nothing
-  (rbList, allbookings) <- if Just True == mbOnlyActive then runInMultiCloud $ QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId else QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId
+  (rbList, allbookings) <- QR.findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId
   let limit = maybe 10 fromIntegral mbLimit
   if null rbList
     then do
@@ -201,17 +234,17 @@ getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusLi
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess
 
-bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow BookingListRes
-bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Flow BookingListRes
+bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup = do
   (rbList, allbookings) <- getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
   case mbPersonId of
     Just personId -> returnResonseAndClearStuckRides allbookings rbList personId
-    Nothing -> BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking booking.riderId) rbList
+    Nothing -> BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)) rbList
   where
     returnResonseAndClearStuckRides allbookings rbList personId = do
       fork "booking list status update" $ checkBookingsForStatus allbookings
       logInfo $ "rbList: test " <> show rbList
-      BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
+      BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking personId (fromMaybe False mbDontNeedFareBreakup)) rbList
 
 getPassList :: Id Merchant.Merchant -> Id Person.Person -> Maybe Int -> Maybe Int -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow [DPurchasedPass.PurchasedPass]
 getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes = do
@@ -257,7 +290,7 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
           Just person -> pure person.id
           Nothing -> tryEmail
       Nothing -> tryEmail
-  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset Nothing mbFromDate' mbToDate' billingCategoryList rideTypeList (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType Nothing Nothing
+  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset Nothing mbFromDate' mbToDate' billingCategoryList rideTypeList (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType Nothing Nothing Nothing
   where
     tryEmail =
       case mbEmail of
@@ -266,20 +299,9 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
           pure person.id
         Nothing -> throwError $ InternalError "No Person Found"
 
-applyMasterDbIfGcp :: Flow a -> Flow a
-applyMasterDbIfGcp computation = do
-  mbCloudType <- asks (.cloudType)
-  case mbCloudType of
-    Just cloudType | cloudType == GCP -> do
-      logInfo "applyMasterDbIfGcp: CloudType is GCP, routing queries to Master DB (AWS)"
-      B.runInMasterDb computation
-    _ -> do
-      logInfo $ "applyMasterDbIfGcp: CloudType is " <> show mbCloudType <> ", using default replica/local DB"
-      computation
-
-bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow BookingListResV2
-bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes = do
-  applyMasterDbIfGcp $ do
+bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Maybe Bool -> Flow BookingListResV2
+bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes mbDontNeedFareBreakup =
+  do
     allPasses <- getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes
     (apiEntity, nextBookingOffset, nextJourneyOffset, nextPassOffset, hasMoreData) <- case mbBookingRequestType of
       Just SRB.BookingRequest -> do
@@ -296,7 +318,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         let hasMoreData = length rbFilteredList + length allPasses >= limit
 
-        (entitiesWithSource, finalBookingOffset, _, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList [] allPasses mbInitialBookingOffset (Just 0) (Just 0)
+        (entitiesWithSource, finalBookingOffset, _, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList [] allPasses mbInitialBookingOffset (Just 0) (Just 0) (fromMaybe False mbDontNeedFareBreakup)
 
         pure (entitiesWithSource, Just finalBookingOffset, Nothing, Just finalPassOffset, hasMoreData)
       Just SRB.JourneyRequest -> do
@@ -312,22 +334,21 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         let hasMoreData = length allJourneys + length allPasses >= limit
 
-        (entitiesWithSource, _, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys allPasses (Just 0) mbInitialJourneyOffset (Just 0)
+        (entitiesWithSource, _, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys allPasses (Just 0) mbInitialJourneyOffset (Just 0) (fromMaybe False mbDontNeedFareBreakup)
 
         pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
       _ -> do
         bookingListFork <-
           awaitableFork "bookingListV2->getBookingList" $
-            applyMasterDbIfGcp $ getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
+            getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
 
         -- Journeys (NammaTransit) should only be included for PERSONAL billing category and NORMAL ride type
         let shouldIncludeJourneys = shouldIncludeJourneysForFilters billingCategoryList rideTypeList
         journeyListFork <-
           awaitableFork "bookingListV2->getJourneyList" $
-            applyMasterDbIfGcp $
-              if shouldIncludeJourneys
-                then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-                else pure []
+            if shouldIncludeJourneys
+              then getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+              else pure []
 
         (rbList, allbookings) <-
           L.await Nothing bookingListFork >>= \case
@@ -353,7 +374,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         clearStuckRides (Just filteredAllBookingsList) rbFilteredList
 
-        (entitiesWithSource, finalBookingOffset, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList allJourneys allPasses mbInitialBookingOffset mbInitialJourneyOffset mbInitialPassOffset
+        (entitiesWithSource, finalBookingOffset, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList allJourneys allPasses mbInitialBookingOffset mbInitialJourneyOffset mbInitialPassOffset (fromMaybe False mbDontNeedFareBreakup)
 
         pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
 
@@ -391,17 +412,17 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           logInfo $ "rbList: test " <> show rbList
         Nothing -> do
           fork "booking list status update" $
-            applyMasterDbIfGcp $ do
+            do
               (rbList_, allbookings_) <- getBookingList (Just personId, merchantId) Nothing False integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList Nothing
               checkBookingsForStatus allbookings_
               logInfo $ "rbList: test " <> show rbList_
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
 
-buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int, Int)
-buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset = do
+buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Bool -> Flow ([BookingAPIEntityV2], Int, Int, Int)
+buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset dontNeedFareBreakup = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
@@ -518,7 +539,7 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
       where
         go _ [] acc = pure (toList acc)
         go riderId' (MBooking booking : ls) acc = do
-          bookingEntity <- SRB.buildBookingAPIEntity booking riderId'
+          bookingEntity <- SRB.buildBookingAPIEntity booking riderId' dontNeedFareBreakup
           go riderId' ls (acc Seq.|> Ride bookingEntity)
         go riderId' (MJourney journey : ls) acc = do
           mbJourneyEntity <- JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")
@@ -560,6 +581,132 @@ editStop :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> StopReq -> Flow
 editStop (_, merchantId) bookingId req = do
   processStop bookingId req merchantId True
   pure Success
+
+editLocationForBooking ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  Id SRB.Booking ->
+  DRide.EditLocationReq ->
+  Flow DRide.EditLocationResp
+editLocationForBooking (personId, merchantId) bookingId req = do
+  when (isNothing req.origin && isNothing req.destination) $
+    throwError PickupOrDropLocationNotFound
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  mbRide <- B.runInReplica $ QR.findActiveByRBId booking.id
+  when (isNothing mbRide) $ do
+    riderConfig <-
+      getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId))
+        >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    unless (fromMaybe False riderConfig.enableEditLocationWithoutRide) $
+      throwError $ InvalidRequest "Edit location without an assigned ride is not enabled for this city"
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  when (not isValueAddNP) $ throwError (InvalidRequest "Edit location is not supported for non value add NP")
+  when (booking.status == SRB.CANCELLED || booking.status == SRB.COMPLETED) $
+    throwError (InvalidRequest $ "Customer is not allowed to change destination as the booking is in terminal state for bookingId: " <> booking.id.getId)
+  case (req.origin, req.destination) of
+    (Just pickup, _) -> do
+      whenJust mbRide $ \ride -> do
+        when (ride.status /= SRide.NEW) $
+          throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
+      EditLocationThrottle.decEditPickupAttempts booking.id merchant.numOfAllowedEditPickupLocationAttemptsThreshold
+      -- Proximity check uses booking's initial pickup; applies whether or not a Ride exists.
+      pickupLocationMappings <- QLM.findAllByEntityIdAndOrder booking.id.getId 0
+      oldestMapping <- (listToMaybe $ sortBy (comparing (Down . (.version))) pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for bookingId: " <> booking.id.getId)
+      initialLocationForBooking <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
+      let initialLatLong = LatLong {lat = initialLocationForBooking.lat, lon = initialLocationForBooking.lon}
+          currentLatLong = pickup.gps
+          distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
+      when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) $
+        throwError EditPickupLocationNotServiceable
+      whenJust mbRide $ \ride -> do
+        res <- withTryCatch "callGetDriverLocation:editLocation" (CallBPP.callGetDriverLocation ride.trackingUrl)
+        case res of
+          Right res' -> do
+            let curDriverLocation = res'.currPoint
+                distanceOfDriverFromChangingPickup = CD.distanceBetweenInMeters curDriverLocation currentLatLong
+            when (distanceOfDriverFromChangingPickup < distanceToHighPrecMeters merchant.driverDistanceThresholdFromPickup) $
+              throwError $ DriverAboutToReachAtInitialPickup (show distanceOfDriverFromChangingPickup)
+          Left err -> logTagInfo "DriverLocationFetchFailed" $ show err
+      startLocation <- DRide.buildLocation merchantId booking.merchantOperatingCityId pickup
+      QL.create startLocation
+      pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just merchantId) (Just booking.merchantOperatingCityId)
+      QLM.create pickupMapForBooking
+      whenJust mbRide $ \ride -> do
+        pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
+        QLM.create pickupMapForRide
+      pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id booking.transactionId DLM.SEARCH_REQUEST (Just merchantId) (Just booking.merchantOperatingCityId)
+      QLM.create pickupMapForSearchReq
+      let origin = Just $ startLocation{id = "0"}
+      bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+      uuid <- generateGUID
+      let dUpdateReq =
+            ACL.UpdateBuildReq
+              { bppBookingId,
+                merchant,
+                bppId = booking.providerId,
+                bppUrl = booking.providerUrl,
+                transactionId = booking.transactionId,
+                messageId = uuid,
+                city = merchant.defaultCity,
+                details =
+                  ACL.UEditLocationBuildReqDetails $
+                    ACL.EditLocationBuildReqDetails
+                      { bppRideId = (.bppRideId) <$> mbRide,
+                        origin,
+                        status = ACL.CONFIRM_UPDATE,
+                        destination = Nothing,
+                        stops = Nothing
+                      }
+              }
+      becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      QRB.updateIsBookingUpdated True booking.id
+      pure $ DRide.EditLocationResp Nothing "Success"
+    (_, Just destination) -> do
+      EditLocationThrottle.gateEditLocAttempts booking.id merchant.numOfAllowedEditLocationAttemptsThreshold
+      EditLocationThrottle.decEditLocSoftAttempts booking.id
+      startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
+      origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
+      let sourceLatLong = LatLong {lat = origin.lat, lon = origin.lon}
+      void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong destination.gps person
+      newDropLocation <- DRide.buildLocation merchantId booking.merchantOperatingCityId destination
+      QL.create newDropLocation
+      oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
+      bookingUpdateReq <- DRide.buildbookingUpdateRequest booking
+      QBUR.create bookingUpdateReq
+      startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+      QLM.create startLocMap
+      oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+      QLM.create oldDropLocMap
+      newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+      QLM.create newDropLocationMap
+      prevOrder <- QLM.maxOrderByEntity booking.id.getId
+      let destination' = Just $ newDropLocation{id = show prevOrder}
+      bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+      let dUpdateReq =
+            ACL.UpdateBuildReq
+              { bppBookingId,
+                merchant,
+                bppId = booking.providerId,
+                bppUrl = booking.providerUrl,
+                transactionId = booking.transactionId,
+                messageId = bookingUpdateReq.id.getId,
+                city = merchant.defaultCity,
+                details =
+                  ACL.UEditLocationBuildReqDetails $
+                    ACL.EditLocationBuildReqDetails
+                      { bppRideId = (.bppRideId) <$> mbRide,
+                        origin = Nothing,
+                        status = ACL.SOFT_UPDATE,
+                        destination = destination',
+                        stops = Nothing
+                      }
+              }
+      becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      pure $ DRide.EditLocationResp (Just bookingUpdateReq.id) "Success"
+    (_, _) -> throwError PickupOrDropLocationNotFound
 
 processStop :: Id SRB.Booking -> StopReq -> Id Merchant -> Bool -> Flow ()
 processStop bookingId loc merchantId isEdit = do
@@ -615,6 +762,8 @@ validateStopReq booking isEdit loc merchant = do
     SRB.AmbulanceDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in ambulance rides"
     SRB.DeliveryDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in delivery rides"
     SRB.MeterRideDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in meter rides"
+    -- Unlike Rental, EasyBooking has no mid-ride "planned stop" concept — reject like the others.
+    SRB.EasyBookingDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in easy booking rides"
 
   nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
   fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})

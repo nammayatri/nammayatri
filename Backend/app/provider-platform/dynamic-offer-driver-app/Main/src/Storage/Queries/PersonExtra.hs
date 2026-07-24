@@ -411,6 +411,17 @@ findByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash (Id merchantI
         ]
     ]
 
+findAllByMobileNumberAndMerchantAndRoles :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DbHash -> Id Merchant -> [Role] -> m [Person]
+findAllByMobileNumberAndMerchantAndRoles countryCode mobileNumberHash (Id merchantId) roles =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId,
+          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash],
+          Se.Is BeamP.role $ Se.In roles
+        ]
+    ]
+
 updatePersonName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Text -> Maybe Text -> m ()
 updatePersonName (Id personId) mbFirstName mbLastName = do
   now <- getCurrentTime
@@ -460,7 +471,8 @@ updatePersonRec (Id personId) person = do
         LTSSync.clientSdkVersion = LTSSync.Set person.clientSdkVersion,
         LTSSync.clientBundleVersion = LTSSync.Set person.clientBundleVersion,
         LTSSync.clientConfigVersion = LTSSync.Set person.clientConfigVersion,
-        LTSSync.clientDevice = LTSSync.Set person.clientDevice
+        LTSSync.clientDevice = LTSSync.Set person.clientDevice,
+        LTSSync.cloudType = LTSSync.Set person.cloudType
       }
 
 updateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> KET.Language -> m ()
@@ -521,10 +533,11 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         { LTSSync.clientSdkVersion = LTSSync.Set (mbClientVersion <|> person.clientSdkVersion),
           LTSSync.clientBundleVersion = LTSSync.Set (mbBundleVersion <|> person.clientBundleVersion),
           LTSSync.clientConfigVersion = LTSSync.Set (mbConfigVersion <|> person.clientConfigVersion),
-          LTSSync.clientDevice = LTSSync.Set (mbDevice <|> person.clientDevice)
+          LTSSync.clientDevice = LTSSync.Set (mbDevice <|> person.clientDevice),
+          LTSSync.cloudType = LTSSync.Set cloudType
         }
 
-updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe CloudType -> Id Person -> m ()
+updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe CloudType -> Id Person -> m ()
 updateCloudType cloudType (Id personId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -532,6 +545,8 @@ updateCloudType cloudType (Id personId) = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
+  LTSSync.syncDriverPoolDataToLTS (Id personId) $
+    LTSSync.emptyUpdate {LTSSync.cloudType = LTSSync.Set cloudType}
 
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
@@ -699,6 +714,15 @@ updateMerchantIdAndCityId personId merchantId merchantOperatingCityId = do
 findByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =
   findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash),
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]
+
+findAllByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m [Person]
+findAllByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash),
           Se.Is BeamP.merchantId $ Se.Eq merchantId

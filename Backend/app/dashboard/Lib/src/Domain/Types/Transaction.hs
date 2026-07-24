@@ -91,6 +91,7 @@ data Endpoint
   | SafetyAPI Safety.SafetyEndpoint
   | DashboardUserLogin
   | DashboardUserLogout
+  | DashboardTwoFactorAdminReset
   | RiderManagementAPI RiderManagement.ManagementUserActionType
   | RiderAppManagementAPI RiderAppManagement.AppManagementUserActionType
   | RiderIssueManagementAPI RiderIssueManagement.IssueManagementUserActionType
@@ -112,6 +113,7 @@ instance Show Endpoint where
     SafetyAPI e -> "SafetyAPI " <> show e
     DashboardUserLogin -> "DASHBOARD_USER/LOGIN"
     DashboardUserLogout -> "DASHBOARD_USER/LOGOUT"
+    DashboardTwoFactorAdminReset -> "DASHBOARD_USER/TWO_FACTOR_ADMIN_RESET"
     RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
     RiderAppManagementAPI e -> "RIDER_APP_MANAGEMENT/" <> show e
     RiderIssueManagementAPI e -> "RIDER_ISSUE_MANAGEMENT/" <> show e
@@ -159,6 +161,9 @@ instance Read Endpoint where
             ++ [ (SafetyAPI v1, r2)
                  | r1 <- stripPrefix "SafetyAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (DashboardTwoFactorAdminReset, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/TWO_FACTOR_ADMIN_RESET" r
                ]
             ++ [ (DashboardUserLogin, r1)
                  | r1 <- stripPrefix "DASHBOARD_USER/LOGIN" r

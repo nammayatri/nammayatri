@@ -70,10 +70,12 @@
   rider-dashboard-metrics = 9991;
   provider-dashboard-metrics = 9992;
   rider-producer-metrics = 9990;
-  producer-metrics = 9990;
+  producer-metrics = 9993;
+  rider-producer-healthcheck = 8114;
+  producer-healthcheck = 8115;
   unified-dashboard-metrics = 9995;
   driver-offer-allocator-metrics = 8056;
-  rider-app-scheduler-metrics = 8056;
+  rider-app-scheduler-metrics = 8057;
 
   # Dev tools
   caddy-reverse-proxy = 9090;
@@ -82,4 +84,6 @@
   metabase = 3001;
   redis-commander = 8431;
   victoria-metrics = 8428;
+  db-manager-backend = 3010;
+  db-manager-frontend = 5183;
 }

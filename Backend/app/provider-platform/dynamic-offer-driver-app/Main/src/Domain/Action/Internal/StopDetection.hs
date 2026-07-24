@@ -16,11 +16,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBAP as BP
-import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -40,7 +42,7 @@ stopDetection StopDetectionReq {..} = do
   logDebug $ "Stopdetected for driverId:" <> driverId.getId
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let distance = distanceBetweenInMeters location (LatLong booking.fromLocation.lat booking.fromLocation.lon)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let isValidRideForStop = (ride.status == INPROGRESS || ride.status == NEW) && not booking.isScheduled
@@ -49,7 +51,7 @@ stopDetection StopDetectionReq {..} = do
     oldStopCount :: Maybe Int <- Redis.safeGet $ mkStopCountRedisKey rideId.getId
     let currStopCount = 1 + fromMaybe 0 oldStopCount
     Redis.setExp (mkStopCountRedisKey ride.id.getId) currStopCount 1200 --20 mins
-    vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
+    vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
     case (vehicleServiceTier.stopFcmThreshold, vehicleServiceTier.stopFcmSuppressCount) of
       (Just threshold, Just suppressCount) -> do
         let condition = sendNotificationCondition threshold suppressCount currStopCount

@@ -25,7 +25,6 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.DocsVerificationStatus,
     documentImageId :: Kernel.Types.Id.Id Domain.Types.Image.Image,
-    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     failedRules :: [Kernel.Prelude.Text],
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -35,6 +34,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     manufacturerModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    pendingChallan :: Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.PendingChallanResult,
     permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     pucExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -57,6 +57,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus,
+    verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -64,9 +65,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -80,7 +81,6 @@ instance EncryptedItem VehicleRegistrationCertificate where
           dateOfRegistration = dateOfRegistration entity,
           docsVerificationStatus = docsVerificationStatus entity,
           documentImageId = documentImageId entity,
-          enableForAirport = enableForAirport entity,
           failedRules = failedRules entity,
           fitnessExpiry = fitnessExpiry entity,
           fleetOwnerId = fleetOwnerId entity,
@@ -90,6 +90,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           mYManufacturing = mYManufacturing entity,
           manufacturerModel = manufacturerModel entity,
           oxygen = oxygen entity,
+          pendingChallan = pendingChallan entity,
           permitExpiry = permitExpiry entity,
           pucExpiry = pucExpiry entity,
           rejectReason = rejectReason entity,
@@ -112,6 +113,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           vehicleVariant = vehicleVariant entity,
           ventilator = ventilator entity,
           verificationStatus = verificationStatus entity,
+          verified = verified entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           createdAt = createdAt entity,
@@ -127,7 +129,6 @@ instance EncryptedItem VehicleRegistrationCertificate where
             dateOfRegistration = dateOfRegistration entity,
             docsVerificationStatus = docsVerificationStatus entity,
             documentImageId = documentImageId entity,
-            enableForAirport = enableForAirport entity,
             failedRules = failedRules entity,
             fitnessExpiry = fitnessExpiry entity,
             fleetOwnerId = fleetOwnerId entity,
@@ -137,6 +138,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             mYManufacturing = mYManufacturing entity,
             manufacturerModel = manufacturerModel entity,
             oxygen = oxygen entity,
+            pendingChallan = pendingChallan entity,
             permitExpiry = permitExpiry entity,
             pucExpiry = pucExpiry entity,
             rejectReason = rejectReason entity,
@@ -159,6 +161,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             vehicleVariant = vehicleVariant entity,
             ventilator = ventilator entity,
             verificationStatus = verificationStatus entity,
+            verified = verified entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             createdAt = createdAt entity,
@@ -174,6 +177,9 @@ instance EncryptedItem' VehicleRegistrationCertificate where
 
 data DocsVerificationStatus = ADMIN_PENDING | ADMIN_APPROVED | ADMIN_REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocsVerificationStatus)
+data PendingChallanResult = PendingChallanResult {errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text, pendingChallanCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''DocsVerificationStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocsVerificationStatus))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DocsVerificationStatus))

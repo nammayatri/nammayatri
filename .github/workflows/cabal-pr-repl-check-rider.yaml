@@ -1,0 +1,140 @@
+name: Cabal PR Repl Check — Rider
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: cabal-pr-repl-rider-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  repl-check-rider:
+    name: Incremental Repl Check — Rider
+    runs-on: x86_64_main_pull
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Find merge base commit
+        id: merge-base
+        run: |
+          git fetch origin main
+          BASE_SHA=$(git merge-base origin/main ${{ github.event.pull_request.head.sha }})
+          echo "sha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "Merge base: $BASE_SHA"
+
+      - name: Setup MinIO client
+        run: |
+          MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
+          MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
+          MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+      - name: Check minio-pushed tag for merge base
+        id: artifact-check
+        run: |
+          MERGE_BASE="${{ steps.merge-base.outputs.sha }}"
+          git fetch origin 'refs/tags/minio-pushed/*:refs/tags/minio-pushed/*' || true
+          FOUND_SHA=""
+          for sha in $(git log --format='%H' -n 10 "$MERGE_BASE"); do
+            if git rev-parse -q --verify "refs/tags/minio-pushed/$sha" >/dev/null; then
+              FOUND_SHA="$sha"
+              echo "minio-push verified for $sha"
+              break
+            fi
+          done
+          if [ -n "$FOUND_SHA" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "base_sha=$FOUND_SHA" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No minio-pushed tag found in last 10 commits from $MERGE_BASE"
+            exit 1
+          fi
+
+      - name: Download repl artifacts from MinIO
+        if: steps.artifact-check.outputs.found == 'true'
+        run: |
+          BASE_SHA="${{ steps.artifact-check.outputs.base_sha }}"
+          ARTIFACTS_DIR=/tmp/ny-pr-artifacts-${{ github.run_id }}
+          mkdir -p "$ARTIFACTS_DIR"
+
+          mc cp "minio/haskell-cache/cabal-build/$BASE_SHA/build-path.txt"                   "$ARTIFACTS_DIR/build-path.txt"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/cache-root.txt"                    "$ARTIFACTS_DIR/cache-root.txt"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/rider-app.tar.zst"                 "$ARTIFACTS_DIR/rider.tar.zst"
+          mc cp "minio/haskell-cache/cabal-repl/$BASE_SHA/repl-support.tar.zst"              "$ARTIFACTS_DIR/repl-support.tar.zst"
+
+          echo "ARTIFACTS_DIR=$ARTIFACTS_DIR" >> $GITHUB_ENV
+          ORIGINAL_PATH=$(cat "$ARTIFACTS_DIR/build-path.txt")
+          ORIGINAL_CACHE_ROOT=$(cat "$ARTIFACTS_DIR/cache-root.txt")
+          echo "Original build path: $ORIGINAL_PATH"
+          echo "Original cache root: $ORIGINAL_CACHE_ROOT"
+          echo "original_path=$ORIGINAL_PATH" >> $GITHUB_ENV
+          echo "original_cache_root=$ORIGINAL_CACHE_ROOT" >> $GITHUB_ENV
+
+      - name: Extract repl artifacts
+        if: success() && steps.artifact-check.outputs.found == 'true'
+        run: |
+          PR_CACHE_ROOT=/tmp/ny-pr-cache-${{ github.run_id }}
+          mkdir -p "$PR_CACHE_ROOT"
+          echo "PR_CACHE_ROOT=$PR_CACHE_ROOT" >> $GITHUB_ENV
+
+          tar -I 'zstd -T0' -xf "$ARTIFACTS_DIR/rider.tar.zst"        -C "$PR_CACHE_ROOT"
+          tar -I 'zstd -T0' -xf "$ARTIFACTS_DIR/repl-support.tar.zst" -C "$PR_CACHE_ROOT"
+
+          rm -f "$ARTIFACTS_DIR"/*.tar.zst
+
+      - name: Repl check — rider-app
+        if: success() && steps.artifact-check.outputs.found == 'true'
+        run: |
+          CI_PROJECT_ROOT="$original_path"
+          LOCAL_ROOT="$GITHUB_WORKSPACE"
+          ORIGINAL_CABAL_DIR="$original_cache_root/.cabal-dir"
+          ORIGINAL_DIST_RIDER="$original_cache_root/dist-newrepl-rider"
+
+          NIX_OVERLAY=""
+          if [ -d "$PR_CACHE_ROOT/.nix-deps/nix/store" ]; then
+            while IFS= read -r dep_file; do
+              rel="${dep_file#"$PR_CACHE_ROOT/.nix-deps"}"
+              if [ -f "$rel" ]; then
+                NIX_OVERLAY="$NIX_OVERLAY mount --bind $PR_CACHE_ROOT/.nix-deps$rel $rel &&"
+              fi
+            done < <(find "$PR_CACHE_ROOT/.nix-deps/nix/store" -name "*.a" -type f 2>/dev/null)
+          fi
+
+          nix develop .#backend --command \
+            unshare --user --mount --map-root-user bash -c "
+              set -eo pipefail
+              mkdir -p /tmp/ns-root
+              mount --bind $LOCAL_ROOT /tmp/ns-root
+              mount -t tmpfs tmpfs /home
+              mkdir -p $CI_PROJECT_ROOT
+              mount --bind /tmp/ns-root $CI_PROJECT_ROOT
+              mkdir -p $ORIGINAL_CABAL_DIR
+              mount --bind $PR_CACHE_ROOT/.cabal-dir $ORIGINAL_CABAL_DIR
+              mkdir -p $ORIGINAL_DIST_RIDER
+              mount --bind $PR_CACHE_ROOT/dist-newrepl-rider $ORIGINAL_DIST_RIDER
+              $NIX_OVERLAY true
+              cd $CI_PROJECT_ROOT/Backend
+              ln -sfn $ORIGINAL_DIST_RIDER dist-newrepl-rider
+              grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
+                [ -d \"\$pkg\" ] || continue
+                rm -rf \"\$pkg/.hie\"
+                ln -sfn \"$PR_CACHE_ROOT/hie/\$pkg\" \"\$pkg/.hie\"
+              done
+              export CABAL_DIR=$ORIGINAL_CABAL_DIR
+              cabal repl rider-app \
+                --repl-options='-fno-code -fwrite-interface' \
+                --builddir=dist-newrepl-rider <<< ':quit' 2>&1 | tee /tmp/repl-rider-out-${{ github.run_id }}.txt
+            "
+          grep -q Failed /tmp/repl-rider-out-${{ github.run_id }}.txt && exit 1 || true
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf "$PR_CACHE_ROOT" "$ARTIFACTS_DIR" /tmp/ns-root /tmp/repl-rider-out-${{ github.run_id }}.txt

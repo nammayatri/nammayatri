@@ -30,6 +30,9 @@ import qualified Sequelize as Se
 findById :: BeamFlow m r => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findById (Id paymentOrder) = findOneWithKV [Se.Is BeamPO.id $ Se.Eq paymentOrder]
 
+findAllByIds :: BeamFlow m r => [Id DOrder.PaymentOrder] -> m [DOrder.PaymentOrder]
+findAllByIds ids = findAllWithKV [Se.Is BeamPO.id $ Se.In (map getId ids)]
+
 findByShortId :: BeamFlow m r => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamPO.shortId $ Se.Eq shortId]
 
@@ -41,6 +44,14 @@ findLatestByPersonId personId =
     (Just 1)
     Nothing
     <&> listToMaybe
+
+findAllByPersonId :: BeamFlow m r => Text -> Text -> Maybe Int -> Maybe Int -> m [DOrder.PaymentOrder]
+findAllByPersonId personId merchantId mbLimit mbOffset =
+  findAllWithOptionsKV
+    [Se.And [Se.Is BeamPO.personId $ Se.Eq personId, Se.Is BeamPO.merchantId $ Se.Eq merchantId]]
+    (Se.Desc BeamPO.createdAt)
+    mbLimit
+    mbOffset
 
 findByDomainEntityId :: BeamFlow m r => Text -> m (Maybe DOrder.PaymentOrder)
 findByDomainEntityId domainEntityId =

@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 
+import qualified Data.Aeson
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -18,6 +19,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.MerchantServiceUsageConfig as Beam
 
 instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig where
@@ -26,6 +28,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
       Just
         Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig
           { aadhaarVerificationService = aadhaarVerificationService,
+            additionalIssueTicketServices = additionalIssueTicketServices,
             autoComplete = autoComplete,
             cancelPaymentIntent = fromMaybe Kernel.External.Payment.Types.Stripe cancelPaymentIntent,
             capturePaymentIntent = capturePaymentIntent,
@@ -38,6 +41,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             createdAt = createdAt,
             deleteCard = deleteCard,
             enableDashboardSms = enableDashboardSms,
+            eventTrackingOverrides = Kernel.Utils.JSON.valueToMaybe =<< eventTrackingOverrides,
             eventTrackingProviders = fromMaybe [Kernel.External.EventTracking.Types.Moengage] eventTrackingProviders,
             getCardList = getCardList,
             getDistances = getDistances,
@@ -76,6 +80,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
   toTType' (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig {..}) = do
     Beam.MerchantServiceUsageConfigT
       { Beam.aadhaarVerificationService = aadhaarVerificationService,
+        Beam.additionalIssueTicketServices = additionalIssueTicketServices,
         Beam.autoComplete = autoComplete,
         Beam.cancelPaymentIntent = Kernel.Prelude.Just cancelPaymentIntent,
         Beam.capturePaymentIntent = capturePaymentIntent,
@@ -88,6 +93,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.createdAt = createdAt,
         Beam.deleteCard = deleteCard,
         Beam.enableDashboardSms = enableDashboardSms,
+        Beam.eventTrackingOverrides = Data.Aeson.toJSON <$> eventTrackingOverrides,
         Beam.eventTrackingProviders = Kernel.Prelude.Just eventTrackingProviders,
         Beam.getCardList = getCardList,
         Beam.getDistances = getDistances,

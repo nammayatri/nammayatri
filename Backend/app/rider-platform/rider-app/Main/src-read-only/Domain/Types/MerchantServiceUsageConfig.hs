@@ -4,6 +4,7 @@
 module Domain.Types.MerchantServiceUsageConfig where
 
 import Data.Aeson
+import qualified Data.Map.Strict
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -25,6 +26,7 @@ import qualified Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { aadhaarVerificationService :: Kernel.External.AadhaarVerification.AadhaarVerificationService,
+    additionalIssueTicketServices :: Kernel.Prelude.Maybe [Kernel.External.Ticket.Types.IssueTicketService],
     autoComplete :: Kernel.External.Maps.Types.MapsService,
     cancelPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
     capturePaymentIntent :: Kernel.External.Payment.Types.PaymentService,
@@ -37,6 +39,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     createdAt :: Kernel.Prelude.UTCTime,
     deleteCard :: Kernel.External.Payment.Types.PaymentService,
     enableDashboardSms :: Kernel.Prelude.Bool,
+    eventTrackingOverrides :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text [Kernel.External.EventTracking.EventTrackingService]),
     eventTrackingProviders :: [Kernel.External.EventTracking.EventTrackingService],
     getCardList :: Kernel.External.Payment.Types.PaymentService,
     getDistances :: Kernel.External.Maps.Types.MapsService,

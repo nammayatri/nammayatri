@@ -4,6 +4,7 @@
 
 module Storage.Queries.FRFSTicketBooking (module Storage.Queries.FRFSTicketBooking, module ReExport) where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
@@ -16,6 +17,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.FRFSTicketBookingExtra as ReExport
@@ -50,6 +52,11 @@ updateBPPOrderIdAndStatusById bppOrderId status id = do
 
 updateBPPOrderIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateBPPOrderIdById bppOrderId id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.bppOrderId bppOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateBPPPaymentIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateBPPPaymentIdById bppPaymentId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.bppPaymentId bppPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateBppBankDetailsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -124,15 +131,16 @@ updatePayoutStatusById cashbackStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cashbackStatus cashbackStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateQuoteAndBppItemIdAndRouteStationsJson ::
+updateQuoteBppItemIdRouteStationsAndServiceTierById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateQuoteAndBppItemIdAndRouteStationsJson quoteId bppItemId routeStationsJson id = do
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateQuoteBppItemIdRouteStationsAndServiceTierById quoteId bppItemId routeStationsJson serviceTierType id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.routeStationsJson routeStationsJson,
+      Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -196,12 +204,15 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppOrderId bppOrderId,
+      Se.Set Beam.bppPaymentId bppPaymentId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
+      Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
+      Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.cloudType cloudType,
       Se.Set Beam.conductorId conductorId,
       Se.Set Beam.customerCancelled customerCancelled,

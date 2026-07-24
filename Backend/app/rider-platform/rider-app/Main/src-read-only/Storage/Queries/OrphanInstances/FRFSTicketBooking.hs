@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 
+import qualified Data.Text
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -14,10 +15,13 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
+import qualified Kernel.Utils.Version
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -28,12 +32,15 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             bppDelayedInterest = bppDelayedInterest,
             bppItemId = bppItemId,
             bppOrderId = bppOrderId,
+            bppPaymentId = bppPaymentId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
             busLocationData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData),
             cancellationCharges = cancellationCharges,
             cashbackPayoutOrderId = cashbackPayoutOrderId,
             cashbackStatus = cashbackStatus,
+            clientBundleVersion = clientBundleVersion',
+            clientSdkVersion = clientSdkVersion',
             cloudType = cloudType,
             conductorId = conductorId,
             customerCancelled = customerCancelled,
@@ -115,12 +122,15 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.bppDelayedInterest = bppDelayedInterest,
         Beam.bppItemId = bppItemId,
         Beam.bppOrderId = bppOrderId,
+        Beam.bppPaymentId = bppPaymentId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.busLocationData = Just $ toJSON busLocationData,
         Beam.cancellationCharges = cancellationCharges,
         Beam.cashbackPayoutOrderId = cashbackPayoutOrderId,
         Beam.cashbackStatus = cashbackStatus,
+        Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
+        Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.cloudType = cloudType,
         Beam.conductorId = conductorId,
         Beam.customerCancelled = customerCancelled,

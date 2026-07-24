@@ -55,6 +55,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -149,6 +150,7 @@ data AppCfg = AppCfg
     maxShards :: Int,
     maxNotificationShards :: Int,
     gateNotifiedKeyShards :: Int,
+    activeDriversListKeyShards :: Int,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
@@ -192,9 +194,12 @@ data AppCfg = AppCfg
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     ttenTokenCacheExpiry :: Seconds,
+    imageExtractionTimeoutSec :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     enableLtsPoolDataForPooling :: Bool,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -245,6 +250,7 @@ data AppEnv = AppEnv
     googleTranslateKey :: Text,
     bppMetrics :: BPPMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
+    driverSearchRequestResponseMetrics :: DriverSearchRequestResponseMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     searchRequestExpirationSecondsForMultimodal :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
@@ -266,6 +272,8 @@ data AppEnv = AppEnv
     maxShards :: Int,
     maxNotificationShards :: Int,
     gateNotifiedKeyShards :: Int,
+    activeDriversListKeyShards :: Int,
+    enableDriverFeeShardedFanOut :: Bool,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -320,10 +328,14 @@ data AppEnv = AppEnv
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
     ttenTokenCacheExpiry :: Seconds,
+    imageExtractionTimeoutSec :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     masterCloudForwarderManager :: Http.Manager,
     enableLtsPoolDataForPooling :: Bool,
-    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
+    xyneWebhookSigningSecret :: Text,
+    xyneWebhookBearerToken :: Text,
+    actorInfo :: Finance.ActorInfo
   }
   deriving (Generic)
 
@@ -385,10 +397,12 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       Right env -> pure (Just env)
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  enableDriverFeeShardedFanOut <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "ENABLE_DRIVER_FEE_SHARDED_FAN_OUT"
   let sessionId = Nothing
   let kafkaProducerForART = Just kafkaProducerTools
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
+  driverSearchRequestResponseMetrics <- registerDriverSearchRequestResponseMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   serviceClickhouseEnv <- createConn driverClickhouseCfg
@@ -405,6 +419,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
+  let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

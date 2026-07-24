@@ -40,6 +40,7 @@ module SharedLogic.CallBAP
     notfyDeliveryImageUploadedToBAP,
     sendChangeServiceTierUpdateToBAP,
     sendAddBaggageUpdateToBAP,
+    buildVehicleFromRideDetailsSnapshot,
   )
 where
 
@@ -71,6 +72,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time hiding (getCurrentTime)
+import qualified Data.UUID as UUID
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
@@ -82,6 +84,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DDriverStats
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Estimate as DEst
+import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -91,12 +94,14 @@ import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
@@ -114,20 +119,26 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Kernel.Utils.InternalAPICallLogging as ApiCallLogger
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
@@ -144,7 +155,6 @@ import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
-import Utils.Common.Cac.KeyNameConstants
 
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -176,7 +186,10 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
   ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
   logDebug $ "on_selectV2 request bpp: " <> show content
-  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
+  let onSelectReq = Spec.OnSelectReq context Nothing (Just content)
+  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnSelectV2" "BPP" (Just searchRequest.transactionId) (Just onSelectReq) res
   where
     getMsgIdByTxnId :: CacheFlow m r => Text -> m Text
     getMsgIdByTxnId txnId = do
@@ -206,7 +219,9 @@ callOnUpdateV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onUpdateReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnUpdateV2" "BPP" (req.onUpdateReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -227,7 +242,9 @@ callOnStatusV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onStatusReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_STATUS) API.onStatusAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnStatusV2" "BPP" (req.onStatusReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnCancelV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -248,7 +265,9 @@ callOnCancelV2 req retryConfig merchantId = do
   bapUri <- parseBaseUrl bapUri'
   bppSubscriberId <- req.onCancelReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Ride Assigned request context.")
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_CANCEL) API.onCancelAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnCancelV2" "BPP" (req.onCancelReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -278,7 +297,10 @@ callOnConfirmV2 transporter context content bppConfig = do
   txnId <- Utils.getTransactionId context
   ttl <- bppConfig.onConfirmTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
-  void $ withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
+  let onConfirmReq = Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content}
+  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap onConfirmReq
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnConfirmV2" "BPP" (Just txnId) (Just onConfirmReq) res
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -338,7 +360,7 @@ rideAssignedCommon booking ride driver veh = do
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-  mbTransporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
@@ -385,6 +407,39 @@ rideAssignedCommon booking ride driver veh = do
             Nothing -> QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
+  let isTierUpgradeFeatureEnabled = fromMaybe False (mbTransporterConfig >>= (.enableTierUpgradeFeature))
+  (isTierUpgrade, assignedServiceTierType, assignedServiceTierName) <-
+    case (isTierUpgradeFeatureEnabled, mbTransporterConfig) of
+      (True, Just transporterConfig) -> do
+        let bookedTier = booking.vehicleServiceTier
+        cityTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow booking.merchantOperatingCityId Nothing
+        supportedServiceTiers <- CQFP.findSupportedServiceTiersByMerchantOpCityId booking.merchantOperatingCityId
+        now <- getCurrentTime
+        let mbBookedCfg = DL.find (\t -> t.serviceTierType == bookedTier) cityTiers
+            (_acWorking, mbAssignedCfg, _isVehicleSupported) =
+              SVST.getDriverDefaultSupportedServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityTiers now
+            isUpgrade = fromMaybe False $ do
+              a <- mbAssignedCfg
+              b <- mbBookedCfg
+              pure (a.priority < b.priority)
+        logInfo $
+          "tierUpgradeCheck ride=" <> ride.id.getId
+            <> " booking.vehicleServiceTier="
+            <> show bookedTier
+            <> " vehicle.variant="
+            <> show vehicle.variant
+            <> " mbBookedCfg="
+            <> show ((\t -> (t.serviceTierType, t.name, t.priority)) <$> mbBookedCfg)
+            <> " mbAssignedCfg="
+            <> show ((\t -> (t.serviceTierType, t.name, t.priority)) <$> mbAssignedCfg)
+            <> " isTierUpgrade="
+            <> show isUpgrade
+        pure
+          ( isUpgrade,
+            if isUpgrade then (show . (.serviceTierType)) <$> mbAssignedCfg else Nothing,
+            if isUpgrade then (.name) <$> mbAssignedCfg else Nothing
+          )
+      _ -> pure (False, Nothing, Nothing)
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text
@@ -415,7 +470,7 @@ rideAssignedCommon booking ride driver veh = do
                             _ -> Nothing
                    in maybe False (== veh.registrationNo) mbRegNo
               )
-              <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+              <$> QIV.findAllByDriverIdAndDocType ride.driverId (docTypeToText DIT.VehicleRegistrationCertificate)
 
           newVehicle <-
             (flip $ maybe (pure veh))
@@ -465,7 +520,7 @@ buildOnConfirmMessage booking ride driver veh = do
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 rideAssignedBuildReq farePolicy becknConfig
+  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
   pure . fromJust $ onConfirmMessage
@@ -540,7 +595,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken EmptyDynamicParam
+  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) EmptyDynamicParam
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
@@ -592,6 +647,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
+  fork "FleetEngine: trip enroute to dropoff on ride started" $ FleetEngine.notifyRideStarted booking ride
 
 sendRideEstimatedEndTimeRangeUpdateToBAP ::
   ( CacheFlow m r,
@@ -630,6 +686,40 @@ sendRideEstimatedEndTimeRangeUpdateToBAP booking ride = do
   endEstimateTimeRangeMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing endEstimateTimeRangeBuildReq
   void $ callOnUpdateV2 endEstimateTimeRangeMsgV2 retryConfig merchant.id
 
+buildVehicleFromRideDetailsSnapshot :: DRB.Booking -> SRide.Ride -> DRD.RideDetails -> DVeh.Vehicle
+buildVehicleFromRideDetailsSnapshot booking ride rideDetails =
+  DVeh.Vehicle
+    { driverId = ride.driverId,
+      merchantId = booking.providerId,
+      merchantOperatingCityId = Just booking.merchantOperatingCityId,
+      registrationNo = rideDetails.vehicleNumber,
+      color = fromMaybe "" rideDetails.vehicleColor,
+      model = fromMaybe "" rideDetails.vehicleModel,
+      vehicleClass = fromMaybe "" rideDetails.vehicleClass,
+      variant = fromMaybe (Variant.castServiceTierToVariant booking.vehicleServiceTier) rideDetails.vehicleVariant,
+      capacity = ride.vehicleServiceTierSeatingCapacity,
+      selectedServiceTiers = [booking.vehicleServiceTier],
+      airConditioned = Nothing,
+      category = Nothing,
+      downgradeReason = Nothing,
+      energyType = Nothing,
+      luggageCapacity = Nothing,
+      mYManufacturing = Nothing,
+      make = Nothing,
+      oxygen = Nothing,
+      registrationCategory = Nothing,
+      ruleBasedUpgradeTiers = Nothing,
+      size = Nothing,
+      vehicleImageId = Nothing,
+      vehicleName = Nothing,
+      vehicleRating = Nothing,
+      vehicleRatingRemark = Nothing,
+      vehicleTags = Nothing,
+      ventilator = Nothing,
+      createdAt = ride.createdAt,
+      updatedAt = ride.updatedAt
+    }
+
 sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -647,15 +737,24 @@ sendRideCompletedUpdateToBAP ::
   Maybe DMPM.PaymentMethodInfo ->
   Maybe Text ->
   Maybe Maps.LatLong ->
+  Bool ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  mbVehicle <- QVeh.findById ride.driverId
+  vehicle <- case mbVehicle of
+    Just v -> pure v
+    Nothing
+      | allowSnapshotVehicleFallback -> do
+        logWarning $ "Vehicle missing for driver " <> ride.driverId.getId <> " on completed ride " <> ride.id.getId <> "; using ride_details snapshot (ops/cron sync)"
+        rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+        pure $ buildVehicleFromRideDetailsSnapshot booking ride rideDetails
+      | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
@@ -665,6 +764,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
+  fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -695,6 +795,8 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellat
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
+  whenJust mbRide $ \cancelledRide ->
+    fork "FleetEngine: cancel trip on booking cancelled" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId cancelledRide.id
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -719,7 +821,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   isValueAddNP <- CValueAddNP.isValueAddNP searchReq.bapId
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId searchReq.configInExperimentVersions (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
+  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
   callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
@@ -805,6 +907,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 
 sendPhoneCallRequestUpdateToBAP ::
   ( CacheFlow m r,
@@ -970,31 +1073,33 @@ sendUpdateEditDestToBAP ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
-  SRide.Ride ->
+  Maybe SRide.Ride ->
   DBUR.BookingUpdateRequest ->
   Maybe DLoc.Location ->
   Maybe Maps.LatLong ->
   DOU.UpdateType ->
   m ()
-sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination currentLocation updateType = do
+sendUpdateEditDestToBAP booking mbRide bookingUpdateReqDetails newDestination currentLocation updateType = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-    vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    let paymentUrl = Nothing
-    riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
-    riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
-        sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
+    becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bookingDetails <- forM mbRide $ \ride -> do
+      let bppConfig = becknConfig
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      let paymentUrl = Nothing
+      riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+      riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+      pure ACL.BookingDetails {..}
+    let sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {bookingDetails, bookingUpdateReqDetails, newDestination, currentLocation, updateType}
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
     void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id

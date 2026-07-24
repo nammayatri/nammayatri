@@ -31,6 +31,10 @@ _SPECS = {
             "passExpiryReminderDays",
             "remindEverydayUntilPassExpiry",
             "passExpiryReminderBatchSize",
+            # cancellation-fee test toggles
+            "immediateCaptureRiderCancellationFee",
+            "immediateCaptureDriverCancellationFee",
+            "settleCancellationFeeBeforeNextRide",
         },
         "selectable": {
             "merchantOperatingCityId",
@@ -39,6 +43,26 @@ _SPECS = {
             "remindEverydayUntilPassExpiry",
             "passExpiryReminderBatchSize",
             "timeDiffFromUtc",
+            "immediateCaptureRiderCancellationFee",
+            "immediateCaptureDriverCancellationFee",
+            "settleCancellationFeeBeforeNextRide",
+        },
+        "filter": {"merchantOperatingCityId"},
+    },
+    "transporterConfig": {
+        "schema": "atlas_driver_offer_bpp",
+        "pg_table": "transporter_config",
+        "kv_table_name": "transporterConfig",
+        "pk": "merchantOperatingCityId",
+        "updatable": {
+            # cancellation-fee test toggles
+            "canAddCancellationFee",
+            "cancellationFeePaymentMethodExceptions",
+        },
+        "selectable": {
+            "merchantOperatingCityId",
+            "canAddCancellationFee",
+            "cancellationFeePaymentMethodExceptions",
         },
         "filter": {"merchantOperatingCityId"},
     },

@@ -71,6 +71,27 @@ getCoinsByEventFunction (Id driverId) eventFunction entityId =
         ]
     ]
 
+-- | Looks up an existing award only within [windowStart, windowEnd).
+-- Used for incentive configs so yesterday's (or previous-window) award does not block today.
+getCoinsByEventFunctionWithinTimeRange ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id SP.Person ->
+  DriverCoinsFunctionType ->
+  Maybe Text ->
+  UTCTime ->
+  UTCTime ->
+  m (Maybe CoinHistory)
+getCoinsByEventFunctionWithinTimeRange (Id driverId) eventFunction entityId windowStart windowEnd =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDC.driverId $ Se.Eq driverId,
+          Se.Is BeamDC.eventFunction $ Se.Eq eventFunction,
+          Se.Is BeamDC.entityId $ Se.Eq entityId,
+          Se.Is BeamDC.createdAt $ Se.GreaterThanOrEq windowStart,
+          Se.Is BeamDC.createdAt $ Se.LessThan windowEnd
+        ]
+    ]
+
 getExpiringCoinsInXDay :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> NominalDiffTime -> NominalDiffTime -> m [CoinHistory]
 getExpiringCoinsInXDay (Id driverId) configTime timeDiffFromUtc = do
   istTime <- addUTCTime timeDiffFromUtc <$> getCurrentTime

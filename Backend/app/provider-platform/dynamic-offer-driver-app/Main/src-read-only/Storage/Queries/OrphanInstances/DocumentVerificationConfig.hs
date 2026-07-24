@@ -3,7 +3,6 @@
 
 module Storage.Queries.OrphanInstances.DocumentVerificationConfig where
 
-import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.Beam.Functions
@@ -31,9 +30,11 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             disableWarning = disableWarning,
             doStrictVerifcation = doStrictVerifcation,
             documentCategory = documentCategory,
-            documentFields = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< documentFieldsJSON,
+            documentFields = getDocumentFieldsFromJSON documentFieldsJSON,
             documentFlowGrouping = documentFlowGrouping,
+            documentOnboardingStage = documentOnboardingStage,
             documentType = documentType,
+            faceMatchSourceDoc = faceMatchSourceDoc,
             filterForOldApks = filterForOldApks,
             isApprovalSupported = isApprovalSupported,
             isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
@@ -43,6 +44,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             isMandatory = isMandatory,
             isMandatoryForEnabling = isMandatoryForEnabling,
             isReminderSupported = isReminderSupported,
+            markImageValidOnValidationSkip = markImageValidOnValidationSkip,
             maxRetryCount = maxRetryCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -70,9 +72,11 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.disableWarning = disableWarning,
         Beam.doStrictVerifcation = doStrictVerifcation,
         Beam.documentCategory = documentCategory,
-        Beam.documentFieldsJSON = Data.Aeson.toJSON <$> documentFields,
+        Beam.documentFieldsJSON = mkDocumentFieldsJSON documentFields,
         Beam.documentFlowGrouping = documentFlowGrouping,
+        Beam.documentOnboardingStage = documentOnboardingStage,
         Beam.documentType = documentType,
+        Beam.faceMatchSourceDoc = faceMatchSourceDoc,
         Beam.filterForOldApks = filterForOldApks,
         Beam.isApprovalSupported = isApprovalSupported,
         Beam.isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
@@ -82,6 +86,7 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
         Beam.isMandatory = isMandatory,
         Beam.isMandatoryForEnabling = isMandatoryForEnabling,
         Beam.isReminderSupported = isReminderSupported,
+        Beam.markImageValidOnValidationSkip = markImageValidOnValidationSkip,
         Beam.maxRetryCount = maxRetryCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

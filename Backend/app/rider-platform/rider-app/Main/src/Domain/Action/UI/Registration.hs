@@ -101,6 +101,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -115,19 +116,23 @@ import qualified SharedLogic.Person as SLP
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.MerchantConfig as CQMerchantCfg
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.DepotManager as QDepotManager
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified System.Environment as SE
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notify
 import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)
@@ -274,6 +279,21 @@ data AuthVerifyRes = AuthVerifyRes
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
+lookupClientIPPositionFromRight :: IO Int
+lookupClientIPPositionFromRight = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv "XFF_CLIENT_IP_POSITION_FROM_RIGHT"
+
+extractClientIP :: MonadIO m => Maybe Text -> m (Maybe Text)
+extractClientIP mbXForwardedFor = do
+  clientIPPosition <- liftIO lookupClientIPPositionFromRight
+  pure $
+    mbXForwardedFor
+      >>= \headerValue ->
+        let ips = filter (not . T.null) $ map T.strip $ T.splitOn "," headerValue
+            idx = length ips - clientIPPosition
+         in (if idx >= 0 then listToMaybe (drop idx ips) else Nothing) >>= \clientIP ->
+              let ipWithoutPort = T.takeWhile (/= ':') clientIP
+               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+
 findReusableToken :: (CacheFlow m r, EsqDBFlow m r, MonadTime m) => Id SP.Person -> m (Maybe SR.RegistrationToken)
 findReusableToken personId = do
   regTokens <- RegistrationToken.findAllByPersonId personId
@@ -309,12 +329,7 @@ auth ::
   m AuthRes
 auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash mbIsDashboardRequest = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
-  let mbClientIP =
-        mbXForwardedFor
-          >>= \headerValue ->
-            (listToMaybe $ T.splitOn "," headerValue) >>= \firstIP ->
-              let ipWithoutPort = T.takeWhile (/= ':') $ T.strip firstIP
-               in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
+  mbClientIP <- extractClientIP mbXForwardedFor
   whenJust mbClientIP $ \clientIP -> do
     logInfo $ "Auth request from IP: " <> clientIP <> " for identifier: " <> show req'.mobileNumber
     ipBlocked <- SMC.isIPBlocked clientIP
@@ -356,8 +371,8 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   when (fromMaybe False person.authBlocked && maybe False (now <) person.blockedUntil) $ throwError IpHitsLimitExceeded
   void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId merchantOperatingCityId (Just [])))
   fork "Fraud Auth Check Processing" $ do
     when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
     whenJust mbClientIP $ \clientIP -> do
@@ -367,6 +382,16 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
         whenJust mbMerchantConfigId $ \mcId ->
           SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
+  -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
+  whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash ->
+    -- DbHash's ToJSON instance hex-encodes it, so this yields a stable non-PII Text
+    -- key without a direct Text.Hex dependency (same idiom as the OTP counters below).
+    case A.toJSON mobileNumberHash of
+      A.String phoneNumberHashText -> do
+        mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
+        whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+        SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
+      _ -> pure ()
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id
@@ -757,7 +782,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
       then do
-        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+        merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
         return merchantConfig.useFraudDetection
       else return False
   encMobNum <- mapM encrypt req.mobileNumber
@@ -929,8 +954,9 @@ verify ::
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
   Maybe Text ->
+  Maybe Text ->
   m AuthVerifyRes
-verify tokenId req mbClientId = do
+verify tokenId req mbClientId mbXForwardedFor = do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
@@ -945,9 +971,14 @@ verify tokenId req mbClientId = do
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
-    merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+    merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
     when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
   void $ RegistrationToken.setVerified True tokenId
+  fork "Decrement Auth IP Counter" $ do
+    mbClientIP <- extractClientIP mbXForwardedFor
+    whenJust mbClientIP $ \clientIP -> do
+      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId merchantOperatingCityId (Just [])))
+      SMC.decrementCustomerAuthCountersByIP clientIP merchantConfigs
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
   whenJust req.userPasswordString $ \userPasswordString -> do
@@ -1031,6 +1062,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   Person.create person
   QPS.create createPersonStats
   addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
+  fork "event_tracking: user_onboarded" $
+    ET.trackEvent merchant.id merchantOperatingCityId (ET.UserOnboarded person.id.getId (show identifierType) (show currentCity))
   fork "update emergency contact id" $
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person
@@ -1099,7 +1132,7 @@ resend tokenId mbSenderHash = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   let otpCode = authValueHash
   otpChannel <- getPersonOTPChannel person.id
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
 
   mobileNumber <- mapM decrypt person.mobileNumber
   receiverEmail <- mapM decrypt person.email
@@ -1263,7 +1296,7 @@ sendBusinessEmailVerification personId merchantId merchantOperatingCityId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   businessEmail <- person.businessEmail & fromMaybeM (PersonFieldNotPresent "businessEmail")
   decryptedBusinessEmail <- decrypt businessEmail
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailServiceConfig <- asks (.emailServiceConfig)
 
@@ -1402,7 +1435,7 @@ resendBusinessEmailVerification personId _merchantId merchantOperatingCityId = d
   when (person.businessProfileVerified == Just True) $
     throwError $ AuthBlocked "Business email already verified"
 
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailBusinessVerificationConfig <- riderConfig.emailBusinessVerificationConfig & fromMaybeM (RiderConfigNotFound $ "emailBusinessVerificationConfig not found for merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   emailServiceConfig <- asks (.emailServiceConfig)
 

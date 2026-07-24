@@ -259,6 +259,19 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
+      :> "register"
+      :> "vehicleStatus"
+      :> QueryParam
+           "registrationNo"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "rcId"
+           Kernel.Prelude.Text
+      :> Get
+           ('[JSON])
+           API.Types.UI.DriverOnboardingV2.RcVerifyStatusResp
+      :<|> TokenAuth
+      :> "driver"
       :> "digilocker"
       :> "initiate"
       :> ReqBody
@@ -280,7 +293,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> getDriverRegisterVehicleStatus :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -502,6 +515,17 @@ postDriverLinkToFleet ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverLinkToFleet a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.postDriverLinkToFleet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getDriverRegisterVehicleStatus ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.RcVerifyStatusResp
+  )
+getDriverRegisterVehicleStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getDriverRegisterVehicleStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postDriverDigilockerInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Serviceability
   ( checkServiceability,
+    checkDestinationServiceability,
     getNearestOperatingAndCurrentCity,
     ServiceabilityRes (..),
     NearestOperatingAndCurrentCity (..),
@@ -40,14 +41,16 @@ import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantState as QQMS
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person as CQP
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
 
@@ -66,7 +69,9 @@ data PTRestrictedHours = PTRestrictedHours
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
     city :: Maybe Context.City,
+    cityName :: Maybe Text,
     currentCity :: Maybe Context.City,
+    state :: Maybe Context.IndianState,
     specialLocation :: Maybe QSpecialLocation.SpecialLocationFull,
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
@@ -97,13 +102,15 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
+          (Context.City cityNameText) = nearestOperatingCity.city
+          cityName = Just cityNameText
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
       let mbEnforceFlag = filteredSpecialLocationBody >>= (.enforceTollRoute)
       when isOrigin $ case mbEnforceFlag of
         Just True -> Redis.setExp (enforceTollRouteRedisKey personId) True enforceTollRouteRedisTtlSec
         _ -> Redis.del (enforceTollRouteRedisKey personId)
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       now <- getCurrentTime
       let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
       let isOutsideSubwayBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.subwayRestrictionStartTime riderConfig.subwayRestrictionEndTime now riderConfig.timeDiffFromUtc
@@ -124,6 +131,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
         ServiceabilityRes
           { serviceable = True,
             currentCity = Just currentCity.city,
+            state = Just currentCity.state,
             specialLocation = filteredSpecialLocationBody,
             geoJson = (.geoJson) =<< filteredSpecialLocationBody,
             isMetroServiceable = Just (not isOutsideMetroBusinessHours),
@@ -136,7 +144,9 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
       return
         ServiceabilityRes
           { city = Nothing,
+            cityName = Nothing,
             currentCity = Nothing,
+            state = Nothing,
             serviceable = False,
             specialLocation = Nothing,
             geoJson = Nothing,
@@ -146,6 +156,42 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             enforceTollRoute = Nothing,
             ..
           }
+
+checkDestinationServiceability ::
+  ( CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    MonadFlow m,
+    EsqDBFlow m r
+  ) =>
+  (GeofencingConfig -> GeoRestriction) ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  LatLong ->
+  Maybe LatLong ->
+  Maybe Context.City ->
+  Maybe Context.IndianState ->
+  Bool ->
+  m ServiceabilityRes
+checkDestinationServiceability settingAccessor (personId, merchantId) destLocation mbOriginLocation _mbOriginCity mbOriginState shouldUpdatePerson = do
+  destResult <- checkServiceability settingAccessor (personId, merchantId) destLocation shouldUpdatePerson False
+  isDestinationAllowedFromOrigin <- case (mbOriginState, destResult.state) of
+    (Just originState, Just destState) -> do
+      mbMerchantState <- QQMS.findByMerchantIdAndState merchantId originState
+      let allowedStates = maybe [originState] (.allowedDestinationStates) mbMerchantState
+      return $ destState `elem` allowedStates
+    _ -> case mbOriginLocation of
+      Nothing -> return True
+      Just originLocation -> do
+        mbOriginCityState <- getNearestOperatingAndCurrentCity' (.origin) (personId, merchantId) False originLocation
+        case mbOriginCityState of
+          Nothing -> return False
+          Just originCity -> do
+            case destResult.state of
+              Nothing -> return False
+              Just destState -> do
+                mbMerchantState <- QQMS.findByMerchantIdAndState merchantId originCity.currentCity.state
+                let allowedStates = maybe [originCity.currentCity.state] (.allowedDestinationStates) mbMerchantState
+                return $ destState `elem` allowedStates
+  return destResult {serviceable = destResult.serviceable && isDestinationAllowedFromOrigin}
 
 data NearestOperatingAndCurrentCity = NearestOperatingAndCurrentCity
   { nearestOperatingCity :: CityState,

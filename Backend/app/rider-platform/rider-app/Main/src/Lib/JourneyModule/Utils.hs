@@ -58,20 +58,23 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -279,7 +282,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime currentTimeIST integratedBpp
                 eta <- fromMaybe [] bus.busData.eta_data,
                 eta.stopCode == stopCode
             ]
-      enrichedBuses <- mapM getVehicleServiceType filteredBuses
+      enrichedBuses <- mapConcurrently getVehicleServiceType filteredBuses
       return (routeWithBuses.routeId, catMaybes enrichedBuses)
 
     buildLiveEntries frfsServiceTierMap (routeId, validBuses) =
@@ -449,7 +452,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   -- fetch rider config
-  mbRiderConfig <- measureLatency (getConfig (RiderDimensions {merchantOperatingCityId = mocid.getId})) "getConfig RiderConfig"
+  mbRiderConfig <- measureLatency (getConfig (RiderConfigDimensions {merchantOperatingCityId = mocid.getId}) (Just (CQRC.findByMerchantOperatingCityId mocid))) "getConfig RiderConfig"
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
 
@@ -1235,7 +1238,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
             (rD : _) -> do
               currentTime <- getCurrentTime
               let (_, currentTimeIST) = getISTTimeInfo currentTime
-              mbPreliminaryLeg <- getPreliminaryLeg (rD.fromStopDetails >>= (.name)) rD.startLocation
+              mbPreliminaryLeg <- measureLatency (getPreliminaryLeg (rD.fromStopDetails >>= (.name)) rD.startLocation) "getPreliminaryLeg getSubwayValidRoutes"
               return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance) (Just viaRoute.routeCode)
         else return Nothing
     go [] = return ([], [])
@@ -1398,10 +1401,10 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment = do
   frfsConfig <-
-    getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId person.merchantOperatingCityId (Just [])))
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
   frfsBookingsPayments <- mapMaybeM QFRFSTicketBookingPayment.findTicketBookingPayment bookings
   (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
@@ -1615,7 +1618,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
 sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> Maybe Spec.ServiceTierType -> [FRFSFare] -> m (Maybe FRFSFare)
 sortAndGetBusFares _ _ [] = return Nothing
 sortAndGetBusFares merchantOpCityId mbPreferredTier finalFares = do
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId))
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier mbPreferredTier cfgMap
   let serviceTierTypeFromFare fare = Just fare.vehicleServiceTier.serviceTierType

@@ -53,9 +53,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.PTCircuitBreakerHistory as QPTCBH
 
 -- | Threshold configuration for triggering circuit breaker
@@ -297,7 +297,7 @@ updateFareCachingFlag ::
   Bool ->
   m ()
 updateFareCachingFlag mode mocId enabled = do
-  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (QRiderConfig.findByMerchantOperatingCityId mocId))
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do
@@ -315,7 +315,7 @@ updateBookingFlag ::
   Bool ->
   m ()
 updateBookingFlag mode mocId enabled = do
-  mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (QRiderConfig.findByMerchantOperatingCityId mocId))
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do

@@ -63,7 +63,8 @@ updateCoinEntries UpdateReq {..} =
   updateWithKV
     [ Se.Set BeamDC.active active,
       Se.Set BeamDC.expirationAt expirationAt,
-      Se.Set BeamDC.coins coins
+      Se.Set BeamDC.coins coins,
+      Se.Set BeamDC.timeBounds timeBounds
     ]
     [Se.Is BeamDC.id $ Se.Eq $ getId entriesId]
 
@@ -101,6 +102,27 @@ fetchConfigOnEventAndFunctionBasis eventType eventFunction (Id merchantId) (Id m
 getCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [CoinsConfig]
 getCoinInfo (Id merchantId) = findAllWithKV [Se.Is BeamDC.merchantId $ Se.Eq merchantId]
 
+findAllByMerchantOptCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
+findAllByMerchantOptCityId (Id merchantOptCityId) =
+  findAllWithKV [Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId]
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CoinsConfig -> m ()
+updateByPrimaryKey CoinsConfig {..} =
+  updateWithKV
+    [ Se.Set BeamDC.eventName eventName,
+      Se.Set BeamDC.eventFunction eventFunction,
+      Se.Set BeamDC.merchantId merchantId,
+      Se.Set BeamDC.merchantOptCityId merchantOptCityId,
+      Se.Set BeamDC.coins coins,
+      Se.Set BeamDC.expirationAt expirationAt,
+      Se.Set BeamDC.active active,
+      Se.Set BeamDC.vehicleCategory vehicleCategory,
+      Se.Set BeamDC.tripCategoryType tripCategoryType,
+      Se.Set BeamDC.serviceTierType serviceTierType,
+      Se.Set BeamDC.timeBounds timeBounds
+    ]
+    [Se.Is BeamDC.id $ Se.Eq (getId id)]
+
 getActiveCoinConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m [CoinsConfig]
 getActiveCoinConfigs (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
   findAllWithKV
@@ -127,7 +149,8 @@ instance FromTType' BeamDC.CoinsConfig CoinsConfig where
             active = active,
             vehicleCategory = vehicleCategory,
             tripCategoryType = tripCategoryType,
-            serviceTierType = serviceTierType
+            serviceTierType = serviceTierType,
+            timeBounds = timeBounds
           }
 
 instance ToTType' BeamDC.CoinsConfig CoinsConfig where
@@ -143,5 +166,6 @@ instance ToTType' BeamDC.CoinsConfig CoinsConfig where
         BeamDC.active = active,
         BeamDC.vehicleCategory = vehicleCategory,
         BeamDC.tripCategoryType = tripCategoryType,
-        BeamDC.serviceTierType = serviceTierType
+        BeamDC.serviceTierType = serviceTierType,
+        BeamDC.timeBounds = timeBounds
       }

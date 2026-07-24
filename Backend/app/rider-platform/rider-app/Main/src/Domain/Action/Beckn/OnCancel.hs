@@ -39,10 +39,12 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -72,14 +74,21 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  let validCancellationReasonCodesForImmediateCharge = fromMaybe ["CUSTOMER_NO_SHOW"] riderConfig.validCancellationReasonCodesForImmediateCharge
-  let immediateCharge = isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId booking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  -- Immediate-capture is configured separately for rider- vs driver-initiated cancellations.
+  -- When the flag is true we capture the fee now; when false the fee becomes a pending due.
+  -- Defaults to true to preserve prior behaviour (rider-cancel always immediate, driver no-show immediate).
+  let immediateCharge =
+        isJust cancellationFee
+          && case castedCancellationSource of
+            SBCR.ByUser -> fromMaybe True riderConfig.immediateCaptureRiderCancellationFee
+            _ -> fromMaybe True riderConfig.immediateCaptureDriverCancellationFee
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   whenJust mbRide $ \ride -> do
     fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups
-    QFareBreakup.createMany fareBreakupEntries
+    SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakupEntries
   SharedCancel.releaseCancellationLock booking.transactionId
+  EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     castCancellatonSource = \case
       Just Enums.CONSUMER -> SBCR.ByUser

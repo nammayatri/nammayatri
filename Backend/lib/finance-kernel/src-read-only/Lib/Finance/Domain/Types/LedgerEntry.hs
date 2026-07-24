@@ -8,6 +8,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
+import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
 import qualified Tools.Beam.UtilsTH
 
@@ -15,7 +16,11 @@ data LedgerEntry = LedgerEntry
   { amount :: Kernel.Types.Common.HighPrecMoney,
     concernedIndividualId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    createdById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
+    entityReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    entityReferenceType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntityReferenceType,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,
     fromAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     fromEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -37,16 +42,24 @@ data LedgerEntry = LedgerEntry
     toAccountId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account,
     toEndingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toStartingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    updatedBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,
+    updatedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     voidReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
+
+data EntityReferenceType = RefundRequest deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data EntryStatus = PENDING | DUE | SETTLED | VOIDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data EntryType = Expense | Revenue | LiabilityCreated | LiabilitySettled | Reversal deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SettlementStatus = UNSETTLED | PROCESSING | PAID_OUT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntityReferenceType))
+
+$(mkHttpInstancesForEnum (''EntityReferenceType))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EntryStatus))
 

@@ -1,0 +1,970 @@
+{
+  "info": {
+    "name": "Issue Lifecycle Flow (BAP + BPP)",
+    "description": "End-to-end Issue/IssueCategory lifecycle across rider-app (BAP) and dynamic-offer-driver-app (BPP). Exercises dashboard CRUD (category/option/message/translation), UI consumption from rider and driver, in-app chat (UI + dashboard sides), and config-update PATCH semantics (regression for the merchantName/supportEmail drop bug).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "",
+          "// Generate a fresh rider phone number ONCE per collection run.",
+          "if (!pm.collectionVariables.get('_test_rider_number')) {",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    console.log('[issue-flow] generated rider number ' + rNum);",
+          "}",
+          "// Per-run suffix used in test artefacts so concurrent runs don't collide.",
+          "if (!pm.collectionVariables.get('_test_run_suffix')) {",
+          "    pm.collectionVariables.set('_test_run_suffix', Math.floor(Math.random() * 1000000).toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{rider_merchant_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rider Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"issue-flow-rider-device\",\n    \"whatsappNotificationEnroll\": \"OPT_OUT\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth", "{{rider_authId}}", "verify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('rider token present', function () { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Create IssueCategory",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"category\": \"IssueFlowTest_{{_test_run_suffix}}\",\n    \"logoUrl\": \"https://example.com/logo.png\",\n    \"priority\": 999,\n    \"categoryType\": \"Category\",\n    \"isRideRequired\": false,\n    \"isTicketRequired\": false,\n    \"isActive\": true,\n    \"translations\": [\n      { \"language\": \"ENGLISH\", \"translation\": \"IssueFlow Test Category\" }\n    ],\n    \"messages\": [\n      {\n        \"message\": \"Welcome message for IssueFlow test\",\n        \"messageTitle\": \"Welcome\",\n        \"priority\": 1,\n        \"messageTranslations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Welcome\" } ],\n        \"titleTranslations\": [],\n        \"actionTranslations\": [],\n        \"options\": [],\n        \"isActive\": true\n      }\n    ],\n    \"label\": \"ISSUE_FLOW_TEST_{{_test_run_suffix}}\",\n    \"enableKapture\": false,\n    \"showInDefault\": true\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/category/create",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "category", "create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Create category resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('categoryId returned', function () { pm.expect(d.categoryId).to.be.a('string'); });",
+              "pm.environment.set('issue_category_id', d.categoryId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Get IssueCategory Detail (capture messageId)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/category/{{issue_category_id}}/detail",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "category", "{{issue_category_id}}", "detail"],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Category detail resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has nested category', function () { pm.expect(d.category).to.be.an('object'); });",
+              "pm.test('Inline message created', function () { pm.expect(d.messages).to.be.an('array').and.to.have.length.at.least(1); });",
+              "if (d.messages && d.messages.length) {",
+              "    pm.environment.set('issue_message_id', d.messages[0].messageId || d.messages[0].issueMessageId);",
+              "    console.log('captured messageId=' + pm.environment.get('issue_message_id'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP UI: Rider lists IssueCategories",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/category",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "category"],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Categories array present', function () { pm.expect(d.categories).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Create IssueOption (under category)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"option\": \"IssueFlowOpt_{{_test_run_suffix}}\",\n    \"priority\": 1,\n    \"isActive\": true,\n    \"translations\": [ { \"language\": \"ENGLISH\", \"translation\": \"IssueFlow Option\" } ],\n    \"messages\": [\n      {\n        \"message\": \"Terminal message under option\",\n        \"messageTitle\": \"Done\",\n        \"priority\": 1,\n        \"messageTranslations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Terminal message under option\" } ],\n        \"titleTranslations\": [],\n        \"actionTranslations\": [],\n        \"options\": [],\n        \"isActive\": true\n      }\n    ],\n    \"label\": \"OPT_{{_test_run_suffix}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/option/create?issueCategoryId={{issue_category_id}}&issueMessageId={{issue_message_id}}",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "option", "create"],
+          "query": [
+            { "key": "issueCategoryId", "value": "{{issue_category_id}}" },
+            { "key": "issueMessageId", "value": "{{issue_message_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Create option resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('optionId returned', function () { pm.expect(d.optionId).to.be.a('string'); });",
+              "pm.environment.set('issue_option_id', d.optionId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP UI: Rider creates IssueReport",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mediaFiles\": [],\n    \"optionId\": \"{{issue_option_id}}\",\n    \"categoryId\": \"{{issue_category_id}}\",\n    \"description\": \"IssueFlow rider-side test report {{_test_run_suffix}}\",\n    \"chats\": null,\n    \"createTicket\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/issue",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue"],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Create issue resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('issueReportId returned', function () { pm.expect(d.issueReportId).to.be.a('string'); });",
+              "pm.environment.set('issue_report_id', d.issueReportId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP UI: Rider posts chat message",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"text\": \"Hi from rider {{_test_run_suffix}}\",\n    \"mediaFileIds\": null\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/{{issue_report_id}}/chat/message",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "{{issue_report_id}}", "chat", "message"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('chat messageId returned', function () { pm.expect(d.messageId).to.be.a('string'); });",
+              "pm.test('senderType is USER/CUSTOMER', function () { pm.expect(d.senderType).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP UI: Rider lists chat messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/{{issue_report_id}}/chat/messages",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "{{issue_report_id}}", "chat", "messages"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('chat messages:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Returns array', function () { pm.expect(d).to.be.an('array'); });",
+              "pm.test('At least 1 message (rider)', function () { pm.expect(d.length).to.be.at.least(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP UI: Rider marks chat read",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"upTo\": \"{{chat_read_at}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/issue/{{issue_report_id}}/chat/read",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["issue", "{{issue_report_id}}", "chat", "read"]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('chat_read_at', new Date().toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Get IssueConfig (snapshot)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/config",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "config"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Pre-update config:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('reopenCount is integer', function () { pm.expect(d.reopenCount).to.be.a('number'); });",
+              "pm.environment.set('merchantName_before', d.merchantName || '');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Update IssueConfig (full set both fields)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantName\": \"IssueFlowMerchant_{{_test_run_suffix}}\",\n    \"supportEmail\": \"issueflow-{{_test_run_suffix}}@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/config/update",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "config", "update"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Verify Config update persisted (regression: both fields set)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/config",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "config"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Post-update config:', JSON.stringify(d));",
+              "var suffix = pm.collectionVariables.get('_test_run_suffix');",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('merchantName persisted', function () { pm.expect(d.merchantName).to.eql('IssueFlowMerchant_' + suffix); });",
+              "pm.test('supportEmail persisted', function () { pm.expect(d.supportEmail).to.eql('issueflow-' + suffix + '@example.com'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Update IssueConfig (only supportEmail, PATCH semantics)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"supportEmail\": \"issueflow-patched-{{_test_run_suffix}}@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/config/update",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "config", "update"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Verify PATCH semantics (merchantName preserved, supportEmail changed)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/config",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "config"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Post-PATCH config:', JSON.stringify(d));",
+              "var suffix = pm.collectionVariables.get('_test_run_suffix');",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('merchantName preserved by PATCH', function () { pm.expect(d.merchantName).to.eql('IssueFlowMerchant_' + suffix); });",
+              "pm.test('supportEmail updated by PATCH', function () { pm.expect(d.supportEmail).to.eql('issueflow-patched-' + suffix + '@example.com'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Delete IssueOption",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/option/{{issue_option_id}}/delete",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "option", "{{issue_option_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BAP Dashboard: Delete IssueCategory",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "token", "value": "{{rider_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_merchant_short_id}}/{{city}}/issueV2/category/{{issue_category_id}}/delete",
+          "host": ["{{bap_dashboard_url}}"],
+          "path": ["bap", "{{bap_merchant_short_id}}", "{{city}}", "issueV2", "category", "{{issue_category_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"7f7896dd-787e-4a0b-8675-e9e6fe93bb8f\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"issue-flow-driver-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth", "{{driver_authId}}", "verify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('driver token present', function () { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Create IssueCategory (driver-side)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"category\": \"DriverIssueFlow_{{_test_run_suffix}}\",\n    \"logoUrl\": \"https://example.com/logo.png\",\n    \"priority\": 999,\n    \"categoryType\": \"Category\",\n    \"isRideRequired\": false,\n    \"isTicketRequired\": false,\n    \"isActive\": true,\n    \"translations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Driver IssueFlow Category\" } ],\n    \"messages\": [\n      {\n        \"message\": \"Driver welcome\",\n        \"messageTitle\": \"Hi driver\",\n        \"priority\": 1,\n        \"messageTranslations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Driver welcome\" } ],\n        \"titleTranslations\": [],\n        \"actionTranslations\": [],\n        \"options\": [],\n        \"isActive\": true\n      }\n    ],\n    \"label\": \"DRIVER_ISSUE_FLOW_{{_test_run_suffix}}\",\n    \"enableKapture\": false,\n    \"showInDefault\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/category/create",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "category", "create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('BPP create category resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('categoryId returned', function () { pm.expect(d.categoryId).to.be.a('string'); });",
+              "pm.environment.set('bpp_issue_category_id', d.categoryId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Get IssueCategory Detail (capture messageId)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/category/{{bpp_issue_category_id}}/detail",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "category", "{{bpp_issue_category_id}}", "detail"],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has nested category', function () { pm.expect(d.category).to.be.an('object'); });",
+              "pm.test('Inline message created', function () { pm.expect(d.messages).to.be.an('array').and.to.have.length.at.least(1); });",
+              "if (d.messages && d.messages.length) {",
+              "    pm.environment.set('bpp_issue_message_id', d.messages[0].messageId || d.messages[0].issueMessageId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP UI: Driver lists IssueCategories",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/issue/category",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["issue", "category"],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Categories array present', function () { pm.expect(d.categories).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Create IssueOption (driver-side)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"option\": \"DriverOpt_{{_test_run_suffix}}\",\n    \"priority\": 1,\n    \"isActive\": true,\n    \"translations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Driver Option\" } ],\n    \"messages\": [\n      {\n        \"message\": \"Terminal message under driver option\",\n        \"messageTitle\": \"Done\",\n        \"priority\": 1,\n        \"messageTranslations\": [ { \"language\": \"ENGLISH\", \"translation\": \"Terminal message under driver option\" } ],\n        \"titleTranslations\": [],\n        \"actionTranslations\": [],\n        \"options\": [],\n        \"isActive\": true\n      }\n    ],\n    \"label\": \"DOPT_{{_test_run_suffix}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/option/create?issueCategoryId={{bpp_issue_category_id}}&issueMessageId={{bpp_issue_message_id}}",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "option", "create"],
+          "query": [
+            { "key": "issueCategoryId", "value": "{{bpp_issue_category_id}}" },
+            { "key": "issueMessageId", "value": "{{bpp_issue_message_id}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('optionId returned', function () { pm.expect(d.optionId).to.be.a('string'); });",
+              "pm.environment.set('bpp_issue_option_id', d.optionId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP UI: Driver creates IssueReport",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mediaFiles\": [],\n    \"optionId\": \"{{bpp_issue_option_id}}\",\n    \"categoryId\": \"{{bpp_issue_category_id}}\",\n    \"description\": \"IssueFlow driver-side test report {{_test_run_suffix}}\",\n    \"chats\": null,\n    \"createTicket\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/issue",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["issue"],
+          "query": []
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('BPP create issue resp:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('issueReportId returned', function () { pm.expect(d.issueReportId).to.be.a('string'); });",
+              "pm.environment.set('bpp_issue_report_id', d.issueReportId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP UI: Driver posts chat message",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"text\": \"Hi from driver {{_test_run_suffix}}\",\n    \"mediaFileIds\": null\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/issue/{{bpp_issue_report_id}}/chat/message",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["issue", "{{bpp_issue_report_id}}", "chat", "message"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('chat messageId returned', function () { pm.expect(d.messageId).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP UI: Driver lists chat messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/issue/{{bpp_issue_report_id}}/chat/messages",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["issue", "{{bpp_issue_report_id}}", "chat", "messages"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Returns array', function () { pm.expect(d).to.be.an('array'); });",
+              "pm.test('At least 1 message (driver)', function () { pm.expect(d.length).to.be.at.least(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Update IssueConfig (PATCH semantics on driver side)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantName\": \"BppIssueFlow_{{_test_run_suffix}}\",\n    \"supportEmail\": \"bpp-issueflow-{{_test_run_suffix}}@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/config/update",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "config", "update"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Verify Config update persisted",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/config",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "config"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var suffix = pm.collectionVariables.get('_test_run_suffix');",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('BPP merchantName persisted', function () { pm.expect(d.merchantName).to.eql('BppIssueFlow_' + suffix); });",
+              "pm.test('BPP supportEmail persisted', function () { pm.expect(d.supportEmail).to.eql('bpp-issueflow-' + suffix + '@example.com'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Delete IssueOption",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/option/{{bpp_issue_option_id}}/delete",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "option", "{{bpp_issue_option_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "BPP Dashboard: Delete IssueCategory",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "token", "value": "{{driver_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{bpp_merchant_short_id}}/{{city}}/issue/category/{{bpp_issue_category_id}}/delete",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{bpp_merchant_short_id}}", "{{city}}", "issue", "category", "{{bpp_issue_category_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 module ExternalBPP.Flow.Common where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (Down (..))
@@ -19,28 +20,56 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.Location as DL
+import qualified Domain.Types.LocationAddress as DLA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Trip as DTrip
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Types
 import qualified ExternalBPP.Flow.Fare as Flow
+import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..), LocationV2 (..), WayPointV2 (..))
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import qualified Kernel.External.MultiModal.Interface as KMultiModal
+import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
+import qualified Storage.Queries.Location as QLocation
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Tools.MultiModal as TMultiModal
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
-  quotes <- buildQuotes routeDetails
+search = searchImpl False
+
+-- | Same as 'search', but builds quotes by discovering the transit route
+-- (including interchanges) between the search's stations via the transit
+-- planner, instead of the route-stop mappings. Used as a fallback when
+-- 'search' yields no quotes, e.g. metro journeys that need an interchange
+-- where no single route serves both stations.
+multimodalDiscoverySearch :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+multimodalDiscoverySearch = searchImpl True
+
+searchImpl :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Bool -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
+searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
+  quotes <- bool buildQuotes buildMultimodalDiscoveryQuotes useMultimodalDiscovery routeDetails
   logDebug $ "Route Details Debug: " <> show routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -88,6 +117,84 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
               routesInfo
           return $ concat quotes
 
+    -- Multimodal discovery path: quote a single transit journey (no fixed
+    -- route) by discovering the actual legs from the transit planner. Covers
+    -- interchange journeys where no single route serves both stations.
+    buildMultimodalDiscoveryQuotes = \case
+      [FRFSRouteDetails {routeCode = Nothing, startStationCode, endStationCode}] -> mkInterchangeQuote startStationCode endStationCode
+      _ -> return []
+
+    -- Discover the interchange legs from the transit planner and quote them as
+    -- a multi-leg journey through the regular quote path. Enabled only for
+    -- providers whose fare depends solely on origin and destination (CMRL), so
+    -- the fare is correct irrespective of the discovered legs.
+    mkInterchangeQuote startStationCode endStationCode = do
+      routesInfoResult <- withTryCatch "discoverInterchangeRoutesInfo" (discoverInterchangeRoutesInfo startStationCode endStationCode)
+      case routesInfoResult of
+        Left err -> do
+          logError $ "Failed to discover interchange routes between stations: " <> startStationCode <> " and " <> endStationCode <> ", error: " <> show err
+          return []
+        Right routesInfo -> mkQuote Nothing searchReq.vehicleType routesInfo
+
+    -- Asks the transit planner (OTP) for a transit journey between the two
+    -- stations, restricted to the search's vehicle mode, and maps each leg of
+    -- the best route to a RouteStopInfo.
+    discoverInterchangeRoutesInfo startStationCode endStationCode = do
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+      fromLat <- fromStation.lat & fromMaybeM (InternalError $ "Latitude not found for station: " <> fromStation.code)
+      fromLon <- fromStation.lon & fromMaybeM (InternalError $ "Longitude not found for station: " <> fromStation.code)
+      toLat <- toStation.lat & fromMaybeM (InternalError $ "Latitude not found for station: " <> toStation.code)
+      toLon <- toStation.lon & fromMaybeM (InternalError $ "Longitude not found for station: " <> toStation.code)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
+      transitServiceReq <- TMultiModal.getTransitServiceReq merchant.id merchantOperatingCity.id
+      now <- getCurrentTime
+      let expectedMode = case searchReq.vehicleType of
+            Spec.METRO -> MultiModalTypes.MetroRail
+            Spec.SUBWAY -> MultiModalTypes.Subway
+            Spec.BUS -> MultiModalTypes.Bus
+          transitRoutesReq =
+            GetTransitRoutesReq
+              { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = fromLat, longitude = fromLon}}},
+                destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = toLat, longitude = toLon}}},
+                arrivalTime = Nothing,
+                departureTime = Just now,
+                mode = Nothing,
+                transitPreferences = Nothing,
+                transportModes = Nothing,
+                minimumWalkDistance = riderConfig.minimumWalkDistance,
+                permissibleModes = [expectedMode],
+                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                sortingType = MultiModalTypes.Fastest,
+                walkSpeed = Nothing
+              }
+      otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError $ "No transit routes found between stations: " <> fromStation.code <> " and " <> toStation.code)
+      transitRoute <-
+        find (\route -> any (\leg -> leg.mode == expectedMode) route.legs && all (\leg -> leg.mode == expectedMode || leg.mode == MultiModalTypes.Walk) route.legs) otpResponse.routes
+          & fromMaybeM (InternalError $ "No suitable transit route found between stations: " <> fromStation.code <> " and " <> toStation.code)
+      let legsRouteDetails = sortOn (.subLegOrder) $ concatMap (.routeDetails) (filter (\leg -> leg.mode == expectedMode) transitRoute.legs)
+      routesInfo <- forM legsRouteDetails $ \legRouteDetail -> do
+        routeCode <- (legRouteDetail.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InternalError "Route gtfsId not found in transit leg")
+        legStartStopCode <- ((legRouteDetail.fromStopDetails >>= (.stopCode)) <|> ((legRouteDetail.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InternalError "From stop code not found in transit leg")
+        legEndStopCode <- ((legRouteDetail.toStopDetails >>= (.stopCode)) <|> ((legRouteDetail.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InternalError "To stop code not found in transit leg")
+        route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
+        return $
+          RouteStopInfo
+            { route,
+              totalStops = Nothing,
+              stops = Nothing,
+              startStopCode = legStartStopCode,
+              endStopCode = legEndStopCode,
+              travelTime = nominalDiffTimeToSeconds <$> (diffUTCTime <$> legRouteDetail.toArrivalTime <*> legRouteDetail.fromDepartureTime)
+            }
+      -- Create the journey + leg + routeDetails for this interchange, reusing the existing tables.
+      -- Best-effort: failures here must not break quote generation, so isolate them.
+      journeyResult <- withTryCatch "buildInterchangeJourney" (buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDetails)
+      case journeyResult of
+        Left err -> logError $ "Failed to build interchange journey for search " <> searchReq.id.getId <> ": " <> show err
+        Right () -> pure ()
+      return routesInfo
+
     buildMultipleNonTransitRouteQuotes routesDetails = do
       case routesDetails of
         [] -> return []
@@ -123,8 +230,8 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
               let adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) categories)
                   adultBppItemId = maybe (CallAPI.getProviderName integratedBPPConfig) (.bppItemId) (find (\category -> category.category == ADULT) categories)
                   routeStations =
-                    map
-                      ( \routeInfo ->
+                    zipWith
+                      ( \routeSeqNum routeInfo ->
                           DRouteStation
                             { routeCode = routeInfo.route.code,
                               routeLongName = routeInfo.route.longName,
@@ -135,10 +242,11 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                               routeTravelTime = routeInfo.travelTime,
                               routeServiceTier = Just $ mkDVehicleServiceTier vehicleServiceTier,
                               routePrice = adultPrice,
-                              routeSequenceNum = Nothing,
-                              routeColor = Nothing
+                              routeSequenceNum = Just routeSeqNum,
+                              routeColor = routeInfo.route.color
                             }
                       )
+                      [1 ..]
                       routesInfo
                in DQuote
                     { bppItemId = adultBppItemId,
@@ -162,6 +270,152 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
           ..
         }
 
+-- | Create a Journey + JourneyLeg + RouteDetails for an interchange transit journey discovered via
+-- getTransitRoutes, reusing the existing journey / journey_leg / route_details tables: one JourneyLeg
+-- carrying the N sub-leg RouteDetails (subLegOrder). Skips creation when a JourneyLeg already exists
+-- for this FRFS search (i.e. it is already part of a larger multimodal journey created upstream).
+buildInterchangeJourney ::
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m) =>
+  DFRFSSearch.FRFSSearch ->
+  IntegratedBPPConfig ->
+  MultiModalTypes.MultiModalRoute ->
+  [MultiModalTypes.MultiModalRouteDetails] ->
+  m ()
+buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDetails = do
+  mbExistingLeg <- QJourneyLeg.findByLegSearchId (Just searchReq.id.getId)
+  case (mbExistingLeg, legsRouteDetails) of
+    (Just _, _) -> pure ()
+    (_, []) -> pure ()
+    (Nothing, firstSubLeg : _) -> do
+      now <- getCurrentTime
+      journeyGuid <- generateGUID
+      journeyLegGuid <- generateGUID
+      fromLocationId <- generateGUID
+      toLocationId <- generateGUID
+      routeDetails <- mapM (mkRouteDetail searchReq.merchantId searchReq.merchantOperatingCityId journeyLegGuid Nothing) legsRouteDetails
+      let mode = mapVehicleCategoryToTripMode searchReq.vehicleType
+          lastSubLeg = fromMaybe firstSubLeg (listToMaybe (reverse legsRouteDetails))
+          fromLat = maybe 0.0 (.lat) searchReq.fromStationPoint
+          fromLon = maybe 0.0 (.lon) searchReq.fromStationPoint
+          toLat = maybe 0.0 (.lat) searchReq.toStationPoint
+          toLon = maybe 0.0 (.lon) searchReq.toStationPoint
+          fromLocation = mkLocation now fromLocationId fromLat fromLon searchReq.fromStationAddress
+          toLocation = mkLocation now toLocationId toLat toLon searchReq.toStationAddress
+          journey =
+            DJ.Journey
+              { id = journeyGuid,
+                convenienceCost = 0,
+                estimatedDistance = transitRoute.distance,
+                estimatedDuration = Just transitRoute.duration,
+                isPaymentSuccess = Nothing,
+                totalLegs = 1,
+                modes = [mode],
+                searchRequestId = searchReq.id.getId,
+                merchantId = searchReq.merchantId,
+                status = DJ.NEW,
+                riderId = searchReq.riderId,
+                startTime = transitRoute.startTime,
+                endTime = transitRoute.endTime,
+                merchantOperatingCityId = searchReq.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now,
+                recentLocationId = searchReq.recentLocationId,
+                isPublicTransportIncluded = Just True,
+                isSingleMode = Just True,
+                relevanceScore = transitRoute.relevanceScore,
+                hasPreferredServiceTier = Nothing,
+                hasPreferredTransitModes = Just False,
+                fromLocation = fromLocation,
+                toLocation = Just toLocation,
+                paymentOrderShortId = Nothing,
+                journeyExpiryTime = Nothing,
+                hasStartedTrackingWithoutBooking = Nothing
+              }
+          journeyLeg =
+            DJL.JourneyLeg
+              { id = journeyLegGuid,
+                mode = mode,
+                groupCode = Nothing,
+                startLocation = LatLngV2 fromLat fromLon,
+                endLocation = LatLngV2 toLat toLon,
+                distance = Just transitRoute.distance,
+                duration = Just transitRoute.duration,
+                agency = Just $ MultiModalTypes.MultiModalAgency {name = integratedBPPConfig.agencyKey, gtfsId = Just integratedBPPConfig.feedKey},
+                fromArrivalTime = firstSubLeg.fromArrivalTime,
+                fromDepartureTime = firstSubLeg.fromDepartureTime,
+                toArrivalTime = lastSubLeg.toArrivalTime,
+                toDepartureTime = lastSubLeg.toDepartureTime,
+                fromStopDetails = firstSubLeg.fromStopDetails,
+                toStopDetails = lastSubLeg.toStopDetails,
+                routeDetails = routeDetails,
+                liveVehicleAvailableServiceTypes = Nothing,
+                estimatedMinFare = Nothing,
+                estimatedMaxFare = Nothing,
+                merchantId = searchReq.merchantId,
+                merchantOperatingCityId = searchReq.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now,
+                legSearchId = Just searchReq.id.getId,
+                legPricingId = Nothing,
+                changedBusesInSequence = Nothing,
+                finalBoardedBusNumber = Nothing,
+                finalBoardedBusNumberSource = Nothing,
+                finalBoardedDepotNo = Nothing,
+                finalBoardedScheduleNo = Nothing,
+                finalBoardedWaybillId = Nothing,
+                finalBoardedBusServiceTierType = Nothing,
+                userBookedBusServiceTierType = Nothing,
+                userPreferredServiceTier = Nothing,
+                osmEntrance = Nothing,
+                osmExit = Nothing,
+                straightLineEntrance = Nothing,
+                straightLineExit = Nothing,
+                journeyId = journeyGuid,
+                isDeleted = Just False,
+                sequenceNumber = 0,
+                multimodalSearchRequestId = searchReq.multimodalSearchRequestId <|> Just searchReq.id.getId,
+                busLocationData = [],
+                busConductorId = Nothing,
+                busDriverId = Nothing,
+                busTagNumber = Nothing,
+                providerRouteId = Nothing
+              }
+      QLocation.createMany [fromLocation, toLocation]
+      QJourney.create journey
+      QJourneyLegExtra.create journeyLeg
+  where
+    mkLocation now' locId lat lon mbArea =
+      DL.Location
+        { id = locId,
+          lat = lat,
+          lon = lon,
+          address =
+            DLA.LocationAddress
+              { street = Nothing,
+                door = Nothing,
+                city = Nothing,
+                state = Nothing,
+                country = Nothing,
+                building = Nothing,
+                areaCode = Nothing,
+                area = mbArea,
+                ward = Nothing,
+                placeId = Nothing,
+                instructions = Nothing,
+                title = Nothing,
+                extras = Nothing
+              },
+          merchantId = Just searchReq.merchantId,
+          merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
+          createdAt = now',
+          updatedAt = now'
+        }
+
+    mapVehicleCategoryToTripMode = \case
+      Spec.BUS -> DTrip.Bus
+      Spec.METRO -> DTrip.Metro
+      Spec.SUBWAY -> DTrip.Subway
+
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> m DOnInit
 init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
@@ -180,7 +434,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         messageId = booking.id.getId,
         bankAccNum = bankAccountNumber,
         bankCode = bankCode,
-        bppOrderId = bppOrderId
+        bppOrderId = bppOrderId,
+        bppPaymentId = Nothing
       }
   where
     mkDCategorySelect quoteCategory =
@@ -332,14 +587,32 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
   let minutesBefore = floor (diffUTCTime departureTime now / 60) :: Int
       sortedConfigs = sortOn (Down . (.minMinutesBeforeDeparture)) configs
       mbMatchingTier = find (matchesTier minutesBefore) sortedConfigs
-  case mbMatchingTier of
-    Nothing -> return (0, baseFare) -- no config → full refund
-    Just tier -> do
-      let charges = case tier.cancellationChargeType of
+  case (configs, mbMatchingTier) of
+    -- No cancellation config for this city/vehicle: feature not opted-in here, keep legacy full-refund behaviour.
+    ([], _) -> return (0, baseFare)
+    -- Inside a configured (allowed) window: apply that tier's charge and refund the remainder.
+    (_, Just tier) -> do
+      let rawCharges = case tier.cancellationChargeType of
             DFRFSCancellationConfig.PERCENTAGE -> baseFare * tier.cancellationChargeValue / 100
             DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
-          refund = max 0 (baseFare - charges)
+          charges = min baseFare (max 0 rawCharges)
+          refund = baseFare - charges
+      when (rawCharges /= charges) $
+        logError $
+          "FRFSCancellationConfig misconfigured for tier " <> tier.id.getId
+            <> " (type="
+            <> show tier.cancellationChargeType
+            <> ", value="
+            <> show tier.cancellationChargeValue
+            <> ", baseFare="
+            <> show baseFare
+            <> "): rawCharges="
+            <> show rawCharges
+            <> " clamped to "
+            <> show charges
       return (charges, refund)
+    -- Configured, but the current time is outside every allowed window: cancellation is not permitted.
+    (_, Nothing) -> throwError CancellationNotSupported
   where
     matchesTier mins tier =
       mins >= tier.minMinutesBeforeDeparture

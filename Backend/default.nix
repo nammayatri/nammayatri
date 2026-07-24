@@ -7,6 +7,7 @@
     ./nix/run-mobility-stack.nix
     ./nix/arion-configuration.nix
     ./nix/osrm.nix
+    ./nix/db-manager.nix
     ./load-test
   ];
   perSystem = { config, self', pkgs, lib, system, ... }:

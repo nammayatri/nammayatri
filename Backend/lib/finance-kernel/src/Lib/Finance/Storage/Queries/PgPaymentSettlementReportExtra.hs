@@ -46,6 +46,33 @@ findByTxnDateRangeAndStatus merchantId merchantOpCityId startTime endTime = do
         ]
     ]
 
+findByTxnDateRangeAndTxnType ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Domain.TxnType ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Domain.PgPaymentSettlementReport]
+findByTxnDateRangeAndTxnType merchantId merchantOpCityId startTime endTime txnType mbSubscriptionId mbLimit mbOffset = do
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is Beam.txnStatus $ Se.Eq Domain.SUCCESS,
+          Se.Is Beam.txnType $ Se.Eq txnType,
+          Se.Is Beam.txnDate $ Se.GreaterThanOrEq (Just startTime),
+          Se.Is Beam.txnDate $ Se.LessThanOrEq (Just endTime)
+        ]
+          <> [Se.Is Beam.subscriptionPurchaseId $ Se.Eq (Just subId) | Just subId <- [mbSubscriptionId]]
+    ]
+    (Se.Desc Beam.txnDate)
+    mbLimit
+    mbOffset
+
 findAllByMerchantOpCityIdWithFilters ::
   (BeamFlow m r) =>
   Text -> -- merchantId
@@ -76,7 +103,7 @@ findAllByMerchantOpCityIdWithFilters merchantId merchantOpCityId mbFrom mbTo mbS
         ]
           <> [Se.Is Beam.txnDate $ Se.GreaterThanOrEq (Just fromTime) | Just fromTime <- [mbFrom]]
           <> [Se.Is Beam.txnDate $ Se.LessThanOrEq (Just toTime) | Just toTime <- [mbTo]]
-          <> [Se.Is Beam.referenceId $ Se.Eq (Just subscriptionPurchaseId) | Just subscriptionPurchaseId <- [mbSubscriptionPurchaseId]]
+          <> [Se.Is Beam.subscriptionPurchaseId $ Se.Eq (Just subscriptionPurchaseId) | Just subscriptionPurchaseId <- [mbSubscriptionPurchaseId]]
           <> [Se.Is Beam.orderId $ Se.Eq orderId | Just orderId <- [mbOrderId]]
           <> [Se.Is Beam.settlementId $ Se.Eq (Just settlementId) | Just settlementId <- [mbSettlementId]]
           <> [Se.Is Beam.txnType $ Se.Eq txnType | Just txnType <- [mbTxnType]]
@@ -128,3 +155,23 @@ findBySettlementId ::
   m [Domain.PgPaymentSettlementReport]
 findBySettlementId settlementId =
   findAllWithKV [Se.Is Beam.settlementId $ Se.Eq (Just settlementId)]
+
+findBySettlementDateRange ::
+  (BeamFlow m r) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [Domain.PgPaymentSettlementReport]
+findBySettlementDateRange merchantId fromDate toDate limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.settlementDate $ Se.GreaterThanOrEq (Just fromDate),
+          Se.Is Beam.settlementDate $ Se.LessThanOrEq (Just toDate)
+        ]
+    ]
+    (Se.Asc Beam.settlementId)
+    (Just limit)
+    (Just offset)

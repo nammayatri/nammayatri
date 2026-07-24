@@ -41,6 +41,7 @@ import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common hiding (mkPrice)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -55,12 +56,14 @@ import SharedLogic.Offer as SOffer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -87,7 +90,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)}) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
@@ -188,7 +191,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                   void $ markJourneyPaymentSuccess updatedBooking paymentOrder paymentBooking
                   buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                 else do
-                  (mbJourneyId, _) <- getAllJourneyFrfsBookings booking
                   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
                   let fareCachingAllowed = case integratedBppConfig.providerConfig of
                         DIBC.ONDC ondcCfg -> fromMaybe False ondcCfg.fareCachingAllowed
@@ -197,7 +199,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                         if fareCachingAllowed
                           then fromMaybe False booking.ondcOnInitReceived
                           else True
-                  if paymentBookingStatus == FRFSTicketService.SUCCESS && (not isMultiModalBooking || isJust mbJourneyId) && shouldProceedWithConfirm
+                  if paymentBookingStatus == FRFSTicketService.SUCCESS && shouldProceedWithConfirm
                     then do
                       -- Add default TTL of 1 min or the value provided in the config
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
@@ -230,7 +232,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              Right _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                              Right _ ->
+                                case integratedBppConfig.providerConfig of
+                                  DIBC.ONDC _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                                  _ -> do
+                                    latestStatus <- maybe DFRFSTicketBooking.CONFIRMING (.status) <$> QFRFSTicketBooking.findById booking.id
+                                    return $ makeUpdatedBooking booking latestStatus (Just updatedTTL) (Just txnId.getId)
                           buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
                         else buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
                     else do
@@ -258,8 +265,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                     }
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
-          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing})
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
           let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
                 [] -> 0 -- 30 minutes in seconds if all are Nothing
@@ -377,6 +384,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
       nwAddress <- asks (.nwAddress)
+      udf1 <- SLUtils.getPersonUdf1 person
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -400,7 +408,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 basket = Nothing,
                 paymentRules = Nothing,
                 autoRefundPostSuccess = Nothing,
-                paymentFilter = Nothing
+                paymentFilter = Nothing,
+                udf1 = udf1
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
@@ -481,7 +490,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         status = booking.status,
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
-        payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
+        payment = payment <&> (\p -> (p :: FRFSTicketService.FRFSBookingPaymentAPI) {transactionId = booking.paymentTxnId}),
         isFareChanged = booking.isFareChanged,
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         integratedBppConfigId = booking.integratedBppConfigId,

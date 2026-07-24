@@ -63,6 +63,8 @@ PayoutOrder:
   constraints:
     id: SecondaryKey
     orderId: PrimaryKey
+    customerId: "!SecondaryKey"
+    entityIds: "!SecondaryKey"
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -78,12 +80,6 @@ PayoutOrder:
       kvFunction: updateOneWithKV
       params: [status, transferStatus]
       where: orderId
-    findAllWithStatus:
-      kvFunction: findAllWithKV
-      where: status
-    findAllByCustomerId:
-      kvFunction: findAllWithKV
-      where: customerId
     updatePayoutOrderTxnRespInfo:
       kvFunction: updateOneWithKV
       params: [responseCode, responseMessage]

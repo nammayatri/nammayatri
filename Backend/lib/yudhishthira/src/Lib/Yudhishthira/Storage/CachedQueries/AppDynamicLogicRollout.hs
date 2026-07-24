@@ -3,7 +3,9 @@ module Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout where
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.Id
+import Kernel.Utils.Logging (logDebug)
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Beam
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as Queries
@@ -50,6 +52,7 @@ findBaseRolloutByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   where
     fetchAndCase =
       ( \dataToBeCached -> do
+          logDebug $ "[BASEROLLOUT_REFILL] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId merchantOperatingCityId <> " fetchedFromDB=" <> show (map (\r -> (r.version, r.isBaseVersion)) dataToBeCached)
           expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
           Hedis.setExp (baseRolloutCacheKey merchantOperatingCityId domain) dataToBeCached expTime
       )
@@ -96,10 +99,29 @@ findActiveByMerchantOpCityAndDomain merchantOperatingCityId domain =
   where
     fetchAndCache =
       ( \dataToBeCached -> do
+          logDebug $ "[ACTIVE_REFILL] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId merchantOperatingCityId <> " fetchedFromDB=" <> show (map (\r -> (r.version, r.isBaseVersion, r.experimentStatus, r.percentageRollout)) dataToBeCached)
           expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
           Hedis.setExp (activeDomainCacheKey merchantOperatingCityId domain) dataToBeCached expTime
       )
         /=<< Queries.findActiveByMerchantOpCityAndDomain merchantOperatingCityId domain
+
+isExperimentRunningCached ::
+  BeamFlow.BeamFlow m r =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m Bool
+isExperimentRunningCached cityId domain =
+  IM.withInMemCache (experimentRunningInMemKey cityId domain) 10800 $ do
+    mbFlag <- Hedis.safeGet (experimentRunningRedisKey cityId domain)
+    case mbFlag of
+      Just running -> pure running
+      Nothing -> do
+        active <- findActiveByMerchantOpCityAndDomain cityId domain
+        let running = any (\r -> r.isBaseVersion /= Just True && r.percentageRollout > 0) active
+        expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+        Hedis.setExp (experimentRunningRedisKey cityId domain) running expTime
+        logDebug $ "CP Log: [EXPERIMENT_RUNNING_REFILL] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId <> " running=" <> show running
+        pure running
 
 delete :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 delete = Queries.delete
@@ -128,11 +150,30 @@ baseRolloutCacheKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicR
 activeDomainCacheKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> Text
 activeDomainCacheKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain <> ":Active"
 
+experimentRunningRedisKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> Text
+experimentRunningRedisKey cityId domain = "yudhishthira-CachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId cityId <> ":Domain-" <> show domain <> ":ExperimentRunning"
+
+experimentRunningInMemKey :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> [Text]
+experimentRunningInMemKey cityId domain = ["AppDynamicLogicRollout:ExperimentRunning", show domain, Kernel.Types.Id.getId cityId]
+
+experimentRunningInMemInfix :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> Text
+experimentRunningInMemInfix cityId domain = "AppDynamicLogicRollout:ExperimentRunning:" <> show domain <> ":" <> Kernel.Types.Id.getId cityId
+
 clearActiveDomainCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
-clearActiveDomainCache cityId domain = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ activeDomainCacheKey cityId domain
+clearActiveDomainCache cityId domain = do
+  logDebug $ "CP Log: [ACTIVE_DELETE] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del $ activeDomainCacheKey cityId domain
+
+clearExperimentRunningCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
+clearExperimentRunningCache cityId domain = do
+  logDebug $ "CP Log: [EXPERIMENT_RUNNING_DELETE] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del $ experimentRunningRedisKey cityId domain
+  IM.refreshInMem $ experimentRunningInMemInfix cityId domain
 
 clearBaseRolloutCacheKey :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
-clearBaseRolloutCacheKey cityId domain = Hedis.runInMultiCloudRedisWrite $ Hedis.del $ baseRolloutCacheKey cityId domain
+clearBaseRolloutCacheKey cityId domain = do
+  logDebug $ "CP Log: [BASEROLLOUT_DELETE] domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del $ baseRolloutCacheKey cityId domain
 
 clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 clearCache cityId domain = do
@@ -140,3 +181,23 @@ clearCache cityId domain = do
   clearDomainCache cityId domain
   clearBaseRolloutCacheKey cityId domain
   clearActiveDomainCache cityId domain
+  clearExperimentRunningCache cityId domain
+
+-- | Write-through refresh of the runtime read-path rollout caches.
+refreshActiveAndBaseCache ::
+  BeamFlow.BeamFlow m r =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] ->
+  [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] ->
+  m ()
+refreshActiveAndBaseCache cityId domain activeRollouts baseRollouts = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (activeDomainCacheKey cityId domain) activeRollouts expTime
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (baseRolloutCacheKey cityId domain) baseRollouts expTime
+  let experimentRunning = any (\r -> r.isBaseVersion /= Just True && r.percentageRollout > 0) activeRollouts
+  Hedis.runInMultiCloudRedisWrite $ Hedis.setExp (experimentRunningRedisKey cityId domain) experimentRunning expTime
+  IM.refreshInMem $ experimentRunningInMemInfix cityId domain
+  logDebug $ "CP Log: Experiment: domain=" <> show domain <> " city=" <> Kernel.Types.Id.getId cityId <> " running=" <> show experimentRunning
+  clearDomainCache cityId domain
+  clearCityConfigsCache cityId

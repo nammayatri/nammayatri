@@ -238,7 +238,8 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     label :: Maybe Text,
     igmCategory :: Maybe Text,
     enableKapture :: Maybe Bool,
-    showInDefault :: Maybe Bool
+    showInDefault :: Maybe Bool,
+    xyneChannelId :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -614,6 +615,7 @@ data IssueConfigRes = IssueConfigRes
     onIssueReopenMsgs :: [Id IssueMessage],
     onAutoMarkIssueClsMsgs :: [Id IssueMessage],
     onKaptMarkIssueResMsgs :: [Id IssueMessage],
+    onCustomerNotSatisfiedMsgs :: [Id IssueMessage],
     onIssueCloseMsgs :: [Id IssueMessage],
     reopenCount :: Int,
     merchantName :: Maybe Text,
@@ -628,6 +630,7 @@ data UpdateIssueConfigReq = UpdateIssueConfigReq
     onIssueReopenMsgs :: Maybe [Id IssueMessage],
     onAutoMarkIssueClsMsgs :: Maybe [Id IssueMessage],
     onKaptMarkIssueResMsgs :: Maybe [Id IssueMessage],
+    onCustomerNotSatisfiedMsgs :: Maybe [Id IssueMessage],
     onIssueCloseMsgs :: Maybe [Id IssueMessage],
     reopenCount :: Maybe Int,
     merchantName :: Maybe Text,

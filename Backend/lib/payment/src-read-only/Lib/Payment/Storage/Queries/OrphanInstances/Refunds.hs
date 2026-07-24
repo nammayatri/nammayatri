@@ -17,7 +17,8 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
     pure $
       Just
         Lib.Payment.Domain.Types.Refunds.Refunds
-          { arn = arn,
+          { actualRefundedAmount = actualRefundedAmount,
+            arn = arn,
             completedAt = completedAt,
             createdAt = createdAt,
             errorCode = errorCode,
@@ -28,6 +29,7 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
             isApiCallSuccess = isApiCallSuccess,
             merchantId = merchantId,
             orderId = Kernel.Types.Id.ShortId orderId,
+            referenceType = referenceType,
             refundAmount = refundAmount,
             shortId = Kernel.Types.Id.ShortId shortId,
             status = status,
@@ -37,7 +39,8 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
 instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
   toTType' (Lib.Payment.Domain.Types.Refunds.Refunds {..}) = do
     Beam.RefundsT
-      { Beam.arn = arn,
+      { Beam.actualRefundedAmount = actualRefundedAmount,
+        Beam.arn = arn,
         Beam.completedAt = completedAt,
         Beam.createdAt = createdAt,
         Beam.errorCode = errorCode,
@@ -48,6 +51,7 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Beam.isApiCallSuccess = isApiCallSuccess,
         Beam.merchantId = merchantId,
         Beam.orderId = Kernel.Types.Id.getShortId orderId,
+        Beam.referenceType = referenceType,
         Beam.refundAmount = refundAmount,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.status = status,

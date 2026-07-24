@@ -35,6 +35,9 @@ findById roleId = findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId roleId]
 findByName :: BeamFlow m r => Text -> m (Maybe Role)
 findByName name = findOneWithKV [Se.Is BeamR.name $ Se.Eq name]
 
+findAllByName :: BeamFlow m r => [Text] -> m [Role]
+findAllByName names = findAllWithKV [Se.Is BeamR.name $ Se.In names]
+
 findByDashboardAccessType :: BeamFlow m r => Role.DashboardAccessType -> m (Maybe Role)
 findByDashboardAccessType dashboardAccessType =
   findOneWithKV [Se.Is BeamR.dashboardAccessType $ Se.Eq dashboardAccessType]
@@ -42,6 +45,10 @@ findByDashboardAccessType dashboardAccessType =
 findAllInDashboardAccessType :: BeamFlow m r => [Role.DashboardAccessType] -> m [Role]
 findAllInDashboardAccessType dashboardAccessTypes =
   findAllWithKV [Se.Is BeamR.dashboardAccessType $ Se.In dashboardAccessTypes]
+
+findAllByIds :: BeamFlow m r => [Id Role] -> m [Role]
+findAllByIds [] = pure []
+findAllByIds ids = findAllWithKV [Se.Is BeamR.id $ Se.In (map getId ids)]
 
 findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Role]
 findAllByLimitOffset mbLimit mbOffset = do
@@ -77,12 +84,46 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
       catMaybes <$> mapM fromTType' m'
     Left _ -> pure []
 
+findAllWithLimitOffsetByIds ::
+  BeamFlow m r =>
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Text ->
+  [Id Role] ->
+  m [Role]
+findAllWithLimitOffsetByIds _ _ _ [] = pure []
+findAllWithLimitOffsetByIds mbLimit mbOffset mbSearchString ids = do
+  let limitVal = fromMaybe 10 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+      idTexts = map getId ids
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ limitVal $
+          B.offset_ offsetVal $
+            B.orderBy_ (\role -> B.desc_ role.name) $
+              B.filter_'
+                ( \role ->
+                    B.sqlBool_ (role.id `B.in_` map B.val_ idTexts)
+                      B.&&?. maybe
+                        (B.sqlBool_ $ B.val_ True)
+                        (\searchStr -> B.sqlBool_ (role.name `B.like_` B.val_ ("%" <> searchStr <> "%")))
+                        mbSearchString
+                )
+                do
+                  B.all_ (SBC.role SBC.atlasDB)
+  case res of
+    Right res' -> catMaybes <$> mapM fromTType' res'
+    Left _ -> pure []
+
 instance FromTType' BeamR.Role Role.Role where
   fromTType' BeamR.RoleT {..} = do
     return $
       Just
         Role.Role
           { id = Id id,
+            accessibleRoles = Id <$> accessibleRoles,
             ..
           }
 
@@ -90,5 +131,6 @@ instance ToTType' BeamR.Role Role.Role where
   toTType' Role.Role {..} =
     BeamR.RoleT
       { id = getId id,
+        accessibleRoles = getId <$> accessibleRoles,
         ..
       }

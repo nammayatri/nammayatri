@@ -47,7 +47,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     onRideBatchSplitConfig :: B.C f [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistanceOnRide],
     onRideRadiusConfig :: B.C f [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.OnRideRadiusConfig],
     radiusShrinkValueForDriversOnRide :: B.C f Kernel.Types.Common.Meters,
-    radiusStepSize :: B.C f Kernel.Types.Common.Meters,
+    radiusStepSize :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     scheduleTryTimes :: B.C f [Kernel.Prelude.Int],
     selfRequestIfRiderIsDriver :: B.C f Kernel.Prelude.Bool,
     singleBatchProcessTime :: B.C f Kernel.Types.Common.Seconds,

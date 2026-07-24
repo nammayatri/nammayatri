@@ -21,6 +21,7 @@ import API.Types.ProviderPlatform.Management.Endpoints.Account (FleetOwnerStatus
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Pg)
 import Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantAccess as MerchantAccess
 import Domain.Types.Person as Person
@@ -32,6 +33,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
@@ -45,6 +47,34 @@ import Storage.Queries.Role ()
 
 create :: BeamFlow m r => Person -> m ()
 create = createWithKV
+
+-- Bypasses the KV write path so writes across two tables share one Postgres
+-- BEGIN/COMMIT. Readers hit Postgres on cache miss (findWithKVConnector fallback).
+createPersonsWithAccessAtomic ::
+  BeamFlow m r =>
+  [(Person, MerchantAccess.MerchantAccess)] ->
+  m ()
+createPersonsWithAccessAtomic [] = pure ()
+createPersonsWithAccessAtomic pairs = do
+  let personRows = map (toTType' . fst) pairs
+      accessRows = map (toTType' . snd) pairs
+  runMasterTransaction "PT bulkCreate" $ do
+    L.insertRows $ B.insert (SBC.person SBC.atlasDB) (B.insertValues personRows)
+    L.insertRows $ B.insert (SBC.merchantAccess SBC.atlasDB) (B.insertValues accessRows)
+
+-- Generic BEGIN/COMMIT wrapper: any multi-statement batch writes can reuse this
+-- instead of hand-rolling `getMasterBeamConfig + L.runTransaction + case result`.
+runMasterTransaction ::
+  BeamFlow m r =>
+  Text ->
+  L.SqlDB Pg () ->
+  m ()
+runMasterTransaction label action = do
+  dbConf <- getMasterBeamConfig
+  result <- L.runTransaction dbConf action
+  case result of
+    Left err -> throwError (InternalError $ label <> " failed: " <> T.pack (show err))
+    Right _ -> pure ()
 
 findById ::
   BeamFlow m r =>
@@ -226,6 +256,22 @@ updatePersonVerifiedStatus personId verified = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+updatePersonUpsertableFields :: BeamFlow m r => Person -> m ()
+updatePersonUpsertableFields p =
+  updateWithKV
+    [ Se.Set BeamP.firstName p.firstName,
+      Se.Set BeamP.lastName p.lastName,
+      Se.Set BeamP.roleId (getId p.roleId),
+      Se.Set BeamP.emailEncrypted (p.email <&> (unEncrypted . (.encrypted))),
+      Se.Set BeamP.emailHash (p.email <&> (.hash)),
+      Se.Set BeamP.dashboardAccessType p.dashboardAccessType,
+      Se.Set BeamP.tokenNoHash p.tokenNoHash,
+      Se.Set BeamP.entityId (p.entityId <&> getId),
+      Se.Set BeamP.verified p.verified,
+      Se.Set BeamP.updatedAt p.updatedAt
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId p.id]
+
 findAllWithLimitOffset ::
   BeamFlow m r =>
   Maybe Text ->
@@ -297,6 +343,26 @@ updatePersonRole personId role = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+updatePerson2FaSecret :: BeamFlow m r => Id Person -> Text -> m ()
+updatePerson2FaSecret personId secretKey = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.secretKey $ Just secretKey,
+      Se.Set BeamP.is2faEnabled True,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
+clearPerson2Fa :: BeamFlow m r => Id Person -> m ()
+clearPerson2Fa personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.secretKey Nothing,
+      Se.Set BeamP.is2faEnabled False,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
 updatePersonPassword :: BeamFlow m r => Id Person -> DbHash -> m ()
 updatePersonPassword personId newPasswordHash = do
@@ -400,6 +466,7 @@ instance FromTType' BeamP.Person Person.Person where
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
             language = language,
+            entityId = entityId <&> Id,
             ..
           }
 
@@ -416,6 +483,7 @@ instance ToTType' BeamP.Person Person.Person where
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,
         language = language,
+        entityId = entityId <&> getId,
         ..
       }
 

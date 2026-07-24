@@ -124,18 +124,20 @@ findAllAutoPayInvoicesActiveOlderThanProvidedDuration ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   NominalDiffTime ->
   Id DMOC.MerchantOperatingCity ->
+  Int ->
   m [Domain.Invoice]
-findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeDiff merchantOperatingCityId = do
+findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeDiff merchantOperatingCityId limit = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * timeDiff) endTime
-  findAllWithKV
+  findAllWithOptionsKV'
     [ Se.And
         [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
-          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE,
           Se.Is BeamI.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOperatingCityId),
           Se.Is BeamI.createdAt $ Se.LessThan startTime
         ]
     ]
+    (Just limit)
+    Nothing
 
 findLatestAutopayActiveByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findLatestAutopayActiveByDriverFeeId driverFeeId = do
@@ -203,18 +205,16 @@ updateStatusAndTypeByMbdriverFeeIdAndInvoiceId invoiceId status paymentMode driv
 
 updatePendingToFailed ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  NominalDiffTime ->
+  [Id Domain.Invoice] ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-updatePendingToFailed seconds merchantOperatingCityId = do
-  endTime <- getCurrentTime
-  let startTime = addUTCTime (-1 * seconds) endTime
+updatePendingToFailed invoiceIds merchantOperatingCityId =
   updateWithKV
     [Se.Set BeamI.invoiceStatus Domain.INACTIVE]
     [ Se.And
-        [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
-          Se.Is BeamI.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
-          Se.Is BeamI.createdAt $ Se.LessThan startTime
+        [ Se.Is BeamI.id $ Se.In (getId <$> invoiceIds),
+          Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
         ]
     ]
 

@@ -48,8 +48,11 @@ data SpecialLocationFull = SpecialLocationFull
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
+    fetchAllGateFareProduct :: Maybe Bool,
     supportNumber :: Maybe Text,
-    render :: Maybe D.RenderType
+    render :: Maybe D.RenderType,
+    paymentModes :: Maybe [D.PaymentMode],
+    fareSettlementType :: Maybe D.FareSettlementType
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

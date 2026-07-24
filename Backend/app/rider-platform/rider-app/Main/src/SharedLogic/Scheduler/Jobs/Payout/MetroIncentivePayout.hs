@@ -30,6 +30,8 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
@@ -39,9 +41,10 @@ import SharedLogic.JobScheduler
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payout as TP
@@ -56,7 +59,8 @@ sendCustomerRefund ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
   ) =>
   Job 'MetroIncentivePayout ->
   m ExecutionResult
@@ -66,8 +70,8 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       merchantId = jobData.merchantId
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
-  payoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True, payoutEntity = Just METRO_TICKET_CASHBACK})
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True, payoutEntity = Just METRO_TICKET_CASHBACK}) (Just (maybeToList <$> CQPayoutCfg.findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity merchantOpCityId True METRO_TICKET_CASHBACK (Just [])))
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId)) >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
   let rescheduleTimeDiff = payoutConfig <&> (.timeDiff)
   eligibleBookingsList <- QFTB.findAllByCashbackStatus riderConfig.payoutBatchSize (Just 0) (Just statusForRetry)
   logDebug $ "Bookings eligible for cashback: " <> show eligibleBookingsList
@@ -105,7 +109,8 @@ callPayout ::
     SchedulerFlow r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

@@ -5,6 +5,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import Domain.Types.Image hiding (id)
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate hiding (id)
 import Domain.Types.VehicleVariant as Vehicle
@@ -25,6 +26,44 @@ import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
 -- Extra code goes here --
+
+findVerifiedAndApproved ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Bool ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Int ->
+  Int ->
+  Maybe Text ->
+  Maybe Text ->
+  m [VehicleRegistrationCertificate]
+findVerifiedAndApproved merchantOpCityId isVerified isApproved mbFrom mbTo limit offset mbRcNo mbRcId = do
+  let clauses =
+        [ Se.Is BeamVRC.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+          Se.Is BeamVRC.verified (Se.Eq (Just isVerified))
+        ]
+          <> ( if isApproved
+                 then [Se.Is BeamVRC.approved (Se.Eq (Just True))]
+                 else
+                   [ Se.Or
+                       [ Se.Is BeamVRC.approved (Se.Eq (Just False)),
+                         Se.Is BeamVRC.approved Se.Null
+                       ]
+                   ]
+             )
+          <> maybe [] (\from -> [Se.Is BeamVRC.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
+          <> maybe [] (\to -> [Se.Is BeamVRC.updatedAt (Se.LessThanOrEq to)]) mbTo
+          <> maybe [] (\rcNo -> [Se.Is BeamVRC.unencryptedCertificateNumber (Se.Eq (Just rcNo))]) mbRcNo
+          <> maybe [] (\rcId -> [Se.Is BeamVRC.id (Se.Eq rcId)]) mbRcId
+
+  findAllWithOptionsKV
+    [Se.And clauses]
+    (Se.Desc BeamVRC.updatedAt)
+    (Just limit)
+    (Just offset)
+
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
   res <- findOneWithKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]
@@ -156,6 +195,47 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
       Se.Set BeamVRC.updatedAt now
     ]
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
+
+-- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
+--   Downgrading `verified` to False also revokes `approved` (re-approval required), mirroring the driver side.
+updateVerifiedByCertificateNumberHash ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Bool ->
+  DbHash ->
+  m ()
+updateVerifiedByCertificateNumberHash verified certificateHash = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [ Se.Set BeamVRC.verified verified,
+        Se.Set BeamVRC.updatedAt now
+      ]
+        <> [Se.Set BeamVRC.approved (Just False) | verified == Just False]
+    )
+    [ Se.And
+        [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
+          Se.Or
+            [ Se.Is BeamVRC.verified $ Se.Eq Nothing, -- first write (NULL) — cover it; NULL <> x is NULL
+              Se.Is BeamVRC.verified $ Se.Not (Se.Eq verified)
+            ]
+        ]
+    ]
+
+-- | Targeted `approved` + `verified` update by RC id. Patches only those two fields (not a full-row
+--   updateByPrimaryKey), so it doesn't clobber concurrent writes to other fields.
+updateApprovedAndVerifiedById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Bool ->
+  Maybe Bool ->
+  Id VehicleRegistrationCertificate ->
+  m ()
+updateApprovedAndVerifiedById approved verified (Id rcId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamVRC.approved approved,
+      Se.Set BeamVRC.verified verified,
+      Se.Set BeamVRC.updatedAt now
+    ]
+    [Se.Is BeamVRC.id $ Se.Eq rcId]
 
 findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Maybe Text -> m [VehicleRegistrationCertificate]
 findAllRCByStatusForFleet fleetOwnerId status limitVal offsetVal (Id merchantId') statusAwareVehicleNo = do
@@ -829,3 +909,16 @@ findAllByFleetOwnerIdAndSearchString mbLimit mbOffset fleetOwnerId mbSearchStrin
   case res of
     Right res' -> catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
+
+findVehicleInfoByRcIdOrVehicleNo :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Text -> m (Maybe VehicleRegistrationCertificate)
+findVehicleInfoByRcIdOrVehicleNo mbRcId mbVehicleNo = do
+  mbVehicleNoHash <- mapM getDbHash mbVehicleNo
+  let searchPreds =
+        catMaybes
+          [ (\rId -> Se.Is BeamVRC.id $ Se.Eq rId) <$> mbRcId,
+            (\vNoHash -> Se.Is BeamVRC.certificateNumberHash $ Se.Eq vNoHash) <$> mbVehicleNoHash
+          ]
+  case searchPreds of
+    [] -> pure Nothing
+    [p] -> findOneWithKV [p]
+    ps -> findOneWithKV [Se.Or ps]
