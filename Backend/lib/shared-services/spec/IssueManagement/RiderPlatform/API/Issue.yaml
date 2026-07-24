@@ -1,5 +1,12 @@
 imports:
   IssueCategory: IssueManagement.Domain.Types.Issue.IssueCategory
+  IssueApiIntegration: IssueManagement.Domain.Types.Issue.IssueApiIntegration
+  ApiIntegrationListRes: IssueManagement.Common.Dashboard.Issue
+  UpsertApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
+  UpsertApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
+  TestApiIntegrationReq: IssueManagement.Common.Dashboard.Issue
+  TestApiIntegrationRes: IssueManagement.Common.Dashboard.Issue
+  IssueOptionListRes: IssueManagement.Common.UI.Issue
   CategoryType: IssueManagement.Domain.Types.Issue.IssueCategory
   IssueMessage: IssueManagement.Domain.Types.Issue.IssueMessage
   IssueReport: IssueManagement.Domain.Types.Issue.IssueReport
@@ -493,6 +500,48 @@ apis:
         type: MarkChatReadByUserReq
       response:
         type: APISuccess
+  - GET: # ApiIntegrationListAPI
+      endpoint: /apiIntegration/list
+      name: GetIssueApiIntegrationList
+      auth: ApiAuthV2
+      response:
+        type: ApiIntegrationListRes
+  - POST: # ApiIntegrationUpsertAPI
+      endpoint: /apiIntegration/upsert
+      name: PostIssueApiIntegrationUpsert
+      auth: ApiAuthV2
+      request:
+        type: UpsertApiIntegrationReq
+      response:
+        type: UpsertApiIntegrationRes
+  - POST: # ApiIntegrationDeleteAPI
+      endpoint: /apiIntegration/{apiIntegrationId}/delete
+      name: PostIssueApiIntegrationDelete
+      auth: ApiAuthV2
+      params:
+        apiIntegrationId: Id IssueApiIntegration
+      response:
+        type: APISuccess
+  - POST: # ApiIntegrationTestAPI
+      endpoint: /apiIntegration/test
+      name: PostIssueApiIntegrationTest
+      auth: ApiAuthV2
+      request:
+        type: TestApiIntegrationReq
+      response:
+        type: TestApiIntegrationRes
+  - GET: # FlowSimulateAPI - walk the chat flow (engine included) from the dashboard
+      endpoint: /flow/simulate
+      name: GetIssueFlowSimulate
+      auth: ApiAuthV2
+      mandatoryQuery:
+        categoryId: (Id IssueCategory)
+      query:
+        - optionId: (Id IssueOption)
+        - rideId: (Id Ride)
+        - sessionId: Text
+      response:
+        type: IssueOptionListRes
 # Did not generated any types because we need to use common types for rider and provider dashboard
 types: {}
 
