@@ -98,6 +98,7 @@ library
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
       IssueManagement.Utils.Html
+      IssueManagement.Utils.RemoteFile
       MerchantDocuments.Domain.Action.UI.MerchantDocument
       MerchantDocuments.Domain.Types.Common
       MerchantDocuments.Storage.BeamFlow
@@ -218,10 +219,12 @@ library
     , geojson
     , hspec
     , http-client
+    , http-client-tls
     , lens
     , location-updates
     , mobility-core
     , mock-registry
+    , network
     , openapi3
     , persistent
     , postgresql-simple

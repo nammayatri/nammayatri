@@ -351,6 +351,10 @@ createMediaEntry url fileType filePath = do
             s3FilePath = Just filePath,
             status = Just D.PENDING,
             fileHash = Nothing,
+            -- Multipart uploads don't carry the client's original filename, and
+            -- the size is already enforced by the caller's limit check.
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }
@@ -478,6 +482,51 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
 fetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
 fetchMedia _personId filePath =
   S3.get $ T.unpack filePath
+
+-- | Presigned, time-limited link for opening a media file outside the app.
+--
+-- 'fetchMedia' above returns base64 behind our token auth, which works for
+-- anything the app renders itself but not for handing a file to an external
+-- viewer — a browser opening a PDF cannot present the token. Presigning the S3
+-- object gives a url that stands on its own for a few minutes.
+--
+-- Rows with no @s3FilePath@ (a third-party attachment whose rehost failed, or a
+-- legacy row predating rehosting) fall back to their stored url, so older
+-- attachments keep opening.
+--
+-- The link it hands out needs no auth, so access is checked first: the caller
+-- must own the issue, and the file must actually belong to that issue — either
+-- as media attached to the report itself or on one of its chat messages.
+-- @media_file@ carries no owner of its own, so the issue is what scopes it;
+-- without that any authenticated user could presign any file by id.
+mediaFileDownloadLink ::
+  (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) =>
+  (Id Person, Id Merchant) ->
+  Identifier ->
+  Id D.IssueReport ->
+  Text ->
+  m Common.MediaFileDownloadLinkRes
+mediaFileDownloadLink (personId, _merchantId) identifier issueReportId mediaFileId = do
+  issueReport <-
+    QIR.findById issueReportId
+      >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  unless (issueReport.personId == personId) $
+    throwError (InvalidRequest "This issue does not belong to the caller.")
+  chatMessages <- QCM.findChatMessagesAfter issueReportId Nothing Nothing
+  let issueMediaIds = issueReport.mediaFiles <> concatMap (.mediaFileIds) chatMessages
+  unless (Id mediaFileId `elem` issueMediaIds) $
+    throwError (InvalidRequest "This media file does not belong to the issue.")
+  mediaFile <-
+    CQMF.findById (Id mediaFileId) identifier
+      >>= fromMaybeM (FileDoesNotExist mediaFileId)
+  let isReady = mediaFile.status == Just D.COMPLETED || isNothing mediaFile.status
+  unless isReady . throwError $ InvalidRequest "Media file is not ready to download."
+  downloadUrl <- case mediaFile.s3FilePath of
+    Just s3Path -> S3.generateDownloadUrl (T.unpack s3Path) mediaFileLinkExpiry
+    Nothing -> pure mediaFile.url
+  pure Common.MediaFileDownloadLinkRes {downloadUrl}
+  where
+    mediaFileLinkExpiry = Seconds 300
 
 createIssueReport ::
   ( EsqDBReplicaFlow m r,
