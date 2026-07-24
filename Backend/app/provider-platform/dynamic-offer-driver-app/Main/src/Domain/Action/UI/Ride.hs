@@ -461,6 +461,8 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
             s3FilePath = Just fp,
             status = Just MediaFile.PENDING,
             fileHash = Nothing,
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }
@@ -517,6 +519,8 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
             s3FilePath = Just fp,
             status = Just MediaFile.PENDING,
             fileHash = Nothing,
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }

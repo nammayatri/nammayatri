@@ -13,6 +13,9 @@ type IssueAPI =
       :> Common.IssueUploadAPI
     :<|> "media"
       :> Common.IssueFetchMediaAPI
+    :<|> "media"
+      :> "downloadLink"
+      :> Common.IssueMediaDownloadLinkAPI
     :<|> "category"
       :> Common.IssueCategoryAPI
     :<|> "option"

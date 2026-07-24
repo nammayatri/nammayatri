@@ -28,6 +28,12 @@ data MediaFile = MediaFile
     s3FilePath :: Maybe Text,
     status :: Maybe MediaFileUploadStatus,
     fileHash :: Maybe Text,
+    -- | Original filename as supplied by the source (e.g. a Xyne attachment's
+    -- @name@). Absent for uploads that never carried one — callers fall back to
+    -- deriving a label from the url/s3 key.
+    name :: Maybe Text,
+    -- | Size in bytes, when the source reported it.
+    size :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: Maybe UTCTime
   }
