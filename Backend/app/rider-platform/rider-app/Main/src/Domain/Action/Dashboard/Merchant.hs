@@ -1563,7 +1563,6 @@ instance FromNamedRecord SpecialLocationCSVRow where
     enforceTollRoute <- optional (r .: "enforce_toll_route")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     render <- optional (r .: "render")
-    enableQueueFilter <- optional (r .: "enable_queue_filter")
     pure SpecialLocationCSVRow {..}
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities

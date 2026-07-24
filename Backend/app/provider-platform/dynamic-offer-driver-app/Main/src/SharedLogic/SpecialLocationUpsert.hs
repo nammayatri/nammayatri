@@ -143,7 +143,6 @@ instance FromNamedRecord SpecialLocationCSVRow where
     gateInfoNotificationActiveTillInSec <- optional (r .: "gate_info_notification_active_till_in_sec")
     enforceTollRoute <- optional (r .: "enforce_toll_route")
     render <- optional (r .: "render")
-    enableQueueFilter <- optional (r .: "enable_queue_filter")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     pure SpecialLocationCSVRow {..}
 
