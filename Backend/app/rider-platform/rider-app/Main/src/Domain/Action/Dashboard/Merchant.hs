@@ -753,6 +753,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       let (Context.City cityText) = newOperatingCity.city
       void $ City.validateAndAppendCityStdCodeMapping cityText stdCode
 
+  -- Reject before any DB write if the requested exophone number is already in use by another operating city
+  existingExophones <- CQExophone.findAllByPhone req.exophone
+  unless (all (\e -> e.merchantOperatingCityId == newMerchantOperatingCityId) existingExophones) $
+    throwError $ InvalidRequest $ "Exophone number " <> req.exophone <> " is already in use by another operating city"
+
   finally
     ( do
         whenJust mbGeometry $ \geometry -> QGeo.create geometry
@@ -889,6 +894,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             merchantId = mId,
             primaryPhone = req.exophone,
             backupPhone = req.exophone,
+            callService = req.callService,
             isPrimaryDown = False,
             createdAt = currentTime,
             updatedAt = currentTime,

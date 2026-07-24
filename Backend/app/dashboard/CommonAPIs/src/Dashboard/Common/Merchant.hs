@@ -613,6 +613,7 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     cityStdCode :: Maybe Text,
     enableForMerchant :: Bool,
     exophone :: Text,
+    callService :: CallService,
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
@@ -644,6 +645,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "cityStdCode" form
       <*> parseInput "enableForMerchant" form
       <*> parseInput "exophone" form
+      <*> parseInput "callService" form
       <*> parseMaybeInput "rcNumberPrefixList" form
       <*> parseMaybeInput "currency" form
       <*> parseMaybeInput "distanceUnit" form
@@ -694,6 +696,7 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     cityStdCode :: Maybe Text,
     enableForMerchant :: Bool,
     exophone :: Text,
+    callService :: CallService,
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
