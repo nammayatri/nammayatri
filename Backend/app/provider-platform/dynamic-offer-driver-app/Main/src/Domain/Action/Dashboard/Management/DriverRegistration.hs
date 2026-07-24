@@ -2102,23 +2102,19 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
 
 approveAndUpdateLdcDocument :: Common.LDCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateLdcDocument req _mId _mOpCityId = do
-  let documentId = Id req.documentId.getId
-  document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
-  let updatedDocument = document {DCommonDoc.verificationStatus = VALID, DCommonDoc.rejectReason = Nothing}
-  QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+  let imageId = Id req.documentImageId.getId
+  image <- findApproveImage imageId
+  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LDCCertificate
   whenJust req.tdsRate $ \rate ->
-    whenJust document.driverId $ \driverId ->
-      QFOI.updateTdsRate (Just rate) driverId
+    QFOI.updateTdsRate (Just rate) image.personId
 
 approveAndUpdateTanDocument :: Common.TANApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateTanDocument req _mId _mOpCityId = do
-  let documentId = Id req.documentId.getId
-  document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
-  let updatedDocument = document {DCommonDoc.verificationStatus = VALID, DCommonDoc.rejectReason = Nothing}
-  QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+  let imageId = Id req.documentImageId.getId
+  image <- findApproveImage imageId
+  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.TANCertificate
   whenJust req.tdsRate $ \rate ->
-    whenJust document.driverId $ \driverId ->
-      QFOI.updateTdsRate (Just rate) driverId
+    QFOI.updateTdsRate (Just rate) image.personId
 
 castReqTypeToDomain :: Common.PanType -> DPan.PanType
 castReqTypeToDomain = \case
@@ -2218,9 +2214,9 @@ getImageIdsFromApproveDetails = \case
   Common.SSNApprove _ -> []
   Common.CommonDocument _ -> []
   Common.UDYAMApprove req -> [req.documentImageId]
-  Common.LDCApprove _ -> []
+  Common.LDCApprove req -> [req.documentImageId]
   Common.GSTApprove req -> [req.documentImageId]
-  Common.TANApprove _ -> []
+  Common.TANApprove req -> [req.documentImageId]
 
 validatePersonForDocumentApproval :: Id DP.Person -> Id DM.Merchant -> Flow DP.Person
 validatePersonForDocumentApproval personId merchantId = do
@@ -2338,7 +2334,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       let imageId = Id imageRejectReq.documentImageId.getId
           reason = imageRejectReq.reason
           rejectImage imgId = QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid reason) imgId
-          imageOnlyRejectTypes = [DVC.ProfilePhoto, DVC.UploadProfile, DVC.VehicleInspectionForm, DVC.VehicleFront, DVC.VehicleBack, DVC.VehicleRight, DVC.VehicleLeft, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.Odometer, DVC.PoliceVerificationCertificate, DVC.DriverVehicleNOC] -- TODO Jitu: Fetch through config (onlyImageVerificationStatusLookupRequired)
+          imageOnlyRejectTypes = [DVC.ProfilePhoto, DVC.UploadProfile, DVC.VehicleInspectionForm, DVC.VehicleFront, DVC.VehicleBack, DVC.VehicleRight, DVC.VehicleLeft, DVC.VehicleFrontInterior, DVC.VehicleBackInterior, DVC.Odometer, DVC.PoliceVerificationCertificate, DVC.DriverVehicleNOC, DVC.TANCertificate, DVC.LDCCertificate] -- TODO Jitu: Fetch through config (onlyImageVerificationStatusLookupRequired)
       image <- findApproveImage imageId
       case image.imageType of
         DVC.VehicleFitnessCertificate -> do
@@ -2419,12 +2415,6 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
       rejectAndUpdateCommonDocument commonRejectReq merchantOperatingCityId
-      -- LDC reject also resets the fleet owner's TDS: explicit rate from the request, else the configured default (mirrors approve)
-      when (document.documentType == DVC.LDCCertificate) $ do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-        let mbTdsRate = commonRejectReq.tdsRate <|> ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate)
-        whenJust document.driverId $ \driverId ->
-          QFOI.updateTdsRate mbTdsRate driverId
       whenJust document.driverId $ \driverId -> do
         mbDriver <- QDriver.findById driverId
         case mbDriver of
@@ -2703,11 +2693,11 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         mbImage <- QImage.findById (Id req.documentImageId.getId)
         pure $ (.personId) <$> mbImage
       Common.LDCApprove req -> do
-        mbDoc <- QCommonDriverOnboardingDocuments.findById (Id req.documentId.getId)
-        pure $ join ((.driverId) <$> mbDoc)
+        mbImage <- QImage.findById (Id req.documentImageId.getId)
+        pure $ (.personId) <$> mbImage
       Common.TANApprove req -> do
-        mbDoc <- QCommonDriverOnboardingDocuments.findById (Id req.documentId.getId)
-        pure $ join ((.driverId) <$> mbDoc)
+        mbImage <- QImage.findById (Id req.documentImageId.getId)
+        pure $ (.personId) <$> mbImage
       req
         | (imgId : _) <- getImageIdsFromApproveDetails req -> do
           mbImage <- QImage.findById (Id imgId.getId)
