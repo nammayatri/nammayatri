@@ -260,6 +260,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.refundAmount refundAmount,
+      Se.Set Beam.rescheduleCount rescheduleCount,
+      Se.Set Beam.rescheduledFromBookingId (Kernel.Types.Id.getId <$> rescheduledFromBookingId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.routeName routeName,

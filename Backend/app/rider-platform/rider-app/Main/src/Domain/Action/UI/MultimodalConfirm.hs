@@ -34,6 +34,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSoftCancel,
     getMultimodalOrderCancelStatus,
     postMultimodalOrderCancel,
+    postMultimodalOrderReschedule,
     getMultimodalOrderSimilarJourneyLegs,
     postMultimodalOrderSwitchJourneyLeg,
     postMultimodalOrderChangeStops,
@@ -369,6 +370,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
       DFRFSTicketBookingPayment.REFUNDED -> FRFSTicketServiceAPI.REFUNDED
       DFRFSTicketBookingPayment.REFUND_FAILED -> FRFSTicketServiceAPI.REFUND_FAILED
       DFRFSTicketBookingPayment.REFUND_INITIATED -> FRFSTicketServiceAPI.REFUND_INITIATED
+      DFRFSTicketBookingPayment.RESCHEDULED -> FRFSTicketServiceAPI.RESCHEDULED
 
     mkFulfillmentHandler paymentServiceType orderId paymentStatusResp = case paymentServiceType of
       DOrder.FRFSBooking -> FRFSTicketService.frfsOrderStatusHandler merchantId paymentStatusResp JMU.switchFRFSQuoteTierUtil
@@ -1510,6 +1512,22 @@ postMultimodalOrderCancel (_, _) journeyId legOrder = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
   cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
   JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+  return Kernel.Types.APISuccess.Success
+
+postMultimodalOrderReschedule ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    FRFSTicketServiceAPI.FRFSRescheduleReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalOrderReschedule userInfo journeyId legOrder req = do
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest "No search found for the given leg")
+  booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
+  void $ FRFSTicketService.postFrfsBookingReschedule userInfo booking.id req
   return Kernel.Types.APISuccess.Success
 
 getAbsoluteValue :: Maybe HighPrecMoney -> Maybe HighPrecMoney

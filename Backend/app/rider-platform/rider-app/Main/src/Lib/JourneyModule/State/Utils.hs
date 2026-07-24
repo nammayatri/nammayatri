@@ -58,6 +58,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
       DFRFSBooking.COUNTER_CANCELLED -> JLTypes.Cancelled
       DFRFSBooking.CANCEL_INITIATED -> JLTypes.Cancelled
       DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> JLTypes.InPlan
+      DFRFSBooking.RESCHEDULED -> JLTypes.Cancelled
 
 getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, TrackingStatus, Maybe UTCTime)
 getWalkAllStatuses journeyLeg = do

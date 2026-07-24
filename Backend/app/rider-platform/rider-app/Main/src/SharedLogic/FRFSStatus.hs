@@ -300,6 +300,11 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
           `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
+    DFRFSTicketBooking.RESCHEDULED -> do
+      withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
+        let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
+        buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
+          `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
   where
     orElseM action fallback = action >>= maybe fallback pure
 
@@ -336,6 +341,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                       FRFSTicketService.REFUND_PENDING -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
                       FRFSTicketService.REFUND_INITIATED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_INITIATED
                       FRFSTicketService.REFUND_FAILED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_FAILED
+                      FRFSTicketService.RESCHEDULED -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.RESCHEDULED
                       FRFSTicketService.NEW -> Nothing
        in paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
 

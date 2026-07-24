@@ -28,3 +28,15 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN train_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_cancellable boolean ;
+
+
+------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_time_after_start integer ;
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_days_ahead integer ;
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_count integer ;
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_reschedule_allowed boolean ;

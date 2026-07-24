@@ -94,6 +94,7 @@ import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOpe
 import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
+import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
@@ -861,11 +862,11 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing
+      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing Nothing
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId Nothing
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -901,7 +902,7 @@ frfsOrderStatusHandler merchantId paymentStatusResponse switchFRFSQuoteTier = do
   orderShortId <- DPayment.getOrderShortId paymentStatusResponse
   logDebug $ "frfs ticket order bap webhookc call" <> orderShortId.getShortId
   order <- QPaymentOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound orderShortId.getShortId)
-  bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
+  bookingPayments <- QFRFSTicketBookingPayment.findActiveOrderBookingPayments order.id
   bookingsStatusWithBooking <-
     mapM
       ( \bookingPayment -> do
@@ -1095,6 +1096,48 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
     FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
     FRFSCancelJourney.cancelJourney updatedBooking
   return APISuccess.Success
+
+postFrfsBookingReschedule ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  API.Types.UI.FRFSTicketService.FRFSRescheduleReq ->
+  m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
+  personId <- fromMaybeM (InvalidRequest "personId not found") mbPersonId
+  oldBooking <- B.runInReplica $ QFRFSTicketBooking.findById oldBookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  unless (personId == oldBooking.riderId) $ throwError AccessDenied
+  oldPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment oldBooking >>= fromMaybeM (InvalidRequest "Payment not found for booking being rescheduled")
+  quote <- B.runInReplica $ QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity oldBooking
+  case integratedBppConfig.providerConfig of
+    DIBC.ONDC _ -> throwError $ InvalidRequest "Reschedule is not supported for ONDC-integrated operators"
+    _ -> do
+      FRFSReschedule.validateRescheduleEligibility oldBooking quote req.tripId integratedBppConfig
+      selectedQuoteCategories <-
+        forM req.offered $ \offeredCategory -> do
+          category <- QFRFSQuoteCategory.findById offeredCategory.quoteCategoryId >>= fromMaybeM (InvalidRequest "Invalid quote category id")
+          pure
+            FRFSTicketService.FRFSCategorySelectionReq
+              { quoteCategoryId = offeredCategory.quoteCategoryId,
+                quantity = category.selectedQuantity,
+                seatIds = offeredCategory.seatIds
+              }
+      FRFSReschedule.withRescheduleLock oldBooking.id $ do
+        freshOldBooking <- QFRFSTicketBooking.findById oldBooking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")
+        unless (freshOldBooking.status == DFRFSTicketBooking.CONFIRMED) $
+          throwError $ InvalidRequest "Booking is no longer confirmed, cannot be rescheduled"
+        statusRes <- postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories Nothing (Just True) (Just False) Nothing integratedBppConfig (Just req.tripId) (Just (oldBooking.id, oldPayment.paymentOrderId))
+        finalStatus <- getFrfsBookingStatusWithActor (Just personId, merchantId) statusRes.bookingId
+        if finalStatus.status == DFRFSTicketBooking.CONFIRMED
+          then do
+            FRFSReschedule.completeReschedule oldBooking.id finalStatus.bookingId
+            mbOldLeg <- QJourneyLeg.findByLegSearchId (Just oldBooking.searchId.getId)
+            whenJust mbOldLeg $ \oldLeg -> QJourneyLeg.updateLegSearchId (Just quote.searchId.getId) oldLeg.id
+            pure finalStatus
+          else do
+            void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.RESCHEDULED finalStatus.bookingId
+            pure finalStatus
 
 getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus
 getFrfsBookingCancelStatus _ bookingId = do

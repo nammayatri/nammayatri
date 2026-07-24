@@ -95,6 +95,7 @@ data FRFSBookingPaymentStatusAPI
   | REFUNDED
   | REFUND_FAILED
   | REFUND_INITIATED
+  | RESCHEDULED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -268,6 +269,14 @@ data FRFSRefundAttemptAPI = FRFSRefundAttemptAPI
     status :: Data.Text.Text
   }
   deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRescheduleCategoryReq = FRFSRescheduleCategoryReq {quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory, seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRescheduleReq = FRFSRescheduleReq {offered :: [FRFSRescheduleCategoryReq], quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote, tripId :: Data.Text.Text}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSRouteAPI = FRFSRouteAPI

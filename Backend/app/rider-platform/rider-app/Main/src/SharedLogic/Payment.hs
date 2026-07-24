@@ -439,7 +439,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
       m ()
     bookingsRefundStatusHandler refund = do
       let isRefundApiCallSuccess = refund.isApiCallSuccess
-      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
+      bookingPayments <- QFRFSTicketBookingPayment.findActiveOrderBookingPayments paymentOrder.id
       mapM_
         ( \bookingPayment -> do
             let bookingPaymentId = bookingPayment.id
@@ -624,7 +624,7 @@ markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
   syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder
   where
     markBookingsRefundPending paymentOrder = do
-      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
+      bookingPayments <- QFRFSTicketBookingPayment.findActiveOrderBookingPayments paymentOrder.id
       mapM_ (\bookingPayment -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPayment.id) bookingPayments
 
     markPassesRefundPending paymentOrder = do
