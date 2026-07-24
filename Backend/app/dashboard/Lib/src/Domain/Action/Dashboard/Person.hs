@@ -29,6 +29,7 @@ import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
+import qualified Domain.Types.Transaction as DTransaction
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Types as KET
@@ -44,6 +45,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Entity as QEntity
@@ -52,6 +54,7 @@ import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
+import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
@@ -577,8 +580,11 @@ deletePerson ::
   TokenInfo ->
   Id DP.Person ->
   m APISuccess
-deletePerson _ personId = do
+deletePerson tokenInfo personId = do
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Audit log: record who deleted which user before the deletion happens
+  transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
+  QT.create transaction{DTransaction.request = Just personId.getId}
   QAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
   QReg.deleteAllByPersonId personId
