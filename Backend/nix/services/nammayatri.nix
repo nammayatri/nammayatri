@@ -243,7 +243,8 @@ in
           fi
           unshare --user --mount --map-root-user bash -c "
             set -e
-            export LC_ALL=C
+            export LOCALE_ARCHIVE=${pkgs.glibcLocales}/lib/locale/locale-archive
+            export LC_ALL=C.UTF-8
             # Save local root before tmpfs hides /home
             mkdir -p /tmp/ns-root
             mount --bind $LOCAL_ROOT /tmp/ns-root
