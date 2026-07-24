@@ -9,23 +9,28 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
-  { _type :: (B.C f BecknV2.FRFS.Enums.ServiceTierType),
-    description :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
-    isAirConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isCancellable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    longName :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    providerCode :: (B.C f Kernel.Prelude.Text),
-    shortName :: (B.C f Kernel.Prelude.Text),
-    trainType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { _type :: B.C f BecknV2.FRFS.Enums.ServiceTierType,
+    description :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
+    isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isRescheduleAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    longName :: B.C f Kernel.Prelude.Text,
+    maxRescheduleCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRescheduleDaysAhead :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRescheduleTimeAfterStart :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    providerCode :: B.C f Kernel.Prelude.Text,
+    shortName :: B.C f Kernel.Prelude.Text,
+    trainType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +40,6 @@ instance B.Table FRFSVehicleServiceTierT where
 
 type FRFSVehicleServiceTier = FRFSVehicleServiceTierT Identity
 
-$(enableKVPG (''FRFSVehicleServiceTierT) [('id)] [])
+$(enableKVPG ''FRFSVehicleServiceTierT ['id] [])
 
-$(mkTableInstances (''FRFSVehicleServiceTierT) "frfs_vehicle_service_tier")
+$(mkTableInstances ''FRFSVehicleServiceTierT "frfs_vehicle_service_tier")

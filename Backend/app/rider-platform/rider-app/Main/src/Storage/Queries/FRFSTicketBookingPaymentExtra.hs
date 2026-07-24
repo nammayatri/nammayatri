@@ -6,6 +6,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBookingPayment as Beam
 import Storage.Queries.OrphanInstances.FRFSTicketBookingPayment ()
@@ -18,3 +19,7 @@ findTicketBookingPayment booking =
 findAllTBPByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> m [DFRFSTicketBookingPayment.FRFSTicketBookingPayment]
 findAllTBPByBookingId (Id bookingId) =
   findAllWithOptionsKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq bookingId] (Se.Desc Beam.createdAt) Nothing Nothing
+
+findActiveOrderBookingPayments :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DPaymentOrder.PaymentOrder -> m [DFRFSTicketBookingPayment.FRFSTicketBookingPayment]
+findActiveOrderBookingPayments paymentOrderId =
+  findAllWithKV [Se.And [Se.Is Beam.paymentOrderId $ Se.Eq (getId paymentOrderId), Se.Is Beam.status $ Se.Not $ Se.Eq DFRFSTicketBookingPayment.RESCHEDULED]]

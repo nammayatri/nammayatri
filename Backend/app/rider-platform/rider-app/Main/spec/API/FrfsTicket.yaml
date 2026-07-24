@@ -140,6 +140,15 @@ types:
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
     tripId: Maybe Text
 
+  FRFSRescheduleCategoryReq:
+    quoteCategoryId: Id FRFSQuoteCategory
+    seatIds: Maybe [(Id Seat)]
+
+  FRFSRescheduleReq:
+    quoteId: Id FRFSQuote
+    offered: "[FRFSRescheduleCategoryReq]"
+    tripId: Text
+
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
     description: Text
@@ -303,7 +312,7 @@ types:
     derive: "Show"
 
   FRFSBookingPaymentStatusAPI:
-    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED, RESCHEDULED"
 
   FRFSStationAPI:
     name: Maybe Text
@@ -665,6 +674,17 @@ apis:
       auth: TokenAuth
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # Reschedule a confirmed reserved-seat booking to another trip on the same route/stops, same fare
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/reschedule
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSRescheduleReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
   # Booking Cancel Status
   - GET:

@@ -451,6 +451,8 @@ FRFSTicketBooking:
     toStopIdx: Maybe Int
     holdId: Maybe Text
     tripId: Maybe Text
+    rescheduledFromBookingId: Maybe (Id FRFSTicketBooking)
+    rescheduleCount: Maybe Int
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
@@ -715,7 +717,7 @@ FRFSTicketBookingPayment:
 
   types:
     FRFSTicketBookingPaymentStatus:
-      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED, RESCHEDULED"
 
   constraints:
     id: PrimaryKey
@@ -941,6 +943,7 @@ FRFSConfig:
     discount: Int
     isEventOngoing: Maybe Bool
     isCancellationAllowed: Bool
+    isRescheduleAllowed: Maybe Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
     customDates: "[Text]"
@@ -1256,6 +1259,10 @@ FRFSVehicleServiceTier:
     description: Text
     isAirConditioned: Maybe Bool
     isCancellable: Maybe Bool
+    isRescheduleAllowed: Maybe Bool
+    maxRescheduleCount: Maybe Int
+    maxRescheduleTimeAfterStart: Maybe Seconds
+    maxRescheduleDaysAhead: Maybe Int
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity

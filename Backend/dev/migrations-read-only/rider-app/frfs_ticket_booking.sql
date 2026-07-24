@@ -199,3 +199,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN client_bundle_version text 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_payment_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN rescheduled_from_booking_id character varying(36) ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN reschedule_count integer ;

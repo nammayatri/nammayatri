@@ -88,6 +88,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    rescheduleCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    rescheduledFromBookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking),
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

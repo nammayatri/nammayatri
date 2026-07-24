@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
@@ -56,32 +57,33 @@ cancel ::
   Spec.CancellationType ->
   DBooking.FRFSTicketBooking ->
   m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
-cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  frfsConfig <-
-    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOperatingCity.id (Just [])))
-      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-  unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
-  let mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
-  whenJust mbServiceTierType $ \serviceTierType -> do
-    mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id
-    unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
-  when (cancellationType == Spec.SOFT_CANCEL) $
-    unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
-  case integratedBPPConfig.providerConfig of
-    ONDC _ -> do
-      fork "FRFS ONDC Cancel Req" $ do
-        providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-        ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
-        messageId <- generateGUID
-        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (FRFSUtils.makecancelledTtlKey booking.id) messageId ttl
-        let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
-        bknCancelReq <- ACL.buildCancelReq messageId booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType requestCity
-        logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
-        void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
-      return Nothing
-    _ -> do
-      onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking
-      mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq
-      let updatedBooking = booking {DBooking.bppOrderId = Just onCancelReq.bppOrderId}
-      return $ fmap (\(a, b, c) -> (a, b, c, updatedBooking)) mbSideEffectData
+cancel merchant merchantOperatingCity bapConfig cancellationType booking =
+  FRFSReschedule.withRescheduleLock booking.id $ do
+    integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+    frfsConfig <-
+      getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOperatingCity.id (Just [])))
+        >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+    unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
+    let mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
+    whenJust mbServiceTierType $ \serviceTierType -> do
+      mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id
+      unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
+    when (cancellationType == Spec.SOFT_CANCEL) $
+      unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
+    case integratedBPPConfig.providerConfig of
+      ONDC _ -> do
+        fork "FRFS ONDC Cancel Req" $ do
+          providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+          ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
+          messageId <- generateGUID
+          when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (FRFSUtils.makecancelledTtlKey booking.id) messageId ttl
+          let requestCity = SIBC.resolveOndcCity integratedBPPConfig merchantOperatingCity.city
+          bknCancelReq <- ACL.buildCancelReq messageId booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType requestCity
+          logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
+          void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
+        return Nothing
+      _ -> do
+        onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking
+        mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq
+        let updatedBooking = booking {DBooking.bppOrderId = Just onCancelReq.bppOrderId}
+        return $ fmap (\(a, b, c) -> (a, b, c, updatedBooking)) mbSideEffectData
