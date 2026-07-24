@@ -27,6 +27,8 @@ data MediaFileT f = MediaFileT
     s3FilePath :: B.C f (Maybe Text),
     status :: B.C f (Maybe Text),
     fileHash :: B.C f (Maybe Text),
+    name :: B.C f (Maybe Text),
+    size :: B.C f (Maybe Int),
     createdAt :: B.C f LocalTime,
     updatedAt :: B.C f (Maybe LocalTime)
   }

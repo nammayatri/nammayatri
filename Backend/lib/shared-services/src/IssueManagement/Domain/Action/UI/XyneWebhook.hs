@@ -37,6 +37,7 @@ where
 import qualified AWS.S3 as S3
 import qualified Data.Aeson as A
 import qualified Data.Text as T
+import EulerHS.Types (base64Encode)
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue as DCI
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DDI
@@ -44,10 +45,12 @@ import qualified IssueManagement.Domain.Action.UI.Issue as DUI
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import IssueManagement.Tools.Error
 import IssueManagement.Utils.Html (stripHtml)
+import qualified IssueManagement.Utils.RemoteFile as RF
 import qualified Kernel.External.Ticket.XyneSpaces.Config as Xyne
 import qualified Kernel.External.Ticket.XyneSpaces.Types as Xyne
 import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString (..), verifyXyneSignature)
@@ -82,7 +85,8 @@ processXyneWebhook ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r,
     CoreMetrics m,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   -- | Global signing secret paired with the @/internal/xyne/webhook@ URL.
   Text ->
@@ -117,7 +121,8 @@ handleDeskReply ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r,
     CoreMetrics m,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id Common.Merchant -> Id Common.MerchantOperatingCity -> m Xyne.XyneSpacesCfg) ->
   DUI.ServiceHandle m ->
@@ -152,7 +157,12 @@ handleDeskReply lookupXyneCfg issueHandle identifier payload = do
               then stripHtml payload.body
               else payload.body
           senderUserIdText = fromMaybe cfg.xyneAgentUserId payload.replierUserId
-      mediaIds <- maybe (pure []) (mapM xyneAttachmentToMediaFile) payload.attachments
+      merchantConfig <- issueHandle.findMerchantConfig merchantId mocId (Just $ cast issueReport.personId)
+      mediaIds <-
+        maybe
+          (pure [])
+          (mapM $ xyneAttachmentToMediaFile merchantConfig identifier issueReport.personId)
+          payload.attachments
       let req =
             DCI.SendChatMessageByUserReq
               { DCI.message = messageText,
@@ -170,21 +180,32 @@ handleDeskReply lookupXyneCfg issueHandle identifier payload = do
       Redis.setExp key resp.messageId dedupTtlSeconds
       pure $ XyneWebhookAck {externalId = resp.messageId}
 
--- | Persist a Xyne attachment as a @MediaFile@ row that points at the
--- third-party URL directly. We do not rehost on our S3 yet — if Xyne URLs turn
--- out to be short-lived, a fetch + S3.put step can be added here without
--- changing the call site.
+-- | Persist a Xyne attachment and rehost it on our own S3.
+--
+-- The row is created pointing at the third-party url first, then upgraded in
+-- place once the copy lands. That ordering is deliberate: a working url already
+-- exists, so starting from @PENDING@ (as the rider upload path does, where the
+-- file genuinely is not available yet) would hide the attachment for the
+-- duration of the fetch, and hide it permanently if the fetch failed. Creating
+-- it ready and upgrading on success means a failed rehost degrades to the old
+-- url-only behaviour instead of losing the attachment.
 xyneAttachmentToMediaFile ::
-  BeamFlow m r =>
+  ( BeamFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Common.MerchantConfig ->
+  Common.Identifier ->
+  Id Common.Person ->
   Xyne.XyneAttachment ->
   m (Id DMF.MediaFile)
-xyneAttachmentToMediaFile att = do
+xyneAttachmentToMediaFile merchantConfig identifier personId att = do
   fid <- generateGUID
   now <- getCurrentTime
-  let mf =
+  let fileType = mimeTypeToFileType att.mimeType
+      mf =
         DMF.MediaFile
           { DMF.id = fid,
-            DMF._type = mimeTypeToFileType att.mimeType,
+            DMF._type = fileType,
             DMF.url = att.url,
             DMF.s3FilePath = Nothing,
             -- COMPLETED, not CONFIRMED: the readiness checks that gate media on
@@ -195,11 +216,60 @@ xyneAttachmentToMediaFile att = do
             -- row is ready the moment it is written.
             DMF.status = Just DMF.COMPLETED,
             DMF.fileHash = Nothing,
+            DMF.name = Just att.name,
+            DMF.size = att.size,
             DMF.createdAt = now,
             DMF.updatedAt = Just now
           }
   QMF.create mf
+  fork "S3 Put Xyne Attachment" $ rehostToS3 merchantConfig identifier personId att fileType fid
   pure fid
+
+-- | Copy a Xyne-hosted attachment into our own S3 and repoint the row at it.
+--
+-- Best effort by design: every failure path leaves the row untouched, still
+-- serving the original third-party url, so a rehost problem degrades to the
+-- previous behaviour rather than breaking the attachment.
+rehostToS3 ::
+  ( BeamFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Common.MerchantConfig ->
+  Common.Identifier ->
+  Id Common.Person ->
+  Xyne.XyneAttachment ->
+  S3.FileType ->
+  Id DMF.MediaFile ->
+  m ()
+rehostToS3 merchantConfig identifier personId att fileType fid =
+  handleFailure $ case mimeTypeToExtension att.mimeType of
+    -- No sensible extension: leave it pointing at Xyne rather than storing a
+    -- file we cannot label or serve correctly.
+    Nothing ->
+      logWarning $ "Xyne rehost skipped, unsupported mimeType=" <> fromMaybe "<none>" att.mimeType <> " mediaFileId=" <> fid.getId
+    Just ext -> do
+      -- Cheap pre-screen on the size Xyne advertises, before spending a fetch.
+      if maybe False (> merchantConfig.mediaFileSizeUpperLimit) att.size
+        then logWarning $ "Xyne rehost skipped, advertised size exceeds limit, mediaFileId=" <> fid.getId
+        else
+          RF.fetchRemoteFile att.url merchantConfig.mediaFileSizeUpperLimit >>= \case
+            Nothing -> logWarning $ "Xyne rehost skipped, body exceeded size limit, mediaFileId=" <> fid.getId
+            Just remote -> do
+              filePath <- S3.createFilePath "issue-media/" ("xyne-" <> personId.getId) fileType ext
+              S3.put (T.unpack filePath) (base64Encode remote.content)
+              let fileUrl =
+                    merchantConfig.mediaFileUrlPattern
+                      & T.replace "<DOMAIN>" "issue"
+                      & T.replace "<FILE_PATH>" filePath
+              QMF.updateRehostedById fileUrl filePath fid
+              -- Without this the pre-rehost row stays cached and clients keep
+              -- being handed the third-party url until the entry expires.
+              CQMF.clearMediaFileByIdCache identifier fid
+              logInfo $ "Xyne attachment rehosted to " <> filePath
+  where
+    handleFailure action =
+      action `catch` \(e :: SomeException) ->
+        logError $ "Xyne rehost failed for mediaFileId=" <> fid.getId <> ", keeping original url: " <> show e
 
 mimeTypeToFileType :: Maybe Text -> S3.FileType
 mimeTypeToFileType Nothing = S3.PDF
@@ -209,6 +279,33 @@ mimeTypeToFileType (Just mt)
   | "video/" `T.isPrefixOf` mt = S3.Video
   | mt == "application/pdf" = S3.PDF
   | otherwise = S3.PDF
+
+-- | Extension for the S3 object key. Deliberately separate from
+-- 'validateContentType', which is the rider-upload allowlist and rejects
+-- @application/pdf@ outright — agents can attach documents that customers
+-- cannot upload. 'Nothing' means "do not rehost this".
+mimeTypeToExtension :: Maybe Text -> Maybe Text
+mimeTypeToExtension Nothing = Nothing
+mimeTypeToExtension (Just mt) = case T.toLower (T.strip (T.takeWhile (/= ';') mt)) of
+  "image/png" -> Just "png"
+  "image/jpeg" -> Just "jpg"
+  "image/jpg" -> Just "jpg"
+  "image/gif" -> Just "gif"
+  "image/webp" -> Just "webp"
+  "image/heic" -> Just "heic"
+  "image/heif" -> Just "heif"
+  "application/pdf" -> Just "pdf"
+  "audio/mpeg" -> Just "mp3"
+  "audio/mp3" -> Just "mp3"
+  "audio/mp4" -> Just "m4a"
+  "audio/aac" -> Just "aac"
+  "audio/wav" -> Just "wav"
+  "audio/wave" -> Just "wav"
+  "audio/webm" -> Just "webm"
+  "audio/ogg" -> Just "ogg"
+  "video/mp4" -> Just "mp4"
+  "video/webm" -> Just "webm"
+  _ -> Nothing
 
 -- | Payload for a Xyne @TICKET_STATUS_UPDATED@ event, delivered to the
 -- Bearer-token webhook. Independent of the DESK_REPLY event/payload used by

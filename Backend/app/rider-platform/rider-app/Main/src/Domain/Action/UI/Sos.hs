@@ -525,6 +525,8 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
             s3FilePath = Just filePath,
             status = Just DMF.COMPLETED,
             fileHash = Nothing,
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }
