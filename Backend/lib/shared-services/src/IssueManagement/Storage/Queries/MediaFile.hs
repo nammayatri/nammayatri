@@ -49,6 +49,20 @@ updateStatusAndHashById newStatus fileHash (Id mediaFileId) = do
     [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.fileHash fileHash, Set BeamMF.updatedAt (Just $ T.utcToLocalTime T.utc now)]
     [Is BeamMF.id $ Eq mediaFileId]
 
+-- | Point a row at our own S3 copy after rehosting a third-party attachment.
+-- Callers must follow this with 'clearMediaFileByIdCache', otherwise a client
+-- that read the row before the upload finished keeps being served the old
+-- third-party url until the cache expires.
+updateRehostedById :: BeamFlow m r => Text -> Text -> Id MediaFile -> m ()
+updateRehostedById newUrl s3Key (Id mediaFileId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Set BeamMF.url newUrl,
+      Set BeamMF.s3FilePath (Just s3Key),
+      Set BeamMF.updatedAt (Just $ T.utcToLocalTime T.utc now)
+    ]
+    [Is BeamMF.id $ Eq mediaFileId]
+
 instance FromTType' BeamMF.MediaFile MediaFile where
   fromTType' BeamMF.MediaFileT {..} = do
     pure $
@@ -60,6 +74,8 @@ instance FromTType' BeamMF.MediaFile MediaFile where
             s3FilePath = s3FilePath,
             status = status >>= readMaybe . DT.unpack,
             fileHash = fileHash,
+            name = name,
+            size = size,
             createdAt = T.localTimeToUTC T.utc createdAt,
             updatedAt = T.localTimeToUTC T.utc <$> updatedAt
           }
@@ -73,6 +89,8 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.s3FilePath = s3FilePath,
         BeamMF.status = DT.pack . show <$> status,
         BeamMF.fileHash = fileHash,
+        BeamMF.name = name,
+        BeamMF.size = size,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt,
         -- The column is NOT NULL, so never write a NULL: a domain-level Nothing
         -- only ever means "legacy KV entry", for which createdAt is the best value.

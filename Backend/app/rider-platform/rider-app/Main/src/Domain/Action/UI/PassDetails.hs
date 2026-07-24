@@ -521,6 +521,8 @@ postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
         s3FilePath = Just s3FilePath,
         status = Just DMF.COMPLETED,
         fileHash = Nothing,
+        name = Nothing,
+        size = Nothing,
         createdAt = now,
         updatedAt = Just now
       }

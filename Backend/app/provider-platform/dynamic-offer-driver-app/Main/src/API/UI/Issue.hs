@@ -57,6 +57,7 @@ handler = externalHandler
         :<|> issueReportDriverList (personId, merchantId, merchantOpCityId)
         :<|> issueMediaUpload (personId, merchantId, merchantOpCityId)
         :<|> fetchMedia (personId, merchantId, merchantOpCityId)
+        :<|> mediaFileDownloadLink (personId, merchantId, merchantOpCityId)
         :<|> getIssueCategory (personId, merchantId, merchantOpCityId)
         :<|> getIssueOption (personId, merchantId, merchantOpCityId)
         :<|> issueInfo (personId, merchantId, merchantOpCityId)
@@ -365,6 +366,10 @@ issueReportDriverList (driverId, merchantId, merchantOpCityId) language = withFl
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
 fetchMedia (driverId, merchantId, _) filePath = withFlowHandlerAPI $ Common.fetchMedia (cast driverId, cast merchantId) filePath
+
+mediaFileDownloadLink :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Common.MediaFileDownloadLinkRes
+mediaFileDownloadLink (driverId, merchantId, _) mediaFileId =
+  withFlowHandlerAPI $ Common.mediaFileDownloadLink (cast driverId, cast merchantId) Common.DRIVER mediaFileId
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
 createIssueReport (driverId, merchantId, _merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast driverId, cast merchantId) mbLanguage req driverIssueHandle Common.DRIVER Nothing

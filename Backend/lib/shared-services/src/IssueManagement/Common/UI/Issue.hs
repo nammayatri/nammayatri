@@ -162,6 +162,21 @@ type IssueFetchMediaAPI =
 
 -------------------------------------------------------------------------
 
+-- | Short-lived link for opening a media file outside the app (a PDF handed to
+-- the OS viewer, say). Our own media endpoint needs an auth token, which an
+-- external viewer cannot supply, so we presign the S3 object instead.
+newtype MediaFileDownloadLinkRes = MediaFileDownloadLinkRes
+  { downloadUrl :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type IssueMediaDownloadLinkAPI =
+  MandatoryQueryParam "mediaFileId" Text
+    :> Get '[JSON] MediaFileDownloadLinkRes
+
+-------------------------------------------------------------------------
+
 type IssueDeleteAPI =
   Delete '[JSON] APISuccess
 

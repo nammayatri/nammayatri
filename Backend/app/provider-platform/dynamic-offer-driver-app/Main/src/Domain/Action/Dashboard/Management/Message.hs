@@ -81,6 +81,8 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             s3FilePath = Nothing,
             status = Just Domain.COMPLETED,
             fileHash = Nothing,
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }
@@ -106,6 +108,8 @@ postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
             s3FilePath = Just filePath,
             status = Just Domain.PENDING,
             fileHash = Nothing,
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }

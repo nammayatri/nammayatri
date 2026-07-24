@@ -94,6 +94,7 @@ handler = externalHandler
         :<|> issueReportCustomerList (personId, merchantId)
         :<|> issueMediaUpload (personId, merchantId)
         :<|> fetchMedia (personId, merchantId)
+        :<|> mediaFileDownloadLink (personId, merchantId)
         :<|> getIssueCategory (personId, merchantId)
         :<|> getIssueOption (personId, merchantId)
         :<|> issueInfo (personId, merchantId)
@@ -499,6 +500,10 @@ issueReportCustomerList (personId, merchantId) language = withFlowHandlerAPI $ d
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
 fetchMedia (personId, merchantId) = withFlowHandlerAPI . Common.fetchMedia (cast personId, cast merchantId)
+
+mediaFileDownloadLink :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Common.MediaFileDownloadLinkRes
+mediaFileDownloadLink (personId, merchantId) =
+  withFlowHandlerAPI . Common.mediaFileDownloadLink (cast personId, cast merchantId) Common.CUSTOMER
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
 createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ do
