@@ -26,6 +26,7 @@ import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirect
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
 import qualified Lib.Finance.Storage.Beam.InvoiceTemplate as BeamInvoiceTemplate
+import qualified Lib.Finance.Storage.Beam.JournalEntryTransaction as BeamJournalEntryTransaction
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
@@ -133,6 +134,9 @@ instance HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamSapJournal.SapJournalEntryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamJournalEntryTransaction.JournalEntryTransactionT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamSettlementFileInfo.SettlementFileInfoT where

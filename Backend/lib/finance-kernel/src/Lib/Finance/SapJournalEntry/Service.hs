@@ -74,7 +74,7 @@ auditSapJournalEntryCreate actorInfo entry = do
 createSapJournalEntry ::
   (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
   SapJournalEntryInput ->
-  m ()
+  m Text
 createSapJournalEntry input = do
   actorInfo <- asks (.actorInfo)
   now <- getCurrentTime
@@ -112,3 +112,4 @@ createSapJournalEntry input = do
           }
   QSJE.create entry
   auditSapJournalEntryCreate actorInfo entry
+  pure entryId

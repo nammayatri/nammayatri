@@ -19,6 +19,7 @@ import Kernel.Prelude (Generic)
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgReport
+import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
@@ -117,7 +118,8 @@ atlasDB =
         subscriptionPurchase = subscriptionPurchaseTable,
         indirectTaxTransaction = BeamITT.indirectTaxTransactionTable,
         financeLedgerEntry = BeamLE.ledgerEntryTable,
-        pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable
+        pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable,
+        sapJournalEntry = BeamSapJournal.sapJournalEntryTable
       }
 
 data AtlasDB f = AtlasDB
@@ -168,6 +170,7 @@ data AtlasDB f = AtlasDB
     subscriptionPurchase :: f (B.TableEntity SubscriptionPurchaseT),
     indirectTaxTransaction :: f (B.TableEntity BeamITT.IndirectTaxTransactionT),
     financeLedgerEntry :: f (B.TableEntity BeamLE.LedgerEntryT),
-    pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT)
+    pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT),
+    sapJournalEntry :: f (B.TableEntity BeamSapJournal.SapJournalEntryT)
   }
   deriving (Generic, B.Database be)

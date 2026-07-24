@@ -878,6 +878,7 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
+      Storage.Queries.SapJournalExtra
       Storage.Queries.ScheduledPayoutExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra

@@ -40,16 +40,18 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.JournalEntryTransaction as JET
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.SapJournalEntry.Interface (SapJournalEntryInput (..))
 import qualified Lib.Finance.SapJournalEntry.Service as SapJournalEntryService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.JournalEntryTransaction as QJETExtra
 import qualified Lib.Finance.Storage.Queries.SapJournalEntry as QSJE
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..), SAPPGSettlementDispatchJobData (..), SAPSubscriptionPurchaseDispatchJobData (..))
-import SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals (SubscriptionTotals (..), fetchPGSettlementTotals, fetchSubscriptionTotals)
+import SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals (PGSettlementTransactionRow (..), SubscriptionTotals (..), SubscriptionTransactionRow (..), fetchPGSettlementTotals, fetchSubscriptionTotals)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -143,8 +145,8 @@ runSAPSubscriptionPurchaseDispatchJob Job {id, jobInfo} = withLogTag ("JobId-" <
                 pure False
               Right token -> do
                 result <- try @_ @SomeException $ do
-                  subTotals <- fetchSubscriptionTotals merchantOperatingCityId fromTime toTime
-                  dispatchSubscriptionPurchase sapCfg token merchantId.getId merchantOperatingCityId.getId SubscriptionPurchase retries fromTime toTime subTotals
+                  (subTotals, subRows) <- fetchSubscriptionTotals merchantOperatingCityId fromTime toTime
+                  dispatchSubscriptionPurchase sapCfg token merchantId.getId merchantOperatingCityId.getId SubscriptionPurchase retries fromTime toTime subRows subTotals
                 case result of
                   Left err -> do
                     logError $ "SAP subscription purchase dispatch failed with exception: " <> show err
@@ -212,10 +214,10 @@ runSAPPGSettlementDispatchJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
                 pure False
               Right token -> do
                 result <- try @_ @SomeException $ do
-                  pgTotals <- fetchPGSettlementTotals merchantId.getId merchantOperatingCityId fromTime toTime
-                  pgSettlementOrderOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries PGSettlementOrder pgTotals.totalOrderAmount pgTotals.orderCount fromTime toTime
-                  refundOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries RefundEntry pgTotals.totalRefundAmount pgTotals.refundCount fromTime toTime
-                  chargebackOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries ChargebackEntry pgTotals.totalChargebackAmount pgTotals.chargebackCount fromTime toTime
+                  (pgTotals, orderRows, refundRows, chargebackRows) <- fetchPGSettlementTotals merchantId.getId merchantOperatingCityId fromTime toTime
+                  pgSettlementOrderOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries PGSettlementOrder pgTotals.totalOrderAmount pgTotals.orderCount fromTime toTime orderRows
+                  refundOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries RefundEntry pgTotals.totalRefundAmount pgTotals.refundCount fromTime toTime refundRows
+                  chargebackOk <- dispatchEntry sapCfg token merchantId.getId merchantOperatingCityId.getId retries ChargebackEntry pgTotals.totalChargebackAmount pgTotals.chargebackCount fromTime toTime chargebackRows
 
                   pure $ pgSettlementOrderOk && refundOk && chargebackOk
                 case result of
@@ -277,17 +279,18 @@ dispatchEntry ::
   Int ->
   UTCTime ->
   UTCTime ->
+  [PGSettlementTransactionRow] ->
   m Bool
-dispatchEntry _ _ _ _ _ entryType amount _ _ _
+dispatchEntry _ _ _ _ _ entryType amount _ _ _ _
   | amount == 0 = do
     logInfo $ "No amount for " <> show entryType <> ", skipping"
     pure True
-dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTime toTime = do
+dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTime toTime pgRows = do
   let label = show entryType
   logInfo $ "Dispatching aggregated " <> label <> " entry to SAP, amount=" <> show amount <> " txnCount=" <> show txnCount
   req <- buildJournalRequest sapCfg entryType amount fromTime
   result <- callSAPWithRetry sapCfg token req label maxRetries
-  handleSAPResponse label req result (toTransactionType entryType) txnCount mId mocid fromTime toTime
+  handleSAPResponse label req result (toTransactionType entryType) txnCount mId mocid fromTime toTime Nothing (Just pgRows)
 
 scheduleNextSubscriptionPurchaseJob ::
   ( BeamFlow m r,
@@ -543,13 +546,14 @@ dispatchSubscriptionPurchase ::
   Int ->
   UTCTime ->
   UTCTime ->
+  [SubscriptionTransactionRow] ->
   SubscriptionTotals ->
   m Bool
-dispatchSubscriptionPurchase _ _ _ _ _ _ _ _ totals
+dispatchSubscriptionPurchase _ _ _ _ _ _ _ _ _ totals
   | totals.grossAmount == 0 && totals.netAmount == 0 = do
     logInfo "No subscription purchase data found, skipping"
     pure True
-dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTime toTime totals = do
+dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTime toTime subRows totals = do
   logInfo $
     "Dispatching aggregated subscription purchase to SAP:"
       <> " grossAmount="
@@ -564,7 +568,7 @@ dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTim
       <> show totals.netAmount
   req <- buildSubscriptionJournalRequest sapCfg fromTime totals entryType
   result <- callSAPWithRetry sapCfg token req "SubscriptionPurchase" maxRetries
-  handleSAPResponse "SubscriptionPurchase" req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime
+  handleSAPResponse "SubscriptionPurchase" req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime (Just subRows) Nothing
 
 buildSubscriptionJournalRequest ::
   (BeamFlow m r, CacheFlow m r) =>
@@ -644,37 +648,40 @@ saveSapJournalEntries ::
   UTCTime ->
   UTCTime ->
   Maybe Text ->
-  m ()
+  m (Text, Text)
 saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodStart periodEnd mbErrMsg = do
   let reqHeaders = req.headers
       respHeaders = maybe [] (.responseHeaders) mbResp
-  forM_ reqHeaders $ \reqHeader -> do
+  results <- forM reqHeaders $ \reqHeader -> do
     let mbRespHeader = find (\rh -> rh.batchId == Just reqHeader.batchId) respHeaders
     let (totalDebit, totalCredit) = computeDebitCreditTotals reqHeader.items
-    SapJournalEntryService.createSapJournalEntry
-      SapJournalEntryInput
-        { belnr = mbRespHeader >>= (.belnr),
-          batchId = reqHeader.batchId,
-          blart = reqHeader.blart,
-          transactionType = txnType,
-          description = reqHeader.headerdesc,
-          budat = reqHeader.budat,
-          bldat = reqHeader.bldat,
-          gjahr = mbRespHeader >>= (.gjahr),
-          totalDebitAmount = totalDebit,
-          totalCreditAmount = totalCredit,
-          currency = INR,
-          transactionCount = txnCount,
-          glNumber = Just $ map (.hkont) reqHeader.items,
-          glName = Just $ map (.itemdesc) reqHeader.items,
-          sapMessage = (mbRespHeader >>= (.message)) <|> mbErrMsg,
-          status = entryStatus,
-          periodStartTime = periodStart,
-          periodEndTime = periodEnd,
-          rawResponse = (.rawXml) <$> mbResp,
-          merchantId = mId,
-          merchantOperatingCityId = mocid
-        }
+    sapEntryId <-
+      SapJournalEntryService.createSapJournalEntry
+        SapJournalEntryInput
+          { belnr = mbRespHeader >>= (.belnr),
+            batchId = reqHeader.batchId,
+            blart = reqHeader.blart,
+            transactionType = txnType,
+            description = reqHeader.headerdesc,
+            budat = reqHeader.budat,
+            bldat = reqHeader.bldat,
+            gjahr = mbRespHeader >>= (.gjahr),
+            totalDebitAmount = totalDebit,
+            totalCreditAmount = totalCredit,
+            currency = INR,
+            transactionCount = txnCount,
+            glNumber = Just $ map (.hkont) reqHeader.items,
+            glName = Just $ map (.itemdesc) reqHeader.items,
+            sapMessage = (mbRespHeader >>= (.message)) <|> mbErrMsg,
+            status = entryStatus,
+            periodStartTime = periodStart,
+            periodEndTime = periodEnd,
+            rawResponse = (.rawXml) <$> mbResp,
+            merchantId = mId,
+            merchantOperatingCityId = mocid
+          }
+    pure (sapEntryId, reqHeader.batchId)
+  listToMaybe results & fromMaybeM (InternalError "SAP journal entry creation returned no entry ID")
 
 filterZeroItems :: [SAPJournalItem] -> [SAPJournalItem]
 filterZeroItems = filter (\item -> parseItemAmount item /= 0)
@@ -770,20 +777,97 @@ handleSAPResponse ::
   Text ->
   UTCTime ->
   UTCTime ->
+  Maybe [SubscriptionTransactionRow] ->
+  Maybe [PGSettlementTransactionRow] ->
   m Bool
-handleSAPResponse label req result txnType txnCount mId mocid periodStart periodEnd =
+handleSAPResponse label req result txnType txnCount mId mocid periodStart periodEnd subRows pgRows =
   case result of
     Left err -> do
       logError $ "SAP " <> label <> " dispatch failed: " <> err
-      saveSapJournalEntries req Nothing SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just err)
+      _ <- saveSapJournalEntries req Nothing SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just err)
       pure False
     Right resp
       | hasErrorResponse resp -> do
         logError $ "SAP " <> label <> " dispatch returned error response"
-        saveSapJournalEntries req (Just resp) SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just "SAP returned error msgtyp=E")
+        _ <- saveSapJournalEntries req (Just resp) SJE.FAILED txnType txnCount mId mocid periodStart periodEnd (Just "SAP returned error msgtyp=E")
         pure False
       | otherwise -> do
         forM_ resp.responseHeaders $ \hdr ->
           logInfo $ "SAP " <> label <> " response: batchId=" <> fromMaybe "" hdr.batchId <> " msgtyp=" <> fromMaybe "" hdr.msgtyp
-        saveSapJournalEntries req (Just resp) SJE.SUCCESS txnType txnCount mId mocid periodStart periodEnd Nothing
+        (sapEntryId, sapBatchId) <- saveSapJournalEntries req (Just resp) SJE.SUCCESS txnType txnCount mId mocid periodStart periodEnd Nothing
+        forM_ subRows $ \rows -> saveSubscriptionTransactions mId mocid sapEntryId sapBatchId rows
+        forM_ pgRows $ \rows -> savePGSettlementTransactions mId mocid sapEntryId sapBatchId rows
         pure True
+
+-- ---------------------------------------------------------------------------
+-- Journal Entry Transaction persistence (individual transaction records)
+-- ---------------------------------------------------------------------------
+
+saveSubscriptionTransactions ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  [SubscriptionTransactionRow] ->
+  m ()
+saveSubscriptionTransactions mId mocId sapEntryId batchId rows = do
+  now <- getCurrentTime
+  forM_ rows $ \row -> do
+    txnId <- generateGUID
+    QJETExtra.create
+      JET.JournalEntryTransaction
+        { id = Id txnId,
+          debitAmount = row.debitAmount,
+          creditAmount = row.creditAmount,
+          currency = INR,
+          description = "Subscription Purchase",
+          subscriptionId = Just row.subscriptionId,
+          sapJournalEntryId = sapEntryId,
+          sapBatchId = batchId,
+          transactionType = SJE.SubscriptionPurchase,
+          status = row.status,
+          merchantId = mId,
+          merchantOperatingCityId = mocId,
+          createdAt = now,
+          updatedAt = now,
+          createdBy = "System"
+        }
+
+savePGSettlementTransactions ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  [PGSettlementTransactionRow] ->
+  m ()
+savePGSettlementTransactions mId mocId sapEntryId batchId rows = do
+  now <- getCurrentTime
+  forM_ rows $ \row -> do
+    txnId <- generateGUID
+    QJETExtra.create
+      JET.JournalEntryTransaction
+        { id = Id txnId,
+          debitAmount = row.amount,
+          creditAmount = row.amount,
+          currency = INR,
+          description = row.txnType,
+          subscriptionId = row.subscriptionPurchaseId,
+          sapJournalEntryId = sapEntryId,
+          sapBatchId = batchId,
+          transactionType = pgTxnTypeToSJE row.txnType,
+          status = row.txnStatus,
+          merchantId = mId,
+          merchantOperatingCityId = mocId,
+          createdAt = now,
+          updatedAt = now,
+          createdBy = "System"
+        }
+
+pgTxnTypeToSJE :: Text -> SJE.TransactionType
+pgTxnTypeToSJE t = case T.toLower t of
+  "order" -> SJE.Order
+  "refund" -> SJE.Refund
+  "chargeback" -> SJE.Chargeback
+  _ -> SJE.Order
