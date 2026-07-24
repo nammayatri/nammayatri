@@ -8,7 +8,7 @@
 # without depending on any system-installed node.
 #
 # Working dir on disk: <repo-root>/data/control-center (gitignored, same
-# convention metabase / redis-commander use for runtime state).
+# convention metabase uses for runtime state).
 
 set -euo pipefail
 

@@ -461,7 +461,24 @@ let emailServiceConfig =
       , isForcedAWS = True
       }
 
-let rideEventsPublisherCfg = Some { streamPrefix = "", shardCount = +10 }
+let rideEventsStream =
+      { streamPrefix = "ride_events_stream_"
+      , shardCount = +10
+      , consumerGroupName = "ride-events-consumers"
+      , readBatchSize = +50
+      , readBlockMilliseconds = +5000
+      , claimMinIdleMs = +60000
+      , claimIntervalSeconds = +30
+      , maxDeliveries = +5
+      , pauseFlagKey = "ride_events_stream_paused"
+      , pauseSleepSeconds = +5
+      }
+
+let rideEventsPublisherCfg =
+      Some
+        { streamPrefix = rideEventsStream.streamPrefix
+        , shardCount = rideEventsStream.shardCount
+        }
 
 in  { esqDBCfg
     , esqDBReplicaCfg

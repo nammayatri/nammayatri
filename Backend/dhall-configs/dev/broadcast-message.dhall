@@ -1,108 +1,15 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let base = ./kafka-consumers-base.dhall
 
-let genericCommon = ../generic/common.dhall
-
-let appCfg = ./dynamic-offer-driver-app.dhall
-
-let esqDBCfg =
-      { connectHost = "localhost"
-      , connectPort = env:DB_PRIMARY_PORT ? 5434
-      , connectUser = sec.dbUserId
-      , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
-      , connectionPoolCount = +25
-      }
-
-let esqDBReplicaCfg =
-      { connectHost = esqDBCfg.connectHost
-      , connectPort = esqDBCfg.connectPort
-      , connectUser = esqDBCfg.connectUser
-      , connectPassword = esqDBCfg.connectPassword
-      , connectDatabase = esqDBCfg.connectDatabase
-      , connectSchemaName = esqDBCfg.connectSchemaName
-      , connectionPoolCount = esqDBCfg.connectionPoolCount
-      }
-
-let hedisCfg =
-      { connectHost = "localhost"
-      , connectPort = env:REDIS_PORT ? 6379
-      , connectAuth = None Text
-      , connectDatabase = +0
-      , connectMaxConnections = +50
-      , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
-      , connectReadOnly = True
-      }
-
-let hedisClusterCfg =
-      { connectHost = "localhost"
-      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
-      , connectAuth = None Text
-      , connectDatabase = +0
-      , connectMaxConnections = +50
-      , connectMaxIdleTime = +30
-      , connectTimeout = None Integer
-      , connectReadOnly = True
-      }
-
-let consumerProperties =
-      { groupId = "broadcast-messages-compute"
-      , brockers =
-        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
-      , autoCommit = None Integer
-      , kafkaCompression = common.kafkaCompression.LZ4
-      }
-
-let kvConfigUpdateFrequency = +10
-
-let kafkaConsumerCfg =
-      { topicNames = [ "broadcast-messages" ], consumerProperties }
-
-let availabilityTimeWindowOption =
-      { period = +7, periodType = common.periodType.Days }
-
-let cacheConfig = { configsExpTime = +86400 }
-
-let cacConfig =
-      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
-      , interval = 10
-      , tenant = "test"
-      , retryConnection = False
-      , cacExpTime = +86400
-      , enablePolling = True
-      , enableCac = False
-      }
-
-in  { hedisCfg
-    , ltsRedisCfg = hedisCfg
-    , hedisClusterCfg
-    , hedisNonCriticalCfg = hedisCfg
-    , hedisNonCriticalClusterCfg = hedisClusterCfg
-    , hedisMigrationStage = False
-    , cutOffHedisCluster = False
-    , esqDBCfg
-    , esqDBReplicaCfg
-    , cacheConfig
-    , dumpEvery = +10
-    , kafkaConsumerCfg
-    , timeBetweenUpdates = +10
-    , availabilityTimeWindowOption
-    , granualityPeriodType = common.periodType.Hours
-    , httpClientOptions = common.httpClientOptions
-    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
-    , encTools = appCfg.encTools
-    , loggerConfig =
-            common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
-            , logRawSql = True
-            }
-    , enableRedisLatencyLogging = True
-    , enablePrometheusMetricLogging = True
-    , cacConfig
-    , kvConfigUpdateFrequency
-    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
-    , smsCfg = appCfg.smsCfg
-    }
+in      base
+    //  { transport = common.transportKind.Kafka
+        , kafkaConsumerCfg =
+            base.kafkaConsumerCfg // { topicNames = [ "broadcast-messages" ] }
+        , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
+        , loggerConfig =
+                base.loggerConfig
+            //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
+                , logRawSql = True
+                }
+        }

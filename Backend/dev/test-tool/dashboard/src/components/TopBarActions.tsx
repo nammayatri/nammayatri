@@ -3,8 +3,9 @@ import './TopBarActions.css';
 import { showAlert, showConfirm } from './Dialogs';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
-import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getServiceUrl } from '../config';
+import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getStackServiceUrl, getCaddyServiceUrl } from '../config';
 import { Terminal as IntegratedTerminal } from './Terminal';
+import { ServicePortsModal } from './ServicePortsModal';
 import { FinanceViewer } from './FinanceViewer';
 
 interface SyncStatus {
@@ -29,7 +30,7 @@ interface ControlCenterStatus {
   pid?: number | null;
 }
 
-/** Top-bar actions: live next to DB Explorer / Redis Explorer.
+/** Top-bar actions: live next to DB Manager / Metabase.
  *  - Flush Redis: wipes all Redis keys.
  *  - Sync Data:  runs config-sync from a chosen env (default: prod) → local.
  *  - While running, the sync button flips to "Check Status" which opens a
@@ -56,6 +57,7 @@ export const TopBarActions: React.FC = () => {
 
   // Integrated terminal modal state.
   const [terminalOpen, setTerminalOpen] = useState(false);
+  const [portsOpen, setPortsOpen] = useState(false);
 
   // Finance visualization modal state.
   const [financeOpen, setFinanceOpen] = useState(false);
@@ -294,6 +296,15 @@ export const TopBarActions: React.FC = () => {
     setTimeout(() => setFlushState('idle'), 3000);
   };
 
+  // Both live on the stack host, not on this machine. DB Manager has to go
+  // through caddy: its static server binds 127.0.0.1 and its bundle resolves
+  // the API against window.location.origin, so only the caddy origin works.
+  // Metabase binds 0.0.0.0, so the direct port is fine (and it dislikes being
+  // served under a path prefix).
+  const dbManagerUrl = getCaddyServiceUrl('db-manager-frontend')
+    ?? getStackServiceUrl('db-manager-frontend');
+  const metabaseUrl = getStackServiceUrl('metabase');
+
   const syncBtnLabel = syncRunning
     ? 'Check Status'
     : syncStatus === 'done' ? 'Synced'
@@ -349,11 +360,11 @@ export const TopBarActions: React.FC = () => {
             <div className="tb-floating-section" title="Systems">
               <div className="tb-floating-section-label">Systems</div>
               <div className="tb-floating-section-row">
-                <a className="tb-btn" href={getServiceUrl('metabase')} target="_blank" rel="noopener noreferrer" title="Metabase — BI / DB explorer">
-                  🗄 DB Explorer
+                <a className="tb-btn" href={dbManagerUrl} target="_blank" rel="noopener noreferrer" title={`DB Manager — browse / edit the rider (atlas_app) and driver (atlas_driver_offer_bpp) schemas (${dbManagerUrl})`}>
+                  🧭 DB Manager
                 </a>
-                <a className="tb-btn" href={getServiceUrl('redis-commander')} target="_blank" rel="noopener noreferrer" title="redis-commander — standalone + cluster">
-                  🧰 Redis Explorer
+                <a className="tb-btn" href={metabaseUrl} target="_blank" rel="noopener noreferrer" title={`Metabase — BI / analytics over the stack's DB (${metabaseUrl})`}>
+                  🗄 Metabase
                 </a>
                 <button
                   className={`tb-btn tb-flush${flushState === 'done' ? ' tb-ok' : flushState === 'error' ? ' tb-err' : ''}`}
@@ -369,6 +380,13 @@ export const TopBarActions: React.FC = () => {
                   title="Open an integrated PTY-backed shell running on the test-context-api host"
                 >
                   💻 Terminal
+                </button>
+                <button
+                  className="tb-btn"
+                  onClick={() => { setPanelOpen(false); setPortsOpen(true); }}
+                  title="Every resolved service port for the stack in use: direct host:port URLs and the Caddy host:caddyPort/<service> routes"
+                >
+                  🔌 Service Ports
                 </button>
               </div>
             </div>
@@ -594,6 +612,8 @@ export const TopBarActions: React.FC = () => {
           </div>
         </div>
       )}
+      {portsOpen && <ServicePortsModal onClose={() => setPortsOpen(false)} />}
+
       {terminalOpen && (
         <div className="tb-modal-backdrop" onClick={() => setTerminalOpen(false)}>
           <div className="tb-modal tb-modal-terminal" onClick={e => e.stopPropagation()}>

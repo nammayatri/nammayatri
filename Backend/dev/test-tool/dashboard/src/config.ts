@@ -29,6 +29,35 @@ export function setContextApiBase(url: string | null): void {
 export function getContextApiBaseDefault(): string { return _proxyDefault; }
 export function getContextApiBaseOverride(): string | null { return _readContextApiOverride(); }
 
+// Point the dashboard at whichever stack this checkout targets, without anyone
+// clicking anything: local-api resolves {host, contextApiPort} from the stack's
+// data/devbox-ports.json (over SSH for a devbox). PROXY_BASE is a module-level
+// binding read synchronously all over the app, so a change means persisting the
+// new base and reloading once — the guard below keeps that to a single reload.
+const CTX_SYNC_GUARD = 'ny.contextApiBase.syncedTo';
+
+export async function syncContextApiBase(): Promise<void> {
+  let resolved: string | null = null;
+  try {
+    const resp = await fetch(`${LOCAL_API_BASE}/api/devbox/ports`, { cache: 'no-store' });
+    if (!resp.ok) return;
+    const body = await resp.json();
+    const host = body?.host || 'localhost';
+    const port = body?.contextApiPort;
+    if (!port) return; // stack not up — keep whatever we have
+    resolved = `http://${host}:${port}`;
+  } catch {
+    return; // no local-api (deployed dashboard) — keep the build-time default
+  }
+  if (resolved === PROXY_BASE) return;
+  try {
+    // Don't fight a reload loop if something keeps flapping.
+    if (window.sessionStorage?.getItem(CTX_SYNC_GUARD) === resolved) return;
+    window.sessionStorage?.setItem(CTX_SYNC_GUARD, resolved);
+  } catch { /* ignore */ }
+  setContextApiBase(resolved); // persists + reloads
+}
+
 // ── Runtime port discovery ───────────────────────────────────────────────────
 // The dashboard learns the per-user port mapping by calling context-api's
 // GET /api/ports on first paint. The response is cached in localStorage
@@ -52,7 +81,6 @@ const DEFAULT_PORTS: Record<string, number> = {
   'unified-dashboard': 8022,
   'test-context-api': 7082,
   'metabase': 3001,
-  'redis-commander': 8431,
   'victoria-metrics': 8428,
   'db-manager-frontend': 5183,
   'db-manager-backend': 3010,
@@ -74,17 +102,81 @@ export function getServiceUrl(name: string, pathSuffix = ''): string {
   return `http://localhost:${getServicePort(name)}${pathSuffix}`;
 }
 
+// ── Stack host ──
+// Same source as the Service Ports modal (GET /api/devbox/ports): the machine
+// the stack actually runs on. "localhost" for a local run, the dev-box IP
+// otherwise — a link built with localhost is dead in the dev-box case.
+const HOST_CACHE_KEY = `ny.stackHost::${PROXY_BASE}`;
+
+let _stackHost = 'localhost';
+let _caddyPort: number | null = null;
+(() => {
+  try {
+    const raw = window.localStorage?.getItem(HOST_CACHE_KEY);
+    if (raw) {
+      const cached = JSON.parse(raw);
+      if (cached?.host) _stackHost = cached.host;
+      if (typeof cached?.caddyPort === 'number') _caddyPort = cached.caddyPort;
+    }
+  } catch { /* ignore */ }
+})();
+
+export function getStackHost(): string {
+  return _stackHost;
+}
+
+/** Direct http://<stack-host>:<port> — for services that bind 0.0.0.0. */
+export function getStackServiceUrl(name: string, pathSuffix = ''): string {
+  return `http://${_stackHost}:${getServicePort(name)}${pathSuffix}`;
+}
+
+/**
+ * http://<stack-host>:<caddyPort>/<name>/ — required by services that bind
+ * 127.0.0.1 or resolve their own API against window.location.origin
+ * (db-manager-frontend does both). Null when no caddy port is known.
+ */
+export function getCaddyServiceUrl(name: string): string | null {
+  if (_caddyPort == null) return null;
+  return `http://${_stackHost}:${_caddyPort}/${name}/`;
+}
+
 // Async refresh. Invoked once on app boot (see App.tsx). Subsequent renders
 // of consumer components will see the resolved table.
+// Preference order:
+//   1. local-api GET /api/devbox/ports — the single accessor, which reads
+//      .devbox-ports.json off the stack host (over SSH when it's a devbox).
+//   2. context-api GET /api/ports — for a deployed dashboard with no local-api.
+//   3. DEFAULT_PORTS / the localStorage cache.
 export async function refreshPortsTable(): Promise<void> {
+  const apply = (ports: Record<string, number>): boolean => {
+    if (!ports || typeof ports !== 'object' || Object.keys(ports).length === 0) return false;
+    _portsTable = { ...DEFAULT_PORTS, ...ports };
+    try { window.localStorage?.setItem(PORTS_CACHE_KEY, JSON.stringify(_portsTable)); } catch { /* ignore */ }
+    return true;
+  };
+  const applyHost = (host?: string, caddyPort?: number | null): void => {
+    if (host) _stackHost = host;
+    if (typeof caddyPort === 'number') _caddyPort = caddyPort;
+    try {
+      window.localStorage?.setItem(
+        HOST_CACHE_KEY, JSON.stringify({ host: _stackHost, caddyPort: _caddyPort }),
+      );
+    } catch { /* ignore */ }
+  };
+  try {
+    const resp = await fetch(`${LOCAL_API_BASE}/api/devbox/ports`, { cache: 'no-store' });
+    if (resp.ok) {
+      const data = await resp.json();
+      applyHost(data?.host, data?.caddyPort);
+      if (apply(data?.ports)) return;
+    }
+  } catch {
+    /* local-api not running — fall through to context-api */
+  }
   try {
     const resp = await fetch(`${PROXY_BASE}/api/ports`, { cache: 'no-store' });
     if (!resp.ok) return;
-    const body = await resp.json();
-    if (body && body.ports && typeof body.ports === 'object') {
-      _portsTable = { ...DEFAULT_PORTS, ...body.ports };
-      try { window.localStorage?.setItem(PORTS_CACHE_KEY, JSON.stringify(_portsTable)); } catch { /* ignore */ }
-    }
+    apply((await resp.json())?.ports);
   } catch {
     /* ignore — fall back to defaults / cached values */
   }

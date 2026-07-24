@@ -11,6 +11,8 @@ Hosts the repo launcher endpoints:
 Port: 7083
 """
 
+import fnmatch
+import hashlib
 import json
 import shutil
 import sys
@@ -907,20 +909,45 @@ import termios as _termios
 import uuid as _uuid
 from collections import deque as _deque
 
-REMOTE_EXCLUDES = [
-    "data", "node_modules", "dist-newstyle",
-    "dist", ".direnv", "_build", "result", "result-*",
+# Build artefacts: never copied, and exactly what `cabal clean` wipes on the
+# stack host (see remote_cabal_clean) — one list so the two can't drift.
+BUILD_STATE_EXCLUDES = [
+    "dist-newstyle",
+    "dist",
+    "_build",
+    "result", "result-*",
     ".cabal-dir",
-    ".git",
     ".hie",
     "hie",
     ".nix-deps",
     ".ci-project-root",
     ".ci-cabal-dir",
+    ".ci-cache-sha",
     "cabal.project.local",
+]
+
+# Per-machine state: never copied, and never deleted by cabal clean either.
+# Everything cabal clean wipes — the build-state list minus files a developer
+# may have hand-written (cabal.project.local is theirs, not a build artefact).
+CABAL_CLEAN_TARGETS = [e for e in BUILD_STATE_EXCLUDES if e != "cabal.project.local"]
+
+# Per-machine state: never copied, and never deleted by cabal clean either.
+# data/ holds the stack host's own published port map (data/devbox-ports.json)
+# plus its service state, so excluding it keeps a redeploy from clobbering them.
+MACHINE_STATE_EXCLUDES = [
+    "data", "node_modules", ".direnv",
+    ".git",
+    "*.log",
+    ".stack-state.json",
     "Frontend/android-native", "Frontend/ios",
     "Frontend/build", "Frontend/dist",
 ]
+
+# Single source of truth for what never leaves this machine. Used both as the
+# rsync --exclude list AND as the filter for the workspace fingerprint that
+# decides whether a deploy is needed — adding an entry here automatically stops
+# it from triggering a redeploy.
+REMOTE_EXCLUDES = BUILD_STATE_EXCLUDES + MACHINE_STATE_EXCLUDES
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
 REMOTE_DEFAULT_COMMAND = (
     "cd Backend && nix develop .#backend -c , run-mobility-stack-dev"
@@ -1125,19 +1152,32 @@ def _devbox_resolve(force_new: bool = False) -> dict:
             "localUser": local_user,
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
         }
-        try:
-            DEVBOX_ID_FILE.write_text(json.dumps(saved, indent=2) + "\n")
-        except OSError as e:
-            return {"error": f"cannot write {DEVBOX_ID_FILE}: {e}"}
 
     dev_id = saved["id"]
+    host = machine.get("bestIp") or machine.get("localIp") or ""
+    ssh_user = machine.get("user") or saved.get("sshUser") or ""
+    remote_dir = f"/tmp/{dev_id}/nammayatri"
+
+    # Persist the connection coordinates too: this file is the ONLY local record
+    # of where the devbox is. get_devbox_ports() reads host/sshUser/sshPort/
+    # remoteDir from here to SSH in and cat the stack's data/devbox-ports.json.
+    merged = {**saved, "machine": machine.get("name", saved.get("machine", "")),
+              "sshUser": ssh_user, "host": host, "sshPort": 22,
+              "remoteDir": remote_dir}
+    if merged != saved:
+        try:
+            DEVBOX_ID_FILE.write_text(json.dumps(merged, indent=2) + "\n")
+        except OSError as e:
+            return {"error": f"cannot write {DEVBOX_ID_FILE}: {e}"}
+        _devbox_ports_cache_clear()
+
     return {
         "id": dev_id,
         "machine": machine.get("name", ""),
-        "host": machine.get("bestIp") or machine.get("localIp") or "",
-        "sshUser": machine.get("user") or saved.get("sshUser") or "",
+        "host": host,
+        "sshUser": ssh_user,
         "port": 22,
-        "remoteDir": f"/tmp/{dev_id}/nammayatri",
+        "remoteDir": remote_dir,
         "copyMode": "rsync",
         "resources": machine.get("resources", {}),
         "usage": machine.get("usage", {}),
@@ -1146,18 +1186,8 @@ def _devbox_resolve(force_new: bool = False) -> dict:
     }
 
 
-def _setup_ssh(host: str, user: str, port: int = 22) -> dict:
-    """Ensure we can SSH into the target machine.
-
-    Flow:
-      1. Check if user has an SSH key — if not, generate one.
-      2. Test SSH with BatchMode=yes.
-         → If it works: return {status: "ok"}.
-      3. If not: return error telling user to run ssh-copy-id manually.
-    """
-    key_path, pub_key = _ensure_ssh_key()
-
-    # Test if SSH key is already authorized on the remote
+def _ssh_reachable(user: str, host: str, port: int = 22, timeout: int = 10) -> bool:
+    """True when key auth to user@host already works (no prompts)."""
     try:
         test = subprocess.run(
             ["ssh",
@@ -1166,27 +1196,109 @@ def _setup_ssh(host: str, user: str, port: int = 22) -> dict:
              "-o", "ConnectTimeout=5",
              "-p", str(port),
              f"{user}@{host}", "echo ok"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, timeout=timeout,
         )
-        if test.returncode == 0:
-            return {
-                "status": "ok",
-                "message": f"SSH key authorized on {user}@{host}",
-                "publicKey": pub_key,
-            }
-    except subprocess.TimeoutExpired:
-        pass  # treat timeout same as auth failure — show ssh-copy-id command
+        return test.returncode == 0
+    except (subprocess.TimeoutExpired, OSError):
+        return False
 
-    # SSH failed — user needs to push key manually
+
+def _relay_authorize_key(target_user: str, target_host: str, pub_key: str) -> str | None:
+    """Install pub_key on the target by hopping through a fleet machine we can
+    already reach without a password (typically the base station, which usually
+    has key access to every worker). Returns the relay's name on success, else
+    None — callers fall back to the interactive ssh-copy-id session."""
+    fleet = _fetch_machines().get("machines") or []
+    quoted = shlex.quote(pub_key)
+    install = (
+        "mkdir -p ~/.ssh && chmod 700 ~/.ssh && "
+        f"grep -qxF {quoted} ~/.ssh/authorized_keys 2>/dev/null || "
+        f"echo {quoted} >> ~/.ssh/authorized_keys; "
+        "chmod 600 ~/.ssh/authorized_keys"
+    )
+    for m in fleet:
+        relay_host = m.get("bestIp") or m.get("localIp") or ""
+        relay_user = m.get("user") or ""
+        if not relay_host or not relay_user:
+            continue
+        if relay_host == target_host:
+            continue
+        if not _ssh_reachable(relay_user, relay_host):
+            continue
+        inner = (
+            "ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes "
+            f"-o ConnectTimeout=5 {shlex.quote(f'{target_user}@{target_host}')} "
+            f"{shlex.quote(install)}"
+        )
+        try:
+            res = subprocess.run(
+                ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-o", "BatchMode=yes",
+                 "-o", "ConnectTimeout=5", f"{relay_user}@{relay_host}", inner],
+                capture_output=True, text=True, timeout=25,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            continue
+        if res.returncode == 0 and _ssh_reachable(target_user, target_host):
+            return m.get("name") or relay_host
+    return None
+
+
+def _setup_ssh(host: str, user: str, port: int = 22) -> dict:
+    """Ensure we can SSH into the target machine, without asking the user to run
+    anything by hand.
+
+    Flow:
+      1. Find or generate this machine's SSH key.
+      2. Key auth already works → done.
+      3. Try to install the key via a fleet machine we can already reach
+         passwordlessly (usually the base station).
+      4. Otherwise report needs_password — the dashboard then runs ssh-copy-id
+         in its own terminal, where the user only types the devbox password.
+    """
+    key_path, pub_key = _ensure_ssh_key()
+
+    if _ssh_reachable(user, host, port):
+        return {
+            "status": "ok",
+            "message": f"SSH key authorized on {user}@{host}",
+            "publicKey": pub_key,
+        }
+
+    relay = _relay_authorize_key(user, host, pub_key)
+    if relay:
+        return {
+            "status": "ok",
+            "message": f"SSH key installed on {user}@{host} via {relay}",
+            "publicKey": pub_key,
+            "viaRelay": relay,
+        }
+
     return {
         "status": "needs_password",
-        "message": (
-            f"SSH key not authorized on {user}@{host}. "
-            f"Run this in your terminal:\n\n"
-            f"  ssh-copy-id -i {key_path} -p {port} {user}@{host}"
-        ),
+        "message": f"SSH key not authorized on {user}@{host} yet — one-time password needed.",
+        "command": f"ssh-copy-id -i {key_path} -p {port} {user}@{host}",
         "publicKey": pub_key,
     }
+
+
+def remote_ssh_copy_id(body: dict) -> dict:
+    """Run ssh-copy-id against the target in a PTY session, so the dashboard can
+    prompt for the one-time password inline instead of sending the user to a
+    terminal. Returns a session id the panel attaches its xterm to."""
+    host = (body.get("host") or "").strip()
+    user = (body.get("user") or "").strip()
+    port = int(body.get("port") or 22)
+    if not host or not user:
+        return {"error": "host and user are required"}
+
+    key_path, _ = _ensure_ssh_key()
+    session = _remote_session_make("ssh-copy-id", host)
+    _remote_register(session)
+
+    argv = ["ssh-copy-id",
+            "-o", "StrictHostKeyChecking=accept-new",
+            "-i", key_path, "-p", str(port), f"{user}@{host}"]
+    return _remote_spawn_pty(session, argv, cols=body.get("cols"), rows=body.get("rows"))
 
 
 # ── Multi-user devbox registry ──
@@ -1211,6 +1323,22 @@ def _snoop_modes(modes: dict, chunk: bytes) -> None:
                     modes[int(n)] = action
                 except ValueError:
                     pass
+
+
+def _trim_to_escape_boundary(buf: bytes) -> bytes:
+    """Drop a leading partial escape sequence from a ring-buffer replay.
+
+    The ring starts wherever the 256 KB window happens to begin, often inside
+    an ESC sequence; feeding that to xterm makes it swallow the following
+    printable bytes as sequence parameters. Start at the first line break
+    instead (or the first ESC, whichever comes first) so the parser resyncs."""
+    head = buf[:512]
+    nl, esc = head.find(b"\n"), head.find(b"\x1b")
+    if nl >= 0 and (esc < 0 or nl < esc):
+        return buf[nl + 1:]          # resume after a line break
+    if esc > 0:
+        return buf[esc:]             # resume at a sequence start (keep the ESC)
+    return buf
 
 
 def _replay_modes_bytes(modes: dict) -> bytes:
@@ -1280,41 +1408,169 @@ def _register_dev_user(ssh_user: str, host: str, port: int, identity: str | None
     return entry
 
 
-def _remote_sync_caddy_port(body: dict) -> dict:
-    """Read the caddy port from devbox-registry.json on the remote host."""
-    host = (body.get("host") or "localhost").strip()
-    user = (body.get("user") or "").strip()
-    port = int(body.get("port") or 22)
-    identity = (body.get("identityFile") or "").strip() or None
-    dev_name = (body.get("devName") or "").strip()
+# ── Devbox port discovery (single source of truth) ──
+#
+# The stack's run-mobility-stack-dev preflight publishes its resolved port map
+# at <workspace>/data/devbox-ports.json on the machine it runs on. Nothing is
+# ever mirrored locally: every consumer — the dashboard's port table, Tools →
+# Service Ports, launcher-spec ${ports.*} / ${host} — goes through
+# get_devbox_ports(), which reads that one file (directly for a local stack,
+# over SSH for a devbox, using the coordinates in .devbox-id.json).
+
+DEVBOX_PORTS_RELPATH = "data/devbox-ports.json"
+DEVBOX_PORTS_FILE = PROJECT_ROOT / "data" / "devbox-ports.json"
+_DEVBOX_PORTS_TTL = 5.0
+
+_devbox_ports_lock = threading.Lock()
+_devbox_ports_cache: dict = {"at": 0.0, "key": "", "value": None}
+
+
+def _devbox_ports_cache_clear() -> None:
+    with _devbox_ports_lock:
+        _devbox_ports_cache["at"] = 0.0
+        _devbox_ports_cache["value"] = None
+
+
+def _read_devbox_id() -> dict:
+    try:
+        data = json.loads(DEVBOX_ID_FILE.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _shape_ports(payload: dict, source: str, host: str) -> dict:
+    ports = payload.get("ports") if isinstance(payload, dict) else None
+    if not isinstance(ports, dict) or not ports:
+        return {"source": source, "host": host, "ports": {},
+                "error": "no ports in devbox-ports.json — is the stack running?"}
+    ports = {k: int(v) for k, v in ports.items()}
+    return {
+        "source": source,
+        "host": host,
+        "devKey": payload.get("devKey"),
+        "dir": payload.get("dir"),
+        "ports": ports,
+        "caddyRoutes": payload.get("caddyRoutes") or [],
+        "caddyPort": payload.get("caddyPort") or ports.get("caddy-reverse-proxy"),
+        "contextApiPort": ports.get("test-context-api"),
+    }
+
+
+def get_devbox_ports(force: bool = False, host_override: str | None = None) -> dict:
+    """Resolved port map of the stack this checkout is pointed at.
+
+    Returns {source, host, ports, caddyPort, contextApiPort} — or the same shape
+    with an "error" and an empty ports map when the stack isn't up yet. Cached
+    for _DEVBOX_PORTS_TTL seconds; pass force=True to bypass.
+
+    host_override lets the dashboard ask for a specific stack (it passes
+    "localhost" while in Local mode even though a devbox is still pinned in
+    .devbox-id.json); everything else comes from .devbox-id.json."""
+    now = time.time()
+    cache_key = (host_override or "").strip()
+    if not force:
+        with _devbox_ports_lock:
+            cached = _devbox_ports_cache["value"]
+            if (cached is not None and _devbox_ports_cache.get("key") == cache_key
+                    and now - _devbox_ports_cache["at"] < _DEVBOX_PORTS_TTL):
+                return cached
+
+    saved = _read_devbox_id()
+    host = (host_override or saved.get("host") or "").strip()
 
     if _is_localhost(host):
-        return {"error": "sync-caddy-port is only for remote hosts"}
-    if not user:
-        return {"error": "user (SSH user) is required"}
-    if not dev_name:
-        return {"error": "devName is required"}
+        try:
+            result = _shape_ports(json.loads(DEVBOX_PORTS_FILE.read_text()),
+                                  str(DEVBOX_PORTS_FILE), "localhost")
+        except (OSError, ValueError) as e:
+            result = {"source": str(DEVBOX_PORTS_FILE), "host": "localhost",
+                      "ports": {}, "error": f"cannot read {DEVBOX_PORTS_FILE}: {e}"}
+    else:
+        user = (saved.get("sshUser") or "").strip()
+        ssh_port = int(saved.get("sshPort") or 22)
+        remote_dir = (saved.get("remoteDir")
+                      or (f"/tmp/{saved['id']}/nammayatri" if saved.get("id") else ""))
+        source = f"{user}@{host}:{remote_dir}/{DEVBOX_PORTS_RELPATH}"
+        if not user or not remote_dir:
+            result = {"source": source, "host": host, "ports": {},
+                      "error": "incomplete .devbox-id.json — resolve the devbox first"}
+        else:
+            # Fall back to the registry slice for stacks started before the
+            # preflight learned to publish data/devbox-ports.json.
+            dev_key = saved.get("id") or ""
+            fallback = (
+                f"jq -c --arg k {shlex.quote(dev_key)} "
+                f"'{{devKey: $k, dir: .users[$k].dir, caddyPort: .users[$k].caddyPort, "
+                f"ports: .users[$k].ports}}' {REGISTRY_FILE}"
+            ) if dev_key else "exit 1"
+            argv = _ssh_argv(user, host, ssh_port, _find_ssh_key(), want_tty=False) + [
+                f"cat {shlex.quote(f'{remote_dir}/{DEVBOX_PORTS_RELPATH}')} 2>/dev/null || {fallback}"
+            ]
+            try:
+                proc = subprocess.run(argv, capture_output=True, timeout=15)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    result = _shape_ports(json.loads(proc.stdout), source, host)
+                else:
+                    err = (proc.stderr or b"").decode(errors="replace").strip()
+                    result = {"source": source, "host": host, "ports": {},
+                              "error": err or "no data/devbox-ports.json on the devbox — is the stack running?"}
+            except Exception as e:
+                result = {"source": source, "host": host, "ports": {}, "error": str(e)}
 
-    registry = _remote_read_registry(user, host, port, identity)
-    users = registry.get("users", {})
-    entry = users.get(dev_name)
-    if not entry:
-        return {"error": f"developer '{dev_name}' not found in registry — is the stack running?"}
+    with _devbox_ports_lock:
+        _devbox_ports_cache["at"] = time.time()
+        _devbox_ports_cache["key"] = cache_key
+        _devbox_ports_cache["value"] = result
+    return result
 
-    caddy_port = entry.get("caddyPort")
-    if caddy_port is None:
-        return {"error": "caddy port not yet available in registry — is the stack running?"}
 
-    # Persist resolved ports so launcher specs can override defaults.
-    registry_ports = entry.get("ports") or {}
-    spec_loader.set_registry_ports(registry_ports)
+EDITOR_CLI = "code"
 
+
+def editor_available() -> dict:
+    """Whether the `code` shell command exists on this machine — the dashboard
+    hides its Open-in-editor button when it doesn't."""
+    path = shutil.which(EDITOR_CLI)
+    if path:
+        return {"available": True, "cli": EDITOR_CLI, "path": path}
     return {
-        "devName": dev_name,
-        "caddyPort": caddy_port,
-        "contextApiPort": registry_ports.get("test-context-api"),
-        "dir": entry.get("dir"),
+        "available": False,
+        "cli": EDITOR_CLI,
+        "error": (f"`{EDITOR_CLI}` is not on PATH — open VS Code and run "
+                  f"\"Shell Command: Install '{EDITOR_CLI}' command in PATH\" once."),
     }
+
+
+def open_remote_editor(body: dict) -> dict:
+    """Open the stack workspace in VS Code over Remote-SSH.
+
+    `code` accepts `--folder-uri vscode-remote://ssh-remote+<user@host>/<path>`;
+    for a local stack we just open the directory."""
+    cli = EDITOR_CLI
+    host = (body.get("host") or "localhost").strip()
+    user = (body.get("user") or "").strip()
+    remote_dir = (body.get("remoteDir") or REMOTE_DEFAULT_DIR).strip() or REMOTE_DEFAULT_DIR
+
+    if _is_localhost(host):
+        argv = [cli, str(PROJECT_ROOT)]
+        target = str(PROJECT_ROOT)
+    else:
+        if not user:
+            return {"error": "user (SSH user) is required for a remote workspace"}
+        target = f"vscode-remote://ssh-remote+{user}@{host}{remote_dir}"
+        argv = [cli, "--folder-uri", target]
+
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=20)
+    except FileNotFoundError:
+        return editor_available()
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {"error": str(e)}
+
+    if proc.returncode != 0:
+        return {"error": (proc.stderr or proc.stdout or f"{cli} exited {proc.returncode}").strip()}
+    return {"opened": target}
 
 
 def _remote_session_make(kind: str, host: str) -> dict:
@@ -1632,48 +1888,288 @@ def _compute_cache_commit(project_root: str, max_n: int = 30) -> str:
     return ""
 
 
-def remote_deploy(body: dict) -> dict:
-    host = (body.get("host") or "localhost").strip()
-    user = (body.get("user") or "").strip()
-    port = int(body.get("port") or 22)
-    identity = (body.get("identityFile") or "").strip() or None
-    dev_name = (body.get("devName") or "").strip()
-    copy_mode = (body.get("copyMode") or "rsync").strip()
+# ── Start pre-flight: workspace fingerprint + git-history check ───────────────
+# Deploy and Cabal Clean are no longer manual buttons. Starting the stack runs a
+# pipeline instead:
+#   1. fingerprint the workspace (every file rsync would copy, i.e. everything
+#      not in REMOTE_EXCLUDES) — if it differs from the last deployed
+#      fingerprint for this target, rsync first;
+#   2. compare the git HEAD recorded at the last start against the current
+#      branch's history — if that commit is no longer reachable (branch switch,
+#      rebase, reset), the build tree is stale, so run a cabal clean first.
+# The per-target state lives in .stack-state.json at the repo root.
+STACK_STATE_FILE = PROJECT_ROOT / ".stack-state.json"
 
-    session = _remote_session_make("deploy", host)
-    _remote_register(session)
+
+def _excluded_from_deploy(rel: str, name: str) -> bool:
+    """True when a path is covered by REMOTE_EXCLUDES (rsync semantics:
+    path-less patterns match any component, anchored patterns match a subtree)."""
+    for pat in REMOTE_EXCLUDES:
+        if "/" in pat:
+            if rel == pat or rel.startswith(pat + "/"):
+                return True
+        elif fnmatch.fnmatch(name, pat):
+            return True
+    return False
+
+
+def _workspace_fingerprint() -> str:
+    """Hash of (path, size, mtime) for every file rsync would copy.
+
+    Same change-detection inputs rsync itself uses, so the fingerprint moves
+    exactly when a deploy would actually transfer something."""
+    entries = []
+    stack = [""]
+    while stack:
+        rel = stack.pop()
+        base = PROJECT_ROOT / rel if rel else PROJECT_ROOT
+        try:
+            with os.scandir(base) as it:
+                for e in it:
+                    child = f"{rel}/{e.name}" if rel else e.name
+                    if _excluded_from_deploy(child, e.name):
+                        continue
+                    try:
+                        if e.is_dir(follow_symlinks=False):
+                            stack.append(child)
+                        elif e.is_file(follow_symlinks=False):
+                            st = e.stat(follow_symlinks=False)
+                            entries.append((child, st.st_size, st.st_mtime_ns))
+                    except OSError:
+                        continue
+        except OSError:
+            continue
+    h = hashlib.sha256()
+    for rel, size, mtime in sorted(entries):
+        h.update(f"{rel}\0{size}\0{mtime}\n".encode())
+    return h.hexdigest()
+
+
+def _git_head() -> str:
+    try:
+        r = subprocess.run(["git", "-C", str(PROJECT_ROOT), "rev-parse", "HEAD"],
+                           capture_output=True, text=True, timeout=15)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _git_in_history(sha: str) -> bool:
+    """True when sha is an ancestor of (or equal to) the current HEAD."""
+    if not sha:
+        return False
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(PROJECT_ROOT), "merge-base", "--is-ancestor", sha, "HEAD"],
+            capture_output=True, timeout=20)
+        return r.returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _stack_state_key(body: dict) -> str:
+    host = (body.get("host") or "localhost").strip()
+    if _is_localhost(host):
+        return "local"
+    user = (body.get("user") or "").strip()
+    dev_name = (body.get("devName") or "").strip()
+    return f"{user}@{host}/{dev_name}"
+
+
+def _stack_state_read() -> dict:
+    try:
+        return json.loads(STACK_STATE_FILE.read_text())
+    except Exception:  # noqa: BLE001 — missing or corrupt file: start fresh
+        return {}
+
+
+def _stack_state_write(key: str, patch: dict) -> dict:
+    state = _stack_state_read()
+    entry = dict(state.get(key) or {})
+    entry.update(patch)
+    state[key] = entry
+    try:
+        tmp = STACK_STATE_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, indent=2) + "\n")
+        tmp.replace(STACK_STATE_FILE)
+    except OSError:
+        pass
+    return entry
+
+
+def remote_preflight(body: dict) -> dict:
+    """Decide what has to happen before the stack can start on this target."""
+    host = (body.get("host") or "localhost").strip()
+    copy_mode = (body.get("copyMode") or "rsync").strip()
+    key = _stack_state_key(body)
+    stored = _stack_state_read().get(key) or {}
+
+    workspace_hash = _workspace_fingerprint()
+    stored_workspace = stored.get("workspaceHash") or ""
+    git_head = _git_head()
+    stored_git = stored.get("gitHead") or ""
 
     if _is_localhost(host) or copy_mode == "skip":
-        with session["lock"]:
-            session["running"] = False
-            session["exit_code"] = 0
-            session["finished_at"] = time.time()
-            session["buf"].append(
-                "[deploy] localhost or copyMode=skip — no rsync needed."
-            )
-        return {"session": session["id"], "skipped": True}
+        needs_deploy, deploy_reason = False, "running locally — no rsync needed"
+    elif not stored_workspace:
+        needs_deploy, deploy_reason = True, "no deploy recorded for this dev-box yet"
+    elif stored_workspace != workspace_hash:
+        needs_deploy, deploy_reason = True, "local files changed since the last deploy"
+    else:
+        needs_deploy, deploy_reason = False, "workspace unchanged since the last deploy"
 
-    if not user:
-        with session["lock"]:
-            session["exit_code"] = 2
-            session["finished_at"] = time.time()
-            session["buf"].append("[deploy] error: 'user' is required for non-localhost host")
-        return {"session": session["id"], "error": "user required"}
+    if not stored_git:
+        needs_clean, clean_reason = False, "first run — recording HEAD as the baseline"
+    elif _git_in_history(stored_git):
+        needs_clean = False
+        clean_reason = f"last run's commit {stored_git[:8]} is in this branch's history"
+    else:
+        needs_clean = True
+        clean_reason = (f"last run's commit {stored_git[:8]} is not in this branch's "
+                        f"history — build artifacts are stale")
 
-    # devName is mandatory — derive remoteDir from the devbox registry.
-    entry = _register_dev_user(user, host, port, identity, dev_name)
+    _auto_deploy_remember(_deploy_target(body))
+
+    return {
+        "key": key,
+        "needsDeploy": needs_deploy,
+        "deployReason": deploy_reason,
+        "needsCabalClean": needs_clean,
+        "cabalCleanReason": clean_reason,
+        "gitHead": git_head,
+        "storedGitHead": stored_git,
+        "workspaceHash": workspace_hash,
+        "storedWorkspaceHash": stored_workspace,
+        "deployedAt": stored.get("deployedAt"),
+        "startedAt": stored.get("startedAt"),
+        "checkedAt": time.time(),
+        "autoDeploy": auto_deploy_status(),
+    }
+
+
+def remote_mark(body: dict) -> dict:
+    """Record a completed pipeline stage for this target.
+
+    stage=deploy → snapshot the workspace fingerprint (skips the next rsync
+    until a file actually changes); stage=start → snapshot git HEAD (skips the
+    next cabal clean while that commit stays in the branch's history)."""
+    stage = (body.get("stage") or "").strip()
+    key = _stack_state_key(body)
+    if stage == "deploy":
+        patch = {"workspaceHash": _workspace_fingerprint(), "deployedAt": time.time()}
+    elif stage == "start":
+        patch = {"gitHead": _git_head(), "startedAt": time.time()}
+    else:
+        return {"error": f"unknown stage: {stage!r}"}
+    return {"key": key, "state": _stack_state_write(key, patch)}
+
+
+# ── Deploy: one exclusive lock, two callers ──────────────────────────────────
+# Deploys run one at a time behind _deploy_lock. The two callers differ only in
+# how they wait for it:
+#   • Start (run-mobility-stack) blocks on the lock — if the background watcher
+#     is mid-rsync, the pipeline waits for it instead of racing a second rsync
+#     into the same remote directory;
+#   • the background watcher never blocks — it takes the lock only if it is
+#     free, otherwise it goes back to sleep and retries on the next tick.
+_deploy_lock = threading.Lock()
+
+AUTO_DEPLOY_POLL_SECONDS = 60
+AUTO_DEPLOY_TARGET_KEY = "__autoDeploy__"
+
+_auto_deploy_lock = threading.Lock()
+_auto_deploy = {
+    "target": None,
+    "enabled": True,
+    "lastCheckAt": None,
+    "lastDeployAt": None,
+    "lastSession": None,
+    "lastResult": None,
+}
+
+
+def _deploy_target(body: dict) -> dict:
+    return {
+        "host": (body.get("host") or "localhost").strip(),
+        "user": (body.get("user") or "").strip(),
+        "port": int(body.get("port") or 22),
+        "identityFile": (body.get("identityFile") or "").strip() or None,
+        "devName": (body.get("devName") or "").strip(),
+        "copyMode": (body.get("copyMode") or "rsync").strip(),
+    }
+
+
+def _deployable(target: dict) -> bool:
+    return bool(
+        target
+        and target.get("user")
+        and not _is_localhost(target.get("host") or "localhost")
+        and (target.get("copyMode") or "rsync") != "skip"
+    )
+
+
+def _auto_deploy_remember(target: dict) -> None:
+    """Pin the target the watcher deploys to — the last one the dashboard used."""
+    if not _deployable(target):
+        return
+    with _auto_deploy_lock:
+        if _auto_deploy["target"] == target:
+            return
+        _auto_deploy["target"] = dict(target)
+    _stack_state_write(AUTO_DEPLOY_TARGET_KEY, dict(target))
+
+
+def _auto_deploy_target() -> dict | None:
+    with _auto_deploy_lock:
+        target = _auto_deploy["target"]
+    if target is None:
+        target = (_stack_state_read().get(AUTO_DEPLOY_TARGET_KEY) or {}) or None
+        if target:
+            with _auto_deploy_lock:
+                _auto_deploy["target"] = target
+    return target if _deployable(target or {}) else None
+
+
+def auto_deploy_status() -> dict:
+    with _auto_deploy_lock:
+        status = dict(_auto_deploy)
+    status["busy"] = _deploy_lock.locked()
+    status["pollSeconds"] = AUTO_DEPLOY_POLL_SECONDS
+    return status
+
+
+def _session_note(session: dict, line: str) -> None:
+    with session["lock"]:
+        session["buf"].append(line)
+
+
+def _session_finish(session: dict, code: int) -> None:
+    with session["lock"]:
+        session["running"] = False
+        session["exit_code"] = code
+        session["finished_at"] = time.time()
+
+
+def _deploy_plan(target: dict) -> dict:
+    """rsync argv + the post-rsync git-init command for a target.
+
+    Touches the network (dev-user registry lookup), so it runs inside the lock,
+    not while building the HTTP response."""
+    entry = _register_dev_user(
+        target["user"], target["host"], target["port"],
+        target["identityFile"], target["devName"],
+    )
     remote_dir = entry["dir"]
 
-    target = f"{user}@{host}:{remote_dir}/"
     ssh_cmd_parts = [
         "ssh",
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "BatchMode=yes",
         "-o", "ConnectTimeout=10",
-        "-p", str(port),
+        "-p", str(target["port"]),
     ]
-    if identity:
-        ssh_cmd_parts += ["-i", identity]
+    if target["identityFile"]:
+        ssh_cmd_parts += ["-i", target["identityFile"]]
     ssh_cmd = " ".join(ssh_cmd_parts)
 
     excludes = []
@@ -1688,38 +2184,14 @@ def remote_deploy(body: dict) -> dict:
         ["rsync", "-az", "--delete", "--progress", "--stats",
          "-e", ssh_cmd, "--rsync-path", rsync_path]
         + excludes
-        + [f"{PROJECT_ROOT}/", target]
+        + [f"{PROJECT_ROOT}/", f"{target['user']}@{target['host']}:{remote_dir}/"]
     )
 
-    try:
-        proc = subprocess.Popen(
-            argv,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            bufsize=0,
-            start_new_session=True,
-        )
-    except FileNotFoundError:
-        with session["lock"]:
-            session["exit_code"] = 127
-            session["finished_at"] = time.time()
-            session["buf"].append("[deploy] error: rsync not on PATH")
-        return {"session": session["id"], "error": "rsync not on PATH"}
-
-    with session["lock"]:
-        session["proc"] = proc
-        session["running"] = True
-        session["buf"].append(f"[deploy] {' '.join(argv)}")
-
     cache_commit = _compute_cache_commit(str(PROJECT_ROOT))
-    with session["lock"]:
-        if cache_commit:
-            session["buf"].append(f"[deploy] minio cache commit: {cache_commit}")
-        else:
-            session["buf"].append(
-                "[deploy] no minio-pushed cache commit found — "
-                "cabal will build from scratch"
-            )
+    notes = [
+        f"[deploy] minio cache commit: {cache_commit}" if cache_commit else
+        "[deploy] no minio-pushed cache commit found — cabal will build from scratch"
+    ]
 
     git_ignore_cmd = (
         "printf '%s\\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' "
@@ -1738,17 +2210,173 @@ def remote_deploy(body: dict) -> dict:
     ssh_base = [
         "ssh", "-o", "StrictHostKeyChecking=accept-new",
         "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-        "-p", str(port),
+        "-p", str(target["port"]),
     ]
-    if identity:
-        ssh_base += ["-i", identity]
-    session["post_ssh_argv"] = ssh_base + [f"{user}@{host}", git_init_cmd]
+    if target["identityFile"]:
+        ssh_base += ["-i", target["identityFile"]]
 
+    return {
+        "argv": argv,
+        "notes": notes,
+        "post_ssh_argv": ssh_base + [f"{target['user']}@{target['host']}", git_init_cmd],
+    }
+
+
+def _deploy_run(session: dict, target: dict, wait_for_lock: bool) -> bool:
+    """Run one rsync deploy under the exclusive deploy lock (blocking).
+
+    wait_for_lock=False returns immediately when another deploy holds the lock —
+    that is how the watcher backs off instead of queueing."""
+    if not _deploy_lock.acquire(blocking=False):
+        if not wait_for_lock:
+            _session_note(session, "[deploy] another deploy is in progress — skipped")
+            _session_finish(session, 75)
+            return False
+        _session_note(
+            session,
+            "[deploy] an auto-deploy is already running — waiting for it to finish…",
+        )
+        _deploy_lock.acquire()
+
+    try:
+        # Snapshot before rsync: anything edited *during* the transfer may not
+        # have been picked up, so it must still count as un-deployed.
+        workspace_hash = _workspace_fingerprint()
+        try:
+            plan = _deploy_plan(target)
+        except Exception as exc:  # noqa: BLE001
+            _session_note(session, f"[deploy] error: {exc}")
+            _session_finish(session, 2)
+            return False
+
+        try:
+            proc = subprocess.Popen(
+                plan["argv"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=0,
+                start_new_session=True,
+            )
+        except FileNotFoundError:
+            _session_note(session, "[deploy] error: rsync not on PATH")
+            _session_finish(session, 127)
+            return False
+
+        with session["lock"]:
+            session["proc"] = proc
+            session["running"] = True
+            session["buf"].append(f"[deploy] {' '.join(plan['argv'])}")
+            for note in plan["notes"]:
+                session["buf"].append(note)
+        session["post_ssh_argv"] = plan["post_ssh_argv"]
+
+        _remote_pipe_reader(session, proc.stdout)  # blocks until rsync exits
+
+        if session["exit_code"] == 0:
+            _stack_state_write(
+                _stack_state_key(target),
+                {"workspaceHash": workspace_hash, "deployedAt": time.time()},
+            )
+            return True
+        return False
+    finally:
+        _deploy_lock.release()
+
+
+def remote_deploy(body: dict) -> dict:
+    target = _deploy_target(body)
+    session = _remote_session_make("deploy", target["host"])
+    _remote_register(session)
+
+    if _is_localhost(target["host"]) or target["copyMode"] == "skip":
+        with session["lock"]:
+            session["running"] = False
+            session["exit_code"] = 0
+            session["finished_at"] = time.time()
+            session["buf"].append(
+                "[deploy] localhost or copyMode=skip — no rsync needed."
+            )
+        return {"session": session["id"], "skipped": True}
+
+    if not target["user"]:
+        with session["lock"]:
+            session["exit_code"] = 2
+            session["finished_at"] = time.time()
+            session["buf"].append("[deploy] error: 'user' is required for non-localhost host")
+        return {"session": session["id"], "error": "user required"}
+
+    _auto_deploy_remember(target)
+    with session["lock"]:
+        session["running"] = True
+
+    # The lock wait happens off the request thread so /deploy still answers with
+    # a session id immediately; the wait is visible in that session's output.
     threading.Thread(
-        target=_remote_pipe_reader, args=(session, proc.stdout), daemon=True
+        target=_deploy_run, args=(session, target, True), daemon=True
     ).start()
 
     return {"session": session["id"], "skipped": False}
+
+
+def _auto_deploy_prune() -> None:
+    """Keep finished auto-deploy sessions from piling up (one per minute)."""
+    with _remote_sessions_lock:
+        stale = [
+            sid for sid, s in _remote_sessions.items()
+            if s["kind"] == "deploy" and s.get("auto") and not s["running"]
+            and (s.get("finished_at") or 0) < time.time() - 3600
+        ]
+        for sid in stale:
+            _remote_sessions.pop(sid, None)
+
+
+def _auto_deploy_tick() -> None:
+    target = _auto_deploy_target()
+    with _auto_deploy_lock:
+        _auto_deploy["lastCheckAt"] = time.time()
+    if not target:
+        return
+
+    key = _stack_state_key(target)
+    stored = _stack_state_read().get(key) or {}
+    if not stored.get("workspaceHash"):
+        return  # never deployed to this box yet — let Start do the first sync
+    if stored["workspaceHash"] == _workspace_fingerprint():
+        return
+
+    if _deploy_lock.locked():
+        return  # a Start-triggered deploy owns the lock — retry next tick
+
+    _auto_deploy_prune()
+    session = _remote_session_make("deploy", target["host"])
+    session["auto"] = True
+    _remote_register(session)
+    with session["lock"]:
+        session["running"] = True
+        session["buf"].append("[auto-deploy] local files changed — syncing")
+    with _auto_deploy_lock:
+        _auto_deploy["lastSession"] = session["id"]
+        _auto_deploy["lastDeployAt"] = time.time()
+
+    ok = _deploy_run(session, target, wait_for_lock=False)
+    with _auto_deploy_lock:
+        _auto_deploy["lastResult"] = (
+            "ok" if ok else f"failed (exit {session['exit_code']})"
+        )
+
+
+def _auto_deploy_loop() -> None:
+    while True:
+        time.sleep(AUTO_DEPLOY_POLL_SECONDS)
+        try:
+            _auto_deploy_tick()
+        except Exception as exc:  # noqa: BLE001 — a bad tick must not kill the watcher
+            with _auto_deploy_lock:
+                _auto_deploy["lastResult"] = f"error: {exc}"
+
+
+def start_auto_deploy_watcher() -> None:
+    threading.Thread(target=_auto_deploy_loop, daemon=True).start()
 
 
 def remote_clear_data(body: dict) -> dict:
@@ -1836,7 +2464,13 @@ def remote_cabal_clean(body: dict) -> dict:
     session = _remote_session_make("cabal-clean", host)
     _remote_register(session)
 
-    inner = "cd Backend && rm -rf dist-newstyle .ci-project-root .ci-cabal-dir .cabal-dir .nix-deps"
+    # Clear every build-state entry of the rsync exclude list, at the workspace
+    # root and under Backend/ — those paths are never rsynced, so nothing else
+    # would ever clean them up on the stack host.
+    _targets = " ".join(
+        f"./{e} Backend/{e}" for e in CABAL_CLEAN_TARGETS
+    )
+    inner = f"rm -rf {_targets}"
 
     if _is_localhost(host):
         argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]
@@ -1903,6 +2537,7 @@ def remote_start(body: dict) -> dict:
                 session["finished_at"] = time.time()
                 session["buf"].append("[start] error: 'user' is required for non-localhost host")
             return {"session": session["id"], "error": "user required"}
+        _auto_deploy_remember(_deploy_target(body))
         remote_cmd = f"cd {shlex.quote(remote_dir)} && {command}"
         argv = _ssh_argv(user, host, port, identity, want_tty=True) + [remote_cmd]
 
@@ -1935,6 +2570,44 @@ def remote_start(body: dict) -> dict:
         session["cols"] = cols
         session["rows"] = rows
         session["buf"].append(f"[start] {' '.join(argv)}")
+
+    threading.Thread(target=_remote_pty_reader, args=(session,), daemon=True).start()
+    return {"session": session["id"], "cols": cols, "rows": rows}
+
+
+def _remote_spawn_pty(session: dict, argv: list[str], cols=None, rows=None) -> dict:
+    """Run argv in a PTY attached to an already-registered session, so the
+    dashboard's xterm can drive it (used for interactive one-offs like
+    ssh-copy-id, which must be able to prompt for a password)."""
+    cols = int(cols or 100)
+    rows = int(rows or 24)
+    master_fd, slave_fd = _pty.openpty()
+    try:
+        _set_pty_size(master_fd, rows, cols)
+    except Exception:
+        pass
+    try:
+        proc = subprocess.Popen(
+            argv,
+            stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+            close_fds=True, start_new_session=True,
+        )
+    except (FileNotFoundError, OSError) as e:
+        os.close(master_fd); os.close(slave_fd)
+        with session["lock"]:
+            session["exit_code"] = 127
+            session["finished_at"] = time.time()
+            session["buf"].append(f"[{session['kind']}] error: {e}")
+        return {"session": session["id"], "error": str(e)}
+
+    os.close(slave_fd)
+    with session["lock"]:
+        session["proc"] = proc
+        session["master_fd"] = master_fd
+        session["running"] = True
+        session["cols"] = cols
+        session["rows"] = rows
+        session["buf"].append(f"[{session['kind']}] {' '.join(argv)}")
 
     threading.Thread(target=_remote_pty_reader, args=(session,), daemon=True).start()
     return {"session": session["id"], "cols": cols, "rows": rows}
@@ -1997,6 +2670,60 @@ def remote_stop(session_id: str) -> dict:
         try: os.close(session["master_fd"])
         except Exception: pass
     return {"stopped": True}
+
+
+def _remote_broadcast(session: dict, chunk: bytes) -> None:
+    with session["lock"]:
+        subs = list(session["subscribers"])
+    for q in subs:
+        try:
+            q.put_nowait(chunk)
+        except Exception:  # noqa: BLE001 — a full/closed subscriber queue is not fatal
+            pass
+
+
+def _remote_force_repaint(session: dict, clear: bool = True) -> bool:
+    """Make a full-screen TUI redraw every cell of the browser's terminal.
+
+    A diffing TUI (tcell/process-compose) only writes cells its own model says
+    changed, and it has no idea what the browser is actually showing. Anything
+    xterm holds that the TUI believes is already blank therefore lingers for
+    ever — the stray border column left over from a frame drawn while the
+    browser geometry and the PTY still disagreed. Clearing xterm alone makes
+    that worse (the TUI won't repaint what it thinks is unchanged), so the
+    clear has to be paired with a genuine geometry change, which is the one
+    thing that invalidates the TUI's model."""
+    fd = session.get("master_fd")
+    if fd is None or not session.get("running"):
+        return False
+    with session["lock"]:
+        cols = session.get("cols") or 120
+        rows = session.get("rows") or 32
+        alt_screen = session["modes"].get(1049) == b"h"
+    if clear and alt_screen:
+        _remote_broadcast(session, b"\x1b[0m\x1b[2J\x1b[H")
+    # Shrink by a row AND a column, hold long enough for the app to render that
+    # frame, then restore. Two real changes are needed: a differential renderer
+    # coalesces a fast shrink/restore into "no net change" and repaints only
+    # diffs. Ctrl+L after, for apps that honour it.
+    try:
+        _set_pty_size(fd, max(10, rows - 1), max(20, cols - 1))
+        time.sleep(0.18)
+        _set_pty_size(fd, rows, cols)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        os.write(fd, b"\x0c")
+    except OSError:
+        pass
+    return True
+
+
+def remote_repaint(session_id: str) -> dict:
+    session = _remote_get(session_id)
+    if not session:
+        return {"error": "no such session"}
+    return {"repainted": _remote_force_repaint(session)}
 
 
 def remote_status(session_id: str) -> dict:
@@ -2799,18 +3526,6 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         # ── Remote SSH/PTY runner ──
 
-        # POST /api/remote/host  — persist the devbox host for launcher templates
-        if method == "POST" and path == "/api/remote/host":
-            body = self._read_json_body() or {}
-            spec_loader.set_active_host(body.get("host") or "localhost")
-            self._send_json({"host": spec_loader.get_active_host()})
-            return True
-
-        # POST /api/remote/sync-caddy-port  — read resolved caddy port from remote and update registry
-        if method == "POST" and path == "/api/remote/sync-caddy-port":
-            self._send_json(_remote_sync_caddy_port(self._read_json_body() or {}))
-            return True
-
         # POST /api/remote/logs — list *.log files in the stack workspace
         if method == "POST" and path == "/api/remote/logs":
             self._send_json(_log_list(self._read_json_body() or {}))
@@ -2824,6 +3539,22 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # POST /api/remote/log-clear — truncate a chosen *.log to empty
         if method == "POST" and path == "/api/remote/log-clear":
             self._send_json(_log_clear(self._read_json_body() or {}))
+            return True
+
+        # POST /api/remote/preflight — does starting need a deploy / cabal clean?
+        if method == "POST" and path == "/api/remote/preflight":
+            try:
+                self._send_json(remote_preflight(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"preflight: {exc}"}, 500)
+            return True
+
+        # POST /api/remote/mark — record a completed deploy / start
+        if method == "POST" and path == "/api/remote/mark":
+            try:
+                self._send_json(remote_mark(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"mark: {exc}"}, 500)
             return True
 
         # POST /api/remote/deploy
@@ -2884,11 +3615,23 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": f"stop: {exc}"}, 500)
             return True
 
+        # POST /api/remote/repaint — force a full TUI redraw at the current size
+        if method == "POST" and path == "/api/remote/repaint":
+            body = self._read_json_body() or {}
+            session_id = (body.get("session") or "").strip()
+            self._send_json(remote_repaint(session_id))
+            return True
+
         # GET /api/remote/status?session=<id>
         if method == "GET" and path == "/api/remote/status":
             qs = urllib.parse.parse_qs(parsed.query or "")
             session_id = (qs.get("session", [""])[0]).strip()
             self._send_json(remote_status(session_id))
+            return True
+
+        # GET /api/remote/auto-deploy — watcher target + last run
+        if method == "GET" and path == "/api/remote/auto-deploy":
+            self._send_json(auto_deploy_status())
             return True
 
         # GET /api/remote/sessions
@@ -2901,12 +3644,23 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._send_json(_fetch_machines())
             return True
 
-        # GET /api/devbox/resolve[?new=1] 
+        # GET /api/devbox/resolve[?new=1]
         if method == "GET" and path == "/api/devbox/resolve":
             from urllib.parse import parse_qs as _pq
             q = _pq(urlparse(self.path).query)
             force = (q.get("new", ["0"])[0] or "0") in ("1", "true")
             self._send_json(_devbox_resolve(force_new=force))
+            return True
+
+        # GET /api/devbox/ports[?refresh=1][&host=...]
+        # Single source of truth for resolved ports: reads data/devbox-ports.json
+        # from the stack host (locally, or over SSH using .devbox-id.json).
+        if method == "GET" and path == "/api/devbox/ports":
+            from urllib.parse import parse_qs as _pq
+            q = _pq(urlparse(self.path).query)
+            refresh = (q.get("refresh", ["0"])[0] or "0") in ("1", "true")
+            host_q = (q.get("host", [""])[0] or "").strip() or None
+            self._send_json(get_devbox_ports(force=refresh, host_override=host_q))
             return True
 
         # POST /api/remote/setup-ssh  — generate key + test connectivity
@@ -2922,6 +3676,23 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 self._send_json(_setup_ssh(host, user, port))
             except Exception as e:
                 self._send_json({"error": str(e)}, 500)
+            return True
+
+        # POST /api/remote/ssh-copy-id — PTY session running ssh-copy-id, so the
+        # one-time password can be typed in the dashboard terminal.
+        if method == "POST" and path == "/api/remote/ssh-copy-id":
+            self._send_json(remote_ssh_copy_id(self._read_json_body() or {}))
+            return True
+
+        # GET /api/remote/editor-available — is `code` on PATH on this machine?
+        if method == "GET" and path == "/api/remote/editor-available":
+            self._send_json(editor_available())
+            return True
+
+        # POST /api/remote/open-editor — open the workspace in VS Code
+        # (Remote-SSH for a devbox, plain folder for a local stack).
+        if method == "POST" and path == "/api/remote/open-editor":
+            self._send_json(open_remote_editor(self._read_json_body() or {}))
             return True
 
         # GET /api/remote/stream?session=<id>  (SSE)
@@ -2997,10 +3768,9 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         with session["lock"]:
             backlog = bytes(session["byte_buf"])
             mode_prefix = _replay_modes_bytes(session["modes"])
+            alt_screen = session["modes"].get(1049) == b"h"
             session["subscribers"].append(q)
             running = session["running"]
-            cols = session.get("cols") or 120
-            rows = session.get("rows") or 32
 
         def _send_event(chunk: bytes):
             payload = json.dumps({"b64": _base64.b64encode(chunk).decode()})
@@ -3015,26 +3785,26 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             # buffer — rows look highlighted and input doesn't reach the TUI.
             if mode_prefix:
                 _send_event(mode_prefix)
-            if backlog:
-                _send_event(backlog)
+
+            # A full-screen TUI (alt-screen) repaints itself completely after
+            # the SIGWINCH pulse below, so replaying the ring buys nothing —
+            # and actively hurts: the ring starts mid-stream, so its first
+            # escape sequence is usually cut in half and any SGR whose reset
+            # fell off the front leaks a background colour onto cells the TUI
+            # never repaints (the grey blocks). Hand xterm a clean slate
+            # instead. Non-TUI sessions (deploy/cabal-clean output) still get
+            # their scrollback, prefixed with an SGR reset for the same reason.
+            if alt_screen and is_pty and running:
+                _send_event(b"\x1b[0m\x1b[2J\x1b[H")
+            elif backlog:
+                _send_event(b"\x1b[0m" + _trim_to_escape_boundary(backlog))
             if is_pty and running:
-                fd = session["master_fd"]
-                # The replayed frame is stale (it was drawn for whatever size
-                # the PTY was when the bytes were captured). Pulse the PTY
-                # size to force a SIGWINCH — and follow with Ctrl+L — so the
-                # TUI redraws fresh against the now-correctly-moded xterm.
-                # We pulse to (cols-1) and back so the kernel sees a real
-                # change either way; same-size ioctls don't emit SIGWINCH.
-                try:
-                    _set_pty_size(fd, rows, max(20, cols - 1))
-                    time.sleep(0.05)
-                    _set_pty_size(fd, rows, cols)
-                except Exception:
-                    pass
-                try:
-                    os.write(fd, b"\x0c")
-                except OSError:
-                    pass
+                # The clear above already went to this subscriber, so only the
+                # geometry pulse is needed here. The browser re-runs this via
+                # /repaint once its own fit has settled — the pulse is only
+                # correct at the *final* geometry, and the first fit often is
+                # not it.
+                _remote_force_repaint(session, clear=False)
             if not running and session.get("exit_code") is not None:
                 _send_event(f"\r\n[exit {session['exit_code']}]\r\n".encode())
                 return
@@ -3327,6 +4097,7 @@ def main():
 
     server = ThreadingHTTPServer(("0.0.0.0", port), LocalApiHandler)
     server.daemon_threads = True
+    start_auto_deploy_watcher()
     print(
         f"\n  \033[93m📋 Local API on http://localhost:{port} (threaded)\033[0m\n")
 

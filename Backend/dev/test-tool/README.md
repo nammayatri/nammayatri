@@ -128,6 +128,14 @@ Handles things the browser can't do for itself:
   a PTY over SSH and runs `, run-mobility-stack-dev` there. The dashboard's
   **Remote Stack** tab is a thin wrapper over these endpoints and reuses the
   same xterm.js `Terminal` component used by `context-api`'s PTY API.
+- **Port discovery** (single source of truth): `GET /api/devbox/ports
+  [?refresh=1][&host=…]` returns `{host, ports, caddyPort, contextApiPort,
+  caddyRoutes}` by reading `<workspace>/data/devbox-ports.json` off the stack host —
+  directly when the stack is local, over SSH otherwise, using the `host`,
+  `sshUser`, `sshPort` and `remoteDir` recorded in `<repo-root>/.devbox-id.json`
+  by `GET /api/devbox/resolve`. Nothing is cached on disk locally; the dashboard
+  port table, launcher-spec `${ports.*}` / `${host}` and **Tools → Service
+  Ports** all go through this one endpoint.
 
 Pure stdlib — no `paramiko`, no extra runtime deps. The included nix
 `test-local-api` process runs `python3 dev/test-tool/local-api/server.py`.
@@ -145,8 +153,15 @@ Where you actually drive a test run. Tabs:
 - **Finance Visualization** — read-only view over the finance side-effects of
   a recent ride / booking.
 - **Remote Stack** — SSH deploy + run `, run-mobility-stack-dev` against a
-  remote host; flip the dashboard's `context-api` base to that host's `:7082`
-  once it's healthy (stored in `localStorage` under `ny.contextApiBase`).
+  remote host. The dashboard re-points its own `context-api` base at that host's
+  resolved port automatically on boot (`syncContextApiBase()` in `config.ts`,
+  cached in `localStorage.ny.contextApiBase`) — there is nothing to click.
+- **Tools → Service Ports** — modal listing every resolved port of the stack
+  currently targeted: dashboard endpoints, the Caddy `<host>:<caddyPort>/<service>/`
+  routes and the direct `http://<host>:<port>` URLs, each with a copy button.
+- **Remote Stack → 🗒** — full-screen log viewer. Each pane picks its own file and
+  can be split horizontally (▥) or vertically (▤); the split direction and open
+  files persist in `localStorage.ny.remoteStack.logLayout`.
 
 The dashboard talks to test-context-api for data, test-local-api for
 host/remote actions, and the backend services directly via the local proxy
@@ -208,10 +223,13 @@ The **Remote Stack** tab in the dashboard lets you target an SSH-reachable host.
 4. Click **Start mobility-stack-dev** — opens an `ssh -tt` PTY into a fresh
    bash login shell that runs `cd Backend && nix develop .#backend -c , run-mobility-stack-dev`
    (the **Command** field shows this canonical command).
-5. Click **Use this context-api** — sets `localStorage.ny.contextApiBase =
-   http://<host>:7082` and reloads. From then on the dashboard's collection
-   scanner, prerequest PTY, log tailer, etc. all hit the remote. **Reset**
-   clears the override.
+5. Nothing else to do: on its next boot the dashboard asks local-api for the
+   stack's resolved `test-context-api` port, sets `localStorage.ny.contextApiBase
+   = http://<host>:<port>` and reloads once. From then on the collection scanner,
+   prerequest PTY, log tailer, etc. all hit that stack. **Tools → Service Ports**
+   shows the base currently in use. The dev-box card also offers **Open Remote SSH**,
+   which opens the remote workspace in VS Code (shown only when `code` is on PATH —
+   `GET /api/remote/editor-available`).
 
 The PTY is streamed back to the panel via Server-Sent Events; you can type
 into it, resize the window, and stop it from the dashboard.

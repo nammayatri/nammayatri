@@ -2,7 +2,7 @@
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
-  background: #1e1e1e;
+  background: #000000;
   padding: 6px 10px 10px 10px;
   box-sizing: border-box;
   overflow: hidden;
@@ -21,7 +21,7 @@
 }
 
 .tb-term-host .xterm-viewport {
-  background-color: #1e1e1e !important;
+  background-color: #000000 !important;
 }
 
 .tb-modal-terminal {
@@ -35,5 +35,5 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #1e1e1e;
+  background: #000000;
 }
