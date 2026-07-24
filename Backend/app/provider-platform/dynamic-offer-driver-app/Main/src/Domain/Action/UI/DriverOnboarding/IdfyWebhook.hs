@@ -208,7 +208,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
             ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
             logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
-            void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+            void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing verificationReq.driverId
             return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text

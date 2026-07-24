@@ -27,9 +27,9 @@ import Kernel.Utils.Common
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
-import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
@@ -43,7 +43,20 @@ blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetric
 blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason blockTimeInHours blockReasonFlag = do
   now <- getCurrentTime
   logInfo $ "Temporarily blocking driver, driverId: " <> driverId.getId
-  QDriverInformation.updateDynamicBlockedStateWithActivity driverId (Just blockedReason) (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" merchantId "AUTOMATICALLY_BLOCKED_BY_APP" merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
+  SStatus.runBlockChange driverId $
+    SStatus.Block
+      SStatus.BlockPayload
+        { SStatus.bpReason = Just blockedReason,
+          SStatus.bpExpiryMinutes = Just blockTimeInHours,
+          SStatus.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+          SStatus.bpMerchantId = merchantId,
+          SStatus.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+          SStatus.bpMerchantOperatingCityId = merchantOperatingCityId,
+          SStatus.bpBlockedBy = DTDBT.Application,
+          SStatus.bpActive = Just False,
+          SStatus.bpMode = Just DriverInfo.OFFLINE,
+          SStatus.bpFlag = blockReasonFlag
+        }
   let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
   void $ LTS.blockDriverLocationsTill merchantId driverId expiryTime
   let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60

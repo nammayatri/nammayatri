@@ -315,6 +315,7 @@ data TransporterConfigT f = TransporterConfigT
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     toNotifyDriverForExtraKmsLimitExceed :: B.C f Kernel.Prelude.Bool,
     trackingShortUrlPattern :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    unifiedOnboardingFlagsRecompute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     updateNotificationStatusBatchSize :: B.C f Kernel.Prelude.Int,
     updateOrderStatusBatchSize :: B.C f Kernel.Prelude.Int,
     updatePayoutStatusBatchSize :: B.C f Kernel.Prelude.Int,

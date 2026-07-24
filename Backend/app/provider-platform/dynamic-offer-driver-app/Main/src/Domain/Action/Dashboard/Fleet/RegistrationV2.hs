@@ -174,8 +174,9 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = updEmail, role = newRole}
   void $ QP.updateByPrimaryKey updPerson
   void $ updateFleetOwnerInfo fleetOwnerInfo req
-  -- Registration is now a mandatory (verified-only) doc; recompute so `verified` flips once registeredAt is set.
-  void $ SStatus.refreshDocsVerificationStatusesWithStatus (Just updPerson) (Just transporterConfig) fleetOwnerId
+  -- FleetRegistration is treated as a mandatory doc — fire the funnel so recompute picks up the fresh
+  -- registeredAt / role and re-derives verified/approved/enabled.
+  void $ SStatus.runRefreshOnboardingFlagsFleet (Just updPerson) (Just transporterConfig) fleetOwnerId
 
   mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
   whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
@@ -233,7 +234,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
       else pure False
   -- Under BOT flow, fleet enablement is owned by the BOT review (submit/review/request →
   -- recomputeFleetVerifiedAndEnabled), so don't enable here at registration/finalize.
-  let enableBotFlow = transporterConfig.enableBotFlow == Just True
+  let enableBotFlow = transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
   if registrationPending || adminApprovalRequired == Just True || enableBotFlow
     then pure False
     else do
@@ -276,7 +277,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
           | panValid && aadhaarValid -> do
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
             let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-            void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            void $ SStatus.runAdminEnable Nothing fleetOwnerId
             when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
             pure True
           | otherwise -> pure False
@@ -284,7 +285,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
           | panValid && aadhaarValid && gstValid -> do
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
             let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-            void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            void $ SStatus.runAdminEnable Nothing fleetOwnerId
             when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
             pure True
           | otherwise -> pure False
@@ -396,7 +397,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             address = Nothing,
             addressState = Nothing,
             addressDocumentType = Nothing,
-            approved = Nothing
+            approved = Nothing,
+            disabledReasonFlag = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.

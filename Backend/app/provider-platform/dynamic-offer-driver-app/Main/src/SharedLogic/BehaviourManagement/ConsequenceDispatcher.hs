@@ -41,6 +41,7 @@ import qualified Lib.ConsequenceEngine.Types as CET
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
@@ -135,19 +136,20 @@ dispatchConsequence ctx driverId = \case
   CET.HardBlock params -> do
     logWarning $ "Hard blocking driver " <> driverId.getId <> ", duration: " <> show params.blockDurationHours <> "h"
     let reasonFlag = parseBlockReasonFlag params.blockReasonTag
-    QDriverInformation.updateDynamicBlockedStateWithActivity
-      (cast driverId)
-      (Just params.blockReason)
-      (Just params.blockDurationHours)
-      "BehaviorManagementFramework"
-      ctx.merchantId
-      params.blockReason
-      ctx.merchantOperatingCityId
-      DTDBT.Application
-      True
-      (Just False)
-      (Just DriverInfo.OFFLINE)
-      reasonFlag
+    SStatus.runBlockChange (cast driverId) $
+      SStatus.Block
+        SStatus.BlockPayload
+          { SStatus.bpReason = Just params.blockReason,
+            SStatus.bpExpiryMinutes = Just params.blockDurationHours,
+            SStatus.bpDashboardUserName = "BehaviorManagementFramework",
+            SStatus.bpMerchantId = ctx.merchantId,
+            SStatus.bpReasonCode = params.blockReason,
+            SStatus.bpMerchantOperatingCityId = ctx.merchantOperatingCityId,
+            SStatus.bpBlockedBy = DTDBT.Application,
+            SStatus.bpActive = Just False,
+            SStatus.bpMode = Just DriverInfo.OFFLINE,
+            SStatus.bpFlag = reasonFlag
+          }
     -- Block location tracking + schedule auto-unblock
     now <- getCurrentTime
     let expiryTime = addUTCTime (fromIntegral params.blockDurationHours * 60 * 60) now
@@ -160,13 +162,14 @@ dispatchConsequence ctx driverId = \case
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty) params.cooldownHours
   CET.PermanentBlock params -> do
     logWarning $ "Permanently blocking driver " <> driverId.getId <> ", reason: " <> params.blockReason
-    QDriverInformation.updateBlockedState
-      (cast driverId)
-      True
-      (Just "BehaviorManagementFramework")
-      ctx.merchantId
-      ctx.merchantOperatingCityId
-      DTDBT.Application
+    SStatus.runBlockChange (cast driverId) $
+      SStatus.SimpleBlock
+        SStatus.SimplePayload
+          { SStatus.spModifier = Just "BehaviorManagementFramework",
+            SStatus.spMerchantId = ctx.merchantId,
+            SStatus.spMerchantOperatingCityId = ctx.merchantOperatingCityId,
+            SStatus.spBlockedBy = DTDBT.Application
+          }
     let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
     BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
   CET.Nudge params -> sendOverlayByKey ctx driverId params.nudgeKey

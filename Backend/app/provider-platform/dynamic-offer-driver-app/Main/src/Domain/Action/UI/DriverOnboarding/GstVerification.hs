@@ -173,7 +173,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   res <- case enablementRole of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
-        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
+        void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
@@ -264,7 +264,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
                 <> " requestedGstin="
                 <> maskText req.gstin
             throwError (DriverGstAlreadyVerified person.id.getId)
-          when (verificationStatus == Documents.INVALID && transporterConfig.enableBotFlow == Just True) $ DGQuery.updateVerificationStatus Documents.PENDING person.id
+          when (verificationStatus == Documents.INVALID && (transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True)) $ DGQuery.updateVerificationStatus Documents.PENDING person.id
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp

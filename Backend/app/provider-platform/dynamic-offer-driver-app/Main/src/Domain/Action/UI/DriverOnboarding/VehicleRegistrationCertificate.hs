@@ -843,7 +843,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
-  when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True) $ do
+  when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $ do
     unless driverInfo.enabled $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is not enabled"
       throwError (InvalidRequest "Driver is not enabled")
@@ -908,7 +908,6 @@ invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = 
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
         Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
     _ -> return ()
-  RCQuery.updateApproved (Just False) rcId
   VRCExtra.updateVerificationStatusAndRejectReason Documents.INVALID reason rc.documentImageId
   ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid reason) rc.documentImageId
 
