@@ -127,6 +127,7 @@ createTestVehicleRequest =
       Common.vehicleTags = Just ["Premium", "AC"],
       Common.fuelType = Just "Petrol",
       Common.skipFleetChecks = Nothing,
+      Common.skipDriverChecks = Nothing,
       Common.udinNumber = Nothing
     }
 
@@ -154,6 +155,7 @@ createCustomVehicleRequest regNo vehicleClass capacity colour energyType model m
       Common.vehicleTags = Just ["Premium", "AC"],
       Common.fuelType = Just "Petrol",
       Common.skipFleetChecks = Nothing,
+      Common.skipDriverChecks = Nothing,
       Common.udinNumber = Nothing
     }
 

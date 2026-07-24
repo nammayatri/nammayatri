@@ -1755,6 +1755,7 @@ types:
     - vehicleTags: Maybe [Text]
     - fuelType: Maybe Text
     - skipFleetChecks: Maybe Bool
+    - skipDriverChecks: Maybe Bool
     - udinNumber: Maybe Text
     - derive: "'HideSecrets"
   ListVehicleResT:
