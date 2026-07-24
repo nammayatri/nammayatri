@@ -41,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.Scheduler.Types
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Beckn.Common as DTS
 import qualified SharedLogic.Type as SLT
@@ -254,6 +255,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     isForwardRequest :: Bool,
     previousDropGeoHash :: Maybe Text,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest),
+    specialLocWarriorPreferredSpecialLocId :: Maybe (Id SL.SpecialLocation),
     score :: Maybe A.Value
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -275,6 +277,7 @@ instance Default DriverPoolWithActualDistResult where
         isForwardRequest = False,
         previousDropGeoHash = Nothing,
         goHomeReqId = Nothing,
+        specialLocWarriorPreferredSpecialLocId = Nothing,
         score = Nothing
       }
 

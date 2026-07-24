@@ -65,7 +65,6 @@ import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Text as T
 import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Tuple.Extra (snd3)
 import qualified Data.Vector as V
 import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -101,6 +100,7 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -555,7 +555,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       ( \driver -> runMaybeT $ do
           ghrId <- MaybeT $ CQDGR.getDriverGoHomeRequestInfo driver.driverId merchantOpCityId Nothing <&> (.driverGoHomeRequestId)
           goHomeReq <- MaybeT $ QDGR.findById ghrId
-          return (goHomeReq, driver)
+          return (goHomeReq, driver, Nothing)
       )
       randomDriverPool
   let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
@@ -582,34 +582,34 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                     merchantId = Just merchantId,
                     merchantOperatingCityId = Just merchantOpCityId
                   }
-          return (gHR, specialLocWarriorDriver)
+          return (gHR, specialLocWarriorDriver, Just preferredLocId)
       )
       specialLocWarriorDrivers
   logDebug $ "MetroWarriorDebugging specialLocgoHomeRequests -----" <> show specialLocgoHomeRequests
-  let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) (goHomeRequests <> specialLocgoHomeRequests)
+  let convertedDriverPoolRes = map (\(ghr, driver, mbPreferredSpecialLocId) -> (ghr, driver, mbPreferredSpecialLocId, makeDriverPoolRes driver)) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
       [] -> return []
       _ -> do
-        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, _), dpwAD) -> (ghr, driver, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId Nothing fromLocation (NE.fromList $ map (\(_, _, c) -> c) convertedDriverPoolRes) currentSearchInfo
+        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, mbPreferredSpecialLocId, _), dpwAD) -> (ghr, driver, mbPreferredSpecialLocId, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId Nothing fromLocation (NE.fromList $ map (\(_, _, _, c) -> c) convertedDriverPoolRes) currentSearchInfo
         case driverPoolCfg.actualDistanceThreshold of
           Nothing -> return driverGoHomePoolWithActualDistance
           Just threshold -> do
             logDebug $ "Threshold :" <> show threshold
-            let res = filter (\(_, driver, dpwAD) -> filterFunc threshold dpwAD driver.distanceToDriver) driverGoHomePoolWithActualDistance
-            logDebug $ "secondly filtered go home driver pool" <> show (map snd3 res)
+            let res = filter (\(_, driver, _, dpwAD) -> filterFunc threshold dpwAD driver.distanceToDriver) driverGoHomePoolWithActualDistance
+            logDebug $ "secondly filtered go home driver pool" <> show (map (\(_, driver, _, _) -> driver) res)
             return res
 
   driversRoutes' <- getRoutesForAllDrivers driverGoHomePoolWithActualDistance
   let driversRoutes = map (refactorRoutesResp goHomeCfg) driversRoutes'
   let driversOnWayToHome =
         filter
-          ( \(_, driverRoute, _, _) ->
+          ( \(_, driverRoute, _, _, _) ->
               any (\wp -> highPrecMetersToMeters (distanceBetweenInMeters (getCoordinates toLocation) wp) <= goHomeCfg.goHomeWayPointRadius) driverRoute.points
           )
           driversRoutes
-  let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
-  let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
+  let goHomeDriverIdsToDest = map (\(driver, _, _, _, _) -> driver.driverId) driversOnWayToHome
+  let goHomeDriverIdsNotToDest = map (\(_, driver, _, _) -> driver.driverId) $ filter (\(_, driver, _, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
   logDebug $ "MetroWarriorDebugging goHomeDriverIdsToDest -----" <> show goHomeDriverIdsToDest
   logDebug $ "MetroWarriorDebugging goHomeDriverIdsNotToDest -----" <> show goHomeDriverIdsNotToDest
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
@@ -638,7 +638,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
 
     getRoutesForAllDrivers =
       mapM
-        ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
+        ( \(ghReq, driver, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance) -> do
             routes <-
               Maps.getTripRoutes merchantId merchantOpCityId Nothing $
                 Maps.GetRoutesReq
@@ -647,7 +647,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                     calcPoints = True
                   }
             let route = if null routes then defRouteInfo else head routes
-            return (driver, route, ghReq.id, driverGoHomePoolWithActualDistance)
+            return (driver, route, ghReq.id, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance)
         )
 
     defRouteInfo =
@@ -663,7 +663,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           trafficSegments = Nothing
         }
 
-    makeDriverPoolWithActualDistResult (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
+    makeDriverPoolWithActualDistResult (driverPoolRes, _, ghrId, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance) = do
       DriverPoolWithActualDistResult
         { driverPoolResult = makeDriverPoolResultFromGoHome driverPoolRes,
           actualDistanceToPickup = driverGoHomePoolWithActualDistance.actualDistanceToPickup, --fromMaybe 0 driverRoute.distance,
@@ -678,6 +678,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           goHomeReqId = if ghrId.getId == "specialLocWarriorGoHomeId" then Nothing else Just ghrId,
           isForwardRequest = False,
           previousDropGeoHash = Nothing,
+          specialLocWarriorPreferredSpecialLocId = mbPreferredSpecialLocId,
           score = driverGoHomePoolWithActualDistance.score
         }
 
@@ -956,6 +957,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
+          specialLocWarriorPreferredSpecialLocId = Nothing,
           isForwardRequest = False,
           previousDropGeoHash = Nothing,
           score = dpr.score
@@ -1188,6 +1190,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
+          specialLocWarriorPreferredSpecialLocId = Nothing,
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score
@@ -1246,13 +1249,14 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
+          specialLocWarriorPreferredSpecialLocId = Nothing,
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score
         }
 
-refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult)
-refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, driverGoHomePoolWithActualDistance)
+refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult)
+refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, mbPreferredSpecialLocId, driverGoHomePoolWithActualDistance)
   where
     newRoute route' =
       RouteInfo
