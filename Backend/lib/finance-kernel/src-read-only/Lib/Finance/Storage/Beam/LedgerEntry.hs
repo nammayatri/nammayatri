@@ -29,7 +29,7 @@ data LedgerEntryT f = LedgerEntryT
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    metadataV2 :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     reconciliationStatus :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     referenceId :: (B.C f Kernel.Prelude.Text),
     referenceType :: (B.C f Kernel.Prelude.Text),

@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN created_by te
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN entity_reference_type text ;
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN entity_reference_id text ;
 CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_entity_reference_id ON atlas_driver_offer_bpp.finance_ledger_entry USING btree (entity_reference_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN metadata_v2 json ;

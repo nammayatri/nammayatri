@@ -28,7 +28,7 @@ data LedgerEntry = LedgerEntry
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
-    metadata :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    metadataV2 :: Kernel.Prelude.Maybe Data.Aeson.Value,
     reconciliationStatus :: Kernel.Prelude.Maybe Data.Aeson.Value,
     referenceId :: Kernel.Prelude.Text,
     referenceType :: Kernel.Prelude.Text,

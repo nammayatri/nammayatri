@@ -102,8 +102,9 @@ refundLedger rideId req apiKey = do
     case req.refundRequestStatus of
       APPROVED ->
         -- VOIDED legs are skipped so a retry re-raises fresh; ANY live leg de-dups a re-fire.
-        unless (any (\e -> e.status /= LE.VOIDED) existing) $
-          postLegs ctx Pending legs req.refundRequestId
+        if any (\e -> e.status /= LE.VOIDED) existing
+          then logInfo $ "refundLedger: APPROVED call dedup — live legs already exist for refundRequestId " <> req.refundRequestId <> "; skipping"
+          else postLegs ctx Pending legs req.refundRequestId
       REFUNDED -> do
         -- alreadyDone = this refund's live legs exist and are ALL settled (skip the invoice).
         -- Strictly none-PENDING, so a crash mid-settle still completes invoices on redelivery.
@@ -111,7 +112,9 @@ refundLedger rideId req apiKey = do
             alreadyDone = not (null idLegs) && not (any (\e -> e.status == LE.PENDING) idLegs)
         if not (null idLegs)
           then forM_ (filter (\e -> e.status == LE.PENDING) idLegs) $ \e -> LedgerSvc.settleEntry e.id
-          else -- APPROVED was missed; post directly as SETTLED (reachable only with no live legs — fires at most once).
+          else do
+            -- APPROVED was missed; post directly as SETTLED (reachable only with no live legs — fires at most once).
+            logInfo $ "refundLedger: REFUNDED call with no live legs (APPROVED missed) — posting directly as SETTLED for refundRequestId " <> req.refundRequestId
             postLegs ctx Settled legs req.refundRequestId
         -- the fleet/driver-visible refund invoice + (if driver-deducted) the negative Commission invoice, once per refund
         unless alreadyDone $ do

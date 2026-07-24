@@ -618,7 +618,10 @@ refundLedger ::
   m ()
 refundLedger apiKey internalUrl bppRideId req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  void $ try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (refundLedgerClient bppRideId (Just apiKey) req) "RefundLedger" refundLedgerApi
+  res <- try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (refundLedgerClient bppRideId (Just apiKey) req) "RefundLedger" refundLedgerApi
+  case res of
+    Left err -> logError $ "refundLedger: BPP call " <> show req.refundRequestStatus <> " FAILED (no re-trail) for refundRequestId " <> req.refundRequestId <> " bppRideId " <> bppRideId <> ": " <> show err
+    Right _ -> pure ()
 
 type GetDeliveryImageAPI =
   "internal"

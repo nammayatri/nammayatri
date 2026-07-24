@@ -93,7 +93,7 @@ ledgerEntryToAuditValue = Aeson.toJSON . toTType' @BeamLE.LedgerEntry . hideLedg
     hideLedgerEntrySensitiveFields :: LedgerEntry -> LedgerEntry
     hideLedgerEntrySensitiveFields LedgerEntry {..} =
       LedgerEntry
-        { metadata = Nothing,
+        { metadataV2 = Nothing,
           ..
         }
 
@@ -207,7 +207,7 @@ createEntry input = do
             reversalOf = Nothing,
             voidReason = Nothing,
             settledAt = Nothing,
-            metadata = input.metadata,
+            metadataV2 = input.metadata,
             reconciliationStatus = Nothing,
             fromStartingBalance = Nothing,
             fromEndingBalance = Nothing,
@@ -277,7 +277,7 @@ createEntryWithBalanceUpdate input = do
                 reversalOf = Nothing,
                 voidReason = Nothing,
                 settledAt = Nothing,
-                metadata = input.metadata,
+                metadataV2 = input.metadata,
                 reconciliationStatus = Nothing,
                 fromStartingBalance = Just fromStartBal,
                 fromEndingBalance = Just fromEndBal,
@@ -336,7 +336,7 @@ createReversal originalId reason = do
                 reversalOf = Just originalId,
                 voidReason = Nothing,
                 settledAt = Just now,
-                metadata = Just $ Aeson.String reason,
+                metadataV2 = Just $ Aeson.String reason,
                 reconciliationStatus = original.reconciliationStatus,
                 fromStartingBalance = Nothing,
                 fromEndingBalance = Nothing,
