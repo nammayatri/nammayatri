@@ -77,7 +77,7 @@ postMeterRidePrice (Just driverId, merchantId, merchantOpCityId) rideId req = do
   let tripStartTime = ride.tripStartTime
   let rideStatus = ride.status
   whenJust (NE.nonEmpty (fromMaybe [] req.locationUpdates)) $ \locUpdates -> do
-    let locationUpdates = fmap (\point -> LTS.LocationUpdate {lat = point.lat, lon = point.lon, ts = Nothing}) locUpdates
+    let locationUpdates = fmap (\point -> LTS.LocationUpdate {lat = point.lat, lon = point.lon, ts = Nothing, acc = Just 0.0}) locUpdates
     void $ BLoc.bulkLocUpdate (BLoc.BulkLocUpdateReq ride.id driverId locationUpdates)
   traveledDistance <- LU.getTravelledDistance driverId
   fareEstimates <- FC.calculateFareUtil merchantId merchantOpCityId Nothing (LatLong ride.fromLocation.lat ride.fromLocation.lon) (Just $ highPrecMetersToMeters traveledDistance) Nothing Nothing (OneWay MeterRide) (Just booking.vehicleServiceTier) booking.configInExperimentVersions
