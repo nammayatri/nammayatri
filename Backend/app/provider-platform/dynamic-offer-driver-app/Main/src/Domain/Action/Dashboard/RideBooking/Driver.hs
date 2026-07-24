@@ -612,7 +612,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         fleetOwnerId = fleetOwnerId',
         docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
         courtRecord = courtRecord',
-        approved = driverInfo.approved
+        approved = driverInfo.approved,
+        disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag
       }
   where
     buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> m Common.DriverAssociationInfo
@@ -634,6 +635,12 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
     castOnboardingAs = \case
       DI.FLEET_DRIVER -> Common.FLEET_DRIVER
       DI.INDIVIDUAL -> Common.INDIVIDUAL
+
+    castDisabledReasonFlag :: DI.DisabledReasonFlag -> Common.DisabledReasonFlag
+    castDisabledReasonFlag = \case
+      DI.FleetDisabled -> Common.FleetDisabled
+      DI.AdminDisabled -> Common.AdminDisabled
+      DI.DriverDisabled -> Common.DriverDisabled
 
 castDriverDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
 castDriverDocsVerificationStatus = \case

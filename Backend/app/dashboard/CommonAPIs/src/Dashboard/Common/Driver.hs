@@ -19,7 +19,7 @@ module Dashboard.Common.Driver
   )
 where
 
-import Dashboard.Common as Reexport
+import Dashboard.Common as Reexport hiding (DRIVER)
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Kernel.External.Payment.Stripe.Types as Stripe
@@ -203,3 +203,15 @@ instance ToMultipart Tmp UpsertDriverServiceTiersCsvReq where
 data AddressDocumentType = RationCard | UtilityBill | Passport | VoterId | LifeInsurancePolicy | Others
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data OnboardingAs = FLEET_DRIVER | INDIVIDUAL
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''OnboardingAs)
+
+data DisabledReasonFlag = FleetDisabled | AdminDisabled | DriverDisabled
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''DisabledReasonFlag)

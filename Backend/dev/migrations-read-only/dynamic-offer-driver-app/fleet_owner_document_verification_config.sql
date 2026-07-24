@@ -65,3 +65,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD 
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN only_image_verification_status_lookup_required boolean ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN document_fields_json json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN is_approval_supported boolean ;

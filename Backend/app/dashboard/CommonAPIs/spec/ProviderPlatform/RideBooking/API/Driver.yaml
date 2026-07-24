@@ -21,6 +21,8 @@ imports:
   VerifiedBy: Domain.Types.DriverPanCard
   DocsVerificationStatus: Dashboard.Common
   CRCVerificationResponse: Kernel.External.Verification.Types
+  OnboardingAs: Dashboard.Common.Driver
+  DisabledReasonFlag: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -363,6 +365,7 @@ types:
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - courtRecord: Maybe CourtRecordResult
     - approved: Maybe Bool
+    - disabledReasonFlag: Maybe DisabledReasonFlag
   CourtRecordResult:
     - result: Maybe CRCVerificationResponse
     - errorMessage: Maybe Text
@@ -375,8 +378,6 @@ types:
     - verified: Maybe Bool
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - enabled: Maybe Bool
-  OnboardingAs:
-    enum: "FLEET_DRIVER, INDIVIDUAL"
   GetFeedbackListRes:
     - feedbacks: [DriverFeedbackAPIEntity]
   DriverFeedbackAPIEntity:

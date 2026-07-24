@@ -471,6 +471,15 @@ updateApproved approved driverId = do
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
+updateOnboardingAs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.OnboardingAs -> Id Person.Driver -> m ()
+updateOnboardingAs onboardingAs driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.onboardingAs onboardingAs,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
 -- | Stamp `firstVerifiedAt = now` only if it is currently NULL — atomic, so concurrent status
 --   polls cannot double-stamp / overwrite the first-verification timestamp.
 stampFirstVerifiedAtIfNull :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()

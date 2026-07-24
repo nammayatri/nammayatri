@@ -89,7 +89,6 @@ sanitizeBulkPerson p =
       tokenNo = p.tokenNo >>= nonBlank
     }
 
-
 requireBulkPersonFields :: MonadFlow m => Int -> BulkCreatePerson -> m ()
 requireBulkPersonFields idx p = do
   let rowTag = "Row " <> T.pack (show idx) <> ": "

@@ -22,7 +22,6 @@ where
 import qualified API.Types.ProviderPlatform.Management.Communication as CommAPI
 import qualified Dashboard.Common
 import qualified Data.Aeson as Aeson
-import Data.Function (on)
 import Data.List (nub, nubBy)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TEnc
@@ -398,7 +397,7 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
               if null fleetOwnerIds
                 then pure []
                 else do
-                  pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
+                  pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True) Nothing Nothing Nothing Nothing Nothing
                   pure $ map (\(_, person) -> person) pairs
             _ -> do
               tuples <-
@@ -415,6 +414,8 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
                     mbSearchDbHash
                     mbSearch
                     mbSearch
+                    Nothing
+                    Nothing
               pure $ map (\(person, _, _) -> person) tuples
         pure drivers
   recipients <- mapM buildRecipientItem persons
@@ -561,12 +562,12 @@ resolveRecipientIdsForSelectAll merchant merchantOpCity mbSelectAllRoles mbFleet
           <$> sequence
             [ if CommAPI.ROLE_DRIVER `elem` rolesToFetch
                 then do
-                  drivers <- QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity selectAllMaxLimit 0 Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                  drivers <- QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity selectAllMaxLimit 0 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                   pure $ map (\(p, _, _) -> (p.id.getId, DDelivery.RR_DRIVER)) drivers
                 else pure [],
               if CommAPI.ROLE_FLEET_OWNER `elem` rolesToFetch
                 then do
-                  fleetOwners <- QFOI.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0)
+                  fleetOwners <- QFOI.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0) Nothing Nothing Nothing
                   pure $ map (\fo -> (fo.fleetOwnerPersonId.getId, DDelivery.RR_FLEET_OWNER)) fleetOwners
                 else pure [],
               if CommAPI.ROLE_OPERATOR `elem` rolesToFetch

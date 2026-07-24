@@ -147,7 +147,7 @@ data DriverInfoRes = DriverInfoRes
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    onboardingAs :: Kernel.Prelude.Maybe OnboardingAs,
+    onboardingAs :: Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs,
     activeFleetInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
     operatorInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
     panAadhaarLinkedFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -161,7 +161,8 @@ data DriverInfoRes = DriverInfoRes
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
-    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -220,12 +221,6 @@ instance Kernel.Types.HideSecrets.HideSecrets ExemptionAndCashCollectionDriverFe
 
 data GetFeedbackListRes = GetFeedbackListRes {feedbacks :: [DriverFeedbackAPIEntity]}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data OnboardingAs
-  = FLEET_DRIVER
-  | INDIVIDUAL
-  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PanCardAPIEntity = PanCardAPIEntity

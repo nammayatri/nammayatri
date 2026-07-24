@@ -133,3 +133,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate DROP COLUMN 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

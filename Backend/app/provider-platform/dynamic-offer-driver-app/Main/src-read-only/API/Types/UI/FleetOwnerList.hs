@@ -23,6 +23,7 @@ data FleetOwnerListItem = FleetOwnerListItem
     fleetType :: Domain.Types.FleetOwnerInformation.FleetType,
     enabled :: Kernel.Prelude.Bool,
     verified :: Kernel.Prelude.Bool,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
     isEligibleForSubscription :: Kernel.Prelude.Bool,
     address :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.Address,

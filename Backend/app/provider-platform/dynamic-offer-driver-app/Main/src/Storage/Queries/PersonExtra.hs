@@ -172,8 +172,10 @@ findAllDriversWithInfoAndVehicle ::
   Maybe DbHash ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
+  Maybe DriverInfo.OnboardingAs ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString = do
+findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString mbApproved mbOnboardingAs = do
   dbConf <- getReplicaBeamConfig
   result <- L.runDB dbConf $
     L.findRows $
@@ -193,6 +195,8 @@ findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified m
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\subscribed -> driverInfo.subscribed B.==?. B.val_ subscribed) mbSubscribed
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchPhoneDBHash
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> driverInfo.approved B.==?. B.val_ (Just approved)) mbApproved
+                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\onboardingAs -> driverInfo.onboardingAs B.==?. B.val_ (Just onboardingAs)) mbOnboardingAs
               )
               do
                 person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
