@@ -59,6 +59,7 @@ PAN_HARD_CHECK_DIR="$SCRIPT_DIR/collections/PanHardCheckFlow"
 REWARDS_DIR="$SCRIPT_DIR/collections/RewardsFlow"
 PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
+GOHOME_DIR="$SCRIPT_DIR/collections/GoHomeSpecialLocationFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -602,6 +603,27 @@ run_facematch() {
     run_frfs "$FACEMATCH_DIR" "FACE MATCH ONBOARDING" "${1:-}" "${2:-}"
 }
 
+# Go-Home blocked special location: block whichever special location covers the airport test
+# point for the Bangalore driver operating city (go_home_config.blocked_home_special_location_ids).
+GOHOME_SETUP_SQL="$GOHOME_DIR/setup-gohome-special-location.sql"
+seed_gohome_special_location() {
+    echo "Seeding Go-Home blocked special location (Bangalore)..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$GOHOME_SETUP_SQL" \
+        || echo "WARNING: Go-Home seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $GOHOME_SETUP_SQL"
+}
+run_gohome() {
+    # Provider-dashboard admin token (+ merchant_access) — needed for the Switch City / Add
+    # Vehicle / Enable Driver steps that put the fresh driver into an enabled state.
+    if [ -f "$PROVIDER_DASHBOARD_SEED_SQL" ]; then
+        echo "Seeding provider-dashboard local-testing-data (token, merchant_access)..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+            -f "$PROVIDER_DASHBOARD_SEED_SQL" > /dev/null 2>&1 || \
+            echo "WARNING: provider-dashboard.sql seed failed — dashboard steps may 401"
+    fi
+    seed_gohome_special_location
+    run_frfs "$GOHOME_DIR" "GO HOME SPECIAL LOCATION" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -632,6 +654,7 @@ show_help() {
     echo "  toll                Run toll-config then toll-ride"
     echo "  rewards             Run rewards dashboard + rider unlock suites (NY + BT)"
     echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
+    echo "  gohome              Run Go-Home blocked special location suite (auto-seeds blocked airport special location)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -770,6 +793,9 @@ case "${1:-}" in
         ;;
     face-match|facematch)
         run_facematch "${2:-}" "${3:-}"
+        ;;
+    gohome|go-home)
+        run_gohome "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

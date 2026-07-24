@@ -142,6 +142,7 @@ GoHomeConfig:
     ignoreWaypointsTill : Meters
     addStartWaypointAt : Meters
     newLocAllowedRadius : Meters
+    blockedHomeSpecialLocationIds : "Maybe [Text]"
     distanceUnit: DistanceUnit
     createdAt : UTCTime
     updatedAt : UTCTime
