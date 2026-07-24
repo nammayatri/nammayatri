@@ -106,6 +106,7 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
+import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
@@ -704,35 +705,35 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   issuedByName = Just merchant.name,
                   issuedByAddress = issuedByAddress,
                   gstinOfParty = gstinOfParty,
-                  merchantGstin = merchant.gstin,
+                  merchantGstin = merchantOperatingCity.gstin <|> merchant.gstin,
                   merchantShortId = getShortId merchant.shortId
                 }
         -- Resolve seller (merchant) and buyer (driver/fleet owner) GSTINs for B2B
         -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
         -- GSTIN is encrypted on DriverGstin and must be decrypted.
-        let sellerGstin = merchant.gstin
+        let sellerGstin = merchantOperatingCity.gstin <|> merchant.gstin
         mbBuyerGstinRow <- QDG.findByDriverId person.id
         buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
         -- For FLEET_BUSINESS with both GSTINs present, use GSTIN state-code
-        -- comparison (proper B2B path). Otherwise fall back to merchant-vs-opCity
-        -- place-based jurisdiction.
-        let subscriptionGstBreakdown =
-              if person.role == DP.FLEET_BUSINESS && isJust sellerGstin && isJust buyerGstin
-                then
-                  let igst = SLDriverFee.calculatePlatformIgst latestPurchase.planFee transporterConfig.taxConfig.subscriptionGst
-                   in computeGstBreakdownGSTIN
-                        transporterConfig.taxConfig.subscriptionGst
-                        sellerGstin
-                        buyerGstin
-                        igst
-                else
-                  computeGstBreakdownByPlace
-                    transporterConfig.taxConfig.rideGst
-                    (Just $ show merchant.state)
-                    (Just $ show merchantOperatingCity.state)
-                    (Just $ show merchant.city)
-                    (Just $ show merchantOperatingCity.city)
-                    (cgst + sgst)
+        -- comparison (proper B2B path). Otherwise compare PoB vs driver/fleet
+        -- addressState from local residence proof.
+        subscriptionGstBreakdown <-
+          if person.role == DP.FLEET_BUSINESS && isJust sellerGstin && isJust buyerGstin
+            then
+              let igst = SLDriverFee.calculatePlatformIgst latestPurchase.planFee transporterConfig.taxConfig.subscriptionGst
+               in pure $
+                    computeGstBreakdownGSTIN
+                      transporterConfig.taxConfig.subscriptionGst
+                      sellerGstin
+                      buyerGstin
+                      igst
+            else
+              computeGstBreakdownForPerson
+                transporterConfig.taxConfig.subscriptionGst
+                merchantOperatingCity
+                person.id
+                isFleetOwner
+                (cgst + sgst)
         mbPanCard <- QPanCard.findByDriverId person.id
         (_newBalance, mbInvoiceId) <-
           creditPrepaidBalance
@@ -798,20 +799,19 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
   mbPanCard <- QPanCard.findByDriverId person.id
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist person.merchantOperatingCityId.getId)
   let totalGst = driverFee.platformFee.cgst + driverFee.platformFee.sgst
-      gstBreakdown =
-        computeGstBreakdownByPlace
-          transporterConfig.taxConfig.rideGst
-          (Just $ show merchant.state)
-          (Just $ show merchantOperatingCity.state)
-          (Just $ show merchant.city)
-          (Just $ show merchantOperatingCity.city)
-          totalGst
+      isFleetOwner = DCommon.checkFleetOwnerRole person.role
+  gstBreakdown <-
+    computeGstBreakdownForPerson
+      transporterConfig.taxConfig.subscriptionGst
+      merchantOperatingCity
+      person.id
+      isFleetOwner
+      totalGst
   let vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just driverFee.vehicleCategory else Nothing
-  if DCommon.checkFleetOwnerRole person.role
+  if isFleetOwner
     then do
       newBalance <-
         creditPrepaidBalance

@@ -257,6 +257,9 @@ instance Default FRT.InvoiceContext where
         periodEnd = Nothing,
         taxTxnRate = Nothing,
         taxTxnGstRate = Nothing,
+        taxTxnCgstRate = Nothing,
+        taxTxnSgstRate = Nothing,
+        taxTxnIgstRate = Nothing,
         cardBrand = Nothing,
         cardLastFour = Nothing,
         lineItems = []

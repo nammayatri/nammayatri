@@ -624,7 +624,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     replicateFareProducts :: Maybe Bool,
     issueCategorySourceMerchant :: Maybe Text,
     issueCategorySourceCity :: Maybe Context.City,
-    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums]
+    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums],
+    gstin :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -656,6 +657,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "issueCategorySourceMerchant" form
       <*> parseMaybeInput "issueCategorySourceCity" form
       <*> parseMaybeInput "gatewayAndRegistryPriorityList" form
+      <*> parseMaybeInput "gstin" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -705,7 +707,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     replicateFareProducts :: Maybe Bool,
     issueCategorySourceMerchant :: Maybe Text,
     issueCategorySourceCity :: Maybe Context.City,
-    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums]
+    gatewayAndRegistryPriorityList :: Maybe [NetworkEnums],
+    gstin :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

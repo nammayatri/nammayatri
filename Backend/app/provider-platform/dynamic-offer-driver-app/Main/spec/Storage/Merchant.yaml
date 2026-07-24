@@ -359,6 +359,7 @@ MerchantOperatingCity:
     currency: Currency
     distanceUnit: DistanceUnit
     stdCode: Maybe Text
+    gstin: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)

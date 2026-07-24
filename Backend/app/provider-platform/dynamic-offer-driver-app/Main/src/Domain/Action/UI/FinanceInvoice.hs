@@ -23,6 +23,7 @@ import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
+import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
@@ -116,9 +117,9 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             taxableValue = invoice.subtotal,
             totalAmountPayable = invoice.totalAmount,
             gstRate = (.gstRate) <$> mbTaxTxn,
-            cgstRate = mbTaxTxn >>= mkComponentRate (Just . (.cgstAmount)),
-            sgstRate = mbTaxTxn >>= mkComponentRate (Just . (.sgstAmount)),
-            igstRate = mbTaxTxn >>= mkComponentRate (Just . (.igstAmount)),
+            cgstRate = mbTaxTxn >>= mkComponentRateFromTxn (Just . (.cgstAmount)),
+            sgstRate = mbTaxTxn >>= mkComponentRateFromTxn (Just . (.sgstAmount)),
+            igstRate = mbTaxTxn >>= mkComponentRateFromTxn (Just . (.igstAmount)),
             sgstAmount = (.sgstAmount) <$> mbTaxTxn,
             cgstAmount = (.cgstAmount) <$> mbTaxTxn,
             igstAmount = (.igstAmount) <$> mbTaxTxn,
@@ -141,11 +142,6 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),
             issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo)
           }
-
-    mkComponentRate getAmount txn = do
-      componentAmount <- getAmount txn
-      guard (txn.taxableValue > 0)
-      pure $ realToFrac (componentAmount / txn.taxableValue) * 100.0
 
 -- | Generate a PDF for a single invoice.
 getFinanceInvoicePdf ::
