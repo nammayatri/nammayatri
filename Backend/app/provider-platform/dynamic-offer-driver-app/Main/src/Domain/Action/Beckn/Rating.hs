@@ -171,9 +171,14 @@ syncServiceTiersOnRatingChange ::
   m ()
 syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId = do
   let updatedDriverStats = driverStats {DDriverStats.rating = newRating}
-  tierResults <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId
-  let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
-  QVehicle.updateSelectedServiceTiers newTiers personId
+  try (fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId) >>= \case
+    Left (VehicleNotFound _) -> do
+      logWarning $ "Vehicle not found for driver " <> personId.getId <> ". Skipping service tier sync on rating change."
+      pure ()
+    Left err -> throwError err
+    Right tierResults -> do
+      let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
+      QVehicle.updateSelectedServiceTiers newTiers personId
 
 calculateAverageRating ::
   (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
