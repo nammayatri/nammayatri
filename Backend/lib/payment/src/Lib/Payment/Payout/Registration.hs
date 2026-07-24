@@ -109,7 +109,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing,
-            basket = Nothing,
+            basket = [],
             paymentRules = Nothing,
             autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing,
             webhookUrl = Just nwAddress,

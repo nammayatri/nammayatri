@@ -82,6 +82,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.VendorFee as QVF
+import qualified Tools.Payment as TPayment
 
 calculateDriverFeeForDrivers ::
   forall m r c.
@@ -421,9 +422,9 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ tran
   processDriverFee paymentMode driverFee subscriptionConfig transporterConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName transporterConfig.timeDiffFromUtc
 
-makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Maybe Bool -> Payment.OfferListReq
-makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig isMember =
-  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = transporterConfig.currency, basket = Nothing} -- add UDFs
+makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Maybe Bool -> [Payment.Basket] -> Payment.OfferListReq
+makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig isMember offerBasket =
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = transporterConfig.currency, basket = offerBasket} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
    in Payment.OfferListReq
         { order = offerOrder,
@@ -472,7 +473,12 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
         case waiveOffMode of
           DPlan.WITHOUT_OFFER -> return []
           _ -> do
-            offers <- SPayment.offerListCache merchantId driverFee.driverId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscountWithWaiveOff driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig isMemberEligibleForOffers)
+            subscriptionConfig <-
+              CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName driverFee.merchantOperatingCityId Nothing plan.serviceName
+                >>= fromMaybeM (InternalError $ "No subscription config found" <> show plan.serviceName)
+            paymentServiceName <- TPayment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+            offerBasket <- TPayment.mkOfferBasket driverFee.merchantOperatingCityId (Just paymentServiceName) feeWithoutDiscountWithWaiveOff
+            offers <- SPayment.offerListCache merchantId driverFee.driverId driverFee.merchantOperatingCityId plan.serviceName (makeOfferReq feeWithoutDiscountWithWaiveOff driver plan dutyDate registrationDateLocal numOfRidesConsideredForCharges transporterConfig isMemberEligibleForOffers offerBasket)
             return offers.offerResp
       (finalOrderAmount, offerId, offerTitle) <-
         if null offerResp

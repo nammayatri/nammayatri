@@ -141,6 +141,7 @@ createOrder (personId, merchantId) rideId = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  offerBasket <- Payment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing Payment.Normal totalFare.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -161,7 +162,7 @@ createOrder (personId, merchantId) rideId = do
             metadataGatewayReferenceId = Nothing,
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
@@ -209,6 +210,7 @@ createRideBookingPaymentOrder booking = do
     Nothing -> pure Nothing
 
   udf1 <- SLUtils.getPersonUdf1 person
+  offerBasket <- Payment.mkOfferBasket booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking amount 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -229,7 +231,7 @@ createRideBookingPaymentOrder booking = do
             metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
@@ -861,6 +863,7 @@ postWalletRecharge (personId, merchantId) req = do
                 }
           }
   udf1 <- SLUtils.getPersonUdf1 person
+  offerBasket <- Payment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (fromIntegral req.pointsAmount) 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -881,7 +884,7 @@ postWalletRecharge (personId, merchantId) req = do
             metadataGatewayReferenceId = Nothing,
             webhookUrl = Just nwAddress,
             splitSettlementDetails = Nothing,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Just paymentRules,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
