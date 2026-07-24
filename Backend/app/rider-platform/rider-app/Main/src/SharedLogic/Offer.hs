@@ -538,7 +538,8 @@ mkOfferListReq person price = do
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   deviceIdentifier <- getDeviceIdentifier person
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
-  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = price.amount, currency = price.currency, basket = Nothing}
+  offerBasket <- TPayment.mkOfferBasket person.merchantId person.merchantOperatingCityId Nothing DOrder.RideHailing price.amount 1
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = price.amount, currency = price.currency, basket = offerBasket}
       customerReq = Payment.OfferCustomer {customerId = person.id.getId, email = email, mobile = Just personPhone}
   decryptedImeiNumber <- mapM decrypt person.imeiNumber
   return
@@ -717,7 +718,7 @@ mkOfferListReqWithBasket person totalAmount currency basketItems = do
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   deviceIdentifier <- getDeviceIdentifier person
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
-  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalAmount, currency = currency, basket = Just basketItems}
+  let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalAmount, currency = currency, basket = basketItems}
       customerReq = Payment.OfferCustomer {customerId = person.id.getId, email = email, mobile = Just personPhone}
   return
     Payment.OfferListReq

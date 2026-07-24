@@ -855,7 +855,7 @@ createPaymentOrder ::
   DP.Person ->
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
-  Maybe [Payment.Basket] ->
+  [Payment.Basket] ->
   Bool ->
   m (Maybe DOrder.PaymentOrder)
 createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment = do

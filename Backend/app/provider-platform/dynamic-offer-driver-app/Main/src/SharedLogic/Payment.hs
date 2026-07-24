@@ -170,7 +170,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             webhookUrl = Just nwAddress,
-            basket = Just offerBasket,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
@@ -425,7 +425,7 @@ createOrderV2 (personId, merchantId, merchantOperatingCityId) createOrderReq mbP
   paymentServiceName <- TPayment.decidePaymentService defaultPaymentServiceName person.clientSdkVersion merchantOperatingCityId
   -- Build the offer basket (productId from merchant service config, quantity 1) instead of sending Nothing
   offerBasket <- TPayment.mkOfferBasket merchantOperatingCityId (Just paymentServiceName) createOrderReq.amount
-  let createOrderReqWithBasket = (createOrderReq :: Payment.CreateOrderReq) {Payment.basket = Just offerBasket}
+  let createOrderReqWithBasket = (createOrderReq :: Payment.CreateOrderReq) {Payment.basket = offerBasket}
   entityName <- case paymentServiceType of
     DOrder.STCL -> pure DPayment.DRIVER_STCL
     _ -> throwError $ InternalError $ "Unhandled Payment Service Type, " <> show paymentServiceType
@@ -497,7 +497,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
             metadataGatewayReferenceId = Nothing,
-            basket = Just offerBasket,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             webhookUrl = Just nwAddress,
