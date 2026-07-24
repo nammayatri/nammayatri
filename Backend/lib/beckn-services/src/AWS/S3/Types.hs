@@ -198,3 +198,12 @@ putPublicRaw :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String 
 putPublicRaw path file_ contentType_ = do
   s3EnvPublic <- asks (.s3EnvPublic)
   putRawH s3EnvPublic path file_ contentType_
+
+-- | Store raw bytes (with a content type) in the private bucket. Unlike 'put',
+-- which writes its 'Text' argument as-is — callers there hand it base64 and the
+-- object holds base64 — this stores the actual bytes, so a presigned download
+-- serves a file a browser or player can use directly.
+putRaw :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> BS.ByteString -> String -> m ()
+putRaw path file_ contentType_ = do
+  s3env <- asks (.s3Env)
+  putRawH s3env path file_ contentType_

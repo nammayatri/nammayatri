@@ -282,6 +282,8 @@ createMediaEntry url fileType filePath = do
             s3FilePath = Just filePath,
             status = Just D.COMPLETED,
             fileHash = Nothing,
+            name = Nothing,
+            size = Nothing,
             createdAt = now,
             updatedAt = Just now
           }
