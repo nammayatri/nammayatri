@@ -410,6 +410,7 @@ types:
     phone: Text
     bookingId: Id FRFSTicketBooking
     checkedIn: Bool
+    quantity: Int
     derive: "Show"
 
   PassengerStopManifest:

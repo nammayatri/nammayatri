@@ -467,7 +467,8 @@ data PassengerInfo = PassengerInfo
     checkedIn :: Kernel.Prelude.Bool,
     name :: Data.Text.Text,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    phone :: Data.Text.Text
+    phone :: Data.Text.Text,
+    quantity :: Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
