@@ -91,6 +91,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import SharedLogic.EndOtpConfig (checkEndOtpRequired)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -338,7 +339,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor
-      when (DTC.isEndOtpRequired booking.tripCategory) $ do
+      endOtpRequired <- checkEndOtpRequired booking.merchantOperatingCityId booking.tripCategory
+      when endOtpRequired $ do
         case driverReq.endRideOtp of
           Just endRideOtp -> do
             unless (Just endRideOtp == rideOld.endOtp) $ throwError IncorrectOTP
