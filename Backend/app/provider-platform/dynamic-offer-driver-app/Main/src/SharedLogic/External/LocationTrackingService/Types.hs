@@ -69,7 +69,8 @@ data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
 data LocationUpdate = LocationUpdate
   { lat :: Double,
     lon :: Double,
-    ts :: Maybe Int64
+    ts :: Maybe Int64,
+    acc :: Maybe Double
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
