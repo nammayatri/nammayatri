@@ -638,16 +638,19 @@ getPaymentRefundRequest ::
     Environment.Flow API.Types.UI.RidePayment.RefundRequestListResp
   )
 getPaymentRefundRequest (mbPersonId, _merchantId) rideId = do
-  orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InternalError $ "No payment order found for ride " <> rideId.getId)
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  rows <- QRefundRequest.findAllByOrderId orderId
-  forM_ rows $ \rr ->
-    unless (rr.personId == personId) $
-      throwError $ InvalidRequest "Person is not the owner of the ride"
-  items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
-    evidence <- fetchEvidenceFromS3 rr
-    pure $ mkRefundRequestResp rideId rr evidence
-  pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
+  -- Cash/offline rides have no payment order — legitimately no refunds, not a 500.
+  SPayment.getOrderIdForRide rideId >>= \case
+    Nothing -> pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = []}
+    Just orderId -> do
+      rows <- QRefundRequest.findAllByOrderId orderId
+      forM_ rows $ \rr ->
+        unless (rr.personId == personId) $
+          throwError $ InvalidRequest "Person is not the owner of the ride"
+      items <- forM (sortOn (Down . (.createdAt)) rows) $ \rr -> do
+        evidence <- fetchEvidenceFromS3 rr
+        pure $ mkRefundRequestResp rideId rr evidence
+      pure $ API.Types.UI.RidePayment.RefundRequestListResp {refundRequests = items}
 
 -- | Per-component fare+tax breakdown for a ride — the refundable options feeding
 --   refundRequest/create. Reuses 'buildLedgerInfoFromBreakups' with appFee=0, so RideFare is the
@@ -662,7 +665,7 @@ getPaymentFareBreakup ::
   )
 getPaymentFareBreakup (mbPersonId, _merchantId) rideId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
   getFareBreakupForRide rideId booking
@@ -798,12 +801,12 @@ createPaymentRefundRequest ::
   Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
   Environment.Flow resp
 createPaymentRefundRequest h rideId = do
-  orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InternalError $ "No payment order found for ride " <> rideId.getId)
+  orderId <- SPayment.getOrderIdForRide rideId >>= fromMaybeM (InvalidRequest $ "No payment order found for ride " <> rideId.getId <> " — cash/offline rides cannot be refunded")
   eResult <- Redis.whenWithLockRedisAndReturnValue (refundRequestProccessingKey orderId) 60 $ do
     existingRequests <- QRefundRequest.findAllByOrderId orderId
     when (any (\r -> r.status `elem` [DRefundRequest.OPEN, DRefundRequest.APPROVED]) existingRequests) $
       throwError (InvalidRequest $ "A refund request is already in process for this order; please retry after it is resolved. Order: " <> orderId.getId)
-    ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
     booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
     -- Per-city kill-switch: refunds are rejected outright unless the city's rider_config enables them.
     riderConfig <-
@@ -938,6 +941,8 @@ processRefundSucceeded refundRequest = do
   -- BPP call) on the ledger dedup signal. The settle+zero-out is NOT gated: it is internally
   -- idempotent, so a re-fire heals a crash between the settle and the zero-out reversal.
   alreadyRecorded <- RidePaymentFinance.refundSucceededAlreadyRecorded refundRequest.id
+  when alreadyRecorded $
+    logInfo $ "processRefundSucceeded: refundRequest " <> refundRequest.id.getId <> " already has settled legs; skipping invoice + BPP REFUNDED call"
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
@@ -998,16 +1003,18 @@ processRefundResult ::
   Maybe (Kernel.Types.Id.Id DRefunds.Refunds) ->
   Environment.Flow ()
 processRefundResult refundRequest updStatus mbRefundsId =
-  when (refundRequest.status /= updStatus || (isJust mbRefundsId && refundRequest.refundsId /= mbRefundsId)) $ do
-    case mbRefundsId of
-      Just rid -> QRefundRequest.updateRefundIdAndStatus (Just rid) updStatus refundRequest.id
-      Nothing -> QRefundRequest.updateRefundStatus updStatus refundRequest.id
-    rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
-    QRide.updateRefundRequestStatus (Just updStatus) rideId
-    let updRefundRequest = refundRequest{status = updStatus, refundsId = mbRefundsId <|> refundRequest.refundsId}
-    Notify.notifyRefunds updRefundRequest
-    when (updStatus == DRefundRequest.REFUNDED) $ processRefundSucceeded updRefundRequest
-    when (updStatus == DRefundRequest.FAILED) $ processRefundFailed updRefundRequest
+  if refundRequest.status /= updStatus || (isJust mbRefundsId && refundRequest.refundsId /= mbRefundsId)
+    then do
+      case mbRefundsId of
+        Just rid -> QRefundRequest.updateRefundIdAndStatus (Just rid) updStatus refundRequest.id
+        Nothing -> QRefundRequest.updateRefundStatus updStatus refundRequest.id
+      rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
+      QRide.updateRefundRequestStatus (Just updStatus) rideId
+      let updRefundRequest = refundRequest{status = updStatus, refundsId = mbRefundsId <|> refundRequest.refundsId}
+      Notify.notifyRefunds updRefundRequest
+      when (updStatus == DRefundRequest.REFUNDED) $ processRefundSucceeded updRefundRequest
+      when (updStatus == DRefundRequest.FAILED) $ processRefundFailed updRefundRequest
+    else logInfo $ "processRefundResult: no-op for refundRequest " <> refundRequest.id.getId <> " — status already " <> show updStatus <> "; side-effects (BAP settle/invoice, BPP call) not re-fired"
 
 fetchEvidenceFromS3 :: DRefundRequest.RefundRequest -> Environment.Flow (Maybe Text)
 fetchEvidenceFromS3 refundRequest = forM refundRequest.evidenceS3Path $ \evidenceS3Path -> do

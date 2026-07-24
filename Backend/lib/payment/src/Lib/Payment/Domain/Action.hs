@@ -679,11 +679,15 @@ refundPaymentService req refundCall = do
           -- Return the internal refunds.id (not Stripe's) so the caller links refund_request.refunds_id —
           -- the same id the Stripe webhook looks up via metadata.
           pure $ Just response {PInterface.refundId = refundId}
-        Left err -> do
-          logError $ "Refund API Call Failure with Error: " <> show err
+        Left exec -> do
+          -- surface the gateway's rejection reason (persisted on the row + returned to the caller)
+          let stripeErr = fromException @Payment.StripeError exec
+              gwErrorCode = stripeErr <&> toErrorCode
+              gwErrorMessage = (stripeErr >>= toMessage) <|> Just (T.pack (show exec))
+          logError $ "Refund API Call Failure with Error: " <> show exec
           HQRefunds.updateIsApiCallSuccess req.merchantOpCityId (Just False) refundsEntry mbAction
           -- Flip status to REFUND_FAILURE so retry works (else the row is stuck at REFUND_PENDING forever).
-          HQRefunds.updateRefundStatus req.merchantOpCityId PInterface.REFUND_FAILURE refundsEntry mbAction
+          HQRefunds.updateRefundsEntryByResponse req.merchantOpCityId Nothing Nothing gwErrorMessage gwErrorCode PInterface.REFUND_FAILURE Nothing Nothing Nothing refundsEntry mbAction
           -- Surface the failed attempt so the caller links refund_request.refunds_id — the
           -- dashboard reads status/errorCode off that link, and a retry targets this row via it.
           pure $
@@ -692,8 +696,8 @@ refundPaymentService req refundCall = do
                 { refundId = refundId,
                   status = PInterface.REFUND_FAILURE,
                   amount = Nothing,
-                  errorCode = Nothing,
-                  errorMessage = Nothing,
+                  errorCode = gwErrorCode,
+                  errorMessage = gwErrorMessage,
                   reference = Nothing,
                   referenceType = Nothing
                 }

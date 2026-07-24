@@ -30,7 +30,10 @@ data RefundComponentItem = RefundComponentItem {component :: Domain.Types.FareBr
 
 data RefundRequestInfoResp = RefundRequestInfoResp
   { orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     requestedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    requestedRefundComponents :: Kernel.Prelude.Maybe [RefundComponentItem],
+    approvedRefundComponents :: Kernel.Prelude.Maybe [RefundComponentItem],
     transactionAmount :: Kernel.Types.Common.PriceAPIEntity,
     refundPurpose :: Domain.Types.RefundRequest.RefundPurpose,
     status :: Domain.Types.RefundRequest.RefundRequestStatus,

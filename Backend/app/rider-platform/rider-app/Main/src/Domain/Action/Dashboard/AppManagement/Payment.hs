@@ -84,30 +84,37 @@ getPaymentRefundRequestInfo ::
   Flow Common.RefundRequestInfoResp
 getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefunds = do
   refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
+  rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
   let refundRequestInfoHandler =
         DRidePayment.RefundRequestInfoHandler
           { validateRefundRequestOwner = \rr -> do
               merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
               merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
               unless (rr.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist refundRequestId.getId),
-            mkRefundRequestInfoResp = mkRefundRequestInfoResp,
+            mkRefundRequestInfoResp = mkRefundRequestInfoResp rideId,
             fetchRefunds = \refundsId -> (Just <$>) $ HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.") -- required only for admin
           }
   DRidePayment.fetchPaymentRefundRequestInfo @Common.RefundRequestInfoResp refundRequestInfoHandler refreshRefunds refundRequest
 
 mkRefundRequestInfoResp ::
+  Id DRide.Ride ->
   DRefundRequest.RefundRequest ->
   Maybe Text ->
   Maybe Kernel.External.Payment.Interface.RefundStatus ->
   Maybe Text ->
   Common.RefundRequestInfoResp
-mkRefundRequestInfoResp DRefundRequest.RefundRequest {..} evidence refundStatus errorCode =
+mkRefundRequestInfoResp rideId DRefundRequest.RefundRequest {..} evidence refundStatus errorCode =
   Common.RefundRequestInfoResp
     { refundsAmount = flip PriceAPIEntity currency <$> refundsAmount,
       requestedAmount = flip PriceAPIEntity currency <$> requestedAmount,
       transactionAmount = PriceAPIEntity transactionAmount currency,
+      requestedRefundComponents = map mkRefundComponentItem <$> requestedRefundComponents,
+      approvedRefundComponents = map mkRefundComponentItem <$> approvedRefundedComponents,
+      rideId = rideId,
       ..
     }
+  where
+    mkRefundComponentItem c = Common.RefundComponentItem {component = c.component, amount = PriceAPIEntity c.amount currency}
 
 postPaymentRefundRequestRespond ::
   ShortId DM.Merchant ->
@@ -236,7 +243,7 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
   let h =
         DRidePayment.RefundRequestCreateHandler
           { validateRefundRequester = \booking ->
-              unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideNotFound rideId.getId),
+              unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideDoesNotExist rideId.getId),
             mkRefundRequestRow = \ctx -> do
               -- Admin /initiate is component-wise only (same as customer create) + auto-approved.
               -- refundComponents required, total = component sum, no whole-amount fallback.
@@ -279,7 +286,7 @@ getPaymentFareBreakup ::
 getPaymentFareBreakup merchantShortId opCity rideId = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideNotFound rideId.getId)
+  unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideDoesNotExist rideId.getId)
   DRidePayment.getFareBreakupForRide rideId booking

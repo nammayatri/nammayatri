@@ -50,7 +50,11 @@ LedgerEntry:
     reversalOf: Maybe (Id LedgerEntry)
     voidReason: Maybe Text
     settledAt: Maybe UTCTime
-    metadata: Maybe Value # SENSITIVE
+    # Replace the deprecated `metadata` column: it was created as `text` while the Haskell type
+    # is Value (json), so any non-NULL row broke every ledger read (BeamRowReadError), and prod's
+    # heavy table can't afford the full-rewrite ALTER to json. The old column stays for backward compatibility,
+    # but is never read or written again. sqlType json below is REQUIRED,as Value defaults to text otherwise.
+    metadataV2: Maybe Value # SENSITIVE
     fromStartingBalance: Maybe HighPrecMoney
     toStartingBalance: Maybe HighPrecMoney
     fromEndingBalance: Maybe HighPrecMoney
@@ -68,6 +72,9 @@ LedgerEntry:
     createdById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
     updatedBy: Maybe ActorType                     # Who updated this record
     updatedById: Maybe Text                        # requestId for UNKNOWN/SYSTEM, jobId for JOB, personId for PERSON/DASHBOARD_PERSON
+
+  sqlType:
+    metadataV2: "json"
 
   constraints:
     id: PrimaryKey

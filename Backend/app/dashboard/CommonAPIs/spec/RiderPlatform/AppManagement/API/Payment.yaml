@@ -94,7 +94,10 @@ types:
     - updatedAt: UTCTime
   RefundRequestInfoResp:
     - orderId: Id PaymentOrder
+    - rideId: Id Ride
     - requestedAmount: Maybe PriceAPIEntity
+    - requestedRefundComponents: "Maybe [RefundComponentItem]"
+    - approvedRefundComponents: "Maybe [RefundComponentItem]"
     - transactionAmount: PriceAPIEntity
     - refundPurpose: RefundPurpose
     - status: RefundRequestStatus
