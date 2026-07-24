@@ -122,7 +122,7 @@ sendNotificationToEmergencyContact senderPersonId recipientPerson body title not
             ttl = Nothing,
             sound = Nothing
           }
-  runWithServiceConfigForProviders recipientPerson.merchantOperatingCityId recipientPerson.clientId recipientPerson.clientDevice notificationData EulerHS.id (clearDeviceToken recipientPerson.id)
+  runWithServiceConfigForProviders (.notifyEmergencyContactsToDriver) recipientPerson.merchantOperatingCityId recipientPerson.clientId recipientPerson.clientDevice notificationData EulerHS.id (clearDeviceToken recipientPerson.id)
 
 sendMessageToEmergencyContact :: Person.Person -> DriverEmergencyContactEntity -> (Text -> Sms.SendSMSReq) -> Flow ()
 sendMessageToEmergencyContact person emergencyContact buildSmsReq = do

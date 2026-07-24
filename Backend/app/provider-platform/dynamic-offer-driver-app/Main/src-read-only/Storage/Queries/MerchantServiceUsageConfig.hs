@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payout.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Verification.Types
@@ -94,6 +95,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             dashboardPanVerificationService = dashboardPanVerificationService,
             dashboardUdyamVerificationService = dashboardUdyamVerificationService,
             driverBackgroundVerificationService = driverBackgroundVerificationService,
+            editLocationToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] editLocationToDriver,
             faceMatchService = Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy faceMatchService,
             faceVerificationService = faceVerificationService,
             getBankAccount = getBankAccount,
@@ -114,6 +116,14 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             llmChatCompletion = Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI llmChatCompletion,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            notifyDriverStopDetectionToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyDriverStopDetectionToDriver,
+            notifyEmergencyContactsToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyEmergencyContactsToDriver,
+            notifyExotelCallStatusToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyExotelCallStatusToDriver,
+            notifyIssueChatMessageToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyIssueChatMessageToDriver,
+            notifyMarketingEventsToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyMarketingEventsToDriver,
+            notifyOnCancelToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyOnCancelToDriver,
+            notifyRideRelatedUpdateToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyRideRelatedUpdateToDriver,
+            notifyScheduledRideAlertToDriver = fromMaybe [Kernel.External.Notification.Types.FCM] notifyScheduledRideAlertToDriver,
             panVerificationService = panVerificationService,
             payoutOrderStatus = fromMaybe Kernel.External.Payout.Types.Juspay payoutOrderStatus,
             rectifyDistantPointsFailure = rectifyDistantPointsFailure,
@@ -146,6 +156,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.dashboardPanVerificationService = dashboardPanVerificationService,
         Beam.dashboardUdyamVerificationService = dashboardUdyamVerificationService,
         Beam.driverBackgroundVerificationService = driverBackgroundVerificationService,
+        Beam.editLocationToDriver = Kernel.Prelude.Just editLocationToDriver,
         Beam.faceMatchService = Kernel.Prelude.Just faceMatchService,
         Beam.faceVerificationService = faceVerificationService,
         Beam.getBankAccount = getBankAccount,
@@ -166,6 +177,14 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.llmChatCompletion = Kernel.Prelude.Just llmChatCompletion,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.notifyDriverStopDetectionToDriver = Kernel.Prelude.Just notifyDriverStopDetectionToDriver,
+        Beam.notifyEmergencyContactsToDriver = Kernel.Prelude.Just notifyEmergencyContactsToDriver,
+        Beam.notifyExotelCallStatusToDriver = Kernel.Prelude.Just notifyExotelCallStatusToDriver,
+        Beam.notifyIssueChatMessageToDriver = Kernel.Prelude.Just notifyIssueChatMessageToDriver,
+        Beam.notifyMarketingEventsToDriver = Kernel.Prelude.Just notifyMarketingEventsToDriver,
+        Beam.notifyOnCancelToDriver = Kernel.Prelude.Just notifyOnCancelToDriver,
+        Beam.notifyRideRelatedUpdateToDriver = Kernel.Prelude.Just notifyRideRelatedUpdateToDriver,
+        Beam.notifyScheduledRideAlertToDriver = Kernel.Prelude.Just notifyScheduledRideAlertToDriver,
         Beam.panVerificationService = panVerificationService,
         Beam.payoutOrderStatus = Kernel.Prelude.Just payoutOrderStatus,
         Beam.rectifyDistantPointsFailure = rectifyDistantPointsFailure,

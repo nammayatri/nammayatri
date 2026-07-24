@@ -280,6 +280,7 @@ validateRequest ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r

@@ -127,3 +127,16 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN face
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN image_extraction_providers_priority_list text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_scheduled_ride_alert_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_ride_related_update_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_on_cancel_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_marketing_events_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_issue_chat_message_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_exotel_call_status_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_emergency_contacts_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN notify_driver_stop_detection_to_driver text[]  default '{"FCM"}';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN edit_location_to_driver text[]  default '{"FCM"}';
