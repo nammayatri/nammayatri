@@ -302,11 +302,14 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
-      ( \driverId batchWaypoints -> do
+      ( \driverId accurateWaypoints allWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
-          routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
-          (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
+          routeDeviation <-
+            if null accurateWaypoints
+              then pure False
+              else updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride accurateWaypoints
+          (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride allWaypoints
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
       (\mbDriverId -> TollsDetector.getTollInfoOnRoute merchantOpCityId.getId (fmap getId mbDriverId))

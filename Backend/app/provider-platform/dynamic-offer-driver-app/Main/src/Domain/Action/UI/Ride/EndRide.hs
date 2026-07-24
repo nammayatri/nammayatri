@@ -32,6 +32,7 @@ where
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
@@ -178,7 +179,7 @@ data ServiceHandle m = ServiceHandle
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> HighPrecMoney -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> NonEmpty (LatLong, Int64) -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
+    finalDistanceCalculation :: Maybe MapsServiceConfig -> Bool -> Bool -> Id DRide.Ride -> Id DP.Person -> [(LatLong, Int64)] -> NonEmpty (LatLong, Int64) -> Meters -> Maybe HighPrecMoney -> Maybe [Text] -> Maybe [Text] -> Bool -> Bool -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: Maybe CacKey -> m (Maybe DTConf.TransporterConfig),
@@ -424,11 +425,13 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         estimatedTollIds = rideOld.estimatedTollIds
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
     advanceRide <- runInMasterDbAndRedis $ QRide.getActiveAdvancedRideByDriverId driverId
-    tripEndPoints <- do
+    (allTripEndPoints, accTripEndPoints) <- do
       let mbAdvanceRideId = (.id) <$> advanceRide
       res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId Nothing (Just $ floor $ utcTimeToPOSIXSeconds now)
       let nowTs = floor $ utcTimeToPOSIXSeconds now
-      pure $ toList $ fmap (\locUpd -> (LatLong locUpd.lat locUpd.lon, fromMaybe nowTs locUpd.ts)) res.loc
+          mkPoint locUpd = (LatLong locUpd.lat locUpd.lon, fromMaybe nowTs locUpd.ts)
+          accLoc = NE.filter (\locUpd -> maybe True (< 50) locUpd.acc) res.loc
+      pure (toList $ fmap mkPoint res.loc, map mkPoint accLoc)
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
         CronJobReq _ -> do
@@ -456,14 +459,14 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               else do
                 -- here we update the current ride, so below we fetch the updated version
                 pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-                whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
+                whenJust (nonEmpty allTripEndPoints) \allTripEndPoints' -> do
                   rectificationMapsConfig <-
                     if shouldRectifyDistantPointsSnapToRoadFailure
                       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
                       else pure Nothing
-                  let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig . fst) tripEndPoints'
-                  logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show tripEndPoints'
-                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
+                  let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig . fst) accTripEndPoints
+                  logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show accTripEndPoints
+                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId accTripEndPoints allTripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames estimatedTollIds pickupDropOutsideOfThreshold passedThroughDrop (booking.tripCategory == DTC.OneWay DTC.MeterRide)
 
                 updRide <- runInMasterDbAndRedis $ findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
