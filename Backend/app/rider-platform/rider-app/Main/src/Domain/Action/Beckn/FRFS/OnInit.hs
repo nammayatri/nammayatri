@@ -116,22 +116,50 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   void $ QFRFSTicketBooking.updateTotalPriceById totalPrice oldBooking.id
   void $ QFRFSTicketBooking.updateIsFareChangedById (Just isFareChanged) oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
   whenJust onInitReq.bppPaymentId (\bppPaymentId -> void $ QFRFSTicketBooking.updateBPPPaymentIdById (Just bppPaymentId) oldBooking.id)
-  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
+  paymentResult <- withTryCatch "onInit:createJourneyPayments" $ createJourneyPayments merchant person mbEnableOffer booking
+  case paymentResult of
+    Right () -> pure ()
+    Left err ->
+      logError $ "FRFS onInit: payment creation failed for booking: " <> booking.id.getId <> ", error: " <> show err
+
+createJourneyPayments ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool,
+    Metrics.HasBAPMetrics m r,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    Finance.HasActorInfo m r
+  ) =>
+  Merchant.Merchant ->
+  DP.Person ->
+  Maybe Bool ->
+  FTBooking.FRFSTicketBooking ->
+  m ()
+createJourneyPayments merchant person mbEnableOffer booking = do
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId booking.merchantOperatingCityId (Just []))) >>= fromMaybeM (FRFSConfigNotFound booking.merchantOperatingCityId.getId)
+  isMetroTestTransaction <- asks (.isMetroTestTransaction)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
-
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
+  unless allLegsOnInitDone $
+    logError $
+      "FRFS createJourneyPayments: skipping payment creation, not all journey legs are on_init done yet, bookingId: "
+        <> booking.id.getId
+        <> ", pendingLegBookingIds: "
+        <> show (map (\b -> b.id.getId) (filter (\b -> b.journeyOnInitDone /= Just True) allJourneyBookings))
   when allLegsOnInitDone $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
-      (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-      baskets <- Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id booking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+      baskets <- Just <$> createBasketFromBookings allJourneyBookings merchant.id booking.merchantOperatingCityId paymentType mbEnableOffer
+      createPayments allJourneyBookings booking.merchantOperatingCityId booking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
 

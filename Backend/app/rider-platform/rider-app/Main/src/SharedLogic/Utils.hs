@@ -34,10 +34,10 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 -- Resolves to the customer's device id based on the client OS:
 --   iOS     -> person.deviceId
 --   Android -> person.androidId
--- Returns Nothing when the device/OS is unknown.
+-- Falls back to "UNKNOWN" when the device/OS is unknown.
 getPersonUdf1 :: Applicative m => DP.Person -> m (Maybe Text)
 getPersonUdf1 person =
-  pure $ case person.clientDevice of
+  pure . Just . fromMaybe "UNKNOWN" $ case person.clientDevice of
     Just device -> case device.deviceType of
       Version.IOS -> person.deviceId
       Version.ANDROID -> person.androidId
