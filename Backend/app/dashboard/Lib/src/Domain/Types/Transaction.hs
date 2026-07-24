@@ -92,6 +92,7 @@ data Endpoint
   | DashboardUserLogin
   | DashboardUserLogout
   | DashboardTwoFactorAdminReset
+  | DashboardUserDelete
   | RiderManagementAPI RiderManagement.ManagementUserActionType
   | RiderAppManagementAPI RiderAppManagement.AppManagementUserActionType
   | RiderIssueManagementAPI RiderIssueManagement.IssueManagementUserActionType
@@ -114,6 +115,7 @@ instance Show Endpoint where
     DashboardUserLogin -> "DASHBOARD_USER/LOGIN"
     DashboardUserLogout -> "DASHBOARD_USER/LOGOUT"
     DashboardTwoFactorAdminReset -> "DASHBOARD_USER/TWO_FACTOR_ADMIN_RESET"
+    DashboardUserDelete -> "DASHBOARD_USER/DELETE"
     RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
     RiderAppManagementAPI e -> "RIDER_APP_MANAGEMENT/" <> show e
     RiderIssueManagementAPI e -> "RIDER_ISSUE_MANAGEMENT/" <> show e
@@ -170,6 +172,9 @@ instance Read Endpoint where
                ]
             ++ [ (DashboardUserLogout, r1)
                  | r1 <- stripPrefix "DASHBOARD_USER/LOGOUT" r
+               ]
+            ++ [ (DashboardUserDelete, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/DELETE" r
                ]
             ++ [ (RiderManagementAPI v1, r2)
                  | r1 <- stripPrefix "RIDER_MANAGEMENT/" r,
