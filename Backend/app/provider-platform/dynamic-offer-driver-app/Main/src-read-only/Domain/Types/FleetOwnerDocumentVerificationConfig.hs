@@ -24,6 +24,7 @@ data FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
     documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentOnboardingStage :: Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,

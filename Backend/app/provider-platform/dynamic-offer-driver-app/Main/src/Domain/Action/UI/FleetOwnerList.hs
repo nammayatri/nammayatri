@@ -27,7 +27,9 @@ getFleetOwnerList ::
       Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe DDVS.DocsVerificationStatus ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe FOI.FleetType ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
@@ -35,13 +37,14 @@ getFleetOwnerList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow [API.FleetOwnerListItem]
   )
-getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbDocsVerificationStatus mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
+getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApproved mbBlocked mbDocsVerificationStatus mbEnabled mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate mbVerified = do
   let normalizedLimit = Just $ clampLimit $ fromMaybe 10 mbLimit
       normalizedOffset = Just $ max 0 $ fromMaybe 0 mbOffset
       targetOpCity = defaultOpCityId
-  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset
+  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset mbVerified mbApproved mbEnabled
   persons <- QPerson.findAllByPersonIds (Id.getId . (.fleetOwnerPersonId) <$> fleetOwners)
   let personMap = HM.fromList $ (\p -> (p.id, p)) <$> persons
   mapMaybeM (toApiItem personMap targetOpCity) fleetOwners
@@ -64,6 +67,7 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbDocsVerification
                   fleetType = fleetOwnerInfo.fleetType,
                   enabled = fleetOwnerInfo.enabled,
                   verified = fleetOwnerInfo.verified,
+                  approved = fleetOwnerInfo.approved,
                   blocked = fleetOwnerInfo.blocked,
                   isEligibleForSubscription = fleetOwnerInfo.isEligibleForSubscription,
                   address = fleetOwnerInfo.stripeAddress,

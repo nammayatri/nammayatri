@@ -98,6 +98,7 @@ import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument as BecknPI
 import Control.Applicative (liftA2, optional)
 import qualified "dashboard-helper-api" Dashboard.Common as DC
 import qualified "dashboard-helper-api" Dashboard.Common as DCommonRole (Role (..))
+import qualified "dashboard-helper-api" Dashboard.Common.Driver
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
@@ -233,6 +234,7 @@ import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOAExtra
@@ -596,8 +598,11 @@ getDriverFleetGetAllVehicle ::
   Maybe Bool ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Bool ->
   Flow Common.ListVehicleResT
-getDriverFleetGetAllVehicle merchantShortId opCity mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive mbMemberPersonId mbSendDriverMobileNumber = do
+getDriverFleetGetAllVehicle merchantShortId opCity mbLimit mbOffset mbRegNumberString mbFleetOwnerId mbIsActive mbMemberPersonId mbSendDriverMobileNumber mbVerified mbApproved mbIsRcActive = do
   memberPersonId <- mbMemberPersonId & fromMaybeM (InvalidRequest "Member person id is required")
   let sendDriverMobileNumber = fromMaybe False mbSendDriverMobileNumber
   let limit = fromMaybe 10 mbLimit
@@ -610,17 +615,19 @@ getDriverFleetGetAllVehicle merchantShortId opCity mbLimit mbOffset mbRegNumberS
   when (merchant.fleetOwnerEnabledCheck == Just True) $
     forM_ fleetOwnerIds $ \foId -> DCommon.checkFleetOwnerVerification foId merchant.fleetOwnerEnabledCheck
   mbRegNumberStringHash <- mapM getDbHash mbRegNumberString
-  case mbIsActive of
+  -- Explicit isRcActive filter takes precedence over legacy isActive query-split.
+  let mbActiveEff = mbIsRcActive <|> mbIsActive
+  case mbActiveEff of
     Just True -> do
-      activeVehicleList <- QRCAssociation.findAllActiveAssociationByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbRegNumberString mbRegNumberStringHash
+      activeVehicleList <- QRCAssociation.findAllActiveAssociationByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbRegNumberString mbRegNumberStringHash mbVerified mbApproved
       vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap) activeVehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
     Just False -> do
-      inactiveVehicleList <- QRCAssociation.findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumberString mbRegNumberStringHash
+      inactiveVehicleList <- QRCAssociation.findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumberString mbRegNumberStringHash mbVerified mbApproved
       vehicles <- traverse (convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap) inactiveVehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
     Nothing -> do
-      vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdsAndSearchString (toInteger limit) (toInteger offset) merchant.id merchantOpCity.id.getId fleetOwnerIds mbRegNumberString mbRegNumberStringHash
+      vehicleList <- RCQuery.findAllValidRcByFleetOwnerIdsAndSearchString (toInteger limit) (toInteger offset) merchant.id merchantOpCity.id.getId fleetOwnerIds mbRegNumberString mbRegNumberStringHash mbVerified mbApproved
       vehicles <- traverse (convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap) vehicleList
       return $ Common.ListVehicleResT (catMaybes vehicles)
 
@@ -730,8 +737,12 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
 
 ---------------------------------------------------------------------
 
-getDriverFleetGetAllDriver :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Flow Common.FleetListDriverResT
-getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumber mbName mbSearchString mbFleetOwnerId mbIsActive mbMemberPersonId = do
+castCommonOnboardingAsToDomain :: Dashboard.Common.Driver.OnboardingAs -> DI.OnboardingAs
+castCommonOnboardingAsToDomain Dashboard.Common.Driver.FLEET_DRIVER = DI.FLEET_DRIVER
+castCommonOnboardingAsToDomain Dashboard.Common.Driver.INDIVIDUAL = DI.INDIVIDUAL
+
+getDriverFleetGetAllDriver :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.OnboardingAs -> Flow Common.FleetListDriverResT
+getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumber mbName mbSearchString mbFleetOwnerId mbIsActive mbMemberPersonId mbVerified mbApproved mbEnabled mbBlocked mbOnboardingAs = do
   memberPersonId <- mbMemberPersonId & fromMaybeM (InvalidRequest "Member person id is required")
   merchant <- findMerchantByShortId merchantShortId
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId mbFleetOwnerId
@@ -746,17 +757,18 @@ getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumb
     Nothing -> case mbMobileNumber of
       Just phNo -> Just <$> getDbHash phNo
       Nothing -> pure Nothing
+  let mbOnboardingAsDom = castCommonOnboardingAsToDomain <$> mbOnboardingAs
   case mbIsActive of
     Just True -> do
-      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just True)
+      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just True) mbVerified mbApproved mbEnabled mbBlocked mbOnboardingAsDom
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Just False -> do
-      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just False)
+      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just False) mbVerified mbApproved mbEnabled mbBlocked mbOnboardingAsDom
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Nothing -> do
-      pairs <- FDV.findAllDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString
+      pairs <- FDV.findAllDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString mbVerified mbApproved mbEnabled mbBlocked mbOnboardingAsDom
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
 
@@ -1168,6 +1180,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
           QRCAssociation.endAllRCAssociationsForDriver personId
           FDV.endFleetDriverAssociation entityId personId
+          SA.syncDriverOnboardingAsWithFDA personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
@@ -3664,6 +3677,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing
+            SA.syncDriverOnboardingAsWithFDA person.id
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country fleetOwner
 
@@ -3837,7 +3851,9 @@ getDriverFleetOwnerList ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Bool ->
+  Maybe Bool ->
   Maybe Common.DocsVerificationStatus ->
+  Maybe Bool ->
   Maybe RegV2.FleetType ->
   Maybe UTCTime ->
   Maybe Int ->
@@ -3845,15 +3861,16 @@ getDriverFleetOwnerList ::
   Maybe Int ->
   Maybe Bool ->
   Maybe UTCTime ->
+  Maybe Bool ->
   Flow [Common.FleetOwnerListItem]
-getDriverFleetOwnerList merchantShortId opCity mbBlocked mbDocsVerificationStatus mbFleetTypeReg mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
+getDriverFleetOwnerList merchantShortId opCity mbApproved mbBlocked mbDocsVerificationStatus mbEnabled mbFleetTypeReg mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate mbVerified = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbFleetType = DRegV2.castFleetType <$> mbFleetTypeReg
       mbFleetDocsVerificationStatus = castCommonToDocsVerificationStatus <$> mbDocsVerificationStatus
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   let shouldRefreshNullDocStatus = transporterConfig.enableManualDocumentStatusCheck == Just True
-  let fetchFleetOwners = FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetDocsVerificationStatus mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate
+  let fetchFleetOwners = FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbApproved mbBlocked mbFleetDocsVerificationStatus mbEnabled mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate mbVerified
   fleetOwnerListItems <- fetchFleetOwners
   fleetOwnerListItemsFinal <-
     if shouldRefreshNullDocStatus
@@ -3877,6 +3894,7 @@ getDriverFleetOwnerList merchantShortId opCity mbBlocked mbDocsVerificationStatu
           fleetType = DRegV2.castFleetTypeToDomain fleetType,
           enabled = enabled,
           verified = verified,
+          approved = approved,
           blocked = blocked,
           isEligibleForSubscription = isEligibleForSubscription,
           address = address,
@@ -4652,6 +4670,13 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           when (newFleetType /= fleetOwnerInfo.fleetType) $
             QPerson.updatePersonRole personId (DRegV2.castFleetTypeToRole newFleetType)
         _ -> pure ()
+
+  -- ADR: onboardingAs write from dashboard. Direct DI write, then sync-with-FDA which
+  -- overrides to FLEET_DRIVER whenever an active FDA exists. Fleet membership stays the
+  -- source of truth; dashboard write is authoritative only when driver has no active FDA.
+  whenJust req.onboardingAs $ \reqOnboardingAs -> do
+    QDIExtra.updateOnboardingAs (Just $ castCommonOnboardingAsToDomain reqOnboardingAs) personId
+    SA.syncDriverOnboardingAsWithFDA personId
 
   pure Success
 

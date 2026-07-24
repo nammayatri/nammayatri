@@ -214,7 +214,7 @@ types:
     documents: "[DocumentStatusItem]"
     derive: "Show"
   LinkToFleetReq:
-    fleetOwnerId: Id Person
+    fleetOwnerId: Maybe (Id Person)
     onboardingVehicleCategory: Maybe VehicleCategory
     isRevoke: Maybe Bool
     requestReason: Maybe Text

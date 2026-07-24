@@ -533,8 +533,8 @@ findAllVehicleByStatusForFleetByLimitOffset fleetOwnerId (Id merchantId') limitV
 
 -------------------------------------------- Queries for multi fleet owner ids --------------------------------------------
 
-findAllValidRcByFleetOwnerIdsAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> [Text] -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
-findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') merchantOperatingCityId fleetOwnerIds mbSearchString mbSearchStringHash = do
+findAllValidRcByFleetOwnerIdsAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> Text -> [Text] -> Maybe Text -> Maybe DbHash -> Maybe Bool -> Maybe Bool -> m [VehicleRegistrationCertificate]
+findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') merchantOperatingCityId fleetOwnerIds mbSearchString mbSearchStringHash mbVerified mbApproved = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
@@ -549,6 +549,8 @@ findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') merch
                         B.&&?. rc.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
                         B.&&?. (if null fleetOwnerIds then B.sqlBool_ (B.not_ (B.isNothing_ rc.fleetOwnerId)) else B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds)))
                         B.&&?. rc.verificationStatus B.==?. B.val_ Documents.VALID
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> rc.verified B.==?. B.val_ (Just verified)) mbVerified
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\approved -> rc.approved B.==?. B.val_ (Just approved)) mbApproved
                         B.&&?. ( maybe
                                    (B.sqlBool_ $ B.val_ True)
                                    (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))

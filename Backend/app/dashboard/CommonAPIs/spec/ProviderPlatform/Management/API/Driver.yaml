@@ -37,6 +37,8 @@ imports:
   IndianState: Kernel.Types.Beckn.Context
   Day: Data.Time
   AddressDocumentType: Dashboard.Common.Driver
+  OnboardingAs: Dashboard.Common.Driver
+  DisabledReasonFlag: Dashboard.Common.Driver
 
 module: Driver
 
@@ -119,6 +121,8 @@ apis:
         - phone: Text
         - vehicleNumberSearchString: Text
         - mbNameSearchString: Text
+        - approved: Bool
+        - onboardingAs: OnboardingAs
       response:
         type: DriverListRes
       migrate:
@@ -753,6 +757,12 @@ types:
     - onRide: Bool
     - active: Bool
     - onboardingDate: Maybe UTCTime
+    - approved: Maybe Bool
+    - onboardingAs: Maybe OnboardingAs
+    - fleetOwnerId: Maybe Text
+    - fleetConsentActive: Bool
+    - hasActiveRc: Bool
+    - disabledReasonFlag: Maybe DisabledReasonFlag
   LicDetails:
     - licExpiry: UTCTime
     - vehicleClass: [Text]

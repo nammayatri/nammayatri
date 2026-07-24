@@ -25,11 +25,14 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "fleetOwner" :> "list" :> QueryParam "blocked" Kernel.Prelude.Bool
+  ( TokenAuth :> "fleetOwner" :> "list" :> QueryParam "approved" Kernel.Prelude.Bool :> QueryParam "blocked" Kernel.Prelude.Bool
       :> QueryParam
            "docsVerificationStatus"
            Domain.Types.DocsVerificationStatus.DocsVerificationStatus
-      :> QueryParam "fleetType" Domain.Types.FleetOwnerInformation.FleetType
+      :> QueryParam "enabled" Kernel.Prelude.Bool
+      :> QueryParam
+           "fleetType"
+           Domain.Types.FleetOwnerInformation.FleetType
       :> QueryParam
            "fromDate"
            Kernel.Prelude.UTCTime
@@ -48,6 +51,9 @@ type API =
       :> QueryParam
            "toDate"
            Kernel.Prelude.UTCTime
+      :> QueryParam
+           "verified"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            [API.Types.UI.FleetOwnerList.FleetOwnerListItem]
@@ -62,7 +68,9 @@ getFleetOwnerList ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.FleetType ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
@@ -70,6 +78,7 @@ getFleetOwnerList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler [API.Types.UI.FleetOwnerList.FleetOwnerListItem]
   )
-getFleetOwnerList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FleetOwnerList.getFleetOwnerList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFleetOwnerList a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FleetOwnerList.getFleetOwnerList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a13) a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1

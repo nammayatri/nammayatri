@@ -1337,6 +1337,7 @@ FleetOwnerDocumentVerificationConfig:
     rolesAllowedToUploadDocument: Maybe [Role]
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     documentFields: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
+    isApprovalSupported: Maybe Bool
   default:
     order: "0"
     role: "'FLEET_OWNER'"

@@ -36,6 +36,7 @@ imports:
   MerchantOperatingCity: Dashboard.Common
   IndianState: Kernel.Types.Beckn.Context
   AddressDocumentType: Dashboard.Common.Driver
+  OnboardingAs: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -62,6 +63,9 @@ apis:
         limit: Int
         offset: Int
         docsVerificationStatus: DocsVerificationStatus
+        verified: Bool
+        approved: Bool
+        enabled: Bool
       response:
         type: "[FleetOwnerListItem]"
 
@@ -260,6 +264,9 @@ apis:
         - mbIsActive: Bool
         - mbMemberPersonId: Text
         - mbSendDriverMobileNumber: Bool
+        - verified: Bool
+        - approved: Bool
+        - isRcActive: Bool
       response:
         type: ListVehicleResT
       migrate:
@@ -291,6 +298,11 @@ apis:
         - mbFleetOwnerId: Text
         - mbIsActive: Bool
         - mbMemberPersonId: Text
+        - verified: Bool
+        - approved: Bool
+        - enabled: Bool
+        - blocked: Bool
+        - onboardingAs: OnboardingAs
       response:
         type: FleetListDriverResT
       migrate:
@@ -1587,6 +1599,7 @@ types:
     - nomineeDob: Maybe Day
     - nomineeRel: Maybe Text
     - addressState: Maybe IndianState
+    - onboardingAs: Maybe OnboardingAs
     - derive: "'HideSecrets"
   DriverDetailsRes:
     - driverId: Id Driver
@@ -1676,6 +1689,7 @@ types:
     - fleetType: FleetType
     - enabled: Bool
     - verified: Bool
+    - approved: Maybe Bool
     - blocked: Bool
     - isEligibleForSubscription: Bool
     - address: Maybe StripeAddress

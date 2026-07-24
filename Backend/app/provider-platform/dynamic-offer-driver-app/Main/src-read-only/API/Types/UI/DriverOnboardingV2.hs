@@ -226,7 +226,7 @@ data HVSdkCallLogReq = HVSdkCallLogReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LinkToFleetReq = LinkToFleetReq
-  { fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+  { fleetOwnerId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     isRevoke :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
