@@ -235,7 +235,7 @@ getDriverRideById driverId mocId rideId mbFinanceData = do
   let driverLanguage = fromMaybe L.ENGLISH driverPerson.language
       rideEarningsEnabled = mbFinanceData == Just True
   transporterConfig <- case mocId of
-    Just id -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId}) (Just (SCTC.findByMerchantOpCityId id Nothing))
+    Just id -> SCTC.findByMerchantOpCityId id Nothing
     Nothing -> pure Nothing
   mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
