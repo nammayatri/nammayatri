@@ -11,6 +11,7 @@ imports:
   Ride: Domain.Types.Ride
   FareComponent: Domain.Types.FareBreakup
   FareBreakupRes: API.Types.UI.RidePayment
+  FileType: AWS.S3
 
 importPackageOverrides:
   API.Types.UI.RidePayment: "rider-app"
@@ -59,6 +60,8 @@ apis:
   - POST:
       endpoint: refundRequest/{rideId}/initiate
       auth: ApiAuthV2
+      query:
+        - autoApprove: Bool # server-set by the dashboard proxy (DASHBOARD_ADMIN => true); client value ignored
       params:
         rideId: Id Ride
       request:
@@ -131,4 +134,7 @@ types:
     - refundComponents: "[RefundComponentItem]"  # per-component amounts (required) — same as customer create; component-wise cap; total = sum
     - description: Maybe Text                     # admin notes; null = handler default
     - deductFromDriver: Maybe Bool                # false = platform absorbs, true = clawback from driver — ledger-based (no Stripe reverse_transfer)
+    - evidence: Maybe Text                        # optional proof image (base64), same as customer create; shown to the approver via /info
+    - fileType: Maybe FileType
+    - reqContentType: Maybe Text
     - derive: "'HideSecrets"

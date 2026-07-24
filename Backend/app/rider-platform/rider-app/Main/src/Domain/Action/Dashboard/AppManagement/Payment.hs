@@ -235,30 +235,31 @@ postPaymentRefundRequestInitiate ::
   ShortId DM.Merchant ->
   Context.City ->
   Id DRide.Ride ->
+  Maybe Bool ->
   Common.RefundRequestInitiateReq ->
   Flow Common.RefundRequestRespondResp
-postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
+postPaymentRefundRequestInitiate merchantShortId opCity rideId mbAutoApprove req = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  let autoApprove = fromMaybe True mbAutoApprove -- server-set by the dashboard proxy; absent (legacy) = auto-approve
   let h =
         DRidePayment.RefundRequestCreateHandler
           { validateRefundRequester = \booking ->
               unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideDoesNotExist rideId.getId),
             mkRefundRequestRow = \ctx -> do
-              -- Admin /initiate is component-wise only (same as customer create) + auto-approved.
-              -- refundComponents required, total = component sum, no whole-amount fallback.
+              -- Dashboard /initiate is component-wise only (same as customer create); without
+              -- autoApprove the row is born OPEN like a customer-created request, awaiting /respond.
               when (null req.refundComponents) $ throwError (InvalidRequest "refundComponents required")
               let uiComps = map (\c -> API.Types.UI.RidePayment.RefundComponentReq {component = c.component, amount = c.amount}) req.refundComponents
               DRidePayment.validateRefundComponents rideId ctx.booking uiComps
+              evidenceS3Path <- DRidePayment.uploadRefundEvidence req.evidence req.fileType req.reqContentType ctx rideId
               let total = sum (map (\c -> c.amount.amount) req.refundComponents)
                   requestedAmount = Just total
-                  refundsAmount = Just total -- auto-approved: this is what gets sent to Stripe
-                  refundsTries = 1 -- row is born post-approval, matching /respond's increment
-                  evidenceS3Path = Nothing -- no need as initiated by admin
-                  code = DRefundRequest.RefundRequestCode "ADMIN_INITIATED"
-                  description = fromMaybe "Admin-initiated refund" req.description
+                  refundsAmount = if autoApprove then Just total else Nothing
+                  refundsTries = if autoApprove then 1 else 0
+                  code = DRefundRequest.RefundRequestCode (if autoApprove then "ADMIN_INITIATED" else "AGENT_INITIATED")
+                  description = fromMaybe (if autoApprove then "Admin-initiated refund" else "Agent-initiated refund") req.description
                   comps = Just (map (\c -> DRefundRequest.RefundComponentAmount {amount = c.amount.amount, component = c.component}) req.refundComponents)
-              -- initiate = create + approve: requested and approved components are the same.
               DRidePayment.buildRefundRequestRow
                 ctx
                 evidenceS3Path
@@ -267,14 +268,17 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
                 requestedAmount
                 refundsAmount
                 refundsTries
-                DRefundRequest.APPROVED
+                (if autoApprove then DRefundRequest.APPROVED else DRefundRequest.OPEN)
                 req.deductFromDriver
                 comps
-                comps,
+                (if autoApprove then comps else Nothing),
             postCreate = \refundRequest -> do
               Notify.notifyRefunds refundRequest
-              DRidePayment.processRefundRaised refundRequest
-              submitRefundToPaymentService refundRequest False
+              if autoApprove
+                then do
+                  DRidePayment.processRefundRaised refundRequest
+                  submitRefundToPaymentService refundRequest False
+                else pure Common.RefundRequestRespondResp {status = DRefundRequest.OPEN, refundStatus = Nothing, errorCode = Nothing}
           }
   DRidePayment.createPaymentRefundRequest h rideId
 

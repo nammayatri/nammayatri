@@ -36,8 +36,8 @@ getPaymentRefundRequestInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.A
 postPaymentRefundRequestRespond :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
 postPaymentRefundRequestRespond a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Payment.postPaymentRefundRequestRespond a4 a3 a2 a1
 
-postPaymentRefundRequestInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> API.Types.Dashboard.AppManagement.Payment.RefundRequestInitiateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
-postPaymentRefundRequestInitiate a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Payment.postPaymentRefundRequestInitiate a4 a3 a2 a1
+postPaymentRefundRequestInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> API.Types.Dashboard.AppManagement.Payment.RefundRequestInitiateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
+postPaymentRefundRequestInitiate a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Payment.postPaymentRefundRequestInitiate a5 a4 a3 a2 a1
 
 getPaymentFareBreakup :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.FlowHandler API.Types.UI.RidePayment.FareBreakupRes)
 getPaymentFareBreakup a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Payment.getPaymentFareBreakup a3 a2 a1

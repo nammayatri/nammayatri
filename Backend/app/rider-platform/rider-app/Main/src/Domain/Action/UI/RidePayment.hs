@@ -485,14 +485,9 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
               -- Component-wise only — refundComponents required, no whole-amount fallback.
               when (null req.refundComponents) $ throwError (InvalidRequest "refundComponents required")
               validateRefundComponents rideId ctx.booking req.refundComponents
-              personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-              evidenceS3Path <- forM req.evidence $ \evidence -> do
-                imageExtension <- validateContentType req
-                path <- createPath ctx.booking.merchantId personId rideId ctx.refundPurpose imageExtension
-                fork "S3 Put Image" do
-                  Redis.withLockRedis (imageS3Lock path) 5 $
-                    S3.put (Text.unpack path) evidence
-                pure path
+              -- ownership (booking.riderId == caller) is enforced by validateRefundRequester above,
+              -- so the path's personId is safely ctx.booking.riderId inside the shared helper
+              evidenceS3Path <- uploadRefundEvidence req.evidence req.fileType req.reqContentType ctx rideId
               let requestedAmount = Just (sum (map (\c -> c.amount.amount) req.refundComponents))
                   refundsAmount = Nothing -- admin sets at /respond/approve
                   refundsTries = 0 -- no Stripe attempts yet
@@ -505,17 +500,36 @@ postPaymentRefundRequestCreate (mbPersonId, _) rideId req = do
   createPaymentRefundRequest h rideId
 
 validateContentType ::
-  API.Types.UI.RidePayment.RefundRequestReq ->
+  Kernel.Prelude.Maybe S3.FileType ->
+  Kernel.Prelude.Maybe Text ->
   Environment.Flow Text
-validateContentType req = do
-  fileType <- req.fileType & fromMaybeM (InvalidRequest "fileType is required")
-  reqContentType <- req.reqContentType & fromMaybeM (InvalidRequest "reqContentType is required")
+validateContentType mbFileType mbContentType = do
+  fileType <- mbFileType & fromMaybeM (InvalidRequest "fileType is required")
+  reqContentType <- mbContentType & fromMaybeM (InvalidRequest "reqContentType is required")
   case fileType of
     S3.Image -> case reqContentType of
       "image/png" -> pure "png"
       "image/jpeg" -> pure "jpg"
       _ -> throwError $ FileFormatNotSupported reqContentType
     _ -> throwError $ FileFormatNotSupported reqContentType
+
+-- | Validate + upload optional refund evidence; returns the S3 path. Shared by the customer
+--   create and the dashboard initiate.
+uploadRefundEvidence ::
+  Kernel.Prelude.Maybe Text ->
+  Kernel.Prelude.Maybe S3.FileType ->
+  Kernel.Prelude.Maybe Text ->
+  ValidatedRefundContext ->
+  Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+  Environment.Flow (Kernel.Prelude.Maybe Text)
+uploadRefundEvidence mbEvidence mbFileType mbContentType ctx rideId =
+  forM mbEvidence $ \evidence -> do
+    imageExtension <- validateContentType mbFileType mbContentType
+    path <- createPath ctx.booking.merchantId ctx.booking.riderId rideId ctx.refundPurpose imageExtension
+    fork "S3 Put Image" do
+      Redis.withLockRedis (imageS3Lock path) 5 $
+        S3.put (Text.unpack path) evidence
+    pure path
 
 refundRequestProccessingKey :: Kernel.Types.Id.Id DPaymentOrder.PaymentOrder -> Text
 refundRequestProccessingKey orderId = "RefundRequest:Processing:OrderId" <> orderId.getId
