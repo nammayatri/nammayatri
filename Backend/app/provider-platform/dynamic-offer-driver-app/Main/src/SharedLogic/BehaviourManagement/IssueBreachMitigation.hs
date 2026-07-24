@@ -29,6 +29,7 @@ import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import SharedLogic.BehaviourManagement.IssueBreach
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import Storage.Beam.SchedulerJob ()
@@ -190,7 +191,20 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
                 void $ Redis.setExp isNotificationPendingKey notificationEntityData (blockTimeInHours * 60 * 60)
           IBHard -> do
             logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
-            QDriverInformation.updateDynamicBlockedStateWithActivity driverInfo.driverId (Just $ "ISSUE_BREACH_" <> show issueType) (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" transporterConfig.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
+            SStatus.runBlockChange (cast driverInfo.driverId) $
+              SStatus.Block
+                SStatus.BlockPayload
+                  { SStatus.bpReason = Just $ "ISSUE_BREACH_" <> show issueType,
+                    SStatus.bpExpiryMinutes = Just blockTimeInHours,
+                    SStatus.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+                    SStatus.bpMerchantId = transporterConfig.merchantId,
+                    SStatus.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+                    SStatus.bpMerchantOperatingCityId = transporterConfig.merchantOperatingCityId,
+                    SStatus.bpBlockedBy = DTDBT.Application,
+                    SStatus.bpActive = Just False,
+                    SStatus.bpMode = Just DriverInfo.OFFLINE,
+                    SStatus.bpFlag = blockReasonFlag
+                  }
             void $ LTS.blockDriverLocationsTill transporterConfig.merchantId driverInfo.driverId expiryTime
             JC.createJobIn @_ @'UnblockDriver (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) unblockDriverJobTs $
               UnblockDriverRequestJobData

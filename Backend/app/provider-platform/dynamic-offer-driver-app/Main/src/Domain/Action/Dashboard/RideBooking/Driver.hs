@@ -81,10 +81,10 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
-import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -782,7 +782,6 @@ postDriverUnlinkVehicle ::
 postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
 
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
@@ -793,7 +792,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC transporterConfig personId
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -808,7 +807,6 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -825,7 +823,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
@@ -856,7 +854,7 @@ postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
   QDriverInfo.updateAadhaarNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> deleteAadhaar : " (show personId)
   pure Success
 
@@ -887,7 +885,7 @@ postDriverDeletePanCard merchantShortId opCity reqDriverId = do
   QDriverInfo.updatePanNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> deletePanCard : " (show personId)
   pure Success
 

@@ -36,6 +36,13 @@ updateBusinessLicenseImage businessLicenseImageId fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.businessLicenseImageId businessLicenseImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateFleetOwnerDisabledReasonFlag ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateFleetOwnerDisabledReasonFlag disabledReasonFlag fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.disabledReasonFlag disabledReasonFlag, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateFleetOwnerEnabledStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateFleetOwnerEnabledStatus enabled fleetOwnerPersonId = do
   _now <- getCurrentTime

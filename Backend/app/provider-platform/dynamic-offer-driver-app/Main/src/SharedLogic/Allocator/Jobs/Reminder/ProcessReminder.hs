@@ -27,10 +27,12 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.Common as DDriverInfo
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DriverInformation as DDriverInfoDI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Reminder as DR
 import qualified Domain.Types.ReminderConfig as DRC
@@ -58,7 +60,6 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
-import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -78,6 +79,7 @@ import qualified Storage.Queries.DriverRCAssociationExtra as QDRCAExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Image as QImage
+import qualified Storage.Queries.OperationHubRequests as SQOHR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Reminder as QReminder
 import qualified Storage.Queries.ReminderConfig as QRC
@@ -159,7 +161,8 @@ disableDriverForMandatoryReminder ::
 disableDriverForMandatoryReminder transporterConfig driverId now documentTypeName = do
   driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (InternalError "DriverInformation not found")
   when driverInfo.enabled $ do
-    Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig driverId False Nothing
+    -- Reminder-expired disable is sticky: admin must explicitly re-enable (recompute won't).
+    SStatus.runAdminDisableM (cast driverId) DDriverInfoDI.DriverDisabled
     logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
 
   let isActive = False
@@ -275,7 +278,6 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
               -- Invalidate RC, deactivate association and remove vehicle (only when not on ride)
               let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
               DomainRC.invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
-              refreshVehicleDocsStatusForReminder rcId "processInspectionReminder:InspectionHub"
               logInfo $ "Invalidated RC " <> reminder.entityId <> " and removed vehicle for driver " <> reminder.driverId.getId <> " due to expired mandatory vehicle inspection reminder"
       DVC.DriverInspectionHub ->
         processInspectionReminder
@@ -288,10 +290,12 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
           FCM.DRIVER_INSPECTION
           DMM.DRIVER_INSPECTION_SMS
           $ do
-            -- Set approved flag to False for DriverInformation
+            now <- getCurrentTime
+            mbOHR <- SQOHR.findLatestByDriverIdAndRequestType reminder.driverId DOHR.DRIVER_ONBOARDING_INSPECTION
+            whenJust mbOHR $ \hubReq ->
+              SQOHR.updateByPrimaryKey hubReq {DOHR.requestStatus = DOHR.REJECTED, DOHR.updatedAt = now, DOHR.remarks = Just "Expired mandatory driver inspection reminder"}
             QDIExtra.updateApproved (Just False) reminder.driverId
-            refreshPersonDocsStatusForReminder reminder.driverId "processInspectionReminder:DriverInspectionHub"
-            logInfo $ "Set approved = false for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
+            logInfo $ "Set approved=Just False for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
       DVC.TrainingForm -> do
         -- Check LMS training status: if all trainings completed, cancel other pending training reminders and mark current SENT
         mbStatus <- DriverOnboardingStatus.checkLMSTrainingStatus reminder.driverId merchantOpCityId
@@ -436,11 +440,9 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                       expiryReason = "Expired mandatory vehicle document reminder"
                   DomainRC.invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
                   invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
-                  refreshVehicleDocsStatusForReminder rcId "processDocumentExpiryReminder:vehicleExpired"
                   logInfo $ "Invalidated RC " <> reminder.entityId <> " (type: " <> documentTypeName <> ") for driver " <> reminder.driverId.getId <> " due to expiry"
                 else do
                   invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
-                  refreshPersonDocsStatusForReminder reminder.driverId "processDocumentExpiryReminder:personDocumentExpired"
                   logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do
               let rescheduleSeconds = fromMaybe defaultRescheduleIntervalSeconds reminderConfig.reminderRescheduleIntervalSeconds
@@ -518,61 +520,6 @@ invalidateExpiredDocument documentType entityId _merchantId _driverId expiryReas
         QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid expiryReason) bl.documentImageId
     DVC.TrainingForm -> pure ()
     _ -> logError $ "Unknown document type for invalidation: " <> show documentType
-
-refreshPersonDocsStatusForReminder ::
-  ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    EncFlow m r,
-    MonadFlow m
-  ) =>
-  Id DP.Person ->
-  Text ->
-  m ()
-refreshPersonDocsStatusForReminder personId logContext =
-  do
-    person <- BF.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-    if transporterConfig.enableManualDocumentStatusCheck == Just True
-      then
-        void $
-          withTryCatch
-            ("processStatusEventForReminder:PersonReminderProcessedEvent:" <> logContext)
-            (SStatus.processStatusEventForReminder (SStatus.PersonReminderProcessedEvent personId))
-      else
-        logInfo $
-          "Skipping person docs status refresh for reminder as enableManualDocumentStatusCheck is disabled. personId="
-            <> personId.getId
-            <> ", context="
-            <> logContext
-
-refreshVehicleDocsStatusForReminder ::
-  ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    CacheFlow m r,
-    EncFlow m r,
-    MonadFlow m
-  ) =>
-  Id DVRC.VehicleRegistrationCertificate ->
-  Text ->
-  m ()
-refreshVehicleDocsStatusForReminder rcId logContext =
-  do
-    rc <- BF.runInReplica $ QVRC.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id " <> rcId.getId)
-    merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    if transporterConfig.enableManualDocumentStatusCheck == Just True
-      then
-        void $
-          withTryCatch
-            ("processStatusEventForReminder:RCReminderProcessedEvent:" <> logContext)
-            (SStatus.processStatusEventForReminder (SStatus.RCReminderProcessedEvent rcId))
-      else
-        logInfo $
-          "Skipping RC docs status refresh for reminder as enableManualDocumentStatusCheck is disabled. rcId="
-            <> rcId.getId
-            <> ", context="
-            <> logContext
 
 -- Helper function to send FCM and SMS notifications to driver
 sendDriverNotifications ::

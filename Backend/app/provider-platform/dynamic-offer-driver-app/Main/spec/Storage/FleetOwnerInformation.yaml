@@ -10,6 +10,7 @@ imports:
   BlockReasonFlag: Tools.Error
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
   AddressDocumentType: Domain.Types.DriverInformation
+  DisabledReasonFlag: Domain.Types.DriverInformation
   IndianState: Kernel.Types.Beckn.Context
 
 FleetOwnerInformation:
@@ -64,6 +65,7 @@ FleetOwnerInformation:
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType
     approved: Maybe Bool
+    disabledReasonFlag: Maybe DisabledReasonFlag
 
   excludedFields: [merchantOperatingCityId]
   default:
@@ -153,6 +155,10 @@ FleetOwnerInformation:
     updateFleetOwnerEnabledStatus:
       kvFunction: updateOneWithKV
       params: [enabled]
+      where: fleetOwnerPersonId
+    updateFleetOwnerDisabledReasonFlag:
+      kvFunction: updateOneWithKV
+      params: [disabledReasonFlag]
       where: fleetOwnerPersonId
     updateReferredByOperatorId:
       kvFunction: updateOneWithKV

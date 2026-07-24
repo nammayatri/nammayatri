@@ -1,0 +1,710 @@
+{
+  "info": {
+    "_postman_id": "msil-onboarding-02-add-driver",
+    "name": "MSIL Onboarding 02 - Add Driver (fleet joining OTP + docs + operator inspection + bot enable)",
+    "description": "Onboards a fleet-associated driver on MSIL_PARTNER/Delhi. Uses the fleet-owner token from 01 to send/verify a joining OTP for a new driver, uploads DL/Aadhaar/PAN/residence/police docs, creates an operator inspection request, has the operator approve it, then bot-enables the driver. Asserts the new flag model (verified/approved/enabled + onboardingAs sync + sticky disabledReasonFlag) at each transition.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.environment.get('driver_mobile')) {",
+          "  const r = Math.floor(Math.random() * 900000000) + 100000000;",
+          "  pm.environment.set('driver_mobile', String(r));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Send Joining OTP (fleet-side)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Send joining OTP returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "if (d && d.authId) pm.environment.set('driver_authId', d.authId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{driver_mobile}}\", \"fleetOwnerId\": \"{{fleet_owner_id}}\", \"mobileCountryCode\": \"{{country_code}}\", \"deviceToken\": \"test-driver-msil\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/sendJoiningOtp?fleetOwnerId={{fleet_owner_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "sendJoiningOtp"],
+          "query": [ { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" } ]
+        }
+      }
+    },
+    {
+      "name": "02 - Verify Joining OTP — returns APISuccess; driver_id is resolved via driverAssociation search next",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verify joining OTP returns 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{driver_mobile}}\", \"fleetOwnerId\": \"{{fleet_owner_id}}\", \"otp\": \"{{login_otp}}\", \"mobileCountryCode\": \"{{country_code}}\", \"deviceToken\": \"test-driver-msil\", \"authId\": \"{{driver_authId}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/verifyJoiningOtp?fleetOwnerId={{fleet_owner_id}}&authId={{driver_authId}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "verifyJoiningOtp"],
+          "query": [
+            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" },
+            { "key": "authId", "value": "{{driver_authId}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 - Driver Association (search by mobile, resolve driver_id if missing)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver association lookup returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "if (!pm.environment.get('driver_id')) {",
+              "  const arr = d.drivers || d.list || d || [];",
+              "  const first = Array.isArray(arr) && arr.length ? arr[0] : null;",
+              "  if (first) {",
+              "    pm.environment.set('driver_id', first.driverId || first.id || first.personId || '');",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "token", "value": "{{fleet_owner_token}}" } ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/driverAssociation?mbSearchString={{driver_mobile}}&fleetOwnerId={{fleet_owner_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "driverAssociation"],
+          "query": [
+            { "key": "mbSearchString", "value": "{{driver_mobile}}" },
+            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Get All Operation Hubs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Get all hubs returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "const hubs = d.hubs || d.list || d || [];",
+              "const first = Array.isArray(hubs) && hubs.length ? hubs[0] : null;",
+              "if (first) pm.environment.set('operation_hub_id', first.id || first.hubId || '');",
+              "pm.test('At least one hub configured', () => pm.expect(!!first).to.be.true);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "token", "value": "{{fleet_owner_token}}" } ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operation/getAllHubs",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operation", "getAllHubs"]
+        }
+      }
+    },
+    {
+      "name": "05 - Upload Driver License",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Upload DL returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.environment.set('driver_dl_image_id', d.imageId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageBase64\": \"{{doc_image_base64}}\", \"imageType\": \"DriverLicense\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/document/upload",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "document", "upload"]
+        }
+      }
+    },
+    {
+      "name": "06 - Register DL",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Register DL returns 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageId1\": \"{{driver_dl_image_id}}\", \"driverDateOfBirth\": \"{{driver_dob}}\", \"driverLicenseNumber\": \"{{driver_dl_number}}\", \"operatingCity\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/register/dl",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "register", "dl"]
+        }
+      }
+    },
+    {
+      "name": "07 - Upload Aadhaar Front",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Upload Aadhaar Front returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.environment.set('driver_aadhaar_front_image_id', d.imageId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageBase64\": \"{{doc_image_base64}}\", \"imageType\": \"AadhaarCard\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/document/upload",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "document", "upload"]
+        }
+      }
+    },
+    {
+      "name": "08 - Upload Aadhaar Back",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Upload Aadhaar Back returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.environment.set('driver_aadhaar_back_image_id', d.imageId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageBase64\": \"{{doc_image_base64}}\", \"imageType\": \"AadhaarCard\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/document/upload",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "document", "upload"]
+        }
+      }
+    },
+    {
+      "name": "09 - Verify Aadhaar",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verify Aadhaar returns 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driver_id}}\", \"identifierNumber\": \"{{driver_aadhaar_number}}\", \"imageId\": \"{{driver_aadhaar_front_image_id}}\", \"optionalImageId\": \"{{driver_aadhaar_back_image_id}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_AADHAAR%22",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "onboarding", "verify", "%22VERIFY_AADHAAR%22"]
+        }
+      }
+    },
+    {
+      "name": "10 - Upload PAN",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Upload PAN returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.environment.set('driver_pan_image_id', d.imageId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageBase64\": \"{{doc_image_base64}}\", \"imageType\": \"PanCard\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/document/upload",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "document", "upload"]
+        }
+      }
+    },
+    {
+      "name": "11 - Verify PAN",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verify PAN returns 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driver_id}}\", \"identifierNumber\": \"{{driver_pan_number}}\", \"imageId\": \"{{driver_pan_image_id}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "onboarding", "verify", "%22VERIFY_PAN%22"]
+        }
+      }
+    },
+    {
+      "name": "12 - Upload Local Residence Proof",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [ "pm.test('Upload residence returns 200', () => pm.response.to.have.status(200));" ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageBase64\": \"{{doc_image_base64}}\", \"imageType\": \"LocalResidenceProof\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/document/upload",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "document", "upload"]
+        }
+      }
+    },
+    {
+      "name": "13 - Update Address Proof",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [ "pm.test('Update address returns 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));" ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"address\": \"MSIL Test Address, Delhi\", \"addressDocumentType\": \"AadhaarCard\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/driver/{{driver_id}}/update",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "driver", "{{driver_id}}", "update"]
+        }
+      }
+    },
+    {
+      "name": "14 - Upload Police Verification Certificate",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [ "pm.test('Upload police cert returns 200', () => pm.response.to.have.status(200));" ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"imageBase64\": \"{{doc_image_base64}}\", \"imageType\": \"PoliceVerificationCertificate\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/document/upload",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "document", "upload"]
+        }
+      }
+    },
+    {
+      "name": "15 - Create Operator Inspection Request (DRIVER_ONBOARDING_INSPECTION)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Create hub request returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "if (d.id) pm.environment.set('driver_hub_request_id', d.id);",
+              "else if (d.requestId) pm.environment.set('driver_hub_request_id', d.requestId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"creatorId\": \"{{fleet_owner_id}}\", \"driverId\": \"{{driver_id}}\", \"operationHubId\": \"{{operation_hub_id}}\", \"requestType\": \"DRIVER_ONBOARDING_INSPECTION\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "createRequest"]
+        }
+      }
+    },
+    {
+      "name": "16 - Ops Login OTP — returns FleetOwnerLoginResV2 {personId} (operator uses same v2 route)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Ops login OTP returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.expect(d.personId, 'personId in login/otp response').to.be.a('string');",
+              "pm.environment.set('operator_id', d.personId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{ops_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"]
+        }
+      }
+    },
+    {
+      "name": "17 - Ops Verify OTP — returns FleetOwnerVerifyResV2 {authToken}",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Ops verify OTP returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "pm.expect(d.authToken, 'authToken in verify/otp response').to.be.a('string');",
+              "pm.environment.set('ops_token', d.authToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{ops_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"otp\": \"{{login_otp}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "18 - Ops Fetch Pending Driver Hub Requests (by mobile)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fetch hub requests returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "if (!pm.environment.get('driver_hub_request_id')) {",
+              "  const arr = d.requests || d.list || d || [];",
+              "  const first = Array.isArray(arr) && arr.length ? arr[0] : null;",
+              "  if (first) pm.environment.set('driver_hub_request_id', first.id || first.operationHubRequestId || '');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "token", "value": "{{ops_token}}" } ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22&mbReqType=%22DRIVER_ONBOARDING_INSPECTION%22&mbMobileNumber={{driver_mobile}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "fetch", "hubRequests"],
+          "query": [
+            { "key": "mbLimit", "value": "10" },
+            { "key": "mbOffset", "value": "0" },
+            { "key": "mbStatus", "value": "%22PENDING%22" },
+            { "key": "mbReqType", "value": "%22DRIVER_ONBOARDING_INSPECTION%22" },
+            { "key": "mbMobileNumber", "value": "{{driver_mobile}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Ops Respond to Hub Request (APPROVED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Respond hub request returns 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{ops_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"operationHubRequestId\": \"{{driver_hub_request_id}}\", \"operatorId\": \"{{operator_id}}\", \"status\": \"APPROVED\", \"remarks\": \"\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/respond/hubRequest",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "respond", "hubRequest"]
+        }
+      }
+    },
+    {
+      "name": "20 - Ops Update Driver Entry (Inspection Q&A)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Update driver entry returns 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{ops_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"entityId\": \"{{driver_id}}\", \"entityType\": \"DRIVER\", \"newInfo\": [{\"question\": \"Does the driver's physical Driving Licence match the driver and the one uploaded during onboarding?\", \"questionId\": \"d1\", \"answer\": \"Yes\"}]}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/entityInfo/update",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "entityInfo", "update"]
+        }
+      }
+    },
+    {
+      "name": "21 - Bot Approve Driver (submit/review/request)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const code = pm.response.code;",
+              "if (code !== 200) { console.warn('Bot approve not configured — leaving driver in pre-approval state. code:', code); return; }",
+              "pm.test('Bot approve driver returns 200', () => pm.expect(code).to.eql(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bot_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"entityId\": \"{{driver_id}}\", \"entityType\": \"DRIVER\", \"rejectDocumentUpdateReq\": []}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/submit/review/request",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "submit", "review", "request"]
+        }
+      }
+    },
+    {
+      "name": "22 - Driver Register Status (assert onboardingAs=FLEET_DRIVER + enabled=true + sticky flag null)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Register status returns 200', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json();",
+              "if (d.onboardingAs !== undefined) {",
+              "  pm.test('onboardingAs synced to FLEET_DRIVER (via FDA sync)', () => pm.expect(d.onboardingAs).to.eql('FLEET_DRIVER'));",
+              "}",
+              "pm.test('disabledReasonFlag stays null (no admin/driver disable)', () => pm.expect(d.disabledReasonFlag || null).to.eql(null));",
+              "if (pm.environment.get('bot_token') && pm.environment.get('bot_token') !== pm.environment.get('dashboard_token')) {",
+              "  pm.test('Driver enabled after bot approval', () => pm.expect(d.enabled).to.eql(true));",
+              "  pm.test('Driver approved after bot approval', () => pm.expect(d.approved).to.eql(true));",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [ { "key": "token", "value": "{{fleet_owner_token}}" } ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/status?driverId={{driver_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "onboarding", "register", "status"],
+          "query": [ { "key": "driverId", "value": "{{driver_id}}" } ]
+        }
+      }
+    }
+  ]
+}

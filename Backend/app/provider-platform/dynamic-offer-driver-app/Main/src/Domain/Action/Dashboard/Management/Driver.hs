@@ -138,7 +138,6 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
-import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociation, checkFleetDriverAssociation, checkFleetOperatorAssociation, isAssociationBetweenTwoPerson)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
@@ -358,8 +357,6 @@ postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> 
 postDriverDisable merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
@@ -368,8 +365,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
-  QDriverInfo.updateDisabledReasonFlag (Just DrInfo.DriverDisabled) driverId
+  void $ SStatus.runAdminDisable Nothing personId DrInfo.DriverDisabled
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -408,7 +404,21 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
-  QDriverInfo.updateDynamicBlockedStateWithActivity driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True Nothing Nothing ByDashboard
+  void $
+    SStatus.runBlockChange personId $
+      SStatus.Block
+        SStatus.BlockPayload
+          { SStatus.bpReason = req.blockReason,
+            SStatus.bpExpiryMinutes = req.blockTimeInHours,
+            SStatus.bpDashboardUserName = dashboardUserName,
+            SStatus.bpMerchantId = merchantId,
+            SStatus.bpReasonCode = req.reasonCode,
+            SStatus.bpMerchantOperatingCityId = driver.merchantOperatingCityId,
+            SStatus.bpBlockedBy = DTDBT.Dashboard,
+            SStatus.bpActive = Nothing,
+            SStatus.bpMode = Nothing,
+            SStatus.bpFlag = ByDashboard
+          }
   case req.blockTimeInHours of
     Just hrs -> do
       let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
@@ -435,7 +445,16 @@ postDriverBlock merchantShortId opCity reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && driver.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True Nothing merchantId driver.merchantOperatingCityId DTDBT.Dashboard)
+  when (not driverInf.blocked) $
+    void $
+      SStatus.runBlockChange personId $
+        SStatus.SimpleBlock
+          SStatus.SimplePayload
+            { SStatus.spModifier = Nothing,
+              SStatus.spMerchantId = merchantId,
+              SStatus.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+              SStatus.spBlockedBy = DTDBT.Dashboard
+            }
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -471,7 +490,15 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
 
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInf.blocked $ do
-    QDriverInfo.updateBlockedState driverId False (Just dashboardUserName) merchantId driver.merchantOperatingCityId DTDBT.Dashboard
+    void $
+      SStatus.runBlockChange personId $
+        SStatus.Unblock
+          SStatus.SimplePayload
+            { SStatus.spModifier = Just dashboardUserName,
+              SStatus.spMerchantId = merchantId,
+              SStatus.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+              SStatus.spBlockedBy = DTDBT.Dashboard
+            }
     now <- getCurrentTime
     void $ LF.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
     case (preventDailyCancellationRateBlockingTill, preventWeeklyCancellationRateBlockingTill) of
@@ -533,7 +560,6 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -541,7 +567,7 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -558,7 +584,7 @@ postDriverUnlinkAadhaar merchantShortId opCity driverId = do
 
   QAadhaarCard.deleteByPersonId personId
   QDriverInfo.updateAadhaarVerifiedState False driverId_
-  unless (transporterConfig.aadhaarVerificationRequired) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 

@@ -89,7 +89,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
-import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVCat
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
@@ -126,7 +125,6 @@ import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -166,7 +164,6 @@ import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Translations as QTranslations
-import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehicleNOC as QVNOC
@@ -625,11 +622,10 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   when shouldRefreshVehicleDocsStatus $ do
     mbRcId <- resolveRcIdFromDocument docType uploadedImageId
     whenJust mbRcId $ \rcId ->
-      runStatusEventSafely
-        "refreshVehicleDocsVerificationStatusForRC:postDriverRegistrationDocumentUpload"
-        Nothing
-        Nothing
-        (SStatus.VehicleDocChangedEvent rcId)
+      void $
+        withTryCatch
+          "refreshVehicleDocsVerificationStatusForRC:postDriverRegistrationDocumentUpload"
+          (void $ SStatus.runRefreshOnboardingFlagsVehicle Nothing rcId)
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
 postDriverRegistrationDocumentsCommon ::
@@ -702,11 +698,10 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
           createDocumentEntry
       else createDocumentEntry
   person <- QPerson.findById driverPersonId
-  runStatusEventSafely
-    "refreshDocsStatus:postDriverRegistrationDocumentsCommon"
-    person
-    Nothing
-    (SStatus.PersonDocChangedEvent driverPersonId)
+  void $
+    withTryCatch
+      "refreshDocsStatus:postDriverRegistrationDocumentsCommon"
+      (void $ SStatus.runRefreshOnboardingFlagsDriver person Nothing driverPersonId)
   pure res
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
@@ -724,11 +719,14 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
       pure entity
     Nothing -> runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   res <- unlinkPersonDocument merchantOpCityId person
-  runStatusEventSafely
-    "onDriverRegistrationUnlinkDocument:postDriverRegistrationUnlinkDocument"
-    (Just person)
-    Nothing
-    (SStatus.DocumentUnlinkedEvent person.id)
+  void $
+    withTryCatch
+      "onDriverRegistrationUnlinkDocument:postDriverRegistrationUnlinkDocument"
+      ( void $
+          if DCommon.checkFleetOwnerRole person.role
+            then SStatus.runRefreshOnboardingFlagsFleet (Just person) Nothing person.id
+            else SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing person.id
+      )
   return
     Common.UnlinkDocumentResp
       { mandatoryDocumentRemoved = res
@@ -761,46 +759,22 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow Bool
     checkAndUpdateEnabledStatus merchantOpCityId docType person = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let enableBotFlow = transporterConfig.enableBotFlow == Just True
       -- isMandatory → verified, isMandatoryForEnabling → enabled (deliberately split).
-      case person.role of
-        role | DCommon.checkFleetOwnerRole role -> do
-          mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
-          let blocksVerified = maybe False (.isMandatory) mbCfg
-              blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
-          if enableBotFlow
-            then do
-              -- BOT: downgrade enabled/verified independently (single query; leaves non-blocked field untouched).
-              when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
-              pure (blocksEnabled || blocksVerified)
-            else do
-              -- Legacy: isMandatory drives only enabled.
-              when blocksVerified $ QFOI.updateFleetOwnerEnabledStatus False person.id
-              pure blocksVerified
-        DP.DRIVER -> do
-          mbCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing))
-          let blocksVerified = maybe False (.isMandatory) mbCfg
-              blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
-          if enableBotFlow
-            then do
-              applyDriverDocInvalidation transporterConfig person.id blocksEnabled blocksVerified
-              pure (blocksEnabled || blocksVerified)
-            else do
-              -- Legacy: mandatory drives only enabled.
-              when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
-              pure False
-        _ -> pure False
-
--- | BOT doc invalidation: downgrade enabled/verified separately, and revoke approved.
---   enabled cases go through analytics (which also revokes approved under BOT); the verified-only case
---   writes verified+approved in one query (leaving enabled untouched).
-applyDriverDocInvalidation :: DTC.TransporterConfig -> Id DP.Person -> Bool -> Bool -> Flow ()
-applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified =
-  case (blocksEnabled, blocksVerified) of
-    (True, True) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False (Just False)
-    (True, False) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False Nothing
-    (False, True) -> QDriverInfo.updateVerifiedAndApprovedState (cast personId) False (Just False)
-    (False, False) -> pure ()
+      let getBlocks mbCfg =
+            (maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg, maybe False (.isMandatory) mbCfg)
+      (blocksEnabled, blocksVerified) <- case person.role of
+        role
+          | DCommon.checkFleetOwnerRole role ->
+            getBlocks <$> getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
+        DP.DRIVER ->
+          getBlocks <$> getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing))
+        _ -> pure (False, False)
+      when (blocksEnabled || blocksVerified) $
+        void $
+          if DCommon.checkFleetOwnerRole person.role
+            then SStatus.runRefreshOnboardingFlagsFleet (Just person) (Just transporterConfig) person.id
+            else SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
+      pure (blocksEnabled || blocksVerified)
 
 -- DEPRECATED: Use postDriverRegistrationDocumentRegister with DLData metadata instead.
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
@@ -2125,35 +2099,6 @@ castReqTypeToDomain = \case
   Common.INDIVIDUAL -> DPan.INDIVIDUAL
   Common.BUSINESS -> DPan.BUSINESS
 
-handleMandatoryDocRejection :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DVC.DocumentType -> Id DImage.Image -> Flow ()
-handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType imageId = do
-  docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just docType, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOperatingCityId docType Nothing))
-  -- isMandatory → verified, isMandatoryForEnabling → enabled (split).
-  let blocksVerified = Kernel.Prelude.any (.isMandatory) docConfigs
-      blocksEnabled = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
-  when (blocksEnabled || blocksVerified) $ do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-    let isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
-        separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
-        -- BOT splits enabled/verified; legacy disables both together.
-        disableDriver =
-          if transporterConfig.enableBotFlow == Just True
-            then applyDriverDocInvalidation transporterConfig driverId blocksEnabled blocksVerified
-            else QDriverInfo.updateEnabledVerifiedState (cast driverId) False (Just False) Nothing
-    if isVehicleDoc
-      then do
-        -- Resolve the specific RC tied to the rejected document
-        mbRcId <- resolveRcIdFromDocument docType imageId
-        whenJust mbRcId $ \rcId -> do
-          mbAssoc <- QRCAssoc.findActiveAssociationByRC rcId True
-          whenJust mbAssoc $ \assoc -> when (assoc.driverId == driverId) $ do
-            QRCAssoc.deactivateRCForDriver False driverId rcId
-            QVehicle.deleteByDriverid driverId
-            -- If not separate enablement, also disable the driver
-            unless separateEnablement disableDriver
-      else -- Driver doc rejected: disable the driver
-        disableDriver
-
 resolveRcIdFromDocument :: DVC.DocumentType -> Id DImage.Image -> Flow (Maybe (Id DRC.VehicleRegistrationCertificate))
 resolveRcIdFromDocument docType imageId = case docType of
   DVC.VehicleRegistrationCertificate -> do
@@ -2177,18 +2122,6 @@ resolveRcIdFromDocument docType imageId = case docType of
   _ -> do
     mbImage <- QImage.findById imageId
     pure $ Id <$> (mbImage >>= (.rcId))
-
-runStatusEventSafely ::
-  Text ->
-  Maybe DP.Person ->
-  Maybe DTC.TransporterConfig ->
-  SStatus.StatusEvent ->
-  Flow ()
-runStatusEventSafely logTag mbPerson mbTransporterConfig event =
-  void $
-    withTryCatch
-      logTag
-      (void $ SStatus.processStatusEvent mbPerson mbTransporterConfig event)
 
 getImageIdsFromApproveDetails :: Common.ApproveDetails -> [Id Common.Image]
 getImageIdsFromApproveDetails = \case
@@ -2331,7 +2264,7 @@ doApproveWithRevert imageIds action = do
       throwM err
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
+handleRejectRequest rejectReq _merchantId merchantOperatingCityId = do
   case rejectReq of
     Common.SSNReject ssnRejectReq -> rejectSSNAndSendNotification ssnRejectReq merchantOperatingCityId
     Common.ImageDocuments imageRejectReq -> do
@@ -2406,7 +2339,12 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         docType
           | docType `elem` imageOnlyRejectTypes -> rejectImage imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
-      handleMandatoryDocRejection merchantId merchantOperatingCityId image.personId image.imageType imageId
+      mbPersonForRefresh <- QPerson.findById image.personId
+      whenJust mbPersonForRefresh $ \personForRefresh ->
+        void $
+          if DCommon.checkFleetOwnerRole personForRefresh.role
+            then SStatus.runRefreshOnboardingFlagsFleet (Just personForRefresh) Nothing image.personId
+            else SStatus.runRefreshOnboardingFlagsDriver (Just personForRefresh) Nothing image.personId
       mbDriver <- QDriver.findById image.personId
       case mbDriver of
         Nothing -> logWarning $ "Driver not found for rejection notification, skipping: " <> image.personId.getId
@@ -2557,15 +2495,20 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let updateAndFetchEnabled mbPersonId = case mbPersonId of
         Just personId -> do
+          person <- QDriver.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          let isFleetOwner = DCommon.checkFleetOwnerRole person.role
           result <-
-            withTryCatch "updateAndFetchEnabled:PersonDocChangedEvent" $
-              fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
+            withTryCatch "updateAndFetchEnabled:PersonDocChanged" $
+              fromMaybe False
+                <$> ( if isFleetOwner
+                        then SStatus.runRefreshOnboardingFlagsFleet (Just person) Nothing personId
+                        else SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing personId
+                    )
           case result of
             Right isEnabled -> pure isEnabled
             Left e -> do
-              logError $ "updateAndFetchEnabled:PersonDocChangedEvent failed for personId=" <> personId.getId <> ", error=" <> show e <> " — falling back to current enabled flag without refreshing docs_verification_status"
-              person <- QDriver.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-              if DCommon.checkFleetOwnerRole person.role
+              logError $ "updateAndFetchEnabled:PersonDocChanged failed for personId=" <> personId.getId <> ", error=" <> show e
+              if isFleetOwner
                 then do
                   fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
                   pure fleetOwnerInfo.enabled
@@ -2575,11 +2518,10 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         Nothing -> pure False
       refreshVehicleDocsStatus mbRcId =
         whenJust mbRcId $ \rcId ->
-          runStatusEventSafely
-            "refreshVehicleDocsVerificationStatusForRC:postDriverRegistrationDocumentsUpdate"
-            Nothing
-            Nothing
-            (SStatus.VehicleDocChangedEvent rcId)
+          void $
+            withTryCatch
+              "refreshVehicleDocsVerificationStatusForRC:postDriverRegistrationDocumentsUpdate"
+              (void $ SStatus.runRefreshOnboardingFlagsVehicle Nothing rcId)
       resolvePersonIdViaRc mbRcId = do
         case mbRcId of
           Nothing -> pure Nothing

@@ -82,7 +82,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
-        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
+        void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

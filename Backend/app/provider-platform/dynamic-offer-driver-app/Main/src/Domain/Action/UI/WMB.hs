@@ -54,6 +54,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SchedulerJob ()
@@ -510,7 +511,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId -> do
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId referredOperatorId
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
+  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) (cast driverId)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

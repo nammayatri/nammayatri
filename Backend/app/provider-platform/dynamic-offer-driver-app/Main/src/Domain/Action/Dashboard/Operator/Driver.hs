@@ -278,7 +278,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       -- Recording the inspection (→ InspectionHub VALID) runs for all cities. Under enableBotFlow the
       -- BOT owns `approved` and statusHandler owns RC activation, so those are skipped; non-BOT ops-hub
       -- cities keep them (ops-approve is their approval step).
-      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       -- BOT: approve once dependency docs are VALID (fetch once, reuse in the fork). Non-BOT: full check.
       (mbVehicleDocs, allVehicleDocsVerified) <-
         if enableBotFlow
@@ -296,7 +296,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         if enableBotFlow
           then -- BOT: mark RC verified now, then reconcile in the fork.
           whenJust mbVehicleDocs $ \(vehicleDocItem, allDocumentVerificationConfigs) -> do
-            SStatus.forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs
+            SStatus.forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs enableBotFlow
           else QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
@@ -334,7 +334,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       -- Recording the inspection (→ DriverInspectionHub VALID) runs for all cities. Under enableBotFlow
       -- the BOT owns `approved` and statusHandler owns enablement, so those are skipped; non-BOT ops-hub
       -- cities keep them (ops-approve is their approval step).
-      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       -- BOT: approve once dependency docs are VALID (just marks APPROVED; verified/enabled is owned by
       -- the BOT/statusHandler flow). Non-BOT: full enabling check.
       allDriverDocsVerified <-

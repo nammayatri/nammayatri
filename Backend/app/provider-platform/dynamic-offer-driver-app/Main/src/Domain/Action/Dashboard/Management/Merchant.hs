@@ -1264,6 +1264,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
         documentOnboardingStage = Nothing,
+        isDefaultVerifiedOnManualVerification = Nothing,
         ..
       }
   where

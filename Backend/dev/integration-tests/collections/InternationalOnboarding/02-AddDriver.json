@@ -1,0 +1,144 @@
+{
+	"info": {
+		"_postman_id": "international-onboarding-02-add-driver",
+		"name": "International Onboarding 02 - Add Driver (JUSPAY_ADMIN dashboard path)",
+		"description": "Onboards a driver via the proven driver-app OTP path. Under the new refactor, when this driver is later linked to a fleet (via addVehicle?fleetOwnerId=... in flow 03), `syncDriverOnboardingAsWithFDA` flips DI.onboardingAs to FLEET_DRIVER; this flow itself leaves onboardingAs=INDIVIDUAL until that link happens. The dashboard document-approve chain drives verified/approved through `processOnboardingEvent(PersonDocChanged)` → `recomputeDriverVerifiedAndEnabled`. Ported from HelsinkiOnboarding/03-AddDriver_AdminPath.json.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"if (!pm.environment.get('driver_mobile')) {",
+					"  const r = Math.floor(Math.random() * 900000000) + 100000000;",
+					"  const alpha = 'abcdefghijklmnopqrstuvwxyz';",
+					"  let s = ''; for (let i = 0; i < 8; i++) s += alpha[Math.floor(Math.random()*26)];",
+					"  pm.environment.set('driver_mobile', String(r));",
+					"  pm.environment.set('driver_name_suffix', s.charAt(0).toUpperCase() + s.slice(1));",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "01 - Driver Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Auth returns 200', () => pm.response.to.have.status(200));",
+							"pm.environment.set('driver_authId', pm.response.json().authId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{driver_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "02 - Driver OTP Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('OTP verify returns 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.expect(d.token).to.be.a('string');",
+							"pm.environment.set('driver_token', d.token);",
+							"pm.environment.set('driver_id', d.person.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-driver-helsinki\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["auth", "{{driver_authId}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "03 - Update Driver Profile",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Profile update returns 200 or 204', () => pm.expect([200, 204]).to.include(pm.response.code));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{driver_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"firstName\": \"Driver{{driver_name_suffix}}\", \"lastName\": \"Test\", \"email\": \"driver-{{driver_mobile}}@helsinki.test\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/profile",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["driver", "profile"]
+				}
+			}
+		},
+		{
+			"name": "04 - Assert Driver Refactor Flags (initial state: onboardingAs=INDIVIDUAL, verified=F, enabled=F, disabledReasonFlag=null)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Driver profile returns 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('onboardingAs defaults to INDIVIDUAL until linked to a fleet', () => pm.expect(['INDIVIDUAL', null, undefined]).to.include(d.onboardingAs === undefined ? undefined : d.onboardingAs));",
+							"pm.test('verified=false pre-docs (no mandatory docs uploaded yet)', () => pm.expect(d.verified).to.eql(false));",
+							"pm.test('enabled=false pre-approval', () => pm.expect(d.enabled).to.eql(false));",
+							"pm.test('disabledReasonFlag stays null (no admin/driver disable fired)', () => pm.expect(d.disabledReasonFlag || null).to.eql(null));"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [ { "key": "token", "value": "{{driver_token}}" } ],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/profile",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["driver", "profile"]
+				}
+			}
+		}
+	]
+}
