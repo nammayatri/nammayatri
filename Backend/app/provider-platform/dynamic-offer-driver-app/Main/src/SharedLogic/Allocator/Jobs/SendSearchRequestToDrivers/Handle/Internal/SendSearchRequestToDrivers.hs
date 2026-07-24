@@ -20,6 +20,9 @@ where
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
+import Data.Aeson (Value (..))
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
@@ -363,7 +366,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 isForwardRequest = dpwRes.isForwardRequest,
                 previousDropGeoHash = dpwRes.previousDropGeoHash,
-                driverTags = Just dpRes.driverTags,
+                driverTags = Just $ addSpecialLocWarriorPreferredSpecialLocId dpwRes.specialLocWarriorPreferredSpecialLocId dpRes.driverTags,
                 customerTags = dpRes.customerTags,
                 poolingLogicVersion = searchReq.poolingLogicVersion,
                 poolingConfigVersion = searchReq.poolingConfigVersion,
@@ -385,6 +388,16 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               }
       pure searchRequestForDriver
       where
+        addSpecialLocWarriorPreferredSpecialLocId mbSpecialLocId driverTags =
+          case mbSpecialLocId of
+            Nothing -> driverTags
+            Just specialLocId ->
+              let tagKey = AK.fromString "SpecialLocWarriorPreferredSpecialLoc"
+                  tagValue = String specialLocId.getId
+               in case driverTags of
+                    Object keymap -> Object $ AKM.insert tagKey tagValue keymap
+                    _ -> Object $ AKM.singleton tagKey tagValue
+
         additionalChargeConditional isEligibleForSafetyPlusCharge conditionalCharges = do
           let safetyCharges = if isEligibleForSafetyPlusCharge then find (\ac -> ac == DAC.SAFETY_PLUS_CHARGES) $ map (.chargeCategory) conditionalCharges else Nothing
           catMaybes $ [safetyCharges]
