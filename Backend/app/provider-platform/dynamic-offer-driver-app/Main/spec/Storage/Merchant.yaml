@@ -1348,6 +1348,7 @@ TransporterConfig:
     enableScheduleReallocation: Maybe Bool
     enableCoinsToDirectPayout: Maybe Bool
     airportEntryFeeEnabled: Maybe Bool
+    airportEntryFeeCheckAtStartRide: Maybe Bool
     minBaseFare: Maybe HighPrecMoney
     allowFarePolicyUpdateBelowMinBaseFare: Maybe Bool
     enableDirectWalletIncentives: Maybe Bool
