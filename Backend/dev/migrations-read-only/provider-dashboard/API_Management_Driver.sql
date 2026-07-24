@@ -188,6 +188,16 @@ UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_DRIVER_TAG'
   WHERE endpoint = 'DriverAPI PostDriverUpdateDriverTagEndpoint';
 
+-- {"api":"PostDriverUpdateSpecialLocWarrior","migration":"endpoint","param":"DriverAPI UpdateSpecialLocWarriorEndPoint","schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_SPECIAL_LOC_WARRIOR'
+  WHERE endpoint = 'DriverAPI UpdateSpecialLocWarriorEndPoint';
+
+-- {"api":"PostDriverUpdateSpecialLocWarrior","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_SPECIAL_LOC_WARRIOR'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateSpecialLocWarriorEndpoint';
+
 -- {"api":"PostDriverClearFee","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CLEAR_FEE'
@@ -293,6 +303,9 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostDriverUpdateDriverTag","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_TAG","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_DRIVER_TAG' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'UPDATE_DRIVER_TAG' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverUpdateSpecialLocWarrior","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_SPECIAL_LOC_WARRIOR","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_SPECIAL_LOC_WARRIOR' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'UPDATE_SPECIAL_LOC_WARRIOR' ) ON CONFLICT DO NOTHING;
 
 -- {"api":"PostDriverClearFee","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_FEE","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CLEAR_FEE' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'CLEAR_FEE' ) ON CONFLICT DO NOTHING;
