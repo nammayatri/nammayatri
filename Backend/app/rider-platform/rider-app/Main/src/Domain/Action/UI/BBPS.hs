@@ -91,6 +91,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActor
   staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
   udf1 <- SLUtils.getPersonUdf1 person
   nwAddress <- asks (.nwAddress)
+  offerBasket <- Payment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing Payment.BBPS bbpsAmount 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,
@@ -111,7 +112,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActor
             metadataGatewayReferenceId = Nothing,
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,

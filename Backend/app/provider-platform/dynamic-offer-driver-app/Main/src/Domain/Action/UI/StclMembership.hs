@@ -46,6 +46,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Auth
+import qualified Tools.Payment as TPayment
 import qualified Utils.Common.Cac.KeyNameConstants as CCK
 
 -- Fallback defaults used when the per-MOC TransporterConfig leaves the corresponding field unset.
@@ -118,6 +119,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = Ac
 
   -- Create PaymentTypes.CreateOrderReq
   nwAddress <- asks (.nwAddress)
+  offerBasket <- TPayment.mkOfferBasket merchantOperatingCityId (Just $ DMSC.MembershipPaymentService PaymentService.Juspay) amount
   let createOrderReq =
         PaymentTypes.CreateOrderReq
           { orderId = orderId,
@@ -138,7 +140,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = Ac
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
             webhookUrl = Just nwAddress,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
@@ -310,6 +312,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
         -- the frontend resumes the existing payment screen. createOrderService recognises the orderId and
         -- returns the stored payment links — see Lib.Payment.Domain.Action.createOrderService.
         nwAddress <- asks (.nwAddress)
+        offerBasket <- TPayment.mkOfferBasket merchantOperatingCityId (Just $ DMSC.MembershipPaymentService PaymentService.Juspay) existingOrder.amount
         let resumeReq =
               PaymentTypes.CreateOrderReq
                 { orderId = existing.id.getId,
@@ -330,7 +333,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
                   webhookUrl = Just nwAddress,
-                  basket = Nothing,
+                  basket = offerBasket,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,
@@ -359,6 +362,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
         applicationId <- generateGUIDText
 
         nwAddress <- asks (.nwAddress)
+        offerBasket <- TPayment.mkOfferBasket merchantOperatingCityId (Just $ DMSC.MembershipPaymentService PaymentService.Juspay) resolvedReqAmount
 
         let createOrderReq =
               PaymentTypes.CreateOrderReq
@@ -380,7 +384,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
                   webhookUrl = Just nwAddress,
-                  basket = Nothing,
+                  basket = offerBasket,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,

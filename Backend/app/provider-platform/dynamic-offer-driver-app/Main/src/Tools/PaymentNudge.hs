@@ -45,11 +45,13 @@ import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.PlanExtra as CQP
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QDP
 import Tools.Error
 import Tools.Notifications (mkOverlayReq, sendOverlay)
+import qualified Tools.Payment as TPayment
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
@@ -139,7 +141,9 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
     makeOfferReq date paymentMode_ plan driver = do
       now <- getCurrentTime
       isMember <- SPayment.checkDriverMembership (cast driver.id) transporterConfig.merchantOperatingCityId plan.serviceName Nothing
-      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = transporterConfig.currency, basket = Nothing}
+      mbSubscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName transporterConfig.merchantOperatingCityId Nothing plan.serviceName
+      offerBasket <- TPayment.mkOfferBasket transporterConfig.merchantOperatingCityId ((.paymentServiceName) <$> mbSubscriptionConfig) plan.maxAmount
+      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = transporterConfig.currency, basket = offerBasket}
           customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
       return
         Payment.OfferListReq

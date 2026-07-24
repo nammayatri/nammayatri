@@ -77,6 +77,7 @@ postMultimodalParkingBook mbApiKey req = ActorInfo.withRequestIdActorInfo $ do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  offerBasket <- TPayment.mkOfferBasket person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking req.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -97,7 +98,7 @@ postMultimodalParkingBook mbApiKey req = ActorInfo.withRequestIdActorInfo $ do
             metadataGatewayReferenceId = Nothing,
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
