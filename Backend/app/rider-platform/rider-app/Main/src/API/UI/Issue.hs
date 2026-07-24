@@ -119,6 +119,10 @@ customerIssueHandle =
       kaptureGetTicket = Just castKaptureGetTicket,
       getTicketStatus = Just castGetTicketStatus,
       findMerchantConfig = buildMerchantConfig,
+      mbCounterpartDashboardInfo = Just $ \merchantId -> do
+        mbMerchant <- CQM.findById (cast merchantId)
+        mbToken <- asks (.driverDashboardToken)
+        pure $ (,) <$> (mbMerchant <&> (.driverOfferBaseUrl)) <*> mbToken,
       mbReportACIssue = Just reportACIssue,
       mbReportIssue = Just reportIssue,
       mbFindLatestBookingByPersonId = Just findLatestBookingByRiderId,

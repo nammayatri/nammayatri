@@ -5,11 +5,15 @@ module IssueManagement.Domain.Action.Dashboard.Issue where
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AKey
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString as BS
 import Data.Either (partitionEithers)
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T hiding (count, map)
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
@@ -22,6 +26,7 @@ import IssueManagement.Domain.Action.UI.Issue (ServiceHandle)
 import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
+import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration as DAI
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueChat as DICT
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as DICFG
@@ -39,12 +44,14 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QC
+import qualified IssueManagement.Storage.Queries.Issue.IssueApiIntegration as QAI
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueChat as QICT
 import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
+import qualified IssueManagement.Tools.ApiIntegrationExecutor as Executor
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -54,6 +61,7 @@ import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -789,6 +797,7 @@ createIssueMessages merchantShortId city merchantOperatingCity issueCategoryId m
       return $
         DIM.IssueMessage
           { categoryId = maybe (Just issueCategoryId) (const Nothing) mbIssueOptionId,
+            apiAction = Nothing,
             isActive = fromMaybe True isActive,
             optionId = mbIssueOptionId,
             messageType = issueMessageType,
@@ -1001,7 +1010,13 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
       now <- getCurrentTime
       message <- fromMaybeM (InvalidRequest "Message is required field for creating a new issue message") $ req.message <|> ((.message) <$> mbIssueMessage)
       priority <- fromMaybeM (InvalidRequest "Priority is required field for creating a new issue message") $ req.priority <|> ((.priority) <$> mbIssueMessage)
-      let messageType = findIssueMessageType mbIssueMessage mbParentCategory
+      whenJust req.apiAction $ validateApiAction mbIssueMessage merchantOperatingCity
+      -- Omitting apiAction on an edit preserves the existing lookup config, so
+      -- text/priority edits can't silently strip a configured lookup step.
+      let mbApiAction = (encodeToText <$> req.apiAction) <|> ((.apiAction) =<< mbIssueMessage)
+      -- A message carrying a lookup config IS an ApiCall step; the derived
+      -- Terminal/Intermediate/FAQ classification only applies to ordinary ones.
+      let messageType = if isJust mbApiAction then DIM.ApiCall else findIssueMessageType mbIssueMessage mbParentCategory
       mediaFiles <- uploadMessageMediaFiles id (maybe [] (.mediaFiles) mbIssueMessage) merchantOperatingCity messageType iHandle
       return $
         DIM.IssueMessage
@@ -1014,9 +1029,31 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
             optionId = mbOptionId,
             messageTitle = req.messageTitle <|> ((.messageTitle) =<< mbIssueMessage),
             messageAction = req.messageAction <|> ((.messageAction) =<< mbIssueMessage),
+            apiAction = mbApiAction,
             isActive = fromMaybe True (req.isActive <|> (mbIssueMessage <&> (.isActive))),
             ..
           }
+
+    -- Lookup-step config is validated at write time: a dangling integration or
+    -- branch option would otherwise only surface mid-conversation, where the
+    -- engine can merely fall back to the error branch.
+    validateApiAction :: BeamFlow m r => Maybe DIM.IssueMessage -> MerchantOperatingCity -> DIM.ApiCallAction -> m ()
+    validateApiAction mbIssueMessage merchantOperatingCity action = do
+      editedMessageId <-
+        fromMaybeM (InvalidRequest "apiAction can only be set while editing an existing message: create the message and its branch options first, then attach the lookup") $
+          (.id) <$> mbIssueMessage
+      integration <-
+        QAI.findById (Id action.integrationId)
+          >>= fromMaybeM (InvalidRequest $ "apiAction.integrationId not found: " <> action.integrationId)
+      unless integration.isActive $ throwError $ InvalidRequest "apiAction integration is inactive"
+      unless (integration.merchantId == merchantOperatingCity.merchantId) $ throwError $ InvalidRequest "apiAction integration belongs to a different merchant"
+      let branchTargets = map (.nextOptionId) action.branches <> maybeToList action.defaultNextOptionId <> [action.onErrorNextOptionId]
+      forM_ branchTargets $ \targetOptionId -> do
+        option <-
+          CQIO.findById (Id targetOptionId) identifier
+            >>= fromMaybeM (InvalidRequest $ "apiAction branch option not found: " <> targetOptionId)
+        unless (option.issueMessageId == Just editedMessageId.getId) $
+          throwError $ InvalidRequest $ "apiAction branch option " <> targetOptionId <> " is not a child option of this message"
 
     clearIssueMessageIdCaches :: BeamFlow m r => DIM.IssueMessage -> m ()
     clearIssueMessageIdCaches im = do
@@ -1863,6 +1900,11 @@ copyIssueCategory merchantShortId city req issueHandle identifier = do
             label = msg.label,
             priority = msg.priority,
             messageType = msg.messageType,
+            -- NOTE: branch option ids inside apiAction are copied verbatim and NOT
+            -- remapped like msgIdMap/optIdMap remap the tree - a copied ApiCall
+            -- step still points at the source category's branch options and must
+            -- be re-authored after a copy.
+            apiAction = msg.apiAction,
             isActive = msg.isActive,
             mediaFiles = msg.mediaFiles,
             referenceCategoryId = msg.referenceCategoryId,
@@ -1908,6 +1950,11 @@ copyIssueCategory merchantShortId city req issueHandle identifier = do
             label = msg.label,
             priority = msg.priority,
             messageType = msg.messageType,
+            -- NOTE: branch option ids inside apiAction are copied verbatim and NOT
+            -- remapped like msgIdMap/optIdMap remap the tree - a copied ApiCall
+            -- step still points at the source category's branch options and must
+            -- be re-authored after a copy.
+            apiAction = msg.apiAction,
             isActive = msg.isActive,
             mediaFiles = msg.mediaFiles,
             referenceCategoryId = msg.referenceCategoryId,
@@ -2051,6 +2098,7 @@ mkMessageDetailRes language identifier (msg, translation, _mediaFileUrls) = do
         label = msg.label,
         priority = msg.priority,
         messageType = msg.messageType,
+        apiAction = decodeFromText =<< msg.apiAction,
         isActive = msg.isActive,
         mediaFiles = mediaFiles,
         translations =
@@ -2196,3 +2244,224 @@ markDashboardChatRead merchantShortId opCity issueReportId issueHandle req = do
   _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   QCM.markReadUpTo issueReportId DCM.SENDER_RIDER req.upTo
   pure Success
+
+---------------------------------------------------------
+-- Api Integrations (chat lookups) -----------------------
+
+-- Integrations are merchant-scoped: one declaration serves every operating
+-- city (see IssueManagement.Domain.Types.Issue.IssueApiIntegration). The city from
+-- the dashboard route is used only to resolve the merchant.
+
+resolveMerchantId :: BeamFlow m r => ShortId Merchant -> Context.City -> ServiceHandle m -> m (Id Merchant)
+resolveMerchantId merchantShortId opCity issueHandle = do
+  moCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  pure moCity.merchantId
+
+encodeToText :: A.ToJSON a => a -> T.Text
+encodeToText = TL.toStrict . TLE.decodeUtf8 . A.encode
+
+decodeFromText :: A.FromJSON a => T.Text -> Maybe a
+decodeFromText = A.decode . TLE.encodeUtf8 . TL.fromStrict
+
+mkApiIntegrationItem :: DAI.IssueApiIntegration -> Common.ApiIntegrationItem
+mkApiIntegrationItem integration =
+  Common.ApiIntegrationItem
+    { apiIntegrationId = integration.id,
+      name = integration.name,
+      description = integration.description,
+      kind = integration.kind,
+      method = integration.method,
+      urlTemplate = integration.urlTemplate,
+      headers = fromMaybe [] (integration.headersJson >>= decodeFromText),
+      bodyTemplate = integration.bodyTemplate,
+      timeoutMs = integration.timeoutMs,
+      responseFields = fromMaybe [] (decodeFromText integration.responseFieldsJson),
+      isActive = integration.isActive,
+      updatedAt = integration.updatedAt
+    }
+
+getIssueApiIntegrationList ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.ApiIntegrationListRes
+getIssueApiIntegrationList merchantShortId opCity issueHandle _identifier = do
+  merchantId <- resolveMerchantId merchantShortId opCity issueHandle
+  integrations <- QAI.findAllByMerchantId merchantId
+  pure $ Common.ApiIntegrationListRes {integrations = map mkApiIntegrationItem integrations}
+
+postIssueApiIntegrationUpsert ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.UpsertApiIntegrationReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.UpsertApiIntegrationRes
+-- NOTE: upsert is a full replace, not a field-merge. The dashboard always
+-- sends the complete definition (cleared fields arrive as absent), so this is
+-- what lets a user actually clear a description/header. API clients that want
+-- to change one field must therefore send the whole current definition, not a
+-- partial patch.
+postIssueApiIntegrationUpsert merchantShortId opCity req issueHandle _identifier = do
+  merchantId <- resolveMerchantId merchantShortId opCity issueHandle
+  when (T.null (T.strip req.name)) $ throwError $ InvalidRequest "Integration name cannot be empty"
+  when (T.null (T.strip req.urlTemplate)) $ throwError $ InvalidRequest "URL template cannot be empty"
+  let integrationKind = fromMaybe DAI.External req.kind
+  case integrationKind of
+    DAI.External ->
+      unless ("http://" `T.isPrefixOf` req.urlTemplate || "https://" `T.isPrefixOf` req.urlTemplate) $
+        throwError $ InvalidRequest "External integrations need a full http(s):// URL"
+    _ ->
+      when ("http" `T.isPrefixOf` req.urlTemplate || "/" `T.isPrefixOf` req.urlTemplate) $
+        throwError $ InvalidRequest "Internal integrations take only the endpoint path after /dashboard/{merchant}/{city}/, e.g. ride/rideinfo/{{rideId}}"
+  when (null req.responseFields) $ throwError $ InvalidRequest "Declare at least one response field"
+  now <- getCurrentTime
+  case req.apiIntegrationId of
+    Just integrationId -> do
+      existing <- QAI.findById integrationId >>= fromMaybeM (InvalidRequest $ "IssueApiIntegration not found: " <> integrationId.getId)
+      unless (existing.merchantId == merchantId) $ throwError $ InvalidRequest "IssueApiIntegration belongs to a different merchant"
+      QAI.updateByPrimaryKey (mkIntegration integrationId merchantId existing.createdAt now)
+      pure $ Common.UpsertApiIntegrationRes {apiIntegrationId = integrationId}
+    Nothing -> do
+      newId <- generateGUID
+      QAI.create (mkIntegration newId merchantId now now)
+      pure $ Common.UpsertApiIntegrationRes {apiIntegrationId = newId}
+  where
+    mkIntegration integrationId merchantId createdAt now =
+      DAI.IssueApiIntegration
+        { id = integrationId,
+          merchantId = merchantId,
+          name = req.name,
+          description = req.description,
+          kind = fromMaybe DAI.External req.kind,
+          method = req.method,
+          urlTemplate = req.urlTemplate,
+          headersJson = encodeToText <$> req.headers,
+          bodyTemplate = req.bodyTemplate,
+          timeoutMs = min 10000 (fromMaybe 3000 req.timeoutMs),
+          responseFieldsJson = encodeToText req.responseFields,
+          isActive = fromMaybe True req.isActive,
+          createdAt = createdAt,
+          updatedAt = now
+        }
+
+postIssueApiIntegrationDelete ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DAI.IssueApiIntegration ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+postIssueApiIntegrationDelete merchantShortId opCity apiIntegrationId issueHandle _identifier = do
+  merchantId <- resolveMerchantId merchantShortId opCity issueHandle
+  existing <- QAI.findById apiIntegrationId >>= fromMaybeM (InvalidRequest $ "IssueApiIntegration not found: " <> apiIntegrationId.getId)
+  unless (existing.merchantId == merchantId) $ throwError $ InvalidRequest "IssueApiIntegration belongs to a different merchant"
+  QAI.deleteById apiIntegrationId
+  pure Success
+
+postIssueApiIntegrationTest ::
+  ( BeamFlow m r,
+    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl,
+    HasField "dashboardToken" r T.Text
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.TestApiIntegrationReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.TestApiIntegrationRes
+postIssueApiIntegrationTest merchantShortId opCity req issueHandle _identifier = do
+  moCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  let definition = req.definition
+      params = maybe Map.empty valueToParamMap req.sampleParams
+      authorHeaders = map (\h -> (h.key, h.value)) (fromMaybe [] definition.headers)
+  (testUrl, testHeaders) <- case fromMaybe DAI.External definition.kind of
+    DAI.External -> pure (definition.urlTemplate, authorHeaders)
+    DAI.InternalRider -> do
+      selfBaseUrl <- asks (.selfBaseUrl)
+      dashboardToken <- asks (.dashboardToken)
+      pure (mkDashboardUrl (showBaseUrl selfBaseUrl) moCity definition.urlTemplate, mkTokenHeaders dashboardToken authorHeaders)
+    DAI.InternalDriver -> do
+      counterpart <- maybe (pure Nothing) (\f -> f moCity.merchantId) issueHandle.mbCounterpartDashboardInfo
+      case counterpart of
+        Nothing -> throwError $ InvalidRequest "Driver-side internal lookups are not configured on this deployment"
+        Just (driverBase, driverToken) ->
+          pure (mkDashboardUrl (showBaseUrl driverBase) moCity definition.urlTemplate, mkTokenHeaders driverToken authorHeaders)
+  result <-
+    Executor.executeIntegration
+      (show definition.method)
+      testUrl
+      testHeaders
+      definition.bodyTemplate
+      (min 10000 (fromMaybe 3000 definition.timeoutMs))
+      (map (\f -> (f.name, f.path)) definition.responseFields)
+      params
+  pure
+    Common.TestApiIntegrationRes
+      { success = isNothing result.errorMessage,
+        statusCode = result.statusCode,
+        latencyMs = result.latencyMs,
+        extractedFields = Just $ A.toJSON $ Map.map (fromMaybe A.Null) result.extractedFields,
+        rawResponse = result.rawResponse,
+        errorMessage = result.errorMessage
+      }
+  where
+    valueToParamMap :: A.Value -> Map.Map T.Text T.Text
+    valueToParamMap (A.Object obj) =
+      Map.fromList
+        [ (AKey.toText k, valueToText v)
+          | (k, v) <- AKM.toList obj
+        ]
+    valueToParamMap _ = Map.empty
+
+    valueToText (A.String s) = s
+    valueToText (A.Number n) = T.pack (show n)
+    valueToText (A.Bool b) = if b then "true" else "false"
+    valueToText v = encodeToText v
+
+-- | Dashboard chat simulator: walks the real customer flow - ApiCall engine
+-- included, so lookups actually execute - under a synthetic person, letting
+-- flow authors test end-to-end without a rider session. The synthetic person
+-- id is stable per operating city so the simulator gets its own flow context.
+getIssueFlowSimulate ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasField "selfBaseUrl" r Kernel.Types.Common.BaseUrl,
+    HasField "dashboardToken" r T.Text
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIC.IssueCategory ->
+  Maybe (Id IssueOption) ->
+  Maybe (Id Ride) ->
+  Maybe Text ->
+  ServiceHandle m ->
+  Identifier ->
+  m CommonUI.IssueOptionListRes
+getIssueFlowSimulate merchantShortId city categoryId mbOptionId mbRideId mbSessionId issueHandle identifier = do
+  moCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  -- Namespace the synthetic person by the caller's session so concurrent
+  -- testers of the same category+city don't share one Redis flow context.
+  -- Falls back to the city id when no session is supplied.
+  let sessionKey = fromMaybe moCity.id.getId mbSessionId
+      simulatorPersonId = Id $ "dashboard-simulator-" <> sessionKey
+  UIR.getIssueOption (simulatorPersonId, moCity.merchantId, moCity.id) categoryId mbOptionId Nothing mbRideId (Just ENGLISH) issueHandle identifier
+
+mkDashboardUrl :: T.Text -> MerchantOperatingCity -> T.Text -> T.Text
+mkDashboardUrl base moCity urlTail =
+  let basePadded = if "/" `T.isSuffixOf` base then base else base <> "/"
+   in basePadded <> "dashboard/" <> moCity.merchantShortId.getShortId <> "/" <> show moCity.city <> "/" <> urlTail
+
+mkTokenHeaders :: T.Text -> [(T.Text, T.Text)] -> [(T.Text, T.Text)]
+mkTokenHeaders token authorHeaders = ("token", token) : filter (\(k, _) -> T.toLower k /= "token") authorHeaders
