@@ -64,6 +64,7 @@ import qualified Domain.Types.Depot as DDepot
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import Domain.Types.Person (PersonE (updatedAt))
@@ -372,7 +373,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   void $ cachePersonOTPChannel person.id otpChannel
   let merchantOperatingCityId = person.merchantOperatingCityId
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId merchantOperatingCityId (Just [])))
+  merchantConfigs <- findMerchantConfigsByMerchantOperatingCityId merchantOperatingCityId
   fork "Fraud Auth Check Processing" $ do
     when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
     whenJust mbClientIP $ \clientIP -> do
@@ -977,7 +978,7 @@ verify tokenId req mbClientId mbXForwardedFor = do
   fork "Decrement Auth IP Counter" $ do
     mbClientIP <- extractClientIP mbXForwardedFor
     whenJust mbClientIP $ \clientIP -> do
-      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId merchantOperatingCityId (Just [])))
+      merchantConfigs <- findMerchantConfigsByMerchantOperatingCityId merchantOperatingCityId
       SMC.decrementCustomerAuthCountersByIP clientIP merchantConfigs
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
@@ -1025,6 +1026,13 @@ callWhatsappOptApi mobileNo personId merchantId hasOptedIn = do
 getRegistrationTokenE :: (CacheFlow m r, EsqDBFlow m r) => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
+
+findMerchantConfigsByMerchantOperatingCityId ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  m [DMC.MerchantConfig]
+findMerchantConfigsByMerchantOperatingCityId merchantOperatingCityId =
+  getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId merchantOperatingCityId (Just [])))
 
 createPerson ::
   ( HasFlowEnv m r '["version" ::: DeploymentVersion],
