@@ -87,6 +87,7 @@ data SearchRequestT f = SearchRequestT
     selectedPaymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
     startTime :: B.C f Kernel.Prelude.UTCTime,
+    syncSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toSpecialLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
