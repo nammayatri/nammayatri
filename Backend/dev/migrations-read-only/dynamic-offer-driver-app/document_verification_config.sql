@@ -170,8 +170,3 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 
 ------- SQL updates -------
 
-
-ALTER TABLE atlas_driver_offer_bpp.document_verification_config ALTER COLUMN document_onboarding_stage SET DEFAULT 'PersonalOnboarding';
-ALTER TABLE atlas_driver_offer_bpp.document_verification_config ALTER COLUMN document_onboarding_stage SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.document_verification_config DROP CONSTRAINT document_verification_config_pkey;
-ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD PRIMARY KEY ( document_onboarding_stage, document_type, merchant_operating_city_id, vehicle_category);

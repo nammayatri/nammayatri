@@ -260,9 +260,13 @@ data DocumentType
   | DriverVehicleNOC
   | FleetRegistration
   | NationalID
-  | CompanyDetails
-  | LegalEntityId
   | WorkingHoursMeter
+  | IndividualLegalEntityId
+  | IndividualTAXDetails
+  | IndividualCompanyDetails
+  | LegalEntityLegalEntityId
+  | LegalEntityTAXDetails
+  | LegalEntityCompanyDetails
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

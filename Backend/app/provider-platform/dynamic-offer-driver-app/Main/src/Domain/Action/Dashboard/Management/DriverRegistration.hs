@@ -577,9 +577,13 @@ mapDocumentType Common.BotApproval = DVC.BotApproval
 mapDocumentType Common.NomineeDetails = DVC.NomineeDetails
 mapDocumentType Common.FleetRegistration = DVC.FleetRegistration
 mapDocumentType Common.NationalID = DVC.NationalID
-mapDocumentType Common.CompanyDetails = DVC.CompanyDetails
-mapDocumentType Common.LegalEntityId = DVC.LegalEntityId
 mapDocumentType Common.WorkingHoursMeter = DVC.WorkingHoursMeter
+mapDocumentType Common.IndividualLegalEntityId = DVC.IndividualLegalEntityId
+mapDocumentType Common.IndividualTAXDetails = DVC.IndividualTAXDetails
+mapDocumentType Common.IndividualCompanyDetails = DVC.IndividualCompanyDetails
+mapDocumentType Common.LegalEntityLegalEntityId = DVC.LegalEntityLegalEntityId
+mapDocumentType Common.LegalEntityTAXDetails = DVC.LegalEntityTAXDetails
+mapDocumentType Common.LegalEntityCompanyDetails = DVC.LegalEntityCompanyDetails
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

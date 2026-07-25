@@ -787,7 +787,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         documentFields = fmap (map castDocumentFieldInfo) documentFields,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
-        documentOnboardingStage = Just (castDocumentOnboardingStage documentOnboardingStage),
+        documentOnboardingStage = castDocumentOnboardingStage <$> documentOnboardingStage,
         isReminderSupported = Nothing,
         isApprovalSupported = Nothing,
         rolesAllowedToUploadDocument = fmap (mapMaybe castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument,
@@ -935,9 +935,13 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.NomineeDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.NomineeDetails
   Domain.Types.DocumentVerificationConfig.FleetRegistration -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.FleetRegistration
   Domain.Types.DocumentVerificationConfig.NationalID -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.NationalID
-  Domain.Types.DocumentVerificationConfig.CompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.CompanyDetails
-  Domain.Types.DocumentVerificationConfig.LegalEntityId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityId
   Domain.Types.DocumentVerificationConfig.WorkingHoursMeter -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.WorkingHoursMeter
+  Domain.Types.DocumentVerificationConfig.IndividualLegalEntityId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.IndividualLegalEntityId
+  Domain.Types.DocumentVerificationConfig.IndividualTAXDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.IndividualTAXDetails
+  Domain.Types.DocumentVerificationConfig.IndividualCompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.IndividualCompanyDetails
+  Domain.Types.DocumentVerificationConfig.LegalEntityLegalEntityId -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityLegalEntityId
+  Domain.Types.DocumentVerificationConfig.LegalEntityTAXDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityTAXDetails
+  Domain.Types.DocumentVerificationConfig.LegalEntityCompanyDetails -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.LegalEntityCompanyDetails
 
 -- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
 -- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.

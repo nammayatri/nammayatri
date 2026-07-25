@@ -65,12 +65,3 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD 
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN only_image_verification_status_lookup_required boolean ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN document_fields_json json ;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ALTER COLUMN document_onboarding_stage SET DEFAULT 'PersonalOnboarding';
-ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ALTER COLUMN document_onboarding_stage SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config DROP CONSTRAINT fleet_owner_document_verification_config_pkey;
-ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD PRIMARY KEY ( document_onboarding_stage, document_type, merchant_operating_city_id, role);

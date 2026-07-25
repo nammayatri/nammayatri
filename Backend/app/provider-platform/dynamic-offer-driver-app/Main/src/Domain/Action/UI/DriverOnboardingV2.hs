@@ -152,7 +152,6 @@ mkDocumentVerificationConfigAPIEntity language verificationProvidersPriorityList
         documentFields = documentFields,
         documentFlowGrouping = fromMaybe Domain.STANDARD documentFlowGrouping,
         verificationProvidersPriorityList = verificationProvidersPriorityList,
-        documentOnboardingStage = Just documentOnboardingStage,
         ..
       }
 

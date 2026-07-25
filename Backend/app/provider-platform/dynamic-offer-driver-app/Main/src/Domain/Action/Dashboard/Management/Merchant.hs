@@ -107,7 +107,6 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.CancellationFarePolicy as DTCFP
 import qualified Domain.Types.ConditionalCharges as DAC
-import qualified Domain.Types.DocumentOnboardingStage as DDOS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.DriverPoolConfig as DDPC
@@ -1089,9 +1088,13 @@ castDDocumentType = \case
   DVC.NomineeDetails -> Common.NomineeDetails
   DVC.FleetRegistration -> Common.FleetRegistration
   DVC.NationalID -> Common.NationalID
-  DVC.CompanyDetails -> Common.CompanyDetails
-  DVC.LegalEntityId -> Common.LegalEntityId
   DVC.WorkingHoursMeter -> Common.WorkingHoursMeter
+  DVC.IndividualLegalEntityId -> Common.IndividualLegalEntityId
+  DVC.IndividualTAXDetails -> Common.IndividualTAXDetails
+  DVC.IndividualCompanyDetails -> Common.IndividualCompanyDetails
+  DVC.LegalEntityLegalEntityId -> Common.LegalEntityLegalEntityId
+  DVC.LegalEntityTAXDetails -> Common.LegalEntityTAXDetails
+  DVC.LegalEntityCompanyDetails -> Common.LegalEntityCompanyDetails
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1204,9 +1207,13 @@ castDocumentType = \case
   Common.NomineeDetails -> DVC.NomineeDetails
   Common.FleetRegistration -> DVC.FleetRegistration
   Common.NationalID -> DVC.NationalID
-  Common.CompanyDetails -> DVC.CompanyDetails
-  Common.LegalEntityId -> DVC.LegalEntityId
   Common.WorkingHoursMeter -> DVC.WorkingHoursMeter
+  Common.IndividualLegalEntityId -> DVC.IndividualLegalEntityId
+  Common.IndividualTAXDetails -> DVC.IndividualTAXDetails
+  Common.IndividualCompanyDetails -> DVC.IndividualCompanyDetails
+  Common.LegalEntityLegalEntityId -> DVC.LegalEntityLegalEntityId
+  Common.LegalEntityTAXDetails -> DVC.LegalEntityTAXDetails
+  Common.LegalEntityCompanyDetails -> DVC.LegalEntityCompanyDetails
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -1272,7 +1279,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
-        documentOnboardingStage = maybe DDOS.PersonalOnboarding SDO.castDocumentOnboardingStageFromCommon documentOnboardingStage,
+        documentOnboardingStage = SDO.castDocumentOnboardingStageFromCommon <$> documentOnboardingStage,
         ..
       }
   where

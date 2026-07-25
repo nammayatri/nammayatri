@@ -5,7 +5,6 @@
 module Storage.Queries.DocumentVerificationConfig (module Storage.Queries.DocumentVerificationConfig, module ReExport) where
 
 import qualified Data.Text
-import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
@@ -29,17 +28,16 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
-findByPrimaryKey documentOnboardingStage documentType merchantOperatingCityId vehicleCategory = do
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig))
+findByPrimaryKey documentType merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.documentOnboardingStage $ Se.Eq documentOnboardingStage,
-          Se.Is Beam.documentType $ Se.Eq documentType,
+        [ Se.Is Beam.documentType $ Se.Eq documentType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
@@ -60,6 +58,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.documentCategory documentCategory,
       Se.Set Beam.documentFieldsJSON (mkDocumentFieldsJSON documentFields),
       Se.Set Beam.documentFlowGrouping documentFlowGrouping,
+      Se.Set Beam.documentOnboardingStage documentOnboardingStage,
       Se.Set Beam.faceMatchSourceDoc faceMatchSourceDoc,
       Se.Set Beam.filterForOldApks filterForOldApks,
       Se.Set Beam.isApprovalSupported isApprovalSupported,
@@ -76,15 +75,14 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
       Se.Set Beam.order order,
       Se.Set Beam.rcNumberPrefixList rcNumberPrefixList,
-      Se.Set Beam.rolesAllowedToUploadDocumentText (((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument)),
+      Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
       Se.Set Beam.supportedVehicleClassesJSON (getConfigJSON supportedVehicleClasses),
       Se.Set Beam.title title,
       Se.Set Beam.vehicleClassCheckType vehicleClassCheckType,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
-        [ Se.Is Beam.documentOnboardingStage $ Se.Eq documentOnboardingStage,
-          Se.Is Beam.documentType $ Se.Eq documentType,
+        [ Se.Is Beam.documentType $ Se.Eq documentType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
