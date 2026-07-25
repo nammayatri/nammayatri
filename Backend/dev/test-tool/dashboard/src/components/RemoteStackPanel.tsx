@@ -16,6 +16,7 @@ import {
   remoteSshCopyId,
   openRemoteEditor,
   editorAvailable,
+  setAutoDeploy,
   RemoteTarget,
   DevboxAssignment,
   PreflightResponse,
@@ -39,7 +40,14 @@ const DEFAULT_REMOTE_DIR = '/tmp/nammayatri';
 // Canonical start command — sent server-side as the inner command of the PTY.
 // The exact argv (including this string) is echoed into the terminal by
 // local-api as the first line of the session, so users see what runs.
-const DEFAULT_COMMAND = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev';
+// Local runs take the fixed ports.nix map (nothing else is competing for them,
+// and no registry/Caddyfile is generated). A dev-box is shared, so its stack
+// resolves free ports at startup and fronts them with caddy.
+const CMD_FIXED_PORTS = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev';
+const CMD_AVAILABLE_PORTS = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev-on-available-ports';
+const commandForHost = (host: string): string =>
+  (!host || ['localhost', '127.0.0.1', '::1'].includes(host.trim()))
+    ? CMD_FIXED_PORTS : CMD_AVAILABLE_PORTS;
 const FORM_STORAGE_KEY = 'ny.remoteStack.target';
 const MODE_STORAGE_KEY = 'ny.remoteStack.mode';
 
@@ -60,11 +68,13 @@ interface Step {
   detail?: string;
 }
 
-const INITIAL_STEPS: Step[] = [
+const stepsFor = (localRun: boolean): Step[] => [
   { key: 'check', label: 'Check workspace & git', state: 'pending' },
-  { key: 'deploy', label: 'Deploy (rsync)', state: 'pending' },
+  // Local runs in place — nothing to rsync, so the stage is not even shown.
+  // The git-HEAD check that decides a cabal clean still applies.
+  ...(localRun ? [] : [{ key: 'deploy' as StepKey, label: 'Deploy (rsync)', state: 'pending' as StepState }]),
   { key: 'cabal-clean', label: 'Cabal clean', state: 'pending' },
-  { key: 'start', label: 'Start mobility-stack-dev', state: 'pending' },
+  { key: 'start', label: localRun ? 'Start mobility-stack-dev (fixed ports)' : 'Start mobility-stack-dev (available ports)', state: 'pending' },
 ];
 
 const STEP_ICON: Record<StepState, string> = {
@@ -163,7 +173,7 @@ const defaultTarget = (): RemoteTarget => ({
   devName: '',
   remoteDir: DEFAULT_REMOTE_DIR,
   copyMode: 'rsync',
-  command: DEFAULT_COMMAND,
+  command: CMD_FIXED_PORTS,
 });
 
 export const RemoteStackPanel: React.FC = () => {
@@ -217,6 +227,12 @@ export const RemoteStackPanel: React.FC = () => {
   // Apply a resolved devbox assignment to the deploy target and verify SSH.
   const applyAssignment = async (a: DevboxAssignment) => {
     setDevbox(a);
+    if (a.host && a.sshUser && a.id) {
+      setAutoDeploy({
+        host: a.host, user: a.sshUser, port: a.port || 22,
+        devName: a.id, copyMode: 'rsync',
+      }).catch(() => { /* local-api down */ });
+    }
     setTarget({
       host: a.host || '',
       user: a.sshUser || '',
@@ -225,7 +241,7 @@ export const RemoteStackPanel: React.FC = () => {
       devName: a.id || '',
       remoteDir: a.remoteDir || DEFAULT_REMOTE_DIR,
       copyMode: 'rsync',
-      command: DEFAULT_COMMAND,
+      command: CMD_AVAILABLE_PORTS,
     });
     if (a.host && a.sshUser) {
       try {
@@ -280,6 +296,9 @@ export const RemoteStackPanel: React.FC = () => {
       setDevboxErr(null);
       setSshStatus(null);
       setTarget(defaultTarget());
+      // Nothing to rsync in Local mode — stop the background watcher so a pin
+      // left from an earlier dev-box session cannot keep syncing.
+      setAutoDeploy({ enabled: false, reason: 'Local mode selected' }).catch(() => { /* local-api down */ });
     } else {
       resolveAssignment(false);
     }
@@ -457,7 +476,7 @@ export const RemoteStackPanel: React.FC = () => {
   const onStart = async () => {
     setBusy('start');
     setState(prev => ({ ...prev, error: undefined, status: undefined }));
-    setSteps(INITIAL_STEPS);
+    setSteps(stepsFor(isLocalhost));
     const fail = (key: StepKey, detail: string) => {
       patchStep(key, { state: 'failed', detail });
       setState(prev => ({ ...prev, error: detail, status: undefined }));
@@ -471,7 +490,7 @@ export const RemoteStackPanel: React.FC = () => {
         detail: pre.gitHead ? `HEAD ${pre.gitHead.slice(0, 8)}` : undefined,
       });
 
-      if (pre.needsDeploy) {
+      if (pre.needsDeploy && !isLocalhost) {
         patchStep('deploy', { state: 'running', detail: pre.deployReason });
         const res = await remoteDeploy(target);
         if (res.error || !res.session) { fail('deploy', res.error || 'deploy failed'); return; }
@@ -479,7 +498,7 @@ export const RemoteStackPanel: React.FC = () => {
         const code = await waitForSession(res.session);
         if (code !== 0) { fail('deploy', `rsync exited (code ${code})`); return; }
         patchStep('deploy', { state: 'done', detail: 'workspace synced' });
-      } else {
+      } else if (!isLocalhost) {
         patchStep('deploy', { state: 'skipped', detail: pre.deployReason });
       }
 
@@ -499,7 +518,7 @@ export const RemoteStackPanel: React.FC = () => {
       // Always send the canonical Start command so the field displayed in
       // the UI matches what local-api executes (even if an older value got
       // persisted to localStorage from a previous build).
-      const res = await remoteStart({ ...target, command: DEFAULT_COMMAND });
+      const res = await remoteStart({ ...target, command: commandForHost(target.host) });
       if (res.error || !res.session) { fail('start', res.error || 'start failed'); return; }
       await remoteMark(target, 'start');
       patchStep('start', { state: 'done', detail: `running on ${target.host}` });
@@ -617,18 +636,46 @@ export const RemoteStackPanel: React.FC = () => {
         <div className="rsp-meta" style={{ marginTop: 8 }}>
           {resolving && <div>Resolving dev-box assignment…</div>}
           {devboxErr && (
-            <div style={{ color: '#e53e3e' }}>
-              {devboxErr}{' '}
-              <button onClick={() => resolveAssignment(false)} style={{ marginLeft: 8 }}>Retry</button>
+            <div className="rsp-devbox-error" role="alert">
+              <span className="rsp-devbox-error-icon" aria-hidden="true">⚠</span>
+              <span className="rsp-devbox-error-text">{devboxErr}</span>
+              <button
+                className="rsp-btn-retry"
+                onClick={() => resolveAssignment(false)}
+                disabled={resolving}
+                title="Ask the base station again and re-resolve the assignment"
+              >
+                {resolving ? '◌ Retrying…' : '⟳ Retry'}
+              </button>
             </div>
           )}
           {devbox && !resolving && (
             <div className="rsp-devbox-card">
               <div className="rsp-devbox-head">
                 <span className="rsp-devbox-machine">{devbox.machine}</span>
-                <code className="rsp-devbox-host">{devbox.host}</code>
+                <code
+                  className="rsp-devbox-host"
+                  title={`local ${devbox.localIp || 'n/a'}${devbox.localSubnet ? ` — same subnet as ${devbox.localSubnet}` : ' — different subnet'}\nvpn   ${devbox.vpnHost || 'n/a'}${devbox.vpnSubnet ? ` — same subnet as ${devbox.vpnSubnet}` : ' — different subnet'}`}
+                >
+                  {devbox.host}
+                </code>
+                {devbox.route && (
+                  <span className="rsp-route-pill" title={devbox.route === 'local'
+                    ? `reached on its local address${devbox.localSubnet ? ` — same subnet ${devbox.localSubnet}` : ' (routed, not same subnet)'}`
+                    : `reached on its VPN address${devbox.vpnSubnet ? ` — same subnet ${devbox.vpnSubnet}` : ''}; its local address did not answer`}>
+                    via {devbox.route.toUpperCase()}
+                  </span>
+                )}
                 {devbox.created && <span className="rsp-tag">new assignment</span>}
-                {devbox.repinned && <span className="rsp-tag">re-pinned (old machine offline)</span>}
+                {devbox.repinned && <span className="rsp-tag">re-assigned (old machine left the fleet)</span>}
+                {devbox.ipUpdated && (
+                  <span className="rsp-tag" title={devbox.message}>
+                    IP changed{devbox.previousHost ? ` from ${devbox.previousHost}` : ''}
+                  </span>
+                )}
+                {devbox.lostRoute && (
+                  <span className="rsp-tag rsp-tag-warn" title={devbox.message}>⚠ old box lost route</span>
+                )}
                 {sshStatus && (
                   <span
                     className={`rsp-ssh-pill ${sshStatus.ok ? 'rsp-ssh-ok' : 'rsp-ssh-bad'}`}
@@ -646,6 +693,12 @@ export const RemoteStackPanel: React.FC = () => {
                   ⟳ Re-assign
                 </button>
               </div>
+
+              {devbox.message && (
+                <div className={`rsp-devbox-note${devbox.lostRoute ? ' rsp-devbox-note-warn' : ''}`}>
+                  {devbox.message}
+                </div>
+              )}
 
               <div className="rsp-stats">
                 <Stat label="CPU" value={devbox.resources?.cpu || '—'} usage={devbox.usage?.cpu} />

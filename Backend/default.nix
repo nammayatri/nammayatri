@@ -26,6 +26,7 @@
         "osrm-server"
         "osrm-data"
         "run-mobility-stack-dev"
+        "run-mobility-stack-dev-on-available-ports"
         "run-mobility-stack-nix"
       ];
       # Apps to exclude from CI builds (devour-flake via om ci run)

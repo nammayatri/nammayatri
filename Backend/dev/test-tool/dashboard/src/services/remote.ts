@@ -51,6 +51,19 @@ export interface DevboxAssignment {
   usage?: { cpu?: string; ram?: string; storage?: string };
   created?: boolean;
   repinned?: boolean;
+  /** Which address answered: the machine's own 'local' one, or its 'vpn' one. */
+  route?: 'local' | 'vpn' | '';
+  localIp?: string;
+  vpnHost?: string;
+  localSubnet?: string;
+  vpnSubnet?: string;
+  /** Same machine, new IP in discovery — local records were re-pointed. */
+  ipUpdated?: boolean;
+  previousHost?: string;
+  /** Pinned machine answered on neither address, so it was re-assigned. */
+  lostRoute?: boolean;
+  /** Human-readable explanation of whichever recovery path was taken. */
+  message?: string;
   error?: string;
 }
 
@@ -138,6 +151,9 @@ export interface PreflightResponse {
 }
 
 export interface AutoDeployStatus {
+  enabled?: boolean;
+  reason?: string;
+  watchers?: number;
   busy?: boolean;
   pollSeconds?: number;
   lastCheckAt?: number | null;
@@ -151,6 +167,11 @@ export const remotePreflight = (t: RemoteTarget): Promise<PreflightResponse> =>
 
 export const remoteMark = (t: RemoteTarget, stage: 'deploy' | 'start'): Promise<{ error?: string }> =>
   json('/api/remote/mark', { ...t, stage });
+
+/** Arm the auto-deploy watcher for a dev-box target, or disarm it for Local. */
+export const setAutoDeploy = (
+  arg: { enabled: false; reason?: string } | (RemoteTarget & { enabled?: true }),
+): Promise<AutoDeployStatus> => json('/api/remote/auto-deploy', arg);
 
 export const resolveDevbox = (forceNew = false): Promise<DevboxAssignment> =>
   json(`/api/devbox/resolve${forceNew ? '?new=1' : ''}`);
