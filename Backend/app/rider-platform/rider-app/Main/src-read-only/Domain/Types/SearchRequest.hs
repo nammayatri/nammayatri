@@ -85,6 +85,7 @@ data SearchRequest = SearchRequest
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],
+    syncSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     toSpecialLocationId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
