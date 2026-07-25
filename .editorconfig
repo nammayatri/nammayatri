@@ -1,0 +1,25 @@
+# EditorConfig helps maintain consistent coding styles across editors and IDEs.
+# https://editorconfig.org
+#
+# Auto-discovered by VSCode, JetBrains, vim (vim-editorconfig), emacs
+# (editorconfig-emacs), Sublime, and most modern editors when the
+# repository root is opened.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_size = 2
+
+# Python follows PEP 8: 4-space indent.
+[*.py]
+indent_size = 4
+
+# Trailing whitespace is significant in Markdown (two trailing spaces
+# render as a <br> line break), so do not strip it.
+[*.md]
+trim_trailing_whitespace = false
