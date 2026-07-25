@@ -42,6 +42,7 @@ imports:
   ConfigFailoverReq: Dashboard.Common.Merchant
   ConfigNames: Dashboard.Common.Merchant
   DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+  DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
   Value: Data.Aeson
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
@@ -1012,7 +1013,7 @@ types:
   VehicleClassCheckType:
     - enum: "Infix, Prefix, Suffix, Exact"
   DocumentType:
-    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration"
+    - enum: "RC, DL, Permissions, SubscriptionPlan, ProfilePhoto, AadhaarCard, PanCard, VehiclePermit, VehicleFitnessCertificate, VehicleInsurance, VehiclePUC, ProfileDetails, SocialSecurityNumber, VehicleInspectionForm, DriverInspectionForm, TrainingForm, UploadProfile, GSTCertificate, BackgroundVerification, VehicleFront, VehicleBack, VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, VehicleNOC, BusinessLicense, Odometer, InspectionHub, DriverInspectionHub, KIWADriverCard, KIWATaxiPermit, KvKChamberOfCommerceRegistration, TAXDetails, BankingDetails, VehicleDetails, SchipolAirportAgreement, SchipolSmartcardProof, TXQualityMark, TaxiDriverPermit, TaxiTransportLicense, FinnishIDResidencePermit, BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails"
     - derive: "HttpInstance"
   DocumentFlowGrouping:
     - enum: "COMMON, STANDARD"
@@ -1048,6 +1049,7 @@ types:
     - filterForOldApks: Maybe Bool
     - documentCategory: Maybe DocumentCategory
     - documentFlowGrouping: Maybe DocumentFlowGrouping
+    - documentOnboardingStage: Maybe DocumentOnboardingStage
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money

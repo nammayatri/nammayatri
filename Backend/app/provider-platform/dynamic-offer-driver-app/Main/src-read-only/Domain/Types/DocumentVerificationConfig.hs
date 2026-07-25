@@ -122,6 +122,14 @@ data DocumentType
   | NomineeDetails
   | DriverVehicleNOC
   | FleetRegistration
+  | NationalID
+  | WorkingHoursMeter
+  | IndividualLegalEntityId
+  | IndividualTAXDetails
+  | IndividualCompanyDetails
+  | LegalEntityLegalEntityId
+  | LegalEntityTAXDetails
+  | LegalEntityCompanyDetails
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data FieldInfo = FieldInfo
