@@ -408,7 +408,31 @@ _:
 
         run-mobility-stack-dev = {
           category = "Backend";
-          description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
+          description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard) on the fixed ports from ports.nix.";
+          exec = ''
+            echo "── Pre-flight: freeing service ports ──"
+            ${killSvcPortsScript}
+
+            # Bump soft stack to the hard max. `nix run` spawns a fresh shell
+            # that doesn't inherit the devshell's shellHook, so set it here too.
+            # Required by process-compose / some Haskell exes that want >= 60 MB stack.
+            _hard=$(ulimit -Hs 2>/dev/null || true)
+            if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+              ulimit -s "$_hard" 2>/dev/null || true
+              ulimit -n "$_hard" 2>/dev/null || true
+            fi
+            # -S NAME forces stable sort by process name (no re-ordering on status change).
+            # -d hides `disabled = true` processes (the ones this profile never
+            # starts) so the list only shows what the profile actually runs;
+            # they are still defined, so `process-compose process start <name>`
+            # can bring one up on demand.
+            nix run .#run-mobility-stack-dev -- -S NAME -d "$@"
+          '';
+        };
+
+        run-mobility-stack-dev-on-available-ports = {
+          category = "Backend";
+          description = "Run the backend + test-context-api + mock-server on ports resolved at startup (shared dev-box: per-developer ports + caddy). Use run-mobility-stack-dev for fixed ports.";
           exec = ''
             # errexit + pipefail for the whole preflight (matches sibling scripts).
             # nounset is intentionally omitted — this legacy block has guarded
@@ -597,7 +621,7 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run --impure .#run-mobility-stack-dev -- -S NAME -d "$@"
+            nix run --impure .#run-mobility-stack-dev-on-available-ports -- -S NAME -d "$@"
           '';
         };
 

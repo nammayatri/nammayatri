@@ -894,7 +894,8 @@ def stop_ny_rn(app: str) -> bool:
 
 # ── Remote SSH + PTY runner ──
 #
-# Launches `, run-mobility-stack-dev` (or any command) on a remote host over
+# Launches `, run-mobility-stack-dev-on-available-ports` (or any command) on a
+# remote host over
 # SSH inside a PTY, so the dashboard's xterm can drive it interactively.
 # Localhost is special-cased to skip SSH/rsync entirely.
 #
@@ -949,9 +950,19 @@ MACHINE_STATE_EXCLUDES = [
 # it from triggering a redeploy.
 REMOTE_EXCLUDES = BUILD_STATE_EXCLUDES + MACHINE_STATE_EXCLUDES
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
+# A dev-box is shared, so its stack resolves free ports at startup and puts caddy
+# in front of them. Locally nothing has to coexist, so the fixed ports.nix map is
+# used and nothing (registry / Caddyfile) is generated.
 REMOTE_DEFAULT_COMMAND = (
+    "cd Backend && nix develop .#backend -c , run-mobility-stack-dev-on-available-ports"
+)
+LOCAL_DEFAULT_COMMAND = (
     "cd Backend && nix develop .#backend -c , run-mobility-stack-dev"
 )
+
+
+def _default_stack_command(host: str) -> str:
+    return LOCAL_DEFAULT_COMMAND if _is_localhost(host) else REMOTE_DEFAULT_COMMAND
 REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 
 # ── SSH key + ServiceDiscovery helpers ──
@@ -1002,6 +1013,41 @@ def _ensure_ssh_key() -> tuple[str, str]:
         return key_path, f.read().strip()
 
 
+# ── Which address of a machine can we actually reach? ─────────────────────────
+# Subnet comparison alone cannot answer this, in either direction:
+#   • our VPN interface is often a /32 point-to-point link that *routes* to the
+#     remote subnet without being in it, so containment says "no" while the link
+#     works (WireGuard, utun);
+#   • a full-tunnel VPN sends *everything* through the tunnel, so both the route
+#     lookup and interface check say "yes" for addresses that lead nowhere —
+#     measured on this fleet, `route get 8.8.8.8` and `route get 192.168.99.99`
+#     both resolve out utun6 via the same catch-all.
+# So subnet containment is kept only as the *preference* signal (same LAN → skip
+# the tunnel) and reachability is settled by connecting to the SSH port. Results
+# are cached briefly because the machine list is re-fetched on every poll.
+_REACH_TTL = 60.0
+_reach_cache: dict = {}
+_reach_lock = threading.Lock()
+
+
+def _reachable_cached(ip: str, port: int = 22) -> bool:
+    now = time.time()
+    key = (ip, port)
+    with _reach_lock:
+        hit = _reach_cache.get(key)
+        if hit and now - hit[0] < _REACH_TTL:
+            return hit[1]
+    ok = _tcp_open(ip, port, timeout=1.5)
+    with _reach_lock:
+        _reach_cache[key] = (now, ok)
+    return ok
+
+
+def _reach_cache_clear() -> None:
+    with _reach_lock:
+        _reach_cache.clear()
+
+
 def _fetch_machines() -> dict:
     """Fetch ServiceDiscovery from the base station HTTP API and return
     a list of MachineInfo dicts the frontend can render in a dropdown.
@@ -1032,8 +1078,13 @@ def _fetch_machines() -> dict:
     try:
         if sys.platform == "darwin":
             out = subprocess.check_output(["ifconfig"], text=True, timeout=3)
-            # Parse "inet <ip> netmask <hex>" pairs from ifconfig output
-            for m in re.finditer(r"inet (\d+\.\d+\.\d+\.\d+) netmask (0x[0-9a-fA-F]+)", out):
+            # "inet <ip> netmask <hex>", plus the point-to-point form tunnels use:
+            # "inet 10.4.1.13 --> 10.4.1.13 netmask 0xffffffe0". Skipping the
+            # peer field lost every VPN interface, which made VPN addresses look
+            # like a different network however wide the tunnel's mask was.
+            for m in re.finditer(
+                    r"inet (\d+\.\d+\.\d+\.\d+)(?: --> \d+\.\d+\.\d+\.\d+)? netmask (0x[0-9a-fA-F]+)",
+                    out):
                 ip_str, mask_hex = m.group(1), m.group(2)
                 if ip_str == "127.0.0.1":
                     continue
@@ -1052,52 +1103,76 @@ def _fetch_machines() -> dict:
     except Exception:
         pass
     my_ips = [ip for ip, _ in my_networks]
+    # Our own interfaces as CIDRs — the left-hand side of every same-subnet
+    # comparison below, published so the mask a verdict used is on record.
+    my_networks_cidr = [f"{ip}/{net.prefixlen}" for ip, net in my_networks]
 
-    def _pick_best(local_ip: str, aws_ip: str) -> str:
-        """If any of our IPs is on the same subnet as local_ip, use LAN; else VPN."""
-        if not local_ip:
-            return aws_ip or local_ip
+    def _shared_subnet(ip: str) -> str:
+        """CIDR of one of our own interfaces that contains ip, else "".
+
+        This is the same-subnet rule — (mine AND mask) == (theirs AND mask) —
+        evaluated through *our* mask, which is the only mask we know: discovery
+        reports addresses without prefixes. A remote host configured with a wider
+        mask can therefore consider us local while we consider it remote, so this
+        answers "can I deliver directly?" and nothing more."""
+        if not ip:
+            return ""
         try:
-            target = ipaddress.ip_address(local_ip)
-            for _, net in my_networks:
-                if target in net:
-                    return local_ip
+            target = ipaddress.ip_address(ip)
         except ValueError:
-            pass
-        return aws_ip or local_ip
+            return ""
+        for _, net in my_networks:
+            if target in net:
+                return str(net)
+        return ""
+
+    def _shape_machine(m: dict, role: str, default_name: str) -> dict:
+        local_ip = m.get("localIp", "")
+        aws_ip = m.get("awsIp", "")
+        lan_subnet = _shared_subnet(local_ip)
+        vpn_subnet = _shared_subnet(aws_ip)
+        lan_ok = bool(local_ip) and _reachable_cached(local_ip)
+        # Skip the VPN probe when the local address already answered — same box.
+        vpn_ok = bool(aws_ip) and (False if lan_ok else _reachable_cached(aws_ip))
+        # The local address wins when both answer (no tunnel hop). Neither → no
+        # route from here; the addresses are still reported (for display) but
+        # bestIp/route stay empty so callers can refuse to assign it.
+        if lan_ok:
+            best, route = local_ip, "local"
+        elif vpn_ok:
+            best, route = aws_ip, "vpn"
+        else:
+            best, route = "", ""
+        return {
+            "name":        m.get("name", default_name),
+            "role":        role,
+            "localIp":     local_ip,
+            "awsIp":       aws_ip,
+            "bestIp":      best,
+            "localSubnet": lan_subnet,
+            "vpnSubnet":   vpn_subnet,
+            "route":       route,
+            "localReachable": lan_ok,
+            "vpnReachable": vpn_ok,
+            "user":        m.get("username", "ubuntu"),
+            "type":        m.get("type", ""),
+            "resources":   m.get("resources", {}),
+            "usage":       m.get("usage", {}),
+        }
 
     machines: list[dict] = []
+    raw_machines = [(data.get("base") or {}, "base", "base")] if data.get("base") else []
+    raw_machines += [(w, "worker", "") for w in data.get("workers", [])]
 
-    base = data.get("base") or {}
-    if base:
-        best = _pick_best(base.get("localIp", ""), base.get("awsIp", ""))
-        machines.append({
-            "name":      base.get("name", "base"),
-            "role":      "base",
-            "localIp":   base.get("localIp", ""),
-            "awsIp":     base.get("awsIp", ""),
-            "bestIp":    best,
-            "user":      base.get("username", "ubuntu"),
-            "type":      base.get("type", ""),
-            "resources": base.get("resources", {}),
-            "usage":     base.get("usage", {}),
-        })
+    # Probe the fleet concurrently: serially this would be
+    # (machines × addresses × timeout) of dead air on every poll.
+    from concurrent.futures import ThreadPoolExecutor
+    if raw_machines:
+        with ThreadPoolExecutor(max_workers=min(8, len(raw_machines) * 2)) as pool:
+            machines = list(pool.map(lambda a: _shape_machine(*a), raw_machines))
 
-    for w in data.get("workers", []):
-        best = _pick_best(w.get("localIp", ""), w.get("awsIp", ""))
-        machines.append({
-            "name":      w.get("name", ""),
-            "role":      "worker",
-            "localIp":   w.get("localIp", ""),
-            "awsIp":     w.get("awsIp", ""),
-            "bestIp":    best,
-            "user":      w.get("username", "ubuntu"),
-            "type":      w.get("type", ""),
-            "resources": w.get("resources", {}),
-            "usage":     w.get("usage", {}),
-        })
-
-    return {"machines": machines, "myIps": my_ips}
+    return {"machines": machines, "myIps": my_ips,
+            "myNetworks": my_networks_cidr}
 
 
 # ── Devbox auto-assignment ────────────────────────────────────────────────────
@@ -1113,15 +1188,82 @@ def _parse_ram_pct(usage: dict) -> float:
         return 100.0
 
 
+NO_DEVBOX_ERROR = (
+    "no dev-box available — the base station lists no dev-box that this machine "
+    "can reach (a dev-box off your subnet needs a VPN address). Start one, join "
+    "the VPN, or run the stack with Run on = Local."
+)
+
+
+def _tcp_open(host: str, port: int = 22, timeout: float = 3.0) -> bool:
+    """True when something is listening on host:port.
+
+    Deliberately not _ssh_reachable: that needs key auth to already work, and a
+    freshly assigned dev-box (key not authorized yet) is still perfectly
+    reachable. Only the network path matters here."""
+    if not host:
+        return False
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def _devbox_state_rehost(dev_id: str, ssh_user: str, old_host: str, new_host: str) -> None:
+    """Carry this checkout's per-target state across a dev-box IP change.
+
+    Everything keyed by host — the deploy fingerprint / git HEAD in
+    .stack-state.json, the auto-deploy target, the cached port map — would
+    otherwise look like a brand-new target and force a full redeploy plus a
+    cabal clean, even though it is the same machine and the same workspace."""
+    if not old_host or old_host == new_host:
+        return
+    old_key = f"{ssh_user}@{old_host}/{dev_id}"
+    new_key = f"{ssh_user}@{new_host}/{dev_id}"
+    state = _stack_state_read()
+    entry = state.get(old_key)
+    if entry is not None and new_key not in state:
+        state[new_key] = entry
+        state.pop(old_key, None)
+        try:
+            tmp = STACK_STATE_FILE.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(state, indent=2) + "\n")
+            tmp.replace(STACK_STATE_FILE)
+        except OSError:
+            pass
+
+    target = _auto_deploy_target()
+    if target and target.get("host") == old_host:
+        _auto_deploy_remember({**target, "host": new_host})
+
+    _devbox_ports_cache_clear()
+
+
 def _devbox_resolve(force_new: bool = False) -> dict:
-    """Return this checkout's devbox assignment, creating one if needed."""
+    """Return this checkout's devbox assignment, creating one if needed.
+
+    Discovery is re-read on every call, so the pinned machine's addresses and
+    subnets are always the current ones. What that leaves is three recoveries:
+      • pinned machine answers on a different address (moved IP, or the LAN/VPN
+        route flipped)          → follow it and re-point every local record;
+      • pinned machine answers on neither address, or is gone from discovery
+                                → re-assign by the usual least-loaded pick over
+                                  the dev-boxes that do have a route from here;
+      • nothing left to pick    → say so, explicitly."""
     res = _fetch_machines()
     if res.get("error"):
         return {"error": res["error"]}
     devboxes = [m for m in res.get("machines", [])
                 if m.get("type") == "dev-box" and m.get("role") == "worker"]
     if not devboxes:
-        return {"error": "no dev-box machines registered with the base station"}
+        return {"error": NO_DEVBOX_ERROR}
+
+    # No route from here on either address — not a candidate, however idle it is.
+    # "Has an awsIp" is not enough: that address is only usable while a VPN
+    # actually carries a route to it (see _reachability).
+    assignable = [m for m in devboxes if m.get("bestIp")]
 
     saved = None
     if not force_new and DEVBOX_ID_FILE.is_file():
@@ -1132,14 +1274,36 @@ def _devbox_resolve(force_new: bool = False) -> dict:
 
     machine = None
     repinned = False
+    ip_updated = False
+    lost_route = False
+    previous_host = (saved or {}).get("host") or ""
+    previous_machine = (saved or {}).get("machine") or ""
     if saved and saved.get("machine"):
         machine = next((m for m in devboxes if m.get("name") == saved["machine"]), None)
         if machine is None:
-            repinned = True  # pinned machine dropped off the fleet — re-pick
+            repinned = True   # pinned machine dropped off the fleet — re-pick
+        elif not machine.get("bestIp"):
+            # Neither its LAN nor its VPN address answers any more. The addresses
+            # in hand are already the freshly discovered ones, so there is nothing
+            # left to re-point at — drop the pin and pick a reachable box.
+            machine = None
+            repinned = True
+            lost_route = True
+        elif previous_host and machine["bestIp"] != previous_host:
+            # Answers on a different address than the one on record: its IP
+            # changed, or we moved and the LAN/VPN choice flipped.
+            ip_updated = True
 
     created = False
     if machine is None:
-        machine = min(devboxes, key=lambda m: _parse_ram_pct(m.get("usage")))
+        if not assignable:
+            if lost_route:
+                return {"error": f"{previous_machine} has no route from this machine any "
+                                 f"more, and no other dev-box is reachable either. "
+                                 f"Join the VPN / check the fleet, or run with "
+                                 f"Run on = Local."}
+            return {"error": NO_DEVBOX_ERROR}
+        machine = min(assignable, key=lambda m: _parse_ram_pct(m.get("usage")))
         local_user = re.sub(r"[^a-z0-9]+", "",
                             (os.environ.get("USER") or "dev").lower()) or "dev"
         mslug = re.sub(r"[^a-z0-9]+", "-", machine["name"].lower()).strip("-")[:24]
@@ -1154,15 +1318,31 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         }
 
     dev_id = saved["id"]
-    host = machine.get("bestIp") or machine.get("localIp") or ""
+    local_ip = machine.get("localIp") or ""
+    vpn_host = machine.get("awsIp") or ""
+    local_subnet = machine.get("localSubnet") or ""
+    vpn_subnet = machine.get("vpnSubnet") or ""
+    route = machine.get("route") or ""
+    # Already probed during discovery shaping: the machine's local address when
+    # that answered, its VPN address otherwise. Never empty here — a box with no
+    # route is not assignable.
+    host = machine.get("bestIp") or ""
+
     ssh_user = machine.get("user") or saved.get("sshUser") or ""
     remote_dir = f"/tmp/{dev_id}/nammayatri"
 
     # Persist the connection coordinates too: this file is the ONLY local record
     # of where the devbox is. get_devbox_ports() reads host/sshUser/sshPort/
     # remoteDir from here to SSH in and cat the stack's data/devbox-ports.json.
+    # Both addresses are recorded with the subnet each was matched against, plus
+    # which one won — so the LAN-vs-VPN decision is inspectable after the fact
+    # and the other address is available as a fallback without re-discovery.
     merged = {**saved, "machine": machine.get("name", saved.get("machine", "")),
               "sshUser": ssh_user, "host": host, "sshPort": 22,
+              "localIp": local_ip, "localSubnet": local_subnet,
+              "vpnHost": vpn_host, "vpnSubnet": vpn_subnet,
+              "route": route,
+              "myNetworks": res.get("myNetworks") or [],
               "remoteDir": remote_dir}
     if merged != saved:
         try:
@@ -1170,6 +1350,26 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         except OSError as e:
             return {"error": f"cannot write {DEVBOX_ID_FILE}: {e}"}
         _devbox_ports_cache_clear()
+
+    # Same machine at a new address: move the per-host state over so the pinned
+    # workspace is not treated as a fresh target.
+    if ip_updated and not created and not repinned:
+        _devbox_state_rehost(dev_id, ssh_user, previous_host, host)
+
+    if ip_updated:
+        message = (f"{machine.get('name', '')} moved from {previous_host} to {host} "
+                   f"(via {route.upper()}) — re-pointed this checkout, workspace and "
+                   f"deploy state kept")
+    elif repinned and lost_route:
+        message = (f"{previous_machine} is no longer reachable on either its local or VPN "
+                   f"address — re-assigned to the least-loaded reachable dev-box "
+                   f"{machine.get('name', '')} ({host} via {route.upper()})")
+    elif repinned:
+        message = (f"previously pinned machine {previous_machine!r} is no longer "
+                   f"registered — re-assigned to the least-loaded dev-box "
+                   f"{machine.get('name', '')} ({host})")
+    else:
+        message = ""
 
     return {
         "id": dev_id,
@@ -1183,6 +1383,15 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         "usage": machine.get("usage", {}),
         "created": created,
         "repinned": repinned,
+        "ipUpdated": ip_updated,
+        "previousHost": previous_host if (ip_updated or repinned) else "",
+        "lostRoute": lost_route,
+        "route": route,
+        "localIp": local_ip,
+        "localSubnet": local_subnet,
+        "vpnHost": vpn_host,
+        "vpnSubnet": vpn_subnet,
+        "message": message,
     }
 
 
@@ -2080,12 +2289,20 @@ AUTO_DEPLOY_TARGET_KEY = "__autoDeploy__"
 _auto_deploy_lock = threading.Lock()
 _auto_deploy = {
     "target": None,
-    "enabled": True,
+    # Armed only while a dev-box is the selected target. In Local mode there is
+    # nothing to rsync to, and a target left over from an earlier dev-box session
+    # must not keep syncing behind the user's back.
+    "enabled": False,
+    "reason": "not armed yet",
     "lastCheckAt": None,
     "lastDeployAt": None,
     "lastSession": None,
     "lastResult": None,
 }
+# Exactly one watcher thread for the lifetime of the process — never one per
+# stack start. Guarded so repeated start calls cannot fan out.
+_auto_deploy_thread: threading.Thread | None = None
+_auto_deploy_thread_lock = threading.Lock()
 
 
 def _deploy_target(body: dict) -> dict:
@@ -2109,14 +2326,30 @@ def _deployable(target: dict) -> bool:
 
 
 def _auto_deploy_remember(target: dict) -> None:
-    """Pin the target the watcher deploys to — the last one the dashboard used."""
+    """Pin the target the watcher deploys to, and arm it.
+
+    Anything that is not a deployable dev-box target (Local mode, copyMode=skip)
+    disarms the watcher instead: the pin is kept for the next dev-box session,
+    but nothing is synced while Local is selected."""
     if not _deployable(target):
+        _auto_deploy_disarm("Local mode selected — nothing to deploy")
         return
+    changed = False
     with _auto_deploy_lock:
-        if _auto_deploy["target"] == target:
-            return
-        _auto_deploy["target"] = dict(target)
-    _stack_state_write(AUTO_DEPLOY_TARGET_KEY, dict(target))
+        _auto_deploy["enabled"] = True
+        _auto_deploy["reason"] = "armed"
+        if _auto_deploy["target"] != target:
+            _auto_deploy["target"] = dict(target)
+            changed = True
+    if changed:
+        _stack_state_write(AUTO_DEPLOY_TARGET_KEY, dict(target))
+    start_auto_deploy_watcher()
+
+
+def _auto_deploy_disarm(reason: str) -> None:
+    with _auto_deploy_lock:
+        _auto_deploy["enabled"] = False
+        _auto_deploy["reason"] = reason
 
 
 def _auto_deploy_target() -> dict | None:
@@ -2135,6 +2368,8 @@ def auto_deploy_status() -> dict:
         status = dict(_auto_deploy)
     status["busy"] = _deploy_lock.locked()
     status["pollSeconds"] = AUTO_DEPLOY_POLL_SECONDS
+    status["watchers"] = sum(
+        1 for t in threading.enumerate() if t.name == "auto-deploy-watcher" and t.is_alive())
     return status
 
 
@@ -2331,9 +2566,12 @@ def _auto_deploy_prune() -> None:
 
 
 def _auto_deploy_tick() -> None:
-    target = _auto_deploy_target()
     with _auto_deploy_lock:
         _auto_deploy["lastCheckAt"] = time.time()
+        armed = _auto_deploy["enabled"]
+    if not armed:
+        return
+    target = _auto_deploy_target()
     if not target:
         return
 
@@ -2366,17 +2604,40 @@ def _auto_deploy_tick() -> None:
 
 
 def _auto_deploy_loop() -> None:
-    while True:
-        time.sleep(AUTO_DEPLOY_POLL_SECONDS)
-        try:
-            _auto_deploy_tick()
-        except Exception as exc:  # noqa: BLE001 — a bad tick must not kill the watcher
+    """Poll while armed, then exit — so Local mode leaves no watcher at all.
+
+    Re-arming starts a fresh thread (start_auto_deploy_watcher is the only entry
+    point and it refuses to run a second one)."""
+    global _auto_deploy_thread
+    try:
+        while True:
+            time.sleep(AUTO_DEPLOY_POLL_SECONDS)
             with _auto_deploy_lock:
-                _auto_deploy["lastResult"] = f"error: {exc}"
+                if not _auto_deploy["enabled"]:
+                    return
+            try:
+                _auto_deploy_tick()
+            except Exception as exc:  # noqa: BLE001 — a bad tick must not kill the watcher
+                with _auto_deploy_lock:
+                    _auto_deploy["lastResult"] = f"error: {exc}"
+    finally:
+        with _auto_deploy_thread_lock:
+            if _auto_deploy_thread is threading.current_thread():
+                _auto_deploy_thread = None
 
 
 def start_auto_deploy_watcher() -> None:
-    threading.Thread(target=_auto_deploy_loop, daemon=True).start()
+    """Start the single watcher thread; a no-op when disarmed or already running."""
+    global _auto_deploy_thread
+    with _auto_deploy_lock:
+        if not _auto_deploy["enabled"]:
+            return
+    with _auto_deploy_thread_lock:
+        if _auto_deploy_thread is not None and _auto_deploy_thread.is_alive():
+            return
+        _auto_deploy_thread = threading.Thread(
+            target=_auto_deploy_loop, daemon=True, name="auto-deploy-watcher")
+        _auto_deploy_thread.start()
 
 
 def remote_clear_data(body: dict) -> dict:
@@ -2518,7 +2779,7 @@ def remote_start(body: dict) -> dict:
     port = int(body.get("port") or 22)
     identity = (body.get("identityFile") or "").strip() or None
     remote_dir = (body.get("remoteDir") or REMOTE_DEFAULT_DIR).strip() or REMOTE_DEFAULT_DIR
-    command = (body.get("command") or REMOTE_DEFAULT_COMMAND).strip()
+    command = (body.get("command") or _default_stack_command(host)).strip()
     cols = int(body.get("cols") or 120)
     rows = int(body.get("rows") or 32)
 
@@ -2717,6 +2978,19 @@ def _remote_force_repaint(session: dict, clear: bool = True) -> bool:
     except OSError:
         pass
     return True
+
+
+def auto_deploy_set(body: dict) -> dict:
+    """Arm the watcher for a dev-box target, or disarm it for Local mode.
+
+    The dashboard calls this on every Run-on switch so a pin left over from an
+    earlier dev-box session cannot keep syncing while Local is selected."""
+    if body.get("enabled") is False:
+        _auto_deploy_disarm((body.get("reason") or "disabled by dashboard").strip())
+    else:
+        _auto_deploy_remember(_deploy_target(body))
+    start_auto_deploy_watcher()   # idempotent — one thread, ever
+    return auto_deploy_status()
 
 
 def remote_repaint(session_id: str) -> dict:
@@ -3634,6 +3908,11 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._send_json(auto_deploy_status())
             return True
 
+        # POST /api/remote/auto-deploy — arm for a dev-box target / disarm (Local)
+        if method == "POST" and path == "/api/remote/auto-deploy":
+            self._send_json(auto_deploy_set(self._read_json_body() or {}))
+            return True
+
         # GET /api/remote/sessions
         if method == "GET" and path == "/api/remote/sessions":
             self._send_json(remote_sessions_list())
@@ -4097,7 +4376,6 @@ def main():
 
     server = ThreadingHTTPServer(("0.0.0.0", port), LocalApiHandler)
     server.daemon_threads = True
-    start_auto_deploy_watcher()
     print(
         f"\n  \033[93m📋 Local API on http://localhost:{port} (threaded)\033[0m\n")
 
