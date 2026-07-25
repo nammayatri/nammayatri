@@ -186,6 +186,7 @@ import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
+import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -1087,6 +1088,14 @@ castDDocumentType = \case
   DVC.BotApproval -> Common.BotApproval
   DVC.NomineeDetails -> Common.NomineeDetails
   DVC.FleetRegistration -> Common.FleetRegistration
+  DVC.NationalID -> Common.NationalID
+  DVC.WorkingHoursMeter -> Common.WorkingHoursMeter
+  DVC.IndividualLegalEntityId -> Common.IndividualLegalEntityId
+  DVC.IndividualTAXDetails -> Common.IndividualTAXDetails
+  DVC.IndividualCompanyDetails -> Common.IndividualCompanyDetails
+  DVC.LegalEntityLegalEntityId -> Common.LegalEntityLegalEntityId
+  DVC.LegalEntityTAXDetails -> Common.LegalEntityTAXDetails
+  DVC.LegalEntityCompanyDetails -> Common.LegalEntityCompanyDetails
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1198,6 +1207,14 @@ castDocumentType = \case
   Common.BotApproval -> DVC.BotApproval
   Common.NomineeDetails -> DVC.NomineeDetails
   Common.FleetRegistration -> DVC.FleetRegistration
+  Common.NationalID -> DVC.NationalID
+  Common.WorkingHoursMeter -> DVC.WorkingHoursMeter
+  Common.IndividualLegalEntityId -> DVC.IndividualLegalEntityId
+  Common.IndividualTAXDetails -> DVC.IndividualTAXDetails
+  Common.IndividualCompanyDetails -> DVC.IndividualCompanyDetails
+  Common.LegalEntityLegalEntityId -> DVC.LegalEntityLegalEntityId
+  Common.LegalEntityTAXDetails -> DVC.LegalEntityTAXDetails
+  Common.LegalEntityCompanyDetails -> DVC.LegalEntityCompanyDetails
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -1263,7 +1280,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         onlyImageVerificationStatusLookupRequired = Nothing,
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
-        documentOnboardingStage = Nothing,
+        documentOnboardingStage = SDO.castDocumentOnboardingStageFromCommon <$> documentOnboardingStage,
         ..
       }
   where
