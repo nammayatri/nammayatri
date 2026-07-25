@@ -256,7 +256,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch
   inlineResults <- dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
   fork "Multimodal Search" $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
@@ -397,7 +397,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     whenJust mbImeiNumber $ \imeiNumber -> do
       encryptedImeiNumber <- encrypt imeiNumber
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
-    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing) "DSearch.search multimodalSearchHandler"
+    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing Nothing) "DSearch.search multimodalSearchHandler"
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId dSearchRes.searchRequest.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
     JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers) "multiModalSearch"
@@ -1076,7 +1076,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing Nothing
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2

@@ -488,3 +488,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN offers_fraud_check_failure_reaso
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN discovered_special_location_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN sync_search boolean ;
