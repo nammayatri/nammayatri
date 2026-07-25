@@ -317,8 +317,9 @@ search ::
   Bool ->
   Bool ->
   Maybe Text ->
+  Maybe Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion mbClient device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId mbEnableSyncSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -424,6 +425,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       fromSpecialLocationId
       toSpecialLocationId
       mbDiscoveredSpecialLocId
+      mbEnableSyncSearch
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -697,8 +699,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -762,6 +765,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         onSearchFailed = Nothing,
         offersFraudCheckFailureReason = Nothing,
         cloudType = cloudType,
+        syncSearch = mbEnableSyncSearch,
         ..
       }
   where
