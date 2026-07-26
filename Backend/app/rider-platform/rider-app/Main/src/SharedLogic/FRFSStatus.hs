@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.Text as Text
+import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -102,7 +103,19 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
   logInfo $ "Booking status: " <> show booking.status
   case booking.status of
-    DFRFSTicketBooking.NEW -> buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
+    DFRFSTicketBooking.NEW -> do
+      when (booking.journeyOnInitDone == Just True && booking.validTill > now) $ do
+        mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId)
+        let selfHealLockKey = "frfsBookingStatus:selfHealPayment:" <> maybe booking.id.getId (\leg -> leg.journeyId.getId) mbJourneyLeg
+        Hedis.whenWithLockRedis selfHealLockKey 60 $ do
+          mbPaymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
+          when (isNothing mbPaymentBooking) $ do
+            (_, allJourneyBookings) <- FRFSUtils.getAllJourneyFrfsBookings booking
+            let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
+            when allLegsOnInitDone $ do
+              logError $ "frfsBookingStatus: all journey legs are on_init done but booking has no payment, retrying payment creation, bookingId: " <> booking.id.getId
+              void $ withTryCatch "frfsBookingStatus:createJourneyPayments" $ DOnInit.createJourneyPayments merchant person Nothing booking
+      buildFRFSTicketBookingStatusAPIRes booking quoteCategories Nothing
     DFRFSTicketBooking.FAILED -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, paymentOrder, paymentStatusResp) -> do
         logInfo $ "payment status resp: " <> show paymentStatusResp
