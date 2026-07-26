@@ -43,6 +43,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverUpdateVehicleVariant,
     postDriverBulkReviewRCVariant,
     postDriverUpdateDriverTag,
+    postDriverUpdateSpecialLocWarrior,
     postDriverClearFee,
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
@@ -292,6 +293,13 @@ postDriverUpdateDriverTag merchantShortId opCity apiTokenInfo driverId req = do
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateDriverTag) driverId req
+
+postDriverUpdateSpecialLocWarrior :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverSpecialLocWarriorReq -> Flow APISuccess
+postDriverUpdateSpecialLocWarrior merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverUpdateSpecialLocWarrior) driverId req
 
 postDriverClearFee :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ClearDriverFeeReq -> Environment.Flow APISuccess
 postDriverClearFee merchantShortId opCity apiTokenInfo driverId req = do

@@ -43,6 +43,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateVehicleVariant,
     postDriverBulkReviewRCVariant,
     postDriverUpdateDriverTag,
+    postDriverUpdateSpecialLocWarrior,
     postDriverClearFee,
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
@@ -183,6 +184,7 @@ import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Status as QDocStatus
+import qualified Storage.Queries.Transformers.DriverInformation as TDI
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Tools.ActorInfo as ActorInfo
@@ -929,6 +931,56 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
     QPerson.updateDriverTag (Just tag) personId
   pure Success
+
+---------------------------------------------------------------------
+postDriverUpdateSpecialLocWarrior :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverSpecialLocWarriorReq -> Flow APISuccess
+postDriverUpdateSpecialLocWarrior merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+
+  let preferredPrimarySpecialLocationId =
+        if req.isSpecialLocWarrior
+          then req.preferredPrimarySpecialLocId <|> driverInfo.preferredPrimarySpecialLocId
+          else Nothing
+      preferredSecondarySpecialLocIds =
+        if req.isSpecialLocWarrior
+          then req.preferredSecondarySpecialLocIds
+          else []
+      validatePreferredSpecialLocId specialLocId = do
+        mbSpecialLoc <- TDI.getPreferredPrimarySpecialLoc (Just specialLocId.getId)
+        unless (maybe False (\specialLoc -> specialLoc.merchantOperatingCityId == Just merchantOpCityId.getId && not (null specialLoc.gates)) mbSpecialLoc) $
+          throwError (InvalidRequest $ "Invalid preferredSpecialLocId: " <> specialLocId.getId)
+  when (req.isSpecialLocWarrior && isNothing preferredPrimarySpecialLocationId) $
+    throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
+  whenJust preferredPrimarySpecialLocationId validatePreferredSpecialLocId
+  mapM_ validatePreferredSpecialLocId preferredSecondarySpecialLocIds
+
+  metroWarriorTagValidity <- Yudhishthira.fetchNammaTagValidity (cast merchantOpCityId) $ LYT.TagName "MetroWarrior"
+  now <- getCurrentTime
+  let enabledAt = if req.isSpecialLocWarrior then Just now else Nothing
+  QDriverInfo.updateSpecialLocWarriorInfo req.isSpecialLocWarrior preferredPrimarySpecialLocationId preferredSecondarySpecialLocIds enabledAt personId
+
+  let mbOlderDriverTag = mkDriverTag <$> driverInfo.preferredPrimarySpecialLocId <*> pure driverInfo.preferredSecondarySpecialLocIds <*> pure metroWarriorTagValidity <*> pure now
+      mbDriverTag = mkDriverTag <$> preferredPrimarySpecialLocationId <*> pure preferredSecondarySpecialLocIds <*> pure metroWarriorTagValidity <*> pure now
+      updatedTags =
+        case (req.isSpecialLocWarrior, mbDriverTag) of
+          (True, Just driverTag) -> Just $ Yudhishthira.replaceTagNameValue driver.driverTag driverTag
+          (False, _) -> maybe driver.driverTag (Just . Yudhishthira.removeTagName driver.driverTag) mbOlderDriverTag
+          _ -> driver.driverTag
+  unless ((Yudhishthira.showRawTags <$> updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
+    QPerson.updateDriverTag updatedTags personId
+  pure Success
+  where
+    mkDriverTag prefPrimarySpecialLocationId prefSecondarySpecialLocIds metroWarriorTagValidity now =
+      let tagNameValue =
+            if null prefSecondarySpecialLocIds
+              then LYT.TagNameValue $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId
+              else LYT.TagNameValue $ "MetroWarrior#" <> prefPrimarySpecialLocationId.getId <> "&" <> T.intercalate "&" (map (.getId) prefSecondarySpecialLocIds)
+       in Yudhishthira.addTagExpiry tagNameValue metroWarriorTagValidity now
 
 ---------------------------------------------------------------------
 postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
