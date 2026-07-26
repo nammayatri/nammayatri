@@ -1,0 +1,201 @@
+{-
+
+  Copyright 2022-23, Juspay India Pvt Ltd
+
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module Components.SearchLocationModel.Controller where
+
+import Components.LocationListItem as LocationListItem
+import Components.LocationTagBar as LocationTagBarController
+import Components.PrimaryButton as PrimaryButton
+import Components.Selector as Selector
+import Components.DateTimeSelector as DateTimeSelector
+import Data.Maybe (Maybe(..))
+import Prelude (show)
+import Effect (Effect)
+import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
+import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..), FareProductType(..))
+import MerchantConfig.Types (AppConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Common.Types.App (LazyCheck(..),TicketType(..))
+import Prelude
+import Foreign.Object (Object)
+import Foreign (Foreign)
+import Screens.Types (DateTimeConfig)
+import PrestoDOM
+import Styles.Colors as Color
+import Language.Types 
+import Components.RequestInfoCard as RequestInfoCardController
+
+data Action = GoBack
+            | NoAction
+            | SourceChanged String
+            | DestinationChanged String
+            | SourceClear
+            | UpdateSource Number Number String
+            | DestinationClear
+            | SetLocationOnMap
+            | SetCurrentLocation
+            | EditTextFocusChanged String
+            | LocationListItemActionController LocationListItem.Action
+            | PrimaryButtonActionController PrimaryButton.Action
+            | DebounceCallBack String Boolean
+            | SavedAddressClicked LocationTagBarController.Action
+            | UpdateCurrentLocation String String
+            | RecenterCurrentLocation
+            | DateTimePickerButtonClicked
+            | GoBackSearchModel
+            | RequestInfoCardAction RequestInfoCardController.Action
+            | RideInfoButtonPressed
+            | DateSelectButtonClicked DateTimeSelector.Action
+            | SelectorControllerAction Selector.Action
+
+
+type SearchLocationModelState = {
+    isSearchLocation :: SearchLocationModelType
+  , locationList :: Array LocationListItemState
+  , savedlocationList :: Array LocationListItemState
+  , isSource :: Maybe Boolean
+  , source :: String
+  , destination :: String
+  , isSrcServiceable :: Boolean
+  , isDestServiceable :: Boolean
+  , isRideServiceable :: Boolean
+  , appConfig :: AppConfig
+  , logField :: Object Foreign
+  , crossBtnSrcVisibility :: Boolean
+  , crossBtnDestVisibility :: Boolean
+  , isAutoComplete :: Boolean
+  , showLoader :: Boolean
+  , prevLocation :: String
+  , isEditDestination :: Boolean
+  , isDestViewEditable :: Boolean
+  , isPrimaryButtonForEditDest :: Boolean
+  , currentLocationText :: String
+  , suffixButtonVisibility :: Visibility
+  , suffixButton :: ButtonLayoutConfig
+  , headerVisibility :: Boolean
+  , headerText :: String
+  , tripType :: TicketType
+  , pickupConfig :: DateTimeSelector.DateSelectorConfig 
+  , returnConfig :: DateTimeSelector.DateSelectorConfig
+  , totalRideDuration :: Int
+  , totalRideDistance :: Int
+  , showRideInfo :: Boolean
+  , isIntercityFlow :: Boolean
+  , fareProductType :: FareProductType
+}
+
+type ButtonLayoutConfig = 
+  { text :: String
+  , fontStyle :: Array (Prop (Effect Unit))
+  , prefixImage :: String
+  , suffixImage :: String
+  , padding :: Padding
+  , gravity :: Gravity
+  }
+
+
+dummy_data :: Array LocationListItemState
+dummy_data = [
+    { prefixImageUrl : fetchImage FF_ASSET "ny_ic_briefcase"
+    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
+    , postfixImageVisibility : true
+    , title : "Work"
+    , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+    , placeId : Nothing
+    , lat : Nothing
+    , lon : Nothing
+    , description : ""
+    , tag : ""
+    , tagType : Just (show LOC_LIST)
+    , cardType : Nothing
+    , address : ""
+    , tagName : ""
+    , isEditEnabled : true
+    , savedLocation : ""
+    , placeName : ""
+    , isClickable : true
+    , alpha : 1.0
+    , fullAddress : LocationListItem.dummyAddress
+    , locationItemType : Nothing
+    , distance : Nothing
+    , showDistance : Just false
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+    , dynamicAction : Nothing
+    , types : Nothing
+    }
+  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
+    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
+    , postfixImageVisibility : true
+    , title : "Work"
+    , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+    , placeId : Nothing
+    , lat : Nothing
+    , lon : Nothing
+    , description : ""
+    , tag : ""
+    , tagType : Just (show LOC_LIST)
+    , cardType : Nothing
+    , address : ""
+    , tagName : ""
+    , isEditEnabled : true
+    , savedLocation : ""
+    , placeName : ""
+    , isClickable : true
+    , alpha : 1.0
+    , fullAddress : LocationListItem.dummyAddress
+    , locationItemType : Nothing
+    , distance : Nothing
+    , showDistance : Just false
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+    , dynamicAction : Nothing
+    , types : Nothing
+    }
+  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
+    , postfixImageVisibility : true
+    , title : "Work"
+    , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
+    , placeId : Nothing
+    , lat : Nothing
+    , lon : Nothing
+    , description : ""
+    , tag : ""
+    , tagType : Just (show LOC_LIST)
+    , cardType : Nothing
+    , address : ""
+    , tagName : ""
+    , isEditEnabled : true
+    , savedLocation : ""
+    , placeName : ""
+    , isClickable : true
+    , alpha : 1.0
+    , fullAddress : LocationListItem.dummyAddress
+    , locationItemType : Nothing
+    , distance : Nothing
+    , showDistance : Just false
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+    , dynamicAction : Nothing
+    , types : Nothing
+    }
+]
