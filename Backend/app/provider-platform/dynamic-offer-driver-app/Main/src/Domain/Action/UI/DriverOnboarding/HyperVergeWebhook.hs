@@ -66,7 +66,7 @@ hyperVergeResultWebhookHandler payload = do
   void $
     withTryCatch
       "hyperVergeResultWebhookHandler:refreshDocsVerificationStatuses"
-      (void $ SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent imageEntity.personId))
+      (void $ SStatus.runRefreshOnboardingFlagsDriver Nothing Nothing imageEntity.personId)
   return Ack
   where
     convertHVStatusToPanValidationStatus :: (MonadFlow m) => Text -> m Documents.VerificationStatus
@@ -125,7 +125,7 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
         KEV.RCResp resp -> do
           logDebug $ "RC: getTask api response for request id : " <> reqId <> " is : " <> show resp
           ack_ <- DRC.onVerifyRC person (Just $ SLogicOnboarding.makeHVVerificationReqRecord verificationReq) (resp {Verification.registrationNumber = Just regNum}) mbRemPriorityList Nothing Nothing verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just KEV.HyperVergeRCDL) Nothing
-          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+          void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing verificationReq.driverId
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
     "checkDL" -> do
@@ -134,7 +134,7 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
         KEV.DLResp resp -> do
           logDebug $ "DL: getTask api response for request id : " <> reqId <> " is : " <> show resp
           ack_ <- DDL.onVerifyDL (SLogicOnboarding.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL
-          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+          void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing verificationReq.driverId
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
     _ -> throwError $ InvalidWebhookPayload "HyperVerge" ("Payload contains invalid endpoint parameter value. Payload : " <> show parsedPayload)

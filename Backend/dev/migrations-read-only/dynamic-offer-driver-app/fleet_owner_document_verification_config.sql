@@ -58,7 +58,17 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN is_approval_supported boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN document_onboarding_stage text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN is_default_verified_on_manual_verification boolean ;
 
 
 ------- SQL updates -------

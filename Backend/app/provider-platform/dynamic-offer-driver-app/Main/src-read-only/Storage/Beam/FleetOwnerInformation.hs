@@ -36,6 +36,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     businessLicenseNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    disabledReasonFlag :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

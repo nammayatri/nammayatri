@@ -1286,6 +1286,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         faceMatchSourceDoc = Nothing,
         markImageValidOnValidationSkip = Nothing,
         documentOnboardingStage = SDO.castDocumentOnboardingStageFromCommon <$> documentOnboardingStage,
+        isDefaultVerifiedOnManualVerification = Nothing,
         ..
       }
   where
