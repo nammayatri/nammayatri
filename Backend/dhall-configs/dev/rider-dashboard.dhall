@@ -4,6 +4,8 @@ let sec = ./secrets/rider-dashboard.dhall
 
 let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
 
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = env:DB_PRIMARY_PORT ? 5434
@@ -51,6 +53,12 @@ let appBackendManagement =
       { name = common.ServerName.APP_BACKEND_MANAGEMENT
       , url = "http://localhost:${riderAppPort}/"
       , token = sec.appBackendToken
+      }
+
+let driverOfferBppManagement =
+      { name = common.ServerName.DRIVER_OFFER_BPP_MANAGEMENT
+      , url = "http://localhost:${driverAppPort}/"
+      , token = sec.driverOfferBppToken
       }
 
 let bharatTaxi =
@@ -139,7 +147,8 @@ in  { esqDBCfg
     , loginRateLimitOptions
     , encTools
     , exotelToken = ""
-    , dataServers = [ appBackend, appBackendManagement, bharatTaxi ]
+    , dataServers =
+      [ appBackend, appBackendManagement, driverOfferBppManagement, bharatTaxi ]
     , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
