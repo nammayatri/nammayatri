@@ -92,7 +92,7 @@ export const ServicePortsModal: React.FC<{ onClose: () => void }> = ({ onClose }
         {data?.error && (
           <div className="spm-error">
             {data.error}
-            <div className="spm-hint">Ports are published by the stack at <code>&lt;workspace&gt;/data/devbox-ports.json</code> — start the stack, then refresh.</div>
+            <div className="spm-hint">Ports are published by the stack at <code>&lt;workspace&gt;/data/ports.json</code> — start the stack, then refresh.</div>
           </div>
         )}
 

@@ -171,11 +171,11 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 
-# Resolved ports, in preference order: data/devbox-ports.json published by the
+# Resolved ports, in preference order: data/ports.json published by the
 # run-mobility-stack-dev preflight (single source of truth, also what the local
 # test-dashboard SSHes in to read), then the devbox registry slice
 # (.users[DEVBOX_KEY].ports), then the base ports.nix.
-DEVBOX_PORTS_FILE = PROJECT_ROOT / "data" / "devbox-ports.json"
+DEVBOX_PORTS_FILE = PROJECT_ROOT / "data" / "ports.json"
 DEVBOX_REGISTRY_FILE = os.environ.get("DEVBOX_REGISTRY_FILE", "/tmp/devbox-registry.json")
 PORTS_BASE_PATH = PROJECT_ROOT / "Backend" / "nix" / "services" / "ports.nix"
 
@@ -238,7 +238,7 @@ def _read_ports_from_registry():
 
 
 def _read_ports_from_publish():
-    """{ 'service-name': port, ... } from data/devbox-ports.json, or None."""
+    """{ 'service-name': port, ... } from data/ports.json, or None."""
     try:
         with open(DEVBOX_PORTS_FILE) as f:
             data = json.load(f)
@@ -266,7 +266,7 @@ def _read_ports_from_nix(path):
 def _read_ports_table():
     """Return { 'source': ..., 'ports': { 'service-name': 1234, ... } }.
 
-    Prefers this workspace's data/devbox-ports.json (the DYNAMICALLY resolved
+    Prefers this workspace's data/ports.json (the DYNAMICALLY resolved
     ports published by the preflight), then the devbox-registry.json slice, then
     the base Backend/nix/services/ports.nix. Used by the dashboard for runtime port
     discovery — see GET /api/ports — and by _svc_port()."""

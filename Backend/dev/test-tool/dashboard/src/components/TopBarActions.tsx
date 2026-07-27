@@ -3,7 +3,7 @@ import './TopBarActions.css';
 import { showAlert, showConfirm } from './Dialogs';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
-import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getStackServiceUrl, getCaddyServiceUrl } from '../config';
+import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getStackServiceUrl } from '../config';
 import { Terminal as IntegratedTerminal } from './Terminal';
 import { ServicePortsModal } from './ServicePortsModal';
 import { FinanceViewer } from './FinanceViewer';
@@ -296,13 +296,7 @@ export const TopBarActions: React.FC = () => {
     setTimeout(() => setFlushState('idle'), 3000);
   };
 
-  // Both live on the stack host, not on this machine. DB Manager has to go
-  // through caddy: its static server binds 127.0.0.1 and its bundle resolves
-  // the API against window.location.origin, so only the caddy origin works.
-  // Metabase binds 0.0.0.0, so the direct port is fine (and it dislikes being
-  // served under a path prefix).
-  const dbManagerUrl = getCaddyServiceUrl('db-manager-frontend')
-    ?? getStackServiceUrl('db-manager-frontend');
+  const dbManagerUrl = getStackServiceUrl('db-manager-frontend');
   const metabaseUrl = getStackServiceUrl('metabase');
 
   const syncBtnLabel = syncRunning

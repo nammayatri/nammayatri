@@ -31,7 +31,7 @@ export function getContextApiBaseOverride(): string | null { return _readContext
 
 // Point the dashboard at whichever stack this checkout targets, without anyone
 // clicking anything: local-api resolves {host, contextApiPort} from the stack's
-// data/devbox-ports.json (over SSH for a devbox). PROXY_BASE is a module-level
+// data/ports.json (over SSH for a devbox). PROXY_BASE is a module-level
 // binding read synchronously all over the app, so a change means persisting the
 // new base and reloading once — the guard below keeps that to a single reload.
 const CTX_SYNC_GUARD = 'ny.contextApiBase.syncedTo';
@@ -130,21 +130,11 @@ export function getStackServiceUrl(name: string, pathSuffix = ''): string {
   return `http://${_stackHost}:${getServicePort(name)}${pathSuffix}`;
 }
 
-/**
- * http://<stack-host>:<caddyPort>/<name>/ — required by services that bind
- * 127.0.0.1 or resolve their own API against window.location.origin
- * (db-manager-frontend does both). Null when no caddy port is known.
- */
-export function getCaddyServiceUrl(name: string): string | null {
-  if (_caddyPort == null) return null;
-  return `http://${_stackHost}:${_caddyPort}/${name}/`;
-}
-
 // Async refresh. Invoked once on app boot (see App.tsx). Subsequent renders
 // of consumer components will see the resolved table.
 // Preference order:
 //   1. local-api GET /api/devbox/ports — the single accessor, which reads
-//      .devbox-ports.json off the stack host (over SSH when it's a devbox).
+//      data/ports.json off the stack host (over SSH when it's a devbox).
 //   2. context-api GET /api/ports — for a deployed dashboard with no local-api.
 //   3. DEFAULT_PORTS / the localStorage cache.
 export async function refreshPortsTable(): Promise<void> {
@@ -156,7 +146,7 @@ export async function refreshPortsTable(): Promise<void> {
   };
   const applyHost = (host?: string, caddyPort?: number | null): void => {
     if (host) _stackHost = host;
-    if (typeof caddyPort === 'number') _caddyPort = caddyPort;
+    _caddyPort = typeof caddyPort === 'number' ? caddyPort : null;
     try {
       window.localStorage?.setItem(
         HOST_CACHE_KEY, JSON.stringify({ host: _stackHost, caddyPort: _caddyPort }),

@@ -219,6 +219,16 @@
           config.mission-control.wrapper
           gtfstidy
           (python3.withPackages (ps: with ps; [ psycopg2 boto3 python-dotenv requests rich websockets ]))
+        ] ++ [
+          # The stack runners are part of the shell's closure on purpose: a
+          # process-compose package is a *separate* derivation, so without this
+          # `nix develop` fetches only the shell's own tools and the whole
+          # service closure (postgres, kafka, clickhouse, caddy, metabase,
+          # osrm, the db-manager npm packages, …) downloads later, on the first
+          # `, run-mobility-stack-dev`. Listing them here moves that download to
+          # shell-entry time, so starting the stack is offline-fast.
+          self'.packages.run-mobility-stack-dev
+          self'.packages.run-mobility-stack-dev-on-available-ports
         ] ++ (lib.optionals pkgs.stdenv.isLinux [
           # TODO: Use wkhtmltopdf  (with macOS support) after updating common/nixpkgs-latest
           # common/nixpkgs-latest update requires https://github.com/NixOS/nixpkgs/pull/465567

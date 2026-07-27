@@ -933,7 +933,7 @@ BUILD_STATE_EXCLUDES = [
 CABAL_CLEAN_TARGETS = [e for e in BUILD_STATE_EXCLUDES if e != "cabal.project.local"]
 
 # Per-machine state: never copied, and never deleted by cabal clean either.
-# data/ holds the stack host's own published port map (data/devbox-ports.json)
+# data/ holds the stack host's own published port map (data/ports.json)
 # plus its service state, so excluding it keeps a redeploy from clobbering them.
 MACHINE_STATE_EXCLUDES = [
     "data", "node_modules", ".direnv",
@@ -972,7 +972,7 @@ _SSH_KEY_CANDIDATES = [
     os.path.expanduser("~/.ssh/id_rsa"),
     os.path.expanduser("~/.ssh/id_ecdsa"),
 ]
-BASE_API_HOST = os.environ.get("BASE_API_HOST", "34.100.155.111")
+BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
 
 
@@ -1333,7 +1333,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
 
     # Persist the connection coordinates too: this file is the ONLY local record
     # of where the devbox is. get_devbox_ports() reads host/sshUser/sshPort/
-    # remoteDir from here to SSH in and cat the stack's data/devbox-ports.json.
+    # remoteDir from here to SSH in and cat the stack's data/ports.json.
     # Both addresses are recorded with the subnet each was matched against, plus
     # which one won — so the LAN-vs-VPN decision is inspectable after the fact
     # and the other address is available as a fallback without re-discovery.
@@ -1620,14 +1620,14 @@ def _register_dev_user(ssh_user: str, host: str, port: int, identity: str | None
 # ── Devbox port discovery (single source of truth) ──
 #
 # The stack's run-mobility-stack-dev preflight publishes its resolved port map
-# at <workspace>/data/devbox-ports.json on the machine it runs on. Nothing is
+# at <workspace>/data/ports.json on the machine it runs on. Nothing is
 # ever mirrored locally: every consumer — the dashboard's port table, Tools →
 # Service Ports, launcher-spec ${ports.*} / ${host} — goes through
 # get_devbox_ports(), which reads that one file (directly for a local stack,
 # over SSH for a devbox, using the coordinates in .devbox-id.json).
 
-DEVBOX_PORTS_RELPATH = "data/devbox-ports.json"
-DEVBOX_PORTS_FILE = PROJECT_ROOT / "data" / "devbox-ports.json"
+DEVBOX_PORTS_RELPATH = "data/ports.json"
+DEVBOX_PORTS_FILE = PROJECT_ROOT / "data" / "ports.json"
 _DEVBOX_PORTS_TTL = 5.0
 
 _devbox_ports_lock = threading.Lock()
@@ -1652,7 +1652,7 @@ def _shape_ports(payload: dict, source: str, host: str) -> dict:
     ports = payload.get("ports") if isinstance(payload, dict) else None
     if not isinstance(ports, dict) or not ports:
         return {"source": source, "host": host, "ports": {},
-                "error": "no ports in devbox-ports.json — is the stack running?"}
+                "error": "no ports in data/ports.json — is the stack running?"}
     ports = {k: int(v) for k, v in ports.items()}
     return {
         "source": source,
@@ -1661,7 +1661,7 @@ def _shape_ports(payload: dict, source: str, host: str) -> dict:
         "dir": payload.get("dir"),
         "ports": ports,
         "caddyRoutes": payload.get("caddyRoutes") or [],
-        "caddyPort": payload.get("caddyPort") or ports.get("caddy-reverse-proxy"),
+        "caddyPort": payload.get("caddyPort"),
         "contextApiPort": ports.get("test-context-api"),
     }
 
@@ -1706,7 +1706,7 @@ def get_devbox_ports(force: bool = False, host_override: str | None = None) -> d
                       "error": "incomplete .devbox-id.json — resolve the devbox first"}
         else:
             # Fall back to the registry slice for stacks started before the
-            # preflight learned to publish data/devbox-ports.json.
+            # preflight learned to publish data/ports.json.
             dev_key = saved.get("id") or ""
             fallback = (
                 f"jq -c --arg k {shlex.quote(dev_key)} "
@@ -1723,7 +1723,7 @@ def get_devbox_ports(force: bool = False, host_override: str | None = None) -> d
                 else:
                     err = (proc.stderr or b"").decode(errors="replace").strip()
                     result = {"source": source, "host": host, "ports": {},
-                              "error": err or "no data/devbox-ports.json on the devbox — is the stack running?"}
+                              "error": err or "no data/ports.json on the devbox — is the stack running?"}
             except Exception as e:
                 result = {"source": source, "host": host, "ports": {}, "error": str(e)}
 
@@ -3932,7 +3932,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             return True
 
         # GET /api/devbox/ports[?refresh=1][&host=...]
-        # Single source of truth for resolved ports: reads data/devbox-ports.json
+        # Single source of truth for resolved ports: reads data/ports.json
         # from the stack host (locally, or over SSH using .devbox-id.json).
         if method == "GET" and path == "/api/devbox/ports":
             from urllib.parse import parse_qs as _pq
