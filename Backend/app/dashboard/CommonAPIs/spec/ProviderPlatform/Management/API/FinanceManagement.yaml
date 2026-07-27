@@ -23,6 +23,8 @@ imports:
   AuditEntityType: Lib.Finance.Domain.Types.AuditEntry
   ActorType: Lib.Finance.Core.Types
   SubscriptionCreditAllocation: Lib.Finance.Domain.Types.LedgerEntry
+  TransactionType: Lib.Finance.Domain.Types.SapJournalEntry
+  JournalEntryStatus: Lib.Finance.Domain.Types.SapJournalEntry
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -200,10 +202,11 @@ apis:
         dateTo: UTCTime
         limit: Int
         offset: Int
-        transactionType: Text
-        status: Text
+        transactionType: TransactionType
+        status: JournalEntryStatus
         batchId: Text
         belnr: Text
+        glNumber: Text
       auth: ApiAuthV2
       response:
         type: SapJournalListRes
@@ -212,15 +215,12 @@ apis:
   - GET: # SapJournalTransactionsAPI
       endpoint: /finance/sapJournals/transactions
       mandatoryQuery:
-        transactionType: Text
-        periodStartTime: UTCTime
-        periodEndTime: UTCTime
+        transactionType: TransactionType
+        sapBatchId: Text
       query:
         limit: Int
         offset: Int
         subscriptionId: Text
-        fromTime: UTCTime
-        toTime: UTCTime
       auth: ApiAuthV2
       response:
         type: SapJournalTransactionsRes
@@ -621,9 +621,8 @@ types:
 
   # ----- SAP Journal Entries -----
   SapJournalListRes:
-    - totalItems: Int
-    - summary: Summary
     - journals: [SapJournalItem]
+    - summary: Summary
   SapJournalItem:
     - id: Text
     - belnr: Maybe Text
@@ -659,6 +658,7 @@ types:
     - subscriptionId: Maybe Text
     - creationDate: UTCTime
     - createdBy: Text
+
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
