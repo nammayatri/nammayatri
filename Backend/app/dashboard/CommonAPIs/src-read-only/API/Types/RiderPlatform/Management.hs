@@ -16,6 +16,7 @@ import qualified API.Types.RiderPlatform.Management.Offer
 import qualified API.Types.RiderPlatform.Management.Payout
 import qualified API.Types.RiderPlatform.Management.Rewards
 import qualified API.Types.RiderPlatform.Management.Ride
+import qualified API.Types.RiderPlatform.Management.SearchTry
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.RiderPlatform.Management.SosMedia
 import qualified API.Types.RiderPlatform.Management.System
@@ -40,6 +41,7 @@ data ManagementUserActionType
   | PAYOUT API.Types.RiderPlatform.Management.Payout.PayoutUserActionType
   | REWARDS API.Types.RiderPlatform.Management.Rewards.RewardsUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
+  | SEARCH_TRY API.Types.RiderPlatform.Management.SearchTry.SearchTryUserActionType
   | SOS API.Types.RiderPlatform.Management.Sos.SosUserActionType
   | SOS_MEDIA API.Types.RiderPlatform.Management.SosMedia.SosMediaUserActionType
   | SYSTEM API.Types.RiderPlatform.Management.System.SystemUserActionType
@@ -61,6 +63,7 @@ instance Text.Show.Show ManagementUserActionType where
     PAYOUT e -> "PAYOUT/" <> show e
     REWARDS e -> "REWARDS/" <> show e
     RIDE e -> "RIDE/" <> show e
+    SEARCH_TRY e -> "SEARCH_TRY/" <> show e
     SOS e -> "SOS/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
@@ -171,6 +174,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "RIDE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( SEARCH_TRY v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SEARCH_TRY/" r,
                    ( v1,
                      r2
                      ) <-
