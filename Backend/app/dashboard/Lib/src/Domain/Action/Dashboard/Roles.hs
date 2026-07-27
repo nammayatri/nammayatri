@@ -56,6 +56,11 @@ data ListRoleRes = ListRoleRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+newtype DisableRoleReq = DisableRoleReq
+  { replacementRoleId :: Id DRole.Role
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 createRole ::
   BeamFlow m r =>
   TokenInfo ->
@@ -92,6 +97,7 @@ buildRole req = do
         description = req.description,
         accessibleRoles = [],
         isBppSyncNeeded = req.isBppSyncNeeded,
+        isDisabled = Just False,
         createdAt = now,
         updatedAt = now
       }
@@ -130,6 +136,28 @@ buildAccessMatrixItem roleId req = do
         createdAt = now,
         updatedAt = now
       }
+
+-- Soft-disable a role: migrate its users to a replacement role (which must share
+-- the same dashboardAccessType), wipe the disabled role's access-matrix rows, then
+-- flag it disabled. The role row itself is retained (never hard-deleted).
+disableRole ::
+  BeamFlow m r =>
+  TokenInfo ->
+  Id DRole.Role ->
+  DisableRoleReq ->
+  m APISuccess
+disableRole _ roleId req = do
+  when (roleId == req.replacementRoleId) $
+    throwError (InvalidRequest "Replacement role must be different from the role being disabled")
+  roleToDisable <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  replacementRole <- QRole.findById req.replacementRoleId >>= fromMaybeM (RoleDoesNotExist req.replacementRoleId.getId)
+  unless (roleToDisable.dashboardAccessType == replacementRole.dashboardAccessType) $
+    throwError RoleAccessTypeMismatch
+  persons <- QP.findAllByRole roleId
+  forM_ persons $ \person -> QP.updatePersonRole person.id replacementRole
+  QMatrix.deleteAllByRoleId roleId
+  QRole.markRoleAsDisabled roleId
+  pure Success
 
 listRoles ::
   ( BeamFlow m r,
