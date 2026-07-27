@@ -138,6 +138,7 @@ PurchasedPassPayment:
     profilePicture: Maybe Text
     passPhotoMediaId: Maybe (Id MediaFile)
     passEnum: Maybe PassEnum
+    passTypeId: Maybe (Id PassType)
 
   beamType:
     benefitDescription: Maybe Text

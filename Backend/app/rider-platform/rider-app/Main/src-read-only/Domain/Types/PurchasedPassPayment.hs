@@ -32,6 +32,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passPhotoMediaId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
+    passTypeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType),
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,

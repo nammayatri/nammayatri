@@ -324,6 +324,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passName = pass.name,
             merchantId = pass.merchantId,
             passEnum = passType >>= (.passEnum),
+            passTypeId = Just pass.passTypeId,
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
             passPhotoMediaId = mbPassPhotoMediaId,
