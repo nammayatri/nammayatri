@@ -223,6 +223,7 @@ library
       Domain.Action.Dashboard.RideBooking.Select
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.Dashboard.Route
+      Domain.Action.Dashboard.SearchTry
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
       Domain.Action.Dashboard.System
@@ -825,6 +826,7 @@ library
       API.Action.Dashboard.Management.Offer
       API.Action.Dashboard.Management.Rewards
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.SearchTry
       API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
