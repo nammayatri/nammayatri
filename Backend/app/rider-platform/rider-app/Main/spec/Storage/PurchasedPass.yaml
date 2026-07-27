@@ -3,6 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
   PassType: Domain.Types.PassType
+  Pass: Domain.Types.Pass
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
@@ -138,6 +139,7 @@ PurchasedPassPayment:
     profilePicture: Maybe Text
     passPhotoMediaId: Maybe (Id MediaFile)
     passEnum: Maybe PassEnum
+    passId: Maybe (Id Pass)
 
   beamType:
     benefitDescription: Maybe Text
