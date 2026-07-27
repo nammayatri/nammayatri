@@ -26,6 +26,8 @@ data RoleT f = RoleT
     dashboardAccessType :: B.C f Domain.DashboardAccessType,
     description :: B.C f Text,
     accessibleRoles :: B.C f [Text],
+    isBppSyncNeeded :: B.C f (Maybe Bool),
+    isDisabled :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
