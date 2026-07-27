@@ -962,7 +962,7 @@ in
             };
             location-tracking-service = {
               imports = [ common ];
-              command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
+              command = lib.getExe' ny.inputs.location-tracking-service.packages.${pkgs.system}.default "location-tracking-service";
               environment = {
                 BYPASS_LTS_S3_AND_GCP = "true";
                 SERVICE_PORT = toString ports.location-tracking-service;
@@ -977,7 +977,7 @@ in
             };
             notification-service = {
               imports = [ common ];
-              command = ny.inputs.notification-service.packages.${pkgs.system}.default;
+              command = lib.getExe' ny.inputs.notification-service.packages.${pkgs.system}.default "notification-service";
               environment = {
                 SERVICE_PORT = toString ports.notification-service-grpc;
                 GRPC_PORT = toString ports.notification-service-grpc;
@@ -1056,9 +1056,9 @@ in
                   DIR="$(mkdir -p ../data/db-manager-frontend && cd ../data/db-manager-frontend && pwd)"
                   cp -rf ${self'.packages.db-manager-frontend}/* "$DIR"/
                   chmod -R u+w "$DIR"
-                  printf '%s\n' "window.__APP_CONFIG__ = { BACKEND_URL: window.location.origin + '/db-manager-backend' };" > "$DIR/config.js"
+                  printf '%s\n' "window.__APP_CONFIG__ = { BACKEND_URL: window.location.protocol + '//' + window.location.hostname + ':${toString ports.db-manager-backend}' };" > "$DIR/config.js"
                   cd "$DIR"
-                  exec python3 -m http.server ${toString ports.db-manager-frontend} --bind 127.0.0.1
+                  exec python3 -m http.server ${toString ports.db-manager-frontend} --bind 0.0.0.0
                 '';
               };
               depends_on = {

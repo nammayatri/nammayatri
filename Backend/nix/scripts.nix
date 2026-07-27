@@ -27,6 +27,7 @@ _:
       killSvcPortsScript =
         let ports = import ./services/ports.nix; in
         killPortsSnippet (lib.attrValues ports);
+      basePortsJson = builtins.toJSON (import ./services/ports.nix);
       resolvePorts = import ./services/resolve-ports.nix { inherit pkgs lib; };
       # Nix's glibc resolves locale names ONLY through LOCALE_ARCHIVE. On a
       # non-NixOS host that variable points at the system archive
@@ -78,7 +79,7 @@ _:
             set -euo pipefail
 
             REPO_ROOT=$(git -C "''${FLAKE_ROOT}" rev-parse --show-toplevel)
-            BASE_API="''${BASE_API:-http://34.100.155.111:8787}"
+            BASE_API="''${BASE_API:-http://service-discovery.devenv.movingtech.net:8787}"
             # Same pin file the test dashboard's local-api writes — so , run-cabal-build-devbox
             # and the dashboard's Deploy/Start land on the SAME machine + /tmp/<id>/nammayatri.
             ID_FILE="$REPO_ROOT/.devbox-id.json"
@@ -402,7 +403,7 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run .#run-mobility-stack-nix -- -S NAME -d "$@"
+            nix run --option warn-dirty false .#run-mobility-stack-nix -- -S NAME -d "$@"
           '';
         };
 
@@ -412,6 +413,18 @@ _:
           exec = ''
             echo "── Pre-flight: freeing service ports ──"
             ${killSvcPortsScript}
+
+            echo "── Pre-flight: publishing data/ports.json ──"
+            mkdir -p "''${FLAKE_ROOT}/data"
+            PORTS_PUBLISH="''${FLAKE_ROOT}/data/ports.json"
+            ${pkgs.jq}/bin/jq -n \
+              --arg dev "local-$(id -un 2>/dev/null || echo dev)" \
+              --arg dir "''${FLAKE_ROOT}" \
+              --argjson ports '${basePortsJson}' \
+              '{devKey: $dev, dir: $dir, caddyPort: null, caddyRoutes: [], ports: $ports}' \
+              > "$PORTS_PUBLISH.tmp.$$"
+            mv -f "$PORTS_PUBLISH.tmp.$$" "$PORTS_PUBLISH"
+            echo "Published base ports at $PORTS_PUBLISH"
 
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
@@ -426,7 +439,7 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run .#run-mobility-stack-dev -- -S NAME -d "$@"
+            nix run --option warn-dirty false .#run-mobility-stack-dev -- -S NAME -d "$@"
           '';
         };
 
@@ -585,7 +598,7 @@ _:
             fi
             echo "Generated Caddyfile at ''${FLAKE_ROOT}/data/Caddyfile"
 
-            # ── Publish our slice at data/devbox-ports.json — the single source
+            # ── Publish our slice at data/ports.json — the single source
             #    of truth for anything outside this machine. The local
             #    test-dashboard SSHes in and cats this one file (host + workspace
             #    dir come from .devbox-id.json); test-context-api prefers it over
@@ -594,7 +607,7 @@ _:
             #    caddyRoutes is scraped from the freshly generated Caddyfile,
             #    keeping caddyfile.nix the only place the exposed-service list is
             #    maintained. ──
-            PORTS_PUBLISH="''${FLAKE_ROOT}/data/devbox-ports.json"
+            PORTS_PUBLISH="''${FLAKE_ROOT}/data/ports.json"
             CADDY_ROUTES=$(${pkgs.gnused}/bin/sed -n 's|^[[:space:]]*handle_path /\([^/]*\)/\*.*|\1|p' \
               "''${FLAKE_ROOT}/data/Caddyfile" | ${pkgs.jq}/bin/jq -R -s -c 'split("\n") | map(select(length > 0))')
             ${pkgs.jq}/bin/jq -n \
@@ -621,7 +634,7 @@ _:
             # starts) so the list only shows what the profile actually runs;
             # they are still defined, so `process-compose process start <name>`
             # can bring one up on demand.
-            nix run --impure .#run-mobility-stack-dev-on-available-ports -- -S NAME -d "$@"
+            nix run --impure --option warn-dirty false .#run-mobility-stack-dev-on-available-ports -- -S NAME -d "$@"
           '';
         };
 
@@ -638,7 +651,7 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
-            nix run .#run-mobility-stack-full -- -S NAME -d "$@"
+            nix run --option warn-dirty false .#run-mobility-stack-full -- -S NAME -d "$@"
           '';
         };
 

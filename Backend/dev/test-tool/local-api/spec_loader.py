@@ -277,7 +277,7 @@ def _stack_ports_and_host() -> tuple[Dict[str, int], str]:
     """Resolved ports + host of the stack this checkout points at.
 
     Delegates to server.get_devbox_ports() — the single accessor that reads
-    .devbox-ports.json off the stack host. Imported lazily because server.py
+    data/ports.json off the stack host. Imported lazily because server.py
     imports this module. Falls back to ({}, "localhost") when the stack is
     down, so specs keep rendering with their default ports."""
     try:

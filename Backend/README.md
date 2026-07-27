@@ -297,10 +297,10 @@ The backend stack can run on your laptop or on a separate **devbox**.
 coexist without port clashes. The `, run-mobility-stack-dev` preflight publishes
 the resolved map two ways: a slice in `/tmp/devbox-registry.json` (used for
 cross-developer port exclusion and by the Nix eval) and — the source of truth for
-everything outside the stack host — `<workspace>/data/devbox-ports.json`.
+everything outside the stack host — `<workspace>/data/ports.json`.
 
 Nothing is mirrored on the client side. `test-context-api` reads
-`data/devbox-ports.json` for `GET /api/ports`, and the test-dashboard reads it
+`data/ports.json` for `GET /api/ports`, and the test-dashboard reads it
 through local-api's `GET /api/devbox/ports`, which SSHes into the devbox using
 the host and workspace path recorded in the local `<repo-root>/.devbox-id.json`.
 `data/` is never rsynced, so a redeploy can't clobber the stack host's copy, and

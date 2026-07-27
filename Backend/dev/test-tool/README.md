@@ -130,7 +130,7 @@ Handles things the browser can't do for itself:
   same xterm.js `Terminal` component used by `context-api`'s PTY API.
 - **Port discovery** (single source of truth): `GET /api/devbox/ports
   [?refresh=1][&host=…]` returns `{host, ports, caddyPort, contextApiPort,
-  caddyRoutes}` by reading `<workspace>/data/devbox-ports.json` off the stack host —
+  caddyRoutes}` by reading `<workspace>/data/ports.json` off the stack host —
   directly when the stack is local, over SSH otherwise, using the `host`,
   `sshUser`, `sshPort` and `remoteDir` recorded in `<repo-root>/.devbox-id.json`
   by `GET /api/devbox/resolve`. Nothing is cached on disk locally; the dashboard

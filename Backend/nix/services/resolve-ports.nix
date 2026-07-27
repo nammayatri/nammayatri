@@ -5,7 +5,7 @@
 # on STDOUT (all diagnostics go to STDERR). The run-mobility-stack-dev preflight
 # captures that JSON and (a) records it in the devbox registry under DEVBOX_KEY —
 # nammayatri.nix + the Caddyfile read the ports from there — and (b) publishes it
-# at <workspace>/data/devbox-ports.json, which is what test-context-api and the test
+# at <workspace>/data/ports.json, which is what test-context-api and the test
 # dashboard's local-api read. There is no data/ports-resolved.nix file.
 #
 # Usage:

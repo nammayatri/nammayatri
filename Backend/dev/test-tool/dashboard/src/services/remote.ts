@@ -22,7 +22,7 @@ export interface RemoteSessionResponse {
 }
 
 // Resolved port map of the stack this checkout points at. local-api reads it
-// straight off the stack host's .devbox-ports.json (over SSH for a devbox), so
+// straight off the stack host's data/ports.json (over SSH for a devbox), so
 // this is the only place ports come from — nothing is mirrored locally.
 export interface DevboxPortsResponse {
   source?: string;
