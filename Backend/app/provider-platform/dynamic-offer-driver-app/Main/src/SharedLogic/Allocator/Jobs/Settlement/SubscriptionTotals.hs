@@ -1,21 +1,19 @@
 module SharedLogic.Allocator.Jobs.Settlement.SubscriptionTotals
   ( SubscriptionTotals (..),
+    SubscriptionTransactionRow (..),
     PGSettlementTotals (..),
+    PGSettlementTransactionRow (..),
     fetchSubscriptionTotals,
     fetchPGSettlementTotals,
   )
 where
 
-import qualified Database.Beam as B
-import qualified Database.Beam.Query ()
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified EulerHS.Language as L
-import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgDom
-import qualified Storage.Beam.Common as BeamCommon
+import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReport as QPgReport
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 
 -- ---------------------------------------------------------------------------
@@ -32,23 +30,35 @@ data SubscriptionTotals = SubscriptionTotals
   }
   deriving (Generic)
 
+data SubscriptionTransactionRow = SubscriptionTransactionRow
+  { subscriptionId :: Text,
+    debitAmount :: HighPrecMoney,
+    creditAmount :: HighPrecMoney,
+    status :: Text
+  }
+  deriving (Generic)
+
 fetchSubscriptionTotals ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m SubscriptionTotals
+  m (SubscriptionTotals, [SubscriptionTransactionRow])
 fetchSubscriptionTotals merchantOpCityId fromTime toTime = do
-  (mbGross, mbCgst, mbSgst, mbIgst, mbNet, count) <- QSP.findSubscriptionTotalsByDateRange merchantOpCityId fromTime toTime
-  pure
-    SubscriptionTotals
-      { grossAmount = fromMaybe 0 mbGross,
-        cgst = fromMaybe 0 mbCgst,
-        sgst = fromMaybe 0 mbSgst,
-        igst = fromMaybe 0 mbIgst,
-        netAmount = fromMaybe 0 mbNet,
-        txnCount = count
-      }
+  rows <- QSP.findSubscriptionTotalsByDateRange merchantOpCityId fromTime toTime
+  let (totals, txnRowsRev) = foldl' go (SubscriptionTotals 0 0 0 0 0 0, []) rows
+  pure (totals, reverse txnRowsRev)
+  where
+    go (acc, rs) (spId, planFee, cgstAmt, sgstAmt, igstAmt, taxableVal, st) =
+      ( acc{grossAmount = acc.grossAmount + planFee,
+            cgst = acc.cgst + cgstAmt,
+            sgst = acc.sgst + sgstAmt,
+            igst = acc.igst + igstAmt,
+            netAmount = acc.netAmount + taxableVal,
+            txnCount = acc.txnCount + 1
+           },
+        SubscriptionTransactionRow spId planFee (cgstAmt + sgstAmt + igstAmt + taxableVal) (show st) : rs
+      )
 
 -- ---------------------------------------------------------------------------
 -- PG settlement totals (aggregated by txnType)
@@ -64,62 +74,38 @@ data PGSettlementTotals = PGSettlementTotals
   }
   deriving (Generic)
 
+data PGSettlementTransactionRow = PGSettlementTransactionRow
+  { amount :: HighPrecMoney,
+    txnType :: PgDom.TxnType,
+    txnStatus :: Text,
+    subscriptionPurchaseId :: Maybe Text
+  }
+  deriving (Generic)
+
 fetchPGSettlementTotals ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m PGSettlementTotals
+  m (PGSettlementTotals, [PGSettlementTransactionRow], [PGSettlementTransactionRow], [PGSettlementTransactionRow])
 fetchPGSettlementTotals merchantId merchantOperatingCityId fromTime toTime = do
-  (mbOrder, mbRefund, mbChargeback, mbOrderCnt, mbRefundCnt, mbChargebackCnt) <- findPGSettlementTotalsByDateRange merchantId merchantOperatingCityId fromTime toTime
-  pure
-    PGSettlementTotals
-      { totalOrderAmount = fromMaybe 0 mbOrder,
-        totalRefundAmount = fromMaybe 0 mbRefund,
-        totalChargebackAmount = fromMaybe 0 mbChargeback,
-        orderCount = fromMaybe 0 mbOrderCnt,
-        refundCount = fromMaybe 0 mbRefundCnt,
-        chargebackCount = fromMaybe 0 mbChargebackCnt
-      }
-
-findPGSettlementTotalsByDateRange ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Text ->
-  Id DMOC.MerchantOperatingCity ->
-  UTCTime ->
-  UTCTime ->
-  m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe Int, Maybe Int, Maybe Int)
-findPGSettlementTotalsByDateRange merchantId merchantOperatingCityId startTime endTime = do
-  dbConf <- getReplicaBeamConfig
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.aggregate_
-            ( \r ->
-                ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.ifThenElse_ (r.txnType B.==. B.val_ PgDom.ORDER) r.txnAmount (B.val_ 0)),
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.ifThenElse_ (r.txnType B.==. B.val_ PgDom.REFUND) (B.coalesce_ [r.refundAmount] (B.val_ 0)) (B.val_ 0)),
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ (B.ifThenElse_ (r.txnType B.==. B.val_ PgDom.CHARGEBACK) (B.coalesce_ [r.chargebackAmount] (B.val_ 0)) (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.ifThenElse_ (r.txnType B.==. B.val_ PgDom.ORDER) (B.val_ (1 :: Int)) (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.ifThenElse_ (r.txnType B.==. B.val_ PgDom.REFUND) (B.val_ (1 :: Int)) (B.val_ 0)),
-                  B.as_ @(Maybe Int) $ B.sum_ (B.ifThenElse_ (r.txnType B.==. B.val_ PgDom.CHARGEBACK) (B.val_ (1 :: Int)) (B.val_ 0))
-                )
-            )
-            $ B.filter_'
-              ( \r ->
-                  r.merchantId B.==?. B.val_ merchantId
-                    B.&&?. r.merchantOperatingCityId B.==?. B.val_ merchantOperatingCityId.getId
-                    B.&&?. r.orderType B.==?. B.val_ (Just PgDom.SUBSCRIPTION)
-                    B.&&?. r.isValidSubscriptionPurchase B.==?. B.val_ (Just True)
-                    B.&&?. B.sqlBool_ (B.isJust_ r.settlementDate)
-                    B.&&?. B.sqlBool_ (B.fromMaybe_ (B.val_ startTime) r.settlementDate B.>=. B.val_ startTime)
-                    B.&&?. B.sqlBool_ (B.fromMaybe_ (B.val_ endTime) r.settlementDate B.<=. B.val_ endTime)
-              )
-              (B.all_ (BeamCommon.pgPaymentSettlementReport BeamCommon.atlasDB))
-  case res of
-    Right [row] -> pure row
-    Right _ -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
-    Left err -> do
-      L.logError ("findPGSettlementTotalsByDateRange" :: Text) $ "failed for merchantId=" <> merchantId <> " error=" <> show err
-      pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+  reports <- QPgReport.findPGSettlementTotalsByDateRange merchantId merchantOperatingCityId.getId fromTime toTime
+  let (totals, ordersRev, refundsRev, chargebacksRev) = foldl' go (PGSettlementTotals 0 0 0 0 0 0, [], [], []) reports
+  pure (totals, reverse ordersRev, reverse refundsRev, reverse chargebacksRev)
+  where
+    go (acc, orders, refunds, chargebacks) r =
+      let row = toTransactionRow r
+       in case r.txnType of
+            PgDom.ORDER ->
+              (acc {totalOrderAmount = acc.totalOrderAmount + row.amount, orderCount = acc.orderCount + 1}, row : orders, refunds, chargebacks)
+            PgDom.REFUND ->
+              (acc {totalRefundAmount = acc.totalRefundAmount + row.amount, refundCount = acc.refundCount + 1}, orders, row : refunds, chargebacks)
+            PgDom.CHARGEBACK ->
+              (acc {totalChargebackAmount = acc.totalChargebackAmount + row.amount, chargebackCount = acc.chargebackCount + 1}, orders, refunds, row : chargebacks)
+    toTransactionRow r =
+      let amt = case r.txnType of
+            PgDom.ORDER -> r.txnAmount
+            PgDom.REFUND -> fromMaybe 0 r.refundAmount
+            PgDom.CHARGEBACK -> fromMaybe 0 r.chargebackAmount
+       in PGSettlementTransactionRow amt r.txnType (show r.txnStatus) r.subscriptionPurchaseId

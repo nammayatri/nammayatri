@@ -17,7 +17,6 @@ import Kernel.Types.Id
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
-import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.SubscriptionPurchase as Beam
@@ -342,68 +341,27 @@ findByFinanceInvoiceId ::
 findByFinanceInvoiceId invoiceId =
   findOneWithKV [Se.Is Beam.financeInvoiceId $ Se.Eq (Just (Kernel.Types.Id.getId invoiceId))]
 
-findSubscriptionPurchasesWithTaxByDateRange ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Id DMOC.MerchantOperatingCity ->
-  UTCTime ->
-  UTCTime ->
-  Maybe Text ->
-  Maybe Int ->
-  Maybe Int ->
-  m [(Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, UTCTime)]
-findSubscriptionPurchasesWithTaxByDateRange merchantOpCityId startTime endTime mbSubscriptionId mbLimit mbOffset = do
-  let limitVal = fromIntegral $ fromMaybe 20 mbLimit
-      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-  dbConf <- getReplicaBeamConfig
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.limit_ limitVal $
-            B.offset_ offsetVal $
-              B.orderBy_ (\(sp, _itt) -> (B.desc_ sp.purchaseTimestamp, B.desc_ sp.id)) $
-                B.filter_'
-                  ( \(sp, _itt) ->
-                      sp.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
-                        B.&&?. B.sqlBool_ (sp.status B./=. B.val_ PENDING)
-                        B.&&?. B.sqlBool_ (sp.status B./=. B.val_ FAILED)
-                        B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.>=. B.val_ startTime)
-                        B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.<=. B.val_ endTime)
-                        B.&&?. maybe (B.sqlBool_ (B.val_ True)) (\subId -> sp.id B.==?. B.val_ subId) mbSubscriptionId
-                  )
-                  do
-                    sp <- B.all_ (BeamCommon.subscriptionPurchase BeamCommon.atlasDB)
-                    itt <-
-                      B.join_
-                        (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
-                        (\itt -> itt.referenceId B.==. sp.id B.&&. itt.transactionType B.==. B.val_ ITTDomain.Subscription)
-                    pure (sp, itt)
-  case res of
-    Right rows -> pure $ map (\(sp, itt) -> (Beam.id sp, Beam.planFee sp, BeamITT.cgstAmount itt, BeamITT.sgstAmount itt, BeamITT.igstAmount itt, BeamITT.taxableValue itt, Beam.purchaseTimestamp sp)) rows
-    Left err -> do
-      L.logError ("findSubscriptionPurchasesWithTaxByDateRange" :: Text) $ "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
-      pure []
-
 findSubscriptionTotalsByDateRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m (Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney, Int)
+  m [(Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, HighPrecMoney, SubscriptionPurchaseStatus)]
 findSubscriptionTotalsByDateRange merchantOpCityId startTime endTime = do
   dbConf <- getReplicaBeamConfig
   res <-
     L.runDB dbConf $
       L.findRows $
         B.select $
-          B.aggregate_
+          fmap
             ( \(sp, itt) ->
-                ( B.as_ @(Maybe HighPrecMoney) $ B.sum_ sp.planFee,
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.cgstAmount,
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.sgstAmount,
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.igstAmount,
-                  B.as_ @(Maybe HighPrecMoney) $ B.sum_ itt.taxableValue,
-                  B.as_ @Int B.countAll_
+                ( sp.id,
+                  sp.planFee,
+                  itt.cgstAmount,
+                  itt.sgstAmount,
+                  itt.igstAmount,
+                  itt.taxableValue,
+                  sp.status
                 )
             )
             $ B.filter_'
@@ -422,11 +380,10 @@ findSubscriptionTotalsByDateRange merchantOpCityId startTime endTime = do
                     (\itt -> itt.referenceId B.==. sp.id B.&&. itt.transactionType B.==. B.val_ ITTDomain.Subscription)
                 pure (sp, itt)
   case res of
-    Right [row] -> pure row
-    Right _ -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)
+    Right rows -> pure rows
     Left err -> do
       L.logError ("findSubscriptionTotalsByDateRange" :: Text) $ "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
-      pure (Nothing, Nothing, Nothing, Nothing, Nothing, 0)
+      pure []
 
 -- | Bulk shape used by the reconciliation framework: fetch every
 --   subscription_purchase whose id is in the given set. Replaces per-id
