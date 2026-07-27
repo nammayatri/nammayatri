@@ -21,6 +21,7 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.Common (getCurrentTime)
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import Storage.Beam.Common as SBC
@@ -34,6 +35,18 @@ findById roleId = findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId roleId]
 
 findByName :: BeamFlow m r => Text -> m (Maybe Role)
 findByName name = findOneWithKV [Se.Is BeamR.name $ Se.Eq name]
+
+markRoleAsDisabled :: BeamFlow m r => Id Role -> m ()
+markRoleAsDisabled roleId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.isDisabled (Just True),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id $ Se.Eq $ getId roleId]
+
+findAllByName :: BeamFlow m r => [Text] -> m [Role]
+findAllByName names = findAllWithKV [Se.Is BeamR.name $ Se.In names]
 
 findByDashboardAccessType :: BeamFlow m r => Role.DashboardAccessType -> m (Maybe Role)
 findByDashboardAccessType dashboardAccessType =
