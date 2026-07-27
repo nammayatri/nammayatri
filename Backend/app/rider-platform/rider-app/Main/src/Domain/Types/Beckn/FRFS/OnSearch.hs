@@ -98,7 +98,8 @@ data DStation = DStation
     stationLon :: Maybe Double,
     stationType :: Station.StationType,
     stopSequence :: Maybe Int,
-    towards :: Maybe Text
+    towards :: Maybe Text,
+    color :: Maybe Text
   }
   deriving (Show)
 

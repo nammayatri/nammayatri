@@ -220,7 +220,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
     mkQuote _serviceTier _vehicleType [] = return []
     mkQuote serviceTier vehicleType routesInfo = do
       logDebug $ "Routes Info Debug: " <> show routesInfo
-      let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode}) routesInfo
+      let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode, color = routeInfo.route.color}) routesInfo
           fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
       stations <- CallAPI.buildStations segments integratedBPPConfig
       (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode

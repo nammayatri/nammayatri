@@ -303,7 +303,7 @@ parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOp
       ( \route ->
           Route.Route
             { code = route.id,
-              color = Nothing,
+              color = route.color,
               dailyTripCount = route.tripCount,
               endPoint = route.endPoint,
               startPoint = route.startPoint,
