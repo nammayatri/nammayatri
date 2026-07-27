@@ -397,7 +397,7 @@ handleExit mobileNum mId stationCode exitTime = do
       person.merchantId
       person.merchantOperatingCityId
       integratedBPPConfig
-      (CallAPI.BasicRouteDetail {routeCode = "", startStopCode = entryStation, endStopCode = stationCode} :| [])
+      (CallAPI.BasicRouteDetail {routeCode = "", startStopCode = entryStation, endStopCode = stationCode, color = Nothing} :| [])
       FRFSSpec.METRO
       Nothing
       Nothing

@@ -351,7 +351,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
     mkFareRouteFromFRFSDetails :: [FRFSRouteDetails] -> Maybe Text -> CallAPI.FareRoute
     mkFareRouteFromFRFSDetails rds mbPrId =
       CallAPI.FareRoute
-        { segments = NE.fromList $ mapMaybe (\rd -> (\rc -> CallAPI.BasicRouteDetail {routeCode = rc, startStopCode = rd.startStationCode, endStopCode = rd.endStationCode}) <$> rd.routeCode) rds,
+        { segments = NE.fromList $ mapMaybe (\rd -> (\rc -> CallAPI.BasicRouteDetail {routeCode = rc, startStopCode = rd.startStationCode, endStopCode = rd.endStationCode, color = Nothing}) <$> rd.routeCode) rds,
           mbProviderRouteId = mbPrId
         }
 

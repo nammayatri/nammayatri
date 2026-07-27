@@ -203,7 +203,8 @@ mkDStation stop seqNumber = do
         stopSequence = seqNumber,
         stationLat = fst <$> mLatLon,
         stationLon = snd <$> mLatLon,
-        towards = Nothing
+        towards = Nothing,
+        color = Nothing
       }
 
 sequenceStops :: [Spec.Stop] -> [Spec.Stop]
@@ -415,7 +416,8 @@ buildDiscoveryOnSearchReq req discoveryCounter = do
             stationLon = stationLon,
             stationType = stationType,
             stopSequence = Just idx,
-            towards = Nothing
+            towards = Nothing,
+            color = Nothing
           }
 
     parseLatLong :: Maybe Text -> Maybe Maps.LatLong

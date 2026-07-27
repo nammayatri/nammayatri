@@ -161,7 +161,7 @@ getRecentRides person req = do
               mbFare <-
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
-                          let fareRoute = CallAPI.FareRoute {segments = pure CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode}, mbProviderRouteId = Nothing}
+                          let fareRoute = CallAPI.FareRoute {segments = pure CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode, color = Nothing}, mbProviderRouteId = Nothing}
                           snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRoute req.vehicleType Nothing Nothing [] [] False False
                       )
               return $

@@ -913,7 +913,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         (Just fromCode, Just toCode, Just routeCode) -> do
           case integratedBPPConfig.providerConfig of
             DIBC.CRIS config' -> do
-              (viaPoints, changeOver, rawChangeOver) <- CallAPI.getChangeOverAndViaPoints [CallAPI.BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
+              (viaPoints, changeOver, rawChangeOver) <- CallAPI.getChangeOverAndViaPoints [CallAPI.BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode, color = Nothing}] integratedBPPConfig
               routeFareReq <- CallAPI.getRouteFareRequest fromCode toCode changeOver rawChangeOver viaPoints personId False
               (_, sdkToken) <- RouteFareV3.getRouteFare config' mocId routeFareReq True
               return $ sdkToken

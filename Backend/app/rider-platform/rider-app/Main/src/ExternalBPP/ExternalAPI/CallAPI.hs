@@ -70,7 +70,8 @@ getProviderName integrationBPPConfig =
 data BasicRouteDetail = BasicRouteDetail
   { routeCode :: Text,
     startStopCode :: Text,
-    endStopCode :: Text
+    endStopCode :: Text,
+    color :: Maybe Text
   }
   deriving (Show)
 
@@ -357,21 +358,21 @@ buildStations basicRouteDetails integratedBPPConfig = do
           fromStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.startStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.startStopCode)
           toStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.endStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.endStopCode)
           stops <- OTPRest.getRouteStopMappingByRouteCode routeDetail.routeCode integratedBPPConfig
-          return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType)
+          return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType routeDetail.color)
       )
       basicRouteDetails
   return $ concat stationsArray
   where
     mapWithIndexM f xs = zipWithM f [0 ..] xs
 
-mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
-mkStations fromStation toStation stops startStopType endStopType =
+mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe Text -> Maybe [DStation]
+mkStations fromStation toStation stops startStopType endStopType routeColor =
   ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
     <&> \(startStop, endStop) ->
       do
-        let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) startStopType (Just startStop.sequenceNum) Nothing
-            endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) endStopType (Just endStop.sequenceNum) Nothing
+        let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) startStopType (Just startStop.sequenceNum) Nothing routeColor
+            endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) endStopType (Just endStop.sequenceNum) Nothing routeColor
             intermediateStations =
               (sortOn (.sequenceNum) $ filter (\stop -> stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum < endStop.sequenceNum) stops)
-                <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
+                <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing routeColor)
         [startStation] ++ intermediateStations ++ [endStation]
