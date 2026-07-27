@@ -196,6 +196,11 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN approved b
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN tds_threshold_amount double precision ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN disabled_reason_flag text ;
 
 

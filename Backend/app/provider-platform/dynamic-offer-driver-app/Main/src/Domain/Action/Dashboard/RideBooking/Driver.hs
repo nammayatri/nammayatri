@@ -605,6 +605,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         panAadhaarLinkedFlag = panAadhaarLinkedFlag',
         gstinApplicableFlag = gstinApplicableFlag',
         tdsApplicableFlag = Just tdsApplicableFlag',
+        tdsThresholdAmount = driverInfo.tdsThresholdAmount,
         walletId = (\acc -> acc.id.getId) <$> mbWalletAccount,
         bankAccountNumber = bankAccountNumber',
         bankIfsc = bankIfsc',

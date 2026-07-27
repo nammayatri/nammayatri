@@ -69,6 +69,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     stripeIdNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     subscribed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     tdsRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    tdsThresholdAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tollRouteBlockedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     vatNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

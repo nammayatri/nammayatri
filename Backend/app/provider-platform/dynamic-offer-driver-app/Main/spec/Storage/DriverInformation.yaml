@@ -148,6 +148,7 @@ DriverInformation:
     servicesEnabledForSubscription: "[ServiceNames]"
     panNumber: Maybe (EncryptedHashedField e Text)
     tdsRate: Maybe Double
+    tdsThresholdAmount: Maybe HighPrecMoney
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus

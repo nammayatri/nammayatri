@@ -55,3 +55,12 @@ WHERE document_type IN (
   );
 
 ALTER TABLE atlas_driver_offer_bpp.driver_udyam ALTER COLUMN document_image_id SET DEFAULT '29e68d5e-cd70-4d39-bd55-a2fe831524eb'; -- Please do not run this query in production.
+
+-- Skip RC association checks for DCO and fleet for MSIL_PARTNER.
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET skip_rc_association_check_for_dco = true,
+    skip_rc_association_check_for_fleet = true
+WHERE merchant_operating_city_id IN (
+    SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city
+    WHERE merchant_short_id = 'MSIL_PARTNER'
+  );

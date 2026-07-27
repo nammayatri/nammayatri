@@ -345,11 +345,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
         if transporterConfig.enableManualDocumentStatusCheck == Just True
           then Just DDVS.ADMIN_PENDING
           else Nothing
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) ((.thresholdAmount) =<< transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
-createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe HighPrecMoney -> Maybe DDVS.DocsVerificationStatus -> Flow ()
+createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTdsRate mbTdsThresholdAmount mbDocsVerificationStatus = do
   now <- getCurrentTime
   let fleetOwnerInfo =
         FOI.FleetOwnerInformation
@@ -376,6 +376,7 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             panNumber = Nothing,
             panNumberDec = Nothing,
             tdsRate = mbTdsRate,
+            tdsThresholdAmount = mbTdsThresholdAmount,
             stripeIdNumber = Nothing,
             autoPayStatus = Nothing,
             blockReasonFlag = Nothing,

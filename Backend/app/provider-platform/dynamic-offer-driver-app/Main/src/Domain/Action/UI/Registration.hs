@@ -502,6 +502,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
             tdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate,
+            tdsThresholdAmount = (.thresholdAmount) =<< transporterConfig.taxConfig.defaultTdsRate,
             aadhaarNumber = Nothing,
             dlNumber = Nothing,
             maxPickupRadius = Nothing,

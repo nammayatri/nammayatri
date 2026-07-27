@@ -756,6 +756,7 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     panAadhaarLinkedFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstinApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     tdsApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tdsThresholdAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     walletId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
