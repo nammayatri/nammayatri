@@ -43,6 +43,11 @@ type API =
                :> QueryParam "limit" Integer
                :> QueryParam "offset" Integer
                :> Get '[JSON] DRoles.ListRoleRes
+             :<|> DashboardAuth 'DASHBOARD_ADMIN
+               :> Capture "roleId" (Id DRole.Role)
+               :> "disable"
+               :> ReqBody '[JSON] DRoles.DisableRoleReq
+               :> Post '[JSON] APISuccess
          )
   )
     -- listv2 sits outside the "/admin/" prefix because, unlike create/assign/list,
@@ -62,6 +67,7 @@ handler =
   ( createRole
       :<|> assignAccessLevel
       :<|> listRoles
+      :<|> disableRole
   )
     :<|> listRolesV2
 
@@ -80,3 +86,7 @@ listRoles mbsearchstr mblimit mboffset =
 listRolesV2 :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
 listRolesV2 tokenInfo mbSearchString mbLimit mbOffset =
   withFlowHandlerAPI' (DRoles.listRolesV2 tokenInfo mbSearchString mbLimit mbOffset)
+
+disableRole :: BeamFlow' => TokenInfo -> Id DRole.Role -> DRoles.DisableRoleReq -> FlowHandler APISuccess
+disableRole tokenInfo roleId =
+  withFlowHandlerAPI' . DRoles.disableRole tokenInfo roleId
