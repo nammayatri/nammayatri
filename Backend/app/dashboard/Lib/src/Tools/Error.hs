@@ -59,6 +59,7 @@ data RoleError
   | RoleDoesNotExist Text
   | RoleNameExists Text
   | RoleConversionNotAllowed
+  | RoleAccessTypeMismatch
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RoleError
@@ -69,6 +70,7 @@ instance IsBaseError RoleError where
     RoleDoesNotExist roleId -> Just $ "No role matches passed data \"" <> show roleId <> "\" not exist."
     RoleNameExists name -> Just $ "Role with name \"" <> show name <> "\" already exists."
     RoleConversionNotAllowed -> Just "Role conversion is not allowed for BPP-synced roles."
+    RoleAccessTypeMismatch -> Just "Replacement role must have the same dashboard access type as the role being disabled."
 
 instance IsHTTPError RoleError where
   toErrorCode = \case
@@ -76,11 +78,13 @@ instance IsHTTPError RoleError where
     RoleDoesNotExist _ -> "ROLE_DOES_NOT_EXIST"
     RoleNameExists _ -> "ROLE_NAME_ALREADY_EXISTS"
     RoleConversionNotAllowed -> "ROLE_CONVERSION_NOT_ALLOWED"
+    RoleAccessTypeMismatch -> "ROLE_ACCESS_TYPE_MISMATCH"
   toHttpCode = \case
     RoleNotFound _ -> E500
     RoleDoesNotExist _ -> E400
     RoleNameExists _ -> E400
     RoleConversionNotAllowed -> E400
+    RoleAccessTypeMismatch -> E400
 
 instance IsAPIError RoleError
 

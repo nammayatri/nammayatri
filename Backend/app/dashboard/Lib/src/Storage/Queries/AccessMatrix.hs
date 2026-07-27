@@ -57,6 +57,12 @@ findAllByRoleId ::
   m [DMatrix.AccessMatrixItem]
 findAllByRoleId roleId = findAllWithKV [Se.Is BeamAM.roleId $ Se.Eq $ getId roleId]
 
+deleteAllByRoleId ::
+  BeamFlow m r =>
+  Id DRole.Role ->
+  m ()
+deleteAllByRoleId roleId = deleteWithKV [Se.Is BeamAM.roleId $ Se.Eq $ getId roleId]
+
 updateUserAccessType ::
   BeamFlow m r =>
   Id DMatrix.AccessMatrixItem ->

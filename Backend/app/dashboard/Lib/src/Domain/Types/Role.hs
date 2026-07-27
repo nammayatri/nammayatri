@@ -41,6 +41,7 @@ data Role = Role
     description :: Text,
     accessibleRoles :: [Id Role],
     isBppSyncNeeded :: Maybe Bool,
+    isDisabled :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -51,7 +52,8 @@ data RoleAPIEntity = RoleAPIEntity
     name :: Text,
     dashboardAccessType :: DashboardAccessType,
     description :: Text,
-    isBppSyncNeeded :: Maybe Bool
+    isBppSyncNeeded :: Maybe Bool,
+    isDisabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
