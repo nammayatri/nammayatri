@@ -2405,6 +2405,9 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
     (Just DP.OPERATOR, Just entityId) -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
 
@@ -2891,6 +2894,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         ( \driverInfo -> do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )
+  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
 
   pure Success
 
@@ -4534,6 +4539,8 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         ( \driverInfo ->
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )
+      when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+        void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) driverId
       pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
     _ -> do
       QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason

@@ -745,7 +745,11 @@ postDriverDeleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = 
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
+  res <- DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) personId
+  pure res
 
 ---------------------------------------------------------------------
 getDriverClearStuckOnRide :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Flow Common.ClearOnRideStuckDriversRes

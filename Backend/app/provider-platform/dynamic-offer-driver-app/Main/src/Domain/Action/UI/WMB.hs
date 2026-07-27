@@ -201,6 +201,9 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         return $ Just conductorBadge
       Nothing -> pure Nothing
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing
+  wmbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  when (wmbTransporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbTransporterConfig) driverId
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
@@ -513,7 +516,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   unless (transporterConfig.requiresOnboardingInspection == Just True) $
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) (cast driverId)
+      then void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) (cast driverId)
       else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do

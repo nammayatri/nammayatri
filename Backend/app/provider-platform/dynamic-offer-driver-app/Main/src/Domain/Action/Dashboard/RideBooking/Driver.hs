@@ -1042,7 +1042,11 @@ postDriverSetRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..}
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
+  res <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) personId
+  pure res
 
 ---------------------------------------------------------------------
 postDriverExemptDriverFee ::

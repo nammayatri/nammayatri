@@ -1251,7 +1251,7 @@ checkIfDocumentValid' mode _mbIsFleetDriver (Left fleetConfigs) role docType _ca
       not (isMandatoryForFleet config)
         || ( case status of
                MANUAL_VERIFICATION_REQUIRED -> case mode of
-                 ForVerified -> fromMaybe False config.isDefaultVerifiedOnManualVerification
+                 ForVerified -> fromMaybe True config.isDefaultVerifiedOnManualVerification
                  ForEnabling -> config.isDefaultEnabledOnManualVerification
                _ -> False
            )
@@ -1263,7 +1263,7 @@ checkIfDocumentValid' mode mbIsFleetDriver (Right driverConfigs) _role docType c
       not (isDocRequiredFor mode verificationConfig && docAppliesToDriver mbIsFleetDriver verificationConfig.applicableTo && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory))
         || ( case status of
                MANUAL_VERIFICATION_REQUIRED -> case mode of
-                 ForVerified -> fromMaybe False verificationConfig.isDefaultVerifiedOnManualVerification
+                 ForVerified -> fromMaybe True verificationConfig.isDefaultVerifiedOnManualVerification
                  ForEnabling -> verificationConfig.isDefaultEnabledOnManualVerification
                _ -> False
            )

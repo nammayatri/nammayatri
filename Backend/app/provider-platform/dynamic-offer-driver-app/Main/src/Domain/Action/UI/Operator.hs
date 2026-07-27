@@ -70,7 +70,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   unless (transporterConfig.requiresOnboardingInspection == Just True) $
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) (cast driverId)
+      then void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) (cast driverId)
       else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do

@@ -326,6 +326,8 @@ let AllocatorJobType =
       | TriggerSpecialZoneNotify
       | SAPPGSettlementDispatch
       | SAPSubscriptionPurchaseDispatch
+      | ReconciliationScheduler
+      | ReconciliationSweep
       >
 
 let jobInfoMapx =
@@ -398,6 +400,8 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SAPPGSettlementDispatch, mapValue = True }
+      , { mapKey = AllocatorJobType.ReconciliationScheduler, mapValue = True }
+      , { mapKey = AllocatorJobType.ReconciliationSweep, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
