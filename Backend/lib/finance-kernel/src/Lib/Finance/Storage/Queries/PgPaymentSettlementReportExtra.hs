@@ -187,3 +187,22 @@ findBySettlementDateRange merchantId fromDate toDate limit offset =
     (Se.Asc Beam.settlementId)
     (Just limit)
     (Just offset)
+
+findPGSettlementTotalsByDateRange ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [Domain.PgPaymentSettlementReport]
+findPGSettlementTotalsByDateRange merchantId merchantOpCityId startTime endTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is Beam.orderType $ Se.Eq (Just Domain.SUBSCRIPTION),
+          Se.Is Beam.isValidSubscriptionPurchase $ Se.Eq (Just True),
+          Se.Is Beam.settlementDate $ Se.GreaterThanOrEq (Just startTime),
+          Se.Is Beam.settlementDate $ Se.LessThanOrEq (Just endTime)
+        ]
+    ]
