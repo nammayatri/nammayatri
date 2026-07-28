@@ -6,6 +6,7 @@ imports:
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
   Value: Data.Aeson
   ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
 
 Pass:
   tableName: pass
@@ -39,6 +40,7 @@ Pass:
     benefitDescription: Text
     benefit: Maybe Benefit
     applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: Maybe VehicleCategory
     purchaseEligibilityJsonLogic: "[Value]"
     redeemEligibilityJsonLogic: "[Value]"
     pricingTiers: Maybe Value

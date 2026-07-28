@@ -39,6 +39,7 @@ data PassT f = PassT
     pricingTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     purchaseEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
+    vehicleType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory),
     verificationValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

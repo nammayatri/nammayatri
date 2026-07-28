@@ -42,6 +42,7 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
             pricingTiers = pricingTiers,
             purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,
             redeemEligibilityJsonLogic = redeemEligibilityJsonLogic,
+            vehicleType = vehicleType,
             verificationValidity = Kernel.Prelude.fromMaybe 9000 verificationValidity,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -74,6 +75,7 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.pricingTiers = pricingTiers,
         Beam.purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,
         Beam.redeemEligibilityJsonLogic = redeemEligibilityJsonLogic,
+        Beam.vehicleType = vehicleType,
         Beam.verificationValidity = Kernel.Prelude.Just verificationValidity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

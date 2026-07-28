@@ -40,6 +40,7 @@ data Pass = Pass
     pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
     purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: [Data.Aeson.Value],
+    vehicleType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

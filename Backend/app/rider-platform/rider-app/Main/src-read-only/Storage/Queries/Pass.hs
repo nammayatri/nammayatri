@@ -52,6 +52,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.pricingTiers pricingTiers,
       Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,
       Se.Set Beam.redeemEligibilityJsonLogic redeemEligibilityJsonLogic,
+      Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.verificationValidity (Kernel.Prelude.Just verificationValidity),
       Se.Set Beam.updatedAt _now
     ]
