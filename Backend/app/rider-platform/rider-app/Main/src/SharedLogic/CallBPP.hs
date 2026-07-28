@@ -25,6 +25,7 @@ import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Status as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
+import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.UUID as UUID
 import qualified Domain.Types.Booking as DB
@@ -44,6 +45,7 @@ import Kernel.Utils.InternalAPICallLogging as ApiCallLogger
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Servant.Client (ClientError (DecodeFailure), ResponseF (responseBody))
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
@@ -51,8 +53,17 @@ import Tools.Metrics (CoreMetrics)
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
 
+-- Deliberately permissive: we only need "does the body carry an error object?",
+-- NOT a parse into the strict Beckn `Error` type — the ONDC gateway omits its
+-- required `type` field. Observed NACK shapes vary.
+newtype GatewayNackBody = GatewayNackBody Aeson.Value
+
+instance FromJSON GatewayNackBody where
+  parseJSON = Aeson.withObject "GatewayNackBody" $ \v -> GatewayNackBody <$> v Aeson..: "error"
+
 searchV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
@@ -67,11 +78,25 @@ searchV2 ::
 searchV2 gatewayUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  res <- callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.searchReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "searchV2" "BAP" transactionId (Just req) res
-  pure res
+  eRes <-
+    try @_ @ExternalAPICallError $
+      callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
+  case eRes of
+    Right res -> do
+      fork "Logging Internal API Call" $ do
+        let transactionId = req.searchReqContext.contextTransactionId <&> UUID.toText
+        ApiCallLogger.pushInternalApiCallDataToKafka "searchV2" "BAP" transactionId (Just req) res
+      pure res
+    Left e -> case gatewayNackDetail e of
+      Just errVal -> do
+        logInfo $ "Gateway NACK for search (expected): " <> show errVal
+        pure Ack
+      Nothing -> throwM e
+  where
+    gatewayNackDetail :: ExternalAPICallError -> Maybe Aeson.Value
+    gatewayNackDetail (ExternalAPICallError _ _ (DecodeFailure _ resp)) =
+      (\(GatewayNackBody v) -> v) <$> Aeson.decode (responseBody resp)
+    gatewayNackDetail _ = Nothing
 
 type InternalSyncSearchAPI = "internal" :> API.SyncSearchAPI
 
@@ -124,7 +149,7 @@ selectV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.selectReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
   res <- callBecknAPIWithSignature' merchantId bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.selectReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "selectV2" "BAP" transactionId (Just req) res
   pure res
@@ -146,7 +171,7 @@ initV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.initReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.initReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "initV2" "BAP" transactionId (Just req) res
   pure res
@@ -168,7 +193,7 @@ confirmV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.confirmReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.confirmReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "confirmV2" "BAP" transactionId (Just req) res
   pure res
@@ -190,7 +215,7 @@ cancelV2 merchantId providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.cancelReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.cancelReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "cancelV2" "BAP" transactionId (Just req) res
   pure res
@@ -222,7 +247,7 @@ updateV2 providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.updateReqContext.contextBapId
   res <- callBecknAPIWithSignature bapId "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.updateReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "updateV2" "BAP" transactionId (Just req) res
   pure res
@@ -256,7 +281,7 @@ callTrack booking ride = do
           }
   trackBecknReq <- TrackACL.buildTrackReqV2 trackBuildReq
   res <- callBecknAPIWithSignature' booking.merchantId merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap trackBecknReq
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callTrack" "BAP" (Just booking.transactionId) (Just trackBecknReq) res
   pure ()
 
@@ -298,7 +323,7 @@ feedbackV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.ratingReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.ratingReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "feedbackV2" "BAP" transactionId (Just req) res
   pure res
@@ -321,7 +346,7 @@ callStatusV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.statusReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.statusReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "statusV2" "BAP" transactionId (Just req) res
   pure res
