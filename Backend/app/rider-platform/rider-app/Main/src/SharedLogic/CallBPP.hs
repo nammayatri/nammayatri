@@ -83,7 +83,7 @@ searchV2 gatewayUrl req merchantId = do
       callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
   case eRes of
     Right res -> do
-      fork ("Logging Internal API Call") $ do
+      fork "Logging Internal API Call" $ do
         let transactionId = req.searchReqContext.contextTransactionId <&> UUID.toText
         ApiCallLogger.pushInternalApiCallDataToKafka "searchV2" "BAP" transactionId (Just req) res
       pure res
@@ -149,7 +149,7 @@ selectV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.selectReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
   res <- callBecknAPIWithSignature' merchantId bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.selectReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "selectV2" "BAP" transactionId (Just req) res
   pure res
@@ -171,7 +171,7 @@ initV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.initReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.initReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "initV2" "BAP" transactionId (Just req) res
   pure res
@@ -193,7 +193,7 @@ confirmV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.confirmReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.confirmReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "confirmV2" "BAP" transactionId (Just req) res
   pure res
@@ -215,7 +215,7 @@ cancelV2 merchantId providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.cancelReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.cancelReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "cancelV2" "BAP" transactionId (Just req) res
   pure res
@@ -247,7 +247,7 @@ updateV2 providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.updateReqContext.contextBapId
   res <- callBecknAPIWithSignature bapId "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.updateReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "updateV2" "BAP" transactionId (Just req) res
   pure res
@@ -281,7 +281,7 @@ callTrack booking ride = do
           }
   trackBecknReq <- TrackACL.buildTrackReqV2 trackBuildReq
   res <- callBecknAPIWithSignature' booking.merchantId merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap trackBecknReq
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callTrack" "BAP" (Just booking.transactionId) (Just trackBecknReq) res
   pure ()
 
@@ -323,7 +323,7 @@ feedbackV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.ratingReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.ratingReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "feedbackV2" "BAP" transactionId (Just req) res
   pure res
@@ -346,7 +346,7 @@ callStatusV2 providerUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.statusReqContext.contextBapId
   res <- callBecknAPIWithSignature' merchantId bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
+  fork "Logging Internal API Call" $ do
     let transactionId = req.statusReqContext.contextTransactionId <&> UUID.toText
     ApiCallLogger.pushInternalApiCallDataToKafka "statusV2" "BAP" transactionId (Just req) res
   pure res
