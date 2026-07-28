@@ -25,6 +25,7 @@ import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Status as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
+import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.UUID as UUID
 import qualified Domain.Types.Booking as DB
@@ -44,6 +45,7 @@ import Kernel.Utils.InternalAPICallLogging as ApiCallLogger
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Servant.Client (ClientError (DecodeFailure), ResponseF (responseBody))
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
@@ -51,8 +53,17 @@ import Tools.Metrics (CoreMetrics)
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
 
+-- Deliberately permissive: we only need "does the body carry an error object?",
+-- NOT a parse into the strict Beckn `Error` type — the ONDC gateway omits its
+-- required `type` field. Observed NACK shapes vary.
+newtype GatewayNackBody = GatewayNackBody Aeson.Value
+
+instance FromJSON GatewayNackBody where
+  parseJSON = Aeson.withObject "GatewayNackBody" $ \v -> GatewayNackBody <$> v Aeson..: "error"
+
 searchV2 ::
   ( MonadFlow m,
+    MonadCatch m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
@@ -67,11 +78,25 @@ searchV2 ::
 searchV2 gatewayUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
-  res <- callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
-  fork ("Logging Internal API Call") $ do
-    let transactionId = req.searchReqContext.contextTransactionId <&> UUID.toText
-    ApiCallLogger.pushInternalApiCallDataToKafka "searchV2" "BAP" transactionId (Just req) res
-  pure res
+  eRes <-
+    try @_ @ExternalAPICallError $
+      callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
+  case eRes of
+    Right res -> do
+      fork ("Logging Internal API Call") $ do
+        let transactionId = req.searchReqContext.contextTransactionId <&> UUID.toText
+        ApiCallLogger.pushInternalApiCallDataToKafka "searchV2" "BAP" transactionId (Just req) res
+      pure res
+    Left e -> case gatewayNackDetail e of
+      Just errVal -> do
+        logInfo $ "Gateway NACK for search (expected): " <> show errVal
+        pure Ack
+      Nothing -> throwM e
+  where
+    gatewayNackDetail :: ExternalAPICallError -> Maybe Aeson.Value
+    gatewayNackDetail (ExternalAPICallError _ _ (DecodeFailure _ resp)) =
+      (\(GatewayNackBody v) -> v) <$> Aeson.decode (responseBody resp)
+    gatewayNackDetail _ = Nothing
 
 type InternalSyncSearchAPI = "internal" :> API.SyncSearchAPI
 
