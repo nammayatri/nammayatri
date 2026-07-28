@@ -2123,6 +2123,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                     vehicleNumber = vno,
                     tripId = thisTripId,
                     isActiveTrip = detail.is_active_trip,
+                    isCompleted = detail.is_completed,
                     serviceSubTypes = mbServiceSubTypes,
                     vehicleTagNumber = mbVehicleTagNumber,
                     availableSeats = Nothing,
