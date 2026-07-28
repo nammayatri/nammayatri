@@ -77,6 +77,11 @@ types:
     timeBoundValidRideCount: Maybe Int
     # Count that applies to the selected config (use for milestone progress)
     progressValidRideCount: Int
+    # From DriverIncentiveMetrics Redis JSON blob (day / active timebound window)
+    ridesCompleted: Int
+    totalEarnings: Int
+    totalTripDistanceMeters: Int
+    totalRideTimeSeconds: Int
 
 apis:
   - GET:

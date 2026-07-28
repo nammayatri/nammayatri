@@ -204,6 +204,7 @@ library
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
+      Domain.Action.Dashboard.Management.IncentiveJourney
       Domain.Action.Dashboard.Management.KnowledgeCenter
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
@@ -323,6 +324,7 @@ library
       Domain.Action.UI.FleetEngineToken
       Domain.Action.UI.FleetOwnerList
       Domain.Action.UI.FRFSFleetOperator
+      Domain.Action.UI.IncentiveJourney
       Domain.Action.UI.Insurance
       Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
@@ -585,6 +587,7 @@ library
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
       SharedLogic.IffcoTokioInsurance
+      SharedLogic.IncentiveJourney
       SharedLogic.IntegratedBPPConfig
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
@@ -696,6 +699,9 @@ library
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
       Storage.CachedQueries.GoHomeConfig
+      Storage.CachedQueries.IncentiveJourney
+      Storage.CachedQueries.IncentiveJourneyMilestone
+      Storage.CachedQueries.IncentiveJourneyStats
       Storage.CachedQueries.InterCityTravelCities
       Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.KioskLocation
@@ -859,6 +865,7 @@ library
       Storage.Queries.IdfyVerificationExtra
       Storage.Queries.IffcoTokioInsuranceExtra
       Storage.Queries.ImageExtra
+      Storage.Queries.IncentiveJourneyStatsExtra
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
       Storage.Queries.KioskLocationExtra
@@ -1030,6 +1037,7 @@ library
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement
+      API.Action.Dashboard.Management.IncentiveJourney
       API.Action.Dashboard.Management.KnowledgeCenter
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
@@ -1078,6 +1086,7 @@ library
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
       API.Action.UI.FRFSFleetOperator
+      API.Action.UI.IncentiveJourney
       API.Action.UI.Insurance
       API.Action.UI.Invoice
       API.Action.UI.LmsModule
@@ -1158,6 +1167,7 @@ library
       API.Types.UI.FinanceInvoice
       API.Types.UI.FleetOwnerList
       API.Types.UI.FRFSFleetOperator
+      API.Types.UI.IncentiveJourney
       API.Types.UI.Insurance
       API.Types.UI.Invoice
       API.Types.UI.LmsModule
@@ -1282,6 +1292,9 @@ library
       Domain.Types.IdfyVerification
       Domain.Types.IffcoTokioInsurance
       Domain.Types.Image
+      Domain.Types.IncentiveJourney
+      Domain.Types.IncentiveJourneyMilestone
+      Domain.Types.IncentiveJourneyStats
       Domain.Types.IntegratedBPPConfig
       Domain.Types.Invoice
       Domain.Types.KioskLocation
@@ -1468,6 +1481,9 @@ library
       Storage.Beam.IdfyVerification
       Storage.Beam.IffcoTokioInsurance
       Storage.Beam.Image
+      Storage.Beam.IncentiveJourney
+      Storage.Beam.IncentiveJourneyMilestone
+      Storage.Beam.IncentiveJourneyStats
       Storage.Beam.IntegratedBPPConfig
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
@@ -1659,6 +1675,9 @@ library
       Storage.Queries.IdfyVerification
       Storage.Queries.IffcoTokioInsurance
       Storage.Queries.Image
+      Storage.Queries.IncentiveJourney
+      Storage.Queries.IncentiveJourneyMilestone
+      Storage.Queries.IncentiveJourneyStats
       Storage.Queries.IntegratedBPPConfig
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
@@ -1743,6 +1762,7 @@ library
       Storage.Queries.OrphanInstances.FleetRcDailyStats
       Storage.Queries.OrphanInstances.IffcoTokioInsurance
       Storage.Queries.OrphanInstances.Image
+      Storage.Queries.OrphanInstances.IncentiveJourneyStats
       Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation

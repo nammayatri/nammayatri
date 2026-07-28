@@ -101,6 +101,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
+import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
@@ -652,6 +653,16 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                       <*> updRide.tripEndTime
                 vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
                 timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
+                driverTag = mbDriver >>= (.driverTag)
+                mbPickupSpecialLocationId = booking.area >>= SL.pickupSpecialZoneIdFromArea
+                mbDropSpecialLocationId = booking.area >>= SL.dropSpecialZoneIdFromArea
+                rideDeltas =
+                  IncentiveMetrics.RideIncentiveDeltas
+                    { ridesDelta = 1,
+                      earningsDelta,
+                      distanceMetersDelta = distanceDelta,
+                      rideTimeSecondsDelta = rideTimeDelta
+                    }
             DC.incrementValidRideCountForTimeBoundCohort
               driverId
               booking.providerId
@@ -666,20 +677,32 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               booking.providerId
               booking.merchantOperatingCityId
               vehCategory
-              IncentiveMetrics.RideIncentiveDeltas
-                { ridesDelta = 1,
-                  earningsDelta,
-                  distanceMetersDelta = distanceDelta,
-                  rideTimeSecondsDelta = rideTimeDelta
-                }
+              rideDeltas
               expirationPeriod
               thresholdConfig.timeDiffFromUtc
               timeBoundReferenceUtc
-            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+            -- Journey# tag takes precedence: skip Incentive# / legacy coin flow.
+            if SLJourney.hasJourneyTag driverTag
+              then
+                SLJourney.evaluateDriverJourney
+                  driverId
+                  booking.providerId
+                  booking.merchantOperatingCityId
+                  thresholdConfig
+                  driverTag
+                  vehCategory
+                  (Just booking.vehicleServiceTier)
+                  (Just ride.id.getId)
+                  mbPickupSpecialLocationId
+                  mbDropSpecialLocationId
+                  timeBoundReferenceUtc
+                  rideDeltas
+              else DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.DynamicOfferTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
           when (DTC.isRideOtpTrip booking.tripCategory && validRideTaken) $ do
             DC.incrementOTPValidRideCount driverId expirationPeriod 1
             let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault updRide.vehicleVariant
                 timeBoundReferenceUtc = fromMaybe updRide.createdAt updRide.tripStartTime
+                driverTag = mbDriver >>= (.driverTag)
             DC.incrementValidRideCountForTimeBoundCohort
               driverId
               booking.providerId
@@ -689,7 +712,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
               expirationPeriod
               thresholdConfig.timeDiffFromUtc
               timeBoundReferenceUtc
-            DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
+            -- Journey# drivers skip legacy/incentive coin awards on OTP rides too.
+            unless (SLJourney.hasJourneyTag driverTag) $
+              DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
 
     -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
