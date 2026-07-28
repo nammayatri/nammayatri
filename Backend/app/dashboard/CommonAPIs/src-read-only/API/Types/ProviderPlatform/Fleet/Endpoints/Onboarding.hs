@@ -33,6 +33,10 @@ data AadhaarDocumentMetadata = AadhaarDocumentMetadata
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BusinessLicenseDocumentMetadata = BusinessLicenseDocumentMetadata {businessLicenseNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
   { accountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargesEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -84,6 +88,7 @@ data DocumentMetadata
   | UDYAMMetadata UDYAMDocumentMetadata
   | TANMetadata TANDocumentMetadata
   | LDCMetadata LDCDocumentMetadata
+  | BusinessLicenseMetadata BusinessLicenseDocumentMetadata
   | NomineeDetailsMetadata NomineeDetailsDocumentMetadata
   | BankingDetailsMetadata BankingDetailsDocumentMetadata
   deriving stock (Generic)

@@ -845,7 +845,10 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
         else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType (Just driverId) Nothing docType
     let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
 
-    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata
+    let mbDocFlowGrouping = case allDocVerificationConfigs of
+          Right driverConfs -> find (\c -> c.documentType == docType) driverConfs >>= (.documentFlowGrouping)
+          Left fleetConfs -> find (\c -> c.documentType == docType) fleetConfs >>= (.documentFlowGrouping)
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata mbDocFlowGrouping
     (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal, mbImageIdFinal, mbImageId2Final, mbDocumentIdFinal) <- case mbProcessedStatus of
       Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbDocumentId)
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbDocumentId)
@@ -1031,8 +1034,8 @@ mkUDYAMMetadata driverIdForFoi mbUdyam = forM mbUdyam $ \udyam -> do
   mbFoi <- QFOI.findByPrimaryKey driverIdForFoi
   pure $ UDYAMMetadata UDYAMDocumentMetadata {udyamNumber = Just udyamNumberDec, tdsRate = mbFoi >>= (.tdsRate)}
 
-getProcessedDriverDocuments :: OnboardingFlow m r => DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> Maybe DCDOD.CommonDriverOnboardingDocuments -> DVC.DocumentType -> Maybe Bool -> Bool -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata, Maybe Text)
-getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata = do
+getProcessedDriverDocuments :: OnboardingFlow m r => DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> Maybe DCDOD.CommonDriverOnboardingDocuments -> DVC.DocumentType -> Maybe Bool -> Bool -> Maybe DVC.DocumentFlowGrouping -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata, Maybe Text)
+getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata mbDocFlowGrouping = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       (mbS3Path, mbImageId) = getImageMetaFromLatestImage entityImagesInfo docType
       lookupImage imgId =

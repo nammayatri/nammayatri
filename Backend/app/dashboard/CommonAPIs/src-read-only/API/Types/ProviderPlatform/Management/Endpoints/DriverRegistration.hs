@@ -87,7 +87,7 @@ data ApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BusinessLicenseApproveDetails = BusinessLicenseApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, businessLicenseNumber :: Kernel.Prelude.Text, licenseExpiry :: Kernel.Prelude.UTCTime}
+data BusinessLicenseApproveDetails = BusinessLicenseApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, businessLicenseNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
