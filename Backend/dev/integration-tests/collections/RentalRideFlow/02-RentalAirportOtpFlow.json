@@ -58,7 +58,7 @@
 			"request": {
 				"method": "POST",
 				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Rental Airport Driver\", \"colour\": \"White\"}"},
+				"body": {"mode": "raw", "raw": "{\"variant\": \"{{sz_vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{sz_vehicle_class}}\", \"vehicleCategory\": \"{{sz_vehicle_category}}\", \"make\": \"{{sz_vehicle_make}}\", \"model\": \"{{sz_vehicle_model}}\", \"driverName\": \"Test Rental Airport Driver\", \"colour\": \"White\"}"},
 				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]}
 			}
 		},
@@ -156,7 +156,7 @@
 					"var d = pm.response.json();",
 					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
 					"var quotes = d.quotes || [];",
-					"var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+					"var want = pm.environment.get('sz_quote_tier');",
 					"var pick = null;",
 					"for (var i=0; i<quotes.length; i++) {",
 					"  var inner = quotes[i].onRentalCab || quotes[i].onDemandCab;",
