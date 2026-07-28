@@ -1,0 +1,1237 @@
+{
+  "info": {
+    "name": "AssociationHistoryFix",
+    "description": "Tests that fleet/operator driver-removal properly cleans up vehicle rows and RC associations.\n\nScenario 1: Fleet removes driver with orphaned vehicle row → vehicle row deleted, profile shows linkedVehicle=null.\nScenario 2: Fleet removes driver who has an active RC association → RC deactivated, vehicle deleted, profile shows linkedVehicle=null.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run.",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var fleetNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rcNum = 'KA' + Math.floor(10 + Math.random() * 89) + 'AB' + Math.floor(1000 + Math.random() * 8999);",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_fleet_owner_number', fleetNum);",
+          "    pm.collectionVariables.set('_test_rc_number', rcNum);",
+          "    console.log('Test driver:', dNum, '| fleet owner:', fleetNum, '| rc:', rcNum);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Driver Auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver auth returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_auth_id', d.authId);",
+              "console.log('Driver authId:', d.authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Driver OTP Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_auth_id}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_auth_id}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device-token\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver OTP verify returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Switch City (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Switch city returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Fleet Owner Login OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "fleet",
+            "v2",
+            "login",
+            "otp"
+          ],
+          "query": [
+            {
+              "key": "enabled",
+              "value": "true"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fleet owner login OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('fleet_owner_id', d.personId || d.id);",
+              "console.log('Fleet Owner ID:', pm.environment.get('fleet_owner_id'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Fleet Owner Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "fleet",
+            "v2",
+            "verify",
+            "otp"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\", \"otp\": \"{{login_otp}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fleet owner verify OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('fleet_auth_token', d.authToken);",
+              "console.log('Fleet auth token captured:', d.authToken ? 'yes' : 'missing');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Send Fleet Joining OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/sendJoiningOtp",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "fleet",
+            "sendJoiningOtp"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"name\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Send joining OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Response has authId', function () { pm.expect(d).to.have.property('authId'); });",
+              "pm.environment.set('driver1_fleet_auth_id', d.authId);",
+              "console.log('Driver1 fleet authId:', d.authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Verify Fleet Joining OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/verifyJoiningOtp",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "fleet",
+            "verifyJoiningOtp"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileCountryCode\": \"+91\", \"mobileNumber\": \"{{_test_driver_number}}\", \"otp\": \"{{login_otp}}\", \"deviceToken\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verify joining OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "console.log('fleet_driver_association created for driver:', pm.environment.get('driver_id'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Seed Orphaned Vehicle Row (Mock SQL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"vehicle\",\n  \"touch_timestamps\": true,\n  \"on_conflict_do_nothing\": true,\n  \"values\": {\n    \"driver_id\": \"{{driver_id}}\",\n    \"registration_no\": \"{{_test_rc_number}}\",\n    \"variant\": \"SUV\",\n    \"model\": \"TestModel\",\n    \"color\": \"White\",\n    \"vehicle_class\": \"MC\",\n    \"merchant_id\": \"{{driver_merchant_id}}\",\n    \"selected_service_tiers\": \"{}\"\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Vehicle row seeded (200)', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Row inserted', function () { pm.expect(d.ok).to.be.true; });",
+              "console.log('Seeded orphaned vehicle row for driver:', pm.environment.get('driver_id'), 'rc:', pm.collectionVariables.get('_test_rc_number'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Verify Vehicle Row Exists (Pre-condition)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"vehicle\",\n  \"select\": [\"driver_id\", \"registration_no\"],\n  \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driver_id}}\", \"op\": \"=\"}],\n  \"limit\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Vehicle row exists before removal', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.rows).to.be.an('array').with.length.above(0);",
+              "    console.log('Pre-condition OK: vehicle row found:', JSON.stringify(d.rows[0]));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Fleet Remove Driver",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/fleet/remove/driver",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "fleet",
+            "remove",
+            "driver"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fleet remove driver returns 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver removed from fleet. Verifying cleanup...');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Profile: linkedVehicle is null (Driver 1)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/profile",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "profile"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Profile returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('linkedVehicle is null after fleet removal (vehicle row cleaned up)', function () {",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.linkedVehicle).to.be.null;",
+              "    console.log('PASS: linkedVehicle=null in profile after fleet removal');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Register Status: no vehicle shown (Driver 1)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Register status returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('No active vehicle documents shown after fleet removal', function () {",
+              "    var d = pm.response.json();",
+              "    var vehicleDocs = d.vehicleDocuments || [];",
+              "    pm.expect(vehicleDocs).to.be.an('array').with.length(0,",
+              "        'Expected empty vehicleDocuments after fleet removal, got: ' + JSON.stringify(vehicleDocs));",
+              "    var rcDetails = d.vehicleRegistrationCertificateDetails;",
+              "    var rcCount = (rcDetails || []).length;",
+              "    pm.expect(rcCount).to.equal(0,",
+              "        'Expected no RC details after fleet removal, got: ' + JSON.stringify(rcDetails));",
+              "    console.log('PASS: register/status shows no vehicle after fleet removal');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Verify Vehicle Row Deleted (Main Assert)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"vehicle\",\n  \"select\": [\"driver_id\", \"registration_no\"],\n  \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driver_id}}\", \"op\": \"=\"}],\n  \"limit\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Vehicle row is deleted after fleet removal (orphan cleared)', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.rows).to.be.an('array').with.length(0,",
+              "        'Expected vehicle row to be deleted, but it still exists — stale vehicle bug is not fixed');",
+              "    console.log('PASS: vehicle row gone after fleet removal');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Verify Fleet Driver Association Ended",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"fleet_driver_association\",\n  \"select\": [\"driver_id\", \"fleet_owner_id\", \"is_active\", \"associated_till\"],\n  \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driver_id}}\", \"op\": \"=\"}],\n  \"limit\": 10\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fleet driver association is ended after removal', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.rows).to.be.an('array').with.length.above(0);",
+              "    var activeAssocs = d.rows.filter(function(r) { return r.is_active === true; });",
+              "    pm.expect(activeAssocs).to.have.length(0,",
+              "        'Expected no active fleet_driver_association but found: ' + JSON.stringify(activeAssocs));",
+              "    console.log('PASS: fleet_driver_association is_active=false');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "--- Scenario 2: Active RC Association Cleanup ---",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "about:blank"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Separator — no-op request"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Separator"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - Driver Auth (Second Driver)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver2_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('_test_driver2_number')) {",
+              "    var d2Num = '7' + Math.floor(100000000 + Math.random() * 899999999);",
+              "    var rc2Num = 'MH' + Math.floor(10 + Math.random() * 89) + 'CD' + Math.floor(1000 + Math.random() * 8999);",
+              "    pm.collectionVariables.set('_test_driver2_number', d2Num);",
+              "    pm.collectionVariables.set('_test_rc2_number', rc2Num);",
+              "    pm.collectionVariables.set('_test_rc2_id', pm.variables.replaceIn('{{$guid}}'));",
+              "    pm.collectionVariables.set('_test_drc2_id', pm.variables.replaceIn('{{$guid}}'));",
+              "    console.log('Driver2:', d2Num, '| rc2:', rc2Num);",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver2 auth returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('driver2_auth_id', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 - Driver OTP Verify (Second Driver)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver2_auth_id}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver2_auth_id}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device-token-2\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Driver2 OTP verify returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('driver2_token', d.token);",
+              "pm.environment.set('driver2_id', d.person.id);",
+              "console.log('Driver2 ID:', d.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 - Send Fleet Joining OTP (Second Driver)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/sendJoiningOtp",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "fleet",
+            "sendJoiningOtp"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver2_number}}\", \"mobileCountryCode\": \"+91\", \"name\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Send joining OTP (driver2) returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.environment.set('driver2_fleet_auth_id', d.authId);",
+              "console.log('Driver2 fleet authId:', d.authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 - Verify Fleet Joining OTP (Second Driver)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/verifyJoiningOtp",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "fleet",
+            "verifyJoiningOtp"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileCountryCode\": \"+91\", \"mobileNumber\": \"{{_test_driver2_number}}\", \"otp\": \"{{login_otp}}\", \"deviceToken\": null}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Verify joining OTP (driver2) returns 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 - Seed Active driver_rc_association (Mock SQL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"driver_rc_association\",\n  \"touch_timestamps\": true,\n  \"on_conflict_do_nothing\": true,\n  \"values\": {\n    \"id\": \"{{_test_drc2_id}}\",\n    \"driver_id\": \"{{driver2_id}}\",\n    \"rc_id\": \"{{_test_rc2_id}}\",\n    \"is_rc_active\": true,\n    \"associated_on\": \"2025-01-01 00:00:00+00\",\n    \"associated_till\": \"2099-01-01 00:00:00+00\",\n    \"consent\": true,\n    \"consent_timestamp\": \"2025-01-01 00:00:00+00\",\n    \"merchant_id\": \"{{driver_merchant_id}}\"\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('driver_rc_association seeded', function () { pm.response.to.have.status(200); var d = pm.response.json(); pm.expect(d.ok).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 - Seed Vehicle Row for Active RC (Mock SQL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"vehicle\",\n  \"touch_timestamps\": true,\n  \"on_conflict_do_nothing\": true,\n  \"values\": {\n    \"driver_id\": \"{{driver2_id}}\",\n    \"registration_no\": \"{{_test_rc2_number}}\",\n    \"variant\": \"HATCHBACK\",\n    \"model\": \"TestModel2\",\n    \"color\": \"Red\",\n    \"vehicle_class\": \"MC\",\n    \"merchant_id\": \"{{driver_merchant_id}}\",\n    \"selected_service_tiers\": \"{}\"\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Vehicle row for driver2 seeded', function () { pm.response.to.have.status(200); var d = pm.response.json(); pm.expect(d.ok).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 - Fleet Remove Driver (Second Driver, with active RC assoc)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{fleet_auth_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/fleet/remove/driver",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver2_id}}",
+            "fleet",
+            "remove",
+            "driver"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fleet remove driver2 returns 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 - Profile: linkedVehicle is null (Driver 2)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver2_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/profile",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "profile"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Profile returns 200 (driver2)', function () { pm.response.to.have.status(200); });",
+              "pm.test('linkedVehicle is null after fleet removal — active RC path (driver2)', function () {",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.linkedVehicle).to.be.null;",
+              "    console.log('PASS: linkedVehicle=null in profile for driver2 after fleet removal');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 - Register Status: no vehicle shown (Driver 2)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver2_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Register status returns 200 (driver2)', function () { pm.response.to.have.status(200); });",
+              "pm.test('No active vehicle documents shown after fleet removal (driver2)', function () {",
+              "    var d = pm.response.json();",
+              "    var vehicleDocs = d.vehicleDocuments || [];",
+              "    pm.expect(vehicleDocs).to.be.an('array').with.length(0,",
+              "        'Expected empty vehicleDocuments after fleet removal, got: ' + JSON.stringify(vehicleDocs));",
+              "    var rcDetails = d.vehicleRegistrationCertificateDetails;",
+              "    var rcCount = (rcDetails || []).length;",
+              "    pm.expect(rcCount).to.equal(0,",
+              "        'Expected no RC details after fleet removal, got: ' + JSON.stringify(rcDetails));",
+              "    console.log('PASS: register/status shows no vehicle for driver2 after fleet removal');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 - Verify Vehicle Row Deleted (Second Driver)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"vehicle\",\n  \"select\": [\"driver_id\", \"registration_no\"],\n  \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driver2_id}}\", \"op\": \"=\"}],\n  \"limit\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Vehicle row deleted after fleet removal (active RC path)', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.rows).to.be.an('array').with.length(0,",
+              "        'Vehicle row should be deleted after fleet removal but still exists');",
+              "    console.log('PASS: vehicle row cleared for driver2 (active RC association path)');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 - Verify driver_rc_association Ended (Second Driver)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"driver_rc_association\",\n  \"select\": [\"driver_id\", \"rc_id\", \"is_rc_active\", \"associated_till\"],\n  \"where_clause\": [{\"column_name\": \"driver_id\", \"val\": \"{{driver2_id}}\", \"op\": \"=\"}],\n  \"limit\": 10\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('driver_rc_association is ended after fleet removal', function () {",
+              "    pm.response.to.have.status(200);",
+              "    var d = pm.response.json();",
+              "    pm.expect(d.rows).to.be.an('array').with.length.above(0);",
+              "    var stillActive = d.rows.filter(function(r) { return r.is_rc_active === true || r.associated_till === null; });",
+              "    pm.expect(stillActive).to.have.length(0,",
+              "        'All rows must have is_rc_active=false and a completed associated_till: ' + JSON.stringify(stillActive));",
+              "    console.log('PASS: driver_rc_association properly ended');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_fleet_owner_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rc_number",
+      "value": ""
+    },
+    {
+      "key": "_test_driver2_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rc2_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rc2_id",
+      "value": ""
+    },
+    {
+      "key": "_test_drc2_id",
+      "value": ""
+    },
+    {
+      "key": "fleet_auth_token",
+      "value": ""
+    },
+    {
+      "key": "driver1_fleet_auth_id",
+      "value": ""
+    },
+    {
+      "key": "driver2_fleet_auth_id",
+      "value": ""
+    }
+  ]
+}

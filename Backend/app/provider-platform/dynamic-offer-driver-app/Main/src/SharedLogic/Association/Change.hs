@@ -10,6 +10,7 @@ where
 
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
+import Kernel.External.Encryption (EncFlow, EncKind (AsEncrypted), EncryptedHashedField, decrypt)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -18,6 +19,7 @@ import qualified Storage.Queries.DriverRCAssociation as QDriverRC
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetRCAssociation as QFleetRC
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 
 -- Throws if the driver currently has a NEW/UPCOMING/INPROGRESS ride.
@@ -64,18 +66,17 @@ guardRCNotOwnedByAnotherFleet driverId rcId = do
     membershipChecks <- mapM (\assoc -> isJust <$> QFleetDriver.findByDriverIdAndFleetOwnerId driverId assoc.fleetOwnerId.getId True) activeFleetAssocs
     unless (or membershipChecks) $ throwError VehicleBelongsToAnotherFleet
 
--- RC ownership guard, fleet side: a fleet claiming an RC must not silently take over a
--- vehicle another driver is actively driving (isRcActive=True) -- unconditional block, no
--- exception. This can't false-positive on the fleet's own active vehicle: the caller
--- (initiateRCCreation / updateExistingRCFleetOwnerIfEnabled) already self-checks
--- (isNothing mbFleetAssoc) before calling this helper, and normal flow ordering always
--- creates the fleet_rc_association before a driver can ever reach isRcActive=True. A driver
--- who merely linked the RC without activating it isn't a real conflict -- end that stale
--- link and let the fleet's claim proceed.
-guardRCNotActiveWithAnotherDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DVRC.VehicleRegistrationCertificate -> m ()
-guardRCNotActiveWithAnotherDriver rcId = do
+-- RC ownership guard, fleet side: a fleet claiming an RC must not silently take over a another's active RC.
+guardRCNotActiveWithAnotherDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Id DVRC.VehicleRegistrationCertificate -> EncryptedHashedField 'AsEncrypted Text -> m ()
+guardRCNotActiveWithAnotherDriver rcId encCertificateNumber = do
   guardNoLiveRideByRC rcId
   mbActiveDriverAssoc <- QDriverRC.findActiveAssociationByRC rcId True
   whenJust mbActiveDriverAssoc $ \_ -> throwError RCActiveOnOtherAccount
+  -- No active driver association: clean up any orphan vehicle row that still
+  -- references this RC's registration number (can happen on stale state).
+  registrationNo <- decrypt encCertificateNumber
+  mbVehicle <- QVehicle.findByRegistrationNo registrationNo
+  whenJust mbVehicle $ \vehicle -> QVehicle.deleteById vehicle.driverId
+
   linkedDriverAssocs <- QDriverRC.findAllActiveAssociationByRCId rcId
   forM_ linkedDriverAssocs $ \assoc -> QDriverRC.endAssociationForRC assoc.driverId rcId
