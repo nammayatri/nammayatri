@@ -119,6 +119,8 @@ data SConfigType (cfg :: ConfigType) where
   SIssueConfigRider :: SConfigType 'IssueConfigRider
   SIssueConfigDriver :: SConfigType 'IssueConfigDriver
   SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
+  SIncentiveJourneyConfig :: SConfigType 'IncentiveJourneyConfig
+  SIncentiveJourneyMilestoneConfig :: SConfigType 'IncentiveJourneyMilestoneConfig
 
 deriving instance Show (SConfigType cfg)
 

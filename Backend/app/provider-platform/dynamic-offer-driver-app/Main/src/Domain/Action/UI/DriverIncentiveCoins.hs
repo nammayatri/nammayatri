@@ -110,6 +110,13 @@ getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
   -- Day key exists for any driver who completed a valid ride; missing Redis → 0.
   dayValidRideCount <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let metricWindow =
+        case listToMaybe selectedConfigs of
+          Nothing -> IncentiveMetrics.unBoundedWindowKey
+          Just SelectedIncentiveConfig {selected} ->
+            case selected.timeBounds of
+              Just tb | tb /= TB.Unbounded -> IncentiveMetrics.mkIncentiveWindowKey localTime tb
+              _ -> IncentiveMetrics.unBoundedWindowKey
   timeBoundValidRideCount <-
     case listToMaybe selectedConfigs of
       Nothing -> pure Nothing
@@ -121,11 +128,16 @@ getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
                 Just . fromMaybe 0 <$> Coins.getValidRideCountByDriverIdWindowKey driverId windowKey
               IncentiveMetrics.DayWindow -> pure Nothing
           _ -> pure Nothing
+  metrics <- IncentiveMetrics.getIncentiveMetricsData driverId metricWindow
   pure $
     API.DriverIncentiveRideCountRes
       { dayValidRideCount = dayValidRideCount,
         timeBoundValidRideCount = timeBoundValidRideCount,
-        progressValidRideCount = fromMaybe dayValidRideCount timeBoundValidRideCount
+        progressValidRideCount = fromMaybe dayValidRideCount timeBoundValidRideCount,
+        ridesCompleted = metrics.ridesCompleted,
+        totalEarnings = metrics.totalEarnings,
+        totalTripDistanceMeters = metrics.totalTripDistanceMeters,
+        totalRideTimeSeconds = metrics.totalRideTimeSeconds
       }
 
 loadDriverContext ::

@@ -1,0 +1,67 @@
+imports:
+  IncentiveJourney: Domain.Types.IncentiveJourney
+  CoinsConfig: Domain.Types.Coins.CoinsConfig
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+IncentiveJourneyMilestone:
+  tableName: incentive_journey_milestone
+
+  types:
+    MilestoneConditionType:
+      enum: "RideCompleted, Earnings, Distance, RideDuration, PickupSpecialLocation, DropSpecialLocation, PickupDropSpecialLocation"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    MilestoneConditionOperator:
+      enum: "GTE, GT, EQ, LTE, LT, CT"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    MilestoneRewardType:
+      enum: "Coins, Cash, Coupons"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MilestoneConditionType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MilestoneConditionType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MilestoneConditionOperator>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MilestoneConditionOperator>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <MilestoneRewardType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <MilestoneRewardType>
+
+  fields:
+    id: Id IncentiveJourneyMilestone
+    journeyId: Id IncentiveJourney
+    description: Maybe Text
+    order: Int
+    conditionType: MilestoneConditionType
+    conditionOperator: Maybe MilestoneConditionOperator
+    conditionValue: Int
+    pickupSpecialLocationIds: "Maybe [Text]"
+    dropSpecialLocationIds: "Maybe [Text]"
+    rewardType: MilestoneRewardType
+    rewardConfigId: Maybe (Id CoinsConfig)
+    rewardValue: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    conditionOperator: "'GTE'"
+    pickupSpecialLocationIds: 'NULL'
+    dropSpecialLocationIds: 'NULL'
+
+  constraints:
+    id: PrimaryKey
+    journeyId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByJourneyId:
+      kvFunction: findAllWithOptionsKV
+      where: journeyId
+      orderBy: order
+
+  extraIndexes:
+    - columns: [journeyId]
+
+  extraOperations:
+    - GENERATE_INDEXES

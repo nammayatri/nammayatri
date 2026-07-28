@@ -92,6 +92,10 @@ data TripTransaction
 
 data CoinsConfig
 
+data IncentiveJourney
+
+data IncentiveJourneyMilestone
+
 data Person
 
 data Merchant

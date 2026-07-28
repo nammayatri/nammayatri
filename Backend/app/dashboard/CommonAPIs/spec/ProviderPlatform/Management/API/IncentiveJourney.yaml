@@ -1,0 +1,171 @@
+imports:
+  IncentiveJourney: Dashboard.Common
+  IncentiveJourneyMilestone: Dashboard.Common
+  CoinsConfig: Dashboard.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  TimeBound: Kernel.Types.TimeBound
+
+module: IncentiveJourney
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - enabled: Bool
+        - driverTag: Text
+      response:
+        type: IncentiveJourneyListRes
+
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateIncentiveJourneyReq
+      response:
+        type: CreateIncentiveJourneyRes
+
+  - PUT:
+      endpoint: /update
+      auth: ApiAuthV2
+      request:
+        type: UpdateIncentiveJourneyReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /milestone/list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        journeyId: Id IncentiveJourney
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: IncentiveJourneyMilestoneListRes
+
+  - POST:
+      endpoint: /milestone/create
+      auth: ApiAuthV2
+      request:
+        type: CreateIncentiveJourneyMilestoneReq
+      response:
+        type: CreateIncentiveJourneyMilestoneRes
+
+  - PUT:
+      endpoint: /milestone/update
+      auth: ApiAuthV2
+      request:
+        type: UpdateIncentiveJourneyMilestoneReq
+      response:
+        type: APISuccess
+
+types:
+  MilestoneConditionType:
+    - enum: "RideCompleted, Earnings, Distance, RideDuration, PickupSpecialLocation, DropSpecialLocation, PickupDropSpecialLocation"
+
+  MilestoneConditionOperator:
+    - enum: "GTE, GT, EQ, LTE, LT, CT"
+
+  MilestoneRewardType:
+    - enum: "Coins, Cash, Coupons"
+
+  IncentiveJourneyType:
+    - enum: "Daily, Weekly"
+
+  CreateIncentiveJourneyReq:
+    - name: Text
+    - description: Maybe Text
+    - driverTag: Text
+    - journeyType: IncentiveJourneyType
+    - timeBounds: Maybe TimeBound
+    - startDate: UTCTime
+    - endDate: UTCTime
+    - vehicleCategory: Maybe VehicleCategory
+    - enabled: Bool
+    - derive: "'HideSecrets"
+
+  CreateIncentiveJourneyRes:
+    - journeyId: Id IncentiveJourney
+
+  UpdateIncentiveJourneyReq:
+    - journeyId: Id IncentiveJourney
+    - name: Maybe Text
+    - description: Maybe Text
+    - driverTag: Maybe Text
+    - journeyType: Maybe IncentiveJourneyType
+    - timeBounds: Maybe TimeBound
+    - startDate: Maybe UTCTime
+    - endDate: Maybe UTCTime
+    - vehicleCategory: Maybe VehicleCategory
+    - enabled: Maybe Bool
+    - derive: "'HideSecrets"
+
+  IncentiveJourneyListItem:
+    - journeyId: Id IncentiveJourney
+    - name: Text
+    - description: Maybe Text
+    - driverTag: Text
+    - journeyType: Maybe IncentiveJourneyType
+    - timeBounds: Maybe TimeBound
+    - startDate: UTCTime
+    - endDate: UTCTime
+    - vehicleCategory: Maybe VehicleCategory
+    - enabled: Bool
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  IncentiveJourneyListRes:
+    - journeys: "[IncentiveJourneyListItem]"
+
+  CreateIncentiveJourneyMilestoneReq:
+    - journeyId: Id IncentiveJourney
+    - description: Maybe Text
+    - order: Int
+    - conditionType: MilestoneConditionType
+    - conditionOperator: MilestoneConditionOperator
+    - conditionValue: Int
+    - pickupSpecialLocationIds: Maybe [Text]
+    - dropSpecialLocationIds: Maybe [Text]
+    - rewardType: MilestoneRewardType
+    - rewardConfigId: Maybe (Id CoinsConfig)
+    - rewardValue: Maybe Int
+    - derive: "'HideSecrets"
+
+  CreateIncentiveJourneyMilestoneRes:
+    - milestoneId: Id IncentiveJourneyMilestone
+
+  UpdateIncentiveJourneyMilestoneReq:
+    - milestoneId: Id IncentiveJourneyMilestone
+    - description: Maybe Text
+    - order: Maybe Int
+    - conditionType: Maybe MilestoneConditionType
+    - conditionOperator: Maybe MilestoneConditionOperator
+    - conditionValue: Maybe Int
+    - pickupSpecialLocationIds: Maybe [Text]
+    - dropSpecialLocationIds: Maybe [Text]
+    - rewardType: Maybe MilestoneRewardType
+    - rewardConfigId: Maybe (Id CoinsConfig)
+    - rewardValue: Maybe Int
+    - derive: "'HideSecrets"
+
+  IncentiveJourneyMilestoneListItem:
+    - milestoneId: Id IncentiveJourneyMilestone
+    - journeyId: Id IncentiveJourney
+    - description: Maybe Text
+    - order: Int
+    - conditionType: MilestoneConditionType
+    - conditionOperator: MilestoneConditionOperator
+    - conditionValue: Int
+    - pickupSpecialLocationIds: Maybe [Text]
+    - dropSpecialLocationIds: Maybe [Text]
+    - rewardType: MilestoneRewardType
+    - rewardConfigId: Maybe (Id CoinsConfig)
+    - rewardValue: Maybe Int
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  IncentiveJourneyMilestoneListRes:
+    - milestones: "[IncentiveJourneyMilestoneListItem]"

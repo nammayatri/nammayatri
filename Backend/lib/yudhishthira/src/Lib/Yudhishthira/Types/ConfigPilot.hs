@@ -75,6 +75,8 @@ data ConfigType
   | IssueConfigRider
   | IssueConfigDriver
   | MonetaryRewardConfig
+  | IncentiveJourneyConfig
+  | IncentiveJourneyMilestoneConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ConfigType)

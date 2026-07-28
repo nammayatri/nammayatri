@@ -37,6 +37,7 @@ import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.File as File
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
+import qualified API.Action.UI.IncentiveJourney as IncentiveJourney
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.LmsModule as LmsModule
@@ -149,6 +150,7 @@ type API =
            :<|> KioskLocation.API
            :<|> DriverCoins.API
            :<|> DriverIncentiveCoins.API
+           :<|> IncentiveJourney.API
            :<|> RideSummary.API
            :<|> City.API
            :<|> LmsModule.API
@@ -230,6 +232,7 @@ handler =
     :<|> KioskLocation.handler
     :<|> DriverCoins.handler
     :<|> DriverIncentiveCoins.handler
+    :<|> IncentiveJourney.handler
     :<|> RideSummary.handler
     :<|> City.handler
     :<|> LmsModule.handler

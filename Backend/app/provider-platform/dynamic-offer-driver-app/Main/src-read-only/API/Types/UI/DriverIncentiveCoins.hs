@@ -31,6 +31,14 @@ data DriverIncentiveCoinConfigItem = DriverIncentiveCoinConfigItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data DriverIncentiveRideCountRes = DriverIncentiveRideCountRes {dayValidRideCount :: Kernel.Prelude.Int, progressValidRideCount :: Kernel.Prelude.Int, timeBoundValidRideCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+data DriverIncentiveRideCountRes = DriverIncentiveRideCountRes
+  { dayValidRideCount :: Kernel.Prelude.Int,
+    progressValidRideCount :: Kernel.Prelude.Int,
+    ridesCompleted :: Kernel.Prelude.Int,
+    timeBoundValidRideCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    totalEarnings :: Kernel.Prelude.Int,
+    totalRideTimeSeconds :: Kernel.Prelude.Int,
+    totalTripDistanceMeters :: Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
