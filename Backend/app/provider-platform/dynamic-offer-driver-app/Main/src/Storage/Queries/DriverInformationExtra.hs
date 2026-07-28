@@ -550,7 +550,12 @@ findEligibleForScheduledPayout merchantOpCityId batchSize mbLastDriverId isPayou
         [ Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
           Se.Is BeamDI.enabled $ Se.Eq True,
           Se.Is BeamDI.blocked $ Se.Eq False,
-          Se.Is BeamDI.isBlockedForScheduledPayout $ Se.Not (Se.Eq (Just True))
+          -- NULL-safe: a plain `Se.Not (Se.Eq (Just True))` renders as `<> true`, which silently
+          -- drops rows where is_blocked_for_scheduled_payout IS NULL (the default) via SQL 3-valued logic.
+          Se.Or
+            [ Se.Is BeamDI.isBlockedForScheduledPayout $ Se.Eq Nothing,
+              Se.Is BeamDI.isBlockedForScheduledPayout $ Se.Eq (Just False)
+            ]
         ]
           <> (if isPayoutVpaRequired then [Se.Is BeamDI.payoutVpa $ Se.Not (Se.Eq Nothing)] else [])
           <> maybe [] (\lastId -> [Se.Is BeamDI.driverId $ Se.GreaterThan (getId lastId)]) mbLastDriverId

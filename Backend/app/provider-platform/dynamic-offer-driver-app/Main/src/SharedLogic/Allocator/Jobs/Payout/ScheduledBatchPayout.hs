@@ -186,6 +186,26 @@ processWalletPayouts config jobData = do
       -- Process fleet owners
       mbLastFleetId <- Redis.get fleetCursorKey
       eligibleFleetInfos <- QFOIE.findEligibleFleetOwnersForScheduledPayout merchantOpCityId config.batchSize mbLastFleetId isPayoutVpaRequired
+      logDebug $
+        "[SBP-DEBUG] mocId=" <> merchantOpCityId.getId
+          <> " isPayoutVpaRequired="
+          <> show isPayoutVpaRequired
+          <> " minimumPayoutAmount="
+          <> show config.minimumPayoutAmount
+          <> " batchSize="
+          <> show config.batchSize
+          <> " driverCursor="
+          <> show mbLastDriverId
+          <> " fleetCursor="
+          <> show mbLastFleetId
+          <> " eligibleDrivers="
+          <> show (length eligibleDriverInfos)
+          <> " eligibleFleetOwners="
+          <> show (length eligibleFleetInfos)
+          <> " driverIds="
+          <> show (map (\d -> d.driverId.getId) eligibleDriverInfos)
+          <> " fleetIds="
+          <> show (map (\f -> f.fleetOwnerPersonId.getId) eligibleFleetInfos)
       unless (null eligibleFleetInfos) $ do
         let lastFleetId = (.fleetOwnerPersonId) $ last eligibleFleetInfos
         Redis.setExp fleetCursorKey lastFleetId 86400
@@ -257,6 +277,24 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
         Nothing -> pure (0, [], 0)
         Just accountId -> getPayoutEligibilityData accountId cutoff now
       let payoutableBalance = walletBalance - nonRedeemable
+      logDebug $
+        "[SBP-DEBUG] payee=" <> personId.getId
+          <> " role="
+          <> show person.role
+          <> " hasWalletAccount="
+          <> show (isJust mbAccountId)
+          <> " walletBalance="
+          <> show walletBalance
+          <> " nonRedeemable="
+          <> show nonRedeemable
+          <> " payoutableBalance="
+          <> show payoutableBalance
+          <> " minimum="
+          <> show config.minimumPayoutAmount
+          <> " isManuallyAdded="
+          <> show isManuallyAdded
+          <> " willPay="
+          <> show (payoutableBalance >= config.minimumPayoutAmount && not isManuallyAdded)
 
       when (payoutableBalance >= config.minimumPayoutAmount) $ do
         -- Skip manually-added VPAs

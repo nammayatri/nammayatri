@@ -308,7 +308,12 @@ findEligibleFleetOwnersForScheduledPayout merchantOpCityId batchSize mbLastPerso
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
           Se.Is Beam.enabled $ Se.Eq True,
           Se.Is Beam.blocked $ Se.Eq False,
-          Se.Is Beam.isBlockedForScheduledPayout $ Se.Not (Se.Eq (Just True))
+          -- NULL-safe: a plain `Se.Not (Se.Eq (Just True))` renders as `<> true`, which silently
+          -- drops rows where is_blocked_for_scheduled_payout IS NULL (the default) via SQL 3-valued logic.
+          Se.Or
+            [ Se.Is Beam.isBlockedForScheduledPayout $ Se.Eq Nothing,
+              Se.Is Beam.isBlockedForScheduledPayout $ Se.Eq (Just False)
+            ]
         ]
           <> (if isPayoutVpaRequired then [Se.Is Beam.payoutVpa $ Se.Not (Se.Eq Nothing)] else [])
           <> maybe [] (\lastId -> [Se.Is Beam.fleetOwnerPersonId $ Se.GreaterThan (getId lastId)]) mbLastPersonId
