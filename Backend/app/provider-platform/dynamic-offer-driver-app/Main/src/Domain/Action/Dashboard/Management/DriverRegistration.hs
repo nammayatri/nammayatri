@@ -144,7 +144,6 @@ import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwn
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.BusinessLicenseExtra as QBLExtra
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
@@ -1781,75 +1780,30 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
       QVNOC.create noc
 
 approveAndUpdateBusinessLicense :: Common.BusinessLicenseApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateBusinessLicense req mId mOpCityId = do
+approveAndUpdateBusinessLicense req mId _mOpCityId = do
+  when (T.null req.businessLicenseNumber) $
+    throwError (InvalidRequest "Business license number cannot be empty")
   let imageId = Id req.documentImageId.getId
   blImage <- findApproveImage imageId
   let driverId = blImage.personId
   person <- validatePersonForDocumentApproval driverId mId
   licenseHash <- getDbHash req.businessLicenseNumber
-  mbBlByImage <- QBL.findByImageId imageId
-  -- Fallback for re-upload-after-reject: the BL row's documentImageId still points at the
-  -- prior (rejected) image. Look up by license number hash to recover the existing row.
-  mbBl <- case mbBlByImage of
-    Just _ -> pure mbBlByImage
-    Nothing -> listToMaybe <$> QBLExtra.findAllByLicenseNumberHash licenseHash
-  -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
-  validateDocumentApprovalChecks DVC.BusinessLicense (Just req.businessLicenseNumber) driverId (BusinessLicenseApproveData <$> mbBl)
-  case mbBl of
-    Just bl -> do
-      businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
-      QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.licenseExpiry) DVC.BusinessLicense imageId
-      let updatedBl =
-            bl
-              { DBL.documentImageId = imageId,
-                DBL.licenseNumber = businessLicenseNumberEnc,
-                DBL.licenseExpiry = req.licenseExpiry,
-                DBL.verificationStatus = VALID,
-                DBL.driverId = driverId
-              }
-      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
-      deleteInvalidDocumentOfDriver DVC.BusinessLicense driverId
-      QBLExtra.upsert updatedBl
-      createReminder
-        DVC.BusinessLicense
-        updatedBl.driverId
-        mId
-        mOpCityId
-        (Just $ updatedBl.id.getId)
-        (Just updatedBl.licenseExpiry)
-        Nothing
-      updateFleetOwnerInfoOnDocApproval person $ \personId ->
-        QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
-    Nothing -> whenCreateDocumentRequired mOpCityId (throwError (InternalError "Business License not found by image id")) $ do
-      businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
-      now <- getCurrentTime
-      uuid <- generateGUID
-      QImage.updateVerificationStatusAndExpiry (Just VALID) (Just req.licenseExpiry) DVC.BusinessLicense imageId
-      let bl =
-            DBL.BusinessLicense
-              { documentImageId = imageId,
-                driverId = driverId,
-                id = uuid,
-                licenseExpiry = req.licenseExpiry,
-                licenseNumber = businessLicenseNumberEnc,
-                verificationStatus = VALID,
-                merchantId = Just mId,
-                merchantOperatingCityId = Just mOpCityId,
-                createdAt = now,
-                updatedAt = now
-              }
-      deleteInvalidDocumentOfDriver DVC.BusinessLicense driverId
-      QBL.create bl
-      createReminder
-        DVC.BusinessLicense
-        bl.driverId
-        mId
-        mOpCityId
-        (Just $ bl.id.getId)
-        (Just bl.licenseExpiry)
-        Nothing
-      updateFleetOwnerInfoOnDocApproval person $ \personId ->
-        QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
+  -- Single OR query: returns at most 2 rows — the current fleet's FOI and/or the
+  -- FOI of whichever fleet already holds this license number.
+  existingFois <- QFOIE.findByFleetIdOrBusinessLicenseNumberHash driverId licenseHash
+  let mbCurrentFleetFoi = find (\foi -> foi.fleetOwnerPersonId == driverId) existingFois
+      mbOtherFleetWithLicense = find (\foi -> foi.fleetOwnerPersonId /= driverId) existingFois
+  -- Current fleet already has a business license (different or same number)
+  whenJust mbCurrentFleetFoi $ \currentFoi ->
+    when (isJust currentFoi.businessLicenseNumberDec || isJust currentFoi.businessLicenseImageId) $
+      throwError FleetOwnerAlreadyLinked
+  -- This license number is already linked to a different fleet owner
+  whenJust mbOtherFleetWithLicense $ \_ ->
+    throwError (DocumentAlreadyLinkedWithAnotherFleetOwner "BusinessLicense")
+  businessLicenseNumberEnc <- encrypt req.businessLicenseNumber
+  QImage.updateVerificationStatusByIdAndType VALID imageId DVC.BusinessLicense
+  updateFleetOwnerInfoOnDocApproval person $ \personId ->
+    QFOIE.updateBusinessLicenseImageAndNumber (Just imageId.getId) (Just businessLicenseNumberEnc) personId
 
 approveAndUpdatePan :: Common.PanApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdatePan req mId mOpCityId = do
@@ -2395,7 +2349,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           QVNOC.updateVerificationStatusByImageId INVALID imageId
         DVC.BusinessLicense -> do
           rejectImage imageId
-          QBL.updateVerificationStatusByImageId INVALID imageId
+          QFOIE.updateBusinessLicenseImageAndNumber Nothing Nothing image.personId
         DVC.PanCard -> do
           rejectImage imageId
           QPan.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId

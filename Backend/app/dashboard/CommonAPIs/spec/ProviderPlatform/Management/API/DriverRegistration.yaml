@@ -631,7 +631,6 @@ types:
   BusinessLicenseApproveDetails:
     - documentImageId: Id Image
     - businessLicenseNumber: Text
-    - licenseExpiry: UTCTime
   VerificationStatusListResponse:
     - verificationStatuses: [VerificationStatusItem]
   VerificationStatusItem:

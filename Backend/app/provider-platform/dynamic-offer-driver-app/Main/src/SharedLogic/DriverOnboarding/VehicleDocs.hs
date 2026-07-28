@@ -156,6 +156,11 @@ data LDCDocumentMetadata = LDCDocumentMetadata
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 
+data BusinessLicenseDocumentMetadata = BusinessLicenseDocumentMetadata
+  { businessLicenseNumber :: Maybe T.Text
+  }
+  deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
+
 data NomineeDetailsDocumentMetadata = NomineeDetailsDocumentMetadata
   { nomineeName :: Maybe T.Text,
     nomineeDob :: Maybe Day,
@@ -202,6 +207,7 @@ data DocumentMetadata
   | UDYAMMetadata UDYAMDocumentMetadata
   | TANMetadata TANDocumentMetadata
   | LDCMetadata LDCDocumentMetadata
+  | BusinessLicenseMetadata BusinessLicenseDocumentMetadata
   | NomineeDetailsMetadata NomineeDetailsDocumentMetadata
   | BankingDetailsMetadata BankingDetailsDocumentMetadata
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

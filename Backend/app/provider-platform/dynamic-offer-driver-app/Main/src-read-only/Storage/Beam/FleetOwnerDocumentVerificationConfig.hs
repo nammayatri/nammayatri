@@ -23,6 +23,7 @@ data FleetOwnerDocumentVerificationConfigT f = FleetOwnerDocumentVerificationCon
     doStrictVerifcation :: B.C f Kernel.Prelude.Bool,
     documentCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory),
     documentFieldsJSON :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    documentFlowGrouping :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentFlowGrouping),
     documentOnboardingStage :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage),
     documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
     isApprovalSupported :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
