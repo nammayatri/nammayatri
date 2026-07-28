@@ -226,6 +226,12 @@ mkSplitSettlementDetails vendorFees totalAmount = do
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
 roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 
+-- | Round a money amount DOWN to whole cents (two decimal places).
+--   Used for payouts so the disbursed amount never exceeds the wallet balance
+--   (round-half-up could pay out a sub-cent more than is held, driving the wallet negative).
+floorToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
+floorToTwoDecimalPlaces x = fromIntegral (floor (x * 100) :: Integer) / 100
+
 roundVendorFee :: VF.VendorFee -> VF.VendorFee
 roundVendorFee vf = vf {VF.amount = roundToTwoDecimalPlaces (VF.amount vf)}
 
