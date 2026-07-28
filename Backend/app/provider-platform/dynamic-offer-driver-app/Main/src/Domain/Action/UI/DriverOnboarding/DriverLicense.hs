@@ -253,7 +253,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if documentVerificationConfig.doStrictVerifcation
               then do
                 when (driverLicense.verificationStatus == Documents.INVALID) $
-                  if transporterConfig.enableBotFlow == Just True
+                  if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
                     then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
                     else throwError DLInvalid
                 verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId

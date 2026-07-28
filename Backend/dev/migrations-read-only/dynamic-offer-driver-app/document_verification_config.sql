@@ -170,3 +170,18 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_default_verified_on_manual_verification boolean ;
+
+
+------- SQL updates -------
+

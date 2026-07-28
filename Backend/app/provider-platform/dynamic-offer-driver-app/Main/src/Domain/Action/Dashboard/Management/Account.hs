@@ -9,6 +9,7 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Environment
@@ -56,14 +57,14 @@ postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} =
   let wasDisabled = not fleetOwnerInfo.enabled
   if enabled
     then do
-      QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId'
+      void $ SStatus.runAdminEnable Nothing fleetOwnerId'
       SStatus.cascadeFleetEnableToDrivers fleetOwnerId'
       when wasDisabled $ do
         person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
         DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
     else do
       SStatus.ensureNoActiveRidesUnderFleet fleetOwnerId'
-      QFOI.updateFleetOwnerEnabledStatus False fleetOwnerId'
+      void $ SStatus.runAdminDisable Nothing fleetOwnerId' DI.AdminDisabled
       SStatus.cascadeFleetDisableToDrivers fleetOwnerId'
   pure Kernel.Types.APISuccess.Success
 

@@ -168,7 +168,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
       -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
       -- recomputeFleetVerifiedAndEnabled), so register as not-enabled. Legacy (non-BOT) keeps the
       -- existing default-enabled behavior.
-      mbEnabled' = if transporterConfig.enableBotFlow == Just True then Just False else mbEnabled
+      mbEnabled' = if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True then Just False else mbEnabled
   createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
     fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId DomainRC.defaultAssociationEnd
@@ -247,7 +247,8 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             address = Nothing,
             addressState = Nothing,
             addressDocumentType = Nothing,
-            approved = Nothing
+            approved = Nothing,
+            disabledReasonFlag = Nothing
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.

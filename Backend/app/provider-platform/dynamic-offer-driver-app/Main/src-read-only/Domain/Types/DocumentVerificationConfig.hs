@@ -32,6 +32,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
+    isDefaultVerifiedOnManualVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isImageValidationRequired :: Kernel.Prelude.Bool,

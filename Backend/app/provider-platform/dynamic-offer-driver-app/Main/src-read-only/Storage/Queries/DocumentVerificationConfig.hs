@@ -63,6 +63,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.filterForOldApks filterForOldApks,
       Se.Set Beam.isApprovalSupported isApprovalSupported,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
+      Se.Set Beam.isDefaultVerifiedOnManualVerification isDefaultVerifiedOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,
       Se.Set Beam.isHidden isHidden,
       Se.Set Beam.isImageValidationRequired isImageValidationRequired,

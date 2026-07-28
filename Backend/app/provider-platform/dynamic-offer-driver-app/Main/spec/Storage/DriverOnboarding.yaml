@@ -695,6 +695,7 @@ DocumentVerificationConfig:
     rcNumberPrefixList: "[Text]"
     maxRetryCount: Int
     isDefaultEnabledOnManualVerification: Bool
+    isDefaultVerifiedOnManualVerification: Maybe Bool
     isImageValidationRequired: Bool
     markImageValidOnValidationSkip: Maybe Bool
     doStrictVerifcation: Bool
@@ -1324,6 +1325,7 @@ FleetOwnerDocumentVerificationConfig:
     isHidden: Bool
     dependencyDocumentType: "[DocumentType]"
     isDefaultEnabledOnManualVerification: Bool
+    isDefaultVerifiedOnManualVerification: Maybe Bool
     isImageValidationRequired: Bool
     markImageValidOnValidationSkip: Maybe Bool
     checkExtraction: Bool
@@ -1335,6 +1337,7 @@ FleetOwnerDocumentVerificationConfig:
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
     documentOnboardingStage: Maybe DocumentOnboardingStage
     rolesAllowedToUploadDocument: Maybe [Role]
+    isApprovalSupported: Maybe Bool
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     documentFields: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
   default:

@@ -1273,6 +1273,7 @@ TransporterConfig:
     separateDriverVehicleEnablement: Maybe Bool
     dontAutoEnableDriver: Maybe Bool
     enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
+    unifiedOnboardingFlagsRecompute: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"

@@ -155,7 +155,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
           when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
             Utils.cleanupUploadedImages [Id req.imageId] person.id
             throwError $ DocumentAlreadyValidated "PAN"
-          when (verificationStatus == Documents.INVALID && transporterConfig.enableBotFlow == Just True) $ DPQuery.updateVerificationStatus Documents.PENDING person.id
+          when (verificationStatus == Documents.INVALID && (transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True)) $ DPQuery.updateVerificationStatus Documents.PENDING person.id
         case mbPanVerificationService of
           Just VI.HyperVerge -> do
             let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = Id req.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
@@ -185,7 +185,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
-        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
+        void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->

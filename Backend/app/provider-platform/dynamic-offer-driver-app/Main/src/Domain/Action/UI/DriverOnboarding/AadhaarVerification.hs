@@ -176,7 +176,7 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               aadhaarCard <- QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
               mbAadhaarNumber <- traverse decrypt aadhaarCard.aadhaarNumber
               PanVerification.triggerPanAadhaarLinkageWhenPanAndAadhaarExist person merchantOpCityId mbAadhaarNumber
-              void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent person.id)
+              void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing person.id
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
@@ -479,7 +479,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
-        void $ SStatus.processStatusEvent (Just person) (Just transporterConfig) (SStatus.PersonDocChangedEvent person.id)
+        void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
       pure False
     role
       | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId (Just transporterConfig)
