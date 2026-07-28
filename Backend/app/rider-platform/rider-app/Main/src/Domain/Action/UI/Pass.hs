@@ -94,6 +94,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
 import qualified Storage.CachedQueries.PassType as CQPassType
+import qualified Storage.CachedQueries.PurchasedPassPayment as CQPurchasedPassPayment
 import qualified Storage.CachedQueries.Translations as QT
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -286,6 +287,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   benefitType = benefitType,
                   benefitValue = benefitValue,
                   applicableVehicleServiceTiers = pass.applicableVehicleServiceTiers,
+                  vehicleType = pass.vehicleType,
                   maxValidTrips = pass.maxValidTrips,
                   maxValidDays = pass.maxValidDays,
                   deviceSwitchCount = 0,
@@ -389,6 +391,11 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
+  -- Latch the person-level flag so the FRFS search path can skip the purchased-pass
+  -- lookup for the (large) majority of riders who hold none. Isolated: this runs after
+  -- the payment order exists, so it must not be able to fail an otherwise-good purchase.
+  -- The pass-list backstop re-asserts it if this write is lost.
+  void $ withTryCatch "purchasePassWithPayment:updateHasPass" (QPerson.updateHasPass personId)
   return $
     PassAPI.PassSelectionAPIEntity
       { purchasedPassId = purchasedPassId,
@@ -602,6 +609,7 @@ buildPassAPIEntity mbLanguage person pass = do
         benefit = pass.benefit,
         benefitDescription = benefitDescription,
         vehicleServiceTierType = pass.applicableVehicleServiceTiers,
+        vehicleType = pass.vehicleType,
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
         documentsRequired = pass.documentsRequired,
@@ -659,10 +667,15 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         benefit = benefit,
         benefitDescription = benefitDescription,
         vehicleServiceTierType = purchasedPass.applicableVehicleServiceTiers,
+        vehicleType = purchasedPass.vehicleType,
         maxTrips = purchasedPass.maxValidTrips,
         maxDays = purchasedPass.maxValidDays,
         description = description,
         documentsRequired = [],
+        -- Not reachable here: this entity is built from purchasedPass, which carries no passId.
+        -- Blanked like documentsRequired -- capture config only matters pre-purchase, and a
+        -- skip-configured pass never reaches PhotoPending anyway (the webhook activates it directly).
+        skipUserPhotographCapture = Nothing,
         eligibility = True,
         name = name,
         code = purchasedPass.passCode,
@@ -823,6 +836,10 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
+              -- Seed the has-pass Redis flag only once the pass is actually live. setHasPasses
+              -- maxes the derived TTL against any existing one, so each confirm/renewal simply
+              -- extends the key to cover the longest-dated pass the rider holds.
+              void $ withTryCatch "passOrderStatusHandler:setHasPasses" (CQPurchasedPassPayment.setHasPasses purchasedPass.personId purchasedPassPayment.endDate)
               QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
               -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
@@ -982,6 +999,17 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   now <- getCurrentTime
 
   passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+
+  -- Backstop for the has-pass signals. The app hits pass-list right after paying
+  -- (PaymentStatus screen), so this repairs a purchase-time write that never landed,
+  -- and seeds the Redis flag off the longest-dated live pass. Writing the two here
+  -- and at purchase keeps them independent -- one failed flow can't lose both.
+  let liveEndDates = map (.endDate) $ filter (\p -> p.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) passEntities
+  unless (null liveEndDates) $
+    void $
+      withTryCatch "getMultimodalPassListUtil:setHasPassSignals" $ do
+        unless (person.hasPass == Just True) $ QPerson.updateHasPass personId
+        CQPurchasedPassPayment.setHasPasses personId (maximum liveEndDates)
 
   -- Process each pass and apply updates in-memory to ensure we return the latest state
   -- without relying on read replica synchronization

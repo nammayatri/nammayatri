@@ -388,6 +388,18 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
+-- | Monotonic latch: only ever set to True, never cleared. A stale True costs one
+-- extra pass lookup; a stale False would silently stop applying a pass the rider
+-- actually holds, so nothing writes False here.
+updateHasPass :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
+updateHasPass (Id personId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.hasPass (Just True),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateReferredByCustomer personId referredByPersonId = do
   now <- getCurrentTime

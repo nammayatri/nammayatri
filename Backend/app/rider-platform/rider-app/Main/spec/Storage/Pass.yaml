@@ -40,7 +40,7 @@ Pass:
     benefitDescription: Text
     benefit: Maybe Benefit
     applicableVehicleServiceTiers: "[ServiceTierType]"
-    vehicleType: Maybe VehicleCategory
+    vehicleType: VehicleCategory
     purchaseEligibilityJsonLogic: "[Value]"
     redeemEligibilityJsonLogic: "[Value]"
     pricingTiers: Maybe Value
@@ -58,20 +58,24 @@ Pass:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+    overrideBenefitConfigJson: Maybe Value
 
   beamFields:
     passConfig:
       maxSwitchCount: Maybe Int
 
   beamType:
+    vehicleType: Maybe VehicleCategory
     verificationValidity: Maybe Seconds
     maxSwitchCount: Maybe Int
 
   fromTType:
+    vehicleType: Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS|I
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
     passConfig: (Domain.Types.Pass.PassConfig <$> maxSwitchCount)|E
 
   toTType:
+    vehicleType: Kernel.Prelude.Just|I
     verificationValidity: Kernel.Prelude.Just|I
     maxSwitchCount: ((.maxSwitchCount) <$> passConfig)|E
 
@@ -86,6 +90,7 @@ Pass:
     redeemEligibilityJsonLogic: jsonb[]
     pricingTiers: jsonb
     formVerificationConfig: jsonb
+    overrideBenefitConfigJson: jsonb
 
   extraOperations:
     - EXTRA_QUERY_FILE

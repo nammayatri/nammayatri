@@ -65,3 +65,8 @@ CREATE INDEX CONCURRENTLY purchased_pass_idx_person_id ON atlas_app.purchased_pa
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_photo_media_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN vehicle_type text ;

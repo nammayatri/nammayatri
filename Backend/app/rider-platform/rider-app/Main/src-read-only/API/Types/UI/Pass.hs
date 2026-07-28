@@ -48,6 +48,7 @@ data PassAPIEntity = PassAPIEntity
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     skipUserPhotographCapture :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
   }
   deriving stock (Generic, Show)

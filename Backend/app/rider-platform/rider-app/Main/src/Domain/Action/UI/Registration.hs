@@ -820,6 +820,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         referralCode = Nothing,
         referredAt = Nothing,
         hasTakenValidRide = False,
+        hasPass = Nothing,
         hasDisability = Nothing,
         createdAt = now,
         updatedAt = now,

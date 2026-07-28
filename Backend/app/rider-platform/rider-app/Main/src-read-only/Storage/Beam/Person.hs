@@ -65,6 +65,7 @@ data PersonT f = PersonT
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
     hasDisability :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasPass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasTakenValidRide :: B.C f Kernel.Prelude.Bool,
     id :: B.C f Kernel.Prelude.Text,
     identifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

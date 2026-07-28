@@ -8,6 +8,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
   ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
   BenefitType: Domain.Types.PurchasedPass
   PassEnum: Domain.Types.PassType
   MediaFile: IssueManagement.Domain.Types.MediaFile
@@ -49,6 +50,7 @@ PurchasedPass:
     benefitType: Maybe BenefitType
     benefitValue: Maybe HighPrecMoney
     applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: VehicleCategory
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
     usedTripCount: Maybe Int
@@ -61,14 +63,17 @@ PurchasedPass:
     preferredDestination: Maybe Text
 
   beamType:
+    vehicleType: Maybe VehicleCategory
     deviceSwitchCount: Maybe Int
     verificationValidity: Maybe Seconds
 
   fromTType:
+    vehicleType: Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS|I
     deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
 
   toTType:
+    vehicleType: Kernel.Prelude.Just|I
     deviceSwitchCount: Just deviceSwitchCount|E
     verificationValidity: Just verificationValidity|E
 

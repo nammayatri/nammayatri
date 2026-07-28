@@ -181,6 +181,7 @@ postMultimodalParkingMarshalCreate mbApiKey req = do
                   referralCode = Nothing,
                   referredAt = Nothing,
                   hasTakenValidRide = False,
+                  hasPass = Nothing,
                   hasDisability = Nothing,
                   createdAt = now,
                   updatedAt = now,

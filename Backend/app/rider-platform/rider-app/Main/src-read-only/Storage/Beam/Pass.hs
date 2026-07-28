@@ -34,6 +34,7 @@ data PassT f = PassT
     minFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     order :: B.C f Kernel.Prelude.Int,
+    overrideBenefitConfigJson :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     maxSwitchCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passTypeId :: B.C f Kernel.Prelude.Text,
     pricingTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
