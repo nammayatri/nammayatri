@@ -1,9 +1,6 @@
 name: Cabal CI (Main Push)
 
 on:
-  push:
-    branches:
-      - "Prod-release-branch-18-jul"
   workflow_dispatch:
 
 concurrency:
