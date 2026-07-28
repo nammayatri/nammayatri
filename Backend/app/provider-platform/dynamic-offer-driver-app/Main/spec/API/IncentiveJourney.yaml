@@ -1,0 +1,91 @@
+imports:
+  Id: Kernel.Types.Id
+  IncentiveJourney: Domain.Types.IncentiveJourney
+  IncentiveJourneyMilestone: Domain.Types.IncentiveJourneyMilestone
+  IncentiveJourneyType: Domain.Types.IncentiveJourney
+  MilestoneConditionType: Domain.Types.IncentiveJourneyMilestone
+  MilestoneConditionOperator: Domain.Types.IncentiveJourneyMilestone
+  MilestoneRewardType: Domain.Types.IncentiveJourneyMilestone
+  JourneyMilestoneStatus: Domain.Types.IncentiveJourneyStats
+  TimeBound: Kernel.Types.TimeBound
+  VehicleCategory: Domain.Types.VehicleCategory
+  CoinsConfig: Domain.Types.Coins.CoinsConfig
+  Text: Data.Text
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+module: IncentiveJourney
+
+types:
+  IncentiveJourneyMilestoneItem:
+    milestoneId: Id IncentiveJourneyMilestone
+    description: Maybe Text
+    order: Int
+    conditionType: MilestoneConditionType
+    conditionOperator: MilestoneConditionOperator
+    conditionValue: Int
+    pickupSpecialLocationNames: Maybe [Text]
+    dropSpecialLocationNames: Maybe [Text]
+    rewardType: MilestoneRewardType
+    rewardValue: Maybe Int
+    status: JourneyMilestoneStatus
+    currentValue: Int
+
+  IncentiveJourneyListItem:
+    journeyId: Id IncentiveJourney
+    name: Text
+    description: Maybe Text
+    journeyType: Maybe IncentiveJourneyType
+    timeBounds: Maybe TimeBound
+    startDate: UTCTime
+    endDate: UTCTime
+    vehicleCategory: Maybe VehicleCategory
+    enabled: Bool
+    milestones: "[IncentiveJourneyMilestoneItem]"
+
+  IncentiveJourneyListRes:
+    journeys: "[IncentiveJourneyListItem]"
+
+  IncentiveJourneyHistoryItem:
+    journeyId: Id IncentiveJourney
+    journeyName: Text
+    journeyType: Maybe IncentiveJourneyType
+    milestoneId: Id IncentiveJourneyMilestone
+    milestoneDescription: Maybe Text
+    milestoneOrder: Int
+    conditionType: MilestoneConditionType
+    conditionOperator: MilestoneConditionOperator
+    conditionValue: Int
+    pickupSpecialLocationNames: Maybe [Text]
+    dropSpecialLocationNames: Maybe [Text]
+    currentValue: Int
+    status: JourneyMilestoneStatus
+    rewardType: MilestoneRewardType
+    rewardValue: Maybe Int
+    periodKey: Text
+    completedAt: Maybe UTCTime
+
+  IncentiveJourneyHistoryRes:
+    history: "[IncentiveJourneyHistoryItem]"
+
+apis:
+  - GET:
+      endpoint: /incentive/journey/list
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        active: Bool
+        limit: Int
+        offset: Int
+        date: Text
+      response:
+        type: IncentiveJourneyListRes
+
+  - GET:
+      endpoint: /incentive/journey/history
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        date: Text
+        limit: Int
+        offset: Int
+      response:
+        type: IncentiveJourneyHistoryRes
