@@ -120,6 +120,7 @@ customerIssueHandle =
       kaptureGetTicket = Just castKaptureGetTicket,
       getTicketStatus = Just castGetTicketStatus,
       findMerchantConfig = buildMerchantConfig,
+      mbGetRideCardInfoByRideIds = Just castRideCardInfoByRideIds,
       mbReportACIssue = Just reportACIssue,
       mbReportIssue = Just reportIssue,
       mbFindLatestBookingByPersonId = Just findLatestBookingByRiderId,
@@ -417,6 +418,41 @@ castRideInfo merchantId _ rideId = do
     cacheRideInfo rideInfoRes = do
       let shouldCacheRideInfo = elem (rideInfoRes.rideStatus) [DRR.COMPLETED, DRR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
+
+castRideCardInfoByRideIds :: [Id Common.Ride] -> Flow [(Id Common.Ride, Common.IssueReportRideInfo)]
+castRideCardInfoByRideIds rideIds =
+  fmap catMaybes . forM rideIds $ \rideId -> do
+    mbRide <- runInReplica $ QR.findById (cast rideId)
+    case mbRide of
+      Nothing -> pure Nothing
+      Just ride -> do
+        mbBooking <- runInReplica $ QB.findById ride.bookingId
+        pure $
+          mbBooking <&> \booking ->
+            ( rideId,
+              Common.IssueReportRideInfo
+                { pickupAddress = mkAddressText booking.fromLocation,
+                  dropAddress = bookingDropLocation booking >>= mkAddressText,
+                  fare = (ride.totalFare <|> ride.fare) <&> (.amount),
+                  rideDate = ride.createdAt
+                }
+            )
+  where
+    bookingDropLocation booking = case booking.bookingDetails of
+      OneWayDetails d -> Just d.toLocation
+      DriverOfferDetails d -> Just d.toLocation
+      OneWaySpecialZoneDetails d -> Just d.toLocation
+      InterCityDetails d -> Just d.toLocation
+      AmbulanceDetails d -> Just d.toLocation
+      DeliveryDetails d -> Just d.toLocation
+      MeterRideDetails d -> d.toLocation
+      RentalDetails _ -> Nothing
+      EasyBookingDetails _ -> Nothing
+    mkAddressText loc =
+      let addr = loc.address
+       in case catMaybes [addr.building, addr.area, addr.street] of
+            [] -> Nothing
+            parts -> Just (T.intercalate ", " parts)
 
 castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow (TIT.CreateTicketResp, Maybe Text)
 castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merchantId) (cast merchantOperatingCityId)
