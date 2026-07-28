@@ -773,34 +773,44 @@ gtfsPageInfo req =
           maxPage = (tags >>= SpecUtils.getTag "PAGINATION" "MAX_PAGE_NUMBER") >>= (readMaybe . T.unpack) :: Maybe Int
        in (curPage, maxPage)
 
+gtfsFulfillments :: SpecT.OnSearchReq -> [SpecT.Fulfillment]
+gtfsFulfillments req =
+  let providers = fromMaybe [] (req.onSearchReqMessage >>= (\m -> m.onSearchReqMessageCatalog.catalogProviders))
+   in providers >>= (fromMaybe [] . (.providerFulfillments))
+
 extractGtfsPage :: SpecT.OnSearchReq -> ([API.FRFSGtfsStopAPI], [API.FRFSGtfsRouteAPI], [API.FRFSGtfsRouteStopAPI], [API.FRFSGtfsFareAPI])
 extractGtfsPage req =
   let providers = fromMaybe [] (req.onSearchReqMessage >>= (\m -> m.onSearchReqMessageCatalog.catalogProviders))
-      fulfillments = providers >>= (fromMaybe [] . (.providerFulfillments))
-      stopRows = mapMaybe toStop (fulfillments >>= (fromMaybe [] . (.fulfillmentStops)))
-      routeRows = mapMaybe toRoute fulfillments
-      routeStopRows = concatMap toRouteStops fulfillments
+      routeFulfillments = filter isRouteFulfillment (gtfsFulfillments req)
+      stopRows = mapMaybe toStop (routeFulfillments >>= (fromMaybe [] . (.fulfillmentStops)))
+      routeRows = mapMaybe toRoute routeFulfillments
+      routeStopRows = concatMap toRouteStops routeFulfillments
       fareRows = concatMap toFares providers
    in (stopRows, routeRows, routeStopRows, fareRows)
   where
+    -- A transit route is structurally a fulfillment carrying an ordered list of stops.
+    -- Keying off this rather than network-specific type/tag strings keeps it network-agnostic.
+    isRouteFulfillment f = length (fromMaybe [] f.fulfillmentStops) >= 2
+    stopCodeOf s =
+      case s.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode) of
+        Just c -> Just c
+        Nothing -> s.stopId
+    routeCodeOf f =
+      case SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" (fromMaybe [] f.fulfillmentTags) of
+        Just rid -> Just $ T.strip rid <> maybe "" ("_" <>) (SpecUtils.getTag "ROUTE_INFO" "ROUTE_DIRECTION" (fromMaybe [] f.fulfillmentTags))
+        Nothing -> f.fulfillmentId
     toStop s = do
-      code <- s.stopId
+      code <- stopCodeOf s
       loc <- s.stopLocation
-      let desc = loc.locationDescriptor
-          (lat, lon) = parseGtfsGps loc.locationGps
-      pure API.FRFSGtfsStopAPI {code = code, name = desc >>= (.descriptorName), lat = lat, lon = lon}
-    routeCodeOf f = do
-      let tags = fromMaybe [] f.fulfillmentTags
-      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
-      pure $ T.strip rid <> maybe "" ("_" <>) (SpecUtils.getTag "ROUTE_INFO" "ROUTE_DIRECTION" tags)
+      let (lat, lon) = parseGtfsGps loc.locationGps
+      pure API.FRFSGtfsStopAPI {code = code, name = loc.locationDescriptor >>= (.descriptorName), lat = lat, lon = lon}
     toRoute f = do
-      let tags = fromMaybe [] f.fulfillmentTags
-      rid <- SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" tags
       code <- routeCodeOf f
+      let shortName = maybe code T.strip (SpecUtils.getTag "ROUTE_INFO" "ROUTE_ID" (fromMaybe [] f.fulfillmentTags))
       pure
         API.FRFSGtfsRouteAPI
           { code = code,
-            shortName = T.strip rid,
+            shortName = shortName,
             vehicleType = f.fulfillmentVehicle >>= (.vehicleCategory),
             variant = f.fulfillmentVehicle >>= (.vehicleVariant)
           }
@@ -810,7 +820,7 @@ extractGtfsPage req =
         Just code ->
           mapMaybe
             ( \(sq, s) -> do
-                stopCode <- s.stopId
+                stopCode <- stopCodeOf s
                 pure API.FRFSGtfsRouteStopAPI {routeCode = code, stopCode = stopCode, sequenceNum = sq, stopType = s.stopType}
             )
             (zip [1 ..] (fromMaybe [] f.fulfillmentStops))
@@ -835,6 +845,9 @@ storeDiscoveryGtfs ibcId req = do
       key = SFU.frfsGtfsCacheKey ibcId
       pagesKey = SFU.frfsGtfsPagesKey ibcId
       (mbCurPage, mbMaxPage) = gtfsPageInfo req
+      fulfillments = gtfsFulfillments req
+  when (not (null fulfillments) && null routes) $
+    logWarning $ "GTFS extract yielded 0 routes from " <> show (length fulfillments) <> " fulfillments for ibc " <> ibcId <> "; fulfillmentTypes=" <> show (mapMaybe (.fulfillmentType) fulfillments) <> ", stopCounts=" <> show (map (length . fromMaybe [] . (.fulfillmentStops)) fulfillments)
   Hedis.withWaitAndLockRedis (key <> ":merge") gtfsMergeLockTtlSec gtfsMergeLockRetryMs $ do
     mbExisting <- Hedis.safeGet key
     seenPages <- fromMaybe [] <$> Hedis.safeGet pagesKey
