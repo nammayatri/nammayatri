@@ -287,6 +287,15 @@ operatorWaybillStatus :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortD
 operatorWaybillStatus baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillStatus gtfsId req) "operatorWaybillStatus" NandiAPI.operatorWaybillStatusAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_STATUS_API") baseUrl)
 
+operatorWaybillStatusV2 :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Bool -> UpdateWaybillStatusReq -> m RowsAffectedResp
+operatorWaybillStatusV2 baseUrl gtfsId resetTrips req = do
+  eResp <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillStatusV2 gtfsId (Just resetTrips) req) "operatorWaybillStatusV2" NandiAPI.operatorWaybillStatusV2API
+  case eResp of
+    Right resp -> pure resp
+    Left err -> do
+      logWarning $ "operatorWaybillStatusV2 failed, falling back to v1: " <> show err
+      operatorWaybillStatus baseUrl gtfsId req
+
 operatorWaybillFleet :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillFleetReq -> m RowsAffectedResp
 operatorWaybillFleet baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillFleet gtfsId req) "operatorWaybillFleet" NandiAPI.operatorWaybillFleetAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_FLEET_API") baseUrl)
