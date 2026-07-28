@@ -48,6 +48,7 @@ Pass:
     maxValidDays: Maybe Int
     verificationValidity: Seconds
     documentsRequired: "[PassDocumentType]"
+    skipUserPhotographCapture: Maybe Bool
     order: Int
     enable: Bool
     autoApply: Bool

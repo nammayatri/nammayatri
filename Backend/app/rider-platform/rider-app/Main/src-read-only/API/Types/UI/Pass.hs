@@ -46,6 +46,7 @@ data PassAPIEntity = PassAPIEntity
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
     referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    skipUserPhotographCapture :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
   }

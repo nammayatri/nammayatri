@@ -113,3 +113,9 @@ ALTER TABLE atlas_app.pass ADD COLUMN vehicle_type text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN skip_user_photograph_capture boolean ;

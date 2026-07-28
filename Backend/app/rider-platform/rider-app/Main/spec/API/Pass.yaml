@@ -53,6 +53,7 @@ types:
     maxTrips: Maybe Int
     maxDays: Maybe Int
     documentsRequired: "[PassDocumentType]"
+    skipUserPhotographCapture: Maybe Bool
     eligibility: Bool
     name: Maybe Text
     description: Maybe Text

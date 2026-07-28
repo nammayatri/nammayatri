@@ -605,6 +605,7 @@ buildPassAPIEntity mbLanguage person pass = do
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
         documentsRequired = pass.documentsRequired,
+        skipUserPhotographCapture = pass.skipUserPhotographCapture,
         eligibility = eligibility,
         name = name,
         description = description,
@@ -768,7 +769,12 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId) (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      -- A pass configured with skipUserPhotographCapture never collects a photo, so it must
+      -- not be held in PhotoPending waiting for one it will never receive.
+      mbPass <- maybe (pure Nothing) CQPass.findById purchasedPassPayment.passId
+      let skipPhoto = fromMaybe False (mbPass >>= (.skipUserPhotographCapture))
+      let hasProfilePicture = skipPhoto || isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus hasProfilePicture (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
