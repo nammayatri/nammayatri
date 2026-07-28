@@ -177,14 +177,14 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
   let dateFilters = case (startDay, endDay) of
         (Just sd, Just ed) ->
           [ Se.And
-              [ Se.Is BeamR.updatedAt $ Se.GreaterThanOrEq (minDayTime sd),
-                Se.Is BeamR.updatedAt $ Se.LessThanOrEq (maxDayTime ed)
+              [ Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (minDayTime sd),
+                Se.Is BeamR.createdAt $ Se.LessThanOrEq (maxDayTime ed)
               ]
           ]
         (Just sd, Nothing) ->
           [ Se.And
-              [ Se.Is BeamR.updatedAt $ Se.GreaterThanOrEq (minDayTime sd),
-                Se.Is BeamR.updatedAt $ Se.LessThanOrEq (maxDayTime sd)
+              [ Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (minDayTime sd),
+                Se.Is BeamR.createdAt $ Se.LessThanOrEq (maxDayTime sd)
               ]
           ]
         _ -> []
