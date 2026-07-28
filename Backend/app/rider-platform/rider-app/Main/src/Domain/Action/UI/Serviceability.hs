@@ -66,6 +66,7 @@ data PTRestrictedHours = PTRestrictedHours
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
     city :: Maybe Context.City,
+    cityName :: Maybe Text,
     currentCity :: Maybe Context.City,
     specialLocation :: Maybe QSpecialLocation.SpecialLocationFull,
     geoJson :: Maybe Text,
@@ -97,6 +98,8 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
+          (Context.City cityNameText) = nearestOperatingCity.city
+          cityName = Just cityNameText
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
       let mbEnforceFlag = filteredSpecialLocationBody >>= (.enforceTollRoute)
@@ -136,6 +139,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
       return
         ServiceabilityRes
           { city = Nothing,
+            cityName = Nothing,
             currentCity = Nothing,
             serviceable = False,
             specialLocation = Nothing,
