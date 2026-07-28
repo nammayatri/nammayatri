@@ -1021,9 +1021,12 @@ in
                 name = "db-manager-backend";
                 runtimeInputs = [ pkgs.nodejs_20 pkgs.coreutils ];
                 text = ''
-                  DBJSON='{"primary":{"cloudName":"local","db_configs":[{"name":"bap","label":"Rider (atlas_app)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_app"],"defaultSchema":"atlas_app"},{"name":"bpp","label":"Driver (atlas_driver_offer_bpp)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_driver_offer_bpp"],"defaultSchema":"atlas_driver_offer_bpp"}]},"secondary":[],"history":{"host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev"}}'
+                  DBJSON='{"primary":{"cloudName":"local","db_configs":[{"name":"bap","label":"Rider (atlas_app)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_app"],"defaultSchema":"atlas_app"},{"name":"bpp","label":"Driver (atlas_driver_offer_bpp)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_driver_offer_bpp"],"defaultSchema":"atlas_driver_offer_bpp"},{"name":"bap-dashboard","label":"Rider Dashboard (atlas_bap_dashboard)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_bap_dashboard"],"defaultSchema":"atlas_bap_dashboard"},{"name":"bpp-dashboard","label":"Driver Dashboard (atlas_bpp_dashboard)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_bpp_dashboard"],"defaultSchema":"atlas_bpp_dashboard"}]},"secondary":[],"history":{"host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev"}}'
                   DATABASE_CONFIGS=$(printf '%s' "$DBJSON" | base64 | tr -d '\n')
                   export DATABASE_CONFIGS
+                  REDISJSON='{"services":[{"name":"cluster","label":"App Cluster","clusterMode":true,"primary":{"cloudName":"local","host":"localhost","port":${toString ports.redis-cluster-n1}},"secondary":[]},{"name":"standalone","label":"Standalone","clusterMode":false,"primary":{"cloudName":"local","host":"localhost","port":${toString ports.redis}},"secondary":[]}]}'
+                  REDIS_CONFIGS=$(printf '%s' "$REDISJSON" | base64 | tr -d '\n')
+                  export REDIS_CONFIGS
                   exec node ${self'.packages.db-manager-backend}/dist/server.js
                 '';
               };
@@ -1056,7 +1059,7 @@ in
                   DIR="$(mkdir -p ../data/db-manager-frontend && cd ../data/db-manager-frontend && pwd)"
                   cp -rf ${self'.packages.db-manager-frontend}/* "$DIR"/
                   chmod -R u+w "$DIR"
-                  printf '%s\n' "window.__APP_CONFIG__ = { BACKEND_URL: window.location.protocol + '//' + window.location.hostname + ':${toString ports.db-manager-backend}' };" > "$DIR/config.js"
+                  printf '%s\n' "window.__APP_CONFIG__ = { BACKEND_URL: window.location.origin + '/db-manager-backend' };" > "$DIR/config.js"
                   cd "$DIR"
                   exec python3 -m http.server ${toString ports.db-manager-frontend} --bind 0.0.0.0
                 '';
@@ -1514,8 +1517,15 @@ in
                 text = ''
                   CADDYFILE="''${FLAKE_ROOT:-..}/data/Caddyfile"
                   if [ ! -f "$CADDYFILE" ]; then
-                    echo "ERROR: $CADDYFILE not found. Run build-caddyfile.sh first." >&2
-                    exit 1
+                    # Fixed-port stacks (run-mobility-stack-dev / -full) have no
+                    # preflight that writes data/Caddyfile — generate it here from
+                    # the same ports the stack uses so caddy can start. The dev-box
+                    # preflight writes a resolved-ports Caddyfile first, which takes
+                    # precedence (this branch is skipped when that file exists).
+                    echo "caddy-reverse-proxy: $CADDYFILE not found — generating from ports.nix" >&2
+                    mkdir -p "$(dirname "$CADDYFILE")"
+                    cp ${pkgs.writeText "Caddyfile-fixed-ports" (import ./caddyfile.nix { inherit ports; })} "$CADDYFILE"
+                    chmod u+w "$CADDYFILE"
                   fi
                   echo "caddy-reverse-proxy: listening on :${toString ports.caddy-reverse-proxy}"
                   exec caddy run --config "$CADDYFILE" --adapter caddyfile

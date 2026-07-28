@@ -36,10 +36,25 @@ export function getContextApiBaseOverride(): string | null { return _readContext
 // new base and reloading once — the guard below keeps that to a single reload.
 const CTX_SYNC_GUARD = 'ny.contextApiBase.syncedTo';
 
+export function localModeHostOverride(): string | undefined {
+  try {
+    if (typeof window !== 'undefined'
+        && window.localStorage?.getItem('ny.remoteStack.mode') === 'local') {
+      return 'localhost';
+    }
+  } catch { /* ignore */ }
+  return undefined;
+}
+
+function devboxPortsUrl(): string {
+  const h = localModeHostOverride();
+  return `${LOCAL_API_BASE}/api/devbox/ports${h ? `?host=${h}` : ''}`;
+}
+
 export async function syncContextApiBase(): Promise<void> {
   let resolved: string | null = null;
   try {
-    const resp = await fetch(`${LOCAL_API_BASE}/api/devbox/ports`, { cache: 'no-store' });
+    const resp = await fetch(devboxPortsUrl(), { cache: 'no-store' });
     if (!resp.ok) return;
     const body = await resp.json();
     const host = body?.host || 'localhost';
@@ -130,6 +145,11 @@ export function getStackServiceUrl(name: string, pathSuffix = ''): string {
   return `http://${_stackHost}:${getServicePort(name)}${pathSuffix}`;
 }
 
+export function getCaddyServiceUrl(name: string, pathSuffix = ''): string {
+  if (_caddyPort == null) return getStackServiceUrl(name, pathSuffix);
+  return `http://${_stackHost}:${_caddyPort}/${name}/${pathSuffix}`;
+}
+
 // Async refresh. Invoked once on app boot (see App.tsx). Subsequent renders
 // of consumer components will see the resolved table.
 // Preference order:
@@ -154,10 +174,13 @@ export async function refreshPortsTable(): Promise<void> {
     } catch { /* ignore */ }
   };
   try {
-    const resp = await fetch(`${LOCAL_API_BASE}/api/devbox/ports`, { cache: 'no-store' });
+    const resp = await fetch(devboxPortsUrl(), { cache: 'no-store' });
     if (resp.ok) {
       const data = await resp.json();
-      applyHost(data?.host, data?.caddyPort);
+      const caddyPort = (typeof data?.caddyPort === 'number')
+        ? data.caddyPort
+        : (data?.ports?.['caddy-reverse-proxy'] ?? null);
+      applyHost(data?.host, caddyPort);
       if (apply(data?.ports)) return;
     }
   } catch {
