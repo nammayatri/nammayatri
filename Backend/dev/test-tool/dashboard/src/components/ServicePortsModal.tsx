@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { fetchDevboxPorts, DevboxPortsResponse } from '../services/remote';
-import { LOCAL_API_BASE, getContextApiBaseOverride, getContextApiBaseDefault } from '../config';
+import { LOCAL_API_BASE, getContextApiBaseOverride, getContextApiBaseDefault, localModeHostOverride } from '../config';
 import './ServicePortsModal.css';
 
 const CopyButton: React.FC<{ value: string }> = ({ value }) => {
@@ -44,7 +44,7 @@ export const ServicePortsModal: React.FC<{ onClose: () => void }> = ({ onClose }
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
-    try { setData(await fetchDevboxPorts({ refresh })); }
+    try { setData(await fetchDevboxPorts({ refresh, host: localModeHostOverride() })); }
     catch (e: any) { setData({ error: e?.message || String(e) }); }
     finally { setLoading(false); }
   }, []);
@@ -59,13 +59,13 @@ export const ServicePortsModal: React.FC<{ onClose: () => void }> = ({ onClose }
 
   const host = data?.host || 'localhost';
   const ports = data?.ports || {};
-  const caddyPort = data?.caddyPort ?? null;
-  const routes = data?.caddyRoutes || [];
+  const caddyPort = data?.caddyPort ?? ports['caddy-reverse-proxy'] ?? null;
+  const publishedRoutes = data?.caddyRoutes || [];
+  const routes = publishedRoutes.length > 0
+    ? publishedRoutes
+    : Object.keys(ports);
   const match = (s: string) => !filter.trim() || s.toLowerCase().includes(filter.trim().toLowerCase());
 
-  const direct = Object.entries(ports)
-    .filter(([name]) => match(name))
-    .sort(([a], [b]) => a.localeCompare(b));
   const viaCaddy = routes.filter(match).sort((a, b) => a.localeCompare(b));
 
   return (
@@ -134,34 +134,6 @@ export const ServicePortsModal: React.FC<{ onClose: () => void }> = ({ onClose }
               </table>
             </section>
           )}
-
-          <section>
-            <h4>Direct ports</h4>
-            <table className="spm-table">
-              <tbody>
-                {direct.map(([name, port]) => (
-                  <tr key={name}>
-                    <td className="spm-name">{name}</td>
-                    <td className="spm-port">{port}</td>
-                    <td className="spm-url">
-                      <a href={`http://${host}:${port}`} target="_blank" rel="noopener noreferrer">
-                        http://{host}:{port}
-                      </a>
-                    </td>
-                    <td className="spm-actions">
-                      <CopyButton value={`http://${host}:${port}`} />
-                      <CopyButton value={String(port)} />
-                    </td>
-                  </tr>
-                ))}
-                {direct.length === 0 && (
-                  <tr><td colSpan={4} className="spm-empty">
-                    {loading ? 'Loading…' : 'No ports available.'}
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
-          </section>
         </div>
 
         {data?.source && <div className="spm-footer">source: <code>{data.source}</code></div>}

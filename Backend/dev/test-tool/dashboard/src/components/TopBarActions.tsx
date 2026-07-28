@@ -3,7 +3,7 @@ import './TopBarActions.css';
 import { showAlert, showConfirm } from './Dialogs';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
-import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getStackServiceUrl } from '../config';
+import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getStackServiceUrl, getCaddyServiceUrl } from '../config';
 import { Terminal as IntegratedTerminal } from './Terminal';
 import { ServicePortsModal } from './ServicePortsModal';
 import { FinanceViewer } from './FinanceViewer';
@@ -296,7 +296,7 @@ export const TopBarActions: React.FC = () => {
     setTimeout(() => setFlushState('idle'), 3000);
   };
 
-  const dbManagerUrl = getStackServiceUrl('db-manager-frontend');
+  const dbManagerUrl = getCaddyServiceUrl('db-manager-frontend');
   const metabaseUrl = getStackServiceUrl('metabase');
 
   const syncBtnLabel = syncRunning

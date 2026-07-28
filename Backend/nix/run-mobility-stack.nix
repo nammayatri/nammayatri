@@ -35,16 +35,16 @@
           services.nammayatri.useCabal = false;
         };
 
-        # Fixed ports straight out of ports.nix. Caddy is off: its only job is to
-        # give a shared dev-box one stable origin in front of per-developer
-        # ports, and it needs a generated data/Caddyfile that this profile
-        # deliberately never writes. useCaddy=false (rather than disabling the
-        # process here) also drops the per-process "wait for caddy" gate the
-        # backend profile adds — without that, every service would wait forever.
+        # Fixed ports straight out of ports.nix, fronted by caddy on a single
+        # origin (:9090) so local URLs match the dev-box. The caddy process
+        # self-generates data/Caddyfile from these fixed ports when none exists
+        # (see caddy-reverse-proxy in nammayatri.nix), so it becomes healthy and
+        # the backend profile's per-process "wait for caddy" gate is satisfied
+        # instead of deadlocking.
         run-mobility-stack-dev = {
           imports = [ (commonFor "backend") ];
           services.nammayatri.useCabal = true;
-          services.nammayatri.useCaddy = false;
+          services.nammayatri.useCaddy = true;
         };
 
         # Same processes, but the ports come from the devbox registry slice the
@@ -58,7 +58,7 @@
         run-mobility-stack-full = {
           imports = [ (commonFor "full") ];
           services.nammayatri.useCabal = true;
-          services.nammayatri.useCaddy = false;
+          services.nammayatri.useCaddy = true;
         };
 
         run-local-test-dashboard = {

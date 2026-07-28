@@ -282,6 +282,65 @@ def _read_ports_table():
     return {"source": src, "ports": _read_ports_from_nix(PORTS_BASE_PATH)}
 
 
+# ── Route the test proxy through caddy ───────────────────────────────────────
+
+_URL_HOST_PORT_RE = re.compile(r"(https?://)(localhost|127\.0\.0\.1):(\d+)")
+_CADDY_ROUTE_RE = re.compile(r"handle_path\s+/([A-Za-z0-9_-]+)/\*")
+
+
+def _caddy_route_set():
+    """Service names caddy fronts, scraped from data/Caddyfile."""
+    try:
+        text = (PROJECT_ROOT / "data" / "Caddyfile").read_text()
+    except OSError:
+        return set()
+    return set(_CADDY_ROUTE_RE.findall(text))
+
+
+def _caddyify_node(node, port_to_service, caddy_port, routes):
+    if isinstance(node, dict):
+        return {k: _caddyify_node(v, port_to_service, caddy_port, routes)
+                for k, v in node.items()}
+    if isinstance(node, list):
+        return [_caddyify_node(v, port_to_service, caddy_port, routes) for v in node]
+    if isinstance(node, str):
+        def repl(m):
+            svc = port_to_service.get(int(m.group(3)))
+            if svc and svc in routes:
+                return f"{m.group(1)}{m.group(2)}:{caddy_port}/{svc}"
+            return m.group(0)
+        return _URL_HOST_PORT_RE.sub(repl, node)
+    return node
+
+
+_CADDY_RW_CACHE = {"at": 0.0, "maps": None}
+
+
+def _caddy_rewrite_maps():
+    """(port_to_service, caddy_port, routes), or None when caddy isn't fronting
+    the stack. Cached briefly so the per-request proxy path doesn't re-read
+    ports.json + Caddyfile on every request."""
+    now = time.time()
+    if now - _CADDY_RW_CACHE["at"] < 15:
+        return _CADDY_RW_CACHE["maps"]
+    ports = _read_ports_table().get("ports") or {}
+    caddy_port = ports.get("caddy-reverse-proxy")
+    routes = _caddy_route_set()
+    maps = ({p: s for s, p in ports.items()}, caddy_port, routes) if (caddy_port and routes) else None
+    _CADDY_RW_CACHE.update(at=now, maps=maps)
+    return maps
+
+
+def _caddyify_env(node):
+    """Rewrite direct localhost:<service-port> URLs to the caddy origin. No-op
+    when caddy isn't fronting the stack (no caddyPort / no Caddyfile routes)."""
+    maps = _caddy_rewrite_maps()
+    if maps is None:
+        return node
+    port_to_service, caddy_port, routes = maps
+    return _caddyify_node(node, port_to_service, caddy_port, routes)
+
+
 def _svc_port(name, default):
     """Resolved port for a service by its ports.nix name, with a fallback.
 
@@ -3028,6 +3087,8 @@ class ContextHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods",
                          "GET, POST, PUT, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Expose-Headers",
+                         "X-Proxy-Url, X-Upstream-Latency-Ms")
 
     def _send_json(self, data, status=200):
         try:
@@ -3106,6 +3167,15 @@ class ContextHandler(BaseHTTPRequestHandler):
         target_url = f"{target_base}{target_path}"
         if parsed.query:
             target_url += f"?{parsed.query}"
+        target_url = _caddyify_env(target_url)
+
+        _req_host = (self.headers.get("Host") or "").split(":")[0]
+        proxy_display_url = (
+            _URL_HOST_PORT_RE.sub(
+                lambda m: f"{m.group(1)}{_req_host}:{m.group(3)}", target_url, count=1)
+            if _req_host and _req_host not in ("localhost", "127.0.0.1")
+            else target_url
+        )
 
         # Read request body
         content_len = int(self.headers.get("Content-Length", 0))
@@ -3130,7 +3200,7 @@ class ContextHandler(BaseHTTPRequestHandler):
                 self.send_response(resp.status)
                 self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
                 self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
-                self.send_header("X-Proxy-Url", target_url)
+                self.send_header("X-Proxy-Url", proxy_display_url)
                 self._cors_headers()
                 self.end_headers()
                 self.wfile.write(resp_body)
@@ -3147,7 +3217,7 @@ class ContextHandler(BaseHTTPRequestHandler):
             self.send_response(e.code)
             self.send_header("Content-Type", e.headers.get("Content-Type", "application/json"))
             self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
-            self.send_header("X-Proxy-Url", target_url)
+            self.send_header("X-Proxy-Url", proxy_display_url)
             self._cors_headers()
             self.end_headers()
             self.wfile.write(resp_body)

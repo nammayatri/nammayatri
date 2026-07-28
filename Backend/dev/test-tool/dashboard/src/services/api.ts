@@ -453,8 +453,12 @@ export async function callPostmanStep(
     scriptError = result.error;
   }
 
-  // resolvedUrl = full URL the proxy forwarded to (shows in log panel for debugging)
-  const resolvedUrl = _proxyTargetHost ? `${_proxyTargetHost}${resolvedPath}` : resolvedPath;
+  // resolvedUrl = full URL the proxy actually forwarded to (shows in log panel).
+  // Prefer context-api's X-Proxy-Url response header, which reflects the real
+  // target after caddy routing (http://host:<caddyPort>/<service>/…); fall back
+  // to the client-side target when the header is absent (internal/non-proxied).
+  const resolvedUrl = responseHeaders['x-proxy-url']
+    || (_proxyTargetHost ? `${_proxyTargetHost}${resolvedPath}` : resolvedPath);
   return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
 }
 
