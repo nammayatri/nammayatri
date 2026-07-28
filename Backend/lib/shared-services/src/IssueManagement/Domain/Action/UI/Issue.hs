@@ -4,6 +4,7 @@ import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
@@ -75,6 +76,7 @@ data ServiceHandle m = ServiceHandle
     kaptureGetTicket :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.GetTicketReq -> m [TIT.GetTicketResp]),
     getTicketStatus :: Maybe (Id Merchant -> Id MerchantOperatingCity -> TIT.SearchTicketByIdReq -> m [TIT.GetTicketStatusResp]),
     findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
+    mbGetRideCardInfoByRideIds :: Maybe ([Id Ride] -> m [(Id Ride, Common.IssueReportRideInfo)]),
     mbReportACIssue :: Maybe (BaseUrl -> Text -> Text -> m APISuccess), -- Deprecated
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
     mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
@@ -287,7 +289,11 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
   let validIssueReports = filter (isJust . (.categoryId)) issueReports
   issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
-  issues <- mapM (processIssueReport issueConfig now language issueHandle) validIssueReports
+  let rideIds = mapMaybe (.rideId) validIssueReports
+  rideInfoMap <- case issueHandle.mbGetRideCardInfoByRideIds of
+    Just getRideCardInfo | not (null rideIds) -> Map.fromList <$> getRideCardInfo rideIds
+    _ -> pure mempty
+  issues <- mapM (processIssueReport issueConfig now language rideInfoMap) validIssueReports
   return $ Common.IssueReportListRes {issues}
   where
     processIssueReport ::
@@ -297,10 +303,10 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
       D.IssueConfig ->
       UTCTime ->
       Language ->
-      ServiceHandle m ->
+      Map.Map (Id Ride) Common.IssueReportRideInfo ->
       D.IssueReport ->
       m Common.IssueReportListItem
-    processIssueReport iConfig currTime language _ iReport = do
+    processIssueReport iConfig currTime language rideInfoMap iReport = do
       let timeDiff = realToFrac (currTime `diffUTCTime` iReport.updatedAt) / 3600
       if iReport.status == RESOLVED && timeDiff > iConfig.autoMarkIssueClosedDuration
         then do
@@ -310,16 +316,17 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
           let updatedChats =
                 iReport.chats ++ map (\messageId -> mkIssueChat IssueMessage messageId.getId currTime) issueMessages
           QIR.updateChats iReport.id updatedChats
-          mkIssueReport iReport (Just CLOSED) language
-        else mkIssueReport iReport Nothing language
+          mkIssueReport iReport (Just CLOSED) language rideInfoMap
+        else mkIssueReport iReport Nothing language rideInfoMap
 
     mkIssueReport ::
       BeamFlow m r =>
       D.IssueReport ->
       Maybe IssueStatus ->
       Language ->
+      Map.Map (Id Ride) Common.IssueReportRideInfo ->
       m Common.IssueReportListItem
-    mkIssueReport issueReport issueStatus language = do
+    mkIssueReport issueReport issueStatus language rideInfoMap = do
       (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage (fromJust issueReport.categoryId) language identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
       mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueReport.optionId
       return $
@@ -331,7 +338,8 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
             ticketBookingId = issueReport.ticketBookingId,
             optionLabel = mbIssueOption >>= (.label),
             status = fromMaybe issueReport.status issueStatus,
-            createdAt = issueReport.createdAt
+            createdAt = issueReport.createdAt,
+            rideInfo = issueReport.rideId >>= (`Map.lookup` rideInfoMap)
           }
 
 createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> Text -> m Common.IssueMediaUploadRes

@@ -72,7 +72,17 @@ data IssueReportListItem = IssueReportListItem
     optionLabel :: Maybe Text,
     rideId :: Maybe (Id Ride),
     ticketBookingId :: Maybe (Id FRFSTicketBooking),
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    rideInfo :: Maybe IssueReportRideInfo
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IssueReportRideInfo = IssueReportRideInfo
+  { pickupAddress :: Maybe Text,
+    dropAddress :: Maybe Text,
+    fare :: Maybe HighPrecMoney,
+    rideDate :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
