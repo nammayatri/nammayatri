@@ -13,20 +13,20 @@ import qualified Lib.Finance.Domain.Types.AuditEntry
 import Tools.Beam.UtilsTH
 
 data AuditEntryT f = AuditEntryT
-  { action :: (B.C f Lib.Finance.Domain.Types.AuditEntry.AuditAction),
-    actorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    actorType :: (B.C f Lib.Finance.Core.Types.ActorType),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    entityId :: (B.C f Kernel.Prelude.Text),
-    entityType :: (B.C f Lib.Finance.Domain.Types.AuditEntry.AuditEntityType),
-    id :: (B.C f Kernel.Prelude.Text),
-    ipAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    newState :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    previousState :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { action :: B.C f Lib.Finance.Domain.Types.AuditEntry.AuditAction,
+    actorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    actorType :: B.C f Lib.Finance.Core.Types.ActorType,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    entityId :: B.C f Kernel.Prelude.Text,
+    entityType :: B.C f Lib.Finance.Domain.Types.AuditEntry.AuditEntityType,
+    id :: B.C f Kernel.Prelude.Text,
+    ipAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    newState :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    previousState :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table AuditEntryT where
 
 type AuditEntry = AuditEntryT Identity
 
-$(enableKVPG (''AuditEntryT) [('id)] [[('entityId)]])
+$(enableKVPG ''AuditEntryT ['id] [['entityId]])
 
-$(mkTableInstancesGenericSchema (''AuditEntryT) "finance_audit_entry")
+$(mkTableInstancesGenericSchema ''AuditEntryT "finance_audit_entry")

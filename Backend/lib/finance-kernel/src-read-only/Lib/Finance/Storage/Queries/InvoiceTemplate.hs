@@ -25,7 +25,7 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.InvoiceTemplate.InvoiceTemplate] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantOpCityId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.InvoiceTemplate.InvoiceTemplate]))
+findAllByMerchantOpCityId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.InvoiceTemplate.InvoiceTemplate])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
 findByMerchantOpCityIdInvoiceTypeAndLanguage ::

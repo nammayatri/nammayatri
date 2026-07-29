@@ -103,28 +103,28 @@ data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON
 
 data TxnType = ORDER | REFUND | CHARGEBACK deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DisputeType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DisputeType)
 
-$(mkHttpInstancesForEnum (''DisputeType))
+$(mkHttpInstancesForEnum ''DisputeType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OrderType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OrderType)
 
-$(mkHttpInstancesForEnum (''OrderType))
+$(mkHttpInstancesForEnum ''OrderType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMethod))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentMethod)
 
-$(mkHttpInstancesForEnum (''PaymentMethod))
+$(mkHttpInstancesForEnum ''PaymentMethod)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementMode)
 
-$(mkHttpInstancesForEnum (''SettlementMode))
+$(mkHttpInstancesForEnum ''SettlementMode)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementType)
 
-$(mkHttpInstancesForEnum (''SettlementType))
+$(mkHttpInstancesForEnum ''SettlementType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TxnStatus)
 
-$(mkHttpInstancesForEnum (''TxnStatus))
+$(mkHttpInstancesForEnum ''TxnStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TxnType)
