@@ -136,7 +136,8 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
     seatIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
     skipBooking :: Kernel.Prelude.Bool,
     ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

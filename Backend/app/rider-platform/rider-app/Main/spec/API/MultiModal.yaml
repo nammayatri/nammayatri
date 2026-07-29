@@ -218,6 +218,7 @@ types:
     childTicketQuantity: Maybe Int
     seatIds: Maybe [Id Seat]
     tripId: Maybe Text
+    vehicleNumber: Maybe Text
     crisSdkResponse: Maybe CrisSdkResponse
     categorySelectionReq: Maybe [FRFSCategorySelectionReq]
 

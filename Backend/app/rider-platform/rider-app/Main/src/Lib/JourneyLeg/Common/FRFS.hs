@@ -449,8 +449,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         )
         routeDetails
 
-confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe API.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> m ()
-confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId = ActorInfo.withPersonIdActorInfo personId $ do
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Bool -> Bool -> Maybe API.CrisSdkResponse -> Spec.VehicleCategory -> [API.FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> m ()
+confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId mbVehicleNumber = ActorInfo.withPersonIdActorInfo personId $ do
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
@@ -462,7 +462,7 @@ confirm personId merchantId mbQuoteId bookLater bookingAllowed crisSdkResponse v
         bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
         FRFSTicketService.select merchant merchantOperatingCity bapConfig quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer
       _ -> do
-        void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId Nothing
+        void $ postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote categorySelectionReq crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId Nothing mbVehicleNumber
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
 cancel searchId cancellationType = do
