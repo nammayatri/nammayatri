@@ -1016,7 +1016,7 @@ getEn =
     , introductory_offer_to_be_announced_soon: "Introductory offer will be announced soon!"
     , no_charges_till: "No charges till {}"
     , and: " and "
-    , direct_payment_no_commissions: "Direct payment.\nNo commissions"
+    , direct_payment_no_commissions: "Direct payment.\nLow commissions"
     , customer_pays_directly: "Customer pays to you directly via \ncash or UPI"
     , hundred_percent_fare_goes_to_you: "100% of the fare\ngoes to you!"
     , fare_shown_is_fare_you_get: "The fare shown is the fare you get.\nNo hidden charges."
