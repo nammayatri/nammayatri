@@ -291,7 +291,7 @@ handler ValidatedDSearchReq {..} sReq = do
                   Redis.setExp (multipleRouteKey transactionId) (createMultipleRouteInfo <$> serviceableRoute.multipleRoutes) 3600
               )
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
-        mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId.getId Nothing serviceableRoute.routePoints
+        mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId.getId Nothing Nothing serviceableRoute.routePoints
         return
           ( Just setRouteInfo,
             Just toLocation,
