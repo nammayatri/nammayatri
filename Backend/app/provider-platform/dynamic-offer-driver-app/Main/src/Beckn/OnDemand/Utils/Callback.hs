@@ -20,8 +20,10 @@ import EulerHS.Prelude hiding ((.~))
 import qualified EulerHS.Types as ET
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.Error (BookingError (..), RideError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError (..))
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.SignatureAuth
 import Servant.Client
@@ -90,6 +92,7 @@ withBecknCallback doWithCallback auth transporterId action api cbUrl internalEnd
       doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap $ result
 
 forkBecknCallback ::
+  forall m result.
   (Forkable m, MonadCatch m, Log m) =>
   (BecknAPIError -> result) ->
   (result -> m ()) ->
@@ -99,7 +102,18 @@ forkBecknCallback ::
 forkBecknCallback fromError doWithResult actionName action =
   fork actionName $
     try action >>= \case
-      Right success -> doWithResult success
+      Right success ->
+        doWithResult success `catch` handleExpectedBapRejection
       Left err -> do
         logError $ "Error executing callback action " <> actionName <> ": " <> show err
         doWithResult $ fromError (someExceptionToBecknApiError err)
+  where
+    -- A BAP rejecting our callback because its view of booking/ride state lags
+    -- ours is an EXPECTED async mismatch, not a server fault. Log at info and let
+    -- the fork complete cleanly so it doesn't land on the 5xx dashboard.
+    handleExpectedBapRejection :: SomeException -> m ()
+    handleExpectedBapRejection exc
+      | Just (BecknAPICallError _ err) <- fromException @BecknAPICallError exc,
+        err.code `elem` [toErrorCode (BookingInvalidStatus ""), toErrorCode (RideInvalidStatus "")] =
+        logInfo $ "Callback " <> actionName <> " rejected by BAP (expected state mismatch), code=" <> err.code
+      | otherwise = throwM exc
