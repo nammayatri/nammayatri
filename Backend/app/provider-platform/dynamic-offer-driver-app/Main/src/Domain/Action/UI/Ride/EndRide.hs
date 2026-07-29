@@ -478,6 +478,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
                 mbValidatedPendingToll <-
                   TollsDetector.checkAndValidatePendingTolls
+                    TollsDetector.TollTrackingSnapToRoad
                     updRide.driverId.getId
                     updRide.estimatedTollCharges
                     updRide.estimatedTollNames
