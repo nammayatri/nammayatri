@@ -26,15 +26,15 @@ createMany = traverse_ create
 
 findByAction ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.AuditEntry.AuditEntityType -> Lib.Finance.Domain.Types.AuditEntry.AuditAction -> m ([Lib.Finance.Domain.Types.AuditEntry.AuditEntry]))
+  (Lib.Finance.Domain.Types.AuditEntry.AuditEntityType -> Lib.Finance.Domain.Types.AuditEntry.AuditAction -> m [Lib.Finance.Domain.Types.AuditEntry.AuditEntry])
 findByAction entityType action = do findAllWithKV [Se.And [Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.action $ Se.Eq action]]
 
 findByActor ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.AuditEntry.AuditEntry]))
+  (Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.AuditEntry.AuditEntry])
 findByActor actorType actorId = do findAllWithKV [Se.And [Se.Is Beam.actorType $ Se.Eq actorType, Se.Is Beam.actorId $ Se.Eq actorId]]
 
-findByEntity :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.AuditEntry.AuditEntityType -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.AuditEntry.AuditEntry]))
+findByEntity :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.AuditEntry.AuditEntityType -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.AuditEntry.AuditEntry])
 findByEntity entityType entityId = do findAllWithKV [Se.And [Se.Is Beam.entityType $ Se.Eq entityType, Se.Is Beam.entityId $ Se.Eq entityId]]
 
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.AuditEntry.AuditEntry -> m (Maybe Lib.Finance.Domain.Types.AuditEntry.AuditEntry))

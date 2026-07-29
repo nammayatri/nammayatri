@@ -13,34 +13,34 @@ import qualified Lib.Finance.Domain.Types.SapJournalEntry
 import Tools.Beam.UtilsTH
 
 data SapJournalEntryT f = SapJournalEntryT
-  { batchId :: (B.C f Kernel.Prelude.Text),
-    belnr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    blart :: (B.C f Kernel.Prelude.Text),
-    bldat :: (B.C f Kernel.Prelude.Text),
-    budat :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    createdBy :: (B.C f Lib.Finance.Core.Types.ActorType),
-    createdById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    description :: (B.C f Kernel.Prelude.Text),
-    gjahr :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    glName :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    glNumber :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    periodEndTime :: (B.C f Kernel.Prelude.UTCTime),
-    periodStartTime :: (B.C f Kernel.Prelude.UTCTime),
-    rawResponse :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    sapMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    status :: (B.C f Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus),
-    totalCreditAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    totalDebitAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    transactionCount :: (B.C f Kernel.Prelude.Int),
-    transactionType :: (B.C f Lib.Finance.Domain.Types.SapJournalEntry.TransactionType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedBy :: (B.C f Lib.Finance.Core.Types.ActorType),
-    updatedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text))
+  { batchId :: B.C f Kernel.Prelude.Text,
+    belnr :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    blart :: B.C f Kernel.Prelude.Text,
+    bldat :: B.C f Kernel.Prelude.Text,
+    budat :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    createdBy :: B.C f Lib.Finance.Core.Types.ActorType,
+    createdById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    currency :: B.C f Kernel.Types.Common.Currency,
+    description :: B.C f Kernel.Prelude.Text,
+    gjahr :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    glName :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    glNumber :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    periodEndTime :: B.C f Kernel.Prelude.UTCTime,
+    periodStartTime :: B.C f Kernel.Prelude.UTCTime,
+    rawResponse :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    sapMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    status :: B.C f Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus,
+    totalCreditAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    totalDebitAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    transactionCount :: B.C f Kernel.Prelude.Int,
+    transactionType :: B.C f Lib.Finance.Domain.Types.SapJournalEntry.TransactionType,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedBy :: B.C f Lib.Finance.Core.Types.ActorType,
+    updatedById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -50,6 +50,6 @@ instance B.Table SapJournalEntryT where
 
 type SapJournalEntry = SapJournalEntryT Identity
 
-$(enableKVPG (''SapJournalEntryT) [('id)] [[('batchId)], [('transactionType)]])
+$(enableKVPG ''SapJournalEntryT ['id] [['batchId], ['transactionType]])
 
-$(mkTableInstancesGenericSchema (''SapJournalEntryT) "sap_journal_entry")
+$(mkTableInstancesGenericSchema ''SapJournalEntryT "sap_journal_entry")
