@@ -169,6 +169,7 @@ data AppCfg = AppCfg
     incomingAPIResponseTimeout :: Int,
     maxShards :: Int,
     jobInfoMapx :: M.Map RiderJobType Bool,
+    jobRetryOnExceptionMapx :: M.Map RiderJobType Bool,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,

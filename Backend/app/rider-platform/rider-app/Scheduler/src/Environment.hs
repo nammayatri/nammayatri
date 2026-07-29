@@ -98,6 +98,7 @@ data HandlerEnv = HandlerEnv
     maxShards :: Int,
     version :: DeploymentVersion,
     jobInfoMap :: M.Map Text Bool,
+    jobRetryOnExceptionMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     schedulerSetName :: Text,
@@ -178,6 +179,7 @@ buildHandlerEnv HandlerCfg {..} = do
         pure Nothing
       Right env -> pure (Just env)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
+  let jobRetryOnExceptionMap :: (M.Map Text Bool) = M.mapKeys show jobRetryOnExceptionMapx
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer
   serviceClickhouseEnv <- createConn riderClickhouseCfg

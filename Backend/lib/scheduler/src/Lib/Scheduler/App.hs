@@ -50,11 +50,12 @@ runSchedulerService ::
   (JobProcessor t, FromJSON t, HasSchemaName SystemConfigsT) =>
   SchedulerConfig ->
   JobInfoMap ->
+  JobInfoMap ->
   Int ->
   Int ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency maxShards handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvConfigUpdateFrequency maxShards handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

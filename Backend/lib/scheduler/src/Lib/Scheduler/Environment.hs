@@ -124,7 +124,8 @@ data SchedulerEnv = SchedulerEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     inMemEnv :: InMemEnv,
     url :: Maybe Text,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    jobRetryOnExceptionMap :: JobInfoMap
   }
   deriving (Generic)
 
