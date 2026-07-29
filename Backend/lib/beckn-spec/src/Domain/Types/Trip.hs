@@ -392,6 +392,12 @@ isRideOtpTrip (InterCity OneWayRideOtp _) = True
 isRideOtpTrip (Delivery OneWayRideOtp) = True
 isRideOtpTrip (RideShare RideOtp) = True
 isRideOtpTrip (Rental RideOtp) = True
+-- EasyBooking RideOtp is the special-zone (airport-style) pickup flow: no upfront driver
+-- assignment, an OTP is minted at confirm and whichever queued driver arrives claims the ride.
+-- This predicate has no catch-all, so without this line EasyBooking RideOtp is treated as a
+-- normal trip everywhere downstream (ChangeServiceTier/AddBaggage gating, OTP-valid-ride
+-- incentive, special-zone payout scheduling, RideFlowDebug detection).
+isRideOtpTrip (EasyBooking RideOtp) = True
 isRideOtpTrip _ = False
 
 -- Move it to configs later if required

@@ -1034,9 +1034,11 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
         DRPO.Delivery ->
           [Delivery OneWayOnDemandDynamicOffer | not isScheduled]
         DRPO.EasyBooking ->
-          -- Only OnDemandStaticOffer wired up for now — RideOtp deliberately deferred
-          -- to a follow-up PR (mirrors Rental's own two-mode dispatch above once added).
+          -- Now offers both modes, mirroring Rental above: the static-offer dispatch AND the
+          -- special-zone RideOtp flow (when not scheduled). RideOtp only actually yields a
+          -- quote where a FareProduct row exists for (specialZoneArea, EasyBooking RideOtp).
           [EasyBooking OnDemandStaticOffer]
+            <> [EasyBooking RideOtp | not isScheduled]
         _ -> []
       tripCategories =
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
@@ -1062,8 +1064,12 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               -- FixedRoute, or OneWay categories that need a destination we don't have here.
               -- Scoped down to only carve out EasyBooking; every other preference keeps the
               -- exact previous hardcoded-to-Rental behavior for destination-less searches.
+              -- This is the LIVE path for EasyBooking: it's destination-less, so a search
+              -- always lands in the Nothing branch. Offer both the static-offer and the
+              -- special-zone RideOtp candidate (RideOtp only when not scheduled), mirroring
+              -- the Rental fallback on the next line.
               Nothing -> case dsReq.riderPreferredOption of
-                DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer]
+                DRPO.EasyBooking -> [EasyBooking OnDemandStaticOffer] <> [EasyBooking RideOtp | not isScheduled]
                 _ -> [Rental OnDemandStaticOffer] <> [Rental RideOtp | not isScheduled]
 
   TripOption {..}

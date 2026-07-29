@@ -109,10 +109,13 @@ tfQuotesInfo provider fulfillments validTill item = do
   -- is the one signal that still distinguishes it, so use that to override when present.
   let tripCategory =
         if maybe False ("ON_DEMAND_EASY_BOOKING" `elem`) item.itemCategoryIds
-          then -- Only OnDemandStaticOffer is ever produced for EasyBooking right now
-          -- (see driver-app's Search.hs), so hardcode it here too — RideOtp is
-          -- deliberately deferred to a follow-up PR.
-            EasyBooking OnDemandStaticOffer
+          then -- Both EasyBooking modes are now produced. Preserve the mode the BPP actually
+          -- decoded (EasyBooking RideOtp comes through once the on-us wire string is emitted;
+          -- see Common.tripCategoryToFulfillmentType) instead of hardcoding static-offer.
+          -- Fallback guards the lossy-RENTAL case this override was originally added for.
+          case fulfillmentTripCategory of
+            EasyBooking mode -> EasyBooking mode
+            _ -> EasyBooking OnDemandStaticOffer
           else fulfillmentTripCategory
   case tripCategoryToPricingPolicy tripCategory of
     EstimateBased _ -> do
@@ -187,8 +190,9 @@ tfQuotesInfo provider fulfillments validTill item = do
           OneWay MeterRide -> pure $ Domain.Action.Beckn.OnSearch.MeterRideDetails (Domain.Action.Beckn.OnSearch.MeterRideQuoteDetails {quoteId = quoteOrEstId_})
           -- Just the quote id, like OneWay/MeterRide above — the actual price is carried
           -- generically via quoteBreakupList_/estimatedFare_, not a per-category preview field.
-          -- RideOtp mode not handled yet — never produced (see the tripCategory override above).
-          EasyBooking OnDemandStaticOffer -> pure $ Domain.Action.Beckn.OnSearch.EasyBookingDetails (Domain.Action.Beckn.OnSearch.EasyBookingQuoteDetails {quoteId = quoteOrEstId_})
+          -- Both EasyBooking modes (static-offer AND RideOtp) build the identical shape, so match
+          -- on EasyBooking _ rather than adding a near-duplicate line for RideOtp.
+          EasyBooking _ -> pure $ Domain.Action.Beckn.OnSearch.EasyBookingDetails (Domain.Action.Beckn.OnSearch.EasyBookingQuoteDetails {quoteId = quoteOrEstId_})
           ft -> throwError (InternalError $ "tfQuotesInfo not implemented for fulfillmentType: " <> show ft)
       pure $
         Right $

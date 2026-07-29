@@ -71,6 +71,10 @@ getBookingTypeFromTripCategory tripCategory =
     InterCity OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
     CrossCity OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
     Delivery OneWayRideOtp -> Domain.Types.Booking.SpecialZoneBooking
+    -- EasyBooking RideOtp is a special-zone booking too. This transformer runs on every booking
+    -- write, so without this the booking would persist as NormalBooking and the OTP-claim lookup
+    -- (findBookingBySpecialZoneOTP) wouldn't find it.
+    EasyBooking RideOtp -> Domain.Types.Booking.SpecialZoneBooking
     _ -> Domain.Types.Booking.NormalBooking
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

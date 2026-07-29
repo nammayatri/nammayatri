@@ -191,8 +191,11 @@ tripCategoryToFulfillmentType = \case
   -- FulfillmentType is a fixed Beckn/ONDC protocol enum with no EasyBooking value;
   -- reuse RENTAL since EasyBooking is structurally the same shape (destination-less,
   -- quote-based) as Rental for protocol purposes, even though its fare policy differs.
-  -- Only OnDemandStaticOffer is ever produced for EasyBooking currently, so unlike
-  -- Rental (which special-cases RideOtp above), there's no as-pattern needed here yet.
+  -- EasyBooking RideOtp now IS produced (special-zone flow), so it needs the same on-us
+  -- as-pattern trick as Rental RideOtp above: emit "EasyBooking_RideOtp" so the BAP's
+  -- readMaybe @TripCategory can distinguish it. Without this, both EasyBooking modes
+  -- serialize to "RENTAL" and become indistinguishable on decode.
+  r@(EasyBooking RideOtp) -> show r
   EasyBooking _ -> show Enums.RENTAL
   _ -> show Enums.DELIVERY
 

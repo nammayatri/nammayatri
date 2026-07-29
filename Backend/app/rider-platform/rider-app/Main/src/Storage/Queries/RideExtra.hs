@@ -406,6 +406,9 @@ findBookingDetialsByBookingId bookingId = do
           DRB.OneWaySpecialZoneDetails details -> isJust details.otpCode
           DRB.RentalDetails _ -> True
           DRB.InterCityDetails _ -> True
+          -- EasyBooking RideOtp booking has no assigned ride between confirm and the driver
+          -- entering the OTP; keep it visible to this lookup like Rental/InterCity.
+          DRB.EasyBookingDetails _ -> True
           _ -> False
   if isOtpRideOrRentalIntercityRide
     then pure (Just booking)
@@ -485,6 +488,9 @@ findAllByRiderIdAndRide mbPersonId mbAgentId mbOnlyDashboard mbLimit mbOffset mb
               isRentalOrInterCity = case bookingDetails of
                 DRB.RentalDetails _ -> True
                 DRB.InterCityDetails _ -> True
+                -- Same as above: keep an OTP-pending EasyBooking booking (no ride yet) in the
+                -- rider's active-bookings list instead of filtering it out.
+                DRB.EasyBookingDetails _ -> True
                 _ -> False
            in isJust maybeRide || isJust otpCode || isRentalOrInterCity
 
