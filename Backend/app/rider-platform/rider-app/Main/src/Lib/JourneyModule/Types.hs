@@ -1206,8 +1206,8 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkStandaloneFrfsMinimalLegInfo :: (MonadFlow m) => FRFSSR.FRFSSearch -> Maybe Price -> m LegInfo
-mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare = do
+mkStandaloneFrfsMinimalLegInfo :: (MonadFlow m) => FRFSSR.FRFSSearch -> Maybe Price -> Maybe LegServiceTier -> m LegInfo
+mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
   now <- getCurrentTime
   legId <- generateGUID
   let mbFareEntity = mkPriceAPIEntity <$> mbFare
@@ -1237,7 +1237,7 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare = do
                 ticketsCreatedAt = Nothing,
                 routeName = Nothing,
                 providerName = Nothing,
-                selectedServiceTier = Nothing,
+                selectedServiceTier = mbSelectedServiceTier,
                 frequency = Nothing,
                 alternateShortNames = [],
                 ticketNo = Nothing,
@@ -1294,7 +1294,7 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare = do
                 providerRouteId = Nothing,
                 deviceId = Nothing,
                 ticketTypeCode = Nothing,
-                selectedServiceTier = Nothing,
+                selectedServiceTier = mbSelectedServiceTier,
                 ticketNo = Nothing,
                 adultTicketQuantity = Just frfsSearch.quantity,
                 childTicketQuantity = Nothing,
