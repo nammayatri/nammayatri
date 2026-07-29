@@ -666,7 +666,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             Just latLong -> return [sourceLatLong, latLong, sourceLatLong]
             Nothing -> throwError (InvalidRequest "Destination is required for Round Trips ")
           else return $ sourceLatLong : stopsLatLong
-      calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute
+      calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest_
 
     processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text)
     processRentalSearch person rentalReq stopsLatLong originCity = do
@@ -837,8 +837,9 @@ calculateDistanceAndRoutes ::
   Id SearchRequest.SearchRequest ->
   [LatLong] ->
   Maybe Bool -> -- mbEnforceTollRoute, echoed from the serviceability response by the UI
+  Bool ->
   m (RouteDetails, Maybe Text)
-calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute = do
+calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest = do
   let request =
         Maps.GetRoutesReq
           { waypoints = NE.fromList latLongs,
@@ -847,11 +848,12 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
           }
       sourceLatLong = NE.head (NE.fromList latLongs)
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
-  let mbSpecialLocationEnforceToll = (QSpecialLocation.filterGates mbSpecialLocation True) >>= (.enforceTollRoute)
+  let mbSpecialLocationEnforceToll = QSpecialLocation.filterGates mbSpecialLocation True >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
   let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll
       isAvoidTollEffective = if mustEnforceToll then False else riderConfig.isAvoidToll
-  routeResponse <- Maps.getRoutes (Just isAvoidTollEffective) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
+      finalEffectiveToll = if isDashboardRequest then not <$> mbEnforceTollRoute else Just isAvoidTollEffective
+  routeResponse <- Maps.getRoutes finalEffectiveToll person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
   finalRoutes <-
     if mustEnforceToll
