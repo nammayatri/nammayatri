@@ -28,6 +28,7 @@ FleetOwnerInformation:
     panNumber: Maybe (EncryptedHashedField e Text)
     panNumberDec: Maybe Text # for backward compatibilty
     tdsRate: Maybe Double
+    tdsThresholdAmount: Maybe HighPrecMoney
     fleetType: FleetType
     gstImageId : Maybe Text
     panImageId: Maybe Text

@@ -1020,5 +1020,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN airport_entry_f
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN skip_rc_association_check_for_dco boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN skip_rc_association_check_for_fleet boolean ;
+
+
+------- SQL updates -------
+
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN unified_onboarding_flags_recompute boolean ;

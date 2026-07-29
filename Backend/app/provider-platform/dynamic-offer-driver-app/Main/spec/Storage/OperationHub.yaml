@@ -72,6 +72,8 @@ OperationHubRequests:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< inspectionResponse|E
   constraints:
     id: PrimaryKey
+    requestStatus: "!SecondaryKey"
+    driverId: "!SecondaryKey"
 
   extraOperations:
     - EXTRA_QUERY_FILE

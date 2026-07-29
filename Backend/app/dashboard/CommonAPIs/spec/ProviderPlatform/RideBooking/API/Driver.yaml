@@ -354,6 +354,7 @@ types:
     - panAadhaarLinkedFlag: Maybe Bool
     - gstinApplicableFlag: Maybe Bool
     - tdsApplicableFlag: Maybe Bool
+    - tdsThresholdAmount: Maybe HighPrecMoney
     - walletId: Maybe Text
     - bankAccountNumber: Maybe Text
     - bankIfsc: Maybe Text
