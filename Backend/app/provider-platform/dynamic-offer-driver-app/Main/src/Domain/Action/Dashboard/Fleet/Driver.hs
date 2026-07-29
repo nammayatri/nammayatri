@@ -5124,8 +5124,9 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
   when (isNothing mbVehicleNo && isNothing mbRcId) $ throwError (InvalidRequest "either vehicleNo or rcId is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let mbNormalizedVehicleNo = DomainRC.normalizeDocumentNumber <$> mbVehicleNo
-  mbVrc <- VRCQuery.findVehicleInfoByRcIdOrVehicleNo mbRcId mbNormalizedVehicleNo
+  -- Registration numbers are stored exactly as supplied, so match on the raw value as every
+  -- other lookup here does. Normalizing first strips dashes and never finds plates like "KXP-430".
+  mbVrc <- VRCQuery.findVehicleInfoByRcIdOrVehicleNo mbRcId mbVehicleNo
   vrc <- maybe (throwError $ VehicleNotFound (fromMaybe "" mbVehicleNo <> fromMaybe "" mbRcId)) pure mbVrc
   when (vrc.merchantId /= Just merchant.id || vrc.merchantOperatingCityId /= Just merchantOpCityId) $ do
     throwError (VehicleNotFound (fromMaybe "" mbVehicleNo <> fromMaybe "" mbRcId))
