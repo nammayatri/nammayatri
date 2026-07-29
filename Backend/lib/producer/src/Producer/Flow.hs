@@ -123,6 +123,10 @@ runReviver' producerType = do
                     merchantOperatingCityId = ST.merchantOperatingCityId x
                   }
           createWithKVScheduler $ AnyJob newJob
+          -- Release the reviver lock on the old job id here (before the stream insert). The handler locks the
+          -- revived job on parentJobId (== old id for root jobs); holding this key would make whenWithLockRedis
+          -- skip execution, so the revived job would never run.
+          Hedis.withCrossAppRedis $ Hedis.unlockRedis (mkRunningJobKey x.id.getId)
           logDebug $ "Driver side Job Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
           pure (AnyJob newJob)
       let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
@@ -159,6 +163,10 @@ runReviver' producerType = do
                     merchantOperatingCityId = ST.merchantOperatingCityId x
                   }
           createWithKVScheduler $ AnyJob newJob
+          -- Release the reviver lock on the old job id here (before the stream insert). The handler locks the
+          -- revived job on parentJobId (== old id for root jobs); holding this key would make whenWithLockRedis
+          -- skip execution, so the revived job would never run.
+          Hedis.withCrossAppRedis $ Hedis.unlockRedis (mkRunningJobKey x.id.getId)
           logDebug $ "Rider sideJob Revived and inserted into DB with parentJobId : " <> show x.id <> " JobId : " <> show newid
           pure (AnyJob newJob)
       let newJobsToExecute_ = map (BSL.toStrict . Ae.encode) newJobsToExecute
