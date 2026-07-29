@@ -373,3 +373,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN unhygienic_vehi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN airport_block_expiry_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN initiated_by text ;

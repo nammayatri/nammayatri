@@ -13,8 +13,10 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra as O
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding as CommonOnboarding
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
+import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.Text as Text
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
@@ -26,6 +28,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as UIStatus
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -242,7 +245,34 @@ castStatusRes SStatus.StatusRes' {..} =
       driverLicenseDetails = fmap (castDLDetails <$>) driverLicenseDetails,
       vehicleDocuments = castVehicleDocumentItem <$> vehicleDocuments,
       vehicleRegistrationCertificateDetails = fmap (castRCDetails <$>) vehicleRegistrationCertificateDetails,
+      onboardingAs = castOnboardingAs <$> onboardingAs,
+      disabledReasonFlag = castDisabledReasonFlag <$> disabledReasonFlag,
+      recentFleetInfo = castFleetInfoToAssociationInfo <$> recentFleetInfo,
       ..
+    }
+
+castOnboardingAs :: DI.OnboardingAs -> CommonDriver.OnboardingAs
+castOnboardingAs DI.FLEET_DRIVER = CommonDriver.FLEET_DRIVER
+castOnboardingAs DI.INDIVIDUAL = CommonDriver.INDIVIDUAL
+
+castDisabledReasonFlag :: DI.DisabledReasonFlag -> CommonDriver.DisabledReasonFlag
+castDisabledReasonFlag DI.FleetDisabled = CommonDriver.FleetDisabled
+castDisabledReasonFlag DI.AdminDisabled = CommonDriver.AdminDisabled
+castDisabledReasonFlag DI.DriverDisabled = CommonDriver.DriverDisabled
+
+castFleetInfoToAssociationInfo :: DOVT.FleetInfo -> CommonDriver.DriverAssociationInfo
+castFleetInfoToAssociationInfo f =
+  CommonDriver.DriverAssociationInfo
+    { personId = Id f.id,
+      name = Just f.ownerName,
+      mobileCountryCode = Nothing,
+      mobileNumber = f.phoneNumber,
+      fleetName = f.fleetName,
+      verified = Nothing,
+      enabled = Nothing,
+      isActive = f.isActive,
+      isAssociated = f.isAssociated,
+      associatedTill = f.associatedTill
     }
 
 castDocumentStatusItem :: SStatus.DocumentStatusItem -> CommonOnboarding.DocumentStatusItem

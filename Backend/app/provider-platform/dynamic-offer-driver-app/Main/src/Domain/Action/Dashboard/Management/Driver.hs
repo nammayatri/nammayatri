@@ -312,18 +312,27 @@ getDriverAadhaarInfobyMobileNumber merchantShortId _ phoneNumber = do
     Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
 
 ---------------------------------------------------------------------
-getDriverList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
-getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString = do
+castCommonOnboardingAsToDomain :: Common.OnboardingAs -> DrInfo.OnboardingAs
+castCommonOnboardingAsToDomain Common.FLEET_DRIVER = DrInfo.FLEET_DRIVER
+castCommonOnboardingAsToDomain Common.INDIVIDUAL = DrInfo.INDIVIDUAL
+
+approvalStatusToFilter :: Common.ApprovalStatusFilter -> Maybe Bool
+approvalStatusToFilter Common.ApprovedOnly = Just True
+approvalStatusToFilter Common.RejectedOnly = Just False
+approvalStatusToFilter Common.PendingOnly = Nothing
+
+getDriverList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Flow Common.DriverListRes
+getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString
+  let mbOnboardingAsDom = castCommonOnboardingAsToDomain <$> mbOnboardingAs
+      mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
+  driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString mbApprovalFilter mbOnboardingAsDom
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
-  -- should we consider filters in totalCount, e.g. count all enabled drivers?
-  -- totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.DriverListRes {totalItems = count, summary, drivers = items}
   where
@@ -333,6 +342,9 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
 buildDriverListItem :: EncFlow m r => (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
 buildDriverListItem (person, driverInformation, mbVehicle) = do
   phoneNo <- mapM decrypt person.mobileNumber
+  -- recentFleetInfo + hasActiveRc: stubbed in list view; use /driver/info for full detail.
+  -- Populating them here needs per-driver FDA + DRCA + fleet-owner reads. If required, extend
+  -- findAllDriversWithInfoAndVehicle with a JOIN param rather than adding separate batch queries.
   pure $
     Common.DriverListItem
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -347,8 +359,19 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         subscribed = driverInformation.subscribed,
         onRide = driverInformation.onRide,
         active = driverInformation.active,
-        onboardingDate = driverInformation.lastEnabledOn
+        onboardingDate = driverInformation.lastEnabledOn,
+        approved = driverInformation.approved,
+        onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
+        recentFleetInfo = Nothing,
+        hasActiveRc = False,
+        disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag
       }
+  where
+    castOnboardingAs DrInfo.FLEET_DRIVER = Common.FLEET_DRIVER
+    castOnboardingAs DrInfo.INDIVIDUAL = Common.INDIVIDUAL
+    castDisabledReasonFlag DrInfo.FleetDisabled = Common.FleetDisabled
+    castDisabledReasonFlag DrInfo.AdminDisabled = Common.AdminDisabled
+    castDisabledReasonFlag DrInfo.DriverDisabled = Common.DriverDisabled
 
 ---------------------------------------------------------------------
 getDriverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActivityRes

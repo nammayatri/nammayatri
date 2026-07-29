@@ -9,6 +9,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.FleetOwnerInformation
+import qualified Domain.Types.InitiatedBy
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -47,6 +48,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     gstNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gstNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     gstNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy),
     isBlockedForReferralPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedForScheduledPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEligibleForSubscription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

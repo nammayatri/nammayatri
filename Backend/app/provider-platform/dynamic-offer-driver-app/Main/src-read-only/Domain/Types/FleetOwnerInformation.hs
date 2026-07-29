@@ -6,6 +6,7 @@ module Domain.Types.FleetOwnerInformation where
 import Data.Aeson
 import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverInformation
+import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -45,6 +46,7 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     gstImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gstNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     gstNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    initiatedBy :: Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy,
     isBlockedForReferralPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedForScheduledPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isEligibleForSubscription :: Kernel.Prelude.Bool,
@@ -114,6 +116,7 @@ instance EncryptedItem FleetOwnerInformation where
           gstImageId = gstImageId entity,
           gstNumber = gstNumber_,
           gstNumberDec = gstNumberDec entity,
+          initiatedBy = initiatedBy entity,
           isBlockedForReferralPayout = isBlockedForReferralPayout entity,
           isBlockedForScheduledPayout = isBlockedForScheduledPayout entity,
           isEligibleForSubscription = isEligibleForSubscription entity,
@@ -175,6 +178,7 @@ instance EncryptedItem FleetOwnerInformation where
             gstImageId = gstImageId entity,
             gstNumber = gstNumber_,
             gstNumberDec = gstNumberDec entity,
+            initiatedBy = initiatedBy entity,
             isBlockedForReferralPayout = isBlockedForReferralPayout entity,
             isBlockedForScheduledPayout = isBlockedForScheduledPayout entity,
             isEligibleForSubscription = isEligibleForSubscription entity,

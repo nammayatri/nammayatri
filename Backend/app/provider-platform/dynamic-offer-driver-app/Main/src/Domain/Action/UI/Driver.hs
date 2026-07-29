@@ -468,6 +468,7 @@ data DriverInformationRes = DriverInformationRes
     nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe DOVT.FleetInfo,
+    recentFleetInfo :: Maybe DOVT.FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney,
@@ -1650,6 +1651,7 @@ buildFleetInfo person fda = do
   fleetPhoneNumber <- decrypt `mapM` person.mobileNumber
   fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
   mbFleetBankAccount <- QDBA.findByPrimaryKey (Id @SP.Person fda.fleetOwnerId)
+  now <- getCurrentTime
   return $
     DOVT.FleetInfo
       { id = fda.fleetOwnerId,
@@ -1660,7 +1662,10 @@ buildFleetInfo person fda = do
         requestReason = fda.requestReason,
         responseReason = fda.responseReason,
         chargesEnabled = (.chargesEnabled) <$> mbFleetBankAccount,
-        createdAt = fda.createdAt
+        createdAt = fda.createdAt,
+        isActive = fda.isActive,
+        isAssociated = maybe False (> now) fda.associatedTill,
+        associatedTill = fda.associatedTill
       }
 
 buildOperatorInfo :: (EncFlow m r, CacheFlow m r) => SP.Person -> m OperatorInfo
@@ -1802,6 +1807,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           favCount = Just driverStats.favRiderCount,
           operatorReferralCode = (.referralCode.getId) <$> operatorReferral,
           activeFleet = activeFleet,
+          recentFleetInfo = activeFleet <|> fleetRequest,
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = case activeFleet of
@@ -1821,6 +1827,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           createdAt = registeredAt,
           forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
           approved = driverInfo.approved,
+          disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           ..
         }

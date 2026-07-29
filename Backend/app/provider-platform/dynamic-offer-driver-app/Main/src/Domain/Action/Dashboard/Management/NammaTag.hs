@@ -180,7 +180,8 @@ instance YTH.GenericDefaults DDVC.FieldInfo where
           DDVC.name = "defaultText",
           DDVC.placeholder = Just "defaultText",
           DDVC.regexValidation = Just "defaultText",
-          DDVC.requestKey = Just "defaultText"
+          DDVC.requestKey = Just "defaultText",
+          DDVC.imageUrl = Just "defaultUrl"
         }
     ]
 
