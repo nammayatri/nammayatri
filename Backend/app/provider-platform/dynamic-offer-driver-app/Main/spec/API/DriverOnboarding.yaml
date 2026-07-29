@@ -177,6 +177,9 @@ types:
     responseReason: Maybe Text
     chargesEnabled: Maybe Bool
     createdAt: UTCTime
+    isActive: Bool
+    isAssociated: Bool
+    associatedTill: Maybe UTCTime
   HVSdkCallLogReq:
     txnId: Text
     hvFlowId: Maybe Text

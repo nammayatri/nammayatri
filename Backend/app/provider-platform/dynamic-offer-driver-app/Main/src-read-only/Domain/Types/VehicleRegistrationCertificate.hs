@@ -6,6 +6,7 @@ module Domain.Types.VehicleRegistrationCertificate where
 import Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
+import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
@@ -29,6 +30,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     fitnessExpiry :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
+    initiatedBy :: Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy,
     insuranceValidity :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
@@ -65,9 +67,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -85,6 +87,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           fitnessExpiry = fitnessExpiry entity,
           fleetOwnerId = fleetOwnerId entity,
           id = id entity,
+          initiatedBy = initiatedBy entity,
           insuranceValidity = insuranceValidity entity,
           luggageCapacity = luggageCapacity entity,
           mYManufacturing = mYManufacturing entity,
@@ -133,6 +136,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             fitnessExpiry = fitnessExpiry entity,
             fleetOwnerId = fleetOwnerId entity,
             id = id entity,
+            initiatedBy = initiatedBy entity,
             insuranceValidity = insuranceValidity entity,
             luggageCapacity = luggageCapacity entity,
             mYManufacturing = mYManufacturing entity,
@@ -180,6 +184,6 @@ data DocsVerificationStatus = ADMIN_PENDING | ADMIN_APPROVED | ADMIN_REJECTED de
 data PendingChallanResult = PendingChallanResult {errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text, pendingChallanCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocsVerificationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocsVerificationStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DocsVerificationStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''DocsVerificationStatus)

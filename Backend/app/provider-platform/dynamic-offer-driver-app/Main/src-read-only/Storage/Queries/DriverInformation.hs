@@ -304,6 +304,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.hasRideStarted hasRideStarted,
+      Se.Set Beam.initiatedBy initiatedBy,
       Se.Set Beam.isBlockedForReferralPayout isBlockedForReferralPayout,
       Se.Set Beam.isBlockedForScheduledPayout isBlockedForScheduledPayout,
       Se.Set Beam.isHighAccuracyLocationEnabled isHighAccuracyLocationEnabled,

@@ -532,7 +532,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             disabledReasonFlag = Nothing,
             preferredMapProvider = Nothing,
             unhygienicVehicleViolationCount = Nothing,
-            vehicleUnsafeViolationCount = Nothing
+            vehicleUnsafeViolationCount = Nothing,
+            initiatedBy = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

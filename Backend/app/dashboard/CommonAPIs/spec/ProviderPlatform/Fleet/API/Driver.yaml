@@ -36,6 +36,9 @@ imports:
   MerchantOperatingCity: Dashboard.Common
   IndianState: Kernel.Types.Beckn.Context
   AddressDocumentType: Dashboard.Common.Driver
+  OnboardingAs: Dashboard.Common.Driver
+  ApprovalStatusFilter: Dashboard.Common.Driver
+  DriverAssociationInfo: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -62,6 +65,9 @@ apis:
         limit: Int
         offset: Int
         docsVerificationStatus: DocsVerificationStatus
+        verified: Bool
+        approvalStatus: ApprovalStatusFilter
+        enabled: Bool
       response:
         type: "[FleetOwnerListItem]"
 
@@ -260,6 +266,9 @@ apis:
         - mbIsActive: Bool
         - mbMemberPersonId: Text
         - mbSendDriverMobileNumber: Bool
+        - verified: Bool
+        - approvalStatus: ApprovalStatusFilter
+        - isRcActive: Bool
       response:
         type: ListVehicleResT
       migrate:
@@ -291,6 +300,12 @@ apis:
         - mbFleetOwnerId: Text
         - mbIsActive: Bool
         - mbMemberPersonId: Text
+        - verified: Bool
+        - approvalStatus: ApprovalStatusFilter
+        - enabled: Bool
+        - blocked: Bool
+        - onboardingAs: OnboardingAs
+        - fleetDriverAssociationConsent: Bool
       response:
         type: FleetListDriverResT
       migrate:
@@ -1003,7 +1018,7 @@ apis:
       multipart:
         type: CreateDriversReq
       response:
-        type: APISuccessWithUnprocessedEntities
+        type: AddDriversResp
       helperApi:
         - POST:
             endpoint: /fleet/addDrivers
@@ -1013,7 +1028,7 @@ apis:
             multipart:
               type: CreateDriversReq
             response:
-              type: APISuccessWithUnprocessedEntities
+              type: AddDriversResp
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
 
@@ -1587,6 +1602,7 @@ types:
     - nomineeDob: Maybe Day
     - nomineeRel: Maybe Text
     - addressState: Maybe IndianState
+    - onboardingAs: Maybe OnboardingAs
     - derive: "'HideSecrets"
   DriverDetailsRes:
     - driverId: Id Driver
@@ -1676,6 +1692,7 @@ types:
     - fleetType: FleetType
     - enabled: Bool
     - verified: Bool
+    - approved: Maybe Bool
     - blocked: Bool
     - isEligibleForSubscription: Bool
     - address: Maybe StripeAddress
@@ -2189,6 +2206,12 @@ types:
     - derive: "'HideSecrets"
   APISuccessWithUnprocessedEntities:
     - recordType: NewType
+    - unprocessedEntities: [Text]
+  ProcessedDriverInfo:
+    - driverId: Id Driver
+    - phoneNo: Text
+  AddDriversResp:
+    - processedDrivers: [ProcessedDriverInfo]
     - unprocessedEntities: [Text]
   MultiOwnerSelect:
     - recordType: NewType

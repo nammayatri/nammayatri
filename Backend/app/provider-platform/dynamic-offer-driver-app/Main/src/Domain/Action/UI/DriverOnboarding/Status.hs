@@ -19,6 +19,7 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
+import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as DGst
@@ -27,6 +28,7 @@ import qualified Domain.Action.UI.DriverOnboarding.SyncVerificationStatus as Syn
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as DUdyam
 import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
+import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -61,6 +63,12 @@ data StatusRes = StatusRes
     vehicleDocuments :: [SStatus.VehicleDocumentItem],
     commonDocuments :: [SStatus.CommonDocumentItem],
     enabled :: Bool,
+    verified :: Bool,
+    approved :: Maybe Bool,
+    blocked :: Bool,
+    onboardingAs :: Maybe DriverInfo.OnboardingAs,
+    disabledReasonFlag :: Maybe DriverInfo.DisabledReasonFlag,
+    recentFleetInfo :: Maybe DOVT.FleetInfo,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [SStatus.DLDetails],
     vehicleRegistrationCertificateDetails :: Maybe [SStatus.RCDetails],
@@ -68,7 +76,7 @@ data StatusRes = StatusRes
     digilockerResponseCode :: Maybe Text,
     digilockerAuthorizationUrl :: Maybe Text
   }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
 statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage enableDocumentMetadata = do

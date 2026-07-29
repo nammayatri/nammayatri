@@ -21,6 +21,7 @@ imports:
   Meters: Kernel.Types.Common
   UpgradedTier: Domain.Types.UpgradedTier
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
+  InitiatedBy: Domain.Types.InitiatedBy
 DriverInformation:
   tableName: driver_information
   types:
@@ -133,6 +134,7 @@ DriverInformation:
     weeklyCancellationRateBlockingCooldown: Maybe UTCTime
     blockReasonFlag: Maybe BlockReasonFlag
     disabledReasonFlag: Maybe DisabledReasonFlag
+    initiatedBy: Maybe InitiatedBy
     payoutRegAmountRefunded: Maybe HighPrecMoney
     driverTripEndLocation: Maybe LatLong
     onRideTripCategory: Maybe TripCategory

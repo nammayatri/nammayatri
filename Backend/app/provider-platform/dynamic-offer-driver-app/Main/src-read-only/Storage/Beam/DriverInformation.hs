@@ -11,6 +11,7 @@ import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.Plan
+import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
@@ -69,6 +70,7 @@ data DriverInformationT f = DriverInformationT
     forwardBatchingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasRideStarted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy),
     isBlockedForReferralPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedForScheduledPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isHighAccuracyLocationEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

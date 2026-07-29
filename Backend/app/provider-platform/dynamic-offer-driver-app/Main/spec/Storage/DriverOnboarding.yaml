@@ -334,6 +334,7 @@ VehicleRegistrationCertificate:
     docsVerificationStatus: Maybe DocsVerificationStatus
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
+    initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
   default:
     approved: "false"
   constraints:
@@ -673,6 +674,7 @@ DocumentVerificationConfig:
       dropdownValues: Maybe [Text]
       requestKey: Maybe Text
       fields: Maybe [FieldInfo]
+      imageUrl: Maybe Text
       derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -1340,6 +1342,7 @@ FleetOwnerDocumentVerificationConfig:
     isApprovalSupported: Maybe Bool
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     documentFields: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
+    isApprovalSupported: Maybe Bool
   default:
     order: "0"
     role: "'FLEET_OWNER'"
