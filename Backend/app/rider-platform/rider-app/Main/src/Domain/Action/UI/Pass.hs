@@ -880,9 +880,6 @@ updatePurchasedPass ::
 -- payment row (never the pass row), so this read path owns both the PhotoPending -> Active/PreBooked
 -- transition and the normal term-based reconcile. Date-expired PhotoPending passes fall through to
 -- the expiry fallback below.
-updatePurchasedPass purchasedPass _today now
-  | purchasedPass.status /= DPurchasedPass.PhotoPending && diffUTCTime now purchasedPass.updatedAt <= 300 =
-    return (purchasedPass, Nothing, False)
 updatePurchasedPass purchasedPass today now = do
   latestPayments <-
     QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
