@@ -404,7 +404,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             let routeInfoInText = T.pack $ show routeInfo
             Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600
             Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
-            mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id.getId (mbPerson <&> (.id.getId)) shortestRoute.points
+            mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id.getId Nothing Nothing shortestRoute.points
             let isTollAllowed =
                   maybe
                     True
