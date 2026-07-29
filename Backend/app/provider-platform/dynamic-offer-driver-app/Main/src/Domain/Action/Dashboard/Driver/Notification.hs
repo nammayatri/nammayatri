@@ -132,7 +132,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
               dummyToLocation = transporterConfig.dummyToLocation
               dummyShowDriverAdditions = fromMaybe True transporterConfig.dummyShowDriverAdditions
               isValueAddNP = True
-          let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
+          let entityData = mkDummyNotificationEntityData (Just driver.merchantId) (Just merchantOperatingCityId) now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP transporterConfig.currency
           notificationData <- TN.buildSendSearchRequestNotificationData merchantOperatingCityId driver.id driver.deviceToken entityData EmptyDynamicParam Nothing
           logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
           let otherMerchantIds = ["840327a8-f17c-4d7c-8199-a583cfaadc5f", "7e6a2982-f8b5-4c67-b8af-bf41f1b4a2c9", "8c91f173-a0e3-4c5b-b3a1-2a58d00f29b2"] -- Array Contents are : [Dev/Master , UAT , Prod]
@@ -153,14 +153,15 @@ mkDummyNotificationEntityData ::
   DLoc.DummyLocationInfo ->
   Bool ->
   Bool ->
+  Currency ->
   USRD.SearchRequestForDriverAPIEntity
-mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
+mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP currency =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation mbMerchantId mbMerchantOpCityId now fromLocData
       toLocation = Just $ mkDummySearchReqToLocation mbMerchantId mbMerchantOpCityId now toLocData
       -- newFromLocation = mkDummyFromLocation now fromLocData
       -- newToLocation = Just $ mkDummyToLocation now toLocData
-      mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
+      mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) currency
       (driverMinExtraFee, driverMaxExtraFee, driverMinExtraFeeWithCurrency, driverMaxExtraFeeWithCurrency, driverDefaultStepFeeWithCurrency, driverStepFeeWithCurrency) =
         if dummyShowDriverAdditions
           then (Just (Money 0), Just (Money 20), Just $ mkDummyPrice 0, Just $ mkDummyPrice 20, Just $ mkDummyPrice 10, Just $ mkDummyPrice 10)
