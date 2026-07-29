@@ -743,14 +743,16 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
                in compare (maybe 0 (.amount) mbAdultPrice1) (maybe 0 (.amount) mbAdultPrice2)
           )
           routeFilteredQuotesWithCategories
-  let mbReprAdultPrice = listToMaybe sortedQuotesWithCategories >>= \(_, qcs) -> find (\c -> c.category == ADULT) qcs <&> (.price)
+  let mbReprQuoteWithCategories = listToMaybe sortedQuotesWithCategories
+      mbReprAdultPrice = mbReprQuoteWithCategories >>= \(_, qcs) -> find (\c -> c.category == ADULT) qcs <&> (.price)
+      mbReprServiceTier = mbReprQuoteWithCategories >>= \(quote, qcs) -> JourneyUtils.getServiceTierFromQuote qcs quote
   mbOffer <-
     if isJust mbJourneyLeg
       then pure Nothing
       else case mbReprAdultPrice of
         Nothing -> pure Nothing
         Just reprPrice -> do
-          standaloneLeg <- JMTypes.mkStandaloneFrfsMinimalLegInfo search (Just reprPrice)
+          standaloneLeg <- JMTypes.mkStandaloneFrfsMinimalLegInfo search (Just reprPrice) mbReprServiceTier
           withTryCatch
             "getFrfsSearchQuote:cumulativeOffer"
             ( SOffer.offerListCache merchantId_ personId search.merchantOperatingCityId (FRFSUtils.getPaymentType False search.vehicleType) reprPrice Nothing
