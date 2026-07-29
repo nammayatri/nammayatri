@@ -157,8 +157,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, serviceTier = serviceTier, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> m ()
-confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId =
+confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> m ()
+confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId mbVehicleNumber =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -243,5 +243,6 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               isSingleMode,
               mbEnableOffer,
               mbIsMockPayment,
-              mbTripId
+              mbTripId,
+              mbVehicleNumber
             }

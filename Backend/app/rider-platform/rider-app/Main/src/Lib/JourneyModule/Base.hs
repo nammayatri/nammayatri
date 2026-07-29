@@ -526,7 +526,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
         let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
             bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
             updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
-        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment (mElement >>= (.tripId))
+        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment (mElement >>= (.tripId)) (mElement >>= (.vehicleNumber))
     )
     allLegs
 
@@ -552,7 +552,7 @@ startJourneyLeg legInfo isSingleMode = do
           ( \category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.categoryId, quantity = category.categorySelectedQuantity, seatIds = category.seatIds}
           )
           categories
-  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing Nothing
+  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing Nothing Nothing
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,

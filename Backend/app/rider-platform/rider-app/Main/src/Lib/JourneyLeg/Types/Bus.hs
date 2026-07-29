@@ -45,7 +45,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     mbEnableOffer :: Maybe Bool,
     isSingleMode :: Maybe Bool,
     mbIsMockPayment :: Maybe Bool,
-    mbTripId :: Maybe Text
+    mbTripId :: Maybe Text,
+    mbVehicleNumber :: Maybe Text
   }
 
 data BusLegRequestUpdateData = BusLegRequestUpdateData
