@@ -78,7 +78,7 @@ handler hnd = do
                 else Hedis.whenWithLockRedis (mkRunningJobKey parentJobId.getId) (fromIntegral expirationTime) runFn
         lockFn $
           withLogTag ("JobId = " <> id.getId <> " and parentJobId = " <> parentJobId.getId <> " jobType = " <> jobType' <> " isLongRunningJob = " <> show isLongRunningJob) $ do
-            res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+            res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher jobType'
             registerExecutionResult hnd anyJob res
             releaseLock parentJobId
             Hedis.unlockRedis (mkRunningJobKey id.getId)
@@ -249,8 +249,14 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
               reScheduleOnError jobType' j newErrorsCount $
                 fromIntegral waitBeforeRetry `addUTCTime` now
 
-defaultCatcher :: C.MonadThrow m => SomeException -> m ExecutionResult
-defaultCatcher exep = pure $ defaultResult exep
-
-defaultResult :: SomeException -> ExecutionResult
-defaultResult exep = Terminate (show exep)
+defaultCatcher :: Text -> SomeException -> SchedulerM ExecutionResult
+defaultCatcher jobType' exep = do
+  jobRetryOnExceptionMap <- asks (.jobRetryOnExceptionMap)
+  let isRetryable = fromMaybe False (M.lookup jobType' jobRetryOnExceptionMap)
+  if isRetryable
+    then do
+      logError $ "job execution threw an uncaught exception, will retry within maxErrors budget: jobType = " <> jobType' <> "; exception = " <> show exep
+      pure Retry
+    else do
+      logError $ "job execution threw an uncaught exception, jobType = " <> jobType' <> " is not configured for retry, terminating: " <> show exep
+      pure $ Terminate (show exep)

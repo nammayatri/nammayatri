@@ -108,6 +108,7 @@ data HandlerEnv = HandlerEnv
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
     jobInfoMap :: M.Map Text Bool,
+    jobRetryOnExceptionMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     ltsCfg :: LT.LocationTrackingeServiceConfig,
@@ -202,6 +203,7 @@ buildHandlerEnv HandlerCfg {..} = do
         pure Nothing
       Right env -> pure (Just env)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
+  let jobRetryOnExceptionMap :: (M.Map Text Bool) = M.mapKeys show jobRetryOnExceptionMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer

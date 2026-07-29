@@ -299,6 +299,9 @@ let RiderJobType =
       | ReconcileRewardInflight
       >
 
+let jobRetryOnExceptionMapx =
+      [] : List { mapKey : RiderJobType, mapValue : Bool }
+
 let jobInfoMapx =
       [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
       , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
@@ -485,6 +488,7 @@ in  { esqDBCfg
     , incomingAPIResponseTimeout = +15
     , maxShards = +5
     , jobInfoMapx
+    , jobRetryOnExceptionMapx
     , internalEndPointMap = common.internalEndPointMap
     , schedulerSetName = "Scheduled_Jobs_Rider"
     , schedulerType = common.schedulerType.RedisBased

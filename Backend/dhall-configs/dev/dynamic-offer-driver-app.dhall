@@ -330,6 +330,9 @@ let AllocatorJobType =
       | ReconciliationSweep
       >
 
+let jobRetryOnExceptionMapx =
+      [] : List { mapKey : AllocatorJobType, mapValue : Bool }
+
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
@@ -537,6 +540,7 @@ in  { esqDBCfg
     , externalServiceRateLimitOptions
     , slackCfg
     , jobInfoMapx
+    , jobRetryOnExceptionMapx
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
     , searchRequestExpirationSecondsForMultimodal = +14400

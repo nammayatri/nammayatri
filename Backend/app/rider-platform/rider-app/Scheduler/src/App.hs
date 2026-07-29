@@ -206,7 +206,7 @@ runRiderAppScheduler configModifier = do
               ]
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
 
 createCAC :: Environment.AppCfg -> IO ()
 createCAC appCfg = do

@@ -161,6 +161,7 @@ data AppCfg = AppCfg
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     jobInfoMapx :: M.Map AllocatorJobType Bool,
+    jobRetryOnExceptionMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
     modelNamesMap :: M.Map Text Text,
     incomingAPIResponseTimeout :: Int,
