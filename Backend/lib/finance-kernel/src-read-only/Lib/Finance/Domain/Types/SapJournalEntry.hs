@@ -47,10 +47,10 @@ data JournalEntryStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generi
 
 data TransactionType = SubscriptionPurchase | Order | Refund | Chargeback | RevenueRecognition deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JournalEntryStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JournalEntryStatus)
 
-$(mkHttpInstancesForEnum (''JournalEntryStatus))
+$(mkHttpInstancesForEnum ''JournalEntryStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TransactionType)
 
-$(mkHttpInstancesForEnum (''TransactionType))
+$(mkHttpInstancesForEnum ''TransactionType)
