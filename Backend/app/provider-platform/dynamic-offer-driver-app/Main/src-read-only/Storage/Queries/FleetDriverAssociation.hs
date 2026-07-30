@@ -46,6 +46,8 @@ updateByPrimaryKey (Domain.Types.FleetDriverAssociation.FleetDriverAssociation {
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.isActive isActive,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.onboardedOperatorId (Kernel.Types.Id.getId <$> onboardedOperatorId),
       Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory,
       Se.Set Beam.requestReason requestReason,
