@@ -56,6 +56,7 @@ imports:
   Months: Kernel.Types.Time
   SpecialZone: Dashboard.Common
   CancellationRateConfig: Dashboard.Common
+  AvailabilityCheckConfig: Dashboard.Common
   Language: Kernel.External.Types
 
 module: Merchant
@@ -1292,6 +1293,7 @@ types:
     - vehicleAgeThreshold: Maybe Months
     - specialZone: Maybe SpecialZone
     - cancellationRateConfig: Maybe CancellationRateConfig
+    - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
@@ -1323,6 +1325,7 @@ types:
     - allowedAreas: Maybe [Area]
     - specialZone: Maybe SpecialZone
     - cancellationRateConfig: Maybe CancellationRateConfig
+    - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - vehicleAgeThreshold: Maybe Months
     - allowNullVehicleRating: Maybe Bool
     - derive: "'HideSecrets"
@@ -1359,6 +1362,7 @@ types:
     - vehicleAgeThreshold: Maybe Months
     - specialZone: Maybe SpecialZone
     - cancellationRateConfig: Maybe CancellationRateConfig
+    - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierListRes:
     - recordType: Type

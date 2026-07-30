@@ -643,6 +643,9 @@ in  { logger_cfg
     , kafka_cfg
     , port = env:SERVICE_PORT ? 8081
     , auth_url = "http://127.0.0.1:${driverAppPort}/internal/auth"
+    , rider_auth_url = "http://127.0.0.1:${riderAppPort}/v2/auth"
+    , rider_auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
+    , rider_auth_token_expiry = 86400
     , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
     , bulk_location_callback_url =
         "http://127.0.0.1:${driverAppPort}/internal/bulkLocUpdate"

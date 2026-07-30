@@ -65,6 +65,7 @@ Plan:
     productOwnershipAmount : HighPrecMoney
     originalRegistrationAmount : Maybe HighPrecMoney
     airportRideSubscription : Maybe HighPrecMoney
+    mahilaShaktiRideSubscription : Maybe HighPrecMoney
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -150,6 +151,7 @@ Plan:
     freeRideCount: integer
     merchantOpCityId: text
     airportRideSubscription: double precision
+    mahilaShaktiRideSubscription: double precision
 
   default:
     subscribedFlagToggleAllowed: "true"

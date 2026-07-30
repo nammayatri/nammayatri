@@ -4775,6 +4775,7 @@ applyVehicleServiceTierUpdate existing req =
       DVST.allowedAreas = req.allowedAreas <|> existing.allowedAreas,
       DVST.specialZone = req.specialZone <|> existing.specialZone,
       DVST.cancellationRateConfig = req.cancellationRateConfig <|> existing.cancellationRateConfig,
+      DVST.availabilityCheckConfig = req.availabilityCheckConfig <|> existing.availabilityCheckConfig,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
       DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
@@ -4879,6 +4880,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         specialZone = req.specialZone,
         cancellationRateConfig = req.cancellationRateConfig,
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
+        availabilityCheckConfig = req.availabilityCheckConfig,
         createdAt = now,
         updatedAt = now
       }

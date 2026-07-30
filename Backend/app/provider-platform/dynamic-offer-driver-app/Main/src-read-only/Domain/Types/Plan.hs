@@ -33,6 +33,7 @@ data Plan = Plan
     isFleetOwnerPlan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isOfferApplicable :: Kernel.Prelude.Bool,
     listingPriority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    mahilaShaktiRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxAmount :: Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -54,32 +55,32 @@ data Plan = Plan
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BasedOnEntity = RIDE | NONE | VEHICLE | VEHICLE_AND_RIDE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BasedOnEntity = RIDE | NONE | VEHICLE | VEHICLE_AND_RIDE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data BillingType = PREPAID | POSTPAID deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BillingType = PREPAID | POSTPAID deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data Frequency = DAILY | WEEKLY | MONTHLY | FLEXIBLE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Frequency = DAILY | WEEKLY | MONTHLY | FLEXIBLE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data PaymentMode = MANUAL | AUTOPAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PaymentMode = MANUAL | AUTOPAY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data PlanType = DEFAULT | SUBSCRIPTION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PlanType = DEFAULT | SUBSCRIPTION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentMode)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMode))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''PaymentMode)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''PaymentMode))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Frequency)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Frequency))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Frequency)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Frequency))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlanType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PlanType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''PlanType)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''PlanType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''BasedOnEntity)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''BasedOnEntity))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''BasedOnEntity)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''BasedOnEntity))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''BillingType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''BillingType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''BillingType)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''BillingType))

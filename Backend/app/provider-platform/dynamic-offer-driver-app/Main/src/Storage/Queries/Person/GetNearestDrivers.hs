@@ -2,6 +2,8 @@ module Storage.Queries.Person.GetNearestDrivers
   ( getNearestDrivers,
     fetchSortedLTSCandidates,
     processCandidatesChunk,
+    buildDriverResult,
+    isTierEligibleForDriver,
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
@@ -194,6 +196,24 @@ getNearestDrivers req fetchPoolData = do
   candidates <- fetchSortedLTSCandidates req
   processCandidatesChunk req fetchPoolData candidates
 
+-- | True if `tier` is either not cohort-gated at all, or the driver currently holds a valid,
+-- unexpired tag for the cohort it's gated on. Also imported by SharedLogic.VehicleServiceTier's
+-- candidate-selection/display logic, so this is the single shared definition -- defined here
+-- (not there) to avoid a module cycle, since VehicleServiceTier needs Storage.Queries.Person for
+-- an internal Person.driverTag fetch, and Storage.Queries.Person's submodule graph already routes
+-- through this file. This is the layer that actually gates dispatch, so it must never trust
+-- `selectedServiceTiers` alone for a cohort-gated tier. The cohort tag itself is always
+-- ops-assigned (via the dashboard); no tier-selection change ever writes it.
+--
+-- The cohort tag's value is always "Cohort#<tier>" -- the same string as the tier itself, not a
+-- separately configured short code -- so no Redis-backed short-code-to-tier mapping is needed
+-- anywhere (Haskell or location-tracking-service) to answer "which tier does this cohort gate."
+isTierEligibleForDriver :: UTCTime -> Maybe [LYT.TagNameValueExpiry] -> HashMap.HashMap ServiceTierType DVST.VehicleServiceTier -> ServiceTierType -> Bool
+isTierEligibleForDriver now driverTag tierConfigs tier =
+  case HashMap.lookup tier tierConfigs >>= (.availabilityCheckConfig) of
+    Nothing -> True
+    Just _ -> Yudhishthira.elemTagNameValue (LYT.TagNameValue ("Cohort#" <> show tier)) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driverTag))
+
 buildDriverResult ::
   NearestDriversReq ->
   HashMap.HashMap (Id Person.Driver) DPD.DriverPoolData ->
@@ -234,10 +254,11 @@ buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap loc
   let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
   let availableCityTiers = (.serviceTierType) <$> filter (\vst -> dpd.variant `elem` vst.allowedVehicleVariant) cityServiceTiers
   let selectedDriverServiceTiers = removeSoftBlockedTiers $ DL.intersect dpd.selectedServiceTiers availableCityTiers
+  let selectedDriverServiceTiers' = filter (isTierEligibleForDriver now dpd.driverTag cityServiceTiersHashMap) selectedDriverServiceTiers
   let matchingTiers =
         if null serviceTiers
-          then selectedDriverServiceTiers
-          else filter (`elem` selectedDriverServiceTiers) serviceTiers
+          then selectedDriverServiceTiers'
+          else filter (`elem` selectedDriverServiceTiers') serviceTiers
   guard $ not $ null matchingTiers
   Just $ mapMaybe (mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination) matchingTiers
 

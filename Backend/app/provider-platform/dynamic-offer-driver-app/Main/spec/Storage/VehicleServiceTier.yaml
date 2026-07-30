@@ -11,6 +11,7 @@ imports:
   Value: Data.Aeson
   SpecialZone: Dashboard.Common
   CancellationRateConfig: Dashboard.Common
+  AvailabilityCheckConfig: Dashboard.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -51,6 +52,7 @@ VehicleServiceTier:
     vehicleAgeThreshold: Maybe Months
     specialZone: Maybe SpecialZone
     cancellationRateConfig: Maybe CancellationRateConfig
+    availabilityCheckConfig: Maybe AvailabilityCheckConfig
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
@@ -62,6 +64,7 @@ VehicleServiceTier:
     vehicleAgeThreshold: int
     specialZone: "json"
     cancellationRateConfig: "json"
+    availabilityCheckConfig: "json"
   default:
     priority: '0'
     isEnabled: 'true'
@@ -73,6 +76,7 @@ VehicleServiceTier:
     allowedAreas: Maybe [Text]
     specialZone: Maybe Value
     cancellationRateConfig: Maybe Value
+    availabilityCheckConfig: Maybe Value
   fromTType:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText))|I
@@ -80,11 +84,14 @@ VehicleServiceTier:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< specialZone|E
     cancellationRateConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateConfig|E
+    availabilityCheckConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< availabilityCheckConfig|E
   toTType:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText))|I
     specialZone: Kernel.Prelude.toJSON <$> specialZone|E
     cancellationRateConfig: Kernel.Prelude.toJSON <$> cancellationRateConfig|E
+    availabilityCheckConfig: Kernel.Prelude.toJSON <$> availabilityCheckConfig|E
   constraints:
     id: PrimaryKey
   queries:

@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findByCityServiceAndVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m ([Domain.Types.Plan.Plan]))
 findByCityServiceAndVehicle merchantOpCityId serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
@@ -53,7 +53,7 @@ findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
 
 findByMerchantOpCityAndServiceAndFleetOwnerPlan ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityAndServiceAndFleetOwnerPlan merchantOpCityId serviceName isFleetOwnerPlan = do
   findAllWithKV
     [ Se.And
@@ -65,7 +65,7 @@ findByMerchantOpCityAndServiceAndFleetOwnerPlan merchantOpCityId serviceName isF
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
@@ -79,7 +79,7 @@ findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceNa
 
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Extra.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Extra.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentMode serviceName vehicleVariant = do
   findAllWithKV
     [ Se.And
@@ -92,7 +92,7 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentM
 
 findByMerchantOpCityIdTypeServiceNameVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
@@ -106,7 +106,7 @@ findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId paymentMode servic
 
 findByMerchantOpCityIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdWithServiceName merchantOpCityId serviceName = do
   findAllWithKV
     [ Se.And
@@ -134,6 +134,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.isFleetOwnerPlan isFleetOwnerPlan,
       Se.Set Beam.isOfferApplicable isOfferApplicable,
       Se.Set Beam.listingPriority listingPriority,
+      Se.Set Beam.mahilaShaktiRideSubscription mahilaShaktiRideSubscription,
       Se.Set Beam.maxAmount maxAmount,
       Se.Set Beam.maxCreditLimit maxCreditLimit,
       Se.Set Beam.maxMandateAmount maxMandateAmount,

@@ -1075,7 +1075,7 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
             let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry req.driverTag (mbNammTag >>= (.validity)) now
             Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
           else Yudhishthira.removeTagNameValue driver.driverTag req.driverTag
-  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
+  unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
     QPerson.updateDriverTag (Just tag) personId
   pure Success
 
@@ -1613,7 +1613,7 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req 
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  forM_ req.selected_service_tiers $ \serviceTier -> do
+  forM_ req.selected_service_tiers $ \serviceTier ->
     CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   let currentTiers = vehicle.selectedServiceTiers

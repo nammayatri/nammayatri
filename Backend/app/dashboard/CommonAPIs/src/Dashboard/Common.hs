@@ -43,7 +43,7 @@ import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Types.Common (Centesimal)
+import Kernel.Types.Common (Centesimal, Meters)
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import qualified Kernel.Types.Id as Id
@@ -394,5 +394,22 @@ data SpecialZone = SpecialZone
 data CancellationRateConfig = CancellationRateConfig
   { cancellationRate :: Centesimal,
     cancellationRideThreshold :: Int
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | Configures a live, radius-based "is anyone eligible nearby" check for a
+-- tier, backed by an ops-assigned cohort tag's dedicated GEO bucket in
+-- location-tracking-service. When set, this replaces the general-driver-pool
+-- visibility check for that tier's estimate (see Mahila Shakti, the first
+-- consumer of this). The cohort tag itself is never a separately configured
+-- string -- by convention it's always "Cohort#<serviceTierType>", so the same
+-- tier this config lives on also names its own cohort. This keeps the tag on
+-- Person.driverTag and the value in Vehicle.selectedServiceTiers/driver-pool-data
+-- as the same string everywhere, with no separate short-code-to-tier mapping
+-- to keep in sync (previously pushed to LTS Redis via a dedicated key -- no
+-- longer needed once the two are the same string).
+data AvailabilityCheckConfig = AvailabilityCheckConfig
+  { radiusMeters :: Meters,
+    minDriverCount :: Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

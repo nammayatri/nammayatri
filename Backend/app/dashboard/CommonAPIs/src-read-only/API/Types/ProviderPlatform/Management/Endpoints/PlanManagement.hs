@@ -30,6 +30,7 @@ data CreatePlanReq = CreatePlanReq
     registrationAmount :: Kernel.Types.Common.HighPrecMoney,
     originalRegistrationAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     airportRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    mahilaShaktiRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
     productOwnershipAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -76,6 +77,7 @@ data PlanAPIEntity = PlanAPIEntity
     registrationAmount :: Kernel.Types.Common.HighPrecMoney,
     originalRegistrationAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     airportRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    mahilaShaktiRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
     productOwnershipAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -140,22 +142,22 @@ data PlanType
 
 type API = ("planManagement" :> (PostPlanManagementCreate :<|> PostPlanManagementDeletePlan :<|> PostPlanManagementActivatePlan :<|> GetPlanManagementListPlans :<|> GetPlanManagementPlanTranslations))
 
-type PostPlanManagementCreate = ("create" :> ReqBody '[JSON] CreatePlanReq :> Post '[JSON] CreatePlanResp)
+type PostPlanManagementCreate = ("create" :> ReqBody ('[JSON]) CreatePlanReq :> Post ('[JSON]) CreatePlanResp)
 
-type PostPlanManagementDeletePlan = (Capture "planId" Kernel.Prelude.Text :> "delete" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostPlanManagementDeletePlan = (Capture "planId" Kernel.Prelude.Text :> "delete" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type PostPlanManagementActivatePlan = (Capture "planId" Kernel.Prelude.Text :> "activate" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostPlanManagementActivatePlan = (Capture "planId" Kernel.Prelude.Text :> "activate" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
-type GetPlanManagementListPlans = ("list" :> QueryParam "serviceName" Kernel.Prelude.Text :> Get '[JSON] ListPlansResp)
+type GetPlanManagementListPlans = ("list" :> QueryParam "serviceName" Kernel.Prelude.Text :> Get ('[JSON]) ListPlansResp)
 
-type GetPlanManagementPlanTranslations = (Capture "planId" Kernel.Prelude.Text :> "translations" :> Get '[JSON] [PlanTranslationAPIEntity])
+type GetPlanManagementPlanTranslations = (Capture "planId" Kernel.Prelude.Text :> "translations" :> Get ('[JSON]) [PlanTranslationAPIEntity])
 
 data PlanManagementAPIs = PlanManagementAPIs
-  { postPlanManagementCreate :: CreatePlanReq -> EulerHS.Types.EulerClient CreatePlanResp,
-    postPlanManagementDeletePlan :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPlanManagementActivatePlan :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getPlanManagementListPlans :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ListPlansResp,
-    getPlanManagementPlanTranslations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient [PlanTranslationAPIEntity]
+  { postPlanManagementCreate :: (CreatePlanReq -> EulerHS.Types.EulerClient CreatePlanResp),
+    postPlanManagementDeletePlan :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postPlanManagementActivatePlan :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getPlanManagementListPlans :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ListPlansResp),
+    getPlanManagementPlanTranslations :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient [PlanTranslationAPIEntity])
   }
 
 mkPlanManagementAPIs :: (Client EulerHS.Types.EulerClient API -> PlanManagementAPIs)
@@ -172,14 +174,14 @@ data PlanManagementUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''PlanBasedOnEntity)
+$(mkHttpInstancesForEnum (''PlanBasedOnEntity))
 
-$(mkHttpInstancesForEnum ''PlanBillingType)
+$(mkHttpInstancesForEnum (''PlanBillingType))
 
-$(mkHttpInstancesForEnum ''PlanFrequency)
+$(mkHttpInstancesForEnum (''PlanFrequency))
 
-$(mkHttpInstancesForEnum ''PlanPaymentMode)
+$(mkHttpInstancesForEnum (''PlanPaymentMode))
 
-$(mkHttpInstancesForEnum ''PlanType)
+$(mkHttpInstancesForEnum (''PlanType))
 
-$(Data.Singletons.TH.genSingletons [''PlanManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''PlanManagementUserActionType)])
