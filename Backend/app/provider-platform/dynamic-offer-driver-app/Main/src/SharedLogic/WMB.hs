@@ -42,7 +42,6 @@ import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -559,9 +558,6 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
                 isActivate = True
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
-      wmbLinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-      when (wmbLinkTC.unifiedOnboardingFlagsRecompute == Just True) $
-        void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbLinkTC) driverId
     createRCAssociation = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       createDriverRCAssociationIfPossible transporterConfig driverId vehicleRC
@@ -592,9 +588,6 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
     >>= \case
       Just rc -> DAQuery.endAssociationForRC driverId rc.id
       Nothing -> pure ()
-  wmbUnlinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-  when (wmbUnlinkTC.unifiedOnboardingFlagsRecompute == Just True) $
-    void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbUnlinkTC) driverId
 
 getRouteDetails :: Text -> Flow Common.RouteDetails
 getRouteDetails routeCode = do

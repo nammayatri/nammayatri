@@ -860,11 +860,8 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   AC.guardNoLiveRideByRC rc.id
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
+  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
-  when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $
-    if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-      else Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
 ---------------------------------------------------------------------
@@ -1198,7 +1195,6 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           FDV.endFleetDriverAssociation entityId personId
           SA.syncDriverOnboardingAsWithFDA personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
-        void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus
@@ -1605,12 +1601,12 @@ refreshNullDocsVerificationStatuses shouldRefresh personIds rcIds = do
       void $
         withTryCatch
           ("refreshNullDocsVerificationStatuses:person:" <> personId.getId)
-          (SStatus.runRefreshOnboardingFlagsDriver Nothing Nothing personId)
+          (SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId))
     forM_ (nub rcIds) $ \rcId ->
       void $
         withTryCatch
           ("refreshNullDocsVerificationStatuses:rc:" <> rcId.getId)
-          (SStatus.runRefreshOnboardingFlagsVehicle Nothing rcId)
+          (SStatus.processStatusEvent Nothing Nothing (SStatus.VehicleDocChangedEvent rcId))
 
 buildFleetOwnerNameMap :: Map.Map Text (Text, Maybe Text) -> [Text] -> Flow (Map.Map Text (Text, Maybe Text))
 buildFleetOwnerNameMap currentMap ownerIds = do
@@ -2431,9 +2427,6 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
     (Just DP.OPERATOR, Just entityId) -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-    void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
 
@@ -2920,8 +2913,6 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         ( \driverInfo -> do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )
-  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-    void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) person.id
 
   pure Success
 
@@ -4573,8 +4564,6 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         ( \driverInfo ->
             DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
         )
-      when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-        void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) driverId
       pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
     _ -> do
       QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason

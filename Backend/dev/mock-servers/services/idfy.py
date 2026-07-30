@@ -47,7 +47,6 @@ _CONFIG = {
     "dlNumber": "KA0120200012345",
 }
 _WEBHOOK_URL = os.environ.get("IDFY_WEBHOOK_URL", "")
-_WEBHOOK_SECRET = os.environ.get("IDFY_WEBHOOK_SECRET", "test-secret")
 _WEBHOOK_DELAY_MS = int(os.environ.get("IDFY_WEBHOOK_DELAY_MS", "500"))
 
 
@@ -88,7 +87,7 @@ def _fire_webhook(tag, payload):
             req = urllib.request.Request(
                 _WEBHOOK_URL,
                 data=json.dumps({"tag": tag, "data": payload}).encode("utf-8"),
-                headers={"Content-Type": "application/json", "Authorization": _WEBHOOK_SECRET},
+                headers={"Content-Type": "application/json"},
             )
             urllib.request.urlopen(req, timeout=5).read()
         except Exception:

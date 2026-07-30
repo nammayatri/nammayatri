@@ -1378,6 +1378,8 @@ postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          -- Reuse the fleet associations already fetched above; the shared guard only adds the
+          -- driver-operator read (and short-circuits entirely when overwrite is enabled).
           SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
@@ -1505,7 +1507,8 @@ rcVerifyStatusForRC caller rc enableDocumentMetadata = do
   let allValid = SStatus.checkAllVehicleDocsValidForFetchedDocs configs vehicleDocItem
   -- Persist verified only under enableBotFlow (matches existing config behaviour).
   when (transporterConfig.enableBotFlow == Just True) $ do
-    void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rc.id
+    rcHash <- getDbHash registrationNo
+    RCQuery.updateVerifiedByCertificateNumberHash (Just allValid) rcHash
   pure (registrationNo, allValid, rc.approved, vehicleDocItem.documents)
 
 postDriverDigilockerInitiate ::
