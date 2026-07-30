@@ -1401,6 +1401,68 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
+createRecentLocationForFRFSBooking ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m ()
+createRecentLocationForFRFSBooking booking = do
+  (mbFromPoint, mbToPoint) <- case (booking.fromStationPoint, booking.toStationPoint) of
+    (Just fp, Just tp) -> pure (Just fp, Just tp)
+    _ -> do
+      integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+      mbFromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBppConfig
+      mbToStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBppConfig
+      let fp = booking.fromStationPoint <|> (LatLong <$> (mbFromStation >>= (.lat)) <*> (mbFromStation >>= (.lon)))
+          tp = booking.toStationPoint <|> (LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon)))
+      pure (fp, tp)
+  case (mbFromPoint, mbToPoint) of
+    (Just fromPoint, Just toPoint) -> do
+      let entityType = convertVehicleCategoryToEntityType booking.vehicleType
+          mbRouteCode = booking.routeCode
+          fromGeohash = T.pack <$> Geohash.encode 6 (fromPoint.lat, fromPoint.lon)
+          toGeohash = T.pack <$> Geohash.encode 6 (toPoint.lat, toPoint.lon)
+      case (fromGeohash, toGeohash) of
+        (Just fg, Just tg) -> do
+          now <- getCurrentTime
+          mbRecentLocation <- SQRL.findByRiderIdAndGeohashAndEntityType booking.riderId (Just tg) (Just fg) entityType
+          case mbRecentLocation of
+            Just recentLocation -> SQRL.increaceFrequencyById recentLocation.id
+            Nothing -> do
+              uuid <- generateGUID
+              let recentLocation =
+                    DTRL.RecentLocation
+                      { id = uuid,
+                        riderId = booking.riderId,
+                        frequency = 1,
+                        entityType = entityType,
+                        address = booking.toStationAddress,
+                        fromLatLong = Just $ LatLong fromPoint.lat fromPoint.lon,
+                        routeCode = mbRouteCode,
+                        toStopCode = Just booking.toStationCode,
+                        fromStopCode = Just booking.fromStationCode,
+                        toLatLong = LatLong toPoint.lat toPoint.lon,
+                        merchantOperatingCityId = booking.merchantOperatingCityId,
+                        createdAt = now,
+                        updatedAt = now,
+                        fare = Just booking.totalPrice.amount,
+                        fromGeohash = Just fg,
+                        toGeohash = Just tg
+                      }
+              SQRL.create recentLocation
+        _ -> return ()
+    _ -> return ()
+
+-- Map a FRFS VehicleCategory to the corresponding RecentLocation EntityType
+convertVehicleCategoryToEntityType :: Spec.VehicleCategory -> DTRL.EntityType
+convertVehicleCategoryToEntityType Spec.BUS = DTRL.BUS
+convertVehicleCategoryToEntityType Spec.METRO = DTRL.METRO
+convertVehicleCategoryToEntityType Spec.SUBWAY = DTRL.SUBWAY
+
 postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment = do
   frfsConfig <-
