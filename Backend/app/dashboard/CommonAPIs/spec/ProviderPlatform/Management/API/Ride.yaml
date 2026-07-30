@@ -449,6 +449,11 @@ types:
     - invoiceIds: [Text]
     - badge: [Text]
     - rating: Maybe Int
+    - estimatedTollInfo: Maybe [TollInfoAPIEntity]
+    - actualTollInfo: Maybe [TollInfoAPIEntity]
+  TollInfoAPIEntity:
+    - id: Text
+    - name: Text
   StopInformation:
     - stopId: Text
     - stopLocId: Text
