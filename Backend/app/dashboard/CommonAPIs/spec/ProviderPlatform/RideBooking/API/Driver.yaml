@@ -24,6 +24,7 @@ imports:
   OnboardingAs: Dashboard.Common.Driver
   DisabledReasonFlag: Dashboard.Common.Driver
   DriverAssociationInfo: Dashboard.Common.Driver
+  SpecialLocation: Lib.Types.SpecialLocation
 module: Driver
 
 apis:
@@ -367,6 +368,11 @@ types:
     - courtRecord: Maybe CourtRecordResult
     - approved: Maybe Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
+    - specialLocWarriorInfo: SpecialLocWarriorInfo
+  SpecialLocWarriorInfo:
+    - isSpecialLocWarrior: Bool
+    - preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
+    - preferredSecondarySpecialLocIds: [Id SpecialLocation]
   CourtRecordResult:
     - result: Maybe CRCVerificationResponse
     - errorMessage: Maybe Text

@@ -1012,7 +1012,7 @@ postDriverUpdateSpecialLocWarrior merchantShortId opCity driverId req = do
           else []
       validatePreferredSpecialLocId specialLocId = do
         mbSpecialLoc <- TDI.getPreferredPrimarySpecialLoc (Just specialLocId.getId)
-        unless (maybe False (\specialLoc -> specialLoc.merchantOperatingCityId == Just merchantOpCityId.getId && not (null specialLoc.gates)) mbSpecialLoc) $
+        unless (maybe False (\specialLoc -> specialLoc.merchantOperatingCityId == Just merchantOpCityId.getId) mbSpecialLoc) $
           throwError (InvalidRequest $ "Invalid preferredSpecialLocId: " <> specialLocId.getId)
   when (req.isSpecialLocWarrior && isNothing preferredPrimarySpecialLocationId) $
     throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")

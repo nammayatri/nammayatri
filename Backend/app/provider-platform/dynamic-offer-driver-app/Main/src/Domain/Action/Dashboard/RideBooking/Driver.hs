@@ -634,7 +634,13 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
         courtRecord = courtRecord',
         approved = driverInfo.approved,
-        disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag
+        disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag,
+        specialLocWarriorInfo =
+          Common.SpecialLocWarriorInfo
+            { isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
+              preferredPrimarySpecialLocId = driverInfo.preferredPrimarySpecialLocId,
+              preferredSecondarySpecialLocIds = driverInfo.preferredSecondarySpecialLocIds
+            }
       }
   where
     buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe FDA.FleetDriverAssociation -> UTCTime -> m Common.DriverAssociationInfo

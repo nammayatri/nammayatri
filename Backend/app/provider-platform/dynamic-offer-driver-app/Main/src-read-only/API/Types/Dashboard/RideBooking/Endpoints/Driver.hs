@@ -22,6 +22,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
@@ -149,7 +150,8 @@ data DriverInfoRes = DriverInfoRes
     docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag
+    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
+    specialLocWarriorInfo :: SpecialLocWarriorInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -228,6 +230,14 @@ data PlatformFee = PlatformFee
     feeWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     cgstWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     sgstWithCurrency :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SpecialLocWarriorInfo = SpecialLocWarriorInfo
+  { isSpecialLocWarrior :: Kernel.Prelude.Bool,
+    preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
+    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
