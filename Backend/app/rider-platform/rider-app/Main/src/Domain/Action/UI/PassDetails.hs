@@ -441,7 +441,7 @@ getPassDetailsData ::
       Id.Id DMerchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.Flow (Kernel.Prelude.Maybe PassDetailsAPI.PassDetailsDataResp)
+    Environment.Flow PassDetailsAPI.PassDetailsData
   )
 getPassDetailsData (mbPersonId, _) passEnumText = do
   passEnum <- parsePassEnum passEnumText
@@ -449,11 +449,11 @@ getPassDetailsData (mbPersonId, _) passEnumText = do
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbPassDetail <- QPassDetails.findByPersonId person.id passEnum
   case mbPassDetail of
-    Nothing -> pure Nothing
+    Nothing -> pure $ PassDetailsAPI.PassDetailsData {passDetailsDataResp = Nothing}
     Just passDetail -> do
       org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
       decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
-      pure $ Just $ mkPassDetailResp decGuardianMobile passDetail org
+      pure $ PassDetailsAPI.PassDetailsData {passDetailsDataResp = Just $ mkPassDetailResp decGuardianMobile passDetail org}
 
 mkPassDetailResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
 mkPassDetailResp decGuardianMobile DPassDetails.PassDetails {..} org =

@@ -19,6 +19,10 @@ data GetOrganizationResp = GetOrganizationResp {address :: Kernel.Prelude.Maybe 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassDetailsData = PassDetailsData {passDetailsDataResp :: Kernel.Prelude.Maybe PassDetailsDataResp}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassDetailsDataResp = PassDetailsDataResp
   { academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Day,
     academicYearStart :: Kernel.Prelude.Maybe Data.Time.Day,
