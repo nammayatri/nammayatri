@@ -32,7 +32,7 @@ postPlanManagementDeletePlan a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Act
 postPlanManagementActivatePlan :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPlanManagementActivatePlan a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.PlanManagement.postPlanManagementActivatePlan a3 a2 a1
 
-getPlanManagementListPlans :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.ListPlansResp)
+getPlanManagementListPlans :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.PlanManagement.ListPlansResp)
 getPlanManagementListPlans a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.PlanManagement.getPlanManagementListPlans a3 a2 a1
 
 getPlanManagementPlanTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.PlanManagement.PlanTranslationAPIEntity])

@@ -23,6 +23,7 @@ data VehicleServiceTier = VehicleServiceTier
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
+    availabilityCheckConfig :: Kernel.Prelude.Maybe Dashboard.Common.AvailabilityCheckConfig,
     baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     cancellationRateConfig :: Kernel.Prelude.Maybe Dashboard.Common.CancellationRateConfig,
     defaultForVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],

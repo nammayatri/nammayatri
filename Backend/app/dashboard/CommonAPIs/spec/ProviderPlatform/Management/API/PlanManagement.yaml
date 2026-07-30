@@ -77,6 +77,7 @@ types:
     - registrationAmount: HighPrecMoney
     - originalRegistrationAmount: Maybe HighPrecMoney
     - airportRideSubscription: Maybe HighPrecMoney
+    - mahilaShaktiRideSubscription: Maybe HighPrecMoney
     - maxCreditLimit: HighPrecMoney
     - maxMandateAmount: HighPrecMoney
     - productOwnershipAmount: HighPrecMoney
@@ -112,6 +113,7 @@ types:
     - registrationAmount: HighPrecMoney
     - originalRegistrationAmount: Maybe HighPrecMoney
     - airportRideSubscription: Maybe HighPrecMoney
+    - mahilaShaktiRideSubscription: Maybe HighPrecMoney
     - maxCreditLimit: HighPrecMoney
     - maxMandateAmount: HighPrecMoney
     - productOwnershipAmount: HighPrecMoney

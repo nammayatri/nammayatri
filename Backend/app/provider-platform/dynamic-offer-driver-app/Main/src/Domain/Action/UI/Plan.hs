@@ -121,6 +121,7 @@ data PlanEntity = PlanEntity
     bankErrors :: [ErrorEntity],
     cancellationPenalties :: [CancellationPenaltyInformation],
     airportRideSubscription :: Maybe HighPrecMoney,
+    mahilaShaktiRideSubscription :: Maybe HighPrecMoney,
     remainingPlanCreditLimit :: Maybe HighPrecMoney,
     planBaseAmount :: HighPrecMoney
   }

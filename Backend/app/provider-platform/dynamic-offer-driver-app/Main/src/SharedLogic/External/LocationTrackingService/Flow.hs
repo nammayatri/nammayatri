@@ -36,6 +36,7 @@ import qualified SharedLogic.External.LocationTrackingService.API.EndRide as End
 import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueAdd as ManualQueueAddAPI
 import qualified SharedLogic.External.LocationTrackingService.API.ManualQueueRemove as ManualQueueRemoveAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearBy as NearByAPI
+import qualified SharedLogic.External.LocationTrackingService.API.NearByTag as NearByTagAPI
 import qualified SharedLogic.External.LocationTrackingService.API.QueueHistory as QueueHistoryAPI
 import qualified SharedLogic.External.LocationTrackingService.API.RideDetails as RideDetailsAPI
 import qualified SharedLogic.External.LocationTrackingService.API.StartRide as StartRideAPI
@@ -125,6 +126,43 @@ nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   let combinedLocations = primaryResult <> secondaryResult
   logDebug $ "lts nearBy: " <> show combinedLocations
   return combinedLocations
+
+-- | Counts drivers within a radius of a cohort tag's dedicated GEO bucket
+-- (e.g. "MS" for Mahila Shakti), used to decide whether that tier's estimate
+-- should be visible for this search — independent of, and not a substitute
+-- for, the general driver pool used for actual dispatch.
+-- Queries both the primary and (if configured) secondary LTS instance, same
+-- contract as 'nearBy' -- cohort tag GEO buckets can be written to either
+-- cloud, so counting only the primary would under-count and could wrongly
+-- exclude an otherwise-qualified tier. Unlike 'nearBy', a primary-call
+-- failure here does not throw: the whole point of this check is to fail
+-- open (return 'Nothing') so a transient issue never takes down an
+-- otherwise-correct estimate. Secondary failures are always non-fatal.
+nearByTagCount :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Double -> Double -> Text -> Int -> Id DM.Merchant -> m (Maybe Int)
+nearByTagCount lat lon tag radius merchantId = do
+  ltsCfg <- asks (.ltsCfg)
+  let req = NearByTagReq {lat, lon, tag, radius, merchantId}
+  let callNearByTagAPI url =
+        withShortRetry $
+          callAPI url (NearByTagAPI.nearByTag req) "nearByTag" NearByTagAPI.locationTrackingServiceAPI
+  primaryResult <- callNearByTagAPI ltsCfg.url
+  case primaryResult of
+    Left err -> do
+      logError $ "Failed to call nearByTag API for tag " <> tag <> ", url: " <> show ltsCfg.url <> ", error: " <> show err
+      pure Nothing
+    Right primaryLocations -> do
+      logDebug $ "lts nearByTag (primary): " <> show primaryLocations
+      secondaryCount <- case ltsCfg.secondaryUrl of
+        Nothing -> pure 0
+        Just secondaryUrl ->
+          callNearByTagAPI secondaryUrl >>= \case
+            Right locations -> do
+              logDebug $ "lts nearByTag (secondary): " <> show locations
+              pure (length locations)
+            Left err -> do
+              logError $ "Failed to call nearByTag API for secondary url: " <> show secondaryUrl <> ", tag " <> tag <> ", error: " <> show err
+              pure 0
+      pure $ Just (length primaryLocations + secondaryCount)
 
 rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> Maybe Bool -> Maybe RideInfo -> m APISuccess
 rideDetails rideId rideStatus merchantId driverId lat lon isFutureRide rideInfo = do

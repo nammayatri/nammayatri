@@ -60,6 +60,18 @@ data NearByReq = NearByReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
+-- | Request for GET /internal/drivers/nearby/tag — same shape as NearByReq but
+-- scoped by an ops-assigned cohort tag (e.g. "MS" for Mahila Shakti) instead of
+-- vehicle type, searching the dedicated per-tag GEO bucket the drainer populates.
+data NearByTagReq = NearByTagReq
+  { lat :: Double,
+    lon :: Double,
+    tag :: Text,
+    radius :: Int,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
 data LocationTrackingeServiceConfig = LocationTrackingeServiceConfig
   { url :: BaseUrl,
     secondaryUrl :: Maybe BaseUrl

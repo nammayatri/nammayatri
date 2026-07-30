@@ -14,6 +14,7 @@
 
 module SharedLogic.VehicleServiceTier where
 
+import qualified Data.HashMap.Strict as HashMap
 import Data.List (sortOn)
 import Data.Ord (Down (..))
 import Data.Time (diffDays, utctDay)
@@ -31,11 +32,14 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.Person.GetNearestDrivers (isTierEligibleForDriver)
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 
@@ -45,11 +49,12 @@ data ServiceTierFilterMode
   | SelectedServiceTiers
   deriving (Show, Eq)
 
-selectVehicleTierForDriverWithUsageRestriction :: ServiceTierFilterMode -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> UTCTime -> [(DVST.VehicleServiceTier, Bool)]
-selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleServiceTiers mbDriverStats now =
+selectVehicleTierForDriverWithUsageRestriction :: ServiceTierFilterMode -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> Maybe [LYT.TagNameValueExpiry] -> UTCTime -> [(DVST.VehicleServiceTier, Bool)]
+selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleServiceTiers mbDriverStats driverTag now =
   map mapUsageRestriction $ filter filterVehicleTier vehicleServiceTiers
   where
     vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now
+    tierConfigsMap = HashMap.fromList [(vst.serviceTierType, vst) | vst <- vehicleServiceTiers]
 
     mapUsageRestriction :: DVST.VehicleServiceTier -> (DVST.VehicleServiceTier, Bool)
     mapUsageRestriction vehicleServiceTier = do
@@ -75,9 +80,11 @@ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle vehicleSe
       (vehicleServiceTier, usageRestricted)
 
     filterVehicleTier vehicleServiceTier = case mode of
-      AutoSelectedVariants -> vehicle.variant `elem` vehicleServiceTier.autoSelectedVehicleVariant
-      AllowedVariants -> vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant
+      AutoSelectedVariants -> vehicle.variant `elem` vehicleServiceTier.autoSelectedVehicleVariant && isCohortEligible
+      AllowedVariants -> vehicle.variant `elem` vehicleServiceTier.allowedVehicleVariant && isCohortEligible
       SelectedServiceTiers -> vehicleServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
+      where
+        isCohortEligible = isTierEligibleForDriver now driverTag tierConfigsMap vehicleServiceTier.serviceTierType
 
     compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
     compareNumber mbX mbY =
@@ -111,8 +118,16 @@ fetchVehicleTierForDriverWithUsageRestriction mode mbDriverInfo mbVehicle mbDriv
   vehicle <- maybe (QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)) pure mbVehicle
   driverStats <- maybe (QDriverStats.findById personId) (pure . Just) mbDriverStats
   cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
+  -- SelectedServiceTiers mode only re-filters tiers already in Vehicle.selectedServiceTiers and
+  -- never consults isTierEligibleForDriver (see filterVehicleTier above), so skip this fetch there
+  -- entirely -- it would otherwise add an unconditional Person lookup to several automated,
+  -- high-frequency recomputation call sites (rating changes, AC-score changes, etc.) that don't
+  -- need it; the real dispatch-time hard gate is enforced independently regardless.
+  driverTag <- case mode of
+    SelectedServiceTiers -> pure Nothing
+    _ -> (.driverTag) <$> (QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId))
   now <- getCurrentTime
-  pure $ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle cityServiceTiers driverStats now
+  pure $ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle cityServiceTiers driverStats driverTag now
 
 -- | Mirrors Driver.hs's default-tier derivation. Picks the highest-AC tier
 -- whose `defaultForVehicleVariant` contains the driver's variant *and* whose

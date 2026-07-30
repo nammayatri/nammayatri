@@ -88,9 +88,9 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
-import SharedLogic.AirportEntryFee (isAirportPickupArea, requiredEntryFeeForBooking)
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
@@ -104,7 +104,6 @@ import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.SpecialZone ()
 import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()
-import Storage.Cac.DriverPoolConfig as CDP
 import qualified Storage.Cac.FarePolicy as QFPolicy
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
@@ -361,12 +360,11 @@ handler ValidatedDSearchReq {..} sReq = do
   fork "Updating Demand Hotspots on search" $ do
     DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
 
-  (driverPool, selectedFarePolicies) <-
-    if transporterConfig.considerDriversForSearch
-      then do
-        (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP searchReq sReq.paymentMode
-        pure (nonEmpty pool, policies)
-      else return (Nothing, farePolicies)
+  -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
+  -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
+  -- computation at this stage.
+  (pool, selectedFarePolicies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
+  let driverPool = nonEmpty pool
   navGateMap <- buildNavGateMap (SL.pickupSpecialZoneIdFromArea allFarePoliciesProduct.area)
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig navGateMap
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig navGateMap
@@ -559,44 +557,43 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes _configInEx
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo, vehicleServiceTierItem.vehicleIconUrl)
 
-selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> DSR.SearchRequest -> Maybe DMPM.PaymentMode -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
-selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do
-  driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area sreq
+-- considerDriversForSearch is permanently off platform-wide (confirmed product decision, not
+-- a today-only default), so the general driver-pool computation this used to gate is dead
+-- code and has been removed entirely. The only check left is the per-tier
+-- availabilityCheckConfig one (e.g. Mahila Shakti's) -- that one always ran independent of
+-- this flag and must keep doing so, since "always show regardless of any real driver nearby"
+-- is exactly the bad UX it exists to prevent for a small, tag-gated cohort. Tiers without a
+-- dedicated availabilityCheckConfig keep the platform's existing "always show" behaviour.
+selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> DLoc.Location -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
+selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation isScheduled area farePolicies = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId (SL.pickupSpecialZoneIdFromArea area)
-  airportEntryFee <-
-    if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
-      then pure Nothing
-      else requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) sreq.pickupGateId
-  isAirportRequest <- isAirportPickupArea (Just area)
-  let driverPoolCfg' = fromJust driverPoolCfg
-      currentRideTripCategoryValidForForwardBatching = driverPoolCfg'.currentRideTripCategoryValidForForwardBatching
-      calculateDriverPoolReq =
-        CalculateDriverPoolReq
-          { poolStage = Estimate,
-            driverPoolCfg = driverPoolCfg',
-            serviceTiers = [],
-            pickup = fromLocation,
-            merchantOperatingCityId = merchantOpCityId,
-            merchantId = merchant.id,
-            onlinePayment = merchant.onlinePayment,
-            isRental = False,
-            isInterCity = False,
-            rideFare = Nothing,
-            govtCharges = Nothing,
-            tollCharges = Nothing,
-            parkingCharge = Nothing,
-            airportEntryFee,
-            isAirportRequest,
-            paymentInstrument = Nothing,
-            excludeDriverIds = [],
-            prevAttemptedDriverIds = [],
-            ..
-          }
-  (offRidePool, onRidePool, _) <- calculateDriverPool calculateDriverPoolReq
-  let driverPool = offRidePool <> onRidePool
-  logDebug $ "Search handler: driver pool " <> show driverPool
-  let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
-  return (driverPool, onlyFPWithDrivers)
+  let vstByType = M.fromList $ map (\vst -> (vst.serviceTierType, vst)) cityServiceTiers
+      needsLiveCheck fp =
+        not (isScheduled || skipDriverPoolCheck fp.tripCategory)
+          && isJust (M.lookup fp.vehicleServiceTier vstByType >>= (.availabilityCheckConfig))
+      -- One nearByTagCount call per distinct vehicleServiceTier, not per fare policy --
+      -- farePolicies is built by concatenating results across possibleTripOption.tripCategories,
+      -- so the same tier commonly appears more than once here; querying LTS once per duplicate
+      -- would be redundant, sequential, avoidable latency on every search with a configured tier.
+      tiersNeedingLiveCheck =
+        M.fromList
+          [ (fp.vehicleServiceTier, cfg)
+            | fp <- farePolicies,
+              needsLiveCheck fp,
+              Just cfg <- [M.lookup fp.vehicleServiceTier vstByType >>= (.availabilityCheckConfig)]
+          ]
+  availabilityByTier <-
+    fmap M.fromList $
+      forM (M.toList tiersNeedingLiveCheck) $ \(tier, cfg) -> do
+        mbCount <- LTSFlow.nearByTagCount fromLocation.lat fromLocation.lon (show tier) cfg.radiusMeters.getMeters merchant.id
+        pure (tier, maybe True (>= cfg.minDriverCount) mbCount)
+  let checkAvailabilityConfigOnly fp =
+        if isScheduled || skipDriverPoolCheck fp.tripCategory
+          then True
+          else case M.lookup fp.vehicleServiceTier vstByType >>= (.availabilityCheckConfig) of
+            Nothing -> True
+            Just _ -> fromMaybe True (M.lookup fp.vehicleServiceTier availabilityByTier)
+  pure ([], filter checkAvailabilityConfigOnly farePolicies)
 
 buildSearchRequest ::
   ( CacheFlow m r,
