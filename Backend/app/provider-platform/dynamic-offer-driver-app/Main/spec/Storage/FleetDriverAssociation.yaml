@@ -18,6 +18,8 @@ FleetDriverAssociation:
     onboardedOperatorId: Maybe (Id Person)
     requestReason: Maybe Text
     responseReason: Maybe Text
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     createdAt: UTCTime
     updatedAt: UTCTime
 

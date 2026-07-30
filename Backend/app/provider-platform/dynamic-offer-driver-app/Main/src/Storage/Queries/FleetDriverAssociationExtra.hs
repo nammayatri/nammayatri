@@ -10,6 +10,8 @@ import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBankAccount as DDBA
 import Domain.Types.DriverInformation
 import Domain.Types.FleetDriverAssociation
+import Domain.Types.Merchant (Merchant)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person
 import Domain.Types.VehicleCategory
 import Domain.Utils
@@ -45,8 +47,10 @@ createFleetDriverAssociationIfNotExists ::
   VehicleCategory ->
   Bool ->
   Maybe Text ->
+  Maybe (Id Merchant) ->
+  Maybe (Id MerchantOperatingCity) ->
   m ()
-createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorId onboardingVehicleCategory isActive requestReason = do
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorId onboardingVehicleCategory isActive requestReason merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
     mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
@@ -666,9 +670,10 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
           -- Joining `person` inside this query lets the planner drive from the huge `person` table and
           -- full-scan it. Instead we resolve the small, fleet-scoped set from `fleet_driver_association`
           -- first (fleetOwnerId is selective + indexed), then batch-fetch `person` and `driver_information`
-          -- by primary key. This eliminates the `person` scan. NOTE: mirrors the `else B.val_ True` in the
-          -- join branch below — when fleetOwnerIds is non-empty the join applied no merchant/city predicate,
-          -- so none is applied here either.
+          -- by primary key. This eliminates the `person` scan. The merchant/city scope is applied directly
+          -- on the fda columns (populated going forward + backfilled) instead of the earlier `person` join;
+          -- rows not yet backfilled carry NULL merchantId / merchantOperatingCityId and are treated as a
+          -- match so they are not dropped during the backfill window.
           fdaRes <-
             L.runDB dbConf $
               L.findRows $
@@ -679,6 +684,12 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
                         B.filter_'
                           ( \fleetDriverAssociation ->
                               B.sqlBool_ (fleetDriverAssociation.fleetOwnerId `B.in_` (B.val_ <$> fleetOwnerIds))
+                                B.&&?. ( B.sqlBool_ (B.isNothing_ fleetDriverAssociation.merchantId)
+                                           B.||?. fleetDriverAssociation.merchantId B.==?. B.val_ (Just merchantId)
+                                       )
+                                B.&&?. ( B.sqlBool_ (B.isNothing_ fleetDriverAssociation.merchantOperatingCityId)
+                                           B.||?. fleetDriverAssociation.merchantOperatingCityId B.==?. B.val_ (Just merchantOperatingCityId)
+                                       )
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> fleetDriverAssociation.driverId B.==?. B.val_ driverId) mbDriverId
                                 B.&&?. B.sqlBool_ (fleetDriverAssociation.associatedTill B.>=. B.val_ (Just now))
                                 B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (fleetDriverAssociation.associatedOn B.>=. B.val_ (Just from))) mbFrom
