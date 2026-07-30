@@ -477,6 +477,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
   (mbJourneyId, _) <- getAllJourneyFrfsBookings dConfirmRes
   when (isNothing mbJourneyId) $ do
     fork "FRFS buildJourneyAndLeg" $ buildJourneyAndLeg dConfirmRes fareParameters
+    fork "Caching recent location for FRFS booking" $ JourneyUtils.createRecentLocationForFRFSBooking dConfirmRes
     -- Sync vehicle/driver data synchronously (NOT forked). A forked sync races with the confirm/on_init writes,
     -- which rewrite the whole booking row in KV and clobber the driver fields. Running it inline lets the
     -- subsequent sequential KV updates re-read the row and carry these fields forward.
