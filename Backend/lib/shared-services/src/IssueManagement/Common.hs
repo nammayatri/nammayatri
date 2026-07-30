@@ -205,7 +205,7 @@ data RideInfoRes = RideInfoRes
     mobileCountryCode :: Maybe Text
   }
 
-data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
+data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE | IN_PROGRESS
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
 
 -- | The customer's reaction to a post-resolution satisfaction prompt.
