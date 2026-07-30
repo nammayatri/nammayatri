@@ -69,6 +69,7 @@ import qualified SharedLogic.ActiveDriversList as ADL
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import SharedLogic.EndOtpConfig (checkEndOtpRequired)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -235,8 +236,9 @@ startRideHandler ServiceHandle {..} rideId req = do
       -- create first entry of eta here
       let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
       when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
+      endOtpRequired <- checkEndOtpRequired booking.merchantOperatingCityId booking.tripCategory
       updatedRide <-
-        if DTC.isEndOtpRequired booking.tripCategory
+        if endOtpRequired
           then do
             endOtp <- Just <$> generateOTPCode
             QRide.updateEndRideOtp ride.id endOtp

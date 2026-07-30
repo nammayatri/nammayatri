@@ -541,6 +541,7 @@ library
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
       SharedLogic.DynamicPricing
+      SharedLogic.EndOtpConfig
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill
       SharedLogic.External.LocationTrackingService.API.DriverLocation
@@ -685,6 +686,7 @@ library
       Storage.CachedQueries.Driver.OnBoarding
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverReferral
+      Storage.CachedQueries.EndOtpConfig
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
@@ -1242,6 +1244,7 @@ library
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.DriverUdyam
+      Domain.Types.EndOtpConfig
       Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -1428,6 +1431,7 @@ library
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.DriverUdyam
+      Storage.Beam.EndOtpConfig
       Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -1619,6 +1623,7 @@ library
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.DriverUdyam
+      Storage.Queries.EndOtpConfig
       Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone
