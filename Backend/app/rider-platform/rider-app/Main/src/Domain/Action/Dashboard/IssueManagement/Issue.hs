@@ -417,6 +417,7 @@ postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportI
       (Kernel.Types.Id.cast issueReportId)
       dashboardIssueHandle
       Common.CUSTOMER
+      (Just "Control Centre Agent")
       req
   mbIssueReport <- QIR.findById (Kernel.Types.Id.cast issueReportId)
   Kernel.Prelude.whenJust mbIssueReport $ \issueReport ->
