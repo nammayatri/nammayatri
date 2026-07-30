@@ -79,6 +79,6 @@ getFleetEngineCfg merchantId merchantOpCityId = do
   mbServiceConfig <- QOMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DOSC.FleetEngineService DOSC.GoogleFleetEngine)
   pure $ case mbServiceConfig of
     Just sc -> case sc.serviceConfig of
-      DOSC.FleetEngineServiceConfig cfg -> Just cfg
+      DOSC.FleetEngineServiceConfig cfg | cfg.enabled == Just True -> Just cfg
       _ -> Nothing
     Nothing -> Nothing
