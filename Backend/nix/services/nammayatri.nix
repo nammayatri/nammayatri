@@ -475,6 +475,8 @@ in
             "zookeeper".shutdown.signal = 9;
             "db-primary".shutdown.signal = lib.mkForce 9;
             "db-primary-replica".shutdown.signal = lib.mkForce 9;
+            "db-manager-backend".shutdown.signal = 9;
+            "db-manager-frontend".shutdown.signal = 9;
           })
           (lib.mkIf (cfg.profile == "backend" && cfg.useCaddy) (
             let excluded = [ "caddy-reverse-proxy" "nammayatri-init" "cabal-build" "cache-restore" "osrm-server" ];
