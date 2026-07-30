@@ -1360,7 +1360,7 @@ postDriverLinkToFleet ::
   (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   APITypes.LinkToFleetReq ->
   Flow APISuccess
-postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
+postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
   let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
@@ -1380,7 +1380,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
-          FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
+          FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
           SA.syncDriverOnboardingAsWithFDA driverId
   return Success
 

@@ -19,6 +19,8 @@ data FleetDriverAssociationT f = FleetDriverAssociationT
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     isActive :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onboardedOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onboardingVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     requestReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

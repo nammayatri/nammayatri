@@ -25,3 +25,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN onboarded
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN response_reason text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN request_reason text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_driver_association ADD COLUMN merchant_id character varying(36) ;

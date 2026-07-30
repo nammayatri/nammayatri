@@ -4,6 +4,8 @@
 module Domain.Types.FleetDriverAssociation where
 
 import Data.Aeson
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
@@ -18,6 +20,8 @@ data FleetDriverAssociation = FleetDriverAssociation
     fleetOwnerId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FleetDriverAssociation.FleetDriverAssociation,
     isActive :: Kernel.Prelude.Bool,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     onboardedOperatorId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

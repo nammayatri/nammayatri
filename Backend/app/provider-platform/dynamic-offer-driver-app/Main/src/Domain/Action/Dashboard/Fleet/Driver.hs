@@ -2907,7 +2907,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
         QRCAssociation.endAllRCAssociationsForDriver person.id
 
       -- onboarded operator required only for new drivers
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd
+      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
       QFDV.create assoc
       when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
       Analytics.handleDriverAnalyticsAndFlowStatus
@@ -3699,7 +3699,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           fork "Sending Fleet Consent SMS to Driver" $ do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
-            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing
+            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id)
             SA.syncDriverOnboardingAsWithFDA person.id
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id moc.country fleetOwner
