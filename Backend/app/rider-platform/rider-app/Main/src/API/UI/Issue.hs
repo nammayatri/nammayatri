@@ -434,7 +434,8 @@ castRideCardInfoByRideIds rideIds =
                 { pickupAddress = mkAddressText booking.fromLocation,
                   dropAddress = bookingDropLocation booking >>= mkAddressText,
                   fare = (ride.totalFare <|> ride.fare) <&> (.amount),
-                  rideDate = ride.createdAt
+                  rideDate = ride.createdAt,
+                  vehicleServiceTierType = (show <$> ride.vehicleServiceTierType) <|> Just (show booking.vehicleServiceTierType)
                 }
             )
   where
