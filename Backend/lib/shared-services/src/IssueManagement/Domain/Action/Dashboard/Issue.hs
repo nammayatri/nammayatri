@@ -2116,6 +2116,18 @@ mkOptionDetailResWithoutChildren _language _identifier (opt, mbTranslation) = do
 -------------------------------------------------------------------------
 -- Live chat (dashboard operator side) ----------------------------------
 
+-- | @mbForwardSenderLabel@ controls whether this message is also forwarded to
+-- the merchant's ticket service (Xyne) and under what sender name:
+--
+--   * @Just label@ — a control-centre agent's reply; forward it as @label@
+--     (e.g. "Control Centre Agent") so the Xyne agent sees the operator's side
+--     of the conversation.
+--   * @Nothing@ — the message originated from Xyne itself (inbound webhook);
+--     forwarding it back would echo the agent's own reply into an infinite
+--     loop, so it must not be forwarded.
+--
+-- Forwarding is still gated by @mbShouldForwardChatToTicketService@ on the
+-- handle, so it is a no-op for merchants/apps that don't use Xyne.
 sendDashboardChatMessage ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r
@@ -2125,9 +2137,10 @@ sendDashboardChatMessage ::
   Id DIR.IssueReport ->
   ServiceHandle m ->
   Identifier ->
+  Maybe Text ->
   Common.SendChatMessageByUserReq ->
   m CommonUI.ChatMessageItem
-sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle identifier req = do
+sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle identifier mbForwardSenderLabel req = do
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
   _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   now <- getCurrentTime
@@ -2161,6 +2174,11 @@ sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle identi
     case result of
       Right _ -> pure ()
       Left err -> logError $ "sendDashboardChatMessage: sendChatNotification failed " <> show err
+  -- Mirror the control-centre agent's reply into the merchant's ticket service.
+  -- Skipped when the label is Nothing (the inbound-Xyne-webhook path), which
+  -- avoids echoing the agent's own message straight back to Xyne.
+  whenJust mbForwardSenderLabel $ \senderLabel ->
+    UIR.forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle req.message mediaIds
   UIR.toChatMessageItem identifier chatMsg
 
 listDashboardChatMessages ::
