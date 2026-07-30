@@ -12,6 +12,7 @@ module Domain.Action.UI.PassDetails
     parsePassEnum,
     parseVerificationStatus,
     computeValidTill,
+    notifyStudentPassVerified,
   )
 where
 
@@ -22,6 +23,7 @@ import qualified Data.ByteString as BS
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Time
+import Domain.Types.EmptyDynamicParam (EmptyDynamicParam (..))
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DMerchant
@@ -47,6 +49,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types (GeneralVehicleType (..), GetTransitRoutesReq (..), MultiModalLeg, SortingType (..))
 import qualified Kernel.External.MultiModal.OpenTripPlanner.Types as OTPTypes
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Storage.Hedis as Hedis
@@ -58,6 +61,7 @@ import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Person as SLP
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
@@ -70,6 +74,7 @@ import qualified Storage.Queries.PassOrganization as QPassOrganization
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.MultiModal as TMultiModal
+import qualified Tools.Notifications as TNotifications
 
 parsePassEnum :: Kernel.Prelude.Text -> Environment.Flow DPassType.PassEnum
 parsePassEnum "StudentPass" = pure DPassType.StudentPass
@@ -198,6 +203,23 @@ computeValidTill now moid = do
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) (Just (CQRC.findByMerchantOperatingCityId moid)) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
   let durationDays = maybe 365 (.validityDurationDays) riderConfig.studentPassVerifyConfig
   pure $ Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
+
+studentPassVerifiedPNKey :: Kernel.Prelude.Text
+studentPassVerifiedPNKey = "STUDENT_PASS_CLG_VERIFIED"
+
+newtype StudentPassVerifiedEntityData = StudentPassVerifiedEntityData
+  { notificationKey :: Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON)
+
+notifyStudentPassVerified :: [Id.Id DPerson.Person] -> Environment.Flow ()
+notifyStudentPassVerified personIds = do
+  persons <- QPerson.findAllByPersonIds (map Id.getId personIds)
+  forM_ persons $ \person ->
+    when (isJust person.deviceToken) $ do
+      let entity = Notification.Entity Notification.Product person.id.getId (StudentPassVerifiedEntityData {notificationKey = studentPassVerifiedPNKey})
+          templateParams = [("name", SLP.getName person)]
+      TNotifications.dynamicNotifyPerson person (TNotifications.createNotificationReq studentPassVerifiedPNKey Utils.identity) EmptyDynamicParam entity Nothing templateParams Nothing Nothing
 
 updatePassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPassDetails.PassDetails -> Environment.Flow ()
 updatePassDetail req person passDetail = do
