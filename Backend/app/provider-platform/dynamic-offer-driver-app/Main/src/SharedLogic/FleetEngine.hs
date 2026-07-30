@@ -14,11 +14,17 @@
 -- tripId = BPP rideId (1:1); vehicleId = driverId (1:1).
 module SharedLogic.FleetEngine
   ( mkDriverToken,
+    notifyDriverOnline,
     notifyTripCreated,
     notifyDriverArrived,
     notifyRideStarted,
     notifyRideCompleted,
     notifyTripCancelled,
+    notifyDropoffChanged,
+    notifyPickupChanged,
+    notifyStopsChanged,
+    notifyStopArrived,
+    notifyStopDeparted,
   )
 where
 
@@ -28,17 +34,24 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as DVV
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.FleetEngine.Auth as FEAuth
 import qualified Kernel.External.FleetEngine.Client as FEClient
 import Kernel.External.FleetEngine.Config (FleetEngineCfg)
 import qualified Kernel.External.FleetEngine.Config as FEConfig
+import Kernel.External.FleetEngine.Types (Trip (..))
 import qualified Kernel.External.FleetEngine.Types as FETypes
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import qualified Storage.Queries.Vehicle as QVeh
 
 type FleetEngineFlow m r =
   ( MonadFlow m,
@@ -89,6 +102,18 @@ mkDriverToken merchantOpCityId driverId = do
               pure Nothing
             Right token -> pure $ Just (token, vehicleId, cfg.providerId)
 
+-- | Registers the vehicle so a pool trip landing before this driver's first ride finds it.
+notifyDriverOnline ::
+  FleetEngineFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  m ()
+notifyDriverOnline merchantOpCityId driverId =
+  withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
+    logInfo $ "FleetEngine: driverOnline provider=" <> providerId <> " driverId=" <> driverId.getId
+    mbVeh <- QVeh.findById driverId
+    ensureVehicleExists baseUrl providerId token driverId.getId mbVeh
+
 -- | Silent skip when Fleet Engine is off; logs (never throws) on config/token errors.
 withFleetEngine ::
   FleetEngineFlow m r =>
@@ -119,26 +144,43 @@ notifyTripCreated booking ride =
         vehicleId = ride.driverId.getId -- driver<->vehicle is 1:1
         pickupPoint = Just (FETypes.LatLng booking.fromLocation.lat booking.fromLocation.lon)
         dropoffPoint = (\loc -> FETypes.LatLng loc.lat loc.lon) <$> booking.toLocation
-    ensureVehicleExists baseUrl providerId token vehicleId
-    FEClient.createTrip baseUrl providerId token tripId (FETypes.mkCreateTripBody FETypes.EXCLUSIVE pickupPoint dropoffPoint Nothing)
+    mbVeh <- QVeh.findById ride.driverId
+    ensureVehicleExists baseUrl providerId token vehicleId mbVeh
+    FEClient.createTrip baseUrl providerId token tripId $
+      FETypes.mkCreateTripBody (bookingToTripType booking) pickupPoint dropoffPoint (bookingToNumberOfPassengers booking)
     FEClient.assignVehicleAndStart baseUrl providerId token tripId vehicleId
 
 -- | GET-first: don't overwrite state the Driver SDK may set once mobile integration lands.
-ensureVehicleExists :: FleetEngineFlow m r => BaseUrl -> Text -> Text -> Text -> m ()
-ensureVehicleExists baseUrl providerId token vehicleId = do
-  mbVeh <- FEClient.getVehicle baseUrl providerId token vehicleId
-  when (isNothing mbVeh) $
-    FEClient.createVehicle baseUrl providerId token vehicleId defaultVehicle
+ensureVehicleExists :: FleetEngineFlow m r => BaseUrl -> Text -> Text -> Text -> Maybe DVeh.Vehicle -> m ()
+ensureVehicleExists baseUrl providerId token vehicleId mbVeh = do
+  mbFleetVeh <- FEClient.getVehicle baseUrl providerId token vehicleId
+  when (isNothing mbFleetVeh) $
+    FEClient.createVehicle baseUrl providerId token vehicleId (mkFleetEngineVehicle mbVeh)
 
--- | Placeholder body — Driver SDK overwrites state and vehicleType at online-time.
-defaultVehicle :: FETypes.Vehicle
-defaultVehicle =
+mkFleetEngineVehicle :: Maybe DVeh.Vehicle -> FETypes.Vehicle
+mkFleetEngineVehicle mbVeh =
   FETypes.Vehicle
     { vehicleState = FETypes.OFFLINE,
-      supportedTripTypes = [FETypes.EXCLUSIVE],
-      maximumCapacity = 4,
-      vehicleType = FETypes.VehicleType {category = FETypes.AUTO}
+      supportedTripTypes = [FETypes.EXCLUSIVE, FETypes.SHARED],
+      maximumCapacity = fromMaybe 4 (mbVeh >>= (.capacity)),
+      vehicleType = FETypes.VehicleType {category = mapVehicleCategory mbVeh}
     }
+
+mapVehicleCategory :: Maybe DVeh.Vehicle -> FETypes.VehicleCategory
+mapVehicleCategory Nothing = FETypes.UNKNOWN_VEHICLE_CATEGORY
+mapVehicleCategory (Just veh) = case DVV.castVehicleVariantToVehicleCategory veh.variant of
+  DVC.CAR -> FETypes.TAXI
+  DVC.MOTORCYCLE -> FETypes.TWO_WHEELER
+  DVC.AUTO_CATEGORY -> FETypes.AUTO
+  DVC.TRUCK -> FETypes.TRUCK
+  DVC.TOTO -> FETypes.AUTO
+  _ -> FETypes.UNKNOWN_VEHICLE_CATEGORY
+
+bookingToTripType :: DRB.Booking -> FETypes.TripType
+bookingToTripType _booking = FETypes.EXCLUSIVE
+
+bookingToNumberOfPassengers :: DRB.Booking -> Maybe Int
+bookingToNumberOfPassengers _booking = Nothing
 
 notifyTripStatus :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> FETypes.TripStatus -> m ()
 notifyTripStatus merchantOpCityId rideId status =
@@ -150,10 +192,66 @@ notifyDriverArrived :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
 notifyDriverArrived booking ride = notifyTripStatus booking.merchantOperatingCityId ride.id FETypes.ARRIVED_AT_PICKUP
 
 notifyRideStarted :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
-notifyRideStarted booking ride = notifyTripStatus booking.merchantOperatingCityId ride.id FETypes.ENROUTE_TO_DROPOFF
+notifyRideStarted booking ride =
+  let status =
+        if isJust booking.stopLocationId
+          then FETypes.ENROUTE_TO_INTERMEDIATE_DESTINATION
+          else FETypes.ENROUTE_TO_DROPOFF
+   in notifyTripStatus booking.merchantOperatingCityId ride.id status
 
 notifyRideCompleted :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
 notifyRideCompleted booking ride = notifyTripStatus booking.merchantOperatingCityId ride.id FETypes.COMPLETE
 
 notifyTripCancelled :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> m ()
 notifyTripCancelled merchantOpCityId rideId = notifyTripStatus merchantOpCityId rideId FETypes.CANCELED
+
+notifyDropoffChanged :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> LatLong -> m ()
+notifyDropoffChanged merchantOpCityId rideId newDrop =
+  withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
+    logInfo $ "FleetEngine: updateDropoff provider=" <> providerId <> " tripId=" <> rideId.getId
+    let newDropTL = FETypes.TerminalLocation {point = FETypes.LatLng {latitude = newDrop.lat, longitude = newDrop.lon}}
+    void . FEClient.updateTrip baseUrl providerId token rideId.getId "dropoffPoint" $
+      FETypes.emptyTrip {dropoffPoint = Just newDropTL}
+
+-- | Only valid while trip is ENROUTE_TO_PICKUP; Fleet Engine rejects after ARRIVED_AT_PICKUP.
+notifyPickupChanged :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> LatLong -> m ()
+notifyPickupChanged merchantOpCityId rideId newPickup =
+  withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
+    logInfo $ "FleetEngine: updatePickup provider=" <> providerId <> " tripId=" <> rideId.getId
+    let newPickupTL = FETypes.TerminalLocation {point = FETypes.LatLng {latitude = newPickup.lat, longitude = newPickup.lon}}
+    void . FEClient.updateTrip baseUrl providerId token rideId.getId "pickupPoint" $
+      FETypes.emptyTrip {pickupPoint = Just newPickupTL}
+
+-- | Cached Fleet Engine version token for intermediateDestinations optimistic-lock.
+intermediateDestinationsVersionKey :: Id SRide.Ride -> Text
+intermediateDestinationsVersionKey rideId = "fleetengine:trip:" <> rideId.getId <> ":iDestVersion"
+
+notifyStopsChanged :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> [LatLong] -> m ()
+notifyStopsChanged merchantOpCityId rideId stops =
+  withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
+    mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey rideId)
+    let stopsTL = map (\ll -> FETypes.TerminalLocation {point = FETypes.LatLng {latitude = ll.lat, longitude = ll.lon}}) stops
+    logInfo $ "FleetEngine: updateIntermediateDestinations provider=" <> providerId <> " tripId=" <> rideId.getId <> " count=" <> show (length stops)
+    mbResp <-
+      FEClient.updateTrip baseUrl providerId token rideId.getId "intermediateDestinations" $
+        FETypes.emptyTrip
+          { intermediateDestinations = Just stopsTL,
+            intermediateDestinationsVersion = mbVersion
+          }
+    whenJust (mbResp >>= (.intermediateDestinationsVersion)) $ \newVersion ->
+      Redis.setExp (intermediateDestinationsVersionKey rideId) newVersion (24 * 60 * 60)
+
+-- | Index=0 assumes nammayatri's single-stop-at-a-time model.
+notifyStopArrived :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> m ()
+notifyStopArrived merchantOpCityId rideId =
+  withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
+    logInfo $ "FleetEngine: stopArrived tripId=" <> rideId.getId
+    void . FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
+      FETypes.emptyTrip
+        { tripStatus = Just FETypes.ARRIVED_AT_INTERMEDIATE_DESTINATION,
+          intermediateDestinationIndex = Just 0
+        }
+
+notifyStopDeparted :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> m ()
+notifyStopDeparted merchantOpCityId rideId =
+  notifyTripStatus merchantOpCityId rideId FETypes.ENROUTE_TO_DROPOFF

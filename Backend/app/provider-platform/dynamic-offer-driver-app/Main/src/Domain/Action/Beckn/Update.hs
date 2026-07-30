@@ -59,6 +59,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
@@ -317,6 +318,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
       let fcmOverlayReq = Notify.mkOverlayReq overlay
       let entityData = Notify.EditPickupLocationReq {hasAdvanceBooking = driverInfo.hasAdvanceBooking, rideId = ride.id, ..}
       Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
+    whenJust mbRide $ \ride ->
+      fork "FleetEngine:notifyPickupChanged" $
+        FleetEngine.notifyPickupChanged booking.merchantOperatingCityId ride.id Maps.LatLong {lat = startLocation.lat, lon = startLocation.lon}
     QRB.updateIsPickupOrDestinationEdited (Just True) bookingId
 
   whenJust destination $ \dropLocation -> do
@@ -656,6 +660,8 @@ processStop booking location isEdit = do
     person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     let entityData = Notify.StopReq {bookingId = booking.id, stop = Just (DL.makeLocationAPIEntity location), ..}
     when (ride.status `elem` [DRide.INPROGRESS, DRide.NEW]) $ Notify.notifyStopModification ride.status person entityData booking.tripCategory -- when ride.status in [INPROGRESS, NEW]
+    fork "FleetEngine:notifyStopsChanged" $
+      FleetEngine.notifyStopsChanged booking.merchantOperatingCityId ride.id [Maps.LatLong {lat = location.lat, lon = location.lon}]
 
 validateStopReq :: DBooking.Booking -> Bool -> Flow ()
 validateStopReq booking isEdit = do

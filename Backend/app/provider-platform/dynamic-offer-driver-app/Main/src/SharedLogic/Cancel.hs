@@ -52,6 +52,7 @@ import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.Types as SDT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
+import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey)
@@ -213,6 +214,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           if isValueAddNP
             then do
               if isStatic then BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle else BP.sendEstimateRepetitionUpdateToBAP booking ride (Id estimateId) bookingCReason.source driver vehicle
+              -- Reallocation-success branch skips sendBookingCancelledUpdateToBAP, so cancel the old FE trip here.
+              fork "FleetEngine: cancel old trip on reallocation success" $
+                FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
               return True
             else cancelRideTransactionForNonReallocation Nothing (Just estimateId)
         Left _ -> cancelRideTransactionForNonReallocation Nothing (Just estimateId)

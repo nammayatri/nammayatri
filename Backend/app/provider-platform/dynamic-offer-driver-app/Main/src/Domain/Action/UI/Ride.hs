@@ -83,6 +83,7 @@ import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -379,6 +380,8 @@ stopAction rideId pt stopLocId action = do
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      fork "FleetEngine:notifyStopDeparted" $
+        FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
@@ -403,6 +406,8 @@ stopAction rideId pt stopLocId action = do
       VID.addReachedStop rideId stopLM.order pt nowTs
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      fork "FleetEngine:notifyStopArrived" $
+        FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id
       pure Success
   where
     isValidStopArrivedAction stopLM =
