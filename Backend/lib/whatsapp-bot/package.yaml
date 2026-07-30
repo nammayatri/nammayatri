@@ -12,6 +12,8 @@ copyright: "2023 Juspay Technologies Private Limited"
 # on mobility-core (for Kernel.Prelude + Kernel.External.Meta wire types) — NEVER
 # on rider-app. rider-app supplies the effectful adapters (BackendHandle/WaSender/
 # stores) at its own layer. The golden replay suite is the equivalence gate.
+# Ported from ny-connectors@77325a7 (2026-07-09). Every *.ts:NNN citation in
+# this package resolves against that revision only.
 
 flags:
   Local:

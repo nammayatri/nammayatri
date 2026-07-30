@@ -1,0 +1,33 @@
+name: Cabal WhatsApp Bot Tests
+
+on:
+  pull_request:
+    paths:
+      - 'Backend/lib/whatsapp-bot/**'
+      - 'Backend/cabal.project'
+
+concurrency:
+  group: cabal-whatsapp-bot-tests-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  whatsapp-bot-tests:
+    name: WhatsApp Bot Golden Suite
+    runs-on: x86_64_main_pull
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Run the whatsapp-bot golden suite
+        run: |
+          nix develop .#backend --command bash -c "
+            cd Backend
+            cabal test whatsapp-bot --test-show-details=direct
+          "

@@ -15,6 +15,11 @@
 --   * @structured(recordedOutbound[sinceStep])   == step.expectOutbound@
 --   * @recordedBackend[sinceStep]                == step.expectBackend@
 --
+-- Plus a THIRD oracle on the persisted schema: every 'saveContext' round-trips
+-- its 'FlowContext' through JSON and stores the DECODED value, so a session
+-- shape production's @Redis.get@ could not read back (which would DELETE the
+-- key — see 'codecRoundTrip') fails the fixture that produced it.
+--
 -- Ports, faithfully:
 --   * @structured()@ (harness.ts:189-197): @{kind,to,merchant,buttons?,link?}@,
 --     button DATA-ids only (copy dropped). A LIST send is recorded exactly like
@@ -51,6 +56,7 @@
 module GoldenReplay
   ( goldenTests,
     copyChecks,
+    fixtureGuards,
   )
 where
 
@@ -58,6 +64,7 @@ import Control.Concurrent (forkIO, killThread)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, readMVar, takeMVar, tryPutMVar)
 import Data.Aeson (Value (String), eitherDecodeStrict', encode, object, (.=))
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.FileEmbed (embedDir, makeRelativeToProject)
 import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
 import qualified Data.List as L
@@ -69,7 +76,7 @@ import qualified Kernel.External.Meta as Meta
 import Kernel.Prelude
 import System.Timeout (timeout)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
+import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
 import WhatsappBot.Engine (handleMessage, scopedSessionId)
 import WhatsappBot.Env
 import WhatsappBot.Handles
@@ -169,6 +176,10 @@ data World = World
     wReached :: MVar (), -- signalled when a gated backend method is entered
     wRelease :: MVar (), -- released by the harness to un-stall the gate
     wClock :: IORef UTCTime,
+    -- | Persisted-schema violations seen while replaying (see 'codecRoundTrip').
+    -- Appended in occurrence order like 'wOut'/'wCalls' (see 'recordCodecErr');
+    -- asserted empty after EVERY step and tracker step.
+    wCodecErrs :: IORef [String],
     wEnv :: BotEnv IO,
     wDeps :: TrackerDeps IO
   }
@@ -188,6 +199,12 @@ recordOut ref r = atomicModifyIORef' ref (\xs -> (xs ++ [r], ()))
 
 recordCall :: IORef [RecordedCall] -> Text -> [Value] -> IO ()
 recordCall ref m as = atomicModifyIORef' ref (\xs -> (xs ++ [RecordedCall m as], ()))
+
+-- | Record a persisted-schema violation. Atomic like the other two recorders:
+-- 'runConcurrent' has two threads in 'saveContext' at once, and a non-atomic
+-- read-modify-write could drop the very error the assertion exists to catch.
+recordCodecErr :: IORef [String] -> String -> IO ()
+recordCodecErr ref e = atomicModifyIORef' ref (\xs -> (xs ++ [e], ()))
 
 -- ===========================================================================
 -- Knob logic (golden-fixtures.test.ts:74-78). Each mock method RECORDS first,
@@ -418,11 +435,28 @@ mkSender outRef label =
         recordOut outRef (RecordedOut "video" to label Nothing (Just lnk)) >> pure True
     }
 
+-- | Force the value through the exact JSON path production uses.
+--
+-- The harness previously kept 'Session' as a live Haskell value, so a schema
+-- change that would make @Redis.get@ fail — and therefore DELETE the key, since
+-- @get = safeGet = get' key (del key)@ — was invisible to every fixture. Encode
+-- and decode on every write, store the DECODED value so the round-trip is
+-- load-bearing, and record failures for the caller to assert on.
+codecRoundTrip :: (ToJSON a, FromJSON a) => a -> Either String a
+codecRoundTrip = eitherDecodeStrict' . BSL.toStrict . encode
+
 -- | In-memory SessionStore (session/manager.ts). @resolveSession@ create-or-refresh
 -- (++messageCount); @saveContext@ is a silent no-op if the key is absent. TTL is
 -- omitted: virtual advance per fixture (<=~20s) never reaches the 1800s TTL.
-mkSessions :: IORef UTCTime -> IORef (Map.Map Text Session) -> SessionStore IO
-mkSessions clockRef sessRef =
+--
+-- @saveContext@ round-trips the context through JSON. The round-trip is PURE and
+-- happens BEFORE the existing 'atomicModifyIORef'', which is left untouched and
+-- still writes in a single atomic step: the scripted 'runConcurrent' interleave
+-- depends on that atomicity to reproduce the cancel-mid-search race, so no IO
+-- may be moved inside it. Decode failures land in @codecErrRef@ instead, and
+-- only the already-decoded pure value crosses into the atomic section.
+mkSessions :: IORef UTCTime -> IORef (Map.Map Text Session) -> IORef [String] -> SessionStore IO
+mkSessions clockRef sessRef codecErrRef =
   SessionStore
     { resolveSession = \key -> do
         nowT <- readIORef clockRef
@@ -438,10 +472,19 @@ mkSessions clockRef sessRef =
         m <- readIORef sessRef
         pure ((\s -> s.metadata) <$> Map.lookup key m),
       saveContext = \key ctx ->
-        atomicModifyIORef' sessRef $ \m ->
-          case Map.lookup key m of
-            Just s -> (Map.insert key (s {metadata = ctx}) m, ())
-            Nothing -> (m, ())
+        case codecRoundTrip ctx of
+          Left err ->
+            recordCodecErr codecErrRef ("saveContext " <> T.unpack key <> ": " <> err)
+          Right ctx' -> do
+            when (ctx' /= ctx) $
+              recordCodecErr codecErrRef ("saveContext " <> T.unpack key <> ": round-trip changed the value")
+            -- NOTE: ctx' (the DECODED value) is what is stored, so the round-trip
+            -- is load-bearing: anything JSON drops is dropped here too, and the
+            -- fixture's own outbound/backend assertions will see the difference.
+            atomicModifyIORef' sessRef $ \m ->
+              case Map.lookup key m of
+                Just s -> (Map.insert key (s {metadata = ctx'}) m, ())
+                Nothing -> (m, ())
     }
 
 -- | In-memory PersonStore (session/token-store.ts). Starts EMPTY: the golden
@@ -549,6 +592,7 @@ makeWorld merchantCtx theKnobs t0 = do
   introRef <- newIORef Set.empty
   ridesRef <- newIORef Map.empty
   claimedRef <- newIORef Set.empty
+  codecErrRef <- newIORef []
   reached <- newEmptyMVar
   release <- newEmptyMVar
   let rb =
@@ -562,7 +606,7 @@ makeWorld merchantCtx theKnobs t0 = do
           }
       backendH = mkBackend rb
       senderH = mkSender outRef merchantCtx.merchantLabel
-      sessionsH = mkSessions clockRef sessRef
+      sessionsH = mkSessions clockRef sessRef codecErrRef
       personsH = mkPersons personRef introRef
       registryH = mkRegistry ridesRef claimedRef
       clockH = mkClock clockRef
@@ -592,6 +636,7 @@ makeWorld merchantCtx theKnobs t0 = do
         wReached = reached,
         wRelease = release,
         wClock = clockRef,
+        wCodecErrs = codecErrRef,
         wEnv = botEnv,
         wDeps = deps
       }
@@ -627,6 +672,14 @@ sliceSince w (lo, lc) = do
 
 ctxLabel :: String -> Int -> Maybe Text -> String
 ctxLabel lbl i mnote = lbl <> "[" <> show i <> "]" <> maybe "" (\n -> " " <> T.unpack n) mnote
+
+-- | The persisted-schema oracle. Asserted after EVERY step and tracker step, so
+-- a session shape that Redis could not read back fails the fixture that caused
+-- it rather than surfacing (or not) at the end of the run.
+assertNoCodecErrors :: World -> String -> Assertion
+assertNoCodecErrors w ctx = do
+  errs <- readIORef (wCodecErrs w)
+  assertEqual (ctx ++ " codec round-trip errors") ([] :: [String]) errs
 
 -- | @concurrent@ step (golden-fixtures.test.ts:88-97), reproduced as a scripted
 -- MVar interleave: fork the inbound handler (it stalls at the gated backend
@@ -669,6 +722,7 @@ runStep w merchantCtx i step = do
   let ctx = ctxLabel "step" i step.note
   assertEqual (ctx ++ " outbound") step.expectOutbound (map structuredOne gotOut)
   assertEqual (ctx ++ " backend") step.expectBackend (map callToValue gotBack)
+  assertNoCodecErrors w ctx
 
 runTrackerStep :: World -> Int -> TrackerStep -> Assertion
 runTrackerStep w i ts = do
@@ -679,6 +733,7 @@ runTrackerStep w i ts = do
   let ctx = ctxLabel "trackerStep" i ts.note
   assertEqual (ctx ++ " outbound") ts.expectOutbound (map structuredOne gotOut)
   assertEqual (ctx ++ " backend") ts.expectBackend (map callToValue gotBack)
+  assertNoCodecErrors w ctx
 
 runFixture :: Fixture -> Assertion
 runFixture fx = do
@@ -709,6 +764,34 @@ goldenTests =
     | (name, bs) <- L.sortOn fst goldenFiles,
       L.isSuffixOf ".json" name
   ]
+
+-- | Structural guards on the fixture set itself.
+--
+-- A COUNT guard would be worthless here: the Haskell fixture directory and the
+-- TypeScript one (@migration/golden@, read by @golden-fixtures.test.ts@ via
+-- @GOLDEN_DIR@) both hold 6 identically-named files while disagreeing on the
+-- contents of 5 of them. The count reads 6 == 6 and passes.
+--
+-- 'embedDir' on a missing directory yields @[]@, and @testGroup "…" []@ exits
+-- 0, so a broken embed path silently passes too. Assert a non-empty, exact set.
+fixtureGuards :: TestTree
+fixtureGuards =
+  testGroup
+    "golden fixture guards"
+    [ testCase "fixtures are embedded (embedDir on a bad path yields [])" $
+        assertBool "no fixtures embedded" (not (null goldenFiles)),
+      testCase "fixture set is exactly the expected names" $
+        assertEqual
+          "fixture names"
+          [ "cancel-mid-search.json",
+            "driver-not-found.json",
+            "flexi-happy-path.json",
+            "out-of-area.json",
+            "regular-happy-path.json",
+            "token-expiry-reauth.json"
+          ]
+          (L.sort (map fst goldenFiles))
+    ]
 
 -- ===========================================================================
 -- English copy spot-checks — guard the En table against wording drift

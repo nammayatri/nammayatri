@@ -1,4 +1,6 @@
 -- | The conversation engine — a structurally faithful port of
+-- ny-connectors@77325a7 (2026-07-09). ALL @*.ts:NNN@ citations in this package
+-- resolve against THAT revision and against nothing at ny-connectors HEAD.
 -- @ny-connectors/connectors/src/flow/engine.ts@ (@FlowEngine.handleMessage@,
 -- :46-494, its state handlers, flows, and helpers).
 --
