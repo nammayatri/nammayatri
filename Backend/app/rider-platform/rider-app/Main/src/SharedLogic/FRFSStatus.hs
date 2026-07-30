@@ -496,6 +496,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         googleWalletJWTUrl = booking.googleWalletJWTUrl,
         integratedBppConfigId = booking.integratedBppConfigId,
         stations = fromMaybe [] stations,
+        isSpotBooking = booking.isSpotBooking,
         ..
       }
 

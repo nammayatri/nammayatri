@@ -741,7 +741,8 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             updatedAt = booking.updatedAt,
             validTill = booking.validTill,
             vehicleType = booking.vehicleType,
-            integratedBppConfigId = booking.integratedBppConfigId
+            integratedBppConfigId = booking.integratedBppConfigId,
+            isSpotBooking = booking.isSpotBooking
           }
   (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True
   let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token = regToken.token}
@@ -818,7 +819,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
               ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity, seatIds = Nothing}
               )
               updatedQuoteCategories
-      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing False
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return
