@@ -175,6 +175,9 @@ handleDeskReply lookupXyneCfg issueHandle identifier payload = do
           issueReport.id
           issueHandle
           identifier
+          -- Nothing: this message came from Xyne, so it must not be forwarded
+          -- back to Xyne.
+          Nothing
           req
       Redis.setExp key resp.messageId dedupTtlSeconds
       pure $ XyneWebhookAck {externalId = resp.messageId}
