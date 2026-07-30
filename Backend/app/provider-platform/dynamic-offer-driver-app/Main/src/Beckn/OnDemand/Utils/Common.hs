@@ -323,6 +323,67 @@ parseAddress loc@Spec.Location {..} = do
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
 
+parseAddressWithTag :: MonadFlow m => Maybe [Spec.TagGroup] -> Tags.BecknTag -> Spec.Location -> m (Maybe DL.LocationAddress)
+parseAddressWithTag mbTags roleTag loc =
+  case addressFromTag mbTags roleTag of
+    Just address -> pure (Just address)
+    Nothing -> parseAddress loc
+
+addressFromTag :: Maybe [Spec.TagGroup] -> Tags.BecknTag -> Maybe DL.LocationAddress
+addressFromTag mbTags roleTag = locationAddressFromTag <$> locationAddressTagFromFulfillment mbTags roleTag
+
+-- | Downstream `buildSearchReqLocation` reads `OS.ward` into the internal `area`
+-- field, so `tag.area` is preferred here and falls back to `tag.ward`.
+osAddressFromTag :: Maybe [Spec.TagGroup] -> Tags.BecknTag -> Maybe OS.Address
+osAddressFromTag mbTags roleTag = osAddressFromLocationAddressTag <$> locationAddressTagFromFulfillment mbTags roleTag
+
+locationAddressTagFromFulfillment :: Maybe [Spec.TagGroup] -> Tags.BecknTag -> Maybe Spec.LocationAddressTag
+locationAddressTagFromFulfillment mbTags roleTag = do
+  raw <- Utils.getTagV2 Tags.LOCATION_ADDRESS roleTag mbTags
+  decodeFromText raw
+
+osAddressFromLocationAddressTag :: Spec.LocationAddressTag -> OS.Address
+osAddressFromLocationAddressTag tag =
+  OS.Address
+    { OS.locality = Nothing,
+      OS.state = replaceEmpty tag.state,
+      OS.country = replaceEmpty tag.country,
+      OS.building = replaceEmpty tag.building,
+      OS.street = replaceEmpty tag.street,
+      OS.city = replaceEmpty tag.city,
+      OS.area_code = replaceEmpty tag.areaCode,
+      OS.ward = replaceEmpty tag.area <|> replaceEmpty tag.ward,
+      OS.door = replaceEmpty tag.door
+    }
+
+locationAddressFromTag :: Spec.LocationAddressTag -> DL.LocationAddress
+locationAddressFromTag tag =
+  let area' = replaceEmpty tag.area <|> replaceEmpty tag.ward
+      strictFields =
+        catMaybes
+          [ replaceEmpty tag.door,
+            replaceEmpty tag.building,
+            replaceEmpty tag.street,
+            area',
+            replaceEmpty tag.city,
+            replaceEmpty tag.state,
+            replaceEmpty tag.areaCode,
+            replaceEmpty tag.country
+          ]
+   in DL.LocationAddress
+        { area = area',
+          areaCode = replaceEmpty tag.areaCode,
+          building = replaceEmpty tag.building,
+          city = replaceEmpty tag.city,
+          country = replaceEmpty tag.country,
+          door = replaceEmpty tag.door,
+          extras = Nothing,
+          fullAddress = if null strictFields then Nothing else Just (T.intercalate ", " strictFields),
+          instructions = Nothing,
+          state = replaceEmpty tag.state,
+          street = replaceEmpty tag.street
+        }
+
 mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Text -> Maybe [Spec.Stop]
 mkStops' origin mbDestination intermediateStops mAuthorization mEndAuthorization mbStartTime mbScheduledPickupDuration =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
