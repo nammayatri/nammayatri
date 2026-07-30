@@ -169,6 +169,8 @@ getQuoteDetailsType = \case
   DQuote.OneWaySpecialZoneDetails _ -> "OneWaySpecialZoneDetails"
   DQuote.DeliveryDetails _ -> "DeliveryDetails"
   DQuote.MeterRideDetails _ -> "MeterRideDetails"
+  -- Debug label for the new EasyBooking quote-details constructor.
+  DQuote.EasyBookingDetails _ -> "EasyBookingDetails"
 
 extractDriverOffers :: DQuote.Quote -> [DDO.DriverOffer]
 extractDriverOffers q = case q.quoteDetails of

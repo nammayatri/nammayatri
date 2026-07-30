@@ -36,6 +36,11 @@ ruleForRequest cfg = \case
   SLS.DeliverySearch _ -> cfg.delivery
   SLS.PTSearch _ -> cfg.publicTransport
   SLS.FixedRouteSearch _ -> cfg.fixedRoute
+  -- No dedicated sync-dispatch config field for EasyBooking yet; Nothing here
+  -- just means "no rule configured" -> shouldDispatchSync falls through to
+  -- its own `Just cfg -> ... _ -> False` default (async dispatch, same as
+  -- any other unconfigured category).
+  SLS.EasyBookingSearch _ -> Nothing
 
 shouldDispatchSync ::
   Maybe ERC.SyncSearchDispatchConfig ->

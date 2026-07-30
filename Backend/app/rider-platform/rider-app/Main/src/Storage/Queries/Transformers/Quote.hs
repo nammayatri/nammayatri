@@ -31,6 +31,10 @@ fromQuoteDetails quoteDetails =
         DQ.OneWaySpecialZoneDetails specialZoneQuote -> (ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
         DQ.InterCityDetails details -> (INTER_CITY, Nothing, Nothing, Nothing, Just $ getId details.id)
         DQ.MeterRideDetails details -> (ONE_WAY, Nothing, Nothing, Nothing, Just details.quoteId)
+        -- Reuses the rental_details table/column (same domain type) — FareProductType is
+        -- deprecated backward-compat only, so RENTAL here doesn't affect real dispatch,
+        -- which always goes through tripCategory instead (see toQuoteDetails below).
+        DQ.EasyBookingDetails details -> (RENTAL, Nothing, Just $ getId details.id, Nothing, Nothing)
    in (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId)
 
 toQuoteDetails :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m, MonadThrow m) => FareProductType -> Maybe TripCategory -> Kernel.Prelude.Maybe HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Maybe DistanceUnit -> Maybe HighPrecDistance -> m Domain.Types.Quote.QuoteDetails
@@ -43,6 +47,7 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         InterCity _ _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         RideShare _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         Rental _ -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
+        EasyBooking _ -> getEasyBookingDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
         Ambulance _ -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         Delivery _ -> getDeliveryDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         OneWay MeterRide -> getOneWayStaticDetails meterRideBppQuoteId & fromMaybeM (InternalError "No meter ride bpp quote details")
@@ -61,6 +66,9 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         ONE_WAY_SPECIAL_ZONE -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
         INTER_CITY -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         AMBULANCE -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
+        -- Unreachable in practice (EasyBooking is new, so no legacy row lacks tripCategory),
+        -- but the pattern must still be exhaustive; mirrors the RENTAL branch above.
+        EASY_BOOKING -> getEasyBookingDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
   where
     getOneWayStaticDetails mbMterRideBppQuoteId = do
       mbMterRideBppQuoteId >>= \meterRideBppQuoteId' -> do
@@ -80,6 +88,10 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
     getRentalDetails rentalDetailsId' = do
       res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
       maybe (pure Nothing) (pure . Just . DQ.RentalDetails) res
+
+    getEasyBookingDetails rentalDetailsId' = do
+      res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
+      maybe (pure Nothing) (pure . Just . DQ.EasyBookingDetails) res
 
     getDriverOfferDetails driverOfferId' = do
       res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'

@@ -52,6 +52,8 @@ getEstimateBreakupFromQuote quote =
     DQuote.DriverOfferDetails driverOfferDetails ->
       findEstimateBreakupCH (Id.cast driverOfferDetails.estimateId) quote.createdAt
     DQuote.OneWaySpecialZoneDetails _ -> pure []
+    -- EasyBooking's quote details reuse RentalDetails's shape, so the same transformer applies.
+    DQuote.EasyBookingDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
 
 -- | Slim JSON shape mirroring
 -- 'Storage.Queries.Transformers.Estimate.EstimateBreakupItem'. Duplicated here
