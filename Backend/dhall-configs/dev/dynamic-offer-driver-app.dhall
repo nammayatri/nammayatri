@@ -326,6 +326,8 @@ let AllocatorJobType =
       | TriggerSpecialZoneNotify
       | SAPPGSettlementDispatch
       | SAPSubscriptionPurchaseDispatch
+      | ReconciliationScheduler
+      | ReconciliationSweep
       >
 
 let jobInfoMapx =
