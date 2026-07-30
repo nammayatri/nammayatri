@@ -230,6 +230,10 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
               issueReport.chats ++ (mkIssueChat IssueOption optionId.getId now) :
               map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
         QIR.updateChats iReportId updatedChats
+        -- Mirror the auto-generated replies shown on option selection into the
+        -- ticket service, so the Xyne agent sees the same bot conversation the
+        -- user does — not just the status-change replies.
+        mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
       _ -> return ()
     if null issueMessages
       then pure []
@@ -600,6 +604,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
         QIR.updateTicketIds issueReport.id primaryResp.ticketId additionalId
       Left err -> do
         logTagInfo "Create Ticket API failed - " $ show err
+    -- Forward the auto-generated onCreateIssue replies to the ticket service so
+    -- the Xyne agent sees the bot's opening messages too. Runs inside the
+    -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
+    -- append to (forwarding keys on issueReport.id as the Xyne threadId).
+    mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) messages
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
     mkIssueReport mocId updatedChats shouldCreateTicket now = do
