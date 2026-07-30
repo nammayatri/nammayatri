@@ -633,7 +633,9 @@ data RideInfoRes = RideInfoRes
     walletTransactions :: [WalletTransactionItem],
     invoiceIds :: [Kernel.Prelude.Text],
     badge :: [Kernel.Prelude.Text],
-    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    estimatedTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity],
+    actualTollInfo :: Kernel.Prelude.Maybe [TollInfoAPIEntity]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -739,6 +741,10 @@ data StopInformation = StopInformation
 newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
+
+data TollInfoAPIEntity = TollInfoAPIEntity {id :: Kernel.Prelude.Text, name :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data WaiverRideCancellationPenaltyReq = WaiverRideCancellationPenaltyReq {reason :: Kernel.Prelude.Text}
   deriving stock (Generic)

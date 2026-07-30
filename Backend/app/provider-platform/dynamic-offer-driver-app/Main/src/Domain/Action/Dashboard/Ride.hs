@@ -733,8 +733,21 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         walletTransactions,
         invoiceIds,
         badge = map (.badge) feedbacks,
-        rating = mbFeedback >>= (.rating)
+        rating = mbFeedback >>= (.rating),
+        estimatedTollInfo = mkTollInfoEntities ride.estimatedTollIds ride.estimatedTollNames,
+        actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames
       }
+
+mkTollInfoEntities :: Maybe [Text] -> Maybe [Text] -> Maybe [Common.TollInfoAPIEntity]
+mkTollInfoEntities mbTollIds mbTollNames =
+  case (mbTollIds, mbTollNames) of
+    (Nothing, Nothing) -> Nothing
+    _ ->
+      Just $
+        zipWith
+          (\tollId tollName -> Common.TollInfoAPIEntity {id = tollId, name = tollName})
+          (fromMaybe [] mbTollIds)
+          (fromMaybe [] mbTollNames)
 
 mkStopInformation :: DSI.StopInformation -> Common.StopInformation
 mkStopInformation stopInfo =
