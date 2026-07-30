@@ -82,7 +82,8 @@ data IssueReportRideInfo = IssueReportRideInfo
   { pickupAddress :: Maybe Text,
     dropAddress :: Maybe Text,
     fare :: Maybe HighPrecMoney,
-    rideDate :: UTCTime
+    rideDate :: UTCTime,
+    vehicleServiceTierType :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
