@@ -61,6 +61,7 @@ import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
+import qualified API.FleetEngineToken as FleetEngineToken
 import qualified API.UI.Aarokya as Aarokya
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
@@ -185,6 +186,7 @@ type API =
            :<|> QueueRank.API
            :<|> Aarokya.API
            :<|> FRFSFleetOperator.API
+           :<|> FleetEngineToken.API
        )
 
 handler :: FlowServer API
@@ -264,3 +266,4 @@ handler =
     :<|> QueueRank.handler
     :<|> Aarokya.handler
     :<|> FRFSFleetOperator.handler
+    :<|> FleetEngineToken.handler

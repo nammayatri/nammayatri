@@ -57,7 +57,7 @@ getFleetEngineCfg merchantOpCityId = do
   mbServiceConfig <- QOMSC.findByServiceAndCity (DOSC.FleetEngineService DOSC.GoogleFleetEngine) merchantOpCityId
   pure $ case mbServiceConfig of
     Just sc -> case sc.serviceConfig of
-      DOSC.FleetEngineServiceConfig cfg -> Just cfg
+      DOSC.FleetEngineServiceConfig cfg | cfg.enabled == Just True -> Just cfg
       _ -> Nothing
     Nothing -> Nothing
 
@@ -71,7 +71,8 @@ mkDriverToken ::
 mkDriverToken merchantOpCityId driverId = do
   mbCfg <- getFleetEngineCfg merchantOpCityId
   case mbCfg of
-    Nothing -> pure Nothing -- feature off for this city
+    Nothing -> pure Nothing -- no config for this city
+    Just cfg | cfg.enabled /= Just True -> pure Nothing -- config present but kill switch off (Nothing / Just False both = off)
     Just cfg -> do
       saText <- decrypt cfg.driverServiceAccountJson
       case FEAuth.parseServiceAccount saText of
@@ -97,7 +98,8 @@ withFleetEngine ::
 withFleetEngine merchantOpCityId action = do
   mbCfg <- getFleetEngineCfg merchantOpCityId
   case mbCfg of
-    Nothing -> pure () -- feature off for this city
+    Nothing -> pure () -- no config for this city
+    Just cfg | cfg.enabled /= Just True -> pure () -- config present but kill switch off (Nothing / Just False both = off)
     Just cfg -> do
       saText <- decrypt cfg.serverServiceAccountJson
       case FEAuth.parseServiceAccount saText of
