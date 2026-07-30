@@ -249,6 +249,7 @@ data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
   { childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
     enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    isSpotBooking :: Kernel.Prelude.Bool,
     offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
     ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     tripId :: Data.Maybe.Maybe Data.Text.Text
@@ -367,6 +368,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    isSpotBooking :: Kernel.Prelude.Bool,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,

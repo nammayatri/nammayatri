@@ -199,6 +199,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
   updateWithKV
     [ Se.Set Beam._type _type,
       Se.Set Beam.bookingAuthCode bookingAuthCode,
+      Se.Set Beam.isSpotBooking isSpotBooking,
       Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
       Se.Set Beam.bppBankCode bppBankCode,
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
