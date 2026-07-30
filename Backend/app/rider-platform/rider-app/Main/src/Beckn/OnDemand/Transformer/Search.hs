@@ -46,7 +46,9 @@ tfFulfillment SLS.SearchRes {..} = do
       isScheduled = startTime > now
       mbScheduledPickupDuration = Beckn.OnDemand.Utils.Common.mkScheduledPickupDuration isScheduled
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime mbScheduledPickupDuration
-      fulfillmentTags_ = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
+      mbDropAddress = (.address) <$> Kernel.Prelude.listToMaybe (Kernel.Prelude.reverse stops)
+      locationAddressTags_ = Beckn.OnDemand.Utils.Common.mkLocationAddressTags origin.address mbDropAddress
+      fulfillmentTags_ = locationAddressTags_ <> (Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings)
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
       fulfillmentCustomer_ = tfCustomer taggings riderGender
