@@ -25,19 +25,24 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text
+  ( TokenAuth :> "getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "searchString"
+           Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.PassDetails.GetOrganizationResp]
       :<|> TokenAuth
       :> "passDetails"
-      :> Capture "passEnum" Kernel.Prelude.Text
+      :> Capture
+           "passEnum"
+           Kernel.Prelude.Text
       :> "update"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.PassDetails.PassDetailsUpdateReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "passDetails"
@@ -46,8 +51,8 @@ type API =
            Kernel.Prelude.Text
       :> "data"
       :> Get
-           '[JSON]
-           API.Types.UI.PassDetails.PassDetailsDataResp
+           ('[JSON])
+           ((Kernel.Prelude.Maybe API.Types.UI.PassDetails.PassDetailsDataResp))
       :<|> TokenAuth
       :> "passDetails"
       :> Capture
@@ -55,7 +60,7 @@ type API =
            Kernel.Prelude.Text
       :> "verificationStatus"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.PassDetails.PassStatusResp
       :<|> TokenAuth
       :> "passDetails"
@@ -64,7 +69,7 @@ type API =
            Kernel.ServantMultipart.Tmp
            API.Types.UI.PassDetails.UploadDocumentReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.PassDetails.UploadDocumentResp
       :<|> TokenAuth
       :> "passDetails"
@@ -73,7 +78,7 @@ type API =
            "documentId"
            (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
       :> Get
-           '[JSON]
+           ('[JSON])
            Kernel.Prelude.Text
   )
 
@@ -85,9 +90,12 @@ getGetOrganizations ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
     Environment.FlowHandler [API.Types.UI.PassDetails.GetOrganizationResp]
   )
-getGetOrganizations a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getGetOrganizations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getGetOrganizations a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getGetOrganizations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postPassDetailsUpdate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -104,7 +112,7 @@ getPassDetailsData ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.FlowHandler API.Types.UI.PassDetails.PassDetailsDataResp
+    Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.PassDetails.PassDetailsDataResp)
   )
 getPassDetailsData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 

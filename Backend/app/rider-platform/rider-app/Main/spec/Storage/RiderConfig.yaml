@@ -38,6 +38,7 @@ RiderConfig:
       distanceThresholdMeters: Meters
       minMatchingStops: Int
       validityDurationDays: Int
+      activationLimit: Maybe Int
     BusTrackingConfig:
       derive: "Eq"
       maxScoreDistanceInMeters: Double

@@ -86,6 +86,10 @@ apis:
       auth: TokenAuth
       params:
         passEnum: Text
+      query:
+        searchString: Text
+        limit: Int
+        offset: Int
       response:
         type: "[GetOrganizationResp]"
   - POST:
@@ -103,7 +107,7 @@ apis:
       params:
         passEnum: Text
       response:
-        type: PassDetailsDataResp
+        type: "(Maybe PassDetailsDataResp)"
   - GET:
       endpoint: /passDetails/{passEnum}/verificationStatus
       auth: TokenAuth

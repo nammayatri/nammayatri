@@ -1207,10 +1207,15 @@ verifyStudentPass passDetails mbBusRouteCode routeStopMapping riderConfig =
                 then DPassVerifyTransaction.PARTIALLY_VERIFIED
                 else DPassVerifyTransaction.NOT_VERIFIED
 
-studentPassActivationLimit :: Maybe DPassDetails.PassDetails -> Int
-studentPassActivationLimit mbPassDetails =
+-- Used when the pass has no route pairs to derive a limit from.
+defaultStudentPassActivationLimit :: Int
+defaultStudentPassActivationLimit = 6
+
+studentPassActivationLimit :: Maybe Int -> Maybe DPassDetails.PassDetails -> Int
+studentPassActivationLimit mbConfigLimit mbPassDetails =
   let routePairCount = maybe 0 (length . (.routePairs)) mbPassDetails
-   in if routePairCount > 0 then routePairCount else 6
+      routePairLimit = if routePairCount > 0 then routePairCount else defaultStudentPassActivationLimit
+   in maybe routePairLimit (max routePairLimit) mbConfigLimit
 
 reserveStudentPassActivationSlot ::
   DPurchasedPass.PurchasedPass ->
@@ -1218,8 +1223,10 @@ reserveStudentPassActivationSlot ::
   DT.UTCTime ->
   Environment.Flow ()
 reserveStudentPassActivationSlot purchasedPass mbPassDetails istTime = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))
   let countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
-      activationLimit = studentPassActivationLimit mbPassDetails
+      mbConfigLimit = mbRiderConfig >>= (.studentPassVerifyConfig) >>= (.activationLimit)
+      activationLimit = studentPassActivationLimit mbConfigLimit mbPassDetails
   newCount <- Hedis.incr countKey
   let istOffset = 19800 :: NominalDiffTime
       tomorrowMidnightIST = DT.UTCTime (DT.addDays 1 (DT.utctDay istTime)) 0

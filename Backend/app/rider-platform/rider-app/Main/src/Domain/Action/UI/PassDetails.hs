@@ -85,18 +85,30 @@ parseVerificationStatus "REJECTED" = pure DPassDetails.REJECTED
 parseVerificationStatus "EXPIRED" = pure DPassDetails.EXPIRED
 parseVerificationStatus _ = Utils.throwError $ InvalidRequest "Invalid verification status"
 
+-- Default page size, and the ceiling a caller can ask for. Kept above any
+-- realistic per-city organization count so clients that send no limit keep
+-- seeing the whole list.
+maxOrganizationsLimit :: Int
+maxOrganizationsLimit = 200
+
 getGetOrganizations ::
   ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
       Id.Id DMerchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Int ->
+    Kernel.Prelude.Maybe Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow [PassDetailsAPI.GetOrganizationResp]
   )
-getGetOrganizations (mbPersonId, _merchantId) passEnumText = do
+getGetOrganizations (mbPersonId, _merchantId) passEnumText mbLimit mbOffset mbSearchString = do
   passEnum <- parsePassEnum passEnumText
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  organizations <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum (DPerson.merchantOperatingCityId person) passEnum
+  let limitVal = min maxOrganizationsLimit $ max 1 (fromMaybe maxOrganizationsLimit mbLimit)
+      offsetVal = max 0 (fromMaybe 0 mbOffset)
+      mbSearch = mbSearchString >>= \searchString -> let trimmed = T.strip searchString in if T.null trimmed then Nothing else Just trimmed
+  organizations <- QPassOrganization.findAllByMerchantOperatingCityIdAndPassEnumWithSearch (DPerson.merchantOperatingCityId person) passEnum mbSearch limitVal offsetVal
   pure $ map mkPassOrganizationResp organizations
 
 mkPassOrganizationResp :: DPassOrganization.PassOrganization -> PassDetailsAPI.GetOrganizationResp
@@ -429,16 +441,19 @@ getPassDetailsData ::
       Id.Id DMerchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.Flow PassDetailsAPI.PassDetailsDataResp
+    Environment.Flow (Kernel.Prelude.Maybe PassDetailsAPI.PassDetailsDataResp)
   )
 getPassDetailsData (mbPersonId, _) passEnumText = do
   passEnum <- parsePassEnum passEnumText
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  passDetail <- QPassDetails.findByPersonId person.id passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
-  org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
-  decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
-  pure $ mkPassDetailResp decGuardianMobile passDetail org
+  mbPassDetail <- QPassDetails.findByPersonId person.id passEnum
+  case mbPassDetail of
+    Nothing -> pure Nothing
+    Just passDetail -> do
+      org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
+      decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
+      pure $ Just $ mkPassDetailResp decGuardianMobile passDetail org
 
 mkPassDetailResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
 mkPassDetailResp decGuardianMobile DPassDetails.PassDetails {..} org =
