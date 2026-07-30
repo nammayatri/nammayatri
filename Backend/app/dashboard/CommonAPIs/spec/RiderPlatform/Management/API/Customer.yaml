@@ -130,6 +130,20 @@ apis:
         type: ApplyCustomerOfferReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: /ensureExists
+      auth: ApiAuthV2
+      request:
+        type: CustomerEnsureExistsReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /bulkApplyOffer
+      auth: ApiAuthV2
+      request:
+        type: BulkApplyCustomerOfferReq
+      response:
+        type: "[BulkApplyCustomerOfferRes]"
 types:
   CustomerListRes:
     - totalItems: Int # for backward compatibility
@@ -192,3 +206,20 @@ types:
     - validityHours: Int
     - amount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
+  CustomerEnsureExistsReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
+    - derive: "'HideSecrets"
+  BulkApplyOfferCustomer:
+    - mobileNumber: Text
+    - mobileCountryCode: Maybe Text
+  BulkApplyCustomerOfferReq:
+    - customers: [BulkApplyOfferCustomer]
+    - offerCode: Text
+    - validityHours: Int
+    - amount: Maybe HighPrecMoney
+    - derive: "'HideSecrets"
+  BulkApplyCustomerOfferRes:
+    - mobileNumber: Text
+    - isSuccess: Bool
+    - errorReason: Maybe Text

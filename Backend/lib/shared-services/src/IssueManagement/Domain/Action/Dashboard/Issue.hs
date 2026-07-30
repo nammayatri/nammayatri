@@ -493,6 +493,7 @@ issueUpdate merchantShortId opCity issueReportId issueHandle identifier req = do
             OPEN -> "Your issue is now open"
             PENDING_INTERNAL -> "Your issue is being reviewed"
             PENDING_EXTERNAL -> "Your issue is awaiting an external update"
+            IN_PROGRESS -> "Your issue is now in progress"
             NOT_APPLICABLE -> "Your issue status was updated"
           payload =
             ChatNotifPayload
