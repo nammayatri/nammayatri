@@ -25,6 +25,8 @@ module Domain.Action.Dashboard.Customer
     postCustomerUpdatePaymentMode,
     postCustomerOffersList,
     postCustomerApplyOffer,
+    postCustomerEnsureExists,
+    postCustomerBulkApplyOffer,
   )
 where
 
@@ -35,8 +37,10 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import Data.List.Split (chunksOf)
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -325,18 +329,52 @@ postCustomerOffersList merchantShortId opCity req = do
   offers <- SOffer.listOffersForPerson merchant.id person req.amount
   pure $ map mkCustomerOfferEntity offers
 
+-- Eligibility check + tag application, shared by single-apply and bulk-apply so the
+-- "who qualifies for this offer" decision only ever lives in one place.
+applyOfferToPerson :: DM.Merchant -> DP.Person -> Text -> Int -> Maybe HighPrecMoney -> Flow ()
+applyOfferToPerson merchant person offerCode validityHours amount = do
+  offers <- SOffer.listOffersForPerson merchant.id person amount
+  unless (any ((== offerCode) . (.offerCode)) offers) $
+    throwError (InvalidRequest $ "Offer code " <> offerCode <> " is not eligible for customer")
+  now <- getCurrentTime
+  let tag = LYTU.mkTagNameValueExpiry (LYT.TagName SOffer.autoApplyOfferTagName) (LYT.TextValue offerCode) (Just $ Hours validityHours) now
+      newTags = LYTU.removeTagNameValue person.customerNammaTags tag ++ [tag]
+  CQPerson.updateCustomerTags (Just newTags) person.id
+  logTagInfo "dashboard -> applyOffer : " (show person.id <> " offerCode: " <> offerCode)
+
 postCustomerApplyOffer :: ShortId DM.Merchant -> Context.City -> Common.ApplyCustomerOfferReq -> Flow APISuccess
 postCustomerApplyOffer merchantShortId opCity req = do
   (merchant, person) <- findCustomerByMobile merchantShortId opCity req.mobileCountryCode req.mobileNumber
-  offers <- SOffer.listOffersForPerson merchant.id person req.amount
-  unless (any ((== req.offerCode) . (.offerCode)) offers) $
-    throwError (InvalidRequest $ "Offer code " <> req.offerCode <> " is not eligible for customer")
-  now <- getCurrentTime
-  let tag = LYTU.mkTagNameValueExpiry (LYT.TagName SOffer.autoApplyOfferTagName) (LYT.TextValue req.offerCode) (Just $ Hours req.validityHours) now
-      newTags = LYTU.removeTagNameValue person.customerNammaTags tag ++ [tag]
-  CQPerson.updateCustomerTags (Just newTags) person.id
-  logTagInfo "dashboard -> applyOffer : " (show person.id <> " offerCode: " <> req.offerCode)
+  applyOfferToPerson merchant person req.offerCode req.validityHours req.amount
   pure Success
+
+postCustomerEnsureExists :: ShortId DM.Merchant -> Context.City -> Common.CustomerEnsureExistsReq -> Flow APISuccess
+postCustomerEnsureExists merchantShortId _opCity req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  _ <- Registration.createPersonWithPhoneNumber merchant.id req.mobileNumber req.mobileCountryCode
+  pure Success
+
+-- Same lookup as findCustomerByMobile, but auto-creates the Person (no OTP) on a miss and retries once.
+-- Inherits createPersonWithPhoneNumber's known caveat: the created person's city comes from the
+-- merchant's defaultCity, not opCity, so the retry can still fail if the dashboard's selected city differs.
+findOrCreateCustomerByMobile :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Text -> Flow (DM.Merchant, DP.Person)
+findOrCreateCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber =
+  findCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber
+    `catch` \(_ :: SomeException) -> do
+      merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+      _ <- Registration.createPersonWithPhoneNumber merchant.id mobileNumber mbCountryCode
+      findCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber
+
+postCustomerBulkApplyOffer :: ShortId DM.Merchant -> Context.City -> Common.BulkApplyCustomerOfferReq -> Flow [Common.BulkApplyCustomerOfferRes]
+postCustomerBulkApplyOffer merchantShortId opCity req = do
+  when (length req.customers > 200) $ throwError (InvalidRequest "Too many customers in one bulk apply request (max 200)")
+  forM req.customers $ \customer -> do
+    result <- withTryCatch "bulkApplyOffer" $ do
+      (merchant, person) <- findOrCreateCustomerByMobile merchantShortId opCity customer.mobileCountryCode customer.mobileNumber
+      applyOfferToPerson merchant person req.offerCode req.validityHours req.amount
+    case result of
+      Left err -> pure $ Common.BulkApplyCustomerOfferRes customer.mobileNumber False (Just $ T.pack (displayException err))
+      Right () -> pure $ Common.BulkApplyCustomerOfferRes customer.mobileNumber True Nothing
 
 mkCustomerOfferEntity :: SOffer.OfferRespAPIEntity -> Common.CustomerOfferEntity
 mkCustomerOfferEntity SOffer.OfferRespAPIEntity {..} =

@@ -33,6 +33,26 @@ data ApplyCustomerOfferReq = ApplyCustomerOfferReq
 instance Kernel.Types.HideSecrets.HideSecrets ApplyCustomerOfferReq where
   hideSecrets = Kernel.Prelude.identity
 
+data BulkApplyCustomerOfferReq = BulkApplyCustomerOfferReq
+  { customers :: [BulkApplyOfferCustomer],
+    offerCode :: Kernel.Prelude.Text,
+    validityHours :: Kernel.Prelude.Int,
+    amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets BulkApplyCustomerOfferReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data BulkApplyCustomerOfferRes = BulkApplyCustomerOfferRes {mobileNumber :: Kernel.Prelude.Text, isSuccess :: Kernel.Prelude.Bool, errorReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BulkApplyOfferCustomer = BulkApplyOfferCustomer {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CancellationDueBreakup = CancellationDueBreakup {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, dueAmount :: Kernel.Types.Common.PriceAPIEntity, dueStatus :: CancellationDuesPaymentStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -54,6 +74,13 @@ data CancellationDuesPaymentStatus
   | WAIVED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CustomerEnsureExistsReq = CustomerEnsureExistsReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets CustomerEnsureExistsReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data CustomerInfoRes = CustomerInfoRes
   { numberOfRides :: Kernel.Prelude.Int,
@@ -116,7 +143,7 @@ data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq {incrementCou
 instance Kernel.Types.HideSecrets.HideSecrets UpdateSafetyCenterBlockingReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode :<|> PostCustomerOffersList :<|> PostCustomerApplyOffer))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> GetCustomerCancellationDuesDetails :<|> PostCustomerUpdateSafetyCenterBlocking :<|> PostCustomerPersonNumbers :<|> PostCustomerPersonId :<|> PostCustomerUpdatePaymentMode :<|> PostCustomerOffersList :<|> PostCustomerApplyOffer :<|> PostCustomerEnsureExists :<|> PostCustomerBulkApplyOffer))
 
 type GetCustomerList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -165,6 +192,10 @@ type PostCustomerOffersList = ("offersList" :> ReqBody ('[JSON]) CustomerOffersL
 
 type PostCustomerApplyOffer = ("applyOffer" :> ReqBody ('[JSON]) ApplyCustomerOfferReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
+type PostCustomerEnsureExists = ("ensureExists" :> ReqBody ('[JSON]) CustomerEnsureExistsReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
+type PostCustomerBulkApplyOffer = ("bulkApplyOffer" :> ReqBody ('[JSON]) BulkApplyCustomerOfferReq :> Post ('[JSON]) [BulkApplyCustomerOfferRes])
+
 data CustomerAPIs = CustomerAPIs
   { getCustomerList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> EulerHS.Types.EulerClient CustomerListRes),
     deleteCustomerDelete :: (Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
@@ -177,13 +208,15 @@ data CustomerAPIs = CustomerAPIs
     postCustomerPersonId :: ((Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes]),
     postCustomerUpdatePaymentMode :: (Kernel.Types.Id.Id Dashboard.Common.Customer -> UpdatePaymentModeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postCustomerOffersList :: (CustomerOffersListReq -> EulerHS.Types.EulerClient [CustomerOfferEntity]),
-    postCustomerApplyOffer :: (ApplyCustomerOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+    postCustomerApplyOffer :: (ApplyCustomerOfferReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postCustomerEnsureExists :: (CustomerEnsureExistsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postCustomerBulkApplyOffer :: (BulkApplyCustomerOfferReq -> EulerHS.Types.EulerClient [BulkApplyCustomerOfferRes])
   }
 
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
 mkCustomerAPIs customerClient = (CustomerAPIs {..})
   where
-    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId :<|> postCustomerUpdatePaymentMode :<|> postCustomerOffersList :<|> postCustomerApplyOffer = customerClient
+    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> getCustomerCancellationDuesDetails :<|> postCustomerUpdateSafetyCenterBlocking :<|> postCustomerPersonNumbers :<|> postCustomerPersonId :<|> postCustomerUpdatePaymentMode :<|> postCustomerOffersList :<|> postCustomerApplyOffer :<|> postCustomerEnsureExists :<|> postCustomerBulkApplyOffer = customerClient
 
 data CustomerUserActionType
   = GET_CUSTOMER_LIST
@@ -198,6 +231,8 @@ data CustomerUserActionType
   | POST_CUSTOMER_UPDATE_PAYMENT_MODE
   | POST_CUSTOMER_OFFERS_LIST
   | POST_CUSTOMER_APPLY_OFFER
+  | POST_CUSTOMER_ENSURE_EXISTS
+  | POST_CUSTOMER_BULK_APPLY_OFFER
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
