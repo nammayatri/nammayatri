@@ -85,8 +85,8 @@ data SeatHoldParams = SeatHoldParams
     shpSeatBitMapTtl :: Int
   }
 
-confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
-confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId = do
+confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
+confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   riderConfig <-
@@ -157,7 +157,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
       else return quoteCategories
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
-  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId seatSelectionType
+  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId seatSelectionType isSpotBooking
   whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
     logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
     SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
@@ -266,14 +266,14 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       let orderedSeatIds = map (\s -> s.seat.id) orderedCandidates
       pure orderedSeatIds
 
-    confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Bool -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> Maybe (Text, Int, Int) -> Maybe Text -> Maybe DVSLM.SeatSelectionType -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId mbSeatSelectionType = do
+    confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Bool -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> Maybe (Text, Int, Int) -> Maybe Text -> Maybe DVSLM.SeatSelectionType -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId mbSeatSelectionType isSpotBooking' = do
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       unless (personId == quote.riderId) $ throwError AccessDenied
       maybeM
-        (buildAndCreateBooking rider quote fareParameters mbIsMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType)
+        (buildAndCreateBooking rider quote fareParameters mbIsMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType isSpotBooking')
         ( \booking -> do
             updatedBooking <-
               if isMultiInitAllowed
@@ -300,8 +300,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             then Right ()
             else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
 
-    buildAndCreateBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> Maybe DVSLM.SeatSelectionType -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType = do
+    buildAndCreateBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> Maybe DVSLM.SeatSelectionType -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType isSpotBooking' = do
       uuid <- generateGUID
       now <- getCurrentTime
       mbSearch <- QFRFSSearch.findById searchId
@@ -381,6 +381,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 ondcOnInitReceivedAt = Nothing,
                 holdId = mbHoldCtxForAll <&> (\(h, _, _) -> h),
                 tripId = firstTripId,
+                isSpotBooking = isSpotBooking',
                 fromStopIdx = mbHoldCtxForAll <&> (\(_, f, _) -> f),
                 toStopIdx = mbHoldCtxForAll <&> (\(_, _, t) -> t),
                 cloudType = cloudType,
@@ -468,12 +469,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                   chosenEta = fromMaybe (minimumBy (comparing (.arrivalTimeUnix)) allEtas) mbBoardingEta
               pure $ Just (unixToUTC chosenEta.arrivalTimeUnix)
 
-postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId = do
+postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking = do
   when (null selectedQuoteCategories) $ throwError $ NoSelectedCategoryFound quote.id.getId
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed) <- confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId
+  (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed) <- confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking
   (mbJourneyId, _) <- getAllJourneyFrfsBookings dConfirmRes
   when (isNothing mbJourneyId) $ do
     fork "FRFS buildJourneyAndLeg" $ buildJourneyAndLeg dConfirmRes fareParameters
@@ -537,6 +538,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           isFareChanged = booking.isFareChanged,
           googleWalletJWTUrl = booking.googleWalletJWTUrl,
           integratedBppConfigId = booking.integratedBppConfigId,
+          isSpotBooking = booking.isSpotBooking,
           ..
         }
 
