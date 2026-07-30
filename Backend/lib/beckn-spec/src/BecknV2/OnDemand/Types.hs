@@ -51,6 +51,7 @@ module BecknV2.OnDemand.Types
     Intent (..),
     Item (..),
     Location (..),
+    LocationAddressTag (..),
     OnCancelReq (..),
     OnConfirmReq (..),
     OnInitReq (..),
@@ -1084,6 +1085,19 @@ optionsLocation =
         ("locationState", "state"),
         ("locationUpdatedAt", "updated_at")
       ]
+
+data LocationAddressTag = LocationAddressTag
+  { door :: Maybe Text,
+    building :: Maybe Text,
+    street :: Maybe Text,
+    area :: Maybe Text,
+    ward :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    areaCode :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- |
 data OnCancelReq = OnCancelReq

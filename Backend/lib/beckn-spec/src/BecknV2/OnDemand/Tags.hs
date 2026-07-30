@@ -105,6 +105,7 @@ data BecknTagGroup
   | EMAIL_DOMAIN_INFO
   | BPP_INVOICE_INFO
   | CHANGE_SERVICE_TIER_DETAILS
+  | LOCATION_ADDRESS
   | -- v2.1.0 tag groups
     FEATURE_LIST -- item features (AC, etc.)
   | DISABILITY_VIS -- visual disability
@@ -589,6 +590,8 @@ data BecknTag
     IS_TIER_UPGRADE -- GENERAL_INFO: "true" iff assigned tier ranks above booked tier
   | ASSIGNED_SERVICE_TIER_TYPE -- GENERAL_INFO: assigned tier enum (e.g. "SEDAN")
   | ASSIGNED_SERVICE_TIER_NAME -- GENERAL_INFO: merchant-configured display name (e.g. "Sedan")
+  | PICKUP_ADDRESS
+  | DROP_ADDRESS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -657,6 +660,8 @@ instance CompleteTag BecknTag where
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
 
   getTagGroup = \case
+    PICKUP_ADDRESS -> LOCATION_ADDRESS
+    DROP_ADDRESS -> LOCATION_ADDRESS
     DISTANCE_INFO_IN_M -> ROUTE_INFO
     DURATION_INFO_IN_S -> ROUTE_INFO
     RETURN_TIME -> ROUTE_INFO

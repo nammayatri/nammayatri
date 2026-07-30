@@ -106,11 +106,12 @@ buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualB
         pure DRPO.OneWay
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
-  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
+  let fulfillmentTags_ = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddressWithTag fulfillmentTags_ Tags.DROP_ADDRESS
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
   stopLocations <- Beckn.OnDemand.Utils.Search.getIntermediateStopLocations req
   stops <- buildLocation `mapM` stopLocations
-  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
+  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddressWithTag fulfillmentTags_ Tags.PICKUP_ADDRESS . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
   transactionId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId context
   logDebug $ "Phone Number at bap side is: " <> show (Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req)
@@ -149,6 +150,17 @@ buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualB
         businessEmailDomain = businessEmailDomain_,
         ..
       }
+
+tfAddressWithTag ::
+  (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) =>
+  Maybe [Spec.TagGroup] ->
+  Tags.BecknTag ->
+  Maybe BecknV2.OnDemand.Types.Location ->
+  m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
+tfAddressWithTag mbTags roleTag mbLoc =
+  case Beckn.OnDemand.Utils.Common.osAddressFromTag mbTags roleTag of
+    Just address -> pure (Just address)
+    Nothing -> tfAddress mbLoc
 
 -- [door, building, street, area, city, state, areaCode, country]
 tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
