@@ -60,8 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_pg_payout_settlement_report_txn_date_brin ON atla
 -- finance_reconciliation_entry
 -- =========================
 CREATE INDEX IF NOT EXISTS idx_finance_reconciliation_entry_summary_id ON atlas_app.finance_reconciliation_entry USING btree (summary_id);
-CREATE INDEX IF NOT EXISTS idx_finance_reconciliation_entry_booking_id ON atlas_app.finance_reconciliation_entry USING btree (booking_id);
-CREATE INDEX IF NOT EXISTS idx_finance_reconciliation_entry_dco_id ON atlas_app.finance_reconciliation_entry USING btree (dco_id);
+CREATE INDEX IF NOT EXISTS idx_finance_reconciliation_entry_entity_id ON atlas_app.finance_reconciliation_entry USING btree (entity_id);
 -- BRIN on reconciliation_date for range queries
 CREATE INDEX IF NOT EXISTS idx_finance_reconciliation_entry_reconciliation_date_brin ON atlas_app.finance_reconciliation_entry USING brin (reconciliation_date);
 
