@@ -41,6 +41,7 @@ import Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as KUText
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -129,6 +130,18 @@ mkPaymentTags =
           Tags.mkTag Tags.STATIC_TERMS (Just "https://example-test-bap.com/static-terms.txt")
         ]
     ]
+
+mkLocationAddressTags :: DLoc.LocationAddress -> Maybe DLoc.LocationAddress -> Maybe [Spec.TagGroup]
+mkLocationAddressTags fromAddress mbToAddress =
+  let tags =
+        Tags.mkTag Tags.PICKUP_ADDRESS (Just $ encodeAddressTag fromAddress) :
+        maybe [] (\toAddr -> [Tags.mkTag Tags.DROP_ADDRESS (Just $ encodeAddressTag toAddr)]) mbToAddress
+   in Just [Tags.getFullTagGroup Tags.LOCATION_ADDRESS tags]
+
+encodeAddressTag :: DLoc.LocationAddress -> Text
+encodeAddressTag addr =
+  KUText.encodeToText $
+    Spec.LocationAddressTag addr.door addr.building addr.street addr.area addr.ward addr.city addr.state addr.country addr.areaCode
 
 castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
 castVehicleVariant = \case
