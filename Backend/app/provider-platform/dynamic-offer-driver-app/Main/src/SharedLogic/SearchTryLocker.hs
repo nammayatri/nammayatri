@@ -18,7 +18,7 @@ module SharedLogic.SearchTryLocker
     isBookingCancelled,
     lockSearchTry,
     whenBookingCancellable,
-    markBookingAssignmentInprogress,
+    tryMarkBookingAssignmentInprogress,
     isBookingAssignmentInprogress,
     markBookingAssignmentCompleted,
   )
@@ -114,12 +114,12 @@ whenBookingCancellable bookingId actions = do
       Hedis.setExp (mkBookingCancelledKey bookingId) True 120
       actions
 
-markBookingAssignmentInprogress ::
-  CacheFlow m r =>
+tryMarkBookingAssignmentInprogress ::
+  (CacheFlow m r, TryException m) =>
   Id Booking ->
-  m ()
-markBookingAssignmentInprogress bookingId = do
-  Hedis.setExp (mkBookingAssignedKey bookingId) True 120
+  m Bool
+tryMarkBookingAssignmentInprogress bookingId =
+  Hedis.setNxExpire (mkBookingAssignedKey bookingId) 120 True
 
 markBookingAssignmentCompleted ::
   CacheFlow m r =>
