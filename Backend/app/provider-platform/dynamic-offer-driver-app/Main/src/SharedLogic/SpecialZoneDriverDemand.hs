@@ -39,6 +39,20 @@ module SharedLogic.SpecialZoneDriverDemand
     clearAirportPerKmFareCacheForPolicy,
     getAirportPerKmFare,
     getCalloutVariantsForTier,
+    TriggerCounts (..),
+    recordTriggerRequests,
+    incrementTriggerAcceptCount,
+    decrementTriggerAcceptCount,
+    incrementTriggerRejectCount,
+    getTriggerAcceptCount,
+    setTriggerRequired,
+    setTriggerGate,
+    getTriggerCounts,
+    addActiveTrigger,
+    getActiveTriggers,
+    finalizeTrigger,
+    getCleanupTriggers,
+    removeCleanupTrigger,
   )
 where
 
@@ -47,6 +61,7 @@ import Data.List (nub, partition, sortOn)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.FarePolicy as DFP
@@ -440,6 +455,174 @@ resetQueueSkipCount specialLocationId driverId = Redis.runInMasterCloudRedisCell
   let key = mkQueueSkipCountKey specialLocationId driverId.getId
   void $ Redis.del key
 
+-- Trigger-batch tracking (dashboard /triggerNotify) ---------------------------
+--
+-- Everything the retry loop and the status endpoint need is kept in Redis, keyed
+-- by triggerRequestId, so neither path ever scans special_zone_queue_request:
+--   * requested / accept / reject counters  — plain INT keys
+--   * pending set                           — ZSET (member=requestId, score=validTill)
+--   * required-accepts target               — plain INT key
+--   * active triggers for a city            — SET of triggerRequestIds
+-- The pending ZSET lets the status endpoint split "pending" from "ignored" with a
+-- single ZCOUNT against the current time, instead of timestamp-scanning every row.
+-- Written from the allocator (request creation, retry stop) and the driver app
+-- (accept / reject / cancel / no-show); read from the driver app (status). All
+-- routed through the master cloud cell + cross-app namespace so every service
+-- (driver app + allocator) reads and writes the same instance.
+
+triggerCounterTtlSec :: Int
+triggerCounterTtlSec = 900 -- 15 min; comfortably outlives the 5-min retry window
+
+activeTriggersTtlSec :: Int
+activeTriggersTtlSec = 3600 -- safety net only; entries are normally removed by the retry job when it stops
+
+mkTriggerRequestedCountKey :: Text -> Text
+mkTriggerRequestedCountKey trid = "SpecialZoneTrigger:Requested:" <> trid
+
+mkTriggerAcceptCountKey :: Text -> Text
+mkTriggerAcceptCountKey trid = "SpecialZoneTrigger:Accept:" <> trid
+
+mkTriggerRejectCountKey :: Text -> Text
+mkTriggerRejectCountKey trid = "SpecialZoneTrigger:Reject:" <> trid
+
+mkTriggerRequiredCountKey :: Text -> Text
+mkTriggerRequiredCountKey trid = "SpecialZoneTrigger:Required:" <> trid
+
+mkTriggerPendingZSetKey :: Text -> Text
+mkTriggerPendingZSetKey trid = "SpecialZoneTrigger:Pending:" <> trid
+
+mkTriggerGateKey :: Text -> Text
+mkTriggerGateKey trid = "SpecialZoneTrigger:Gate:" <> trid
+
+mkActiveTriggersKey :: Id DMOC.MerchantOperatingCity -> Text
+mkActiveTriggersKey mocId = "SpecialZoneTrigger:Active:" <> mocId.getId
+
+-- Triggers that the retry loop has stopped but whose still-Active rows haven't been
+-- settled to Ignored yet. The status endpoint drains this set, marks the leftover
+-- rows Ignored in the DB, and removes them — so finalization piggybacks on the
+-- dashboard's existing polling instead of needing its own job.
+mkCleanupTriggersKey :: Id DMOC.MerchantOperatingCity -> Text
+mkCleanupTriggersKey mocId = "SpecialZoneTrigger:Cleanup:" <> mocId.getId
+
+utcToScore :: UTCTime -> Double
+utcToScore = realToFrac . utcTimeToPOSIXSeconds
+
+-- | Record a freshly-created batch of pickup-zone requests against a trigger:
+--   bump the requested counter and add each (requestId, validTill) to the pending
+--   ZSET. Called from 'notifyDrivers' for every dashboard-triggered batch.
+recordTriggerRequests :: (Redis.HedisFlow m r, MonadFlow m) => Text -> [(Text, UTCTime)] -> m ()
+recordTriggerRequests _ [] = pure ()
+recordTriggerRequests trid reqs = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let requestedKey = mkTriggerRequestedCountKey trid
+      pendingKey = mkTriggerPendingZSetKey trid
+  void $ Redis.incrby requestedKey (fromIntegral (length reqs))
+  Redis.expire requestedKey triggerCounterTtlSec
+  Redis.zAdd pendingKey [(utcToScore validTill, reqId) | (reqId, validTill) <- reqs]
+  Redis.expire pendingKey triggerCounterTtlSec
+
+-- | Driver accepted: bump the (net) accept counter and drop the request from the
+--   pending ZSET so it stops being counted as pending/ignored. 'zRem'' is used (not
+--   'zRem') so the JSON member encoding matches what 'zAdd' wrote.
+incrementTriggerAcceptCount :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> m ()
+incrementTriggerAcceptCount trid reqId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let key = mkTriggerAcceptCountKey trid
+  void $ Redis.incr key
+  Redis.expire key triggerCounterTtlSec
+  Redis.zRem' (mkTriggerPendingZSetKey trid) [reqId]
+
+-- | Reverse an accept (driver cancelled or no-showed) so the retry loop keeps
+--   topping up toward the required number. Clamped at 0.
+decrementTriggerAcceptCount :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m ()
+decrementTriggerAcceptCount trid = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let key = mkTriggerAcceptCountKey trid
+  newVal <- Redis.decr key
+  when (newVal < 0) $ void $ Redis.set key (0 :: Int)
+
+-- | Driver explicitly rejected: bump the reject counter and drop from pending ZSET.
+incrementTriggerRejectCount :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> m ()
+incrementTriggerRejectCount trid reqId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let key = mkTriggerRejectCountKey trid
+  void $ Redis.incr key
+  Redis.expire key triggerCounterTtlSec
+  Redis.zRem' (mkTriggerPendingZSetKey trid) [reqId]
+
+-- | Net committed accepts for a trigger — the retry job's stop condition. O(1).
+getTriggerAcceptCount :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Int
+getTriggerAcceptCount trid = do
+  mbV <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkTriggerAcceptCountKey trid)
+  pure $ fromMaybe 0 mbV
+
+-- | Stash the required-accepts target so the status endpoint can show progress.
+setTriggerRequired :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> m ()
+setTriggerRequired trid required = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let key = mkTriggerRequiredCountKey trid
+  Redis.set key required
+  Redis.expire key triggerCounterTtlSec
+
+-- | Stash the trigger's gate so the status endpoint can echo it back per request.
+setTriggerGate :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Text -> m ()
+setTriggerGate trid gateId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  let key = mkTriggerGateKey trid
+  Redis.set key gateId
+  Redis.expire key triggerCounterTtlSec
+
+data TriggerCounts = TriggerCounts
+  { gateId :: Text,
+    requiredAccepts :: Int,
+    totalRequested :: Int,
+    accepted :: Int,
+    rejected :: Int,
+    pendingResponse :: Int,
+    ignored :: Int
+  }
+
+-- | Whole status snapshot for one trigger in a single cross-app cell round: four
+--   GETs, a ZCARD and a ZCOUNT. No table scan. "ignored" = requests whose validTill
+--   has passed while still in the pending set (never accepted/rejected); "pending"
+--   = the rest of the pending set (still within their response window).
+getTriggerCounts :: (Redis.HedisFlow m r, MonadFlow m) => Text -> UTCTime -> m TriggerCounts
+getTriggerCounts trid now = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  gateId <- fromMaybe "" <$> Redis.get @Text (mkTriggerGateKey trid)
+  requiredAccepts <- fromMaybe 0 <$> Redis.get @Int (mkTriggerRequiredCountKey trid)
+  totalRequested <- fromMaybe 0 <$> Redis.get @Int (mkTriggerRequestedCountKey trid)
+  accepted <- fromMaybe 0 <$> Redis.get @Int (mkTriggerAcceptCountKey trid)
+  rejected <- fromMaybe 0 <$> Redis.get @Int (mkTriggerRejectCountKey trid)
+  let pendingKey = mkTriggerPendingZSetKey trid
+  unresponded <- fromIntegral <$> Redis.zCard pendingKey
+  ignored <- fromIntegral <$> Redis.zCount pendingKey 0 (utcToScore now)
+  let pendingResponse = max 0 (unresponded - ignored)
+  pure TriggerCounts {..}
+
+-- | Mark a trigger active for a city. Done in the /triggerNotify handler so the
+--   parameterless status endpoint can discover it. Removed by the retry job once
+--   the required accepts are reached or the 5-minute window elapses.
+addActiveTrigger :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m ()
+addActiveTrigger mocId trid =
+  Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+    Redis.sAddExp (mkActiveTriggersKey mocId) [trid] activeTriggersTtlSec
+
+getActiveTriggers :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m [Text]
+getActiveTriggers mocId =
+  Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+    Redis.sMembers (mkActiveTriggersKey mocId)
+
+-- | Retry loop finished for this trigger (target reached or window elapsed): drop it
+--   from the active set and hand it to the cleanup set for the status endpoint to settle.
+finalizeTrigger :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m ()
+finalizeTrigger mocId trid = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+  void $ Redis.srem (mkActiveTriggersKey mocId) [trid]
+  Redis.sAddExp (mkCleanupTriggersKey mocId) [trid] activeTriggersTtlSec
+
+getCleanupTriggers :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m [Text]
+getCleanupTriggers mocId =
+  Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+    Redis.sMembers (mkCleanupTriggersKey mocId)
+
+removeCleanupTrigger :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m ()
+removeCleanupTrigger mocId trid =
+  Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+    void $ Redis.srem (mkCleanupTriggersKey mocId) [trid]
+
 -- | Record a true queue skip for a driver: bump the per-(specialLocation, driver)
 --   skip counter and, if the gate's removal threshold is reached, kick the driver
 --   out of the LTS queue and clear the counter. Threshold = Nothing means "track
@@ -630,7 +813,8 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> show (length eligibleNearGate)
                 <> " toNotify="
                 <> show (min needed (length eligibleNearGate))
-            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant mbServiceTier cooldown mbTriggerSource Nothing (take needed eligibleNearGate)
+            -- App-driven demand notify: no dashboard trigger batch id.
+            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant mbServiceTier cooldown mbTriggerSource Nothing Nothing (take needed eligibleNearGate)
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -655,8 +839,9 @@ forceNotifyDriverDemand ::
   Int -> -- number of drivers to notify
   Maybe [Id DP.Person] -> -- optional priority driver IDs to notify first
   Maybe Bool -> -- isDemandHigh flag (dashboard-supplied, surfaced to driver app)
+  Maybe Text -> -- triggerRequestId: dashboard trigger batch id stamped on every created row
   m Int -- returns count of drivers actually notified
-forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds mbIsDemandHigh = do
+forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds mbIsDemandHigh mbTriggerRequestId = do
   let specialLocationId = gate.specialLocationId.getId
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
@@ -677,7 +862,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       pure 0
     else do
       eligiblePriorityNearGate <- filterByGateProximity merchantId gate priorityVariantMap eligiblePriority
-      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
+      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId eligiblePriorityNearGate
       let remaining = max 0 (needed - priorityCount)
       -- Fill remaining from LTS queue
       queueCount <-
@@ -689,7 +874,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
                 pure $ sortOn (.queuePosition) queueResp.drivers
             let queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
             eligibleNearGate <- filterInBatches 50 remaining specialLocationId vehicleType gateId gate.enableQueueFilter merchantId gate queueDriverIds
-            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
+            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId (take remaining eligibleNearGate)
           else pure 0
       pure (priorityCount + queueCount)
 
@@ -714,10 +899,11 @@ notifyDrivers ::
   Int -> -- cooldown in seconds
   Maybe DSZQR.TriggerSource -> -- trigger source for audit (App | Dashboard)
   Maybe Bool -> -- isDemandHigh override (Nothing => default True)
+  Maybe Text -> -- triggerRequestId: dashboard trigger batch id stamped on every row (Nothing for App-driven)
   [Id DP.Person] -> -- drivers to notify
   m Int
-notifyDrivers _ _ _ _ _ _ _ _ _ [] = pure 0
-notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh driverIds = do
+notifyDrivers _ _ _ _ _ _ _ _ _ _ [] = pure 0
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh mbTriggerRequestId driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
@@ -762,11 +948,17 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
               vehicleType = vehicleType,
               arrivalDeadlineTime = Nothing,
               triggerSource = mbTriggerSource,
+              triggerRequestId = mbTriggerRequestId,
               createdAt = now,
               updatedAt = now
             }
     pure (driverId, reqId, request)
   QSZQR.createMany (map (\(_, _, r) -> r) toNotify)
+  -- Record this batch against its dashboard trigger (if any) so the retry loop and
+  -- the status endpoint can track it purely from Redis. validTill is identical for
+  -- every row in the batch; the pending ZSET keys off it to split pending/ignored.
+  whenJust mbTriggerRequestId $ \trid ->
+    recordTriggerRequests trid [(reqId.getId, validTill) | (_, reqId, _) <- toNotify]
   -- Cooldown markers must land before this function returns: 'forceNotifyDriverDemand'
   -- can call notifyDrivers twice back-to-back, and the second call's eligibility
   -- filter relies on these keys to avoid double-notifying. 'bulkShardedRedisBatch'

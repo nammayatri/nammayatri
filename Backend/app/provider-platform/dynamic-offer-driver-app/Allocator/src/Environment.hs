@@ -101,6 +101,7 @@ data HandlerEnv = HandlerEnv
     activeDriversListKeyShards :: Int,
     enableDriverFeeShardedFanOut :: Bool,
     maxNotificationShards :: Int,
+    gateNotifiedKeyShards :: Int,
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
     eventStreamMap :: [EventStreamMap],

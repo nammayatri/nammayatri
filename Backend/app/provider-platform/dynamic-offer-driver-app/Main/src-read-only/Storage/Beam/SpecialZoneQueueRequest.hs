@@ -24,6 +24,7 @@ data SpecialZoneQueueRequestT f = SpecialZoneQueueRequestT
     specialLocationId :: B.C f Kernel.Prelude.Text,
     specialLocationName :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus,
+    triggerRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     triggerSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.TriggerSource),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validTill :: B.C f Kernel.Prelude.UTCTime,

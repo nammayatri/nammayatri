@@ -29,6 +29,7 @@ SpecialZoneQueueRequest:
     specialLocationName: Text
     vehicleType: Text
     triggerSource: "Maybe TriggerSource"
+    triggerRequestId: "Maybe Text"
     createdAt: UTCTime
     updatedAt: UTCTime
 

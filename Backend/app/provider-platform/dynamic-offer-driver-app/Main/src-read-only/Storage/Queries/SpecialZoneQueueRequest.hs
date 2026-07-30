@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest
       Se.Set Beam.specialLocationId specialLocationId,
       Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.status status,
+      Se.Set Beam.triggerRequestId triggerRequestId,
       Se.Set Beam.triggerSource triggerSource,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
