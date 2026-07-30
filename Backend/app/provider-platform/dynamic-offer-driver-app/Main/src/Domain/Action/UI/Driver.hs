@@ -274,6 +274,7 @@ import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner)
 import qualified SharedLogic.Finance.Wallet as FWallet
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
@@ -987,6 +988,9 @@ setActivity ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasRequestId r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Redis.HedisLTSFlowEnv r,
@@ -1081,6 +1085,9 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               logInfo $ "Driver going OFFLINE at: " <> show now <> " for driverId: " <> show driverId
               DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing (Just now)
             else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo Nothing Nothing
+        when (isActive && not driverInfo.active) $
+          fork "FleetEngine:notifyDriverOnline" $
+            FleetEngine.notifyDriverOnline merchantOpCityId personId
         pure APISuccess.Success
     )
     ( do

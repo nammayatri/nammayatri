@@ -25,6 +25,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Lib.LocationUpdates.Internal (updatePassedThroughDrop)
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
 import qualified Storage.Queries.Booking as QB
@@ -99,6 +100,8 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
             let mbGeohash = T.pack <$> DG.encode 9 (lat, lon)
             whenJust mbGeohash $ \geohash -> do
               Redis.setExp (editDestinationUpdatedLocGeohashKey driverId) geohash (2 * 60 * 60)
+            fork "FleetEngine:notifyDropoffChanged" $
+              FleetEngine.notifyDropoffChanged ride.merchantOperatingCityId ride.id LatLong {lat = lat, lon = lon}
           Notify.notifyEditDestination ride.merchantOperatingCityId driverId driver.deviceToken -- when ride.status in [INPROGRESS, NEW]
           return Success
     else do
