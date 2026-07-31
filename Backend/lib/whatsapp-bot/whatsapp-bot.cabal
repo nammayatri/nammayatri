@@ -15,11 +15,23 @@ copyright:      2023 Juspay Technologies Private Limited
 license:        AllRightsReserved
 build-type:     Simple
 extra-source-files:
+    test/resources/golden/call-112.json
+    test/resources/golden/call-driver.json
+    test/resources/golden/cancel-after-register.json
     test/resources/golden/cancel-mid-search.json
     test/resources/golden/driver-not-found.json
     test/resources/golden/flexi-happy-path.json
+    test/resources/golden/help-support-more.json
+    test/resources/golden/language-switch.json
+    test/resources/golden/main-menu.json
+    test/resources/golden/mark-safe.json
     test/resources/golden/out-of-area.json
+    test/resources/golden/pickup-adjust.json
+    test/resources/golden/regular-change-drop.json
     test/resources/golden/regular-happy-path.json
+    test/resources/golden/sos-no-select-time.json
+    test/resources/golden/sos-trigger.json
+    test/resources/golden/status-tracking.json
     test/resources/golden/token-expiry-reauth.json
 
 source-repository head

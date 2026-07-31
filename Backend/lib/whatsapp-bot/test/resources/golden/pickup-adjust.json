@@ -1,6 +1,6 @@
 {
-  "scenario": "cancel-mid-search",
-  "description": "A \"Cancel search\" tap arrives while the flexi search is still in flight (before a driver is assigned). The search aborts cleanly: no ride is registered with the tracker and no driver card is sent.",
+  "scenario": "pickup-adjust",
+  "description": "pickup_adjust from CONFIRMING_PICKUP -> re-opens the location request with the fare line suppressed; a second pin re-confirms.",
   "env": {
     "merchant": "pn_flexi",
     "systemTime": "2026-07-09T00:00:00.000Z"
@@ -9,14 +9,9 @@
     "returningUser": true,
     "phone": "919361176218"
   },
-  "knobs": [
-    {
-      "method": "getFlexiQuotes",
-      "behavior": "gate"
-    }
-  ],
   "steps": [
     {
+      "note": "tap Quick Ride -> silent auth -> pickup request",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -42,7 +37,7 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.1",
+                      "id": "wamid.pa.1",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
@@ -81,6 +76,7 @@
       ]
     },
     {
+      "note": "share pickup pin -> confirm prompt",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -106,7 +102,7 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.2",
+                      "id": "wamid.pa.2",
                       "timestamp": "1783545600",
                       "type": "location",
                       "location": {
@@ -143,7 +139,7 @@
       ]
     },
     {
-      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote.",
+      "note": "pickup_adjust -> bare location request again (suppressFare)",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -169,14 +165,14 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.3",
+                      "id": "wamid.pa.3",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
                         "type": "button_reply",
                         "button_reply": {
-                          "id": "pickup_confirm",
-                          "title": "Confirm pickup"
+                          "id": "pickup_adjust",
+                          "title": "Change location"
                         }
                       }
                     }
@@ -187,7 +183,18 @@
           }
         ]
       },
-      "concurrent": {
+      "expectOutbound": [
+        {
+          "kind": "location_request",
+          "to": "919361176218",
+          "merchant": "FLEXI"
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "share a different pin -> reverseGeocode again -> confirm prompt",
+      "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
           {
@@ -212,15 +219,12 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.cancel",
+                      "id": "wamid.pa.4",
                       "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "cancel",
-                          "title": "Cancel search"
-                        }
+                      "type": "location",
+                      "location": {
+                        "latitude": 13.33,
+                        "longitude": 77.12
                       }
                     }
                   ]
@@ -236,58 +240,20 @@
           "to": "919361176218",
           "merchant": "FLEXI",
           "buttons": [
-            "cancel"
-          ]
-        },
-        {
-          "kind": "buttons",
-          "to": "919361176218",
-          "merchant": "FLEXI",
-          "buttons": [
-            "ride_type:flexi",
-            "more",
-            "choose_language"
+            "pickup_confirm",
+            "pickup_adjust"
           ]
         }
       ],
       "expectBackend": [
         {
-          "method": "searchFlexi",
+          "method": "reverseGeocode",
           "args": [
-            {
-              "placeId": "mock-pin",
-              "lat": 13.34,
-              "lon": 77.1
-            }
-          ]
-        },
-        {
-          "method": "getFlexiQuotes",
-          "args": [
-            "mock-flexi-search-1"
-          ]
-        },
-        {
-          "method": "getActiveBookings",
-          "args": [
-            -86400
-          ]
-        },
-        {
-          "method": "cancelRide",
-          "args": [
-            "mock-booking-001",
-            "TRIP_ASSIGNED"
-          ]
-        },
-        {
-          "method": "confirmQuote",
-          "args": [
-            "mock-flexi-quote-auto"
+            13.33,
+            77.12
           ]
         }
       ]
     }
-  ],
-  "trackerSteps": []
+  ]
 }

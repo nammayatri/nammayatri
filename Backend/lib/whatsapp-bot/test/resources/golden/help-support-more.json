@@ -1,6 +1,6 @@
 {
-  "scenario": "cancel-mid-search",
-  "description": "A \"Cancel search\" tap arrives while the flexi search is still in flight (before a driver is assigned). The search aborts cleanly: no ride is registered with the tracker and no driver card is sent.",
+  "scenario": "help-support-more",
+  "description": "The static submenu arms: more -> help (intro video + how-it-works + menu loop-back) -> support (dialable phone + menu loop-back).",
   "env": {
     "merchant": "pn_flexi",
     "systemTime": "2026-07-09T00:00:00.000Z"
@@ -9,14 +9,9 @@
     "returningUser": true,
     "phone": "919361176218"
   },
-  "knobs": [
-    {
-      "method": "getFlexiQuotes",
-      "behavior": "gate"
-    }
-  ],
   "steps": [
     {
+      "note": "more -> submenu (flexi-only merchant: no ride_type:regular row)",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -42,14 +37,14 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.1",
+                      "id": "wamid.hsm.1",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
                         "type": "button_reply",
                         "button_reply": {
-                          "id": "ride_type:flexi",
-                          "title": "Quick Ride"
+                          "id": "more",
+                          "title": "More"
                         }
                       }
                     }
@@ -62,182 +57,74 @@
       },
       "expectOutbound": [
         {
-          "kind": "location_request",
+          "kind": "buttons",
           "to": "919361176218",
-          "merchant": "FLEXI"
+          "merchant": "FLEXI",
+          "buttons": [
+            "help",
+            "support",
+            "main_menu"
+          ]
         }
       ],
-      "expectBackend": [
+      "expectBackend": []
+    },
+    {
+      "note": "help -> intro video + howItWorksText + menu loop-back",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.hsm.2",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "help",
+                          "title": "How it works"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
         {
-          "method": "authenticate",
-          "args": [
-            "9361176218"
-          ]
+          "kind": "video",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "link": "https://videos.example/intro.mp4"
         },
         {
-          "method": "getSavedLocations",
-          "args": []
-        }
-      ]
-    },
-    {
-      "inbound": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_flexi"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919361176218"
-                      },
-                      "wa_id": "919361176218"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919361176218",
-                      "id": "wamid.cxl.2",
-                      "timestamp": "1783545600",
-                      "type": "location",
-                      "location": {
-                        "latitude": 13.34,
-                        "longitude": 77.1
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "expectOutbound": [
-        {
-          "kind": "buttons",
+          "kind": "text",
           "to": "919361176218",
-          "merchant": "FLEXI",
-          "buttons": [
-            "pickup_confirm",
-            "pickup_adjust"
-          ]
-        }
-      ],
-      "expectBackend": [
-        {
-          "method": "reverseGeocode",
-          "args": [
-            13.34,
-            77.1
-          ]
-        }
-      ]
-    },
-    {
-      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote.",
-      "inbound": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_flexi"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919361176218"
-                      },
-                      "wa_id": "919361176218"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919361176218",
-                      "id": "wamid.cxl.3",
-                      "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "pickup_confirm",
-                          "title": "Confirm pickup"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "concurrent": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_flexi"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919361176218"
-                      },
-                      "wa_id": "919361176218"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919361176218",
-                      "id": "wamid.cxl.cancel",
-                      "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "cancel",
-                          "title": "Cancel search"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "expectOutbound": [
-        {
-          "kind": "buttons",
-          "to": "919361176218",
-          "merchant": "FLEXI",
-          "buttons": [
-            "cancel"
-          ]
+          "merchant": "FLEXI"
         },
         {
           "kind": "buttons",
@@ -250,44 +137,71 @@
           ]
         }
       ],
-      "expectBackend": [
+      "expectBackend": []
+    },
+    {
+      "note": "support -> support phone + menu loop-back",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.hsm.3",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "support",
+                          "title": "Support"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
         {
-          "method": "searchFlexi",
-          "args": [
-            {
-              "placeId": "mock-pin",
-              "lat": 13.34,
-              "lon": 77.1
-            }
-          ]
+          "kind": "text",
+          "to": "919361176218",
+          "merchant": "FLEXI"
         },
         {
-          "method": "getFlexiQuotes",
-          "args": [
-            "mock-flexi-search-1"
-          ]
-        },
-        {
-          "method": "getActiveBookings",
-          "args": [
-            -86400
-          ]
-        },
-        {
-          "method": "cancelRide",
-          "args": [
-            "mock-booking-001",
-            "TRIP_ASSIGNED"
-          ]
-        },
-        {
-          "method": "confirmQuote",
-          "args": [
-            "mock-flexi-quote-auto"
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "ride_type:flexi",
+            "more",
+            "choose_language"
           ]
         }
-      ]
+      ],
+      "expectBackend": []
     }
-  ],
-  "trackerSteps": []
+  ]
 }

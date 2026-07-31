@@ -62,7 +62,7 @@ where
 
 import Control.Concurrent (forkIO, killThread)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, readMVar, takeMVar, tryPutMVar)
-import Data.Aeson (Value (String), eitherDecodeStrict', encode, object, (.=))
+import Data.Aeson (Value (Null, String), eitherDecodeStrict', encode, object, (.=))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.FileEmbed (embedDir, makeRelativeToProject)
@@ -162,6 +162,19 @@ structuredOne r =
 callToValue :: RecordedCall -> Value
 callToValue c = object ["method" .= rcMethod c, "args" .= rcArgs c]
 
+-- | Record a clock-derived @createdAfter@ as whole seconds relative to the
+-- fixture's @systemTime@ — @Null@ when the caller passed none.
+--
+-- The TS recorder originally dropped this argument (@case 'getActiveBookings':
+-- return []@), which made @sos-no-select-time@ unable to assert the very thing
+-- it is named for, and made the five @getActiveBookings@ call sites mutually
+-- indistinguishable. Recording the offset (rather than the absolute time)
+-- keeps the fixture deterministic and free of UTCTime-vs-toISOString format
+-- skew: both virtual clocks are seeded from @env.systemTime@ and advance only
+-- via @sleepMs@ / fake timers, so the offset is exact.
+relSecs :: RB -> Maybe UTCTime -> Value
+relSecs rb = maybe Null (\tt -> toJSON (round (diffUTCTime tt (rbT0 rb)) :: Int))
+
 -- | @projPlace()@ (harness.ts:223-226): drop everything but @{placeId,lat,lon}@.
 projPlace :: BotPlace -> Value
 projPlace p = object ["placeId" .= p.placeId, "lat" .= p.lat, "lon" .= p.lon]
@@ -191,7 +204,12 @@ data RB = RB
     rbReached :: MVar (),
     rbRelease :: MVar (),
     rbFirstSeen :: IORef (Map.Map Text UTCTime), -- getBookingDetails progression anchor
-    rbClock :: IORef UTCTime
+    rbClock :: IORef UTCTime,
+    -- | The fixture's @env.systemTime@. @getActiveBookings@ records its
+    -- @createdAfter@ as a whole-second offset from this, matching the TS
+    -- recorder's @relSecs@ (harness.ts @normalizeArgs@), so the recording is a
+    -- stable integer rather than a clock-format-sensitive timestamp.
+    rbT0 :: UTCTime
   }
 
 recordOut :: IORef [RecordedOut] -> RecordedOut -> IO ()
@@ -396,8 +414,8 @@ mkBackend rb =
       getBookingDetails = \_a bid -> do
         recordCall (rbCalls rb) "getBookingDetails" [String bid]
         guard1 rb "getBookingDetails" (bookingProgression rb bid),
-      getActiveBookings = \_a _after -> do
-        recordCall (rbCalls rb) "getActiveBookings" []
+      getActiveBookings = \_a mafter -> do
+        recordCall (rbCalls rb) "getActiveBookings" [relSecs rb mafter]
         guardL rb "getActiveBookings" (pure [cannedActiveBooking]),
       triggerSOS = \_a rid _loc -> do
         recordCall (rbCalls rb) "triggerSOS" [String rid]
@@ -602,7 +620,8 @@ makeWorld merchantCtx theKnobs t0 = do
             rbReached = reached,
             rbRelease = release,
             rbFirstSeen = firstSeenRef,
-            rbClock = clockRef
+            rbClock = clockRef,
+            rbT0 = t0
           }
       backendH = mkBackend rb
       senderH = mkSender outRef merchantCtx.merchantLabel
@@ -783,11 +802,23 @@ fixtureGuards =
       testCase "fixture set is exactly the expected names" $
         assertEqual
           "fixture names"
-          [ "cancel-mid-search.json",
+          [ "call-112.json",
+            "call-driver.json",
+            "cancel-after-register.json",
+            "cancel-mid-search.json",
             "driver-not-found.json",
             "flexi-happy-path.json",
+            "help-support-more.json",
+            "language-switch.json",
+            "main-menu.json",
+            "mark-safe.json",
             "out-of-area.json",
+            "pickup-adjust.json",
+            "regular-change-drop.json",
             "regular-happy-path.json",
+            "sos-no-select-time.json",
+            "sos-trigger.json",
+            "status-tracking.json",
             "token-expiry-reauth.json"
           ]
           (L.sort (map fst goldenFiles))

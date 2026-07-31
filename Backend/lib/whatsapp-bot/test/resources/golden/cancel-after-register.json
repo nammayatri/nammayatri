@@ -1,6 +1,6 @@
 {
-  "scenario": "cancel-mid-search",
-  "description": "A \"Cancel search\" tap arrives while the flexi search is still in flight (before a driver is assigned). The search aborts cleanly: no ride is registered with the tracker and no driver card is sent.",
+  "scenario": "cancel-after-register",
+  "description": "Cancel AFTER the flexi booking is registered (registerRide′): handleCancel resolves the booking via getActiveBookings, cancels it, and de-registers the ride. Locks WHICH backend call resolves the booking on the cancel path.",
   "env": {
     "merchant": "pn_flexi",
     "systemTime": "2026-07-09T00:00:00.000Z"
@@ -9,14 +9,9 @@
     "returningUser": true,
     "phone": "919361176218"
   },
-  "knobs": [
-    {
-      "method": "getFlexiQuotes",
-      "behavior": "gate"
-    }
-  ],
   "steps": [
     {
+      "note": "tap Quick Ride -> silent auth -> pickup request",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -42,7 +37,7 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.1",
+                      "id": "wamid.canc.1",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
@@ -81,6 +76,7 @@
       ]
     },
     {
+      "note": "share pickup pin (inside Tumkur) -> confirm prompt",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -106,7 +102,7 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.2",
+                      "id": "wamid.canc.2",
                       "timestamp": "1783545600",
                       "type": "location",
                       "location": {
@@ -143,7 +139,7 @@
       ]
     },
     {
-      "note": "pickup_confirm starts a search (gated). A Cancel tap lands mid-search; the search then aborts cleanly — no ride registered, no driver card. Outbound = [finding+Cancel, then cancelled+menu]; backend interleaves searchFlexi, getFlexiQuotes, getActiveBookings, cancelRide, confirmQuote.",
+      "note": "confirm pickup -> search + confirmQuote + driver card (registerRide′)",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -169,7 +165,7 @@
                   "messages": [
                     {
                       "from": "919361176218",
-                      "id": "wamid.cxl.3",
+                      "id": "wamid.canc.3",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
@@ -177,49 +173,6 @@
                         "button_reply": {
                           "id": "pickup_confirm",
                           "title": "Confirm pickup"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "concurrent": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_flexi"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919361176218"
-                      },
-                      "wa_id": "919361176218"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919361176218",
-                      "id": "wamid.cxl.cancel",
-                      "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "cancel",
-                          "title": "Cancel search"
                         }
                       }
                     }
@@ -244,9 +197,7 @@
           "to": "919361176218",
           "merchant": "FLEXI",
           "buttons": [
-            "ride_type:flexi",
-            "more",
-            "choose_language"
+            "cancel_confirm:mock-booking-001"
           ]
         }
       ],
@@ -268,9 +219,77 @@
           ]
         },
         {
+          "method": "confirmQuote",
+          "args": [
+            "mock-flexi-quote-auto"
+          ]
+        },
+        {
+          "method": "getBookingDetails",
+          "args": [
+            "mock-booking-001"
+          ]
+        }
+      ]
+    },
+    {
+      "note": "type \"cancel\" while TRACKING a REGISTERED booking -> handleCancel",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.canc.4",
+                      "timestamp": "1783545600",
+                      "type": "text",
+                      "text": {
+                        "body": "cancel"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "ride_type:flexi",
+            "more",
+            "choose_language"
+          ]
+        }
+      ],
+      "expectBackend": [
+        {
           "method": "getActiveBookings",
           "args": [
-            -86400
+            -120
           ]
         },
         {
@@ -279,15 +298,16 @@
             "mock-booking-001",
             "TRIP_ASSIGNED"
           ]
-        },
-        {
-          "method": "confirmQuote",
-          "args": [
-            "mock-flexi-quote-auto"
-          ]
         }
       ]
     }
   ],
-  "trackerSteps": []
+  "trackerSteps": [
+    {
+      "advanceMs": 6000,
+      "note": "tracker after cancel: ride de-registered -> nothing polled, nothing sent",
+      "expectOutbound": [],
+      "expectBackend": []
+    }
+  ]
 }

@@ -1,17 +1,17 @@
 {
-  "scenario": "regular-happy-path",
-  "description": "Ride with destination: pickup → typed drop → estimate → book → track to completion.",
+  "scenario": "mark-safe",
+  "description": "Full safety round trip: sos_confirm -> sos_trigger (sets ctx.sosId) -> mark_safe_confirm -> mark_safe_trigger -> markRideAsSafe.",
   "env": {
-    "merchant": "pn_reg",
+    "merchant": "pn_flexi",
     "systemTime": "2026-07-09T00:00:00.000Z"
   },
   "seed": {
     "returningUser": true,
-    "phone": "919812345678"
+    "phone": "919361176218"
   },
   "steps": [
     {
-      "note": "tap ride type → silent auth → pickup request (no fare line)",
+      "note": "tap Quick Ride -> silent auth -> pickup request",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -24,27 +24,27 @@
                   "messaging_product": "whatsapp",
                   "metadata": {
                     "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
+                    "phone_number_id": "pn_flexi"
                   },
                   "contacts": [
                     {
                       "profile": {
-                        "name": "919812345678"
+                        "name": "919361176218"
                       },
-                      "wa_id": "919812345678"
+                      "wa_id": "919361176218"
                     }
                   ],
                   "messages": [
                     {
-                      "from": "919812345678",
-                      "id": "wamid.reg.1",
+                      "from": "919361176218",
+                      "id": "wamid.ms.1",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
                         "type": "button_reply",
                         "button_reply": {
-                          "id": "ride_type:regular",
-                          "title": "Ride with destination"
+                          "id": "ride_type:flexi",
+                          "title": "Quick Ride"
                         }
                       }
                     }
@@ -58,15 +58,15 @@
       "expectOutbound": [
         {
           "kind": "location_request",
-          "to": "919812345678",
-          "merchant": "REG"
+          "to": "919361176218",
+          "merchant": "FLEXI"
         }
       ],
       "expectBackend": [
         {
           "method": "authenticate",
           "args": [
-            "9812345678"
+            "9361176218"
           ]
         },
         {
@@ -76,7 +76,7 @@
       ]
     },
     {
-      "note": "pickup pin → confirm",
+      "note": "share pickup pin (inside Tumkur) -> confirm prompt",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -89,20 +89,20 @@
                   "messaging_product": "whatsapp",
                   "metadata": {
                     "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
+                    "phone_number_id": "pn_flexi"
                   },
                   "contacts": [
                     {
                       "profile": {
-                        "name": "919812345678"
+                        "name": "919361176218"
                       },
-                      "wa_id": "919812345678"
+                      "wa_id": "919361176218"
                     }
                   ],
                   "messages": [
                     {
-                      "from": "919812345678",
-                      "id": "wamid.reg.2",
+                      "from": "919361176218",
+                      "id": "wamid.ms.2",
                       "timestamp": "1783545600",
                       "type": "location",
                       "location": {
@@ -120,8 +120,8 @@
       "expectOutbound": [
         {
           "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
+          "to": "919361176218",
+          "merchant": "FLEXI",
           "buttons": [
             "pickup_confirm",
             "pickup_adjust"
@@ -139,7 +139,7 @@
       ]
     },
     {
-      "note": "confirm pickup → ask for drop",
+      "note": "confirm pickup -> search + confirmQuote + driver card (registerRide′)",
       "inbound": {
         "object": "whatsapp_business_account",
         "entry": [
@@ -152,20 +152,20 @@
                   "messaging_product": "whatsapp",
                   "metadata": {
                     "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
+                    "phone_number_id": "pn_flexi"
                   },
                   "contacts": [
                     {
                       "profile": {
-                        "name": "919812345678"
+                        "name": "919361176218"
                       },
-                      "wa_id": "919812345678"
+                      "wa_id": "919361176218"
                     }
                   ],
                   "messages": [
                     {
-                      "from": "919812345678",
-                      "id": "wamid.reg.3",
+                      "from": "919361176218",
+                      "id": "wamid.ms.3",
                       "timestamp": "1783545600",
                       "type": "interactive",
                       "interactive": {
@@ -185,224 +185,17 @@
       },
       "expectOutbound": [
         {
-          "kind": "location_request",
-          "to": "919812345678",
-          "merchant": "REG"
-        }
-      ],
-      "expectBackend": []
-    },
-    {
-      "note": "typed drop → place search → disambiguation",
-      "inbound": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919812345678"
-                      },
-                      "wa_id": "919812345678"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919812345678",
-                      "id": "wamid.reg.4",
-                      "timestamp": "1783545600",
-                      "type": "text",
-                      "text": {
-                        "body": "Bus Stand"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "expectOutbound": [
-        {
           "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "regdrop:mock-place-1",
-            "regdrop:mock-place-2",
-            "regdrop:mock-place-3"
-          ]
-        }
-      ],
-      "expectBackend": [
-        {
-          "method": "searchPlaces",
-          "args": [
-            "Bus Stand"
-          ]
-        }
-      ]
-    },
-    {
-      "note": "pick a drop → estimate → fare confirm",
-      "inbound": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919812345678"
-                      },
-                      "wa_id": "919812345678"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919812345678",
-                      "id": "wamid.reg.5",
-                      "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "regdrop:mock-place-1",
-                          "title": "Bus Stand"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "expectOutbound": [
-        {
-          "kind": "text",
-          "to": "919812345678",
-          "merchant": "REG"
-        },
-        {
-          "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "regular_book",
-            "regular_change_drop"
-          ]
-        }
-      ],
-      "expectBackend": [
-        {
-          "method": "getPlaceDetails",
-          "args": [
-            "mock-place-1"
-          ]
-        },
-        {
-          "method": "searchRide",
-          "args": [
-            {
-              "placeId": "mock-pin",
-              "lat": 13.34,
-              "lon": 77.1
-            },
-            {
-              "placeId": "mock-place-1",
-              "lat": 13.3379,
-              "lon": 77.1173
-            }
-          ]
-        },
-        {
-          "method": "getEstimates",
-          "args": [
-            "mock-search-1"
-          ]
-        }
-      ]
-    },
-    {
-      "note": "book → select estimate → driver card",
-      "inbound": {
-        "object": "whatsapp_business_account",
-        "entry": [
-          {
-            "id": "entry-1",
-            "changes": [
-              {
-                "field": "messages",
-                "value": {
-                  "messaging_product": "whatsapp",
-                  "metadata": {
-                    "display_phone_number": "15550000000",
-                    "phone_number_id": "pn_reg"
-                  },
-                  "contacts": [
-                    {
-                      "profile": {
-                        "name": "919812345678"
-                      },
-                      "wa_id": "919812345678"
-                    }
-                  ],
-                  "messages": [
-                    {
-                      "from": "919812345678",
-                      "id": "wamid.reg.6",
-                      "timestamp": "1783545600",
-                      "type": "interactive",
-                      "interactive": {
-                        "type": "button_reply",
-                        "button_reply": {
-                          "id": "regular_book",
-                          "title": "Book auto"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "expectOutbound": [
-        {
-          "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
+          "to": "919361176218",
+          "merchant": "FLEXI",
           "buttons": [
             "cancel"
           ]
         },
         {
           "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
+          "to": "919361176218",
+          "merchant": "FLEXI",
           "buttons": [
             "cancel_confirm:mock-booking-001"
           ]
@@ -410,93 +203,278 @@
       ],
       "expectBackend": [
         {
-          "method": "selectEstimate",
+          "method": "searchFlexi",
           "args": [
-            "mock-est-auto"
+            {
+              "placeId": "mock-pin",
+              "lat": 13.34,
+              "lon": 77.1
+            }
           ]
         },
+        {
+          "method": "getFlexiQuotes",
+          "args": [
+            "mock-flexi-search-1"
+          ]
+        },
+        {
+          "method": "confirmQuote",
+          "args": [
+            "mock-flexi-quote-auto"
+          ]
+        },
+        {
+          "method": "getBookingDetails",
+          "args": [
+            "mock-booking-001"
+          ]
+        }
+      ]
+    },
+    {
+      "note": "sos_confirm -> prompt",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.ms.4",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "sos_confirm",
+                          "title": "Emergency"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "sos_trigger",
+            "sos_cancel"
+          ]
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "sos_trigger -> sosId stored",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.ms.5",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "sos_trigger",
+                          "title": "Yes, trigger SOS"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "mark_safe_confirm"
+          ]
+        }
+      ],
+      "expectBackend": [
         {
           "method": "getActiveBookings",
           "args": [
             -120
           ]
-        }
-      ]
-    }
-  ],
-  "trackerSteps": [
-    {
-      "advanceMs": 0,
-      "note": "prime (still assigned → no message)",
-      "expectOutbound": [],
-      "expectBackend": [
+        },
         {
-          "method": "getBookingDetails",
+          "method": "triggerSOS",
           "args": [
-            "mock-booking-001"
+            "mock-ride-001"
           ]
         }
       ]
     },
     {
-      "advanceMs": 6000,
-      "note": "driver arrived",
+      "note": "mark_safe_confirm (guarded on ctx.sosId) -> CONFIRMING_MARK_SAFE prompt",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.ms.6",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "mark_safe_confirm",
+                          "title": "I'm safe"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expectOutbound": [
+        {
+          "kind": "buttons",
+          "to": "919361176218",
+          "merchant": "FLEXI",
+          "buttons": [
+            "mark_safe_trigger",
+            "mark_safe_cancel"
+          ]
+        }
+      ],
+      "expectBackend": []
+    },
+    {
+      "note": "mark_safe_trigger -> markRideAsSafe(sosId) -> markedSafe, back to TRACKING",
+      "inbound": {
+        "object": "whatsapp_business_account",
+        "entry": [
+          {
+            "id": "entry-1",
+            "changes": [
+              {
+                "field": "messages",
+                "value": {
+                  "messaging_product": "whatsapp",
+                  "metadata": {
+                    "display_phone_number": "15550000000",
+                    "phone_number_id": "pn_flexi"
+                  },
+                  "contacts": [
+                    {
+                      "profile": {
+                        "name": "919361176218"
+                      },
+                      "wa_id": "919361176218"
+                    }
+                  ],
+                  "messages": [
+                    {
+                      "from": "919361176218",
+                      "id": "wamid.ms.7",
+                      "timestamp": "1783545600",
+                      "type": "interactive",
+                      "interactive": {
+                        "type": "button_reply",
+                        "button_reply": {
+                          "id": "mark_safe_trigger",
+                          "title": "Yes, mark safe"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
       "expectOutbound": [
         {
           "kind": "text",
-          "to": "919812345678",
-          "merchant": "REG"
+          "to": "919361176218",
+          "merchant": "FLEXI"
         }
       ],
       "expectBackend": [
         {
-          "method": "getBookingDetails",
+          "method": "markRideAsSafe",
           "args": [
-            "mock-booking-001"
-          ]
-        }
-      ]
-    },
-    {
-      "advanceMs": 6000,
-      "note": "ride started (ONE_WAY: no End-ride button)",
-      "expectOutbound": [
-        {
-          "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "flexi_end_otp:mock-booking-001"
-          ]
-        }
-      ],
-      "expectBackend": [
-        {
-          "method": "getBookingDetails",
-          "args": [
-            "mock-booking-001"
-          ]
-        }
-      ]
-    },
-    {
-      "advanceMs": 8000,
-      "note": "ride ended",
-      "expectOutbound": [
-        {
-          "kind": "buttons",
-          "to": "919812345678",
-          "merchant": "REG",
-          "buttons": [
-            "book"
-          ]
-        }
-      ],
-      "expectBackend": [
-        {
-          "method": "getBookingDetails",
-          "args": [
-            "mock-booking-001"
+            "mock-sos-1"
           ]
         }
       ]
