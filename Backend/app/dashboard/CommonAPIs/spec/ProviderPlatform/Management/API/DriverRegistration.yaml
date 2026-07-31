@@ -18,9 +18,6 @@ imports:
   DocsVerificationStatus: Dashboard.Common
   IndianState: Kernel.Types.Beckn.Context
   AddressDocumentType: Dashboard.Common.Driver
-  OnboardingAs: Dashboard.Common.Driver
-  DisabledReasonFlag: Dashboard.Common.Driver
-  DriverAssociationInfo: Dashboard.Common.Driver
 
 module: DriverRegistration
 apiPrefix: driver
@@ -336,12 +333,6 @@ types:
     - driverDocuments: "[DocumentStatusItem]"
     - vehicleDocuments: "[VehicleDocumentItem]"
     - enabled: Bool
-    - verified: Bool
-    - approved: Maybe Bool
-    - blocked: Bool
-    - onboardingAs: Maybe OnboardingAs
-    - disabledReasonFlag: Maybe DisabledReasonFlag
-    - recentFleetInfo: Maybe DriverAssociationInfo
     - manualVerificationRequired: Maybe Bool
     - driverLicenseDetails: "Maybe [DLDetails]"
     - vehicleRegistrationCertificateDetails: "Maybe [RCDetails]"

@@ -50,6 +50,19 @@ data CourtRecordResult = CourtRecordResult {result :: Kernel.Prelude.Maybe Kerne
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverAssociationInfo = DriverAssociationInfo
+  { personId :: Kernel.Types.Id.Id Dashboard.Common.Person,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
+    enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverBlockTransactions = DriverBlockTransactions
   { reasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -135,10 +148,9 @@ data DriverInfoRes = DriverInfoRes
     softBlockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     lastOfflineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    onboardingAs :: Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs,
-    activeFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
-    recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
-    operatorInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
+    onboardingAs :: Kernel.Prelude.Maybe OnboardingAs,
+    activeFleetInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
+    operatorInfo :: Kernel.Prelude.Maybe DriverAssociationInfo,
     panAadhaarLinkedFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstinApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     tdsApplicableFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -147,10 +159,10 @@ data DriverInfoRes = DriverInfoRes
     bankIfsc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankVerificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     upiId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
     specialLocWarriorInfo :: SpecialLocWarriorInfo
   }
   deriving stock (Generic)
@@ -210,6 +222,12 @@ instance Kernel.Types.HideSecrets.HideSecrets ExemptionAndCashCollectionDriverFe
 
 data GetFeedbackListRes = GetFeedbackListRes {feedbacks :: [DriverFeedbackAPIEntity]}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OnboardingAs
+  = FLEET_DRIVER
+  | INDIVIDUAL
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PanCardAPIEntity = PanCardAPIEntity

@@ -194,13 +194,10 @@ data FarePolicyHour
 
 data FleetInfo = FleetInfo
   { address :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.Address,
-    associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     chargesEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
-    isActive :: Kernel.Prelude.Bool,
-    isAssociated :: Kernel.Prelude.Bool,
     ownerName :: Kernel.Prelude.Text,
     phoneNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

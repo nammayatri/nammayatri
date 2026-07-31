@@ -31,12 +31,12 @@ createMany = traverse_ create
 
 findAllByFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate])
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate]))
 findAllByFleetOwnerId limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId] (Se.Desc Beam.updatedAt) limit offset
 
 findAllByFleetOwnerIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> [Kernel.Prelude.Maybe Kernel.Prelude.Text] -> m [Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate])
+  (Maybe Int -> Maybe Int -> [Kernel.Prelude.Maybe Kernel.Prelude.Text] -> m ([Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate]))
 findAllByFleetOwnerIds limit offset fleetOwnerId = do findAllWithOptionsKV [Se.Is Beam.fleetOwnerId $ Se.In fleetOwnerId] (Se.Desc Beam.createdAt) limit offset
 
 findById ::
@@ -135,15 +135,14 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
   updateWithKV
     [ Se.Set Beam.airConditioned airConditioned,
       Se.Set Beam.approved approved,
-      Se.Set Beam.certificateNumberEncrypted (certificateNumber & unEncrypted . encrypted),
-      Se.Set Beam.certificateNumberHash (certificateNumber & hash),
+      Se.Set Beam.certificateNumberEncrypted (((certificateNumber & unEncrypted . encrypted))),
+      Se.Set Beam.certificateNumberHash ((certificateNumber & hash)),
       Se.Set Beam.dateOfRegistration dateOfRegistration,
       Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.fleetOwnerId fleetOwnerId,
-      Se.Set Beam.initiatedBy initiatedBy,
       Se.Set Beam.insuranceValidity insuranceValidity,
       Se.Set Beam.luggageCapacity luggageCapacity,
       Se.Set Beam.mYManufacturing mYManufacturing,

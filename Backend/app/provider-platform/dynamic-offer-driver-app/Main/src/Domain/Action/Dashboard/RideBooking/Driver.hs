@@ -52,7 +52,6 @@ import Domain.Types.DriverPanCard
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.Feedback as DFeedback
-import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
@@ -82,11 +81,10 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
-import qualified SharedLogic.Analytics as Analytics
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -362,23 +360,14 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
 
   let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId <|> mbPersonIdFromWallet
   when mbFleet $ do
-    case (mbPersonId', mbVehicleNumber, mbMobileNumber) of
-      (Just personId, _, _) -> do
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerIdWithStatus personId fleetOwnerId
+    case (mbPersonId', mbVehicleNumber) of
+      (Just personId, _) -> do
+        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
         when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
-      (_, Just vehicleNumber, _) -> do
+      (_, Just vehicleNumber) -> do
         vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNumber fleetOwnerId
         when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
-      (_, _, Just mobileNumber) -> do
-        mobileNumberDbHash <- getDbHash mobileNumber
-        let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
-        person <-
-          B.runInReplica $
-            QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberDbHash merchant.id DP.DRIVER
-              >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerIdWithStatus person.id fleetOwnerId
-        when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
-      _ -> throwError $ InvalidRequest "Fleet Owner can only search with vehicleNumber, personId, walletId or mobileNumber"
+      _ -> throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number, personId or walletId"
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, mbPersonId') of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
@@ -515,29 +504,18 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
   mbActiveFda <- B.runInReplica $ QFleetDriver.findByDriverId person.id True
-  now <- getCurrentTime
   activeFleetInfo <- case mbActiveFda of
     Nothing -> pure Nothing
     Just fda -> do
       fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
       fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo (Just fda) now
-  recentFleetInfo <- case activeFleetInfo of
-    Just _ -> pure activeFleetInfo
-    Nothing -> do
-      allFdas <- B.runInReplica $ QFleetDriver.findAllByDriverIdWithStatus person.id
-      case listToMaybe allFdas of
-        Nothing -> pure Nothing
-        Just fda -> do
-          fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
-          fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-          Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo (Just fda) now
+      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo
   operatorInfo <-
     B.runInReplica (QDriverOperator.findByDriverId person.id True) >>= \case
       Nothing -> pure Nothing
       Just doa -> do
         op <- B.runInReplica $ QPerson.findById (Id doa.operatorId) >>= fromMaybeM (PersonDoesNotExist doa.operatorId)
-        Just <$> buildDriverAssociationInfoFromPerson op Nothing Nothing now
+        Just <$> buildDriverAssociationInfoFromPerson op Nothing
   mbBankAccount <- QDBA.findByPrimaryKey person.id
   mbGstin <- QDGExtra.findGSTInByDriverId person.id
   mbWalletAccount <- FWallet.getWalletAccountByOwner DRIVER person.id.getId
@@ -546,6 +524,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let bankAccountNumber' = mbBankAccount <&> (.accountId)
   let bankIfsc' = mbBankAccount >>= (.ifscCode)
   let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+  let fleetOwnerId' = (.fleetOwnerId) <$> mbActiveFda
   mbIdentityInfo <- B.runInReplica $ QDII.findByDriverId person.id
   let courtRecord' = (mbIdentityInfo >>= (.courtRecord)) <&> \cr -> Common.CourtRecordResult {result = cr.result, errorMessage = cr.errorMessage}
   tdsApplicableFlag' <- case mbActiveFda of
@@ -621,7 +600,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         drunkAndDriveViolationCount,
         onboardingAs = castOnboardingAs <$> info.onboardingAs,
         activeFleetInfo,
-        recentFleetInfo,
         operatorInfo,
         panAadhaarLinkedFlag = panAadhaarLinkedFlag',
         gstinApplicableFlag = gstinApplicableFlag',
@@ -631,10 +609,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         bankIfsc = bankIfsc',
         bankVerificationStatus = bankVerificationStatus',
         upiId = driverInfo.payoutVpa,
+        fleetOwnerId = fleetOwnerId',
         docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
         courtRecord = courtRecord',
         approved = driverInfo.approved,
-        disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag,
         specialLocWarriorInfo =
           Common.SpecialLocWarriorInfo
             { isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
@@ -643,8 +621,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             }
       }
   where
-    buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe FDA.FleetDriverAssociation -> UTCTime -> m Common.DriverAssociationInfo
-    buildDriverAssociationInfoFromPerson p mbFoi mbFda now = do
+    buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> m Common.DriverAssociationInfo
+    buildDriverAssociationInfoFromPerson p mbFoi = do
       mob <- traverse decrypt p.mobileNumber
       pure
         Common.DriverAssociationInfo
@@ -654,22 +632,14 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             mobileNumber = mob,
             fleetName = mbFoi >>= (.fleetName),
             verified = (.verified) <$> mbFoi,
-            enabled = (.enabled) <$> mbFoi,
-            isActive = maybe False (.isActive) mbFda,
-            isAssociated = maybe False (\fda -> maybe False (> now) fda.associatedTill) mbFda,
-            associatedTill = mbFda >>= (.associatedTill)
+            docsVerificationStatus = mbFoi >>= (.docsVerificationStatus) <&> castDriverDocsVerificationStatus,
+            enabled = (.enabled) <$> mbFoi
           }
 
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
     castOnboardingAs = \case
       DI.FLEET_DRIVER -> Common.FLEET_DRIVER
       DI.INDIVIDUAL -> Common.INDIVIDUAL
-
-    castDisabledReasonFlag :: DI.DisabledReasonFlag -> Common.DisabledReasonFlag
-    castDisabledReasonFlag = \case
-      DI.FleetDisabled -> Common.FleetDisabled
-      DI.AdminDisabled -> Common.AdminDisabled
-      DI.DriverDisabled -> Common.DriverDisabled
 
 castDriverDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
 castDriverDocsVerificationStatus = \case
@@ -829,9 +799,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC transporterConfig personId
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -863,9 +831,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
@@ -896,9 +862,7 @@ postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
   QDriverInfo.updateAadhaarNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deleteAadhaar : " (show personId)
   pure Success
 
@@ -929,9 +893,7 @@ postDriverDeletePanCard merchantShortId opCity reqDriverId = do
   QDriverInfo.updatePanNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deletePanCard : " (show personId)
   pure Success
 
@@ -1077,11 +1039,7 @@ postDriverSetRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..}
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  res <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-    void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) personId
-  pure res
+  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
 
 ---------------------------------------------------------------------
 postDriverExemptDriverFee ::

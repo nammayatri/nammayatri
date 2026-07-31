@@ -608,8 +608,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             updatedAt = now,
             vehicleImageId = Nothing,
             verified = Nothing,
-            pendingChallan = Nothing,
-            initiatedBy = Nothing
+            pendingChallan = Nothing
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of
@@ -844,7 +843,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
-  when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $ do
+  when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True) $ do
     unless driverInfo.enabled $ do
       DAQuery.updateRcErrorMessage driverInfo.driverId rc.id "Driver is not enabled"
       throwError (InvalidRequest "Driver is not enabled")

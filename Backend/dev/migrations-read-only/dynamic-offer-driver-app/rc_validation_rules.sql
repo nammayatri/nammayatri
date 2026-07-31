@@ -25,13 +25,3 @@ ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD COLUMN enable_for_air
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-

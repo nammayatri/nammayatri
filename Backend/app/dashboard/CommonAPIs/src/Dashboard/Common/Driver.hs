@@ -19,7 +19,7 @@ module Dashboard.Common.Driver
   )
 where
 
-import Dashboard.Common as Reexport hiding (DRIVER)
+import Dashboard.Common as Reexport
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Kernel.External.Payment.Stripe.Types as Stripe
@@ -203,36 +203,3 @@ instance ToMultipart Tmp UpsertDriverServiceTiersCsvReq where
 data AddressDocumentType = RationCard | UtilityBill | Passport | VoterId | LifeInsurancePolicy | Others
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data OnboardingAs = FLEET_DRIVER | INDIVIDUAL
-  deriving stock (Eq, Ord, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''OnboardingAs)
-
-data DisabledReasonFlag = FleetDisabled | AdminDisabled | DriverDisabled
-  deriving stock (Eq, Ord, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''DisabledReasonFlag)
-
-data DriverAssociationInfo = DriverAssociationInfo
-  { personId :: Id Reexport.Person,
-    name :: Maybe Text,
-    mobileCountryCode :: Maybe Text,
-    mobileNumber :: Maybe Text,
-    fleetName :: Maybe Text,
-    verified :: Maybe Bool,
-    enabled :: Maybe Bool,
-    isActive :: Bool,
-    isAssociated :: Bool,
-    associatedTill :: Maybe UTCTime
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ApprovalStatusFilter = ApprovedOnly | RejectedOnly | PendingOnly
-  deriving stock (Eq, Ord, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''ApprovalStatusFilter)

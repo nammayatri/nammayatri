@@ -244,8 +244,8 @@ findAllInactiveAssociationByFleetOwnerId fleetOwnerId limit offset mbRegNumberSt
 
 ---------------------------- Various queries with array of fleet owner ids ----------------------------
 
-findAllActiveAssociationByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe DbHash -> Maybe Bool -> Maybe (Maybe Bool) -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
-findAllActiveAssociationByFleetOwnerIds fleetOwnerIds Nothing Nothing mbRegNumberString mbRegNumberStringHash mbVerified mbApprovalFilter = do
+findAllActiveAssociationByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe DbHash -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllActiveAssociationByFleetOwnerIds fleetOwnerIds Nothing Nothing mbRegNumberString mbRegNumberStringHash = do
   now <- getCurrentTime
   dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
@@ -256,11 +256,6 @@ findAllActiveAssociationByFleetOwnerIds fleetOwnerIds Nothing Nothing mbRegNumbe
               rcAssn.isRcActive B.==?. B.val_ True
                 B.&&?. B.sqlBool_ (rcAssn.associatedTill B.>=. B.val_ (Just now))
                 B.&&?. B.sqlBool_ (rc.fleetOwnerId `B.in_` ((B.val_ . Just) <$> fleetOwnerIds))
-                B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> rc.verified B.==?. B.val_ (Just verified)) mbVerified
-                B.&&?. case mbApprovalFilter of
-                  Nothing -> B.sqlBool_ $ B.val_ True
-                  Just Nothing -> B.sqlBool_ (B.isNothing_ rc.approved)
-                  Just (Just approved) -> rc.approved B.==?. B.val_ (Just approved)
                 B.&&?. ( maybe
                            (B.sqlBool_ $ B.val_ True)
                            (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
@@ -279,7 +274,7 @@ findAllActiveAssociationByFleetOwnerIds fleetOwnerIds Nothing Nothing mbRegNumbe
     Right rows ->
       catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
     Left _ -> pure []
-findAllActiveAssociationByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbRegNumberString mbRegNumberStringHash mbVerified mbApprovalFilter = do
+findAllActiveAssociationByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbRegNumberString mbRegNumberStringHash = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   now <- getCurrentTime
@@ -294,11 +289,6 @@ findAllActiveAssociationByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbRegNumb
                   rcAssn.isRcActive B.==?. B.val_ True
                     B.&&?. B.sqlBool_ (rcAssn.associatedTill B.>=. B.val_ (Just now))
                     B.&&?. B.sqlBool_ (rc.fleetOwnerId `B.in_` ((B.val_ . Just) <$> fleetOwnerIds))
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> rc.verified B.==?. B.val_ (Just verified)) mbVerified
-                    B.&&?. case mbApprovalFilter of
-                      Nothing -> B.sqlBool_ $ B.val_ True
-                      Just Nothing -> B.sqlBool_ (B.isNothing_ rc.approved)
-                      Just (Just approved) -> rc.approved B.==?. B.val_ (Just approved)
                     B.&&?. ( maybe
                                (B.sqlBool_ $ B.val_ True)
                                (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
@@ -318,9 +308,9 @@ findAllActiveAssociationByFleetOwnerIds fleetOwnerIds mbLimit mbOffset mbRegNumb
       catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
     Left _ -> pure []
 
-findAllInactiveAssociationByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Int -> Int -> Maybe Text -> Maybe DbHash -> Maybe Bool -> Maybe (Maybe Bool) -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
-findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumberString mbRegNumberStringHash mbVerified mbApprovalFilter = do
-  allActiveAssocs <- findAllActiveAssociationByFleetOwnerIds fleetOwnerIds Nothing Nothing mbRegNumberString mbRegNumberStringHash Nothing Nothing
+findAllInactiveAssociationByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Int -> Int -> Maybe Text -> Maybe DbHash -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumberString mbRegNumberStringHash = do
+  allActiveAssocs <- findAllActiveAssociationByFleetOwnerIds fleetOwnerIds Nothing Nothing mbRegNumberString mbRegNumberStringHash
   let allActiveRcIds = map (rcId . fst) allActiveAssocs
   dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
@@ -332,11 +322,6 @@ findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumber
               ( \(rcAssn, rc) ->
                   B.sqlBool_ (rc.fleetOwnerId `B.in_` (B.val_ . Just <$> fleetOwnerIds))
                     B.&&?. B.sqlBool_ (B.not_ (rcAssn.rcId `B.in_` (B.val_ . getId <$> allActiveRcIds)))
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> rc.verified B.==?. B.val_ (Just verified)) mbVerified
-                    B.&&?. case mbApprovalFilter of
-                      Nothing -> B.sqlBool_ $ B.val_ True
-                      Just Nothing -> B.sqlBool_ (B.isNothing_ rc.approved)
-                      Just (Just approved) -> rc.approved B.==?. B.val_ (Just approved)
                     B.&&?. ( maybe
                                (B.sqlBool_ $ B.val_ True)
                                (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))

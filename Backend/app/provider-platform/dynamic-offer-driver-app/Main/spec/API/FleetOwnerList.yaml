@@ -5,7 +5,6 @@ imports:
   FleetType: Domain.Types.FleetOwnerInformation
   Address: Kernel.External.Payment.Stripe.Types
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
-  ApprovalStatusFilter: Dashboard.Common.Driver
 module: FleetOwnerList
 
 types:
@@ -17,7 +16,6 @@ types:
     - fleetType: FleetType
     - enabled: Bool
     - verified: Bool
-    - approved: Maybe Bool
     - blocked: Bool
     - isEligibleForSubscription: Bool
     - address: Maybe Address
@@ -42,8 +40,5 @@ apis:
         limit: Int
         offset: Int
         docsVerificationStatus: DocsVerificationStatus
-        verified: Bool
-        approvalStatus: ApprovalStatusFilter
-        enabled: Bool
       response:
         type: "[FleetOwnerListItem]"

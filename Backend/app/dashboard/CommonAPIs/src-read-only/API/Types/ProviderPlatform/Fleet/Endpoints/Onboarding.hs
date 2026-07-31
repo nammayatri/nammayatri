@@ -145,7 +145,6 @@ data FieldInfo = FieldInfo
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fields :: Kernel.Prelude.Maybe [FieldInfo],
-    imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isMandatory :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -239,18 +238,12 @@ data Role
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 data StatusRes = StatusRes
-  { approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    blocked :: Kernel.Prelude.Bool,
-    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
-    driverDocuments :: [DocumentStatusItem],
+  { driverDocuments :: [DocumentStatusItem],
     driverLicenseDetails :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DLDetails],
     enabled :: Kernel.Prelude.Bool,
     manualVerificationRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    onboardingAs :: Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs,
-    recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
     vehicleDocuments :: [VehicleDocumentItem],
-    vehicleRegistrationCertificateDetails :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.RCDetails],
-    verified :: Kernel.Prelude.Bool
+    vehicleRegistrationCertificateDetails :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.RCDetails]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

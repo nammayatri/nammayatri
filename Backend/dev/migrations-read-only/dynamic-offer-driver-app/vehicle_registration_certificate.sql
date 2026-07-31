@@ -133,9 +133,3 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate DROP COLUMN 
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN initiated_by text ;

@@ -4,7 +4,6 @@ module Domain.Action.UI.FleetOwnerList (getFleetOwnerList) where
 
 import qualified API.Types.UI.FleetOwnerList as API
 import Control.Monad.Extra (mapMaybeM)
-import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -27,10 +26,8 @@ getFleetOwnerList ::
       Id.Id Domain.Types.Merchant.Merchant,
       Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe CommonDriver.ApprovalStatusFilter ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe DDVS.DocsVerificationStatus ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe FOI.FleetType ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
@@ -38,15 +35,13 @@ getFleetOwnerList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow [API.FleetOwnerListItem]
   )
-getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked mbDocsVerificationStatus mbEnabled mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate mbVerified = do
+getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbBlocked mbDocsVerificationStatus mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate = do
   let normalizedLimit = Just $ clampLimit $ fromMaybe 10 mbLimit
       normalizedOffset = Just $ max 0 $ fromMaybe 0 mbOffset
       targetOpCity = defaultOpCityId
-      mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
-  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset mbVerified mbApprovalFilter mbEnabled
+  fleetOwners <- QFleetOwnerInfo.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbOnlyEnabled mbBlocked mbToDate normalizedLimit normalizedOffset
   persons <- QPerson.findAllByPersonIds (Id.getId . (.fleetOwnerPersonId) <$> fleetOwners)
   let personMap = HM.fromList $ (\p -> (p.id, p)) <$> persons
   mapMaybeM (toApiItem personMap targetOpCity) fleetOwners
@@ -69,7 +64,6 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
                   fleetType = fleetOwnerInfo.fleetType,
                   enabled = fleetOwnerInfo.enabled,
                   verified = fleetOwnerInfo.verified,
-                  approved = fleetOwnerInfo.approved,
                   blocked = fleetOwnerInfo.blocked,
                   isEligibleForSubscription = fleetOwnerInfo.isEligibleForSubscription,
                   address = fleetOwnerInfo.stripeAddress,
@@ -84,8 +78,3 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
     personName person@Person.Person {..} =
       let parts = filter (not . T.null) $ catMaybes [Just firstName, middleName, lastName]
        in if null parts then Id.getId person.id else T.intercalate " " parts
-
-    approvalStatusToFilter :: CommonDriver.ApprovalStatusFilter -> Maybe Bool
-    approvalStatusToFilter CommonDriver.ApprovedOnly = Just True
-    approvalStatusToFilter CommonDriver.RejectedOnly = Just False
-    approvalStatusToFilter CommonDriver.PendingOnly = Nothing

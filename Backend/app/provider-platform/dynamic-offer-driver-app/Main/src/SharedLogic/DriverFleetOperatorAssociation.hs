@@ -15,13 +15,11 @@ module SharedLogic.DriverFleetOperatorAssociation
     adjustOperatorAnalytics,
     AssociationChangeType (..),
     performAssociationChange,
-    syncDriverOnboardingAsWithFDA,
   )
 where
 
 import qualified Data.Text as T
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
-import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverOperatorAssociation as DDOA
 import qualified Domain.Types.FleetOperatorAssociation as DFOA
 import qualified Domain.Types.Merchant as DM
@@ -50,7 +48,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -107,7 +104,6 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingFDAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
-        syncDriverOnboardingAsWithFDA existingAssociation.driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
           transporterConfig
           existingAssociation.driverId
@@ -383,13 +379,3 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
             when allowCacheDriverFlowStatus $ do
               whenJust mbActiveAssociation $ \old -> DDriverMode.decrementOperatorStatusKeyForFleetOwner old.operatorId fleetOwnerId
               DDriverMode.incrementOperatorStatusKeyForFleetOwner newOperator.id.getId fleetOwnerId
-
-syncDriverOnboardingAsWithFDA :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id DP.Person -> m ()
-syncDriverOnboardingAsWithFDA driverId =
-  Redis.withLockRedis (syncOnboardingAsLockKey driverId) 10 $ do
-    hasActive <- not . null <$> QFDA.findAllByDriverId driverId True
-    let target = if hasActive then DriverInfo.FLEET_DRIVER else DriverInfo.INDIVIDUAL
-    QDIExtra.updateOnboardingAs (Just target) driverId
-
-syncOnboardingAsLockKey :: Id DP.Person -> Text
-syncOnboardingAsLockKey driverId = "SyncDriverOnboardingAs:" <> driverId.getId

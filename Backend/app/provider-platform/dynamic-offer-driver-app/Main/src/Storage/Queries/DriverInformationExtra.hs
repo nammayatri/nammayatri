@@ -86,17 +86,25 @@ findByVerifiedAndApprovedAndEnabled merchantOpCityId isVerified mbApproved mbEna
 
       findAllWithOptionsKV [Se.And clauses] (Se.Desc BeamDI.updatedAt) (Just limit) (Just offset)
 
--- | Stamp `disabledReasonFlag = FleetDisabled` as part of a fleet-disable cascade.
---   `enabled` is not written here — the funnel derives it via the explicitlyDisabled
---   gate on the next recompute. Caller must trigger a refresh to converge state.
-markDisabledForFleetCascade :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
+-- | Disable a driver as part of a fleet-disable cascade. Flips `enabled` to
+--   False and stamps `disabledReasonFlag = FleetDisabled` so the matching
+--   re-enable cascade can find the rows it created. Kept separate from
+--   `blockReasonFlag` so dashboard/other disable sources don't collide.
+markDisabledForFleetCascade :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> m ()
 markDisabledForFleetCascade (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set BeamDI.disabledReasonFlag (Just DriverInfo.FleetDisabled),
+    [ Se.Set BeamDI.enabled False,
+      Se.Set BeamDI.disabledReasonFlag (Just DriverInfo.FleetDisabled),
       Se.Set BeamDI.updatedAt now
     ]
-    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    [ Se.And
+        [ Se.Is BeamDI.driverId (Se.Eq driverId),
+          Se.Is BeamDI.enabled (Se.Eq True)
+        ]
+    ]
+  LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+    LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set False}
 
 -- | Inverse of 'markDisabledForFleetCascade'. Re-enables a driver and clears
 --   the FleetDisabled flag only if that's the active disable reason — leaves
@@ -459,15 +467,6 @@ updateApproved approved driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.approved approved,
-      Se.Set BeamDI.updatedAt now
-    ]
-    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
-
-updateOnboardingAs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.OnboardingAs -> Id Person.Driver -> m ()
-updateOnboardingAs onboardingAs driverId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDI.onboardingAs onboardingAs,
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]

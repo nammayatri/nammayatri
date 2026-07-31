@@ -264,7 +264,6 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -315,7 +314,6 @@ import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOA
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
-import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Estimate as QEst
@@ -470,8 +468,6 @@ data DriverInformationRes = DriverInformationRes
     nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe DOVT.FleetInfo,
-    recentFleetInfo :: Maybe DOVT.FleetInfo,
-    hasActiveRc :: Bool,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney,
@@ -1066,14 +1062,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 now <- getCurrentTime
                 if now > expiryTime
                   then do
-                    SStatus.runBlockChange (cast driverId) $
-                      SStatus.Unblock
-                        SStatus.SimplePayload
-                          { SStatus.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
-                            SStatus.spMerchantId = merchantId,
-                            SStatus.spMerchantOperatingCityId = merchantOpCityId,
-                            SStatus.spBlockedBy = DTDBT.Application
-                          }
+                    QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
                   else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
@@ -1660,7 +1649,6 @@ buildFleetInfo person fda = do
   fleetPhoneNumber <- decrypt `mapM` person.mobileNumber
   fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
   mbFleetBankAccount <- QDBA.findByPrimaryKey (Id @SP.Person fda.fleetOwnerId)
-  now <- getCurrentTime
   return $
     DOVT.FleetInfo
       { id = fda.fleetOwnerId,
@@ -1671,10 +1659,7 @@ buildFleetInfo person fda = do
         requestReason = fda.requestReason,
         responseReason = fda.responseReason,
         chargesEnabled = (.chargesEnabled) <$> mbFleetBankAccount,
-        createdAt = fda.createdAt,
-        isActive = fda.isActive,
-        isAssociated = maybe False (> now) fda.associatedTill,
-        associatedTill = fda.associatedTill
+        createdAt = fda.createdAt
       }
 
 buildOperatorInfo :: (EncFlow m r, CacheFlow m r) => SP.Person -> m OperatorInfo
@@ -1784,7 +1769,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   let driverReferralApplied = isJust driverInfo.referredByDriverId
       fleetReferralApplied = isJust driverInfo.referredByFleetOwnerId
       operatorReferralApplied = isJust driverInfo.referredByOperatorId
-  hasActiveRc <- isJust <$> QRCAssociation.findActiveAssociationByDriver id True
   getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId) >>= \cfg ->
     return $
       DriverInformationRes
@@ -1817,7 +1801,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           favCount = Just driverStats.favRiderCount,
           operatorReferralCode = (.referralCode.getId) <$> operatorReferral,
           activeFleet = activeFleet,
-          recentFleetInfo = activeFleet <|> fleetRequest,
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
           onboardingAs = case activeFleet of
@@ -1837,7 +1820,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           createdAt = registeredAt,
           forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
           approved = driverInfo.approved,
-          disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           ..
         }
