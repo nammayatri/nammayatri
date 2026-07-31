@@ -806,7 +806,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         currency = searchRequest.currency,
         distanceUnit = searchRequest.distanceUnit,
         merchantOperatingCityId = Just merchantOpCityId,
-        area = SL.areaToText <$> fullFarePolicy.mbArea,
+        area = fullFarePolicy.mbArea >>= (\a -> if a == SL.Default then Nothing else Just (SL.areaToText a)),
         ..
       }
 
@@ -942,7 +942,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         mbCongestionFromLocGeohashDistance = (.mbCongestionFromLocGeohashDistance) =<< fullFarePolicy.congestionChargeData,
         mbCongestionFromLocGeohashDistancePast = (.mbCongestionFromLocGeohashDistancePast) =<< fullFarePolicy.congestionChargeData,
         mbCongestionFromLocGeohashPast = (.mbCongestionFromLocGeohashPast) =<< fullFarePolicy.congestionChargeData,
-        area = SL.areaToText <$> fullFarePolicy.mbArea,
+        area = fullFarePolicy.mbArea >>= (\a -> if a == SL.Default then Nothing else Just (SL.areaToText a)),
         ..
       }
 
