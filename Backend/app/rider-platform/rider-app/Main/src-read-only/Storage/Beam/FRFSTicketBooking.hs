@@ -66,7 +66,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     isFareChanged :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMockPayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSingleMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isSpotBooking :: B.C f Kernel.Prelude.Bool,
+    isSpotBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

@@ -139,7 +139,7 @@ types:
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
     tripId: Maybe Text
-    isSpotBooking: Bool
+    isSpotBooking: Maybe Bool
 
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
@@ -181,7 +181,7 @@ types:
     isFareChanged: Maybe Bool
     googleWalletJWTUrl: Maybe Text
     integratedBppConfigId: Id IntegratedBPPConfig
-    isSpotBooking: Bool
+    isSpotBooking: Maybe Bool
     derive: "Show"
 
   FRFSRefundAttemptAPI:
