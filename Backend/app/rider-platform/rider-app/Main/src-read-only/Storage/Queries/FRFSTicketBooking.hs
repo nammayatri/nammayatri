@@ -199,7 +199,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
   updateWithKV
     [ Se.Set Beam._type _type,
       Se.Set Beam.bookingAuthCode bookingAuthCode,
-      Se.Set Beam.isSpotBooking isSpotBooking,
       Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
       Se.Set Beam.bppBankCode bppBankCode,
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
@@ -243,6 +242,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isFareChanged isFareChanged,
       Se.Set Beam.isMockPayment isMockPayment,
       Se.Set Beam.isSingleMode isSingleMode,
+      Se.Set Beam.isSpotBooking isSpotBooking,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -283,6 +283,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleNumber vehicleNumber,
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.waybillNo waybillNo,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

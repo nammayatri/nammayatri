@@ -120,3 +120,15 @@ findAllConfirmedByTripId tripId = do
     [ Se.Is Beam.tripId $ Se.Eq (Just tripId),
       Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
     ]
+
+-- | All confirmed bookings on a waybill (across all its trips), via the dedicated waybillNo secondary key
+-- (set at booking creation from the tripId). Used to fan a waybill fleet/driver change out to the affected
+-- customer tickets.
+findAllConfirmedByWaybillNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [FRFSTicketBooking]
+findAllConfirmedByWaybillNo waybillNo = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.waybillNo $ Se.Eq (Just waybillNo),
+          Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
+        ]
+    ]

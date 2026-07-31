@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorGetOperators,
     transitOperatorUpdateWaybillStatus,
     transitOperatorUpdateWaybillFleet,
+    transitOperatorUpdateWaybillDetails,
     transitOperatorUpdateWaybillTablet,
     transitOperatorGetWaybills,
     transitOperatorGetDeviceVehicleMappingList,
@@ -156,6 +157,10 @@ transitOperatorUpdateWaybillStatus merchantShortId opCity vehicleCategory req =
 transitOperatorUpdateWaybillFleet :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillFleetReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorUpdateWaybillFleet merchantShortId opCity vehicleCategory req =
   DTOp.transitOperatorUpdateWaybillFleetUtil merchantShortId opCity vehicleCategory req
+
+transitOperatorUpdateWaybillDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillDetailsReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorUpdateWaybillDetails merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorUpdateWaybillDetailsUtil merchantShortId opCity vehicleCategory req
 
 transitOperatorUpdateWaybillTablet :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillTabletReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorUpdateWaybillTablet merchantShortId opCity vehicleCategory req =

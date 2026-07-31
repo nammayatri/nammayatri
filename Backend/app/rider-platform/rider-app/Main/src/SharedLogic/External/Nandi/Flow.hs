@@ -291,6 +291,10 @@ operatorWaybillFleet :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDu
 operatorWaybillFleet baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillFleet gtfsId req) "operatorWaybillFleet" NandiAPI.operatorWaybillFleetAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_FLEET_API") baseUrl)
 
+operatorWaybillDetails :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillDetailsReq -> m RowsAffectedResp
+operatorWaybillDetails baseUrl gtfsId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillDetails gtfsId req) "operatorWaybillDetails" NandiAPI.operatorWaybillDetailsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_DETAILS_API") baseUrl)
+
 operatorWaybillTablet :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillTabletReq -> m RowsAffectedResp
 operatorWaybillTablet baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillTablet gtfsId req) "operatorWaybillTablet" NandiAPI.operatorWaybillTabletAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_TABLET_API") baseUrl)

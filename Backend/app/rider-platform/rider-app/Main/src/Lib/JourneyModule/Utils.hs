@@ -1983,6 +1983,83 @@ makeTripIdFromWaybillNoAndTripNo :: T.Text -> Int -> T.Text
 makeTripIdFromWaybillNoAndTripNo waybillNo tripNo =
   waybillNo <> "-" <> T.pack (show tripNo)
 
+-- | The current driver + (assigned) bus for an FRFS bus ticket, as resolved from the waybill. Returned
+-- so the read path can send fresh values to the frontend in the same response (no next-poll lag), while
+-- the same values are persisted for other consumers.
+data RefreshedTicketVehicleInfo = RefreshedTicketVehicleInfo
+  { driverId :: Maybe Text,
+    driverName :: Maybe Text,
+    driverMobileNumber :: Maybe Text,
+    finalBoardedBusNumber :: Maybe Text,
+    busTagNumber :: Maybe Text,
+    -- Whether this refresh actually mutated the driver contact details / the assigned bus (number or tag).
+    -- Surfaced so a caller (e.g. the operator waybill-details fan-out) can push a customer notification
+    -- only when something the rider sees really changed, without re-diffing.
+    driverChanged :: Bool,
+    busChanged :: Bool
+  }
+
+-- | Core of the waybill refresh given already-fetched metadata: persists any driver change onto the
+-- booking and any bus/tag change onto the leg (guarded to not-yet-boarded legs), and returns the
+-- effective values plus which fields changed. Called by the operator waybill-details fan-out, which
+-- fetches the waybill metadata once and applies it to every affected booking on the waybill.
+applyWaybillMetadataToTicket ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  Maybe DJourneyLeg.JourneyLeg ->
+  NandiTypes.WaybillMetadataResponse ->
+  m RefreshedTicketVehicleInfo
+applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
+  -- Driver contact details -> booking.
+  let newDriverId = meta.driver_id <|> booking.driverId
+      newDriverName = meta.driverName <|> booking.driverName
+      newDriverMobileNumber = meta.driverMobileNumber <|> booking.driverMobileNumber
+      driverChanged = newDriverId /= booking.driverId || newDriverName /= booking.driverName || newDriverMobileNumber /= booking.driverMobileNumber
+  when driverChanged $
+    QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
+      booking.finalBoardedVehicleNumber
+      booking.finalBoardedVehicleNumberSource
+      booking.finalBoardedWaybillId
+      booking.finalBoardedScheduleNo
+      booking.finalBoardedDepotNo
+      booking.finalBoardedVehicleServiceTierType
+      booking.conductorId
+      newDriverId
+      newDriverName
+      newDriverMobileNumber
+      booking.id
+  -- Assigned bus number + its tag -> journey leg (customer reads fleetNo/busTagNumber here), guarded to
+  -- not-yet-boarded legs. The tag tracks the vehicle, so it is refreshed together with the bus number.
+  (newBusNumber, newBusTagNumber, busChanged) <- case mbJourneyLeg of
+    -- No journey leg for this booking: keep the booking's existing vehicle number so a driver-only change
+    -- notification still shows a bus number. No leg means no tag and no detectable bus change.
+    Nothing -> pure (booking.finalBoardedVehicleNumber, Nothing, False)
+    Just journeyLeg -> do
+      let canRefreshBus =
+            not (T.null meta.vehicle_no)
+              && journeyLeg.finalBoardedBusNumberSource /= Just DJourneyLeg.UserActivated
+          effectiveBus = if canRefreshBus then Just meta.vehicle_no else journeyLeg.finalBoardedBusNumber
+          -- Never erase a stored tag with a null fetched one (new vehicle may be absent from the fleet-tag
+          -- list): prefer the fetched tag, else keep the current one -- same fallback as the driver fields.
+          effectiveBusTag = if canRefreshBus then (meta.busTagNumber <|> journeyLeg.busTagNumber) else journeyLeg.busTagNumber
+          busChanged = canRefreshBus && (effectiveBus /= journeyLeg.finalBoardedBusNumber || effectiveBusTag /= journeyLeg.busTagNumber)
+      when busChanged $
+        QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag journeyLeg.id
+      pure (effectiveBus, effectiveBusTag, busChanged)
+  pure
+    RefreshedTicketVehicleInfo
+      { driverId = newDriverId,
+        driverName = newDriverName,
+        driverMobileNumber = newDriverMobileNumber,
+        finalBoardedBusNumber = newBusNumber,
+        busTagNumber = newBusTagNumber,
+        driverChanged = driverChanged,
+        busChanged = busChanged
+      }
+
 meetsSeatQuota :: Int -> Int -> Seat.Seat -> Bool
 meetsSeatQuota fromIdx toIdx seat =
   let numStops = toIdx - fromIdx

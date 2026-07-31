@@ -384,6 +384,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 tripId = firstTripId,
                 isSpotBooking = isSpotBooking',
                 vehicleNumber = quote'.vehicleNumber <|> mbVehicleNumber,
+                waybillNo = firstTripId <&> (fst . JourneyUtils.getWaybillNoAndTripNoFromTripId),
                 fromStopIdx = mbHoldCtxForAll <&> (\(_, f, _) -> f),
                 toStopIdx = mbHoldCtxForAll <&> (\(_, _, t) -> t),
                 cloudType = cloudType,

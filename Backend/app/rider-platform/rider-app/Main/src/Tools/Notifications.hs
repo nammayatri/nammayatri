@@ -1968,6 +1968,7 @@ data BusNotificationType
   | APPROACHING
   | AT_STOP
   | TRACKING_AVAILABLE_ON_START
+  | DETAILS_UPDATED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data BusNotificationEntityData = BusNotificationEntityData
@@ -1977,7 +1978,8 @@ data BusNotificationEntityData = BusNotificationEntityData
     stopCode :: Maybe Text,
     stopName :: Maybe Text,
     notificationType :: BusNotificationType,
-    journeyId :: Maybe Text
+    journeyId :: Maybe Text,
+    bookingId :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -1999,7 +2001,8 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
             stopCode = Nothing,
             stopName = Nothing,
             notificationType = TRIP_STARTED,
-            journeyId = mbJourneyId <&> (.getId)
+            journeyId = mbJourneyId <&> (.getId),
+            bookingId = Nothing
           }
   let entity = Notification.Entity Notification.Product person.id.getId entityData
       dynamicParams = BusTripStartedParam vehicleNumber routeName
@@ -2015,6 +2018,52 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
   -- Secondary channel: WhatsApp for opted-in riders (additive, best-effort).
   -- The `trip_tracking_enabled` template carries a static deep link, so no variables are passed.
   sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_BUS_TRIP_STARTED []
+
+-- | Notify a passenger that the operator changed the driver and/or the assigned bus for their upcoming
+-- FRFS bus trip (waybill-details update). Push-only. A single notification covers both fields; the
+-- `updatedField` template variable carries the three-way wording (driver details / bus number / both) so
+-- one configured template renders correctly for every case. The caller only invokes this when at least
+-- one of driver/bus actually changed.
+notifyFrfsTripDetailsUpdated ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe (Id Domain.Types.Journey.Journey) ->
+  Bool ->
+  Bool ->
+  m ()
+notifyFrfsTripDetailsUpdated person bookingId vehicleNumber routeName mbTripId mbJourneyId driverChanged busChanged = do
+  let updatedField
+        | driverChanged && busChanged = "driver and bus details"
+        | busChanged = "bus number"
+        | otherwise = "driver details"
+      entityData =
+        BusNotificationEntityData
+          { tripId = mbTripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Nothing,
+            stopName = Nothing,
+            notificationType = DETAILS_UPDATED,
+            journeyId = mbJourneyId <&> (.getId),
+            bookingId = Just bookingId
+          }
+      entity = Notification.Entity Notification.Product person.id.getId entityData
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "FRFS_TRIP_DETAILS_UPDATED" identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    [("updatedField", updatedField), ("vehicleNumber", vehicleNumber), ("routeName", routeName)]
+    Nothing
+    Nothing
+  -- Secondary channel: WhatsApp for opted-in riders (additive, best-effort). Template variables are
+  -- positional: {#updatedField#}, {#vehicleNumber#}, {#routeName#}.
+  sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_FRFS_TRIP_DETAILS_UPDATED [Just updatedField, Just vehicleNumber, Just routeName]
 
 -- | Best-effort opt-in WhatsApp template send. Sends only when the rider is enrolled (`OPT_IN`) and a
 -- non-empty template is configured for the given key in their operating city. Any miss (no phone /
@@ -2101,7 +2150,8 @@ notifyShuttleBookingConfirmed personId bookingId = do
                     stopCode = Nothing,
                     stopName = Nothing,
                     notificationType = TRACKING_AVAILABLE_ON_START,
-                    journeyId = mbJourneyId <&> (.getId)
+                    journeyId = mbJourneyId <&> (.getId),
+                    bookingId = Nothing
                   }
               entity = Notification.Entity Notification.Product person.id.getId entityData
           -- Push (primary): shuttle-only booking-confirmed + tracking-on-start reassurance.

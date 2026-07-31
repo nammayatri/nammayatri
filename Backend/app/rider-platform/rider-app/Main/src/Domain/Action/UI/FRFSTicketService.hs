@@ -107,7 +107,6 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
-import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -1720,14 +1719,18 @@ notifyBusTripStartedForTrip tripId = do
   -- Fetch all confirmed bookings for this trip
   bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
   unless (null bookings) $ do
-    -- Fetch person details for each booking
+    -- Batch-load up front instead of querying inside the loop: persons (already batched) and all journey
+    -- legs in one indexed lookup (legId is a secondary key).
     let riderIds = map (.riderId) bookings
     persons <- QP.findAllByIds riderIds
     let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+    legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) bookings)
+    let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
     -- Process all passengers sequentially in this single thread
     forM_ bookings $ \booking -> do
-      -- Get journeyId for this booking
-      mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
+      let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
+      -- journeyId comes straight off the batched leg (no extra query).
+      let mbJourneyId = (.journeyId) <$> mbJourneyLeg
       case Map.lookup booking.riderId personMap of
         Nothing -> pure ()
         Just person -> do

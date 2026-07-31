@@ -1224,6 +1224,31 @@ data UpdateWaybillFleetReq = UpdateWaybillFleetReq
 instance HideSecrets UpdateWaybillFleetReq where
   hideSecrets = identity
 
+-- | Granular update of a waybill's mutable operational fields (crew/fleet/devices) + optional status.
+-- `waybill_id` selects the row in GIMS; `waybill_no` is carried for the rider-app push fan-out (GIMS
+-- ignores it). All operational fields are optional -> only provided ones are written.
+data UpdateWaybillDetailsReq = UpdateWaybillDetailsReq
+  { waybill_id :: Value,
+    waybill_no :: Text,
+    vehicle_no :: Maybe Text,
+    driver_token_no :: Maybe Text,
+    driver_name :: Maybe Text,
+    conductor_token_no :: Maybe Text,
+    conductor_name :: Maybe Text,
+    no_of_device :: Maybe Int,
+    device_serial_number :: Maybe Text,
+    status :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToSchema, Show)
+
+-- Sparse update body: omit unset optional fields from the wire (GIMS treats absent == null via COALESCE,
+-- so this is a cleaner payload with identical semantics).
+instance ToJSON UpdateWaybillDetailsReq where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance HideSecrets UpdateWaybillDetailsReq where
+  hideSecrets = identity
+
 data UpdateWaybillTabletReq = UpdateWaybillTabletReq
   { waybill_id :: Value,
     tablet_id :: Text
@@ -1319,7 +1344,8 @@ data WaybillMetadataResponse = WaybillMetadataResponse
     serviceType :: Text,
     driver_id :: Maybe Text,
     driverName :: Maybe Text,
-    driverMobileNumber :: Maybe Text
+    driverMobileNumber :: Maybe Text,
+    busTagNumber :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
