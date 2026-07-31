@@ -172,9 +172,9 @@ Renaming or retyping one is **not**.
 
 Branch `whatsapp-booking`. The refactor decomposed a 1227-line `Engine.hs`
 monolith so a second WhatsApp flow can be built beside the booking flow.
-**Behaviour-preserving throughout** — verified against a golden-replay
-equivalence oracle at every step (see §6 for why that oracle is no longer in
-the tree).
+**Behaviour-preserving throughout** — verified against the golden-replay
+equivalence oracle in `test/` at every step (§6). **Run it before and after any
+change you make.**
 
 | Done | What |
 |---|---|
@@ -211,25 +211,35 @@ the tree).
 
 ---
 
-## 6. The oracle — removed from the tree, recoverable from history
+## 6. The oracle — `test/`, and this is what you steer by
 
 A golden-replay suite (`test/src/GoldenReplay.hs`, `test/src/CodecSpec.hs`, 18
-JSON fixtures) validated every step of this refactor: **40 tests green through
-all nine tasks.** It has been **deliberately removed from the PR head**. It is
-fully recoverable:
+JSON fixtures under `test/resources/golden/`) validated every step of this
+refactor: **40 tests green through all nine tasks.**
 
 ```bash
-# Restore the whole suite
-git checkout <commit-before-the-removal> -- Backend/lib/whatsapp-bot/test
-# Then re-enable it
-#   cabal.project already has `package whatsapp-bot / tests: True`
+cd /Users/mitran/Documents/voice/nammayatri && nix develop .#backend --command bash -c \
+  'cd Backend && cabal test whatsapp-bot --test-show-details=direct; echo CABAL_EXIT $?'
 ```
 
-**If you resume this refactor, restore it first.** Tasks in §5 were each proven
-behaviour-preserving *by* this suite; continuing without it means the next
-change is unverified.
+Expected: `All 40 tests passed`, `CABAL_EXIT 0`. Record the count before you
+start and match it after. `.github/workflows/cabal-whatsapp-bot-tests.yaml` runs
+it on PRs touching this package.
 
-### How it worked, and what it could NOT see
+**Never edit a fixture to make a test pass.** If a fixture goes red, the code is
+wrong — stop and report. That is the one unforgivable move here.
+
+Fixtures are recorded by running the pinned TypeScript reference, not
+hand-written. The emitter (`connectors/test/emit-golden.test.ts`) was authored
+during this work and **lives only in a throwaway `ny-connectors` worktree** — it
+is *not* committed anywhere. If you need to widen the fixture set, you will have
+to rewrite it. It declares scenario inputs only (merchant, phone, systemTime,
+raw webhook envelopes) with **no expectations**, and writes out whatever the
+pinned engine actually produced. Re-emitting reproduced the six original
+hand-authored fixtures byte-for-byte, which is how we know both the originals
+and the emitter are faithful.
+
+### How it works, and what it CANNOT see
 
 It fed each fixture's webhook payload through the *real* decoder, ran the *real*
 `Engine.handleMessage` against mock handles recording every call, then fired
