@@ -124,7 +124,8 @@ notifyCustomerFromDashboard customerId req = do
                 dynamicParams = EmptyDynamicParam,
                 auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
                 ttl = Nothing,
-                sound = Nothing
+                sound = Nothing,
+                overlayNotificationData = Nothing
               }
       TNotifications.notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
     API.Types.Dashboard.RideBooking.MultiModal.EMAIL ->

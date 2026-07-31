@@ -367,7 +367,7 @@ findOrCreateCustomerByMobile merchantShortId opCity mbCountryCode mobileNumber =
 
 postCustomerBulkApplyOffer :: ShortId DM.Merchant -> Context.City -> Common.BulkApplyCustomerOfferReq -> Flow [Common.BulkApplyCustomerOfferRes]
 postCustomerBulkApplyOffer merchantShortId opCity req = do
-  when (length req.customers > 200) $ throwError (InvalidRequest "Too many customers in one bulk apply request (max 200)")
+  when (length req.customers > 500) $ throwError (InvalidRequest "Too many customers in one bulk apply request (max 500)")
   forM req.customers $ \customer -> do
     result <- withTryCatch "bulkApplyOffer" $ do
       (merchant, person) <- findOrCreateCustomerByMobile merchantShortId opCity customer.mobileCountryCode customer.mobileNumber

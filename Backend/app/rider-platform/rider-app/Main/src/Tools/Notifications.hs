@@ -216,7 +216,8 @@ dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTem
                 auth = fromMaybe (Notification.Auth person.id.getId person.deviceToken person.notificationToken) notiData.auth,
                 sound = notificationSound,
                 ttl = notiData.ttl,
-                dynamicParams = dynamicParams
+                dynamicParams = dynamicParams,
+                overlayNotificationData = Nothing
               }
       --logDebug $ "DFCM - " <> show notiData.notificationKey <> " Title -> " <> show title <> " body - " <> show body
       notifyPerson person.merchantId merchantOperatingCityId person.id notificationData liveActivityReq
@@ -353,7 +354,8 @@ notifyOnRideAssigned booking ride = do
                 auth = Notification.Auth person'.id.getId person'.deviceToken person'.notificationToken,
                 sound = notificationSound,
                 ttl = Nothing,
-                dynamicParams = dynamicParams
+                dynamicParams = dynamicParams,
+                overlayNotificationData = Nothing
               }
       notifyPerson person'.merchantId person'.merchantOperatingCityId person'.id customNotificationData Nothing
 
@@ -431,7 +433,8 @@ notifyOnScheduledRideAccepted booking ride = do
             dynamicParams = RideAssignedParam driverName booking.startTime booking.id booking.isScheduled,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
-            sound = notificationSound
+            sound = notificationSound,
+            overlayNotificationData = Nothing
           }
       title = T.pack "Driver assigned!"
       body =
@@ -1278,7 +1281,8 @@ notifyOnIssueChatMessage personId payload = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
-            sound = notificationSound
+            sound = notificationSound,
+            overlayNotificationData = Nothing
           }
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData Nothing
 
@@ -1306,7 +1310,8 @@ notifyOnNewMessage booking message = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
-            sound = notificationSound
+            sound = notificationSound,
+            overlayNotificationData = Nothing
           }
       title = T.pack "Driver"
       body =
@@ -1506,7 +1511,8 @@ notifyPersonOnEvents person entityData notifType = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
-            sound = notificationSound
+            sound = notificationSound,
+            overlayNotificationData = Nothing
           }
       title = entityData.title
       body =
@@ -1619,7 +1625,8 @@ notifyOnTripUpdate booking mbRide err = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
-            sound = notificationSound
+            sound = notificationSound,
+            overlayNotificationData = Nothing
           }
       toLocationDestination = do
         loc <- maybe (TBooking.getToLocation booking.bookingDetails) (.toLocation) mbRide
@@ -1676,7 +1683,8 @@ notifyAboutScheduledRide booking title body = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
-            sound = notificationSound
+            sound = notificationSound,
+            overlayNotificationData = Nothing
           }
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
 
@@ -1703,7 +1711,8 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
                 dynamicParams = EmptyDynamicParam,
                 auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
                 ttl = Nothing,
-                sound = notificationSound
+                sound = notificationSound,
+                overlayNotificationData = Nothing
               }
       notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
   where

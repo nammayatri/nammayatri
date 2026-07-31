@@ -1061,7 +1061,10 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
-          (issueHandle.updateTicket merchantId merchantOperatingCityId issueReport.additionalTicketIds TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = mbCategoryChannelId})
+          -- issueDetails.issueId carries our IssueReport id as Xyne's threadId
+          -- (see Kernel.External.Ticket.Interface.XyneSpaces.updateTicket);
+          -- ticketId above is the provider's own opaque ticket id.
+          (issueHandle.updateTicket merchantId merchantOperatingCityId (issueReport.additionalTicketIds <|> Just ticketId) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Just TIT.UpdateIssueDetails {issueDescription = Nothing, issueId = Just issueReport.id.getId, mediaFiles = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = mbCategoryChannelId})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
@@ -1539,7 +1542,7 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
       -- 'updateTicket' (no fanout) when the handle is not wired.
       let call = case issueHandle.mbUpdateTicketOnService of
             Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq
-            Nothing -> issueHandle.updateTicket merchantId mocId Nothing ticketReq
+            Nothing -> issueHandle.updateTicket merchantId mocId (issueReport.additionalTicketIds <|> issueReport.ticketId) ticketReq
       result <- withTryCatch "updateTicket:chatMessage" call
       case result of
         Right _ -> pure ()
@@ -1598,7 +1601,7 @@ forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle mess
               }
       let call = case issueHandle.mbUpdateTicketOnService of
             Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq
-            Nothing -> issueHandle.updateTicket merchantId mocId Nothing ticketReq
+            Nothing -> issueHandle.updateTicket merchantId mocId (issueReport.additionalTicketIds <|> issueReport.ticketId) ticketReq
       result <- withTryCatch "updateTicket:operatorOrAutoChatMessage" call
       case result of
         Right _ -> pure ()
