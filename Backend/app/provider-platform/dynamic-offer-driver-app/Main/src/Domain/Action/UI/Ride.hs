@@ -258,13 +258,11 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   driverNumber <- RD.getDriverNumber rideDetail
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  riderCallingNumber <- case transporterConfig >>= DTC.driverCallingOption of
-    Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
-    _ -> pure Nothing
+  resolvedCalling <- resolveCallingNumber booking ride (transporterConfig >>= DTC.driverCallingOption) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   let goHomeReqId = ride.driverGoHomeRequestId
-  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo riderCallingNumber
+  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], Hedis.HedisLTSFlowEnv r) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
@@ -327,11 +325,9 @@ otpRideCreate driver otpCode booking clientId = do
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  riderCallingNumber <- case DTC.driverCallingOption transporterConfig of
-    Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
-    _ -> pure Nothing
+  resolvedCalling <- resolveCallingNumber booking ride (DTC.driverCallingOption transporterConfig) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo riderCallingNumber
+  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
@@ -558,16 +554,16 @@ shouldShareRiderMobileNumber :: DTC.CallingOption -> Bool -> Bool
 shouldShareRiderMobileNumber option riderConsented =
   riderConsented && (option == DTC.DirectCall || option == DTC.DualCall)
 
-getRiderMobileNumber ::
+allowsDirectCalling :: DTC.CallingOption -> Bool
+allowsDirectCalling option = option == DTC.DirectCall || option == DTC.DualCall
+
+getRiderNumbers ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
   DTC.CallingOption ->
-  m (Maybe Text)
-getRiderMobileNumber booking option
-  -- If the calling option forbids sharing regardless of consent, skip the RiderDetails
-  -- read entirely: this path runs on every active-ride details fetch, and AnonymousCall
-  -- is the config default. Sharing must stay routed through shouldShareRiderMobileNumber.
-  | not (shouldShareRiderMobileNumber option True) = pure Nothing
+  m (Maybe (Text, Text, Bool))
+getRiderNumbers booking option
+  | not (allowsDirectCalling option) = pure Nothing
   | otherwise =
     case booking.riderId of
       Nothing -> pure Nothing
@@ -575,10 +571,33 @@ getRiderMobileNumber booking option
         mbRider <- QRID.findById riderId
         case mbRider of
           Nothing -> pure Nothing
-          Just rider ->
-            if shouldShareRiderMobileNumber option rider.consentToShareMobileNumber
-              then Just <$> decrypt rider.mobileNumber
-              else pure Nothing
+          Just rider -> do
+            bareNumber <- decrypt rider.mobileNumber
+            pure $ Just (bareNumber, rider.mobileCountryCode, maybe True (shouldShareRiderMobileNumber option) rider.consentToShareMobileNumber)
+
+resolveCallingNumber ::
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  DRB.Booking ->
+  DRide.Ride ->
+  Maybe DTC.CallingOption ->
+  Text ->
+  m RideCommon.ResolvedCalling
+resolveCallingNumber booking ride mbOption exoPhone = do
+  mbNumbers <- case mbOption of
+    Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderNumbers booking option
+    _ -> pure Nothing
+  let anonymous = RideCommon.CallingNumberAPIEntity {number = exoPhone, countryCode = Nothing, numberType = RideCommon.ANONYMOUS}
+  pure $ case mbNumbers of
+    Nothing ->
+      RideCommon.ResolvedCalling {riderMobileNumber = Nothing, callingNumber = anonymous}
+    Just (bareNumber, riderCountryCode, mayDialDirectly) ->
+      RideCommon.ResolvedCalling
+        { riderMobileNumber = Just bareNumber,
+          callingNumber =
+            if mayDialDirectly
+              then RideCommon.CallingNumberAPIEntity {number = bareNumber, countryCode = Just riderCountryCode, numberType = RideCommon.DIRECT}
+              else anonymous
+        }
 
 setDriverGpsTurnedOff :: Id DRide.Ride -> Flow APISuccess
 setDriverGpsTurnedOff rideId = do

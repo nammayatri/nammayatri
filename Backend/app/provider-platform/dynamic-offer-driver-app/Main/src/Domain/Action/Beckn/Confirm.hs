@@ -78,7 +78,7 @@ data DConfirmReq = DConfirmReq
     toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool,
-    consentToShareMobileNumber :: Bool,
+    consentToShareMobileNumber :: Maybe Bool,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,

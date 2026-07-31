@@ -336,7 +336,7 @@ handler ValidatedDSearchReq {..} sReq = do
         case sReq.customerPhoneNum of
           Just number -> do
             -- consent tag is only emitted at confirm, not search, so no consent to record yet here
-            (riderDetails, isNewRider) <- SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False False
+            (riderDetails, isNewRider) <- SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False Nothing
             when isNewRider $ QRD.create riderDetails
             return riderDetails.cancellationDues
           Nothing -> do

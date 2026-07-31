@@ -13,6 +13,10 @@ module Domain.Action.UI.Ride.Common
     EarningsLabels (..),
     fetchEarningsLabels,
     mkDriverRideRes,
+    CallingNumberType (..),
+    CallingNumberAPIEntity (..),
+    ResolvedCalling (..),
+    mkExoPhone,
     Stop (..),
     DeliveryPersonDetailsAPIEntity (..),
     mkLocationFromLocationMapping,
@@ -103,6 +107,21 @@ data Stop = Stop
 data BookingType = CURRENT | ADVANCED
   deriving stock (Eq, Show, Generic, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CallingNumberType = DIRECT | ANONYMOUS
+  deriving (Show, Eq, Generic, FromJSON, ToJSON, ToSchema)
+
+data CallingNumberAPIEntity = CallingNumberAPIEntity
+  { number :: Text,
+    countryCode :: Maybe Text,
+    numberType :: CallingNumberType
+  }
+  deriving (Show, Eq, Generic, FromJSON, ToJSON, ToSchema)
+
+data ResolvedCalling = ResolvedCalling
+  { riderMobileNumber :: Maybe Text,
+    callingNumber :: CallingNumberAPIEntity
+  }
 
 -- DriverRideRes type (partial, add all fields as in Ride.hs)
 data DriverRideRes = DriverRideRes
@@ -196,6 +215,7 @@ data DriverRideRes = DriverRideRes
     insuredAmount :: Maybe Text,
     isPetRide :: Bool,
     riderMobileNumber :: Maybe Text,
+    callingNumber :: CallingNumberAPIEntity,
     paymentInstrument :: Maybe DMPM.PaymentInstrument,
     paymentMode :: Maybe DMPM.PaymentMode,
     commissionCharges :: Maybe HighPrecMoney,
@@ -411,6 +431,13 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "NET_DRIVER_EARNINGS"
     <*> resolveLabel lang "FARE"
 
+mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
+mkExoPhone mbExophone booking =
+  maybe
+    booking.primaryExophone
+    (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone)
+    mbExophone
+
 mkDriverRideRes ::
   ( EncFlow m r,
     LYBF.BeamFlow m r,
@@ -428,9 +455,9 @@ mkDriverRideRes ::
   Maybe DI.DriverInformation ->
   Bool ->
   [DSI.StopInformation] ->
-  Maybe Text ->
+  ResolvedCalling ->
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
   let estimatedFareParams = booking.fareParams
       estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
@@ -517,7 +544,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         rideRating = rideRating <&> (.ratingValue),
         chargeableDistance = ride.chargeableDistance,
         chargeableDistanceWithUnit = convertMetersToDistance ride.distanceUnit <$> ride.chargeableDistance,
-        exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+        exoPhone = mkExoPhone mbExophone booking,
         customerExtraFee = roundToIntegral <$> estimatedFareParams.customerExtraFee,
         customerExtraFeeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.customerExtraFee,
         bapName = bapMetadata <&> (.name),
@@ -569,7 +596,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         isInsured = Just $ ride.isInsured,
         insuredAmount = ride.insuredAmount,
         isPetRide = booking.isPetRide,
-        riderMobileNumber = mbRiderMobileNumber,
+        riderMobileNumber = resolvedCalling.riderMobileNumber,
+        callingNumber = resolvedCalling.callingNumber,
         billingCategory = booking.billingCategory,
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,

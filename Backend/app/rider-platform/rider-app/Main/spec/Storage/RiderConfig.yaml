@@ -251,6 +251,7 @@ RiderConfig:
     nearbyBusSearchRadius: Maybe Double
     enableOnlinePaymentRide: Maybe Bool
     enableEditLocationWithoutRide: Maybe Bool
+    enableShareNumberWithDriver: Maybe Bool
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
@@ -515,6 +516,7 @@ RiderConfig:
     validateSetOnboardingVehicleRequest: "false"
     enableOnlinePaymentRide: "false"
     enableEditLocationWithoutRide: "true"
+    enableShareNumberWithDriver: "false"
     kafkaTopicName: "'gps-data'"
   queries:
     findByMerchantOperatingCityId:

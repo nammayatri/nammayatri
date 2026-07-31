@@ -81,7 +81,7 @@ data OnInitRes = OnInitRes
     merchant :: DM.Merchant,
     city :: Context.City,
     nightSafetyCheck :: Bool,
-    consentToShareMobileNumber :: Bool,
+    consentToShareMobileNumber :: Maybe Bool,
     isValueAddNP :: Bool,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
@@ -160,7 +160,10 @@ onInit req = do
             paymentInstrument = booking.paymentInstrument,
             merchant = merchant,
             nightSafetyCheck = checkSafetySettingConstraint (Just $ convertToPersonRideShareOptions safetySettings.enableUnexpectedEventsCheck) riderConfig now,
-            consentToShareMobileNumber = fromMaybe False safetySettings.consentToShareMobileNumber,
+            consentToShareMobileNumber =
+              if fromMaybe False riderConfig.enableShareNumberWithDriver
+                then Just (fromMaybe False safetySettings.consentToShareMobileNumber)
+                else Nothing,
             enableFrequentLocationUpdates = checkSafetySettingConstraint (convertToPersonRideShareOptions <$> safetySettings.aggregatedRideShareSetting) riderConfig now,
             paymentId = req.paymentId,
             enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
@@ -253,7 +256,10 @@ buildOnInitResFromBooking bookingId = do
         merchant,
         city,
         nightSafetyCheck = checkSafetySettingConstraint (Just $ convertToPersonRideShareOptions safetySettings.enableUnexpectedEventsCheck) riderConfig now,
-        consentToShareMobileNumber = fromMaybe False safetySettings.consentToShareMobileNumber,
+        consentToShareMobileNumber =
+          if fromMaybe False riderConfig.enableShareNumberWithDriver
+            then Just (fromMaybe False safetySettings.consentToShareMobileNumber)
+            else Nothing,
         isValueAddNP,
         enableFrequentLocationUpdates = checkSafetySettingConstraint (convertToPersonRideShareOptions <$> safetySettings.aggregatedRideShareSetting) riderConfig now,
         paymentId = Nothing,

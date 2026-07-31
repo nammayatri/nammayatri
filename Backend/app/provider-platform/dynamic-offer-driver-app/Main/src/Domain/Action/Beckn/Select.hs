@@ -85,7 +85,7 @@ handler merchant sReq searchReq estimates = do
     Just number -> do
       let mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
       -- consent tag is only emitted at confirm, not select, so no consent to record yet here
-      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number searchReq.bapId False False
+      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number searchReq.bapId False Nothing
       when isNewRider $ QRD.create riderDetails
       when sReq.toUpdateDeviceIdInfo do
         let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist

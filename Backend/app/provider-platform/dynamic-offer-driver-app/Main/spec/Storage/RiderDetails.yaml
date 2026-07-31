@@ -48,7 +48,7 @@ RiderDetails:
     isFlagConfirmed: Maybe Bool
     bapId: Maybe Text
     riderFlaggedForDriverIncentives: Bool
-    consentToShareMobileNumber: Bool
+    consentToShareMobileNumber: Maybe Bool
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -62,7 +62,6 @@ RiderDetails:
     noOfTimesWaiveOffUsed: fromMaybe 0 noOfTimesWaiveOffUsed|E
     waivedOffAmount: fromMaybe 0 waivedOffAmount|E
     riderFlaggedForDriverIncentives: fromMaybe False riderFlaggedForDriverIncentives|E
-    consentToShareMobileNumber: fromMaybe False consentToShareMobileNumber|E
 
   toTType:
     currency: Kernel.Prelude.Just|I
@@ -76,7 +75,6 @@ RiderDetails:
     noOfTimesWaiveOffUsed: Kernel.Prelude.Just|I
     waivedOffAmount: Kernel.Prelude.Just|I
     riderFlaggedForDriverIncentives: Kernel.Prelude.Just|I
-    consentToShareMobileNumber: Kernel.Prelude.Just|I
 
   beamType:
     currency: Maybe Currency

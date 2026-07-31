@@ -79,6 +79,7 @@ data RiderConfig = RiderConfig
     enableRewardsManagement :: Kernel.Prelude.Bool,
     enableRideEndOffers :: Kernel.Prelude.Bool,
     enableRideHailingOffers :: Kernel.Prelude.Bool,
+    enableShareNumberWithDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
     excludedVehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
     executePaymentDelay :: Kernel.Prelude.NominalDiffTime,

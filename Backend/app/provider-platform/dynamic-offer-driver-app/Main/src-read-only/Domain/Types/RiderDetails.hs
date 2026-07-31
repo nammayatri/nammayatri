@@ -21,7 +21,7 @@ data RiderDetailsE e = RiderDetails
     cancellationDuesPaid :: Kernel.Types.Common.HighPrecMoney,
     cancelledRides :: Kernel.Prelude.Int,
     completedRides :: Kernel.Prelude.Int,
-    consentToShareMobileNumber :: Kernel.Prelude.Bool,
+    consentToShareMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     disputeChancesUsed :: Kernel.Prelude.Int,
