@@ -52,7 +52,6 @@ import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
-import qualified JsonLogic
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types
@@ -80,14 +79,17 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -107,6 +109,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
@@ -130,6 +133,10 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   when (null passCategories) $
     logError $ "getMultimodalPassAvailablePasses: no pass categories for mocId " <> person.merchantOperatingCityId.getId
 
+  localTime <- getLocalCurrentTime (19800 :: Seconds)
+  (eligibilityLogics, _mbVersion) <-
+    TDL.getAppDynamicLogic (Id.cast person.merchantOperatingCityId) LYT.PASS_PURCHASE_ELIGIBILITY localTime Nothing Nothing
+
   forM passCategories $ \category -> do
     passTypes <- CQPassType.findAllByPassCategoryId category.id
     when (null passTypes) $
@@ -144,7 +151,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
     let flatPasses = concatMap snd allPasses
     -- Isolate per-pass failures so one bad pass cannot fail the whole response.
     passAPIEntities <- flip mapMaybeM flatPasses $ \pass ->
-      withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person pass)
+      withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
         >>= either (const (pure Nothing)) (pure . Just)
 
     return $
@@ -525,9 +532,10 @@ buildPassTypeAPIEntity passType =
 buildPassAPIEntity ::
   Maybe Lang.Language ->
   DP.Person ->
+  [A.Value] ->
   DPass.Pass ->
   Environment.Flow PassAPI.PassAPIEntity
-buildPassAPIEntity mbLanguage person pass = do
+buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
   passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
 
   mbPassDetails <-
@@ -535,25 +543,26 @@ buildPassAPIEntity mbLanguage person pass = do
       Just DPassType.StudentPass -> B.runInReplica $ QPassDetails.findByPersonId person.id DPassType.StudentPass
       _ -> return Nothing
 
-  -- Create person data for eligibility check with relevant fields
-  let personData =
-        A.object
-          [ "id" A..= (person.id.getId :: Text),
-            "gender" A..= (show person.gender :: Text),
-            "dateOfBirth" A..= person.dateOfBirth,
-            "city" A..= (show person.currentCity :: Text),
-            "merchantOperatingCityId" A..= (person.merchantOperatingCityId.getId :: Text),
-            "hasDisability" A..= person.hasDisability,
-            "customerNammaTags" A..= person.customerNammaTags,
-            "aadhaarVerified" A..= (person.aadhaarVerified :: Bool),
-            "enabled" A..= (person.enabled :: Bool),
-            "blocked" A..= (person.blocked :: Bool),
-            "verificationStatus" A..= ((.verificationStatus) <$> mbPassDetails),
-            "numberOfStages" A..= ((.numberOfStages) =<< mbPassDetails)
-          ]
-
-  -- Check purchase eligibility using JSON logic
-  eligibility <- checkEligibility pass.purchaseEligibilityJsonLogic personData
+  let eligibilityData =
+        SLE.PassEligibilityData
+          { passId = pass.id.getId,
+            passCode = pass.code,
+            passEnum = passType.passEnum,
+            personId = person.id.getId,
+            gender = T.pack (show person.gender),
+            dateOfBirth = person.dateOfBirth,
+            city = T.pack (show person.currentCity),
+            merchantOperatingCityId = person.merchantOperatingCityId.getId,
+            hasDisability = person.hasDisability,
+            customerNammaTags = person.customerNammaTags,
+            aadhaarVerified = person.aadhaarVerified,
+            enabled = person.enabled,
+            blocked = person.blocked,
+            verificationStatus = (.verificationStatus) <$> mbPassDetails,
+            numberOfStages = (.numberOfStages) =<< mbPassDetails
+          }
+  eligibilityResult <- SLE.checkPassPurchaseEligibility person.merchantOperatingCityId eligibilityLogics eligibilityData
+  let eligibility = eligibilityResult.eligible
 
   -- Get pass amount: use pricing tiers if verified organization holder, else default pass amount
   let mbTierAmount = do
@@ -672,24 +681,6 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         formVerificationConfig = Nothing,
         referenceNumber = Nothing
       }
-
--- Check eligibility using JSON logic rules
-checkEligibility :: (MonadFlow m) => [A.Value] -> A.Value -> m Bool
-checkEligibility logics personData = do
-  if null logics
-    then return True -- If no rules defined, consider eligible
-    else do
-      -- Evaluate all JSON logic rules against person data
-      results <- forM logics $ \logic -> do
-        let result = JsonLogic.jsonLogicEither logic personData
-        case result of
-          Right (A.Bool b) -> return b
-          Right _ -> return False -- Non-boolean results considered as False
-          Left err -> do
-            logError $ "JSON logic evaluation error: " <> show err
-            return False -- Errors considered as not eligible
-            -- All rules must be True for eligibility
-      return $ and results
 
 -- Build PurchasedPass API Entity
 buildPurchasedPassAPIEntity ::

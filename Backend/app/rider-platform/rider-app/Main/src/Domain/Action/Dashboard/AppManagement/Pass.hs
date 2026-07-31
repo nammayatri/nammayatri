@@ -9,6 +9,10 @@ module Domain.Action.Dashboard.AppManagement.Pass
     postPassCustomerPassUpdateProfilePicture,
     getPassCustomerPassPhoto,
     postPassCustomerPassRestore,
+    listPassCatalog,
+    createPass,
+    updatePass,
+    deletePass,
   )
 where
 
@@ -19,6 +23,7 @@ import qualified "this" Domain.Action.UI.Pass as DPass
 import qualified Domain.Action.UI.Payment as UIPayment
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Pass
+import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
@@ -33,15 +38,22 @@ import qualified Kernel.External.Types as Lang
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Pass as CQPass
+import qualified Storage.CachedQueries.PassCategory as CQPassCategory
+import qualified Storage.CachedQueries.PassType as CQPassType
+import qualified Storage.Queries.Pass as QPass
+import qualified Storage.Queries.PassExtra as QPassExtra
+import qualified Storage.Queries.PassTypeExtra as QPassType
 import qualified Storage.Queries.Person as QP
 import qualified Tools.ActorInfo as ActorInfo
+import Tools.Error
 
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Lang.Language -> Environment.Flow [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId _opCity personId language = do
@@ -100,3 +112,158 @@ postPassCustomerPassRestore merchantShortId _opCity personId = do
       PassRestore.restorePurchasedPassesIfNeeded person mobileNumber
       pure Kernel.Types.APISuccess.Success
     Nothing -> throwError $ InvalidRequest "Person has no mobile number, cannot restore passes"
+
+listPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.PassCatalogItem])
+listPassCatalog merchantShortId opCity mbEnable mbPassTypeId = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  categories <- CQPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  passTypes <- case mbPassTypeId of
+    Just passTypeId ->
+      CQPassType.findById passTypeId
+        <&> maybeToList . mfilter ((== merchantOperatingCity.id) . (.merchantOperatingCityId))
+    Nothing -> concat <$> mapM (CQPassType.findAllByPassCategoryId . (.id)) categories
+  let categoryNameById = map (\c -> (c.id, c.name)) categories
+      enableFilters = maybe [True, False] (: []) mbEnable
+  fmap concat $
+    forM passTypes $ \passType -> do
+      passes <- concat <$> mapM (CQPass.findAllByPassTypeIdAndEnabled passType.id) enableFilters
+      pure $ map (mkPassCatalogItem passType (Kernel.Prelude.lookup passType.passCategoryId categoryNameById)) passes
+
+mkPassCatalogItem :: Domain.Types.PassType.PassType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassCatalogItem
+mkPassCatalogItem passType mbCategoryName passRow =
+  API.Types.Dashboard.AppManagement.Pass.PassCatalogItem
+    { id = passRow.id,
+      passTypeId = passRow.passTypeId,
+      passTypeTitle = passType.title,
+      passCategoryName = fromMaybe "" mbCategoryName,
+      code = passRow.code,
+      name = passRow.name,
+      description = passRow.description,
+      amount = passRow.amount,
+      benefitDescription = passRow.benefitDescription,
+      benefit = passRow.benefit,
+      applicableVehicleServiceTiers = passRow.applicableVehicleServiceTiers,
+      documentsRequired = passRow.documentsRequired,
+      pricingTiers = passRow.pricingTiers,
+      maxValidTrips = passRow.maxValidTrips,
+      maxValidDays = passRow.maxValidDays,
+      verificationValidity = passRow.verificationValidity,
+      order = passRow.order,
+      enable = passRow.enable,
+      autoApply = passRow.autoApply,
+      maxSwitchCount = (.maxSwitchCount) <$> passRow.passConfig,
+      minFare = passRow.minFare,
+      maxFare = passRow.maxFare,
+      formVerificationConfig = passRow.formVerificationConfig
+    }
+
+createPass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.PassCreateReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassCreateResp)
+createPass merchantShortId opCity req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  passType <- QPassType.findById req.passTypeId >>= fromMaybeM (PassTypeNotFound req.passTypeId.getId)
+  -- A pass under a pass type belonging to another city would be invisible to the
+  -- city-scoped catalog walk, so reject rather than create an orphan row.
+  unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass type " <> req.passTypeId.getId <> " does not belong to city " <> show opCity)
+  whenJustM (QPassExtra.findByCodeAndMerchantOperatingCityId req.code merchantOperatingCity.id) $ \_ ->
+    throwError (InvalidRequest $ "Pass with code " <> req.code <> " already exists in this city")
+  passId <- generateGUID
+  now <- getCurrentTime
+  let passRow =
+        Domain.Types.Pass.Pass
+          { id = passId,
+            passTypeId = req.passTypeId,
+            code = req.code,
+            name = req.name,
+            description = req.description,
+            amount = req.amount,
+            benefitDescription = req.benefitDescription,
+            benefit = req.benefit,
+            applicableVehicleServiceTiers = req.applicableVehicleServiceTiers,
+            documentsRequired = req.documentsRequired,
+            pricingTiers = req.pricingTiers,
+            maxValidTrips = req.maxValidTrips,
+            maxValidDays = req.maxValidDays,
+            verificationValidity = fromMaybe (Seconds 9000) req.verificationValidity,
+            order = req.order,
+            enable = req.enable,
+            autoApply = req.autoApply,
+            passConfig = Domain.Types.Pass.PassConfig <$> req.maxSwitchCount,
+            minFare = req.minFare,
+            maxFare = req.maxFare,
+            formVerificationConfig = req.formVerificationConfig,
+            purchaseEligibilityJsonLogic = [],
+            redeemEligibilityJsonLogic = [],
+            merchantId = merchant.id,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            createdAt = now,
+            updatedAt = now
+          }
+  QPass.create passRow
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  pure $ API.Types.Dashboard.AppManagement.Pass.PassCreateResp {passId = passId}
+
+updatePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+updatePass merchantShortId opCity passId req = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  passRow <- QPass.findByPrimaryKey passId >>= fromMaybeM (PassNotFound passId.getId)
+  unless (passRow.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass " <> passId.getId <> " does not belong to city " <> show opCity)
+  whenJust req.passTypeId $ \newPassTypeId -> do
+    passType <- QPassType.findById newPassTypeId >>= fromMaybeM (PassTypeNotFound newPassTypeId.getId)
+    unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
+      throwError (InvalidRequest $ "Pass type " <> newPassTypeId.getId <> " does not belong to city " <> show opCity)
+  whenJust (mfilter (/= passRow.code) req.code) $ \newCode ->
+    whenJustM (QPassExtra.findByCodeAndMerchantOperatingCityId newCode merchantOperatingCity.id) $ \_ ->
+      throwError (InvalidRequest $ "Pass with code " <> newCode <> " already exists in this city")
+  now <- getCurrentTime
+  let updatedPass =
+        passRow
+          { Domain.Types.Pass.passTypeId = fromMaybe passRow.passTypeId req.passTypeId,
+            Domain.Types.Pass.code = fromMaybe passRow.code req.code,
+            Domain.Types.Pass.name = req.name <|> passRow.name,
+            Domain.Types.Pass.description = req.description <|> passRow.description,
+            Domain.Types.Pass.amount = fromMaybe passRow.amount req.amount,
+            Domain.Types.Pass.benefitDescription = fromMaybe passRow.benefitDescription req.benefitDescription,
+            Domain.Types.Pass.benefit = req.benefit <|> passRow.benefit,
+            Domain.Types.Pass.applicableVehicleServiceTiers = fromMaybe passRow.applicableVehicleServiceTiers req.applicableVehicleServiceTiers,
+            Domain.Types.Pass.documentsRequired = fromMaybe passRow.documentsRequired req.documentsRequired,
+            Domain.Types.Pass.pricingTiers = req.pricingTiers <|> passRow.pricingTiers,
+            Domain.Types.Pass.maxValidTrips = req.maxValidTrips <|> passRow.maxValidTrips,
+            Domain.Types.Pass.maxValidDays = req.maxValidDays <|> passRow.maxValidDays,
+            Domain.Types.Pass.verificationValidity = fromMaybe passRow.verificationValidity req.verificationValidity,
+            Domain.Types.Pass.order = fromMaybe passRow.order req.order,
+            Domain.Types.Pass.enable = fromMaybe passRow.enable req.enable,
+            Domain.Types.Pass.autoApply = fromMaybe passRow.autoApply req.autoApply,
+            Domain.Types.Pass.passConfig = (Domain.Types.Pass.PassConfig <$> req.maxSwitchCount) <|> passRow.passConfig,
+            Domain.Types.Pass.minFare = req.minFare <|> passRow.minFare,
+            Domain.Types.Pass.maxFare = req.maxFare <|> passRow.maxFare,
+            Domain.Types.Pass.formVerificationConfig = req.formVerificationConfig <|> passRow.formVerificationConfig,
+            Domain.Types.Pass.updatedAt = now
+          }
+  QPass.updateByPrimaryKey updatedPass
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  CQPass.clearCacheByPassTypeIdAndEnabled updatedPass.passTypeId updatedPass.enable
+  pure Kernel.Types.APISuccess.Success
+
+-- | Soft delete (enable = false) so purchased_pass rows keep their pass reference.
+deletePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deletePass merchantShortId opCity passId = do
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  passRow <- QPass.findByPrimaryKey passId >>= fromMaybeM (PassNotFound passId.getId)
+  unless (passRow.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass " <> passId.getId <> " does not belong to city " <> show opCity)
+  now <- getCurrentTime
+  QPass.updateByPrimaryKey passRow {Domain.Types.Pass.enable = False, Domain.Types.Pass.updatedAt = now}
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
+  pure Kernel.Types.APISuccess.Success
