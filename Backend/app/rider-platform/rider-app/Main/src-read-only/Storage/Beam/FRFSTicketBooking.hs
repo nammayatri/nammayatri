@@ -107,6 +107,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    waybillNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
@@ -118,6 +119,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId], ['tripId]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

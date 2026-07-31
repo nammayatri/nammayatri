@@ -27,7 +27,6 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
             bookingAuthCode = bookingAuthCode,
-            isSpotBooking = isSpotBooking,
             bppBankAccountNumber = bppBankAccountNumber,
             bppBankCode = bppBankCode,
             bppDelayedInterest = bppDelayedInterest,
@@ -71,6 +70,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             isFareChanged = isFareChanged,
             isMockPayment = isMockPayment,
             isSingleMode = isSingleMode,
+            isSpotBooking = isSpotBooking,
             journeyOnInitDone = journeyOnInitDone,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -109,6 +109,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             validTill = validTill,
             vehicleNumber = vehicleNumber,
             vehicleType = vehicleType,
+            waybillNo = waybillNo,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -118,7 +119,6 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
         Beam.bookingAuthCode = bookingAuthCode,
-        Beam.isSpotBooking = isSpotBooking,
         Beam.bppBankAccountNumber = bppBankAccountNumber,
         Beam.bppBankCode = bppBankCode,
         Beam.bppDelayedInterest = bppDelayedInterest,
@@ -163,6 +163,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.isFareChanged = isFareChanged,
         Beam.isMockPayment = isMockPayment,
         Beam.isSingleMode = isSingleMode,
+        Beam.isSpotBooking = isSpotBooking,
         Beam.journeyOnInitDone = journeyOnInitDone,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
@@ -203,6 +204,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.validTill = validTill,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleType = vehicleType,
+        Beam.waybillNo = waybillNo,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

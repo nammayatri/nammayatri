@@ -71,7 +71,10 @@ getWaybillMetadata ::
   Text ->
   IntegratedBPPConfig ->
   m WaybillMetadataResponse
-getWaybillMetadata waybillNo integratedBPPConfig = IM.withInMemCache ["getWaybillMetadata", integratedBPPConfig.id.getId, waybillNo] 43200 $ do
+-- TTL kept short (30s) so an operator changing the driver on a waybill is reflected on customer
+-- tickets within ~half a minute. Keyed by waybill, so one GIMS read is shared across all tickets/polls.
+-- (Kernel.Storage.InMem is TTL-evicted with no cross-instance invalidation, so the TTL is the bound.)
+getWaybillMetadata waybillNo integratedBPPConfig = IM.withInMemCache ["getWaybillMetadata", integratedBPPConfig.id.getId, waybillNo] 30 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getWaybillMetadata baseUrl integratedBPPConfig.feedKey waybillNo
 

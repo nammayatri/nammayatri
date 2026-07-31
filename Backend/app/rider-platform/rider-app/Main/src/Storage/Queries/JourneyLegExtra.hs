@@ -24,6 +24,27 @@ import Storage.Queries.OrphanInstances.JourneyLeg
 import qualified Storage.Queries.RouteDetails as RD
 
 -- Extra code goes here --
+
+-- | Targeted update of the (assigned) boarded bus number and its tag number on a journey leg. Used to
+-- reflect an operator swapping the bus on a waybill onto the customer's ticket (fleetNo + busTagNumber).
+-- Scoped to these columns so it does not clobber concurrent writes the way a whole-row updateByPrimaryKey
+-- would.
+updateFinalBoardedBusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id JL.JourneyLeg -> m ()
+updateFinalBoardedBusById finalBoardedBusNumber busTagNumber id = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
+      Se.Set Beam.busTagNumber busTagNumber,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+-- | Batch variant of 'findByLegSearchId': fetch all legs for a set of leg-search ids in one indexed
+-- lookup (legId is a secondary key), so callers looping over many bookings avoid an N+1 of per-booking
+-- reads.
+findAllByLegSearchIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Kernel.Prelude.Text] -> m [JL.JourneyLeg]
+findAllByLegSearchIds legSearchIds = findAllWithKV [Se.Is Beam.legId $ Se.In (map Just legSearchIds)]
+
 create' :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (JL.JourneyLeg -> m ())
 create' = createWithKV
 

@@ -9,6 +9,7 @@ imports:
   NandiTripDetail: SharedLogic.External.Nandi.Types
   UpdateWaybillStatusReq: SharedLogic.External.Nandi.Types
   UpdateWaybillFleetReq: SharedLogic.External.Nandi.Types
+  UpdateWaybillDetailsReq: SharedLogic.External.Nandi.Types
   UpdateWaybillTabletReq: SharedLogic.External.Nandi.Types
   RowsAffectedResp: SharedLogic.External.Nandi.Types
   NandiTable: SharedLogic.External.Nandi.Types
@@ -277,6 +278,17 @@ apis:
         vehicleCategory: VehicleCategory
       request:
         type: UpdateWaybillFleetReq
+      response:
+        type: RowsAffectedResp
+
+  - POST:
+      endpoint: /waybillDetails
+      name: TransitOperatorUpdateWaybillDetails
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      request:
+        type: UpdateWaybillDetailsReq
       response:
         type: RowsAffectedResp
 

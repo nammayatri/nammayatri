@@ -451,6 +451,7 @@ FRFSTicketBooking:
     toStopIdx: Maybe Int
     holdId: Maybe Text
     tripId: Maybe Text
+    waybillNo: Maybe Text
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
@@ -518,6 +519,7 @@ FRFSTicketBooking:
     riderId: "!SecondaryKey"
     quoteId: SecondaryKey
     tripId: "!SecondaryKey"
+    waybillNo: "!SecondaryKey"
 
   queries:
     findById:
@@ -623,6 +625,7 @@ FRFSTicketBooking:
 
   extraIndexes:
     - columns: [tripId]
+    - columns: [waybillNo]
 
   extraOperations:
     - EXTRA_QUERY_FILE

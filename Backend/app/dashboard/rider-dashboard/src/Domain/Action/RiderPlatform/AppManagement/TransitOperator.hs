@@ -23,6 +23,7 @@ module Domain.Action.RiderPlatform.AppManagement.TransitOperator
     transitOperatorGetOperators,
     transitOperatorUpdateWaybillStatus,
     transitOperatorUpdateWaybillFleet,
+    transitOperatorUpdateWaybillDetails,
     transitOperatorUpdateWaybillTablet,
     transitOperatorGetWaybills,
     transitOperatorQueryRows,
@@ -254,3 +255,9 @@ transitOperatorExportRouteStopMapping :: (Kernel.Types.Id.ShortId Domain.Types.M
 transitOperatorExportRouteStopMapping merchantShortId opCity apiTokenInfo vehicleCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorExportRouteStopMapping) vehicleCategory
+
+transitOperatorUpdateWaybillDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillDetailsReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorUpdateWaybillDetails merchantShortId opCity apiTokenInfo vehicleCategory req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorUpdateWaybillDetails) vehicleCategory req)
