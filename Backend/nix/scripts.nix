@@ -339,9 +339,8 @@ _:
 
             function applyHint {
             while read -r fileName; do
-            prefix="''${FLAKE_ROOT}/"
-            if "$2" || (git diff --name-only | grep "''${fileName/#$prefix}")
-            then
+                # skips the blank line bash yields on empty input, and paths deleted by git diff
+                [ -f "$fileName" ] || continue
                 # recursive because sometimes we have hints inside of other hints
                 for i in {1..3}
                 do
@@ -350,15 +349,13 @@ _:
                         echo "No hints found: loop $i; file: $fileName"
                         break
                     else
-                        # FIXME avoid creating extra file
                         echo "Applying redundant bracket hints automatically: loop $i; file: $fileName"
-                        hlint --refactor --only "Redundant bracket" "$fileName" > "$fileName".tmp
-                        cp "$fileName".tmp "$fileName"
-                        rm "$fileName".tmp
+                        hlint --refactor --only "Redundant bracket" --refactor-options="--inplace" "$fileName"
                     fi
                 done
-            fi
-            done <<< "$(find "$1" -iname "*.hs")"
+            # $2=true (--all): all .hs under $1; else only changed .hs from git diff
+            # git paths are repo-relative → prefix with FLAKE_ROOT for absolute paths
+            done <<< "$(if "$2"; then find "$1" -iname "*.hs"; else git diff --name-only -- "$1" | grep '\.hs$' | sed "s|^|''${FLAKE_ROOT}/|"; fi)"
             echo "Redundant bracket hints applied: $1; allArgs: $2"
             }
 
