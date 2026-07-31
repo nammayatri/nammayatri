@@ -1807,6 +1807,8 @@ types:
     - color: Maybe Text
     - registrationNo: Text
     - isActive: Maybe Bool
+    - verified: Maybe Bool
+    - approved: Maybe Bool
     - fleetOwnerId: Text
     - fleetOwnerName: Text
     - driverMobileNumber: Maybe Text

@@ -34,6 +34,7 @@ apis:
         driverId: Id Driver
       query:
         rcId: Text
+        docType: DocumentType
       response:
         type: DocumentsListResponse
       migrate:
@@ -43,6 +44,9 @@ apis:
       auth: ApiAuthV2
       params:
         imageId: Id Image
+      query:
+        documentId: Text
+        docType: DocumentType
       response:
         type: GetDocumentResponse
       migrate:
@@ -348,6 +352,7 @@ types:
     - vehicleRegistrationCertificateDetails: "Maybe [RCDetails]"
   DocumentStatusItem:
     - documentType: DocumentType
+    - documentId: Maybe Text
     - verificationStatus: VerificationStatus
     - verificationMessage: Maybe Text
     - s3Path: Maybe Text

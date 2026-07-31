@@ -809,17 +809,17 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
         responseCode = mbDocStatus >>= (.responseCode)
         mbDocVerificationStatus = mbDocStatus >>= (mapDigilockerToResponseStatus . (.status))
 
-    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata
-    (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal, mbImageIdFinal, mbImageId2Final) <- case mbProcessedStatus of
-      Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2)
-      Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2)
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata
+    (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal, mbImageIdFinal, mbImageId2Final, mbDocumentIdFinal) <- case mbProcessedStatus of
+      Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbDocumentId)
+      Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbDocumentId)
       Nothing -> case mbDocVerificationStatus of
-        Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        Just docStatus -> pure (docStatus, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
         Nothing -> getInProgressDriverDocuments person.role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs
 
     mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
-    return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal, metadata = mbMetadata}
+    return $ DocumentStatusItem {documentType = docType, documentId = mbDocumentIdFinal, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal, metadata = mbMetadata}
 
 getDriverDocTypes ::
   OnboardingFlow m r =>
@@ -969,7 +969,7 @@ activateRCAutomatically personId merchantOpCity rcNumber = do
           }
   void $ DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) False rcStatusReq
 
-getProcessedDriverDocuments :: OnboardingFlow m r => DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata)
+getProcessedDriverDocuments :: OnboardingFlow m r => DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata, Maybe Text)
 getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL enableMetadata = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       (mbS3Path, mbImageId) = getImageMetaFromLatestImage entityImagesInfo docType
@@ -985,8 +985,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         case mbDoc of
           Just doc ->
             let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
-             in return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, Nothing)
-          Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+             in return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, Nothing, Just doc.id.getId)
+          Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
       mkDLMetadata mbDl =
         if enableMetadata
           then forM mbDl $ \dl -> do
@@ -1005,13 +1005,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
               iid2 = mbDL' >>= (.documentImageId2) <&> (.getId)
               reason = (mbDL' >>= (.rejectReason)) <|> (if (mbDL' <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL' <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
           mbDlMetadata <- mkDLMetadata mbDL'
-          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), reason, Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata)
+          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), reason, Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata, mbDL' <&> (.id.getId))
         else do
           let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL
               iid2 = mbDL >>= (.documentImageId2) <&> (.getId)
               reason = (mbDL >>= (.rejectReason)) <|> (if (mbDL <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
           mbDlMetadata <- mkDLMetadata mbDL
-          return (mapStatus <$> (mbDL <&> (.verificationStatus)), reason, Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata)
+          return (mapStatus <$> (mbDL <&> (.verificationStatus)), reason, Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2, mbDlMetadata, mbDL <&> (.id.getId))
     DVC.AadhaarCard -> do
       mbAadhaarCard <- QAadhaarCard.findByPrimaryKey driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage (mbAadhaarCard >>= (.aadhaarFrontImageId))
@@ -1023,17 +1023,18 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             aadhaarNumberDec <- mapM decrypt aadhaar.aadhaarNumber
             pure $ AadhaarMetadata AadhaarDocumentMetadata {aadhaarNumber = aadhaarNumberDec, nameOnCard = aadhaar.nameOnCard, dateOfBirth = aadhaar.dateOfBirth, address = aadhaar.address}
           else pure Nothing
-      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, reason, Nothing, Nothing, s3, iid, iid2, mbAadhaarMetadata)
-    DVC.Permissions -> return (Just VALID, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, reason, Nothing, Nothing, s3, iid, iid2, mbAadhaarMetadata, mbAadhaarCard <&> (.driverId.getId))
+    DVC.Permissions -> return (Just VALID, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
-      return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.ProfilePhoto -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.ProfilePhoto
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.UploadProfile -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.UploadProfile
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.PanCard -> do
       mbPanCard <- QDPC.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbPanCard
@@ -1045,7 +1046,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             panNumberDec <- decrypt pan.panCardNumber
             pure $ PanMetadata PanDocumentMetadata {panNumber = panNumberDec, panDocType = pan.docType, driverDob = pan.driverDob}
           else pure Nothing
-      return (mapStatus . (.verificationStatus) <$> mbPanCard, reason, Nothing, Nothing, s3, iid, iid2, mbPanMetadata)
+      return (mapStatus . (.verificationStatus) <$> mbPanCard, reason, Nothing, Nothing, s3, iid, iid2, mbPanMetadata, mbPanCard <&> (.id.getId))
     DVC.GSTCertificate -> do
       mbGSTCertificate <- QDGST.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbGSTCertificate
@@ -1057,19 +1058,19 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
             gstNumberDec <- decrypt gst.gstin
             pure $ GSTMetadata GSTDocumentMetadata {gstNumber = gstNumberDec}
           else pure Nothing
-      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, reason, Nothing, Nothing, s3, iid, iid2, mbGstMetadata)
+      return (mapStatus . (.verificationStatus) <$> mbGSTCertificate, reason, Nothing, Nothing, s3, iid, iid2, mbGstMetadata, mbGSTCertificate <&> (.id.getId))
     DVC.BackgroundVerification -> do
       mbBackgroundVerification <- BVQuery.findByDriverId driverId
       -- Expiry from BackgroundVerification table's expiresAt field (not from Image table)
       if (mbBackgroundVerification <&> (.reportStatus)) == Just Documents.VALID
-        then return (Just VALID, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing)
-        else return (Nothing, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing)
+        then return (Just VALID, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing, Nothing)
+        else return (Nothing, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.DrivingSchoolCertificate -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DrivingSchoolCertificate
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.PoliceVerificationCertificate -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.PoliceVerificationCertificate
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.LocalResidenceProof -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
       -- Fleet owners store the local address triplet in fleet_owner_information; drivers in driver_identity_info.
@@ -1093,22 +1094,22 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
               else Nothing
       let finalStatus = if hasAddressDetails then status else if isJust mbImageId then Just INVALID else Just NO_DOC_AVAILABLE
           rejectReason = if finalStatus == Just INVALID then (Id <$> mbImageId) >>= lookupImageFailReason else Nothing
-      return (finalStatus, reason <|> rejectReason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata)
+      return (finalStatus, reason <|> rejectReason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLocalMetadata, Nothing)
     DVC.DriverVehicleNOC -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DriverVehicleNOC
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.TrainingForm -> do
       status <- checkLMSTrainingStatus driverId merchantOpCityId
-      return (status, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (status, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.DriverInspectionHub -> do
       (status, reason) <- getInspectionHubStatusAndReason DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
-      return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.OperatorPartnerCode -> do
       status <- getOperatorPartnerCodeStatus role driverId
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BotApproval -> do
       status <- getBotApprovalStatusForPerson role driverId
-      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (status, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.UDYAMCertificate -> do
       mbUdyam <- QUDYAM.findByDriverId driverId
       case mbUdyam of
@@ -1120,10 +1121,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 mbFoi <- QFOI.findByPrimaryKey driverId
                 pure $ Just $ UDYAMMetadata UDYAMDocumentMetadata {udyamNumber = Just udyamNumberDec, tdsRate = mbFoi >>= (.tdsRate)}
               else pure Nothing
-          return (Just $ mapStatus udyam.verificationStatus, udyam.rejectReason, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbUdyamMetadata)
+          return (Just $ mapStatus udyam.verificationStatus, udyam.rejectReason, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbUdyamMetadata, Just udyam.id.getId)
         Nothing -> do
           let hasImage = not . null $ IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo DVC.UDYAMCertificate [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
-          return (if hasImage then Just MANUAL_VERIFICATION_REQUIRED else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+          return (if hasImage then Just MANUAL_VERIFICATION_REQUIRED else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.TANCertificate -> do
       mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) DVC.TANCertificate
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TANCertificate
@@ -1136,8 +1137,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 pure $ Just $ TANMetadata TANDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
               else pure Nothing
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
-          return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbTanMetadata)
-        Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+          return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbTanMetadata, Just doc.id.getId)
+        Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.LDCCertificate -> do
       mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) DVC.LDCCertificate
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LDCCertificate
@@ -1150,11 +1151,11 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 pure $ Just $ LDCMetadata LDCDocumentMetadata {documentId = doc.id.getId, tdsRate = mbFoi >>= (.tdsRate)}
               else pure Nothing
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
-          return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbLdcMetadata)
-        Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+          return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbLdcMetadata, Just doc.id.getId)
+        Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.BusinessRegistrationExtract -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessRegistrationExtract
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
+      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.NomineeDetails -> do
       mbIdentityInfo <- QDII.findByDriverId driverId
       let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
@@ -1164,13 +1165,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 mbIdentityInfo <&> \info ->
                   NomineeDetailsMetadata NomineeDetailsDocumentMetadata {nomineeName = info.nomineeName, nomineeDob = info.nomineeDob, nomineeRelationship = info.nomineeRelationship}
               else Nothing
-      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata)
+      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, mbNomineeMetadata, Nothing)
     DVC.FleetRegistration -> do
       mbRegisteredAt <-
         if SDO.isFleetRole role
           then (.registeredAt) <$> (QFOI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId))
           else pure Nothing
-      return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BankingDetails -> do
       if SDO.isFleetRole role
         then do
@@ -1182,7 +1183,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                     mbFleetInfo <&> \fi ->
                       BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa, chargesEnabled = Nothing, payoutsEnabled = Nothing, detailsSubmitted = Nothing}
                   else Nothing
-          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
+          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata, Nothing)
         else do
           mbDriverInfo <- DIQuery.findById (cast driverId)
           mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
@@ -1209,7 +1210,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                             detailsSubmitted = mbDetailsSubmitted
                           }
                   else Nothing
-          return (bankAccountStatus <|> (if hasBankingDetails then Just VALID else Nothing), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
+          return (bankAccountStatus <|> (if hasBankingDetails then Just VALID else Nothing), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata, Nothing)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: OnboardingFlow m r => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
@@ -1316,7 +1317,7 @@ getInProgressDriverDocuments ::
   DDVC.DocumentType ->
   [DVC.VehicleCategory] ->
   DocVerificationConfigs ->
-  m (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text)
+  m (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe Text)
 getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehicleCategories allDocVerificationConfigs = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       merchantId = entityImagesInfo.merchantOperatingCity.merchantId
@@ -1367,7 +1368,7 @@ getInProgressDriverDocuments role driverId entityImagesInfo docType possibleVehi
     DDVC.TANCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.TANCertificate onlyImageLookup filteredDocVerificationConfigs
     DDVC.LDCCertificate -> checkIfImageUploadedOrInvalidated role entityImagesInfo DDVC.LDCCertificate onlyImageLookup filteredDocVerificationConfigs
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-  return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId, Nothing)
+  return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
 
 checkIfImageUploadedOrInvalidated :: OnboardingFlow m r => DP.Role -> IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> DocVerificationConfigs -> m (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfImageUploadedOrInvalidated role entityImagesInfo docType onlyImageLookup allDocVerificationConfigs = do

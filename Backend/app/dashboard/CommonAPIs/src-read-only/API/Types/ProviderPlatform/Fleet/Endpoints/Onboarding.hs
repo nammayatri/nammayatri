@@ -90,7 +90,8 @@ data DocumentMetadata
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentStatusItem = DocumentStatusItem
-  { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
+  { documentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     imageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
