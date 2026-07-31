@@ -18,14 +18,19 @@ module Domain.Action.UI.Pass
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
+    listPassCatalog,
+    createPassCatalog,
+    updatePassCatalog,
+    deletePassCatalog,
   )
 where
 
+import qualified API.Types.Dashboard.AppManagement.Pass as DashPass
 import qualified API.Types.UI.Pass as PassAPI
 import qualified AWS.S3 as S3
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Monad.Extra (mapMaybeM)
+import Control.Monad.Extra (mapMaybeM, whenJustM)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
@@ -52,7 +57,6 @@ import qualified IssueManagement.Domain.Action.UI.Issue as IssueAction
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
-import qualified JsonLogic
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types
@@ -66,6 +70,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -80,15 +85,19 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
@@ -98,15 +107,18 @@ import qualified Storage.CachedQueries.Translations as QT
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+-- Storage.Queries.Pass re-exports Storage.Queries.PassExtra, so this alias covers
+-- both the generated CRUD and the hand-written Extra queries.
+import qualified Storage.Queries.Pass as QPass
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassDetails as QPassDetails
-import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
 import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Tools.ActorInfo as ActorInfo
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import qualified Tools.Payment as TPayment
 import Tools.SMS as Sms hiding (Success)
@@ -130,6 +142,12 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   when (null passCategories) $
     logError $ "getMultimodalPassAvailablePasses: no pass categories for mocId " <> person.merchantOperatingCityId.getId
 
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  (eligibilityLogics, _mbVersion) <-
+    TDL.getAppDynamicLogic (Id.cast person.merchantOperatingCityId) LYT.PASS_PURCHASE_ELIGIBILITY localTime Nothing Nothing
+
   forM passCategories $ \category -> do
     passTypes <- CQPassType.findAllByPassCategoryId category.id
     when (null passTypes) $
@@ -144,7 +162,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
     let flatPasses = concatMap snd allPasses
     -- Isolate per-pass failures so one bad pass cannot fail the whole response.
     passAPIEntities <- flip mapMaybeM flatPasses $ \pass ->
-      withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person pass)
+      withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
         >>= either (const (pure Nothing)) (pure . Just)
 
     return $
@@ -172,6 +190,17 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
   pass <- B.runInReplica $ QPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
 
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
+
+  -- Purchase eligibility is enforced here, not only surfaced as a flag on the
+  -- listing: a pass restricted to a customer tag (say, a discounted test price)
+  -- is otherwise purchasable by anyone who knows its passId. Dashboard purchases
+  -- bypass, as they do for required documents -- that path is already behind
+  -- ApiAuthV2 and the access matrix.
+  unless isDashboard $ do
+    eligibilityResult <- resolvePassEligibility person pass
+    unless eligibilityResult.eligible $ do
+      logInfo $ "Pass purchase blocked as ineligible - personId=" <> personId.getId <> " passId=" <> passId.getId <> " reason=" <> fromMaybe "rule_rejected" eligibilityResult.reason
+      throwError (InvalidRequest $ "Not eligible to purchase pass " <> pass.code)
 
   -- Check if user has all required documents
   unless isDashboard $ do
@@ -522,38 +551,204 @@ buildPassTypeAPIEntity passType =
       description = passType.description
     }
 
+-- Pass catalog CRUD. Dashboard-authored, but the logic lives here with the rest
+-- of the pass domain; Domain.Action.Dashboard.AppManagement.Pass stays a thin
+-- delegate like its other handlers.
+
+listPassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Maybe Bool -> Maybe (Id.Id DPassType.PassType) -> Environment.Flow [DashPass.PassCatalogItem]
+listPassCatalog merchantShortId opCity mbEnable mbPassTypeId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  categories <- CQPassCategory.findAllByMerchantOperatingCityId merchantOperatingCity.id
+  passTypes <- case mbPassTypeId of
+    Just passTypeId ->
+      CQPassType.findById passTypeId
+        <&> maybeToList . mfilter ((== merchantOperatingCity.id) . (.merchantOperatingCityId))
+    Nothing -> concat <$> mapM (CQPassType.findAllByPassCategoryId . (.id)) categories
+  let categoryNameById = map (\c -> (c.id, c.name)) categories
+      enableFilters = maybe [True, False] (: []) mbEnable
+  fmap concat $
+    forM passTypes $ \passType -> do
+      passes <- concat <$> mapM (CQPass.findAllByPassTypeIdAndEnabled passType.id) enableFilters
+      pure $ map (mkPassCatalogItem passType (lookup passType.passCategoryId categoryNameById)) passes
+
+mkPassCatalogItem :: DPassType.PassType -> Maybe Text -> DPass.Pass -> DashPass.PassCatalogItem
+mkPassCatalogItem passType mbCategoryName passRow =
+  DashPass.PassCatalogItem
+    { id = passRow.id,
+      passTypeId = passRow.passTypeId,
+      passTypeTitle = passType.title,
+      passCategoryName = fromMaybe "" mbCategoryName,
+      code = passRow.code,
+      name = passRow.name,
+      description = passRow.description,
+      amount = passRow.amount,
+      benefitDescription = passRow.benefitDescription,
+      benefit = passRow.benefit,
+      applicableVehicleServiceTiers = passRow.applicableVehicleServiceTiers,
+      documentsRequired = passRow.documentsRequired,
+      pricingTiers = passRow.pricingTiers,
+      maxValidTrips = passRow.maxValidTrips,
+      maxValidDays = passRow.maxValidDays,
+      verificationValidity = passRow.verificationValidity,
+      order = passRow.order,
+      enable = passRow.enable,
+      autoApply = passRow.autoApply,
+      maxSwitchCount = (.maxSwitchCount) <$> passRow.passConfig,
+      minFare = passRow.minFare,
+      maxFare = passRow.maxFare,
+      formVerificationConfig = passRow.formVerificationConfig
+    }
+
+createPassCatalog :: Id.ShortId DM.Merchant -> Context.City -> DashPass.PassCreateReq -> Environment.Flow DashPass.PassCreateResp
+createPassCatalog merchantShortId opCity req = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passType <- QPassType.findById req.passTypeId >>= fromMaybeM (PassTypeNotFound req.passTypeId.getId)
+  -- A pass under a pass type belonging to another city would be invisible to the
+  -- city-scoped catalog walk, so reject rather than create an orphan row.
+  unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
+    throwError (InvalidRequest $ "Pass type " <> req.passTypeId.getId <> " does not belong to city " <> show opCity)
+  assertPassCodeFree req.code merchantOperatingCity.id
+  passId <- generateGUID
+  now <- getCurrentTime
+  let passRow =
+        DPass.Pass
+          { id = passId,
+            passTypeId = req.passTypeId,
+            code = req.code,
+            name = req.name,
+            description = req.description,
+            amount = req.amount,
+            benefitDescription = req.benefitDescription,
+            benefit = req.benefit,
+            applicableVehicleServiceTiers = req.applicableVehicleServiceTiers,
+            documentsRequired = req.documentsRequired,
+            pricingTiers = req.pricingTiers,
+            maxValidTrips = req.maxValidTrips,
+            maxValidDays = req.maxValidDays,
+            verificationValidity = fromMaybe (Seconds 9000) req.verificationValidity,
+            order = req.order,
+            enable = req.enable,
+            autoApply = req.autoApply,
+            passConfig = DPass.PassConfig <$> req.maxSwitchCount,
+            minFare = req.minFare,
+            maxFare = req.maxFare,
+            formVerificationConfig = req.formVerificationConfig,
+            purchaseEligibilityJsonLogic = [],
+            redeemEligibilityJsonLogic = [],
+            merchantId = merchant.id,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            createdAt = now,
+            updatedAt = now
+          }
+  QPass.create passRow
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  pure $ DashPass.PassCreateResp {passId = passId}
+
+updatePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> DashPass.PassUpdateReq -> Environment.Flow APISuccess.APISuccess
+updatePassCatalog merchantShortId opCity passId req = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  whenJust req.passTypeId $ \newPassTypeId -> do
+    passType <- QPassType.findById newPassTypeId >>= fromMaybeM (PassTypeNotFound newPassTypeId.getId)
+    unless (passType.merchantOperatingCityId == merchantOperatingCity.id) $
+      throwError (InvalidRequest $ "Pass type " <> newPassTypeId.getId <> " does not belong to city " <> show opCity)
+  whenJust (mfilter (/= passRow.code) req.code) $ \newCode ->
+    assertPassCodeFree newCode merchantOperatingCity.id
+  now <- getCurrentTime
+  let updatedPass =
+        passRow
+          { DPass.passTypeId = fromMaybe passRow.passTypeId req.passTypeId,
+            DPass.code = fromMaybe passRow.code req.code,
+            DPass.name = req.name <|> passRow.name,
+            DPass.description = req.description <|> passRow.description,
+            DPass.amount = fromMaybe passRow.amount req.amount,
+            DPass.benefitDescription = fromMaybe passRow.benefitDescription req.benefitDescription,
+            DPass.benefit = req.benefit <|> passRow.benefit,
+            DPass.applicableVehicleServiceTiers = fromMaybe passRow.applicableVehicleServiceTiers req.applicableVehicleServiceTiers,
+            DPass.documentsRequired = fromMaybe passRow.documentsRequired req.documentsRequired,
+            DPass.pricingTiers = req.pricingTiers <|> passRow.pricingTiers,
+            DPass.maxValidTrips = req.maxValidTrips <|> passRow.maxValidTrips,
+            DPass.maxValidDays = req.maxValidDays <|> passRow.maxValidDays,
+            DPass.verificationValidity = fromMaybe passRow.verificationValidity req.verificationValidity,
+            DPass.order = fromMaybe passRow.order req.order,
+            DPass.enable = fromMaybe passRow.enable req.enable,
+            DPass.autoApply = fromMaybe passRow.autoApply req.autoApply,
+            DPass.passConfig = (DPass.PassConfig <$> req.maxSwitchCount) <|> passRow.passConfig,
+            DPass.minFare = req.minFare <|> passRow.minFare,
+            DPass.maxFare = req.maxFare <|> passRow.maxFare,
+            DPass.formVerificationConfig = req.formVerificationConfig <|> passRow.formVerificationConfig,
+            DPass.updatedAt = now
+          }
+  QPass.updateByPrimaryKey updatedPass
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId passRow.enable
+  CQPass.clearCacheByPassTypeIdAndEnabled updatedPass.passTypeId updatedPass.enable
+  pure APISuccess.Success
+
+-- | Soft delete (enable = false) so purchased_pass rows keep their pass reference.
+deletePassCatalog :: Id.ShortId DM.Merchant -> Context.City -> Id.Id DPass.Pass -> Environment.Flow APISuccess.APISuccess
+deletePassCatalog merchantShortId opCity passId = do
+  merchantOperatingCity <- findMerchantOperatingCity merchantShortId opCity
+  passRow <- findPassInCity passId merchantOperatingCity.id opCity
+  now <- getCurrentTime
+  QPass.updateByPrimaryKey passRow {DPass.enable = False, DPass.updatedAt = now}
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
+  CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
+  pure APISuccess.Success
+
+findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
+findMerchantOperatingCity merchantShortId opCity =
+  CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+    >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+findPassInCity :: Id.Id DPass.Pass -> Id.Id DMOC.MerchantOperatingCity -> Context.City -> Environment.Flow DPass.Pass
+findPassInCity passId merchantOperatingCityId opCity = do
+  passRow <- QPass.findByPrimaryKey passId >>= fromMaybeM (PassNotFound passId.getId)
+  unless (passRow.merchantOperatingCityId == merchantOperatingCityId) $
+    throwError (InvalidRequest $ "Pass " <> passId.getId <> " does not belong to city " <> show opCity)
+  pure passRow
+
+-- | Pass code is the discriminator the PASS_PURCHASE_ELIGIBILITY ruleset falls
+-- back to when a pass type has no passEnum, so duplicates within a city make
+-- rules ambiguous. Backed by a unique index; this is the friendly error.
+assertPassCodeFree :: Text -> Id.Id DMOC.MerchantOperatingCity -> Environment.Flow ()
+assertPassCodeFree code merchantOperatingCityId =
+  whenJustM (QPass.findByCodeAndMerchantOperatingCityId code merchantOperatingCityId) $ \_ ->
+    throwError (InvalidRequest $ "Pass with code " <> code <> " already exists in this city")
+
+findEligibilityPassDetails :: DP.Person -> DPassType.PassType -> Environment.Flow (Maybe DPassDetails.PassDetails)
+findEligibilityPassDetails person passType =
+  case passType.passEnum of
+    Just DPassType.StudentPass -> B.runInReplica $ QPassDetails.findByPersonId person.id DPassType.StudentPass
+    _ -> return Nothing
+
+-- | Evaluate purchase eligibility for a single pass, fetching the ruleset itself.
+-- The listing hoists that fetch out of its per-pass loop; the purchase path only
+-- ever looks at one pass, so it fetches here.
+resolvePassEligibility :: DP.Person -> DPass.Pass -> Environment.Flow SLE.PassEligibilityResult
+resolvePassEligibility person pass = do
+  passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
+  mbPassDetails <- findEligibilityPassDetails person passType
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  (eligibilityLogics, _mbVersion) <-
+    TDL.getAppDynamicLogic (Id.cast person.merchantOperatingCityId) LYT.PASS_PURCHASE_ELIGIBILITY localTime Nothing Nothing
+  SLE.checkPassPurchaseEligibility person.merchantOperatingCityId eligibilityLogics (SLE.mkPassEligibilityData person pass passType mbPassDetails)
+
 buildPassAPIEntity ::
   Maybe Lang.Language ->
   DP.Person ->
+  [A.Value] ->
   DPass.Pass ->
   Environment.Flow PassAPI.PassAPIEntity
-buildPassAPIEntity mbLanguage person pass = do
+buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
   passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
 
-  mbPassDetails <-
-    case passType.passEnum of
-      Just DPassType.StudentPass -> B.runInReplica $ QPassDetails.findByPersonId person.id DPassType.StudentPass
-      _ -> return Nothing
+  mbPassDetails <- findEligibilityPassDetails person passType
 
-  -- Create person data for eligibility check with relevant fields
-  let personData =
-        A.object
-          [ "id" A..= (person.id.getId :: Text),
-            "gender" A..= (show person.gender :: Text),
-            "dateOfBirth" A..= person.dateOfBirth,
-            "city" A..= (show person.currentCity :: Text),
-            "merchantOperatingCityId" A..= (person.merchantOperatingCityId.getId :: Text),
-            "hasDisability" A..= person.hasDisability,
-            "customerNammaTags" A..= person.customerNammaTags,
-            "aadhaarVerified" A..= (person.aadhaarVerified :: Bool),
-            "enabled" A..= (person.enabled :: Bool),
-            "blocked" A..= (person.blocked :: Bool),
-            "verificationStatus" A..= ((.verificationStatus) <$> mbPassDetails),
-            "numberOfStages" A..= ((.numberOfStages) =<< mbPassDetails)
-          ]
-
-  -- Check purchase eligibility using JSON logic
-  eligibility <- checkEligibility pass.purchaseEligibilityJsonLogic personData
+  eligibilityResult <- SLE.checkPassPurchaseEligibility person.merchantOperatingCityId eligibilityLogics (SLE.mkPassEligibilityData person pass passType mbPassDetails)
+  let eligibility = eligibilityResult.eligible
 
   -- Get pass amount: use pricing tiers if verified organization holder, else default pass amount
   let mbTierAmount = do
@@ -672,24 +867,6 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         formVerificationConfig = Nothing,
         referenceNumber = Nothing
       }
-
--- Check eligibility using JSON logic rules
-checkEligibility :: (MonadFlow m) => [A.Value] -> A.Value -> m Bool
-checkEligibility logics personData = do
-  if null logics
-    then return True -- If no rules defined, consider eligible
-    else do
-      -- Evaluate all JSON logic rules against person data
-      results <- forM logics $ \logic -> do
-        let result = JsonLogic.jsonLogicEither logic personData
-        case result of
-          Right (A.Bool b) -> return b
-          Right _ -> return False -- Non-boolean results considered as False
-          Left err -> do
-            logError $ "JSON logic evaluation error: " <> show err
-            return False -- Errors considered as not eligible
-            -- All rules must be True for eligibility
-      return $ and results
 
 -- Build PurchasedPass API Entity
 buildPurchasedPassAPIEntity ::

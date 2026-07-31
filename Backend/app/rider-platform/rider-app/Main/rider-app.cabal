@@ -541,6 +541,7 @@ library
       SharedLogic.Offer
       SharedLogic.OfferTypes
       SharedLogic.OTP
+      SharedLogic.Pass.Eligibility
       SharedLogic.PassExpiryReminder
       SharedLogic.PassRestore
       SharedLogic.Payment
