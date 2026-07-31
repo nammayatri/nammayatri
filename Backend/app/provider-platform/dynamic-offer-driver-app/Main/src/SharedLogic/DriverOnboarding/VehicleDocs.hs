@@ -211,6 +211,7 @@ data DocumentMetadata
 
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: DDVC.DocumentType,
+    documentId :: Maybe Text,
     verificationStatus :: ResponseStatus,
     verificationMessage :: Maybe Text,
     verificationUrl :: Maybe BaseUrl,
@@ -385,11 +386,11 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
+            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
+            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
 
     let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
@@ -438,7 +439,7 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
+              return $ DocumentStatusItem {documentType = docType, documentId = Nothing, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
           return
             [ VehicleDocumentItem
                 { registrationNo = vehicle.registrationNo,
@@ -517,7 +518,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl, _, mbS3Path, mbImageId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
+                      return $ DocumentStatusItem {documentType = docType, documentId = Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
                   let mbRcIdText = (.getId) <$> mbRcId
                       mbRcImage =
                         find

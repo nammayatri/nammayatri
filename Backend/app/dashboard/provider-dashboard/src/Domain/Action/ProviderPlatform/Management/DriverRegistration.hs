@@ -92,15 +92,15 @@ shouldExcludeRequestorId apiTokenInfo driverId =
 ----------------------------------------------- Endpoints ------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
 
-getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
-getDriverRegistrationDocumentsList merchantShortId opCity apiTokenInfo driverId mbRcId = do
+getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Common.DocumentType -> Maybe Text -> Flow Common.DocumentsListResponse
+getDriverRegistrationDocumentsList merchantShortId opCity apiTokenInfo driverId mbDocType mbRcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsList) driverId mbRcId
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsList) driverId mbDocType mbRcId
 
-getDriverRegistrationGetDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> Flow Common.GetDocumentResponse
-getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo imageId = do
+getDriverRegistrationGetDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> Maybe Common.DocumentType -> Maybe Text -> Flow Common.GetDocumentResponse
+getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo imageId mbDocType mbDocumentId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationGetDocument) imageId
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationGetDocument) imageId mbDocType mbDocumentId
 
 postDriverRegistrationVerifyBankAccount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyBankAccountReq -> Flow Kernel.External.Verification.Interface.Types.VerifyAsyncResp
 postDriverRegistrationVerifyBankAccount merchantShortId opCity apiTokenInfo driverId req = do

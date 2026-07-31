@@ -260,38 +260,45 @@ extractInvoiceIds docData =
     Right tdsData -> map (.invoiceId) (tdsData :: API.Types.UI.DriverOnboardingV2.TDSCertificateData).tdsCertificates
     Left _ -> []
 
-getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
-getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
+getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Common.DocumentType -> Maybe Text -> Flow Common.DocumentsListResponse
+getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcId = do
   merchant <- findMerchantByShortId merchantShortId
-  odometerImg <- getVehicleImages merchant.id DVC.Odometer
-  vehicleFrontImgs <- getVehicleImages merchant.id DVC.VehicleFront
-  vehicleBackImgs <- getVehicleImages merchant.id DVC.VehicleBack
-  vehicleRightImgs <- getVehicleImages merchant.id DVC.VehicleRight
-  vehicleLeftImgs <- getVehicleImages merchant.id DVC.VehicleLeft
-  vehicleFrontInteriorImgs <- getVehicleImages merchant.id DVC.VehicleFrontInterior
-  vehicleBackInteriorImgs <- getVehicleImages merchant.id DVC.VehicleBackInterior
-  pucImages <- getDriverImages merchant.id DVC.VehiclePUC
-  permitImages <- getDriverImages merchant.id DVC.VehiclePermit
-  dlImgs <- groupByTxnIdInHM <$> runInReplica (findImagesByPersonAndType Nothing Nothing merchant.id (cast driverId) DVC.DriverLicense)
-  vInspectionImgs <- getDriverImages merchant.id DVC.VehicleInspectionForm
-  vehRegImgs <- getDriverImages merchant.id DVC.VehicleRegistrationCertificate
-  uploadProfImgs <- getDriverImages merchant.id DVC.UploadProfile
-  vehicleFitnessCertImgs <- getDriverImages merchant.id DVC.VehicleFitnessCertificate
-  vehicleInsImgs <- getDriverImages merchant.id DVC.VehicleInsurance
-  profilePics <- getDriverImages merchant.id DVC.ProfilePhoto
-  gstImgs <- getDriverImages merchant.id DVC.GSTCertificate
-  udyamImgs <- getDriverImages merchant.id DVC.UDYAMCertificate
-  panImgs <- getDriverImages merchant.id DVC.PanCard
-  businessLicenseImgs <- getDriverImages merchant.id DVC.BusinessLicense
-  aadhaarImgs <- getDriverImages merchant.id DVC.AadhaarCard
-  vehicleNOCImgs <- getDriverImages merchant.id DVC.VehicleNOC
-  driverVehicleNOCImgs <- getDriverImages merchant.id DVC.DriverVehicleNOC
-  localResidenceProofImgs <- getDriverImages merchant.id DVC.LocalResidenceProof
-  policeVerificationCertificateImgs <- getDriverImages merchant.id DVC.PoliceVerificationCertificate
-  drivingSchoolCertificateImgs <- getDriverImages merchant.id DVC.DrivingSchoolCertificate
-  medicalCertificateImgs <- getDriverImages merchant.id DVC.MedicalCertificate
+  let matches dt = case mbDocType of
+        Nothing -> True
+        Just filterDt -> mapDocumentType filterDt == dt
+      whenMatch dt fetch = if matches dt then fetch else pure []
+  odometerImg <- whenMatch DVC.Odometer $ getVehicleImages merchant.id DVC.Odometer
+  vehicleFrontImgs <- whenMatch DVC.VehicleFront $ getVehicleImages merchant.id DVC.VehicleFront
+  vehicleBackImgs <- whenMatch DVC.VehicleBack $ getVehicleImages merchant.id DVC.VehicleBack
+  vehicleRightImgs <- whenMatch DVC.VehicleRight $ getVehicleImages merchant.id DVC.VehicleRight
+  vehicleLeftImgs <- whenMatch DVC.VehicleLeft $ getVehicleImages merchant.id DVC.VehicleLeft
+  vehicleFrontInteriorImgs <- whenMatch DVC.VehicleFrontInterior $ getVehicleImages merchant.id DVC.VehicleFrontInterior
+  vehicleBackInteriorImgs <- whenMatch DVC.VehicleBackInterior $ getVehicleImages merchant.id DVC.VehicleBackInterior
+  pucImages <- whenMatch DVC.VehiclePUC $ getDriverImages merchant.id DVC.VehiclePUC
+  permitImages <- whenMatch DVC.VehiclePermit $ getDriverImages merchant.id DVC.VehiclePermit
+  dlImgs <-
+    if matches DVC.DriverLicense
+      then groupByTxnIdInHM <$> runInReplica (findImagesByPersonAndType Nothing Nothing merchant.id (cast driverId) DVC.DriverLicense)
+      else pure []
+  vInspectionImgs <- whenMatch DVC.VehicleInspectionForm $ getDriverImages merchant.id DVC.VehicleInspectionForm
+  vehRegImgs <- whenMatch DVC.VehicleRegistrationCertificate $ getDriverImages merchant.id DVC.VehicleRegistrationCertificate
+  uploadProfImgs <- whenMatch DVC.UploadProfile $ getDriverImages merchant.id DVC.UploadProfile
+  vehicleFitnessCertImgs <- whenMatch DVC.VehicleFitnessCertificate $ getDriverImages merchant.id DVC.VehicleFitnessCertificate
+  vehicleInsImgs <- whenMatch DVC.VehicleInsurance $ getDriverImages merchant.id DVC.VehicleInsurance
+  profilePics <- whenMatch DVC.ProfilePhoto $ getDriverImages merchant.id DVC.ProfilePhoto
+  gstImgs <- whenMatch DVC.GSTCertificate $ getDriverImages merchant.id DVC.GSTCertificate
+  udyamImgs <- whenMatch DVC.UDYAMCertificate $ getDriverImages merchant.id DVC.UDYAMCertificate
+  panImgs <- whenMatch DVC.PanCard $ getDriverImages merchant.id DVC.PanCard
+  businessLicenseImgs <- whenMatch DVC.BusinessLicense $ getDriverImages merchant.id DVC.BusinessLicense
+  aadhaarImgs <- whenMatch DVC.AadhaarCard $ getDriverImages merchant.id DVC.AadhaarCard
+  vehicleNOCImgs <- whenMatch DVC.VehicleNOC $ getDriverImages merchant.id DVC.VehicleNOC
+  driverVehicleNOCImgs <- whenMatch DVC.DriverVehicleNOC $ getDriverImages merchant.id DVC.DriverVehicleNOC
+  localResidenceProofImgs <- whenMatch DVC.LocalResidenceProof $ getDriverImages merchant.id DVC.LocalResidenceProof
+  policeVerificationCertificateImgs <- whenMatch DVC.PoliceVerificationCertificate $ getDriverImages merchant.id DVC.PoliceVerificationCertificate
+  drivingSchoolCertificateImgs <- whenMatch DVC.DrivingSchoolCertificate $ getDriverImages merchant.id DVC.DrivingSchoolCertificate
+  medicalCertificateImgs <- whenMatch DVC.MedicalCertificate $ getDriverImages merchant.id DVC.MedicalCertificate
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
-  let commonDocuments = map toCommonDocumentItem commonDocumentsData
+  let commonDocuments = map toCommonDocumentItem $ filter (\doc -> matches doc.documentType) commonDocumentsData
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
   allRCImgs <- runInReplica (QRC.findAllByImageId (map (Id) vehRegImgs))
   allDLDetails <- mapM convertDLToDLDetails allDlImgs
@@ -479,11 +486,16 @@ getDriverRegistrationDocumentsCommonList ::
 getDriverRegistrationDocumentsCommonList =
   getDriverRegistrationCommonDocumentsList
 
-getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Common.GetDocumentResponse
-getDriverRegistrationGetDocument merchantShortId _ imageId = do
+getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Maybe Common.DocumentType -> Maybe Text -> Flow Common.GetDocumentResponse
+getDriverRegistrationGetDocument merchantShortId _ imageId mbDocType mbDocumentId = do
   merchant <- findMerchantByShortId merchantShortId
-  img <- getImage merchant.id (cast imageId)
-  image <- QImage.findById (cast imageId) >>= fromMaybeM (InternalError "Image not found by image id")
+  resolvedImageId <- case (mbDocType, mbDocumentId) of
+    (Just docType, Just documentId) ->
+      resolveImageIdFromDomainDoc (mapDocumentType docType) documentId
+        >>= maybe (pure (cast imageId)) pure
+    _ -> pure (cast imageId)
+  img <- getImage merchant.id resolvedImageId
+  image <- QImage.findById resolvedImageId >>= fromMaybeM (InternalError "Image not found by image id")
   pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus, createdAt = image.createdAt}
   where
     castVerificationStatus :: VerificationStatus -> Common.VerificationStatus
@@ -494,6 +506,26 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
       MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
       UNAUTHORIZED -> Common.UNAUTHORIZED
       PULL_REQUIRED -> Common.PENDING
+
+resolveImageIdFromDomainDoc :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image))
+resolveImageIdFromDomainDoc docType docId = case docType of
+  DVC.DriverLicense -> fmap (.documentImageId1) <$> QDL.findById (Id docId)
+  DVC.VehicleRegistrationCertificate -> fmap (.documentImageId) <$> QRC.findById (Id docId)
+  DVC.PanCard -> fmap (.documentImageId1) <$> QPan.findById (Id docId)
+  DVC.GSTCertificate -> fmap (.documentImageId1) <$> QGstin.findById (Id docId)
+  DVC.VehiclePUC -> fmap (.documentImageId) <$> QVPUC.findByPrimaryKey (Id docId)
+  DVC.VehiclePermit -> fmap (.documentImageId) <$> QVPermit.findByPrimaryKey (Id docId)
+  DVC.VehicleInsurance -> fmap (.documentImageId) <$> QVI.findByPrimaryKey (Id docId)
+  DVC.VehicleFitnessCertificate -> fmap (.documentImageId) <$> QFC.findByPrimaryKey (Id docId)
+  DVC.VehicleNOC -> fmap (.documentImageId) <$> QVNOC.findByPrimaryKey (Id docId)
+  DVC.BusinessLicense -> fmap (.documentImageId) <$> QBL.findByPrimaryKey (Id docId)
+  DVC.UDYAMCertificate -> fmap (.documentImageId) <$> QUdyam.findById (Id docId)
+  DVC.AadhaarCard -> do
+    mbAadhaar <- QAadhaarCard.findByPrimaryKey (Id docId)
+    pure $ mbAadhaar >>= \aa -> aa.aadhaarFrontImageId <|> aa.aadhaarBackImageId
+  _ -> do
+    mbCd <- QCommonDriverOnboardingDocuments.findById (Id docId)
+    pure $ mbCd >>= (.documentImageId)
 
 domainTableDocumentTypes :: Set.Set DVC.DocumentType
 domainTableDocumentTypes =
@@ -1093,6 +1125,7 @@ castDocStatusItem :: SStatus.DocumentStatusItem -> Common.DocumentStatusItem
 castDocStatusItem item =
   Common.DocumentStatusItem
     { documentType = SDO.castDocumentType item.documentType,
+      documentId = item.documentId,
       verificationStatus = castMgmtResponseStatus item.verificationStatus,
       verificationMessage = item.verificationMessage,
       s3Path = item.s3Path,

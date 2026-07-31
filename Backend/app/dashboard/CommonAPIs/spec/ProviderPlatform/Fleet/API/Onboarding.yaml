@@ -224,6 +224,7 @@ types:
     vehicleRegistrationCertificateDetails: Maybe [RCDetails]
   DocumentStatusItem:
     documentType: DocumentType
+    documentId: Maybe Text
     verificationStatus: ResponseStatus
     verificationMessage: Maybe Text
     verificationUrl: Maybe BaseUrl

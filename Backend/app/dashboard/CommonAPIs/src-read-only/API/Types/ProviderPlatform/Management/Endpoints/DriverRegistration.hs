@@ -189,6 +189,7 @@ instance Kernel.Types.HideSecrets.HideSecrets DocumentRegisterReq where
 
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: DocumentType,
+    documentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationStatus :: Dashboard.Common.VerificationStatus,
     verificationMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -713,13 +714,20 @@ data VerifyBankAccountReq = VerifyBankAccountReq {bankAccountNo :: Kernel.Prelud
 type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationVerifyBankAccount :<|> GetDriverRegistrationInfoBankAccount :<|> GetDriverRegistrationPayoutRegistrationHelper :<|> PostDriverRegistrationDeleteBankAccount :<|> GetDriverRegistrationPayoutOrderStatus :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> GetDriverRegistrationVerificationStatus :<|> GetDriverRegistrationDocumentsCommonList :<|> PostDriverRegistrationDocumentsUpdate :<|> PostDriverRegistrationDocumentsCommon :<|> PostDriverRegistrationDocumentRegister :<|> PostDriverRegistrationUnlinkDocumentHelper :<|> PostDriverRegistrationTriggerReminderHelper)
 
 type GetDriverRegistrationDocumentsList =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "rcId" Kernel.Prelude.Text
-      :> Get
-           ('[JSON])
-           DocumentsListResponse
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "docType" DocumentType
+      :> QueryParam
+           "rcId"
+           Kernel.Prelude.Text
+      :> Get ('[JSON]) DocumentsListResponse
   )
 
-type GetDriverRegistrationGetDocument = ("getDocument" :> Capture "imageId" (Kernel.Types.Id.Id Dashboard.Common.Image) :> Get ('[JSON]) GetDocumentResponse)
+type GetDriverRegistrationGetDocument =
+  ( "getDocument" :> Capture "imageId" (Kernel.Types.Id.Id Dashboard.Common.Image) :> QueryParam "docType" DocumentType
+      :> QueryParam
+           "documentId"
+           Kernel.Prelude.Text
+      :> Get ('[JSON]) GetDocumentResponse
+  )
 
 type PostDriverRegistrationDocumentUpload =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "document" :> "upload" :> ReqBody ('[JSON]) UploadDocumentReq
@@ -901,8 +909,8 @@ type PostDriverRegistrationTriggerReminderHelper =
   )
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
-  { getDriverRegistrationDocumentsList :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient DocumentsListResponse),
-    getDriverRegistrationGetDocument :: (Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient GetDocumentResponse),
+  { getDriverRegistrationDocumentsList :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient DocumentsListResponse),
+    getDriverRegistrationGetDocument :: (Kernel.Types.Id.Id Dashboard.Common.Image -> Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient GetDocumentResponse),
     postDriverRegistrationDocumentUpload :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp),
     postDriverRegistrationRegisterDl :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postDriverRegistrationVerifyBankAccount :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp),

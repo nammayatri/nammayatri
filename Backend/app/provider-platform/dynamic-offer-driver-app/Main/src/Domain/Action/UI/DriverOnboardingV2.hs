@@ -1453,6 +1453,7 @@ noDocVehicleStatusItems = map mkNoDoc SDO.defaultVehicleDocumentTypes
     mkNoDoc dt =
       SStatus.DocumentStatusItem
         { documentType = dt,
+          documentId = Nothing,
           verificationStatus = SStatus.NO_DOC_AVAILABLE,
           verificationMessage = Nothing,
           verificationUrl = Nothing,
