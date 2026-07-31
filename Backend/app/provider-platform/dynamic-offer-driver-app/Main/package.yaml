@@ -181,6 +181,9 @@ library:
           - -j4
       else:
         ghc-options:
+          - -Wno-ambiguous-fields
+          - -Wno-incomplete-uni-patterns
+          - -Wno-incomplete-record-updates
           - -O2
           - -j4
   dependencies:
@@ -223,6 +226,9 @@ executables:
             - -j4
         else:
           ghc-options:
+            - -Wno-ambiguous-fields
+            - -Wno-incomplete-uni-patterns
+            - -Wno-incomplete-record-updates
             - -O2
             - -j4
     dependencies:
