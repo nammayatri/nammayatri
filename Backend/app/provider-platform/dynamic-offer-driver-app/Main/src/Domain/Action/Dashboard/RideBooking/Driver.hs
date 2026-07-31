@@ -362,23 +362,14 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
 
   let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId <|> mbPersonIdFromWallet
   when mbFleet $ do
-    case (mbPersonId', mbVehicleNumber, mbMobileNumber) of
-      (Just personId, _, _) -> do
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerIdWithStatus personId fleetOwnerId
+    case (mbPersonId', mbVehicleNumber) of
+      (Just personId, _) -> do
+        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
         when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
-      (_, Just vehicleNumber, _) -> do
+      (_, Just vehicleNumber) -> do
         vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNumber fleetOwnerId
         when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
-      (_, _, Just mobileNumber) -> do
-        mobileNumberDbHash <- getDbHash mobileNumber
-        let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
-        person <-
-          B.runInReplica $
-            QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberDbHash merchant.id DP.DRIVER
-              >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerIdWithStatus person.id fleetOwnerId
-        when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
-      _ -> throwError $ InvalidRequest "Fleet Owner can only search with vehicleNumber, personId, walletId or mobileNumber"
+      _ -> throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number, personId or walletId"
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, mbPersonId') of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber

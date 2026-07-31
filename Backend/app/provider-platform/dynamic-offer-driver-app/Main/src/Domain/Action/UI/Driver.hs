@@ -315,7 +315,6 @@ import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOA
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
-import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Estimate as QEst
@@ -471,7 +470,6 @@ data DriverInformationRes = DriverInformationRes
     profilePhotoUploadedAt :: Maybe UTCTime,
     activeFleet :: Maybe DOVT.FleetInfo,
     recentFleetInfo :: Maybe DOVT.FleetInfo,
-    hasActiveRc :: Bool,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney,
@@ -1784,7 +1782,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   let driverReferralApplied = isJust driverInfo.referredByDriverId
       fleetReferralApplied = isJust driverInfo.referredByFleetOwnerId
       operatorReferralApplied = isJust driverInfo.referredByOperatorId
-  hasActiveRc <- isJust <$> QRCAssociation.findActiveAssociationByDriver id True
   getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (Just <$> CGHC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId) >>= \cfg ->
     return $
       DriverInformationRes
