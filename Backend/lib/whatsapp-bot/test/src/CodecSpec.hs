@@ -73,7 +73,7 @@ codecSpec =
       testCase "every FlowState round-trips" $
         forM_ allFlowStates $ \s ->
           assertRoundTrips ("FlowState " <> flowStateLabel s) s,
-      -- Decoding is not enough: 19 of FlowContext's 20 fields are Maybe (all but
+      -- Decoding is not enough: 14 of FlowContext's 15 fields are Maybe (all but
       -- @state@), and aeson's generic decoder turns an ABSENT key into Nothing.
       -- So a RENAMED or RETYPED field still "decodes" — silently, as data loss.
       -- Assert the decoded VALUE, which catches both.
@@ -145,11 +145,9 @@ populatedContext =
   FlowContext
     { state = Tracking,
       personId = Just "person-1",
-      phone = Just "911111111111",
       savedLocations = Just [populatedSavedLocation],
       origin = Just (populatedPlace "place-origin"),
       destination = Just (populatedPlace "place-destination"),
-      destinationOptions = Just [DestinationOption {description = "Tumkur Bus Stand", placeId = "place-destination"}],
       activeBookingId = Just "booking-1",
       selectStartedAt = Just (posixSecondsToUTCTime 1751000000),
       cancelRequested = Just True,
@@ -157,10 +155,7 @@ populatedContext =
       language = Just Kn,
       pendingAction = Just PendingBook,
       rideType = Just Flexi,
-      flexiSearchId = Just "flexi-search-1",
-      flexiQuoteId = Just "flexi-quote-1",
       flexiBookingId = Just "booking-1",
-      regularSearchId = Just "regular-search-1",
       regularEstimateId = Just "est-1",
       regularFare = Just 123.5
     }

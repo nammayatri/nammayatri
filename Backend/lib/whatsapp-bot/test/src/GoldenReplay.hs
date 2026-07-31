@@ -38,7 +38,7 @@
 --
 -- INTEGRATOR NOTES (reconcile with the parallel Engine.hs / Tracker.hs):
 --   * Assumes @Engine.handleMessage :: Monad m => BotEnv m -> InboundEvent -> m ()@
---     and @Engine.scopedSessionId :: MerchantCtx -> InboundEvent -> Text@.
+--     and @Env.scopedSessionId :: MerchantCtx -> InboundEvent -> Text@.
 --   * Assumes the 'TrackerDeps' record shape below (registry + getBookingDetails
 --     + sender + sessions + clock). If Tracker.hs defines it differently, only
 --     the one construction in 'makeWorld' needs to change.
@@ -77,7 +77,7 @@ import Kernel.Prelude
 import System.Timeout (timeout)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
-import WhatsappBot.Engine (handleMessage, scopedSessionId)
+import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)

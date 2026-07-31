@@ -146,9 +146,6 @@ resetSession deps entry = do
         entry.sessionUserId
         ctx{state = Idle,
             flexiBookingId = Nothing,
-            flexiSearchId = Nothing,
-            flexiQuoteId = Nothing,
-            regularSearchId = Nothing,
             regularEstimateId = Nothing,
             regularFare = Nothing,
             activeBookingId = Nothing,

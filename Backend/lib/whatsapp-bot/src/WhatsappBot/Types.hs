@@ -182,11 +182,9 @@ data MerchantCtx = MerchantCtx
 data FlowContext = FlowContext
   { state :: FlowState,
     personId :: Maybe Text,
-    phone :: Maybe Text,
     savedLocations :: Maybe [BotSavedLocation],
     origin :: Maybe BotPlace,
     destination :: Maybe BotPlace,
-    destinationOptions :: Maybe [DestinationOption],
     activeBookingId :: Maybe Text,
     selectStartedAt :: Maybe UTCTime,
     cancelRequested :: Maybe Bool,
@@ -194,10 +192,7 @@ data FlowContext = FlowContext
     language :: Maybe SupportedLanguage,
     pendingAction :: Maybe PendingAction,
     rideType :: Maybe RideType,
-    flexiSearchId :: Maybe Text,
-    flexiQuoteId :: Maybe Text,
     flexiBookingId :: Maybe Text,
-    regularSearchId :: Maybe Text,
     regularEstimateId :: Maybe Text,
     regularFare :: Maybe Double
   }
@@ -208,11 +203,9 @@ initialContext =
   FlowContext
     { state = Idle,
       personId = Nothing,
-      phone = Nothing,
       savedLocations = Nothing,
       origin = Nothing,
       destination = Nothing,
-      destinationOptions = Nothing,
       activeBookingId = Nothing,
       selectStartedAt = Nothing,
       cancelRequested = Nothing,
@@ -220,10 +213,7 @@ initialContext =
       language = Nothing,
       pendingAction = Nothing,
       rideType = Nothing,
-      flexiSearchId = Nothing,
-      flexiQuoteId = Nothing,
       flexiBookingId = Nothing,
-      regularSearchId = Nothing,
       regularEstimateId = Nothing,
       regularFare = Nothing
     }

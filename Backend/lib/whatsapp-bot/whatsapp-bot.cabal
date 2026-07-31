@@ -48,6 +48,7 @@ library
       WhatsappBot.Cities
       WhatsappBot.Engine
       WhatsappBot.Env
+      WhatsappBot.Flow.Booking
       WhatsappBot.Handles
       WhatsappBot.I18n
       WhatsappBot.I18n.Detect
@@ -60,6 +61,7 @@ library
       WhatsappBot.I18n.Types
       WhatsappBot.Inbound
       WhatsappBot.Messages
+      WhatsappBot.Ride
       WhatsappBot.Tracker
       WhatsappBot.Types
       WhatsappBot.Util
