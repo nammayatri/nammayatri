@@ -66,6 +66,7 @@ apis:
         - includeDocuments: Bool
         - onlyMandatoryDocs: Bool
         - mbStatus: DriverMode
+        - mbOperatorId: Text
       response:
         type: DriverInfoResp
       helperApi:
@@ -81,6 +82,7 @@ apis:
               - includeDocuments: Bool
               - onlyMandatoryDocs: Bool
               - mbStatus: DriverMode
+              - mbOperatorId: Text
             mandatoryQuery:
               - requestorId: Text
             response:
