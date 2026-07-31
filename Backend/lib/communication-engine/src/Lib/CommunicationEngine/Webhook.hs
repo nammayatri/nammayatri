@@ -178,7 +178,8 @@ mkNotificationReq contact title body messageData =
       title = title,
       auth = Notification.Auth contact.personId contact.deviceToken contact.notificationToken,
       ttl = Nothing,
-      sound = Just "default"
+      sound = Just "default",
+      overlayNotificationData = Nothing
     }
 
 mkWhatsappReq :: Text -> Text -> [Maybe Text] -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq

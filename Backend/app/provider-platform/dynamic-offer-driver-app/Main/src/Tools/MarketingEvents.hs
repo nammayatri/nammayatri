@@ -69,7 +69,8 @@ setNotificationData events merchantOpCityId driverId eventDestination deviceToke
             title = events,
             auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> deviceToken) Nothing,
             ttl = Nothing,
-            sound = Nothing
+            sound = Nothing,
+            overlayNotificationData = Nothing
           }
   logDebug $ "the notification is :" <> show notificationData
   return notificationData

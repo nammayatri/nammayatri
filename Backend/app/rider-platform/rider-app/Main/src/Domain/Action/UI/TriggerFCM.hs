@@ -47,7 +47,8 @@ postTriggerFCMMessage (mbPersonId, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
           ttl = Nothing,
-          sound = Just "default"
+          sound = Just "default",
+          overlayNotificationData = Nothing
         }
 
     buildFCMEntityData senderId =

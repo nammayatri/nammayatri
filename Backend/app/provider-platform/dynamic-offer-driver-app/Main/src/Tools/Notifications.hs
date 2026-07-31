@@ -482,7 +482,8 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           title = title,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 -- | Sent when a dashboard operator posts a chat message on a driver-side
@@ -520,7 +521,8 @@ notifyOnIssueChatMessage driverId payload = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> driver.deviceToken) Nothing,
             ttl = Nothing,
-            sound = Nothing
+            sound = Nothing,
+            overlayNotificationData = Nothing
           }
   runWithServiceConfigForProviders merchantOperatingCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
@@ -554,7 +556,8 @@ driverScheduledRideAcceptanceAlert merchantOpCityId category title body driver m
           title = title,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 -- Send notification to device, i.e. notifications that should not be shown to the user,
@@ -775,7 +778,8 @@ buildClearedFareNotificationData merchantOpCityId driverId mbDeviceToken searchR
         title = buildTemplate params mbMerchantPN.title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
         ttl = Nothing,
-        sound = Nothing
+        sound = Nothing,
+        overlayNotificationData = Nothing
       }
 
 -- title = FCM.FCMNotificationTitle "Clearing Fare!"
@@ -828,7 +832,8 @@ buildCancelSearchNotificationData merchantOpCityId driverId mbDeviceToken search
         title = buildTemplate params mbMerchantPN.title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
         ttl = Nothing,
-        sound = Nothing
+        sound = Nothing,
+        overlayNotificationData = Nothing
       }
 
 --notifType = FCM.CANCELLED_SEARCH_REQUEST
@@ -1284,7 +1289,8 @@ driverStopDetectionAlert merchantOpCityId category title body driver mbDeviceTok
           body = body,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title
@@ -1321,7 +1327,8 @@ buildSendSearchRequestNotificationData merchantOpCityId driverId mbDeviceToken e
         title = buildTemplate params mbMerchantPN.title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
         ttl = Just entityData.searchRequestValidTill,
-        sound = Nothing
+        sound = Nothing,
+        overlayNotificationData = Nothing
       }
   where
     params =
@@ -1362,7 +1369,12 @@ sendSearchRequestToDriverNotification _merchantId merchantOpCityId driverId req 
   driver <- QPerson.findById driverId
   runWithServiceConfigForProviders merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) req iosModifier (clearDeviceToken driverId)
   where
-    iosModifier (iosFCMdata :: (FCM.FCMData SearchRequestForDriverAPIEntity)) = iosFCMdata {fcmEntityData = modifyEntity iosFCMdata.fcmEntityData}
+    iosModifier (iosFCMdata :: FCM.FCMData Value) =
+      iosFCMdata
+        { fcmEntityData = case fromJSON iosFCMdata.fcmEntityData :: Result SearchRequestForDriverAPIEntity of
+            Success entity -> toJSON (modifyEntity entity)
+            Data.Aeson.Error _ -> iosFCMdata.fcmEntityData
+        }
     modifyEntity SearchRequestForDriverAPIEntity {..} = IOSSearchRequestForDriverAPIEntity {..}
 
 data StopReq = StopReq
@@ -1609,7 +1621,8 @@ notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entit
           title = title,
           auth = Notification.Auth clientId.getId Nothing Nothing,
           ttl = mbTtl,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 extractNotificationSoundIfMatches :: FCM.FCMConfig -> Notification.Category -> Maybe Text
@@ -1633,7 +1646,7 @@ runWithServiceConfigForProviders ::
   Maybe Text ->
   Maybe Version.Device ->
   Notification.NotificationReq a b ->
-  (FCMData a -> FCMData c) ->
+  (FCMData Value -> FCMData c) ->
   m () ->
   m ()
 runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosModifier clearToken = do

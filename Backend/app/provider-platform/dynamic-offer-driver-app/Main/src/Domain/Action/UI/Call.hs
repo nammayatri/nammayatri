@@ -673,7 +673,8 @@ sendFCMToBPPOnFailedCallStatus callStatus idInfo = do
                 title = "",
                 auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> deviceToken) Nothing,
                 ttl = Nothing,
-                sound = Nothing
+                sound = Nothing,
+                overlayNotificationData = Nothing
               }
       return notificationData
 
