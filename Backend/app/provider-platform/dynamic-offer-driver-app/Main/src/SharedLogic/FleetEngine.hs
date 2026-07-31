@@ -51,6 +51,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Vehicle as QVeh
 
 type FleetEngineFlow m r =
@@ -191,13 +192,24 @@ notifyTripStatus merchantOpCityId rideId status =
 notifyDriverArrived :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
 notifyDriverArrived booking ride = notifyTripStatus booking.merchantOperatingCityId ride.id FETypes.ARRIVED_AT_PICKUP
 
+-- Trips with intermediates must transition ENROUTE_TO_INTERMEDIATE_DESTINATION first (per FE multi-destination docs).
 notifyRideStarted :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
 notifyRideStarted booking ride =
-  let status =
-        if isJust booking.stopLocationId
-          then FETypes.ENROUTE_TO_INTERMEDIATE_DESTINATION
-          else FETypes.ENROUTE_TO_DROPOFF
-   in notifyTripStatus booking.merchantOperatingCityId ride.id status
+  withFleetEngine booking.merchantOperatingCityId $ \providerId token baseUrl -> do
+    stops <- QLM.getLatestStopsByEntityId ride.id.getId
+    if null stops
+      then do
+        logInfo $ "FleetEngine: rideStarted (enroute to dropoff) provider=" <> providerId <> " tripId=" <> ride.id.getId
+        FEClient.updateTripStatus baseUrl providerId token ride.id.getId FETypes.ENROUTE_TO_DROPOFF
+      else do
+        mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey ride.id)
+        logInfo $ "FleetEngine: rideStarted (enroute to intermediate, index=0) provider=" <> providerId <> " tripId=" <> ride.id.getId
+        void . FEClient.updateTrip baseUrl providerId token ride.id.getId "tripStatus,intermediateDestinationIndex" $
+          FETypes.emptyTrip
+            { tripStatus = Just FETypes.ENROUTE_TO_INTERMEDIATE_DESTINATION,
+              intermediateDestinationIndex = Just 0,
+              intermediateDestinationsVersion = mbVersion
+            }
 
 notifyRideCompleted :: FleetEngineFlow m r => DRB.Booking -> SRide.Ride -> m ()
 notifyRideCompleted booking ride = notifyTripStatus booking.merchantOperatingCityId ride.id FETypes.COMPLETE
@@ -241,17 +253,32 @@ notifyStopsChanged merchantOpCityId rideId stops =
     whenJust (mbResp >>= (.intermediateDestinationsVersion)) $ \newVersion ->
       Redis.setExp (intermediateDestinationsVersionKey rideId) newVersion (24 * 60 * 60)
 
--- | Index=0 assumes nammayatri's single-stop-at-a-time model.
-notifyStopArrived :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> m ()
-notifyStopArrived merchantOpCityId rideId =
+-- Version goes in body but not in updateMask (per FE docs).
+notifyStopArrived :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> Int -> m ()
+notifyStopArrived merchantOpCityId rideId stopIndex =
   withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
-    logInfo $ "FleetEngine: stopArrived tripId=" <> rideId.getId
+    mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey rideId)
+    logInfo $ "FleetEngine: stopArrived tripId=" <> rideId.getId <> " index=" <> show stopIndex
     void . FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
       FETypes.emptyTrip
         { tripStatus = Just FETypes.ARRIVED_AT_INTERMEDIATE_DESTINATION,
-          intermediateDestinationIndex = Just 0
+          intermediateDestinationIndex = Just stopIndex,
+          intermediateDestinationsVersion = mbVersion
         }
 
-notifyStopDeparted :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> m ()
-notifyStopDeparted merchantOpCityId rideId =
-  notifyTripStatus merchantOpCityId rideId FETypes.ENROUTE_TO_DROPOFF
+-- Nothing = no more stops (drop is next); Just idx = enroute to the next intermediate at that FE index.
+notifyStopDeparted :: FleetEngineFlow m r => Id DMOC.MerchantOperatingCity -> Id SRide.Ride -> Maybe Int -> m ()
+notifyStopDeparted merchantOpCityId rideId mbNextIdx =
+  withFleetEngine merchantOpCityId $ \providerId token baseUrl -> case mbNextIdx of
+    Nothing -> do
+      logInfo $ "FleetEngine: stopDeparted (enroute to dropoff) tripId=" <> rideId.getId
+      FEClient.updateTripStatus baseUrl providerId token rideId.getId FETypes.ENROUTE_TO_DROPOFF
+    Just nextIdx -> do
+      mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey rideId)
+      logInfo $ "FleetEngine: stopDeparted (enroute to intermediate) tripId=" <> rideId.getId <> " nextIndex=" <> show nextIdx
+      void . FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
+        FETypes.emptyTrip
+          { tripStatus = Just FETypes.ENROUTE_TO_INTERMEDIATE_DESTINATION,
+            intermediateDestinationIndex = Just nextIdx,
+            intermediateDestinationsVersion = mbVersion
+          }

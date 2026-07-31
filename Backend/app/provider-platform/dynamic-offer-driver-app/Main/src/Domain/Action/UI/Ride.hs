@@ -35,7 +35,7 @@ where
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM hiding (filter)
-import Data.List (sortOn)
+import Data.List (findIndex, sortOn)
 import Data.Ord
 import qualified Data.Text as T hiding (count, map)
 import qualified Data.Text as Text
@@ -374,14 +374,16 @@ stopAction rideId pt stopLocId action = do
   stopsInfo <- QSI.findAllByRideId rideId
   now <- getCurrentTime
   appBackendBapInternal <- asks (.appBackendBapInternal)
+  let currentStopFEIndex = fromMaybe 0 (findIndex (\lm -> lm.locationId == stopLocId) stopsLM)
   case action of
     DEPART -> do
       stopInfo <- find (\stop -> stop.stopLocId == stopLocId) stopsInfo & fromMaybeM (InvalidRequest ("Invalid Stop depart request with stopLocId" <> stopLocId.getId <> "for ride " <> ride.id.getId))
       QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      let mbNextStopFEIndex = if currentStopFEIndex + 1 < length stopsLM then Just (currentStopFEIndex + 1) else Nothing
       fork "FleetEngine:notifyStopDeparted" $
-        FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id
+        FleetEngine.notifyStopDeparted ride.merchantOperatingCityId ride.id mbNextStopFEIndex
       pure Success
     ARRIVE -> do
       unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
@@ -407,7 +409,7 @@ stopAction rideId pt stopLocId action = do
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
       fork "FleetEngine:notifyStopArrived" $
-        FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id
+        FleetEngine.notifyStopArrived ride.merchantOperatingCityId ride.id currentStopFEIndex
       pure Success
   where
     isValidStopArrivedAction stopLM =
