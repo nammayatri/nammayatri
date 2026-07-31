@@ -73,6 +73,8 @@ reportIssue rideId issueType apiKey = do
     ICommon.SYNC_BOOKING -> pure ()
     ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
     ICommon.DRUNK_AND_DRIVE_VIOLATION -> handleDrunkAndDriveViolation ride
+    ICommon.UNHYGIENIC_VEHICLE -> handleUnhygienicVehicle ride
+    ICommon.VEHICLE_UNSAFE -> handleVehicleUnsafe ride
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()
@@ -177,6 +179,58 @@ handleDrunkAndDriveViolation ride = do
           let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
           Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
       else QDriverInfo.updateDynamicBlockedStateWithActivity ride.driverId (Just "DRUNK_AND_DRIVE_VIOLATION") Nothing "AUTOMATICALLY_BLOCKED_BY_APP" person.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" ride.merchantOperatingCityId DTDBT.Application True Nothing Nothing DrunkAndDriveViolation
+
+handleUnhygienicVehicle :: Ride -> Flow ()
+handleUnhygienicVehicle ride =
+  handleVehicleQualityViolation
+    ride
+    ((.unhygienicVehicleViolationCount))
+    QDI.updateUnhygienicVehicleViolationCount
+    "UNHYGIENIC_VEHICLE"
+    LYT.UNHYGIENIC_VEHICLE_BEHAVIOR
+    (\person -> Notify.unhygienicVehicleWarningNotify ride.merchantOperatingCityId person (Notify.UnhygienicVehicleWarningData {driverId = ride.driverId.getId}))
+
+handleVehicleUnsafe :: Ride -> Flow ()
+handleVehicleUnsafe ride =
+  handleVehicleQualityViolation
+    ride
+    ((.vehicleUnsafeViolationCount))
+    QDI.updateVehicleUnsafeViolationCount
+    "VEHICLE_UNSAFE"
+    LYT.VEHICLE_UNSAFE_BEHAVIOR
+    (\person -> Notify.vehicleUnsafeWarningNotify ride.merchantOperatingCityId person (Notify.VehicleUnsafeWarningData {driverId = ride.driverId.getId}))
+
+handleVehicleQualityViolation ::
+  Ride ->
+  (DI.DriverInformation -> Maybe Int) ->
+  (Maybe Int -> Id DP.Person -> Flow ()) ->
+  Text ->
+  LYT.LogicDomain ->
+  (DP.Person -> Flow ()) ->
+  Flow ()
+handleVehicleQualityViolation ride getCount updateCount actionType logicDomain sendNotification = do
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  let violationCount = fromMaybe 0 (getCount driverInfo) + 1
+  void $ updateCount (Just violationCount) ride.driverId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
+  BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId actionType BTT.ACTION_COUNT
+  eventTime <- getCurrentTime
+  let actionEvent =
+        BTT.ActionEvent
+          { entityType = BTT.DRIVER,
+            entityId = ride.driverId.getId,
+            actionType,
+            merchantOperatingCityId = ride.merchantOperatingCityId.getId,
+            flowContext = A.object [],
+            eventData = A.object ["violationCount" A..= violationCount],
+            timestamp = eventTime
+          }
+  handled <- runBehaviorPipeline transporterConfig ride.driverId ride.merchantOperatingCityId counterConfig actionEvent [] logicDomain
+  unless handled $ do
+    logInfo $ "No " <> show logicDomain <> " rules configured, using fallback for driver " <> ride.driverId.getId
+    person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    sendNotification person
 
 handleAcRestriction :: Ride -> DI.DriverInformation -> Flow ()
 handleAcRestriction ride driverInfo = do

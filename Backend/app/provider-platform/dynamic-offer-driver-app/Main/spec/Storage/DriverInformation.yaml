@@ -110,6 +110,8 @@ DriverInformation:
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
     drunkAndDriveViolationCount: Maybe Int
+    unhygienicVehicleViolationCount: Maybe Int
+    vehicleUnsafeViolationCount: Maybe Int
     extraFareMitigationFlag: Maybe Bool
     forwardBatchingEnabled: Bool
     payoutVpa: Maybe Text
@@ -403,6 +405,14 @@ DriverInformation:
     updateDrunkAndDriveViolationCount:
       kvFunction: updateOneWithKV
       params: [drunkAndDriveViolationCount]
+      where: driverId
+    updateUnhygienicVehicleViolationCount:
+      kvFunction: updateOneWithKV
+      params: [unhygienicVehicleViolationCount]
+      where: driverId
+    updateVehicleUnsafeViolationCount:
+      kvFunction: updateOneWithKV
+      params: [vehicleUnsafeViolationCount]
       where: driverId
     updateUpgradedTiers:
       kvFunction: updateOneWithKV

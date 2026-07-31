@@ -1118,6 +1118,74 @@ drunkAndDriveViolationWarningOverlay mOpCityId person req entityData = do
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
     body = FCMNotificationBody $ fromMaybe "Description" req.description
 
+data UnhygienicVehicleWarningData = UnhygienicVehicleWarningData
+  { driverId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data VehicleUnsafeWarningData = VehicleUnsafeWarningData
+  { driverId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+unhygienicVehicleWarningNotify ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  UnhygienicVehicleWarningData ->
+  m ()
+unhygienicVehicleWarningNotify mOpCityId person entityData = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "UNHYGIENIC_VEHICLE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
+    let notifTitle = FCMNotificationTitle merchantPN.title
+        body = FCMNotificationBody merchantPN.body
+        notificationData =
+          FCM.FCMData
+            { fcmNotificationType = FCM.UNHYGIENIC_VEHICLE_WARNING,
+              fcmShowNotification = FCM.SHOW,
+              fcmEntityType = FCM.Person,
+              fcmEntityIds = entityData.driverId,
+              fcmEntityData = Just entityData,
+              fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.UNHYGIENIC_VEHICLE_WARNING Nothing,
+              fcmOverlayNotificationJSON = Nothing,
+              fcmNotificationId = Nothing
+            }
+    FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+
+vehicleUnsafeWarningNotify ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  VehicleUnsafeWarningData ->
+  m ()
+vehicleUnsafeWarningNotify mOpCityId person entityData = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN mOpCityId "VEHICLE_UNSAFE_WARNING" Nothing Nothing (Just $ fromMaybe ENGLISH person.language) Nothing
+  whenJust mbMerchantPN $ \merchantPN -> do
+    fcmConfig <- findFCMConfigWithFallback mOpCityId person.id
+    let notifTitle = FCMNotificationTitle merchantPN.title
+        body = FCMNotificationBody merchantPN.body
+        notificationData =
+          FCM.FCMData
+            { fcmNotificationType = FCM.VEHICLE_UNSAFE_WARNING,
+              fcmShowNotification = FCM.SHOW,
+              fcmEntityType = FCM.Person,
+              fcmEntityIds = entityData.driverId,
+              fcmEntityData = Just entityData,
+              fcmNotificationJSON = FCM.createAndroidNotification notifTitle body FCM.VEHICLE_UNSAFE_WARNING Nothing,
+              fcmOverlayNotificationJSON = Nothing,
+              fcmNotificationId = Nothing
+            }
+    FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+
 driverStopDetectionAlert ::
   ( ServiceFlow m r,
     CacheFlow m r,
