@@ -94,14 +94,15 @@ getEnableOtpLessRideTag = maybe False getTagValue
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)
 
-getConsentToShareMobileNumberTag :: Bool -> Maybe [Spec.TagGroup] -> Bool
-getConsentToShareMobileNumberTag isValueAddNP = maybe False getTagValue
-  where
-    getTagValue tagGroups
-      | not isValueAddNP = False
-      | otherwise =
-        let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CONSENT_TO_SHARE_MOBILE_NUMBER (Just tagGroups)
-         in fromMaybe False (readMaybe . T.unpack =<< tagValue)
+getConsentToShareMobileNumberTag :: Bool -> Maybe [Spec.TagGroup] -> Maybe Bool
+getConsentToShareMobileNumberTag isValueAddNP tagGroups
+  | not isValueAddNP = Nothing
+  | otherwise =
+    case Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CONSENT_TO_SHARE_MOBILE_NUMBER tagGroups of
+      Nothing -> Nothing
+      Just "True" -> Just True
+      Just "False" -> Just False
+      Just _ -> Just False
 
 getDriverPreferenceTag :: Maybe [Spec.TagGroup] -> Maybe [Text]
 getDriverPreferenceTag Nothing = Nothing

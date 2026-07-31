@@ -720,7 +720,17 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         mbDriverPerson <- QP.findById finalUpdatedRide.driverId
         let endRideLanguage = fromMaybe KET.ENGLISH (mbDriverPerson >>= (.language))
         endRideLabels <- DUIRideCommon.fetchEarningsLabels endRideLanguage
-        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo Nothing
+        let endRideCalling =
+              DUIRideCommon.ResolvedCalling
+                { riderMobileNumber = Nothing,
+                  callingNumber =
+                    DUIRideCommon.CallingNumberAPIEntity
+                      { number = DUIRideCommon.mkExoPhone mbExophone booking,
+                        countryCode = Nothing,
+                        numberType = DUIRideCommon.ANONYMOUS
+                      }
+                }
+        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling
 
   return $
     EndRideResp

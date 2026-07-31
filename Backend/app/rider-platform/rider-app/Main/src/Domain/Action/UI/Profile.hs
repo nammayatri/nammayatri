@@ -756,6 +756,7 @@ data EmergencySettingsRes = EmergencySettingsRes
     safetyCenterDisabledOnDate :: Maybe UTCTime,
     enableOtpLessRide :: Maybe Bool,
     consentToShareMobileNumber :: Maybe Bool,
+    enableShareNumberWithDriver :: Maybe Bool,
     safetyCheckStartTime :: Seconds,
     safetyCheckEndTime :: Seconds
   }
@@ -795,6 +796,7 @@ getEmergencySettings personId = do
         safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
         enableOtpLessRide = safetySettings.enableOtpLessRide,
         consentToShareMobileNumber = safetySettings.consentToShareMobileNumber,
+        enableShareNumberWithDriver = riderConfig.enableShareNumberWithDriver,
         notifySosWithEmergencyContacts = safetySettings.notifySosWithEmergencyContacts
       }
 

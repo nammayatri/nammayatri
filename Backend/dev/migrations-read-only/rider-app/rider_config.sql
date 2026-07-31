@@ -785,3 +785,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_notification_tiers te
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [] USING bus_tracking_notification_tiers::text[];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_share_number_with_driver boolean  default false;

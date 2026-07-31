@@ -1224,7 +1224,8 @@
           {
             "where": {},
             "set": {
-              "is_avoid_toll": true
+              "is_avoid_toll": true,
+              "enable_share_number_with_driver": true
             }
           }
         ],
@@ -3255,7 +3256,8 @@
           {
             "where": {},
             "set": {
-              "is_avoid_toll": true
+              "is_avoid_toll": true,
+              "enable_share_number_with_driver": true
             }
           }
         ],
@@ -5294,7 +5296,8 @@
           {
             "where": {},
             "set": {
-              "is_avoid_toll": true
+              "is_avoid_toll": true,
+              "enable_share_number_with_driver": true
             }
           }
         ],
