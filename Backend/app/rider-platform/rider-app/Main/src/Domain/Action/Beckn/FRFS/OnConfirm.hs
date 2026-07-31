@@ -354,7 +354,7 @@ mkTicket booking dTicket isTicketFree = do
   -- on_confirm should never make status inprogress, except for a bus SPOT_BOOKING: the passenger
   -- is already boarding at booking time (no separate conductor scan), so the ticket should start
   -- checked-in. castTicketStatus's existing BUS branch already turns checkInprogress=True into USED.
-  let isSpotBookedBus = booking.vehicleType == Spec.BUS && booking.isSpotBooking
+  let isSpotBookedBus = booking.vehicleType == Spec.BUS && fromMaybe False booking.isSpotBooking
   ticketStatus <- Utils.getTicketStatus booking isSpotBookedBus dTicket
   processedQrData <- processQRData dTicket.qrData
   cloudType <- asks (.cloudType)

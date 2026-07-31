@@ -70,7 +70,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMockPayment :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    isSpotBooking :: Kernel.Prelude.Bool,
+    isSpotBooking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

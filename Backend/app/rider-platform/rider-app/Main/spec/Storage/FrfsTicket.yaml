@@ -454,11 +454,10 @@ FRFSTicketBooking:
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
-    isSpotBooking: Bool
+    isSpotBooking: Maybe Bool
 
   default:
     customerCancelled: "false"
-    isSpotBooking: "false"
 
   beamFields:
     fromStationCode:
