@@ -87,7 +87,8 @@ sendNotificationToEmergencyContact senderPersonId recipientPerson body title not
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth recipientPerson.id.getId recipientPerson.deviceToken recipientPerson.notificationToken,
           ttl = Nothing,
-          sound = notificationSound
+          sound = notificationSound,
+          overlayNotificationData = Nothing
         }
 
 sendMessageToEmergencyContact :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> (Text -> Sms.SendSMSReq) -> Flow ()
