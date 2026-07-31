@@ -3413,7 +3413,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             priority = 0,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
-            render = request.render,
+            render = request.render <|> (mbExistingSpLoc >>= (.render)),
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
             supportNumber = request.supportNumber,
             paymentModes = request.paymentModes <|> (mbExistingSpLoc >>= (.paymentModes)) <|> Just SL.defaultPaymentModes,
