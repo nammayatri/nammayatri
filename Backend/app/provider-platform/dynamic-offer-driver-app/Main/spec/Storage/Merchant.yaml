@@ -359,6 +359,8 @@ MerchantOperatingCity:
     currency: Currency
     distanceUnit: DistanceUnit
     stdCode: Maybe Text
+    cloudType: Maybe CloudType
+    cloudBaseUrl: Maybe BaseUrl
   sqlType:
     city: character varying(255)
     currency: character varying(255)
@@ -377,6 +379,8 @@ MerchantOperatingCity:
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
+    cloudType: Maybe Text
+    cloudBaseUrl: Maybe Text
   beamFields:
     location:
       lat: Double
@@ -386,10 +390,14 @@ MerchantOperatingCity:
     lon: (.lon) location|E
     currency: Just currency|E
     distanceUnit: Kernel.Prelude.Just|I
+    cloudType: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
+    cloudBaseUrl: (Kernel.Prelude.fmap showBaseUrl)|I
   fromTType:
     location: Kernel.External.Maps.Types.LatLong lat lon|E
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    cloudType: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    cloudBaseUrl: (Kernel.Prelude.pure . (Kernel.Prelude.>>= parseBaseUrl))|MI
 
   beamInstance:
     - MakeTableInstances

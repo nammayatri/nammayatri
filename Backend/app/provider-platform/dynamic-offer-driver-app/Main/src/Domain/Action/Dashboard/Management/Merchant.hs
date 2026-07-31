@@ -3917,7 +3917,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           stdCode = Just cityStdCode,
           language = fromMaybe baseCity.language req.primaryLanguage,
           currency = fromMaybe baseCity.currency req.currency,
-          distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit
+          distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit,
+          cloudType = Nothing,
+          cloudBaseUrl = Nothing
         }
 
     buildIntelligentPoolConfig mId newCityId currentTime DDIPC.DriverIntelligentPoolConfig {..} =

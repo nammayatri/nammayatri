@@ -334,7 +334,8 @@ makeSessionViaPartner ::
 makeSessionViaPartner sessionConfig entityId mId fakeOtp partnerOrgId isApiKeyAuth = do
   logDebug $ "We are in makeSessionViaPartner Creating session for entityId:" +|| entityId ||+ " merchantId:" +|| mId ||+ " partnerOrgId:" +|| partnerOrgId ||+ ""
   let authMedium = SR.PARTNER_ORG
-  regToken <- makeSession authMedium sessionConfig entityId mId (Just fakeOtp) partnerOrgId
+  person <- Person.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
+  regToken <- makeSession authMedium sessionConfig entityId mId person.merchantOperatingCityId.getId (Just fakeOtp) partnerOrgId
   void $ RegistrationToken.create regToken
   when isApiKeyAuth $ void $ RegistrationToken.setDirectAuth regToken.id authMedium
   return (regToken, True)
@@ -344,10 +345,11 @@ makeSession ::
   SmsSessionConfig ->
   Text ->
   Text ->
+  Text ->
   Maybe Text ->
   Id PartnerOrganization ->
   Flow SR.RegistrationToken
-makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partnerOrgId = do
+makeSession authMedium SmsSessionConfig {..} entityId merchantId merchantOperatingCityId fakeOtp partnerOrgId = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -365,6 +367,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partner
         tokenExpiry = tokenExpiry,
         entityId = entityId,
         merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,

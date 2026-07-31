@@ -22,6 +22,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PartnerOrganization as PO
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
@@ -71,15 +72,16 @@ verifyPerson ::
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
-  result <- Redis.safeGet key
+  result :: Maybe (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) <- Redis.safeGet key
   case result of
-    Just (personId, merchantId) -> return (personId, merchantIdFallback merchantId)
+    Just (personId, merchantId, _mocId) -> return (personId, merchantIdFallback merchantId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
       let merchantId = merchantIdFallback (Id sr.merchantId)
-      Redis.setExp key (personId, merchantId) expiryTime
+      let merchantOperatingCityId = Id sr.merchantOperatingCityId
+      Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
       return (personId, merchantId)
 
 merchantIdFallback :: Id Merchant.Merchant -> Id Merchant.Merchant

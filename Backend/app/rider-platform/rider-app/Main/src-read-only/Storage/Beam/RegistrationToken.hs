@@ -24,6 +24,7 @@ data RegistrationTokenT f = RegistrationTokenT
     id :: B.C f Kernel.Prelude.Text,
     info :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     token :: B.C f Kernel.Prelude.Text,
     tokenExpiry :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,

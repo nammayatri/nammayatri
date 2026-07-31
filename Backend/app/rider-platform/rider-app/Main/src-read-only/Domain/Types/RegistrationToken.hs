@@ -22,6 +22,7 @@ data RegistrationToken = RegistrationToken
     id :: Kernel.Types.Id.Id Domain.Types.RegistrationToken.RegistrationToken,
     info :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Text,
     token :: Kernel.Prelude.Text,
     tokenExpiry :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,

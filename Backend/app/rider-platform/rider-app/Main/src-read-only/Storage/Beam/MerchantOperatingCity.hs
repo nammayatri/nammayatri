@@ -14,6 +14,8 @@ import Tools.Beam.UtilsTH
 
 data MerchantOperatingCityT f = MerchantOperatingCityT
   { city :: B.C f Kernel.Types.Beckn.Context.City,
+    cloudBaseUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverOfferMerchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

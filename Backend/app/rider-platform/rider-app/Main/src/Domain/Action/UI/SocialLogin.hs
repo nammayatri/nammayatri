@@ -72,7 +72,7 @@ postSocialLogin req = do
               cloudType <- asks (.cloudType)
               PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing cloudType merchant Nothing Nothing
       QR.deleteByPersonId person.id
-      token <- makeSession person.id.getId merchant.id.getId
+      token <- makeSession person.id.getId merchant.id.getId person.merchantOperatingCityId.getId
       _ <- QR.create token
       pure $ SL.SocialLoginRes isNew token.token
     Left _ -> throwError . InternalError $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
@@ -108,8 +108,9 @@ postSocialLogin req = do
 makeSession ::
   Text ->
   Text ->
+  Text ->
   Environment.Flow SR.RegistrationToken
-makeSession entityId merchantId = do
+makeSession entityId merchantId merchantOperatingCityId = do
   otp <- generateOTPCode
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -127,6 +128,7 @@ makeSession entityId merchantId = do
         tokenExpiry = 356,
         entityId = entityId,
         merchantId = merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
         entityType = SR.USER,
         createdAt = now,
         updatedAt = now,

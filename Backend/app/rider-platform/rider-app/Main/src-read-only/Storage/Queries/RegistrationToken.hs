@@ -48,6 +48,7 @@ updateByPrimaryKey (Domain.Types.RegistrationToken.RegistrationToken {..}) = do
       Se.Set Beam.entityType entityType,
       Se.Set Beam.info info,
       Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Prelude.Just merchantOperatingCityId),
       Se.Set Beam.token token,
       Se.Set Beam.tokenExpiry tokenExpiry,
       Se.Set Beam.updatedAt _now,
