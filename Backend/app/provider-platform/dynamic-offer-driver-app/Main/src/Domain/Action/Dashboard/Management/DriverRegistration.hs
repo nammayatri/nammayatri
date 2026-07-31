@@ -47,9 +47,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
-import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified Dashboard.Common
-import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
@@ -79,7 +77,6 @@ import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverGstin as DGstin
 import qualified Domain.Types.DriverIdentityInfo as DII
-import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.DriverRCAssociation as DRCA
@@ -1055,37 +1052,7 @@ castToManagementStatusRes res =
       vehicleDocuments = castVehicleDocItem <$> res.vehicleDocuments,
       vehicleRegistrationCertificateDetails = fmap (castMgmtRCDetails <$>) res.vehicleRegistrationCertificateDetails,
       enabled = res.enabled,
-      verified = res.verified,
-      approved = res.approved,
-      blocked = res.blocked,
-      onboardingAs = castMgmtOnboardingAs <$> res.onboardingAs,
-      disabledReasonFlag = castMgmtDisabledReasonFlag <$> res.disabledReasonFlag,
-      recentFleetInfo = castMgmtFleetInfoToAssociationInfo <$> res.recentFleetInfo,
       manualVerificationRequired = res.manualVerificationRequired
-    }
-
-castMgmtOnboardingAs :: DI.OnboardingAs -> CommonDriver.OnboardingAs
-castMgmtOnboardingAs DI.FLEET_DRIVER = CommonDriver.FLEET_DRIVER
-castMgmtOnboardingAs DI.INDIVIDUAL = CommonDriver.INDIVIDUAL
-
-castMgmtDisabledReasonFlag :: DI.DisabledReasonFlag -> CommonDriver.DisabledReasonFlag
-castMgmtDisabledReasonFlag DI.FleetDisabled = CommonDriver.FleetDisabled
-castMgmtDisabledReasonFlag DI.AdminDisabled = CommonDriver.AdminDisabled
-castMgmtDisabledReasonFlag DI.DriverDisabled = CommonDriver.DriverDisabled
-
-castMgmtFleetInfoToAssociationInfo :: DOVT.FleetInfo -> CommonDriver.DriverAssociationInfo
-castMgmtFleetInfoToAssociationInfo f =
-  CommonDriver.DriverAssociationInfo
-    { personId = Id f.id,
-      name = Just f.ownerName,
-      mobileCountryCode = Nothing,
-      mobileNumber = f.phoneNumber,
-      fleetName = f.fleetName,
-      verified = Nothing,
-      enabled = Nothing,
-      isActive = f.isActive,
-      isAssociated = f.isAssociated,
-      associatedTill = f.associatedTill
     }
 
 castDocStatusItem :: SStatus.DocumentStatusItem -> Common.DocumentStatusItem
@@ -1287,8 +1254,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       if transporterConfig.enableManualDocumentStatusCheck == Just True
                         then Just DDVS.ADMIN_APPROVED
                         else Nothing,
-                    DRC.pendingChallan = Nothing,
-                    DRC.initiatedBy = Nothing
+                    DRC.pendingChallan = Nothing
                   }
           QRC.create newRC
           -- Create driver RC association so the RC is linked to the driver

@@ -555,8 +555,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         updatedAt = now,
         vehicleImageId = Nothing,
         verified = Nothing,
-        pendingChallan = Nothing,
-        initiatedBy = Nothing
+        pendingChallan = Nothing
       }
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
@@ -824,8 +823,7 @@ castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
       placeholder = placeholder,
       dropdownValues = dropdownValues,
       requestKey = requestKey,
-      fields = fmap (map castDocumentFieldInfo) fields,
-      imageUrl = imageUrl
+      fields = fmap (map castDocumentFieldInfo) fields
     }
 
 castDocumentFieldType :: Domain.Types.DocumentVerificationConfig.FieldType -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldType

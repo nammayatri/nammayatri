@@ -52,7 +52,6 @@ import Domain.Types.DriverPanCard
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.Feedback as DFeedback
-import qualified Domain.Types.FleetDriverAssociation as FDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
@@ -506,29 +505,18 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
   mbActiveFda <- B.runInReplica $ QFleetDriver.findByDriverId person.id True
-  now <- getCurrentTime
   activeFleetInfo <- case mbActiveFda of
     Nothing -> pure Nothing
     Just fda -> do
       fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
       fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo (Just fda) now
-  recentFleetInfo <- case activeFleetInfo of
-    Just _ -> pure activeFleetInfo
-    Nothing -> do
-      allFdas <- B.runInReplica $ QFleetDriver.findAllByDriverIdWithStatus person.id
-      case listToMaybe allFdas of
-        Nothing -> pure Nothing
-        Just fda -> do
-          fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
-          fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-          Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo (Just fda) now
+      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo
   operatorInfo <-
     B.runInReplica (QDriverOperator.findByDriverId person.id True) >>= \case
       Nothing -> pure Nothing
       Just doa -> do
         op <- B.runInReplica $ QPerson.findById (Id doa.operatorId) >>= fromMaybeM (PersonDoesNotExist doa.operatorId)
-        Just <$> buildDriverAssociationInfoFromPerson op Nothing Nothing now
+        Just <$> buildDriverAssociationInfoFromPerson op Nothing
   mbBankAccount <- QDBA.findByPrimaryKey person.id
   mbGstin <- QDGExtra.findGSTInByDriverId person.id
   mbWalletAccount <- FWallet.getWalletAccountByOwner DRIVER person.id.getId
@@ -537,6 +525,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let bankAccountNumber' = mbBankAccount <&> (.accountId)
   let bankIfsc' = mbBankAccount >>= (.ifscCode)
   let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+  let fleetOwnerId' = (.fleetOwnerId) <$> mbActiveFda
   mbIdentityInfo <- B.runInReplica $ QDII.findByDriverId person.id
   let courtRecord' = (mbIdentityInfo >>= (.courtRecord)) <&> \cr -> Common.CourtRecordResult {result = cr.result, errorMessage = cr.errorMessage}
   tdsApplicableFlag' <- case mbActiveFda of
@@ -612,7 +601,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         drunkAndDriveViolationCount,
         onboardingAs = castOnboardingAs <$> info.onboardingAs,
         activeFleetInfo,
-        recentFleetInfo,
         operatorInfo,
         panAadhaarLinkedFlag = panAadhaarLinkedFlag',
         gstinApplicableFlag = gstinApplicableFlag',
@@ -622,10 +610,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         bankIfsc = bankIfsc',
         bankVerificationStatus = bankVerificationStatus',
         upiId = driverInfo.payoutVpa,
+        fleetOwnerId = fleetOwnerId',
         docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus,
         courtRecord = courtRecord',
         approved = driverInfo.approved,
-        disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag,
         specialLocWarriorInfo =
           Common.SpecialLocWarriorInfo
             { isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
@@ -634,8 +622,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             }
       }
   where
-    buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe FDA.FleetDriverAssociation -> UTCTime -> m Common.DriverAssociationInfo
-    buildDriverAssociationInfoFromPerson p mbFoi mbFda now = do
+    buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> m Common.DriverAssociationInfo
+    buildDriverAssociationInfoFromPerson p mbFoi = do
       mob <- traverse decrypt p.mobileNumber
       pure
         Common.DriverAssociationInfo
@@ -645,22 +633,14 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             mobileNumber = mob,
             fleetName = mbFoi >>= (.fleetName),
             verified = (.verified) <$> mbFoi,
-            enabled = (.enabled) <$> mbFoi,
-            isActive = maybe False (.isActive) mbFda,
-            isAssociated = maybe False (\fda -> maybe False (> now) fda.associatedTill) mbFda,
-            associatedTill = mbFda >>= (.associatedTill)
+            docsVerificationStatus = mbFoi >>= (.docsVerificationStatus) <&> castDriverDocsVerificationStatus,
+            enabled = (.enabled) <$> mbFoi
           }
 
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
     castOnboardingAs = \case
       DI.FLEET_DRIVER -> Common.FLEET_DRIVER
       DI.INDIVIDUAL -> Common.INDIVIDUAL
-
-    castDisabledReasonFlag :: DI.DisabledReasonFlag -> Common.DisabledReasonFlag
-    castDisabledReasonFlag = \case
-      DI.FleetDisabled -> Common.FleetDisabled
-      DI.AdminDisabled -> Common.AdminDisabled
-      DI.DriverDisabled -> Common.DriverDisabled
 
 castDriverDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
 castDriverDocsVerificationStatus = \case

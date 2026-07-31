@@ -185,8 +185,3 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_de
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-

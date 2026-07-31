@@ -8,7 +8,6 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.Extra.Plan
-import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -71,7 +70,6 @@ data DriverInformationE e = DriverInformation
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    initiatedBy :: Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy,
     isBlockedForReferralPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedForScheduledPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isHighAccuracyLocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -194,7 +192,6 @@ instance EncryptedItem DriverInformation where
           forwardBatchingEnabled = forwardBatchingEnabled entity,
           hasAdvanceBooking = hasAdvanceBooking entity,
           hasRideStarted = hasRideStarted entity,
-          initiatedBy = initiatedBy entity,
           isBlockedForReferralPayout = isBlockedForReferralPayout entity,
           isBlockedForScheduledPayout = isBlockedForScheduledPayout entity,
           isHighAccuracyLocationEnabled = isHighAccuracyLocationEnabled entity,
@@ -309,7 +306,6 @@ instance EncryptedItem DriverInformation where
             forwardBatchingEnabled = forwardBatchingEnabled entity,
             hasAdvanceBooking = hasAdvanceBooking entity,
             hasRideStarted = hasRideStarted entity,
-            initiatedBy = initiatedBy entity,
             isBlockedForReferralPayout = isBlockedForReferralPayout entity,
             isBlockedForScheduledPayout = isBlockedForScheduledPayout entity,
             isHighAccuracyLocationEnabled = isHighAccuracyLocationEnabled entity,

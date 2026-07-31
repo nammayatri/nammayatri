@@ -11,7 +11,6 @@ imports:
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
   AddressDocumentType: Domain.Types.DriverInformation
   DisabledReasonFlag: Domain.Types.DriverInformation
-  InitiatedBy: Domain.Types.InitiatedBy
   IndianState: Kernel.Types.Beckn.Context
 
 FleetOwnerInformation:
@@ -67,7 +66,6 @@ FleetOwnerInformation:
     addressDocumentType: Maybe AddressDocumentType
     approved: Maybe Bool
     disabledReasonFlag: Maybe DisabledReasonFlag
-    initiatedBy: Maybe InitiatedBy
 
   excludedFields: [merchantOperatingCityId]
   default:

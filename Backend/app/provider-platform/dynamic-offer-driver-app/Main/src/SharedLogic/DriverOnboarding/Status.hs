@@ -48,12 +48,10 @@ module SharedLogic.DriverOnboarding.Status
   )
 where
 
-import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
 import Data.Either (fromRight)
-import Data.List (nub, sortOn)
-import Data.Ord (Down (..))
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -250,12 +248,6 @@ data StatusRes' = StatusRes'
   { driverDocuments :: [DocumentStatusItem],
     vehicleDocuments :: [VehicleDocumentItem],
     enabled :: Bool,
-    verified :: Bool,
-    approved :: Maybe Bool,
-    blocked :: Bool,
-    onboardingAs :: Maybe DI.OnboardingAs,
-    disabledReasonFlag :: Maybe DI.DisabledReasonFlag,
-    recentFleetInfo :: Maybe DOVT.FleetInfo,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [DLDetails],
     vehicleRegistrationCertificateDetails :: Maybe [RCDetails],
@@ -685,19 +677,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         return (Just allDLDetails, Just allRCDetails)
       _ -> return (Nothing, Nothing)
 
-  (enabled, verified, approved, blocked, onboardingAs, disabledReasonFlag) <-
+  enabled <-
     if SDO.isFleetRole person.role
       then do
         fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
-        return (fleetOwnerInfo.enabled, fleetOwnerInfo.verified, fleetOwnerInfo.approved, fleetOwnerInfo.blocked, Nothing, fleetOwnerInfo.disabledReasonFlag)
+        return fleetOwnerInfo.enabled
       else do
         driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-        return (driverInfo.enabled, driverInfo.verified, driverInfo.approved, driverInfo.blocked, driverInfo.onboardingAs, driverInfo.disabledReasonFlag)
-
-  recentFleetInfo <-
-    if SDO.isFleetRole person.role
-      then pure Nothing
-      else getRecentFleetDriverAssociationInfo (cast personId)
+        return driverInfo.enabled
 
   digilockerResponseCode <- getDigilockerResponseCode personId
 
@@ -711,12 +698,6 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       { driverDocuments,
         vehicleDocuments,
         enabled = enabled,
-        verified = verified,
-        approved = approved,
-        blocked = blocked,
-        onboardingAs = onboardingAs,
-        disabledReasonFlag = disabledReasonFlag,
-        recentFleetInfo = recentFleetInfo,
         manualVerificationRequired = transporterConfig.requiresOnboardingInspection,
         driverLicenseDetails = dlDetails,
         vehicleRegistrationCertificateDetails = rcDetails,
@@ -1197,15 +1178,11 @@ ensureNoActiveRidesUnderFleet fleetOwnerId = do
     throwError $ InvalidRequest "Cannot disable fleet: one or more drivers have active rides"
 
 -- | Disable every active driver under the fleet, tagging each with the
---   FleetDisabled flag so the inverse cascade can find them. The flag stamp
---   itself does not flip `enabled` — the follow-up refresh derives it via
---   the explicitlyDisabled gate in recomputeDriverVerifiedAndEnabled.
+--   FleetDisabled flag so the inverse cascade can find them.
 cascadeFleetDisableToDrivers :: Id DP.Person -> Flow ()
 cascadeFleetDisableToDrivers fleetOwnerId = do
   driverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId.getId
-  forM_ driverIds $ \driverId -> do
-    DIQueryExtra.markDisabledForFleetCascade (cast driverId)
-    void $ runRefreshOnboardingFlagsDriver Nothing Nothing (cast driverId)
+  forM_ driverIds $ \driverId -> DIQueryExtra.markDisabledForFleetCascade (cast driverId)
 
 -- | Re-enable drivers previously disabled by 'cascadeFleetDisableToDrivers'.
 --   Drivers blocked for other reasons are left alone.
@@ -1874,36 +1851,6 @@ getDigilockerResponseCode :: Id DP.Person -> Flow (Maybe Text)
 getDigilockerResponseCode driverId = do
   mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
   pure $ mbSession >>= (.responseCode)
-
-getRecentFleetDriverAssociationInfo :: Id DP.Person -> Flow (Maybe DOVT.FleetInfo)
-getRecentFleetDriverAssociationInfo driverId = do
-  fdas <- QFDA.findAllByDriverIdWithStatus driverId
-  case listToMaybe (sortOn (Down . (.createdAt)) fdas) of
-    Nothing -> pure Nothing
-    Just fda -> do
-      mbFleetPerson <- QPerson.findById (Id fda.fleetOwnerId)
-      case mbFleetPerson of
-        Nothing -> pure Nothing
-        Just fleetPerson -> do
-          fleetPhoneNumber <- decrypt `mapM` fleetPerson.mobileNumber
-          fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-          now <- getCurrentTime
-          pure $
-            Just
-              DOVT.FleetInfo
-                { id = fda.fleetOwnerId,
-                  ownerName = fleetPerson.firstName <> maybe "" (" " <>) fleetPerson.lastName,
-                  fleetName = fleetOwnerInfo >>= (.fleetName),
-                  phoneNumber = fleetPhoneNumber,
-                  address = fleetOwnerInfo >>= (.stripeAddress),
-                  requestReason = fda.requestReason,
-                  responseReason = fda.responseReason,
-                  chargesEnabled = Nothing,
-                  createdAt = fda.createdAt,
-                  isActive = fda.isActive,
-                  isAssociated = maybe False (> now) fda.associatedTill,
-                  associatedTill = fda.associatedTill
-                }
 
 getDigilockerDocStatusMap :: Id DP.Person -> Flow DocStatus.DocStatusMap
 getDigilockerDocStatusMap driverId = do

@@ -199,12 +199,7 @@ data DriverListItem = DriverListItem
     verified :: Kernel.Prelude.Bool,
     onRide :: Kernel.Prelude.Bool,
     active :: Kernel.Prelude.Bool,
-    onboardingDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    onboardingAs :: Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs,
-    recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
-    hasActiveRc :: Kernel.Prelude.Bool,
-    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag
+    onboardingDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -435,6 +430,13 @@ data UpdateDriverNameReq = UpdateDriverNameReq {firstName :: Kernel.Prelude.Text
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDriverNameReq where
   hideSecrets = Kernel.Prelude.identity
 
+data UpdateDriverTagReq = UpdateDriverTagReq {driverTag :: Lib.Yudhishthira.Types.TagNameValue, isAddingTag :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdateDriverTagReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data UpdateDriverSpecialLocWarriorReq = UpdateDriverSpecialLocWarriorReq
   { isSpecialLocWarrior :: Kernel.Prelude.Bool,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
@@ -444,13 +446,6 @@ data UpdateDriverSpecialLocWarriorReq = UpdateDriverSpecialLocWarriorReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDriverSpecialLocWarriorReq where
-  hideSecrets = Kernel.Prelude.identity
-
-data UpdateDriverTagReq = UpdateDriverTagReq {driverTag :: Lib.Yudhishthira.Types.TagNameValue, isAddingTag :: Kernel.Prelude.Bool}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets UpdateDriverTagReq where
   hideSecrets = Kernel.Prelude.identity
 
 data UpdatePhoneNumberReq = UpdatePhoneNumberReq {newPhoneNumber :: Kernel.Prelude.Text, newCountryCode :: Kernel.Prelude.Text}
@@ -534,12 +529,6 @@ type GetDriverList =
       :> QueryParam
            "mbNameSearchString"
            Kernel.Prelude.Text
-      :> QueryParam
-           "approvalStatus"
-           Dashboard.Common.Driver.ApprovalStatusFilter
-      :> QueryParam
-           "onboardingAs"
-           Dashboard.Common.Driver.OnboardingAs
       :> Get
            '[JSON]
            DriverListRes
@@ -682,11 +671,10 @@ type PostDriverUpdateDriverTag =
   )
 
 type PostDriverUpdateSpecialLocWarrior =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateSpecialLocWarrior"
-      :> ReqBody
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateSpecialLocWarrior" :> ReqBody '[JSON] UpdateDriverSpecialLocWarriorReq
+      :> Post
            '[JSON]
-           UpdateDriverSpecialLocWarriorReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverClearFee =
@@ -886,7 +874,7 @@ data DriverAPIs = DriverAPIs
     postDriverPersonId :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonMobileNoReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
     getDriverAadhaarInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverAadhaarInfoRes,
     getDriverAadhaarInfobyMobileNumber :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverAadhaarInfoByPhoneReq,
-    getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs -> EulerHS.Types.EulerClient DriverListRes,
+    getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverListRes,
     getDriverActivity :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverActivityRes,
     postDriverDisable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverAcRestrictionUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateACUsageRestrictionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

@@ -204,7 +204,6 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   wmbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   when (wmbTransporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
     void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbTransporterConfig) driverId
-  SA.syncDriverOnboardingAsWithFDA driverId
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))

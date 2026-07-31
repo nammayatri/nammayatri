@@ -21,9 +21,6 @@ imports:
   VerifiedBy: Domain.Types.DriverPanCard
   DocsVerificationStatus: Dashboard.Common
   CRCVerificationResponse: Kernel.External.Verification.Types
-  OnboardingAs: Dashboard.Common.Driver
-  DisabledReasonFlag: Dashboard.Common.Driver
-  DriverAssociationInfo: Dashboard.Common.Driver
   SpecialLocation: Lib.Types.SpecialLocation
 module: Driver
 
@@ -354,7 +351,6 @@ types:
     - lastOfflineTime: Maybe UTCTime
     - onboardingAs: Maybe OnboardingAs
     - activeFleetInfo: Maybe DriverAssociationInfo
-    - recentFleetInfo: Maybe DriverAssociationInfo
     - operatorInfo: Maybe DriverAssociationInfo
     - panAadhaarLinkedFlag: Maybe Bool
     - gstinApplicableFlag: Maybe Bool
@@ -364,10 +360,10 @@ types:
     - bankIfsc: Maybe Text
     - bankVerificationStatus: Maybe Text
     - upiId: Maybe Text
+    - fleetOwnerId: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - courtRecord: Maybe CourtRecordResult
     - approved: Maybe Bool
-    - disabledReasonFlag: Maybe DisabledReasonFlag
     - specialLocWarriorInfo: SpecialLocWarriorInfo
   SpecialLocWarriorInfo:
     - isSpecialLocWarrior: Bool
@@ -376,6 +372,17 @@ types:
   CourtRecordResult:
     - result: Maybe CRCVerificationResponse
     - errorMessage: Maybe Text
+  DriverAssociationInfo:
+    - personId: Id Person
+    - name: Maybe Text
+    - mobileCountryCode: Maybe Text
+    - mobileNumber: Maybe Text
+    - fleetName: Maybe Text
+    - verified: Maybe Bool
+    - docsVerificationStatus: Maybe DocsVerificationStatus
+    - enabled: Maybe Bool
+  OnboardingAs:
+    enum: "FLEET_DRIVER, INDIVIDUAL"
   GetFeedbackListRes:
     - feedbacks: [DriverFeedbackAPIEntity]
   DriverFeedbackAPIEntity:

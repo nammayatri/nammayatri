@@ -216,9 +216,3 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN disabled_r
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN initiated_by text ;

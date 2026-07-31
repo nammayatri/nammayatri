@@ -1362,14 +1362,15 @@ postDriverLinkToFleet ::
   Flow APISuccess
 postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  -- Fetch the driver's (non-expired) fleet associations once and reuse them for both the
+  -- this-fleet branching below and the D17 "active with another fleet" guard, avoiding a
+  -- second read on fleet_driver_association.
   driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
   let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
   case req.isRevoke of
     Just True -> do
       case fdaForFleetOwner of
-        Just fda | not fda.isActive -> do
-          FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
-          SA.syncDriverOnboardingAsWithFDA driverId
+        Just fda | not fda.isActive -> FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
         Just _ -> throwError $ InvalidRequest "Direct revoke is not allowed for active fleet associations"
         Nothing -> throwError $ InvalidRequest "No fleet association found to revoke"
     _ -> do
@@ -1381,7 +1382,6 @@ postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
           SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
-          SA.syncDriverOnboardingAsWithFDA driverId
   return Success
 
 -- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on

@@ -138,7 +138,6 @@ data FieldInfo = FieldInfo
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
-    imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isMandatory :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
