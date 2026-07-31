@@ -11,6 +11,10 @@ module Domain.Action.RiderPlatform.AppManagement.Pass
     postPassCustomerPassUpdateProfilePicture,
     getPassCustomerPassPhoto,
     postPassCustomerPassRestore,
+    listPassCatalog,
+    createPass,
+    updatePass,
+    deletePass,
   )
 where
 
@@ -21,6 +25,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Time
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Pass
+import qualified "rider-app" Domain.Types.PassType
 import qualified "rider-app" Domain.Types.Person
 import qualified "rider-app" Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
@@ -98,3 +103,26 @@ getPassCustomerPassPhoto :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 getPassCustomerPassPhoto merchantShortId opCity apiTokenInfo customerId mediaId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.getPassCustomerPassPhoto) customerId mediaId
+
+listPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.PassCatalogItem])
+listPassCatalog merchantShortId opCity apiTokenInfo enable passTypeId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.listPassCatalog) enable passTypeId
+
+createPass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.Pass.PassCreateReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassCreateResp)
+createPass merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.createPass) req)
+
+updatePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+updatePass merchantShortId opCity apiTokenInfo passId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.updatePass) passId req)
+
+deletePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deletePass merchantShortId opCity apiTokenInfo passId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passDSL.deletePass) passId)

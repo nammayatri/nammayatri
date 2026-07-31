@@ -117,6 +117,7 @@ import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import SharedLogic.Offer
 import qualified SharedLogic.OfferSegment as SOfferSegment
+import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PickupETA as PickupETA
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
@@ -417,6 +418,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
       logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.PASS_PURCHASE_ELIGIBILITY -> do
+      logicData :: SLE.PassEligibilityData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SLE.PassEligibilityResult) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) _riderConfig.dynamicLogicUpdatePassword req logicData
@@ -677,6 +681,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultInput,
             LYTU.schema = toInlinedSchemaValue (Proxy @CancelLogic.CancellationReasonInput)
+          }
+    LYTU.PASS_PURCHASE_ELIGIBILITY ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: SLE.PassEligibilityData),
+            LYTU.schema = toInlinedSchemaValue (Proxy @SLE.PassEligibilityData)
           }
     LYTU.INVOICE_TEMPLATE _scope ->
       return $
