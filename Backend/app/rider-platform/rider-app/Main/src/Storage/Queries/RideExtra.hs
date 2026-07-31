@@ -126,6 +126,7 @@ updateMultiple rideId ride = do
       Se.Set BeamR.startOdometerReading ride.startOdometerReading,
       Se.Set BeamR.endOdometerReading ride.endOdometerReading,
       Se.Set BeamR.tollConfidence ride.tollConfidence,
+      Se.Set BeamR.rideTags ride.rideTags,
       Se.Set BeamR.estimatedEndTimeRangeStart ((.start) <$> ride.estimatedEndTimeRange),
       Se.Set BeamR.estimatedEndTimeRangeEnd ((.end) <$> ride.estimatedEndTimeRange),
       Se.Set BeamR.paymentStatus (Just ride.paymentStatus),
