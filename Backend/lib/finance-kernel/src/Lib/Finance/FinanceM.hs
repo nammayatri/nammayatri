@@ -42,6 +42,7 @@ module Lib.Finance.FinanceM
     account,
     transfer,
     transfer_,
+    adjustment,
     transferPending,
     transferAllowZero,
     transferWithoutAttribution,
@@ -525,7 +526,31 @@ transfer ::
   HighPrecMoney ->
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transfer fromRole toRole amount refType = do
+transfer = transferWithEntryType LE.Expense
+
+-- | Manual adjustment transfer. Positive amounts use @fromRole -> toRole@;
+--   negative amounts reverse the account direction. Collects the entry ID.
+adjustment ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+adjustment fromRole toRole amount refType
+  | amount > 0 = transferWithEntryType LE.Adjustment fromRole toRole amount refType
+  | amount < 0 = transferWithEntryType LE.Adjustment toRole fromRole (negate amount) refType
+  | otherwise = pure Nothing
+
+transferWithEntryType ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  LE.EntryType ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferWithEntryType entryType fromRole toRole amount refType = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -539,7 +564,7 @@ transfer fromRole toRole amount refType = do
                 concernedIndividualId = ctx.concernedIndividualId,
                 amount = amount,
                 currency = ctx.currency,
-                entryType = LE.Expense,
+                entryType,
                 status = LE.SETTLED,
                 referenceType = refType,
                 referenceId = ctx.referenceId,

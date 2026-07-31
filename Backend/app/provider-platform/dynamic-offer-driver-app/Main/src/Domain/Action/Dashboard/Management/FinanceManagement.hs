@@ -11,6 +11,10 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinanceInvoicePdf,
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
+    postFinanceManagementFinanceAdjustmentSubmit,
+    getFinanceManagementFinanceAdjustmentList,
+    postFinanceManagementFinanceAdjustmentApprove,
+    postFinanceManagementFinanceAdjustmentReject,
   )
 where
 
@@ -29,6 +33,7 @@ import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTim
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
+import qualified Domain.Types.LedgerAdjustmentRequest as DLAR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -41,6 +46,7 @@ import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -87,6 +93,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
+import qualified SharedLogic.Finance.LedgerAdjustment as LedgerAdjustment
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
@@ -1949,3 +1956,72 @@ toSapJournalItem entry =
       createdAt = entry.createdAt,
       updatedAt = entry.updatedAt
     }
+
+postFinanceManagementFinanceAdjustmentSubmit ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Text ->
+  API.SubmitLedgerAdjustmentReq ->
+  Flow APISuccess
+postFinanceManagementFinanceAdjustmentSubmit merchantShortId opCity requestorId requestorName req =
+  LedgerAdjustment.ledgerAdjustmentSubmit merchantShortId opCity requestorId requestorName req
+
+getFinanceManagementFinanceAdjustmentList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (Id Dashboard.Common.LedgerAdjustmentRequest) ->
+  Maybe API.AdjustmentRequestStatus ->
+  Maybe (Id Dashboard.Common.Person) ->
+  Maybe Bool ->
+  Maybe API.AdjustmentCategory ->
+  Maybe API.AdjustmentDirection ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe (Id Dashboard.Common.Person) ->
+  Maybe (Id Dashboard.Common.Person) ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Text ->
+  Flow API.LedgerAdjustmentListRes
+getFinanceManagementFinanceAdjustmentList merchantShortId opCity mbLimit mbOffset mbAdjustmentRequestId mbStatus mbPersonId mbExcludeCurrentAdminMaker mbCategory mbDirection mbReferenceType mbReferenceId mbAdminMakerId mbAdminCheckerId mbFrom mbTo requestorId =
+  LedgerAdjustment.ledgerAdjustmentList
+    merchantShortId
+    opCity
+    mbLimit
+    mbOffset
+    (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest <$> mbAdjustmentRequestId)
+    mbStatus
+    (cast @Dashboard.Common.Person @DP.Person <$> mbPersonId)
+    mbExcludeCurrentAdminMaker
+    mbCategory
+    mbDirection
+    mbReferenceType
+    mbReferenceId
+    (cast @Dashboard.Common.Person @DP.Person <$> mbAdminMakerId)
+    (cast @Dashboard.Common.Person @DP.Person <$> mbAdminCheckerId)
+    mbFrom
+    mbTo
+    requestorId
+
+postFinanceManagementFinanceAdjustmentApprove ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.LedgerAdjustmentRequest ->
+  Text ->
+  Text ->
+  Flow APISuccess
+postFinanceManagementFinanceAdjustmentApprove merchantShortId opCity adjustmentRequestId requestorId requestorName =
+  LedgerAdjustment.ledgerAdjustmentApproveAndPost merchantShortId opCity (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest adjustmentRequestId) requestorId requestorName
+
+postFinanceManagementFinanceAdjustmentReject ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.LedgerAdjustmentRequest ->
+  Text ->
+  Text ->
+  Flow APISuccess
+postFinanceManagementFinanceAdjustmentReject merchantShortId opCity adjustmentRequestId requestorId requestorName =
+  LedgerAdjustment.ledgerAdjustmentReject merchantShortId opCity (cast @Dashboard.Common.LedgerAdjustmentRequest @DLAR.LedgerAdjustmentRequest adjustmentRequestId) requestorId requestorName

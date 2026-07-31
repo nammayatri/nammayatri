@@ -12,6 +12,10 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
     getFinanceManagementFinanceAuditList,
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
+    postFinanceManagementFinanceAdjustmentSubmit,
+    getFinanceManagementFinanceAdjustmentList,
+    postFinanceManagementFinanceAdjustmentApprove,
+    postFinanceManagementFinanceAdjustmentReject,
   )
 where
 
@@ -25,6 +29,7 @@ import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -145,3 +150,36 @@ getFinanceManagementFinanceSapJournalsTransactions :: (Kernel.Types.Id.ShortId D
 getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity apiTokenInfo fromTime limit offset subscriptionId toTime periodEndTime periodStartTime transactionType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceSapJournalsTransactions) fromTime limit offset subscriptionId toTime periodEndTime periodStartTime transactionType
+
+postFinanceManagementFinanceAdjustmentSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FinanceManagement.SubmitLedgerAdjustmentReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentSubmit merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+      requestorName = apiTokenInfo.person.firstName <> " " <> apiTokenInfo.person.lastName
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ do
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementFinanceAdjustmentSubmit) requestorId requestorName req
+
+getFinanceManagementFinanceAdjustmentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentRequestStatus) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentCategory) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentDirection) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.LedgerAdjustmentListRes)
+getFinanceManagementFinanceAdjustmentList merchantShortId opCity apiTokenInfo limit offset adjustmentRequestId status personId excludeCurrentAdminMaker category direction referenceType referenceId adminMakerId adminCheckerId from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceAdjustmentList) limit offset adjustmentRequestId status personId excludeCurrentAdminMaker category direction referenceType referenceId adminMakerId adminCheckerId from to requestorId
+
+postFinanceManagementFinanceAdjustmentApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentApprove merchantShortId opCity apiTokenInfo adjustmentRequestId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+      requestorName = apiTokenInfo.person.firstName <> " " <> apiTokenInfo.person.lastName
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ do
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementFinanceAdjustmentApprove) adjustmentRequestId requestorId requestorName
+
+postFinanceManagementFinanceAdjustmentReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentReject merchantShortId opCity apiTokenInfo adjustmentRequestId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+      requestorName = apiTokenInfo.person.firstName <> " " <> apiTokenInfo.person.lastName
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ do
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementFinanceAdjustmentReject) adjustmentRequestId requestorId requestorName

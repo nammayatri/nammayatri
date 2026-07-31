@@ -2161,3 +2161,36 @@ instance IsHTTPError CustomAuthError where
     IpHitsLimitExceeded -> E429
 
 instance IsAPIError CustomAuthError
+
+data LedgerAdjustmentError
+  = LedgerAdjustmentDoesNotExist Text
+  | LedgerAdjustmentAlreadyExists Text
+  | LedgerAdjustmentCategoryNotSupported Text
+  | LedgerAdjustmentReferenceTypeNotSupported Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LedgerAdjustmentError
+
+instance IsBaseError LedgerAdjustmentError where
+  toMessage (LedgerAdjustmentDoesNotExist adjustmentRequestId) =
+    Just $ "Ledger adjustment request \"" <> adjustmentRequestId <> "\" does not exist."
+  toMessage (LedgerAdjustmentAlreadyExists referenceId) =
+    Just $ "Ledger adjustment request for reference \"" <> referenceId <> "\" already exists."
+  toMessage (LedgerAdjustmentCategoryNotSupported category) =
+    Just $ "Ledger adjustment category \"" <> category <> "\" is not supported."
+  toMessage (LedgerAdjustmentReferenceTypeNotSupported referenceType) =
+    Just $ "Ledger adjustment reference type \"" <> referenceType <> "\" is not supported."
+
+instance IsHTTPError LedgerAdjustmentError where
+  toErrorCode = \case
+    LedgerAdjustmentDoesNotExist _ -> "LEDGER_ADJUSTMENT_DOES_NOT_EXIST"
+    LedgerAdjustmentAlreadyExists _ -> "LEDGER_ADJUSTMENT_ALREADY_EXISTS"
+    LedgerAdjustmentCategoryNotSupported _ -> "LEDGER_ADJUSTMENT_CATEGORY_NOT_SUPPORTED"
+    LedgerAdjustmentReferenceTypeNotSupported _ -> "LEDGER_ADJUSTMENT_REFERENCE_TYPE_NOT_SUPPORTED"
+  toHttpCode = \case
+    LedgerAdjustmentDoesNotExist _ -> E400
+    LedgerAdjustmentAlreadyExists _ -> E400
+    LedgerAdjustmentCategoryNotSupported _ -> E400
+    LedgerAdjustmentReferenceTypeNotSupported _ -> E400
+
+instance IsAPIError LedgerAdjustmentError
