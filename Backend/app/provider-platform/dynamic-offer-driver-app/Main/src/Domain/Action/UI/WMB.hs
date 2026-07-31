@@ -54,7 +54,6 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SchedulerJob ()
@@ -201,9 +200,6 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         return $ Just conductorBadge
       Nothing -> pure Nothing
   FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing
-  wmbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-  when (wmbTransporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-    void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbTransporterConfig) driverId
   tripTransaction <-
     if fleetConfig.directlyStartFirstTripAssignment
       then WMB.assignAndStartTripTransaction fleetConfig merchantId merchantOperatingCityId driverId route vehicleRouteMapping vehicleNumber sourceStopInfo destinationStopInfo req.location DriverDirect (mbDriverBadge <&> (.id)) (mbDriverBadge <&> (.badgeName)) (mbConductorBadge <&> (.id)) (mbConductorBadge <&> (.badgeName))
@@ -514,10 +510,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId -> do
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId referredOperatorId
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
-    if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) (cast driverId)
-      else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

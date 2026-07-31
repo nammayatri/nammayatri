@@ -81,11 +81,10 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
-import qualified SharedLogic.Analytics as Analytics
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -800,9 +799,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC transporterConfig personId
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -834,9 +831,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
@@ -867,9 +862,7 @@ postDriverDeleteAadhaar merchantShortId opCity reqDriverId = do
   QDriverInfo.updateAadhaarNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deleteAadhaar : " (show personId)
   pure Success
 
@@ -900,9 +893,7 @@ postDriverDeletePanCard merchantShortId opCity reqDriverId = do
   QDriverInfo.updatePanNumber Nothing driverId
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-    then void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) personId
-    else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> deletePanCard : " (show personId)
   pure Success
 
@@ -1048,11 +1039,7 @@ postDriverSetRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..}
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  res <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-    void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) personId
-  pure res
+  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {..})
 
 ---------------------------------------------------------------------
 postDriverExemptDriverFee ::

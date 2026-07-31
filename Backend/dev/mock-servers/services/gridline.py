@@ -11,12 +11,8 @@ from status_store import extract_path_ids, deep_merge
 log = logging.getLogger("gridline")
 
 WEBHOOK_URL = "http://localhost:8016/service/idfy/verification"
-WEBHOOK_SECRET = "test-secret"
+WEBHOOK_SECRET = "xxxxxxx"
 CALLBACK_DELAY = 0.5
-
-# Static values returned by the extract/verify mock — must match what postman env sends.
-_MOCK_PAN_NUMBER = "ABCDE1234F"
-_MOCK_AADHAAR_NUMBER = "123456789012"
 
 # Court Record Check (CRC) webhook is merchant/city-scoped and uses the
 # Verification_Idfy secret. Hardcoded for the local NY Bangalore test env
@@ -64,50 +60,6 @@ def _send_crc_callback(request_id, group_id, task_id):
             log.info(f"CRC callback sent for {request_id} (driver {group_id}): {resp.status}")
     except Exception as e:
         log.error(f"CRC callback failed for {request_id}: {e}")
-
-
-def _send_pan_callback(request_id, group_id, task_id, pan_number):
-    """Send a PAN verification webhook callback to BPP after a delay."""
-    import time
-    import urllib.request
-    time.sleep(CALLBACK_DELAY)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    payload = {
-        "action": "verify_with_source",
-        "completed_at": now,
-        "created_at": now,
-        "group_id": group_id,
-        "request_id": request_id,
-        "result": {
-            "source_output": {
-                "aadhaar_seeding_status": True,
-                "pan_status": "VALID",
-                "name_match": True,
-                "dob_match": True,
-                "status": "id_found",
-                "input_details": {
-                    "input_pan_number": pan_number,
-                    "input_full_name": "TEST DRIVER",
-                    "input_dob": "1990-01-01",
-                },
-            },
-        },
-        "status": "completed",
-        "task_id": task_id,
-        "type": "ind_pan",
-    }
-    body = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        WEBHOOK_URL,
-        data=body,
-        headers={"Content-Type": "application/json", "Authorization": WEBHOOK_SECRET},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            log.info(f"PAN callback sent for {request_id}: {resp.status}")
-    except Exception as e:
-        log.error(f"PAN callback failed for {request_id}: {e}")
 
 
 def _send_rc_callback(request_id, group_id, task_id, rc_number):
@@ -180,26 +132,6 @@ def handle(handler, path, body):
         if extra:
             base = deep_merge(base, extra)
         handler._json(base)
-
-        # For PAN verification, send a webhook callback after a delay
-        if "ind_pan" in path:
-            parsed_body = {}
-            if body:
-                try:
-                    text = body.decode("utf-8") if isinstance(body, bytes) else body
-                    parsed_body = json.loads(text)
-                except (json.JSONDecodeError, ValueError):
-                    pass
-            pan_number = ((parsed_body.get("data") or {}).get("id_number")
-                          or (parsed_body.get("data") or {}).get("pan_number")
-                          or _MOCK_PAN_NUMBER)
-            group_id = parsed_body.get("group_id", "mock-group")
-            task_id = parsed_body.get("task_id", "mock-task")
-            threading.Thread(
-                target=_send_pan_callback,
-                args=(request_id, group_id, task_id, pan_number),
-                daemon=True,
-            ).start()
 
         # For RC verification, send a webhook callback after a delay
         if "ind_rc" in path:
