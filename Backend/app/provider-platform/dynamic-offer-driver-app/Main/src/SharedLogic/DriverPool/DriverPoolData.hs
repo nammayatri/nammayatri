@@ -12,7 +12,7 @@ module SharedLogic.DriverPool.DriverPoolData
   )
 where
 
-import Data.List (nubBy)
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -100,7 +100,12 @@ data DriverPoolData = DriverPoolData
     -- migrators in 'SharedLogic.DriverPool.DriverPoolMigrations'. 'Nothing'
     -- means the entry was written before this field existed (treated as 0,
     -- so every migrator runs on first cold read).
-    schemaVersion :: Maybe Int
+    schemaVersion :: Maybe Int,
+    -- | Wall-clock (epoch ms) of the last write to this entry — stamped by the
+    -- cold-start builder and bumped on every LTS sync. Used to pick the freshest
+    -- copy when the same driver key exists in both primary and secondary LTS.
+    -- 'Nothing' means a pre-timestamp record (treated as oldest).
+    lastUpdatedAt :: Maybe Milliseconds
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -156,7 +161,17 @@ getDriverPoolDataBatch driverIds = do
   let keys = map driverPoolDataKey driverIds
   primaryResults <- Redis.withLTSRedis $ Redis.mGetStandalone keys
   secondaryResults <- Redis.withSecondaryLTSRedis $ Redis.mGetStandalone keys
-  pure $ nubBy (\a b -> a.driverId == b.driverId) (primaryResults <> secondaryResults)
+  pure $ pickLatestPerDriver (primaryResults <> secondaryResults)
+
+-- | Deduplicate pool entries by driverId, keeping the most recently written copy.
+-- The same driver key can live in both primary and secondary LTS (e.g. right after
+-- a cloud switch); 'lastUpdatedAt' breaks the tie so we always dispatch on the
+-- freshest state. 'Nothing' (pre-timestamp records) sorts oldest via Maybe's Ord.
+pickLatestPerDriver :: [DriverPoolData] -> [DriverPoolData]
+pickLatestPerDriver = HashMap.elems . foldl' insertLatest HashMap.empty
+  where
+    insertLatest acc d = HashMap.insertWith laterOf d.driverId d acc
+    laterOf new old = if new.lastUpdatedAt >= old.lastUpdatedAt then new else old
 
 -- | Zeroed-out DriverPoolData used as the base when no LTS entry exists yet.
 -- Required non-Maybe fields use the most conservative defaults.
@@ -215,7 +230,8 @@ defaultDriverPoolData dId =
       vehicleRating = Nothing,
       registrationNo = "",
       cloudType = Nothing,
-      schemaVersion = Nothing
+      schemaVersion = Nothing,
+      lastUpdatedAt = Nothing
     }
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.

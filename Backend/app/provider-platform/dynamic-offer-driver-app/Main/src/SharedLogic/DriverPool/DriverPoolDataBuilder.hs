@@ -102,9 +102,10 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
       else pure []
   let baMap = HashMap.fromList $ map (\ba -> (ba.driverId, ba)) bankAccounts
 
-  pure $ mapMaybe (buildOne diMap vMap pMap baMap faMap) driverIds
+  now <- getClockTimeInMs
+  pure $ mapMaybe (buildOne now diMap vMap pMap baMap faMap) driverIds
   where
-    buildOne diMap vMap pMap baMap faMap did = do
+    buildOne now diMap vMap pMap baMap faMap did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
@@ -165,5 +166,6 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             vehicleRating = v.vehicleRating,
             registrationNo = v.registrationNo,
             cloudType = p.cloudType,
-            schemaVersion = Just Migrations.currentSchemaVersion
+            schemaVersion = Just Migrations.currentSchemaVersion,
+            lastUpdatedAt = Just now
           }

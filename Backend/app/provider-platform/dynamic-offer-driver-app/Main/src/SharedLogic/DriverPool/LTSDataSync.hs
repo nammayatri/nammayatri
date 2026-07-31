@@ -167,18 +167,19 @@ syncDriverPoolDataToLTS ::
   m ()
 syncDriverPoolDataToLTS driverId update = do
   deploymentCloudType <- asks (.cloudType)
+  now <- getClockTimeInMs
   Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 3 10 $ do
     mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
     case mbExisting of
       Just existing -> do
-        let merged = applyUpdate update existing
+        let merged = applyUpdate now update existing
         cleanupOldCloudKey deploymentCloudType existing merged
         DPD.setDriverPoolDataByCloud deploymentCloudType merged
       Nothing -> do
         mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
         case mbExisting' of
           Just existing' -> do
-            let merged = applyUpdate update existing'
+            let merged = applyUpdate now update existing'
             cleanupOldCloudKey deploymentCloudType existing' merged
             DPD.setDriverPoolDataByCloud deploymentCloudType merged
           Nothing ->
@@ -207,10 +208,13 @@ driverPoolSyncLockKey driverId = "driver-pool-sync-lock:" <> driverId.getId
 
 -- | Apply a partial update to an existing DriverPoolData record.
 -- Only fields marked 'Set' are overwritten; 'Unchanged' fields keep current values.
-applyUpdate :: DriverPoolDataUpdate -> DPD.DriverPoolData -> DPD.DriverPoolData
-applyUpdate u d =
+-- 'lastUpdatedAt' is always bumped to @now@ so reads can pick the freshest copy
+-- when the driver key exists in both primary and secondary LTS.
+applyUpdate :: Milliseconds -> DriverPoolDataUpdate -> DPD.DriverPoolData -> DPD.DriverPoolData
+applyUpdate now u d =
   d
-    { DPD.active = applyField u.active d.active,
+    { DPD.lastUpdatedAt = Just now,
+      DPD.active = applyField u.active d.active,
       DPD.mode = applyField u.mode d.mode,
       DPD.onRide = applyField u.onRide d.onRide,
       DPD.onRideTripCategory = applyField u.onRideTripCategory d.onRideTripCategory,
