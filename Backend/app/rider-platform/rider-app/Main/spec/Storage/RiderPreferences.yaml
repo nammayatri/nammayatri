@@ -1,0 +1,79 @@
+# Triggers NammaDSL code generation for:
+#   src-read-only/Domain/Types/RiderPreferences.hs       -- the table record type
+#   src-read-only/Storage/Beam/RiderPreferences.hs       -- the Beam table definition
+#   src-read-only/Storage/Queries/RiderPreferences.hs    -- generated KV queries
+#   src-read-only/Storage/Queries/OrphanInstances/RiderPreferences.hs -- fromTType/toTType
+
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  # Value is Data.Aeson.Value — used as the Beam-level type for JSONB columns
+  # because Beam doesn't understand our PreferenceData sum type directly.
+  Value: Data.Aeson
+  PreferenceType: Domain.Types.Extra.RiderPreferences
+  PreferenceData: Domain.Types.Extra.RiderPreferences
+
+RiderPreferences:
+  tableName: rider_preferences
+
+  fields:
+    id: Id RiderPreferences
+    riderId: Id Person
+    # preferenceType tells us which JSONB shape is in preferenceData
+    preferenceType: PreferenceType
+    # preferenceData is stored as JSONB; domain layer sees PreferenceData sum type
+    preferenceData: PreferenceData
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # Beam sees Data.Aeson.Value for JSONB; toTType/fromTType handle the conversion
+  beamType:
+    preferenceData: Value
+
+  sqlType:
+    preferenceType: character varying(255)
+    preferenceData: jsonb
+
+  # toJSON converts our PreferenceData sum type to a raw Aeson Value for DB storage
+  toTType:
+    preferenceData: Data.Aeson.toJSON preferenceData|E
+
+  # valueToMaybe decodes the raw Aeson Value back to PreferenceData; >>= Just keeps it in Maybe
+  fromTType:
+    preferenceData: Kernel.Utils.JSON.valueToMaybe preferenceData >>= Just|E
+
+  constraints:
+    id: PrimaryKey
+    # !SecondaryKey (quoted) — enables KV secondary index on riderId.
+    # Must be quoted to prevent YAML tag parsing stripping the ! character.
+    riderId: "!SecondaryKey"
+
+  queries:
+    # Fetches all preferences for a rider — used by the GET endpoint (cache miss path)
+    findAllByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
+
+    # Fetches all preferences of a given type for a rider — used by upsert logic in POST
+    findByRiderIdAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderId, preferenceType]
+
+    # Hard-deletes a single preference row — used by the DELETE endpoint
+    deleteByRiderIdAndId:
+      kvFunction: deleteWithKV
+      where:
+        and: [riderId, id]
+
+  extraOperations:
+    # EXTRA_QUERY_FILE: tells the generator to expect a hand-written
+    #   src/Storage/Queries/RiderPreferencesExtra.hs alongside the generated file.
+    #   We need this for the geohash filter query that requires Haskell-level JSONB decoding.
+    - EXTRA_QUERY_FILE
+    # EXTRA_DOMAIN_TYPE_FILE: tells the generator that
+    #   src/Domain/Types/Extra/RiderPreferences.hs exists and should be re-exported.
+    - EXTRA_DOMAIN_TYPE_FILE

@@ -38,6 +38,7 @@ import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Rewards as Rewards
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
+import qualified API.Action.UI.RiderPreferences as RiderPreferences
 import qualified API.Action.UI.SVP as SVP
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
@@ -164,6 +165,7 @@ type API =
            :<|> Insurance.API
            :<|> Metrics.API
            :<|> PickupInstructions.API
+           :<|> RiderPreferences.API
            :<|> NYRegular.API
            :<|> Rewards.API
            :<|> AttractionRecommend.API
@@ -248,6 +250,7 @@ handler =
     :<|> Insurance.handler
     :<|> Metrics.handler
     :<|> PickupInstructions.handler
+    :<|> RiderPreferences.handler
     :<|> NYRegular.handler
     :<|> Rewards.handler
     :<|> AttractionRecommend.handler
