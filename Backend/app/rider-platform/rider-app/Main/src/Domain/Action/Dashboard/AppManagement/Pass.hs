@@ -9,6 +9,10 @@ module Domain.Action.Dashboard.AppManagement.Pass
     postPassCustomerPassUpdateProfilePicture,
     getPassCustomerPassPhoto,
     postPassCustomerPassRestore,
+    listPassCatalog,
+    createPass,
+    updatePass,
+    deletePass,
   )
 where
 
@@ -19,6 +23,7 @@ import qualified "this" Domain.Action.UI.Pass as DPass
 import qualified Domain.Action.UI.Payment as UIPayment
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Pass
+import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
@@ -33,15 +38,15 @@ import qualified Kernel.External.Types as Lang
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
-import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QP
 import qualified Tools.ActorInfo as ActorInfo
+import Tools.Error
 
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Lang.Language -> Environment.Flow [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses merchantShortId _opCity personId language = do
@@ -100,3 +105,15 @@ postPassCustomerPassRestore merchantShortId _opCity personId = do
       PassRestore.restorePurchasedPassesIfNeeded person mobileNumber
       pure Kernel.Types.APISuccess.Success
     Nothing -> throwError $ InvalidRequest "Person has no mobile number, cannot restore passes"
+
+listPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> Environment.Flow [API.Types.Dashboard.AppManagement.Pass.PassCatalogItem])
+listPassCatalog merchantShortId opCity mbEnable mbPassTypeId = DPass.listPassCatalog merchantShortId opCity mbEnable mbPassTypeId
+
+createPass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.PassCreateReq -> Environment.Flow API.Types.Dashboard.AppManagement.Pass.PassCreateResp)
+createPass merchantShortId opCity req = DPass.createPassCatalog merchantShortId opCity req
+
+updatePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassUpdateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+updatePass merchantShortId opCity passId req = DPass.updatePassCatalog merchantShortId opCity passId req
+
+deletePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+deletePass merchantShortId opCity passId = DPass.deletePassCatalog merchantShortId opCity passId

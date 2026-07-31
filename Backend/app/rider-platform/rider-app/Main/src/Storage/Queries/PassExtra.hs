@@ -3,6 +3,7 @@
 
 module Storage.Queries.PassExtra where
 
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassType as DPassType
 import Kernel.Beam.Functions
@@ -36,3 +37,19 @@ findAllByPassTypeIdAndEnabled passTypeId enabled = do
     (Se.Asc Beam.order)
     Nothing
     Nothing
+
+-- | Code is the discriminator the PASS_PURCHASE_ELIGIBILITY ruleset falls back to
+-- when a pass type has no passEnum, so duplicates within a city make rules
+-- ambiguous. Used by the dashboard create endpoint to reject collisions.
+findByCodeAndMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe DPass.Pass)
+findByCodeAndMerchantOperatingCityId code merchantOperatingCityId =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.code $ Se.Eq code,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)
+        ]
+    ]
