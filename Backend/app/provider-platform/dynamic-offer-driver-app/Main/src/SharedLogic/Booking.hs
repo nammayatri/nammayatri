@@ -49,6 +49,7 @@ cancelBooking ::
     EncFlow m r,
     MonadCatch m,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,

@@ -120,7 +120,9 @@ sendNotificationToEmergencyContact senderPersonId recipientPerson body title not
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth recipientPerson.id.getId ((.getFCMRecipientToken) <$> recipientPerson.deviceToken) Nothing,
             ttl = Nothing,
-            sound = Nothing
+            sound = Nothing,
+            overlayNotificationData = Nothing,
+            overlayNotificationData = Nothing
           }
   runWithServiceConfigForProviders recipientPerson.merchantOperatingCityId recipientPerson.clientId recipientPerson.clientDevice notificationData EulerHS.id (clearDeviceToken recipientPerson.id)
 

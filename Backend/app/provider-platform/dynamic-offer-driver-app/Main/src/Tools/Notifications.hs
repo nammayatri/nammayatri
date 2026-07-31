@@ -315,10 +315,11 @@ cancellationSourceToSubCategory = \case
   SBCR.ByApplication -> Notification.ByApplication
   SBCR.ByAllocator -> Notification.ByAllocator
 
--- | Send FCM "cancel" notification to driver
+-- | Send FCM/gRPC "cancel" notification to driver
 notifyOnCancel ::
-  ( CacheFlow m r,
+  ( ServiceFlow m r,
     EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
     Hedis.HedisLTSFlowEnv r
   ) =>
@@ -329,23 +330,43 @@ notifyOnCancel ::
   SBCR.CancellationSource ->
   m ()
 notifyOnCancel merchantOpCityId rideId booking person cancellationSource = do
-  let newCityId = cityFallback person.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   subCategory <- getSubCategory cancellationSource
-  dynamicFCMNotifyPerson
-    newCityId
-    person.id
-    person.deviceToken
-    (fromMaybe ENGLISH person.language)
-    (Just booking.tripCategory)
-    (createFCMReq "NOTIFY_DRIVER_ON_CANCEL" rideId.getId FCM.Product (\r -> r {subCategory = Just subCategory, priority = Nothing}))
-    (Just ())
-    [ ("startTime", showTimeIst (booking.startTime))
-    ]
-    (Just booking.configInExperimentVersions)
+  notificationData <- buildCancelNotificationData merchantOpCityId person.id person.deviceToken rideId booking subCategory
+  runWithServiceConfigForProviders merchantOpCityId person.clientId person.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken person.id)
   where
     getSubCategory = \case
       SBCR.ByAllocator -> throwError (InternalError "Unexpected cancellation reason.")
       _ -> return $ cancellationSourceToSubCategory cancellationSource
+
+buildCancelNotificationData ::
+  ( ServiceFlow m r,
+    ToJSON EmptyDynamicParam
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id DRide.Ride ->
+  Booking ->
+  Notification.SubCategory ->
+  m (Notification.NotificationReq EmptyDynamicParam EmptyDynamicParam)
+buildCancelNotificationData merchantOpCityId driverId mbDeviceToken rideId booking subCategory = do
+  let params = [("startTime", showTimeIst booking.startTime)]
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "NOTIFY_DRIVER_ON_CANCEL" (Just booking.tripCategory) (Just subCategory) Nothing (Just booking.configInExperimentVersions) >>= fromMaybeM (InternalError "MerchantPushNotification not found for NOTIFY_DRIVER_ON_CANCEL")
+  return $
+    Notification.NotificationReq
+      { category = Notification.CANCELLED_PRODUCT,
+        subCategory = Just subCategory,
+        showNotification = Notification.SHOW,
+        messagePriority = Nothing,
+        entity = Notification.Entity Notification.Product rideId.getId EmptyDynamicParam,
+        dynamicParams = EmptyDynamicParam,
+        body = buildTemplate params mbMerchantPN.body,
+        title = buildTemplate params mbMerchantPN.title,
+        auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
+        ttl = Nothing,
+        sound = Nothing,
+        overlayNotificationData = Nothing
+      }
 
 -- title = FCMNotificationTitle $ T.pack "Ride cancelled!"
 -- body = FCMNotificationBody
@@ -482,7 +503,8 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           title = title,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 -- | Sent when a dashboard operator posts a chat message on a driver-side
@@ -520,7 +542,8 @@ notifyOnIssueChatMessage driverId payload = do
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> driver.deviceToken) Nothing,
             ttl = Nothing,
-            sound = Nothing
+            sound = Nothing,
+            overlayNotificationData = Nothing
           }
   runWithServiceConfigForProviders merchantOperatingCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
@@ -554,7 +577,8 @@ driverScheduledRideAcceptanceAlert merchantOpCityId category title body driver m
           title = title,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 -- Send notification to device, i.e. notifications that should not be shown to the user,
@@ -775,7 +799,8 @@ buildClearedFareNotificationData merchantOpCityId driverId mbDeviceToken searchR
         title = buildTemplate params mbMerchantPN.title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
         ttl = Nothing,
-        sound = Nothing
+        sound = Nothing,
+        overlayNotificationData = Nothing
       }
 
 -- title = FCM.FCMNotificationTitle "Clearing Fare!"
@@ -828,7 +853,8 @@ buildCancelSearchNotificationData merchantOpCityId driverId mbDeviceToken search
         title = buildTemplate params mbMerchantPN.title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
         ttl = Nothing,
-        sound = Nothing
+        sound = Nothing,
+        overlayNotificationData = Nothing
       }
 
 --notifType = FCM.CANCELLED_SEARCH_REQUEST
@@ -1065,9 +1091,23 @@ sendOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} = do
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
 
+buildOverlayNotificationData :: FCM.FCMOverlayReq -> Notification.OverlayNotificationData
+buildOverlayNotificationData FCM.FCMOverlayReq {..} =
+  Notification.OverlayNotificationData
+    { titleVisibility = isJust title,
+      descriptionVisibility = isJust description,
+      buttonOkVisibility = isJust okButtonText,
+      buttonCancelVisibility = isJust cancelButtonText,
+      buttonLayoutVisibility = isJust okButtonText || isJust cancelButtonText,
+      imageVisibility = isJust imageUrl,
+      ..
+    }
+
 sendUpdateLocOverlay ::
-  ( CacheFlow m r,
+  ( ServiceFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
     Hedis.HedisLTSFlowEnv r
   ) =>
@@ -1079,27 +1119,28 @@ sendUpdateLocOverlay ::
 sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityData = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId
   -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  fcmConfig <- findFCMConfigWithFallback newCityId person.id
-  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
-  where
-    notifType = FCM.DRIVER_NOTIFY_LOCATION_UPDATE
-    notificationData =
-      FCM.FCMData
-        { fcmNotificationType = notifType,
-          fcmShowNotification = if isJust req.title then FCM.SHOW else FCM.DO_NOT_SHOW,
-          fcmEntityType = FCM.Person,
-          fcmEntityIds = person.id.getId,
-          fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType (Just "driver_trip_update_pop_up.mp3"),
-          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
-          fcmNotificationId = Nothing
-        }
-    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
-    body = FCMNotificationBody $ fromMaybe "Description" description
+  let notifReq =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_NOTIFY_LOCATION_UPDATE,
+            subCategory = Nothing,
+            showNotification = if isJust title then Notification.SHOW else Notification.DO_NOT_SHOW,
+            messagePriority = Just Notification.HIGH,
+            entity = Notification.Entity Notification.Person person.id.getId entityData,
+            dynamicParams = EmptyDynamicParam,
+            body = fromMaybe "Description" description,
+            title = fromMaybe "Title" title,
+            auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Just "driver_trip_update_pop_up.mp3",
+            overlayNotificationData = Just $ buildOverlayNotificationData req
+          }
+  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
 
 sendPickupLocationChangedOverlay ::
-  ( CacheFlow m r,
+  ( ServiceFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
     Hedis.HedisLTSFlowEnv r
   ) =>
@@ -1109,23 +1150,22 @@ sendPickupLocationChangedOverlay ::
   m ()
 sendPickupLocationChangedOverlay person req entityData = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  fcmConfig <- findFCMConfigWithFallback newCityId person.id
-  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
-  where
-    notifType = FCM.EDIT_LOCATION
-    notificationData =
-      FCM.FCMData
-        { fcmNotificationType = notifType,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.EditLocation,
-          fcmEntityIds = entityData.rideId.getId,
-          fcmEntityData = Just entityData,
-          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
-          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
-          fcmNotificationId = Nothing
-        }
-    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
-    body = FCMNotificationBody $ fromMaybe "Description" req.description
+  let notifReq =
+        Notification.NotificationReq
+          { category = Notification.EDIT_LOCATION,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Just Notification.HIGH,
+            entity = Notification.Entity Notification.EditLocation entityData.rideId.getId entityData,
+            dynamicParams = EmptyDynamicParam,
+            body = fromMaybe "Description" req.description,
+            title = fromMaybe "Title" req.title,
+            auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Nothing,
+            overlayNotificationData = Just $ buildOverlayNotificationData req
+          }
+  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
 
 sendCancellationRateNudgeOverlay ::
   ( CacheFlow m r,
@@ -1284,7 +1324,8 @@ driverStopDetectionAlert merchantOpCityId category title body driver mbDeviceTok
           body = body,
           auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
           ttl = Nothing,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title
@@ -1321,7 +1362,8 @@ buildSendSearchRequestNotificationData merchantOpCityId driverId mbDeviceToken e
         title = buildTemplate params mbMerchantPN.title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
         ttl = Just entityData.searchRequestValidTill,
-        sound = Nothing
+        sound = Nothing,
+        overlayNotificationData = Nothing
       }
   where
     params =
@@ -1362,7 +1404,9 @@ sendSearchRequestToDriverNotification _merchantId merchantOpCityId driverId req 
   driver <- QPerson.findById driverId
   runWithServiceConfigForProviders merchantOpCityId (driver >>= (.clientId)) (driver >>= (.clientDevice)) req iosModifier (clearDeviceToken driverId)
   where
-    iosModifier (iosFCMdata :: (FCM.FCMData SearchRequestForDriverAPIEntity)) = iosFCMdata {fcmEntityData = modifyEntity iosFCMdata.fcmEntityData}
+    iosModifier iosFCMdata = case fromJSON @SearchRequestForDriverAPIEntity iosFCMdata.fcmEntityData of
+      Success entity -> iosFCMdata {fcmEntityData = toJSON (modifyEntity entity)}
+      Data.Aeson.Error _ -> iosFCMdata
     modifyEntity SearchRequestForDriverAPIEntity {..} = IOSSearchRequestForDriverAPIEntity {..}
 
 data StopReq = StopReq
@@ -1609,7 +1653,8 @@ notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entit
           title = title,
           auth = Notification.Auth clientId.getId Nothing Nothing,
           ttl = mbTtl,
-          sound = Nothing
+          sound = Nothing,
+          overlayNotificationData = Nothing
         }
 
 extractNotificationSoundIfMatches :: FCM.FCMConfig -> Notification.Category -> Maybe Text
@@ -1633,7 +1678,7 @@ runWithServiceConfigForProviders ::
   Maybe Text ->
   Maybe Version.Device ->
   Notification.NotificationReq a b ->
-  (FCMData a -> FCMData c) ->
+  (FCMData Value -> FCMData c) ->
   m () ->
   m ()
 runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosModifier clearToken = do
@@ -1644,7 +1689,9 @@ runWithServiceConfigForProviders merchantOpCityId clientId clientDevice req iosM
         let (DMCC.ClientFCMServiceConfig fcmCfg) = clientConfig.clientServiceConfig
         extractNotificationSoundIfMatches fcmCfg req.category
   let reqWithSound = req {Notification.sound = notificationSound <|> req.sound}
-  Notification.notifyPersonWithAllProviders (handler mbClientConfig) reqWithSound Nothing clearToken
+      ent = reqWithSound.entity
+      reqValue = reqWithSound {Notification.entity = Notification.Entity ent.entityType ent.entityIds (toJSON ent.entityData)}
+  Notification.notifyPersonWithAllProviders (handler mbClientConfig) reqValue Nothing clearToken
   where
     handler mbClientConfig = Notification.NotficationServiceHandler {..}
       where
