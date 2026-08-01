@@ -775,19 +775,19 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     checkAndUpdateEnabledStatus merchantOpCityId docType person = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       let enableBotFlow = transporterConfig.enableBotFlow == Just True
-          unifiedOnly = transporterConfig.unifiedOnboardingFlagsRecompute == Just True && not enableBotFlow
+          unifiedRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
           mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
           let blocksVerified = maybe False (.isMandatory) mbCfg
               blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
-          if enableBotFlow
-            then do
-              when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
-              pure (blocksEnabled || blocksVerified)
+          if unifiedRecompute
+            then pure (blocksEnabled || blocksVerified)
             else
-              if unifiedOnly
-                then pure (blocksEnabled || blocksVerified)
+              if enableBotFlow
+                then do
+                  when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
+                  pure (blocksEnabled || blocksVerified)
                 else do
                   when blocksVerified $ QFOI.updateFleetOwnerEnabledStatus False person.id
                   pure blocksVerified
@@ -795,13 +795,13 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
           mbCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing))
           let blocksVerified = maybe False (.isMandatory) mbCfg
               blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
-          if enableBotFlow
-            then do
-              applyDriverDocInvalidation transporterConfig person.id blocksEnabled blocksVerified
-              pure (blocksEnabled || blocksVerified)
+          if unifiedRecompute
+            then pure (blocksEnabled || blocksVerified)
             else
-              if unifiedOnly
-                then pure (blocksEnabled || blocksVerified)
+              if enableBotFlow
+                then do
+                  applyDriverDocInvalidation transporterConfig person.id blocksEnabled blocksVerified
+                  pure (blocksEnabled || blocksVerified)
                 else do
                   when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
                   pure False
@@ -2182,23 +2182,23 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId personId docType
     person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     let isFleet = DCommon.checkFleetOwnerRole person.role
         enableBotFlow = transporterConfig.enableBotFlow == Just True
-        unifiedOnly = transporterConfig.unifiedOnboardingFlagsRecompute == Just True && not enableBotFlow
+        unifiedRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
         isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
         separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
         downgradePerson
           | isFleet =
-            if enableBotFlow
-              then when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified personId
+            if unifiedRecompute
+              then void $ SStatus.runRefreshOnboardingFlagsFleet (Just person) (Just transporterConfig) personId
               else
-                if unifiedOnly
-                  then void $ SStatus.runRefreshOnboardingFlagsFleet (Just person) (Just transporterConfig) personId
+                if enableBotFlow
+                  then when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified personId
                   else when blocksVerified $ QFOI.updateFleetOwnerEnabledStatus False personId
           | otherwise =
-            if enableBotFlow
-              then applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified
+            if unifiedRecompute
+              then void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) personId
               else
-                if unifiedOnly
-                  then void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) personId
+                if enableBotFlow
+                  then applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified
                   else when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False (Just False)
     if isVehicleDoc
       then do
@@ -2209,7 +2209,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId personId docType
             QRCAssoc.deactivateRCForDriver False personId rcId
             QVehicle.deleteByDriverid personId
             unless separateEnablement downgradePerson
-          when unifiedOnly $
+          when unifiedRecompute $
             void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rcId
       else downgradePerson
 

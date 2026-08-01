@@ -21,6 +21,7 @@ import Kernel.Types.Error (GenericError (InternalError), PersonError (PersonDoes
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -57,15 +58,19 @@ postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} =
   let wasDisabled = not fleetOwnerInfo.enabled
   if enabled
     then do
-      void $ SStatus.runAdminEnable Nothing fleetOwnerId'
-      SStatus.cascadeFleetEnableToDrivers fleetOwnerId'
+      fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
+      tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetOwnerPerson.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetOwnerPerson.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetOwnerPerson.merchantOperatingCityId.getId)
+      SFlags.recomputeDisabledFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson SFlags.AdminEnable
+      void $ SStatus.runRefreshOnboardingFlagsFleet (Just fleetOwnerPerson) (Just tc) fleetOwnerId'
       when wasDisabled $ do
         person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
         DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
     else do
       SStatus.ensureNoActiveRidesUnderFleet fleetOwnerId'
-      void $ SStatus.runAdminDisable Nothing fleetOwnerId' DI.AdminDisabled
-      SStatus.cascadeFleetDisableToDrivers fleetOwnerId'
+      fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
+      tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetOwnerPerson.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetOwnerPerson.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetOwnerPerson.merchantOperatingCityId.getId)
+      SFlags.recomputeDisabledFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson (SFlags.AdminDisable DI.AdminDisabled)
+      void $ SStatus.runRefreshOnboardingFlagsFleet (Just fleetOwnerPerson) (Just tc) fleetOwnerId'
   pure Kernel.Types.APISuccess.Success
 
 putAccountUpdateRole ::

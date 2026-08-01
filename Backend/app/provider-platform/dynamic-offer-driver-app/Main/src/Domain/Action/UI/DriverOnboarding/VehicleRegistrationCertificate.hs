@@ -24,8 +24,8 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     onVerifyRC,
     convertUTCTimetoDate,
     deactivateCurrentRC,
-    invalidateRCAndRemoveVehicleForReminder,
     linkRCStatus,
+    removeVehicle,
     deleteRC,
     getAllLinkedRCs,
     LinkedRC (..),
@@ -74,7 +74,6 @@ import Kernel.External.Encryption
 import Kernel.External.Types (Language (..), SchedulerFlow, ServiceFlow, VerificationFlow)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
-import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -90,6 +89,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -747,7 +747,7 @@ compareRegistrationDates actualDate providedDate =
   isJust providedDate
     && ((convertUTCTimetoDate <$> providedDate) /= (convertUTCTimetoDate <$> convertTextToUTC actualDate))
 
-linkRCStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> RCStatusReq -> Flow APISuccess
+linkRCStatus :: OnboardingFlow m r => (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> RCStatusReq -> m APISuccess
 linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCStatusReq {..} = runInMasterDbAndRedis $ do
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
@@ -765,7 +765,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
       deactivateRC isTaxiBoothRequest transporterConfig rc driverId
   return Success
 
-deactivateRC :: Bool -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> Flow ()
+deactivateRC :: OnboardingFlow m r => Bool -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Id Person.Person -> m ()
 deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   activeAssociation <- DAQuery.findActiveAssociationByRC rc.id True >>= fromMaybeM ActiveRCNotFound
   unless (activeAssociation.driverId == driverId) $ do
@@ -784,7 +784,7 @@ removeVehicle isTaxiBoothRequest driverId = do
   when ((not isTaxiBoothRequest) && isJust isOnRide) $ throwError RCVehicleOnRide
   VQuery.deleteById driverId -- delete the vehicle entry too for the driver
 
-validateRCActivation :: Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> Flow Bool
+validateRCActivation :: OnboardingFlow m r => Bool -> Id Person.Person -> DTC.TransporterConfig -> Domain.VehicleRegistrationCertificate -> m Bool
 validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
   now <- getCurrentTime
   mAssoc <- DAQuery.findLinkedByRCIdAndDriverId driverId rc.id now
@@ -821,7 +821,6 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
         Nothing -> return ()
       return True
   where
-    deactivateIfWeCanDeactivate :: Id Person.Person -> UTCTime -> (Id Person.Person -> Flow ()) -> Flow ()
     deactivateIfWeCanDeactivate oldDriverId now deactivateFunc = do
       driverInfo <- DIQuery.findById oldDriverId >>= fromMaybeM (PersonNotFound oldDriverId.getId)
       let canUnlinkWhenOffline = transporterConfig.allowRcUnlinkWhenDriverOffline == Just True && driverInfo.mode == Just DCommon.OFFLINE
@@ -842,7 +841,7 @@ validateRCActivation isTaxiBoothRequest driverId transporterConfig rc = do
               DAQuery.updateRcErrorMessage oldDriverId rc.id (show RCActiveOnOtherAccount)
               throwError RCActiveOnOtherAccount
 
-activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()
+activateRC :: OnboardingFlow m r => DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTC.TransporterConfig -> UTCTime -> Domain.VehicleRegistrationCertificate -> m ()
 activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
   when (transporterConfig.requiresOnboardingInspection == Just True || transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $ do
     unless driverInfo.enabled $ do
@@ -868,7 +867,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
 
-deactivateCurrentRC :: DTC.TransporterConfig -> Id Person.Person -> Flow ()
+deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()
 deactivateCurrentRC transporterConfig driverId = do
   mActiveAssociation <- DAQuery.findActiveAssociationByDriver driverId True
   case mActiveAssociation of
@@ -878,40 +877,6 @@ deactivateCurrentRC transporterConfig driverId = do
     Nothing -> do
       removeVehicle False driverId
       return ()
-
--- | For reminder job: invalidate RC (set approved false, verification status INVALID),
--- deactivate RC association and remove vehicle for the driver. Call this when vehicle
--- inspection reminder is overdue and mandatory. Order: deactivate+remove first (while RC
--- is still valid), then set RC invalid. Caller (ProcessReminder) must reschedule the job
--- when driver is on ride and only call this when driver is not on ride (removeVehicle
--- throws RCVehicleOnRide if driver is on ride).
-invalidateRCAndRemoveVehicleForReminder ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  Id DVRC.VehicleRegistrationCertificate ->
-  Id Person.Person ->
-  Id DMOC.MerchantOperatingCity ->
-  Text ->
-  m ()
-invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = do
-  rc <- RCQuery.findById rcId >>= fromMaybeM (RCNotFound rcId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
-  case mActiveAssociation of
-    Just assoc | assoc.driverId == driverId -> do
-      removeVehicle False driverId
-      DAQuery.deactivateRCForDriver False driverId rc.id
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-        Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
-    _ -> return ()
-  RCQuery.updateApproved (Just False) rcId
-  VRCExtra.updateVerificationStatusAndRejectReason Documents.INVALID reason rc.documentImageId
-  ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid reason) rc.documentImageId
 
 deleteRC :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DeleteRCReq -> Bool -> Flow APISuccess
 deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do

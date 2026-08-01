@@ -42,9 +42,15 @@ jobs:
             continue-on-error: false
       fail-fast: false
     runs-on: ${{ matrix.host }}
+    outputs:
+      runner-name: ${{ steps.runner-info.outputs.name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Record runner name
+        id: runner-info
+        run: echo "name=$RUNNER_NAME" >> $GITHUB_OUTPUT
 
       - name: Compute cache key
         id: cache-key
@@ -169,15 +175,43 @@ jobs:
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
 
-      - name: Push build artifacts to MinIO
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
 
+  minio-push:
+    name: Push Build Caches to MinIO
+    needs: [check-conditions, cabal-build]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    continue-on-error: true
+    runs-on: x86_64_main_push
+    env:
+      CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Relink cache dirs
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
+          cd "$GITHUB_WORKSPACE/Backend"
+          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
+            [ -d "$pkg" ] || continue
+            mkdir -p "$CACHE_ROOT/hie/$pkg"
+            rm -rf "$pkg/.hie"
+            ln -sfn "$CACHE_ROOT/hie/$pkg" "$pkg/.hie"
+          done
+
+      - name: Push build artifacts to MinIO
         run: |
           MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
           MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
           MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
           mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
 
-          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
           EXCLUDES=$(cd "$CACHE_ROOT" && find dist-newstyle/build -mindepth 4 -maxdepth 4 -name "x" | sed 's|^|--exclude=|')
 
           # Copy non-reproducible .a files referenced by addDependentFile in .hi files.
@@ -210,7 +244,7 @@ jobs:
           # ghc-pkg dump to fail. GHC-provided packages are sufficient.
           tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" $EXCLUDES --exclude='.cabal-dir/logs' --exclude='.cabal-dir/store' dist-newstyle/ hie/ .cabal-dir/ .nix-deps/
           echo "$GITHUB_WORKSPACE" > build-path.txt
-          echo "$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir" > cabal-dir-path.txt
+          echo "$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}/.cabal-dir" > cabal-dir-path.txt
           mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           mc cp build-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/build-path.txt"
           mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/cabal-dir-path.txt"
@@ -219,7 +253,7 @@ jobs:
       - name: Build repl artifacts (dashboard-repl-check)
         run: |
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}/.cabal-dir
             mkdir -p \$CABAL_DIR
             printf 'active-repositories: :none\n' > \$CABAL_DIR/config
             export CABAL_CONFIG=\$CABAL_DIR/config
@@ -236,7 +270,7 @@ jobs:
           MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
           mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
 
-          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
 
           tar -I 'zstd -T0 -3' -cf dashboard-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-dashboard-check/
           mc cp dashboard-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dashboard-check.tar.zst"
@@ -254,10 +288,6 @@ jobs:
         run: |
           git tag "minio-pushed/${{ github.sha }}"
           git push origin "minio-pushed/${{ github.sha }}"
-
-      - name: Cleanup staging dir
-        if: always()
-        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
 
   cabal-build-times:
     name: Analyze Cabal Build Times

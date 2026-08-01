@@ -27,7 +27,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Queries.Person as QP
@@ -43,19 +43,19 @@ blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetric
 blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason blockTimeInHours blockReasonFlag = do
   now <- getCurrentTime
   logInfo $ "Temporarily blocking driver, driverId: " <> driverId.getId
-  SStatus.runBlockChange driverId $
-    SStatus.Block
-      SStatus.BlockPayload
-        { SStatus.bpReason = Just blockedReason,
-          SStatus.bpExpiryHours = Just blockTimeInHours,
-          SStatus.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
-          SStatus.bpMerchantId = merchantId,
-          SStatus.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
-          SStatus.bpMerchantOperatingCityId = merchantOperatingCityId,
-          SStatus.bpBlockedBy = DTDBT.Application,
-          SStatus.bpActive = Just False,
-          SStatus.bpMode = Just DriverInfo.OFFLINE,
-          SStatus.bpFlag = blockReasonFlag
+  SFlags.recomputeBlockFlags driverId $
+    SFlags.Block
+      SFlags.BlockPayload
+        { SFlags.bpReason = Just blockedReason,
+          SFlags.bpExpiryHours = Just blockTimeInHours,
+          SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+          SFlags.bpMerchantId = merchantId,
+          SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+          SFlags.bpMerchantOperatingCityId = merchantOperatingCityId,
+          SFlags.bpBlockedBy = DTDBT.Application,
+          SFlags.bpActive = Just False,
+          SFlags.bpMode = Just DriverInfo.OFFLINE,
+          SFlags.bpFlag = blockReasonFlag
         }
   let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
   void $ LTS.blockDriverLocationsTill merchantId driverId expiryTime

@@ -75,6 +75,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -158,7 +159,7 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           xyneChannelId = Nothing
         }
 
-throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
+throwImageError :: OnboardingFlow m r => Id Domain.Image -> DriverOnboardingError -> m b
 throwImageError id_ err = do
   _ <- Query.addFailureReason (Just err) id_
   throwError err
@@ -169,7 +170,7 @@ getFreeTrialDaysLeft freeTrialDays driverInfo = do
   let driverEnablementDay = utctDay (fromMaybe now (driverInfo.enabledAt <|> driverInfo.lastEnabledOn))
   return $ max 0 (freeTrialDays - fromInteger (diffDays (utctDay now) driverEnablementDay))
 
-triggerOnboardingAlertsAndMessages :: Person -> DTM.Merchant -> DMOC.MerchantOperatingCity -> Flow ()
+triggerOnboardingAlertsAndMessages :: OnboardingFlow m r => Person -> DTM.Merchant -> DMOC.MerchantOperatingCity -> m ()
 triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
   fork "Triggering onboarding messages" $ do
     -- broadcast messages
@@ -187,7 +188,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
     result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOperatingCity.id (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [jsonData.var1, jsonData.var2, jsonData.var3] Nothing (Just merchantMessage.containsUrlButton)) -- Accepts at most 7 variables using GupShup
     when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
 
-enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
+enableAndTriggerOnboardingAlertsAndMessages :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> m ()
 enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -203,13 +204,13 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
 --   'enableAndTriggerOnboardingAlertsAndMessages'). @mbVerified@ optionally co-writes `verified`
 --   (Nothing leaves it untouched). Used by the enableBotFlow recompute when docs become invalid.
 --   Under enableBotFlow the disable also revokes `approved` (handled inside the analytics helper).
-disableDriverWithAnalytics :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Bool -> Flow ()
+disableDriverWithAnalytics :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Bool -> m ()
 disableDriverWithAnalytics merchantOpCityId personId mbVerified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False mbVerified
 
-checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> Flow ()
+checkAndUpdateAirConditioned :: OnboardingFlow m r => Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> m ()
 checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCityId cityVehicleServiceTiers downgradeReason shouldUpdateServiceTiers = do
   driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
@@ -239,7 +240,7 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCit
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
 checkIfACAllowedForDriver driverInfo serviceTierACThresholds = null serviceTierACThresholds || any ((fromMaybe 0 driverInfo.airConditionScore) <=) serviceTierACThresholds
 
-incrementDriverAcUsageRestrictionCount :: [DVST.VehicleServiceTier] -> Id DMOC.MerchantOperatingCity -> Id Person -> Flow ()
+incrementDriverAcUsageRestrictionCount :: OnboardingFlow m r => [DVST.VehicleServiceTier] -> Id DMOC.MerchantOperatingCity -> Id Person -> m ()
 incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers merchantOpCityId personId = do
   driverInfo <- DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -959,7 +960,7 @@ data DriverDocument = DriverDocument
 getRegexRulesFromDocumentConfig :: ODC.DocumentVerificationConfig -> [Text]
 getRegexRulesFromDocumentConfig config = maybe [] (mapMaybe (.regexValidation)) config.documentFields
 
-matchesRegexSafely :: Text -> Text -> Text -> Flow (Maybe Bool)
+matchesRegexSafely :: OnboardingFlow m r => Text -> Text -> Text -> m (Maybe Bool)
 matchesRegexSafely documentType input regexPattern = do
   result <- try @_ @SomeException $ do
     let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
@@ -970,7 +971,7 @@ matchesRegexSafely documentType input regexPattern = do
       logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
       pure Nothing
 
-validateByRegex :: Text -> ODC.DocumentVerificationConfig -> Text -> Flow Bool -> Flow Bool
+validateByRegex :: OnboardingFlow m r => Text -> ODC.DocumentVerificationConfig -> Text -> m Bool -> m Bool
 validateByRegex documentType config input fallback = do
   let regexRules = getRegexRulesFromDocumentConfig config
   if null regexRules
@@ -985,7 +986,7 @@ validateByRegex documentType config input fallback = do
 imageS3Lock :: Text -> Text
 imageS3Lock path = "image-s3-lock-" <> path
 
-isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
+isNameComparePercentageValid :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> m Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.validNameComparePercentage of
@@ -997,7 +998,7 @@ isNameComparePercentageValid merchantId merchantOpCityId req = do
         Nothing -> throwError $ InternalError "Name comparison service returned invalid response"
     Nothing -> return True -- If percentage not configured, assume valid
 
-getValidDocumentImage :: Id Person.Person -> Text -> ODC.DocumentType -> Flow Text
+getValidDocumentImage :: OnboardingFlow m r => Id Person.Person -> Text -> ODC.DocumentType -> m Text
 getValidDocumentImage personId imageId_ expectedDocType = do
   imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
   unless (imageMetadata.verificationStatus == Just Documents.VALID) $
@@ -1008,7 +1009,7 @@ getValidDocumentImage personId imageId_ expectedDocType = do
     throwError (ImageInvalidType (show expectedDocType) "")
   getImageFromS3 imageMetadata
 
-getImageFromS3 :: Image.Image -> Flow Text
+getImageFromS3 :: OnboardingFlow m r => Image.Image -> m Text
 getImageFromS3 imageMetadata =
   Redis.withLockRedisAndReturnValue (imageS3Lock imageMetadata.s3Path) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
@@ -1023,6 +1024,7 @@ data FaceMatchOutcome = FMSkip | FMPass | FMFail | FMDeferred
 
 -- | Sync Idfy face compare, memoized+audited: reuse a "completed" faceCompare* row for this image, else call Idfy and persist the outcome (success or failure) as one.
 recordedFaceCompare ::
+  OnboardingFlow m r =>
   Person.Person ->
   ODC.DocumentType ->
   Id Image.Image ->
@@ -1030,7 +1032,7 @@ recordedFaceCompare ::
   Text ->
   Text ->
   Maybe Text ->
-  Flow Bool
+  m Bool
 recordedFaceCompare person docType docImageId selfieImageId documentImage1 documentImage2 mbPlainDocNumber = do
   docTag <- faceCompareDocTag docType & fromMaybeM (InternalError $ "Face compare not supported for docType: " <> show docType)
   mbExistingRow <- listToMaybe <$> IVQuery.findLatestByDocTypeAndDocumentImageId1 (Just 1) Nothing person.id docTag docImageId
@@ -1099,7 +1101,7 @@ recordedFaceCompare person docType docImageId selfieImageId documentImage1 docum
         maybe (encrypt docImageId.getId) pure mbEnc
 
 -- | Face-match a doc image against the configured source doc (selfie); DRIVER-only, DL/PAN/Aadhaar-only, non-SDK-only; a mismatch marks the image INVALID with FaceMatchFailed.
-runDocFaceMatch :: Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Maybe Text -> Maybe Text -> Flow FaceMatchOutcome
+runDocFaceMatch :: OnboardingFlow m r => Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Maybe Text -> Maybe Text -> m FaceMatchOutcome
 runDocFaceMatch person config docImageId mbDocImage mbPlainDocNumber
   | person.role /= Person.DRIVER = pure FMSkip
   | isNothing (faceCompareDocTag config.documentType) = pure FMSkip
@@ -1130,7 +1132,7 @@ runDocFaceMatch person config docImageId mbDocImage mbPlainDocNumber
             _ -> pure FMDeferred -- PENDING / MANUAL_VERIFICATION_REQUIRED: resolve when image becomes VALID
 
 -- | Status to write where a flow would write VALID: FMPass/FMSkip -> VALID, FMFail -> INVALID, FMDeferred (no selfie yet) -> PENDING.
-resolveFaceMatchVerificationStatus :: Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Maybe Text -> Maybe Text -> Flow Documents.VerificationStatus
+resolveFaceMatchVerificationStatus :: OnboardingFlow m r => Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Maybe Text -> Maybe Text -> m Documents.VerificationStatus
 resolveFaceMatchVerificationStatus person config docImageId mbDocImage mbPlainDocNumber = do
   outcome <- runDocFaceMatch person config docImageId mbDocImage mbPlainDocNumber
   pure $ case outcome of
@@ -1139,11 +1141,11 @@ resolveFaceMatchVerificationStatus person config docImageId mbDocImage mbPlainDo
     _ -> Documents.VALID
 
 -- | On selfie upload, face-match earlier non-SDK doc images: skip while the doc's webhook is pending (the handler resolves it), else run now and promote PENDING->VALID or flip INVALID.
-faceMatchBoundConfigs :: Person.Person -> Flow [ODC.DocumentVerificationConfig]
+faceMatchBoundConfigs :: OnboardingFlow m r => Person.Person -> m [ODC.DocumentVerificationConfig]
 faceMatchBoundConfigs person =
   DL.nubBy (\a b -> a.documentType == b.documentType) . filter (\c -> isJust c.faceMatchSourceDoc && isJust (faceCompareDocTag c.documentType)) <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing))
 
-runDeferredFaceMatchOnSelfie :: Person.Person -> UTCTime -> Flow ()
+runDeferredFaceMatchOnSelfie :: OnboardingFlow m r => Person.Person -> UTCTime -> m ()
 runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
   faceMatchConfigs <- faceMatchBoundConfigs person
   forM_ faceMatchConfigs $ \config -> do
@@ -1201,7 +1203,7 @@ runDeferredFaceMatchOnSelfie person selfieCreatedAt = do
       _ -> pure ()
 
 -- | Once a VALID selfie exists, a DRIVER may upload a new one only while every face-match-bound doc (DL/PAN/Aadhaar with faceMatchSourceDoc set) is absent or INVALID.
-enforceSelfieReuploadPolicy :: Person.Person -> [Image.Image] -> Flow ()
+enforceSelfieReuploadPolicy :: OnboardingFlow m r => Person.Person -> [Image.Image] -> m ()
 enforceSelfieReuploadPolicy person priorSelfies =
   when (person.role == Person.DRIVER && any ((== Just Documents.VALID) . (.verificationStatus)) priorSelfies) $ do
     faceMatchDocTypes <- fmap (.documentType) <$> faceMatchBoundConfigs person
@@ -1251,7 +1253,7 @@ mkRCIdfyVerificationEntity person requestId now imageExtractionValidation encryp
         updatedAt = now
       }
 
-compareNames :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Id Person.Person -> Flow Bool
+compareNames :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Id Person.Person -> m Bool
 compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId =
   case (mbExtractedName, mbVerifiedName) of
     (Just extractedName, Just verifiedName) -> do
@@ -1269,7 +1271,7 @@ compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
       logInfo "Name comparison checks not executed."
       return False
 
-compareDateOfBirth :: Maybe UTCTime -> Maybe UTCTime -> Flow Bool
+compareDateOfBirth :: OnboardingFlow m r => Maybe UTCTime -> Maybe UTCTime -> m Bool
 compareDateOfBirth mbExtractedValue mbVerifiedValue = do
   case (mbExtractedValue, mbVerifiedValue) of
     (Just extractedValue, Just verifiedValue) -> do
@@ -1281,7 +1283,7 @@ compareDateOfBirth mbExtractedValue mbVerifiedValue = do
       logInfo "Date of birth checks not executed."
       return False
 
-checkPan :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
+checkPan :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> m Bool
 checkPan merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
   mdriverPanInformation <- DPQuery.findByDriverId personId
   case mdriverPanInformation of
@@ -1291,7 +1293,7 @@ checkPan merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValu
         else return False
     Nothing -> throwError $ InternalError "Pan not found"
 
-checkDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
+checkDL :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> m Bool
 checkDL merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
   mdriverLicense <- DLQuery.findByDriverId personId
   case mdriverLicense of
@@ -1301,7 +1303,7 @@ checkDL merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue
         else return False
     Nothing -> throwError $ InternalError "DL not found"
 
-checkAadhaar :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
+checkAadhaar :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> m Bool
 checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
   aadhaarInfo <- QAadhaarCard.findByPrimaryKey personId
   case aadhaarInfo of
@@ -1311,14 +1313,14 @@ checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirth
         else return False
     Nothing -> throwError $ InternalError "Aadhaar not found"
 
-checkGST :: Id Person.Person -> Maybe Text -> Flow ()
+checkGST :: OnboardingFlow m r => Id Person.Person -> Maybe Text -> m ()
 checkGST personId mbPanNumber = do
   mGstData <- DGQuery.findByDriverId personId
   case mGstData of
     Just gstData -> checkTwoPanNumber mbPanNumber gstData.panNumber
     Nothing -> throwError $ InternalError "GST not found"
 
-validateDocument :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> ODC.DocumentType -> DriverDocument -> Flow ()
+validateDocument :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> ODC.DocumentType -> DriverDocument -> m ()
 validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthValue mbPanNumber verifyingDocumentType DriverDocument {..} = do
   let mbUtcDateOfBirthValue = parseDateTime =<< mbDateOfBirthValue
   let skipPanAadhaarCrossCheck = isBusinessPan panNumber || isBusinessPan mbPanNumber
@@ -1359,7 +1361,7 @@ validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthV
     ODC.GSTCertificate -> checkTwoPanNumber mbPanNumber panNumber
     _ -> return ()
 
-checkTwoPanNumber :: Maybe Text -> Maybe Text -> Flow ()
+checkTwoPanNumber :: OnboardingFlow m r => Maybe Text -> Maybe Text -> m ()
 checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
   case (mbExtractedValue, mbVerifiedValue) of
     (Just extractedValue, Just verifiedValue) -> do
@@ -1367,7 +1369,7 @@ checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
       return ()
     _ -> return ()
 
-validateNameAndDOB :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id Person.Person -> Flow Bool
+validateNameAndDOB :: OnboardingFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id Person.Person -> m Bool
 validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mbExtractedDOB mbVerifiedDOB personId = do
   isNameValid <- compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
   isDateOfBirthValid <- compareDateOfBirth mbExtractedDOB mbVerifiedDOB
@@ -1387,7 +1389,7 @@ isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
 -- | When a merchant enables individualPANCheck, reject business PANs (4th char ≠ 'P')
 -- for individual drivers (incl. fleet drivers) and individual fleet owners.
 -- Business fleet owners and other roles are exempt, as they may hold a business PAN.
-validateIndividualPANCheck :: DTC.TransporterConfig -> Person.Person -> Text -> Flow ()
+validateIndividualPANCheck :: OnboardingFlow m r => DTC.TransporterConfig -> Person.Person -> Text -> m ()
 validateIndividualPANCheck transporterConfig person panNumber =
   when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
     when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
@@ -1396,7 +1398,7 @@ validateIndividualPANCheck transporterConfig person panNumber =
     isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER
 
 -- Define a common function to handle role-based decryption
-getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)
+getDriverDocumentInfo :: OnboardingFlow m r => Person.Person -> m (Bool, DriverDocument)
 getDriverDocumentInfo person = do
   case person.role of
     role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do

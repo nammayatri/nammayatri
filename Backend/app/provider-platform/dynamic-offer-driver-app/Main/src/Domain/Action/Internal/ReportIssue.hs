@@ -41,7 +41,7 @@ import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as Behavi
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -180,19 +180,19 @@ handleDrunkAndDriveViolation ride = do
           let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
           Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
       else
-        SStatus.runBlockChange (cast ride.driverId) $
-          SStatus.Block
-            SStatus.BlockPayload
-              { SStatus.bpReason = Just "DRUNK_AND_DRIVE_VIOLATION",
-                SStatus.bpExpiryHours = Nothing,
-                SStatus.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
-                SStatus.bpMerchantId = person.merchantId,
-                SStatus.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
-                SStatus.bpMerchantOperatingCityId = ride.merchantOperatingCityId,
-                SStatus.bpBlockedBy = DTDBT.Application,
-                SStatus.bpActive = Nothing,
-                SStatus.bpMode = Nothing,
-                SStatus.bpFlag = DrunkAndDriveViolation
+        SFlags.recomputeBlockFlags (cast ride.driverId) $
+          SFlags.Block
+            SFlags.BlockPayload
+              { SFlags.bpReason = Just "DRUNK_AND_DRIVE_VIOLATION",
+                SFlags.bpExpiryHours = Nothing,
+                SFlags.bpDashboardUserName = "AUTOMATICALLY_BLOCKED_BY_APP",
+                SFlags.bpMerchantId = person.merchantId,
+                SFlags.bpReasonCode = "AUTOMATICALLY_BLOCKED_BY_APP",
+                SFlags.bpMerchantOperatingCityId = ride.merchantOperatingCityId,
+                SFlags.bpBlockedBy = DTDBT.Application,
+                SFlags.bpActive = Nothing,
+                SFlags.bpMode = Nothing,
+                SFlags.bpFlag = DrunkAndDriveViolation
               }
 
 handleUnhygienicVehicle :: Ride -> Flow ()

@@ -45,7 +45,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.VehicleCategory
-import Environment
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -65,6 +64,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -125,16 +125,17 @@ validateDriverDLReqRegexFlow now DriverDLReq {..} =
     t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
-isDLNumberFormatValid :: DTO.DocumentVerificationConfig -> Text -> Flow Bool
+isDLNumberFormatValid :: OnboardingFlow m r => DTO.DocumentVerificationConfig -> Text -> m Bool
 isDLNumberFormatValid documentVerificationConfig normalizedDLNumber =
   validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
 
 verifyDL ::
+  OnboardingFlow m r =>
   DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverDLReq ->
-  Flow DriverDLRes
+  m DriverDLRes
 verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
   let isDashboard = verifyBy == DPan.DASHBOARD
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
@@ -272,7 +273,6 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     else runBody
   return Success
   where
-    getImage :: Id Image.Image -> Flow Text
     getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
@@ -308,7 +308,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     makeVerifyDLHitsCountKey :: Text -> Text
     makeVerifyDLHitsCountKey dlNumber = "VerifyDL:dlNumberHits:" <> dlNumber <> ":hitsCount"
 
-verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> Flow ()
+verifyDLFlow :: OnboardingFlow m r => Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> m ()
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard mbVehicleCategory mbReqId mbTxnId = do
   now <- getCurrentTime
   encryptedDL <- encrypt dlNumber
@@ -335,7 +335,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             MorthQuery.create morthEntity
           onVerifyDLHandler person resp.response.licenseNumber (resp.response.t_validity_to <|> resp.response.nt_validity_to <|> Just "2099-12-12") resp.response.covs resp.response.driverName resp.response.dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory
 
-mkIdfyVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
+mkIdfyVerificationEntity :: OnboardingFlow m r => Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m Domain.IdfyVerification
 mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL = do
   id <- generateGUID
   return $
@@ -364,7 +364,7 @@ mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOf
         updatedAt = now
       }
 
-mkHyperVergeVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Flow Domain.HyperVergeVerification
+mkHyperVergeVerificationEntity :: OnboardingFlow m r => Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> m Domain.HyperVergeVerification
 mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL transactionId = do
   id <- generateGUID
   return $
@@ -394,7 +394,7 @@ mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driver
         ..
       }
 
-onVerifyDL :: VerificationReqRecord -> VerificationIntTypes.DLVerificationOutputInterface -> VT.VerificationService -> Flow AckResponse
+onVerifyDL :: OnboardingFlow m r => VerificationReqRecord -> VerificationIntTypes.DLVerificationOutputInterface -> VT.VerificationService -> m AckResponse
 onVerifyDL verificationReq output serviceName = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   let key = dlCacheKey person.id
@@ -404,7 +404,6 @@ onVerifyDL verificationReq output serviceName = do
     (Just status, Just issueDate, Just (extractedDL, operatingCity), Just dob) | status == "id_not_found" -> dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person
     _ -> linkDl person
   where
-    linkDl :: Person.Person -> Flow AckResponse
     linkDl person = do
       if verificationReq.imageExtractionValidation == Domain.Skipped
         && isJust verificationReq.issueDateOnDoc
@@ -422,7 +421,7 @@ onVerifyDL verificationReq output serviceName = do
           onVerifyDLHandler person output.licenseNumber (output.t_validity_to <|> output.nt_validity_to) output.covs output.driverName output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 
-onVerifyDLHandler :: Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> Flow ()
+onVerifyDLHandler :: OnboardingFlow m r => Person.Person -> Maybe Text -> Maybe Text -> Maybe [Idfy.CovDetail] -> Maybe Text -> Maybe Text -> DocumentVerificationConfig -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Text -> Maybe UTCTime -> Maybe VehicleCategory -> m ()
 onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue vehicleCategory = do
   now <- getCurrentTime
   id <- generateGUID
@@ -531,7 +530,7 @@ isValidCOVDL validCOVs validCOVsCheck cov =
   where
     checkForClass = foldr' (\x acc -> classCheckFunction validCOVsCheck (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
 
-cacheExtractedDl :: Id Person.Person -> Maybe Text -> Text -> Flow ()
+cacheExtractedDl :: OnboardingFlow m r => Id Person.Person -> Maybe Text -> Text -> m ()
 cacheExtractedDl _ Nothing _ = return ()
 cacheExtractedDl personId extractedDL operatingCity = do
   let key = dlCacheKey personId
@@ -542,16 +541,16 @@ dlNameCacheKey :: Id Person.Person -> Text
 dlNameCacheKey personId =
   "providerPlatform:dlNameCacheKey:" <> personId.getId
 
-cacheExtractedDlName :: Id Person.Person -> Maybe Text -> Flow ()
+cacheExtractedDlName :: OnboardingFlow m r => Id Person.Person -> Maybe Text -> m ()
 cacheExtractedDlName personId (Just name) | not (T.null name) = do
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   Redis.setExp (dlNameCacheKey personId) name authTokenCacheExpiry
 cacheExtractedDlName _ _ = return ()
 
-getCachedExtractedDlName :: Id Person.Person -> Flow (Maybe Text)
+getCachedExtractedDlName :: OnboardingFlow m r => Id Person.Person -> m (Maybe Text)
 getCachedExtractedDlName personId = Redis.safeGet (dlNameCacheKey personId)
 
-dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> VerificationReqRecord -> Person.Person -> Flow AckResponse
+dlNotFoundFallback :: OnboardingFlow m r => UTCTime -> (Text, Text) -> UTCTime -> VerificationReqRecord -> Person.Person -> m AckResponse
 dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do
   let dlreq =
         DriverDLReq

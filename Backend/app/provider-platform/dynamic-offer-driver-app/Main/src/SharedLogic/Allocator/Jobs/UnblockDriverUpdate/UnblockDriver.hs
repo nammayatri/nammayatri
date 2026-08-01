@@ -29,7 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -51,13 +51,13 @@ unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let driverId = jobData.driverId
   driver <- BF.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   let merchantId = driver.merchantId
-  SStatus.runBlockChange (cast driverId) $
-    SStatus.Unblock
-      SStatus.SimplePayload
-        { SStatus.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
-          SStatus.spMerchantId = merchantId,
-          SStatus.spMerchantOperatingCityId = driver.merchantOperatingCityId,
-          SStatus.spBlockedBy = DTDBT.Application
+  SFlags.recomputeBlockFlags (cast driverId) $
+    SFlags.Unblock
+      SFlags.SimplePayload
+        { SFlags.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
+          SFlags.spMerchantId = merchantId,
+          SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+          SFlags.spBlockedBy = DTDBT.Application
         }
   mbMerchantPN <- CPN.findMatchingMerchantPN driver.merchantOperatingCityId "UNBLOCK_DRIVER_KEY" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do

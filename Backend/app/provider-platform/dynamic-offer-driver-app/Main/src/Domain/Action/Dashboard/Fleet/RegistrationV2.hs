@@ -59,6 +59,7 @@ import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
@@ -277,7 +278,11 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
           | panValid && aadhaarValid -> do
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
             let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-            mbEnabled <- SStatus.runAdminEnable Nothing fleetOwnerId
+            mbEnabled <- do
+              fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
+              tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
+              SFlags.recomputeDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
+              SStatus.runRefreshOnboardingFlagsFleet (Just fleetPersonForEnable) (Just tcForEnable) fleetOwnerId
             case mbEnabled of
               Just True -> do
                 when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
@@ -288,7 +293,11 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
           | panValid && aadhaarValid && gstValid -> do
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
             let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-            mbEnabled <- SStatus.runAdminEnable Nothing fleetOwnerId
+            mbEnabled <- do
+              fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
+              tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
+              SFlags.recomputeDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
+              SStatus.runRefreshOnboardingFlagsFleet (Just fleetPersonForEnable) (Just tcForEnable) fleetOwnerId
             case mbEnabled of
               Just True -> do
                 when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId

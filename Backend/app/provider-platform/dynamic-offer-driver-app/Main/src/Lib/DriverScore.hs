@@ -52,7 +52,7 @@ import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -163,13 +163,13 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let inCooldown = dailyCooldownActive || weeklyCooldownActive
   when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
-    SStatus.runBlockChange (cast driverId) $
-      SStatus.SimpleBlock
-        SStatus.SimplePayload
-          { SStatus.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",
-            SStatus.spMerchantId = merchantId,
-            SStatus.spMerchantOperatingCityId = merchantOpCityId,
-            SStatus.spBlockedBy = DTDBT.Application
+    SFlags.recomputeBlockFlags (cast driverId) $
+      SFlags.SimpleBlock
+        SFlags.SimplePayload
+          { SFlags.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",
+            SFlags.spMerchantId = merchantId,
+            SFlags.spMerchantOperatingCityId = merchantOpCityId,
+            SFlags.spBlockedBy = DTDBT.Application
           }
   DP.incrementCancellationCount merchantOpCityId driverId
   where

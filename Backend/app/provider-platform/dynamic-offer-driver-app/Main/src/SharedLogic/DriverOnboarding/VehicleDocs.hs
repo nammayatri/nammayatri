@@ -24,7 +24,6 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.VehicleVariant as DV
-import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption
 import Kernel.External.Types (Language)
@@ -36,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -220,9 +220,10 @@ data DocumentStatusItem = DocumentStatusItem
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 validateMandatoryVehicleDocsForRC ::
+  OnboardingFlow m r =>
   DTC.TransporterConfig ->
   RC.VehicleRegistrationCertificate ->
-  Flow ()
+  m ()
 validateMandatoryVehicleDocsForRC transporterConfig rc =
   when (transporterConfig.enableManualDocumentStatusCheck == Just True) $ do
     merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
@@ -251,13 +252,14 @@ validateMandatoryVehicleDocsForRC transporterConfig rc =
         throwError (InvalidRequest "Mandatory vehicle documents are not verified")
 
 fetchVehicleDocuments ::
+  OnboardingFlow m r =>
   IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   Language ->
   Maybe Text ->
   Maybe Bool ->
   Bool ->
-  Flow [VehicleDocumentItem]
+  m [VehicleDocumentItem]
 fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs skipMessages = do
   -- All items required
   processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs skipMessages
@@ -288,6 +290,23 @@ fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (
       logInfo $ "Processed vehicle documents with RC found for rcNo and " <> entityTxt <> ": " <> entityId
       pure processedVehicleDocumentsWithRC
 
+-- | Does this document contribute to the driver-side flags? `documentCategory` is the source of
+--   truth; when it is unset we fall back to the legacy documentType list.
+isDriverSideDocType :: Maybe DDVC.DocumentCategory -> DVC.DocumentType -> Bool
+isDriverSideDocType category docType = case category of
+  Just DDVC.Driver -> True
+  Just DDVC.Training -> True
+  Just DDVC.Vehicle -> False
+  Just DDVC.Permission -> False
+  Nothing -> docType `elem` SDO.defaultDriverDocumentTypes
+
+-- | Does this document contribute to the vehicle-side flags? Same rule, vehicle fallback list.
+isVehicleSideDocType :: Maybe DDVC.DocumentCategory -> DVC.DocumentType -> Bool
+isVehicleSideDocType category docType = case category of
+  Just DDVC.Vehicle -> True
+  Just _ -> False
+  Nothing -> docType `elem` SDO.defaultVehicleDocumentTypes
+
 getVehicleDocTypes ::
   (Monad m, Log m) =>
   Id DMOC.MerchantOperatingCity ->
@@ -298,10 +317,7 @@ getVehicleDocTypes ::
   m [DVC.DocumentType]
 getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs = do
   let vehicleCategory = fromMaybe userSelectedVehicleCategory verifiedVehicleCategory
-      isVehicleSideDoc config = case config.documentCategory of
-        Just DDVC.Vehicle -> True
-        Just _ -> False
-        Nothing -> config.documentType `elem` SDO.defaultVehicleDocumentTypes
+      isVehicleSideDoc config = isVehicleSideDocType config.documentCategory config.documentType
       mandatoryVehicleDocumentVerificationConfigs =
         filter
           ( \config ->
@@ -324,13 +340,14 @@ getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehic
     else pure SDO.defaultVehicleDocumentTypes
 
 fetchProcessedVehicleDocumentsWithRC ::
+  OnboardingFlow m r =>
   IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   Language ->
   Maybe Text ->
   Maybe Bool ->
   Bool ->
-  Flow [VehicleDocumentItem]
+  m [VehicleDocumentItem]
 fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   processedVehicles <- case entityImagesInfo.entity of
@@ -393,12 +410,13 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         }
 
 fetchProcessedVehicleDocumentsWithoutRC ::
+  OnboardingFlow m r =>
   IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   [VehicleDocumentItem] ->
   Maybe Text ->
   Maybe Bool ->
-  Flow [VehicleDocumentItem]
+  m [VehicleDocumentItem]
 fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC mbReqRegistrationNo onlyMandatoryDocs = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       mbPersonId = IQuery.getPersonEntityId entityImagesInfo
@@ -438,6 +456,7 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
     Nothing -> return []
 
 fetchInprogressVehicleDocuments ::
+  OnboardingFlow m r =>
   IQuery.EntityImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
   Language ->
@@ -445,7 +464,7 @@ fetchInprogressVehicleDocuments ::
   Maybe Text ->
   Maybe Bool ->
   Bool ->
-  Flow [VehicleDocumentItem]
+  m [VehicleDocumentItem]
 fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   mbVerificationReqRecord <- case entityImagesInfo.entity of
@@ -529,7 +548,7 @@ computeAdminDocsVerificationStatus docs
   | all ((== VALID) . (.verificationStatus)) docs = DDVS.ADMIN_APPROVED
   | otherwise = DDVS.ADMIN_PENDING
 
-getProcessedVehicleDocuments :: IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata)
+getProcessedVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata)
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
   let entity = entityImagesInfo.entity
       (mbS3Path, mbImageId) = getImageMetaFromVehicleImage entityImagesInfo docType mbRcImagesInfo
@@ -681,7 +700,7 @@ getImageMetaFromVehicleImage entityImagesInfo docType mbRcImagesInfo =
       mbLatestImage = listToMaybe images
    in (mbLatestImage <&> (.s3Path), mbLatestImage <&> (.id.getId))
 
-checkVehiclePhotosStatusByRC :: Maybe IQuery.RcImagesInfo -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkVehiclePhotosStatusByRC :: OnboardingFlow m r => Maybe IQuery.RcImagesInfo -> m (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkVehiclePhotosStatusByRC mbRcImagesInfo = do
   -- Check all vehicle photo types from RC images (6 types: VehicleLeft, VehicleRight, VehicleFrontInterior, VehicleBackInterior, VehicleFront, VehicleBack)
   let vehiclePhotoTypes = vehicleDocsByRcIdList
@@ -735,7 +754,7 @@ vehicleDocsLoadedByRcId =
          DVC.VehicleNOC
        ]
 
-getInProgressVehicleDocuments :: IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> [DVC.DocumentVerificationConfig] -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text)
+getInProgressVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> [DVC.DocumentVerificationConfig] -> m (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text)
 getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs = do
   let onlyImageLookup = maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) docVerificationConfigs
       (mbS3Path, mbImageId) = case mbRcImagesInfo of
@@ -791,7 +810,7 @@ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup = d
         Just Documents.INVALID -> (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
         _ -> (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
-checkIfUnderProgress :: IQuery.EntityImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfUnderProgress :: OnboardingFlow m r => IQuery.EntityImagesInfo -> DVC.DocumentType -> m (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfUnderProgress entityImagesInfo docType = do
   mbVerificationReqRecord <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
@@ -833,7 +852,7 @@ extractImageFailReason imageError =
     Just FaceMatchFailed -> toMessage FaceMatchFailed -- surfaces the face-match failure in the status API's verificationMessage
     _ -> Nothing
 
-documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Bool -> Flow (Maybe Text)
+documentStatusMessage :: OnboardingFlow m r => ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Bool -> m (Maybe Text)
 documentStatusMessage status mbReason docType mbVerificationUrl language skipMessages
   | skipMessages = pure Nothing
   | otherwise = do
@@ -896,12 +915,12 @@ data VerificationMessage
   | Reasons
   deriving (Show, Eq, Ord)
 
-translateDynamicKey :: Text -> Language -> Flow Text
+translateDynamicKey :: OnboardingFlow m r => Text -> Language -> m Text
 translateDynamicKey key lang = do
   mTranslation <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = key, language = Just lang}) (Just (MTQuery.findByErrorAndLanguage key lang))
   return $ fromMaybe key (mTranslation <&> (.message))
 
-toVerificationMessage :: VerificationMessage -> Language -> Flow Text
+toVerificationMessage :: OnboardingFlow m r => VerificationMessage -> Language -> m Text
 toVerificationMessage msg lang = do
   errorTranslations <- getConfig (TranslationDimensions {merchantOperatingCityId = Nothing, messageKey = T.pack (show msg), language = Just lang}) (Just (MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang))
   case errorTranslations of

@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Network.HTTP.Types.URI as URI
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -35,7 +36,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DigilockerVerification as QDV
 import Tools.Error
 
-getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
+getDigiLockerConfig :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> m DigilockerTypes.DigiLockerCfg
 getDigiLockerConfig merchantOpCityId = do
   transporterConfig <-
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
@@ -145,7 +146,7 @@ constructDigiLockerAuthUrl config digiLockerState codeChallenge =
 
 -- | Get DigiLocker authorization URL from an existing session
 -- Returns Nothing if session doesn't exist, is not in PENDING status, or merchantOperatingCityId is missing
-getDigiLockerAuthorizationUrl :: Id DP.Person -> Flow (Maybe Text)
+getDigiLockerAuthorizationUrl :: OnboardingFlow m r => Id DP.Person -> m (Maybe Text)
 getDigiLockerAuthorizationUrl driverId = do
   latestSessions <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
   case latestSessions of
