@@ -43,6 +43,7 @@ import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common
 import Kernel.Types.Flow
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.App (lookupCloudType, lookupDeploymentVersion)
 import Kernel.Utils.Common
@@ -150,6 +151,9 @@ data HandlerEnv = HandlerEnv
     dashboardClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     ttenTokenCacheExpiry :: Seconds,
+    authTokenCacheExpiry :: Seconds,
+    externalServiceRateLimitOptions :: APIRateLimitOptions,
+    imageExtractionTimeoutSec :: Seconds,
     emailServiceConfig :: EmailServiceConfig,
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,

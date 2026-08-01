@@ -60,7 +60,11 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.AnalyticsExtra as AnalyticsExtra
+import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -75,6 +79,7 @@ import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as QDL
+import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRCAExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
@@ -88,7 +93,8 @@ import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehiclePUC as QVPUC
 import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
-import Tools.Error (DriverOnboardingError (ImageNotValid), GenericError (InternalError))
+import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCExtra
+import Tools.Error (DriverOnboardingError (ImageNotValid, RCNotFound), GenericError (InternalError))
 import Tools.Notifications (NotifReq (..), notifyDriverOnEvents, notifyFleetWithGRPCProvider, notifyWithGRPCProvider)
 import qualified Tools.SMS as Sms
 
@@ -146,7 +152,8 @@ scheduleReminderJob scheduleAfter reminderId merchantId merchantOpCityId = do
 
 -- | Disable driver, set OFFLINE mode and update fleet/operator analytics. Used when a mandatory reminder has expired.
 disableDriverForMandatoryReminder ::
-  ( EsqDBFlow m r,
+  ( SOnboardingFlags.OnboardingFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -162,7 +169,8 @@ disableDriverForMandatoryReminder transporterConfig driverId now documentTypeNam
   driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (InternalError "DriverInformation not found")
   when driverInfo.enabled $ do
     -- Reminder-expired disable is sticky: admin must explicitly re-enable (recompute won't).
-    SStatus.runAdminDisableM transporterConfig (cast driverId) DDriverInfoDI.DriverDisabled
+    driverPersonForDisable <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+    SFlags.recomputeDisabledFlags (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) driverPersonForDisable (SFlags.AdminDisable DDriverInfoDI.DriverDisabled)
     logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
 
   let isActive = False
@@ -177,7 +185,8 @@ disableDriverForMandatoryReminder transporterConfig driverId now documentTypeNam
       else DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (Just mode) newFlowStatus driverInfo Nothing Nothing
 
 processReminder ::
-  ( CoreMetrics m,
+  ( SOnboardingFlags.OnboardingFlow m r,
+    CoreMetrics m,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -221,7 +230,8 @@ processReminder Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
 -- | Route reminder processing based on document type
 processReminderByType ::
-  ( CoreMetrics m,
+  ( SOnboardingFlags.OnboardingFlow m r,
+    CoreMetrics m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
@@ -245,91 +255,100 @@ processReminderByType ::
 processReminderByType reminder driver config merchantId merchantOpCityId =
   if reminder.documentType `elem` documentExpiryTypes
     then processDocumentExpiryReminder reminder driver config merchantId merchantOpCityId
-    else case reminder.documentType of
-      DVC.InspectionHub -> do
-        -- If overdue and mandatory but driver is on ride, reschedule instead of removing vehicle
-        now <- getCurrentTime
-        let isOverdue = reminder.dueDate <= now
-            isMandatory = config.isMandatory
-            shouldDisable = isOverdue && isMandatory
-        rescheduledForOnRide <-
-          if shouldDisable
-            then do
-              isOnRide <- QDIExtra.findByDriverIdActiveRide (cast reminder.driverId)
-              if isJust isOnRide
-                then do
-                  let scheduleAfter = fromIntegral $ fromMaybe defaultOnRideRescheduleIntervalSeconds config.reminderOnRideRescheduleIntervalSeconds
-                  scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
-                  logInfo $ "Driver " <> reminder.driverId.getId <> " on ride, rescheduling vehicle inspection reminder in " <> show scheduleAfter <> " seconds"
-                  return True
-                else return False
-            else return False
-        unless rescheduledForOnRide $
-          processInspectionReminder
-            reminder
-            driver
-            config
-            merchantId
-            merchantOpCityId
-            "Vehicle Inspection"
-            FCM.VEHICLE_INSPECTION
-            DMM.VEHICLE_INSPECTION_SMS
-            $ do
-              -- Invalidate RC, deactivate association and remove vehicle (only when not on ride)
-              let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
-              DomainRC.invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
-              logInfo $ "Invalidated RC " <> reminder.entityId <> " and removed vehicle for driver " <> reminder.driverId.getId <> " due to expired mandatory vehicle inspection reminder"
-      DVC.DriverInspectionHub ->
-        processInspectionReminder
-          reminder
-          driver
-          config
-          merchantId
-          merchantOpCityId
-          "Driver Inspection"
-          FCM.DRIVER_INSPECTION
-          DMM.DRIVER_INSPECTION_SMS
-          $ do
-            now <- getCurrentTime
-            mbOHR <- SQOHR.findLatestByDriverIdAndRequestType reminder.driverId DOHR.DRIVER_ONBOARDING_INSPECTION
-            whenJust mbOHR $ \hubReq ->
-              SQOHR.updateByPrimaryKey hubReq {DOHR.requestStatus = DOHR.REJECTED, DOHR.updatedAt = now, DOHR.remarks = Just "Expired mandatory driver inspection reminder"}
-            QDIExtra.updateApproved (Just False) reminder.driverId
-            logInfo $ "Set approved=Just False for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
-      DVC.TrainingForm -> do
-        -- Check LMS training status: if all trainings completed, cancel other pending training reminders and mark current SENT
-        mbStatus <- DriverOnboardingStatus.checkLMSTrainingStatus reminder.driverId merchantOpCityId
-        case mbStatus of
-          Just DriverOnboardingStatus.VALID -> do
-            -- All trainings completed: cancel all pending training reminders for this driver, then mark current as SENT (only this one completed)
-            pendingTrainingReminders <-
-              QReminder.findAllPendingByDriverIdAndDocumentType reminder.driverId DR.PENDING DVC.TrainingForm
-            ReminderHelper.cancelPendingReminders pendingTrainingReminders "LMS training completed"
-            QReminder.updateByPrimaryKey reminder {DR.status = DR.SENT}
-            logInfo $
-              "All LMS trainings completed for driver " <> reminder.driverId.getId
-                <> ", marked current training reminder as SENT and cancelled "
-                <> show (max 0 (length pendingTrainingReminders - 1))
-                <> " other pending training reminder(s)"
-          _ ->
-            -- Not all completed: continue with normal flow (after due date driver will be disabled)
+    else do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      case reminder.documentType of
+        DVC.InspectionHub -> do
+          -- If overdue and mandatory but driver is on ride, reschedule instead of removing vehicle
+          now <- getCurrentTime
+          let isOverdue = reminder.dueDate <= now
+              isMandatory = config.isMandatory
+              shouldDisable = isOverdue && isMandatory
+          rescheduledForOnRide <-
+            if shouldDisable
+              then do
+                isOnRide <- QDIExtra.findByDriverIdActiveRide (cast reminder.driverId)
+                if isJust isOnRide
+                  then do
+                    let scheduleAfter = fromIntegral $ fromMaybe defaultOnRideRescheduleIntervalSeconds config.reminderOnRideRescheduleIntervalSeconds
+                    scheduleReminderJob scheduleAfter reminder.id merchantId merchantOpCityId
+                    logInfo $ "Driver " <> reminder.driverId.getId <> " on ride, rescheduling vehicle inspection reminder in " <> show scheduleAfter <> " seconds"
+                    return True
+                  else return False
+              else return False
+          unless rescheduledForOnRide $
             processInspectionReminder
               reminder
               driver
               config
               merchantId
               merchantOpCityId
-              "Training Video"
-              FCM.TRAINING_VIDEO
-              DMM.TRAINING_VIDEO_SMS
+              "Vehicle Inspection"
+              FCM.VEHICLE_INSPECTION
+              DMM.VEHICLE_INSPECTION_SMS
               $ do
-                logInfo $ "Disabled driver " <> reminder.driverId.getId <> " due to expired mandatory training reminder"
-      _ -> logError $ "Unknown documentType: " <> show reminder.documentType
+                -- Invalidate RC, deactivate association and remove vehicle (only when not on ride)
+                let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
+                invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
+                when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+                  void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rcId
+                logInfo $ "Invalidated RC " <> reminder.entityId <> " and removed vehicle for driver " <> reminder.driverId.getId <> " due to expired mandatory vehicle inspection reminder"
+        DVC.DriverInspectionHub ->
+          processInspectionReminder
+            reminder
+            driver
+            config
+            merchantId
+            merchantOpCityId
+            "Driver Inspection"
+            FCM.DRIVER_INSPECTION
+            DMM.DRIVER_INSPECTION_SMS
+            $ do
+              now <- getCurrentTime
+              mbOHR <- SQOHR.findLatestByDriverIdAndRequestType reminder.driverId DOHR.DRIVER_ONBOARDING_INSPECTION
+              whenJust mbOHR $ \hubReq ->
+                SQOHR.updateByPrimaryKey hubReq {DOHR.requestStatus = DOHR.REJECTED, DOHR.updatedAt = now, DOHR.remarks = Just "Expired mandatory driver inspection reminder"}
+              if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+                then do
+                  void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just transporterConfig) reminder.driverId
+                else do
+                  QDIExtra.updateApproved (Just False) reminder.driverId
+                  logInfo $ "Set approved=Just False for driver " <> reminder.driverId.getId <> " due to expired mandatory driver inspection reminder"
+        DVC.TrainingForm -> do
+          -- Check LMS training status: if all trainings completed, cancel other pending training reminders and mark current SENT
+          mbStatus <- DriverOnboardingStatus.checkLMSTrainingStatus reminder.driverId merchantOpCityId
+          case mbStatus of
+            Just DriverOnboardingStatus.VALID -> do
+              -- All trainings completed: cancel all pending training reminders for this driver, then mark current as SENT (only this one completed)
+              pendingTrainingReminders <-
+                QReminder.findAllPendingByDriverIdAndDocumentType reminder.driverId DR.PENDING DVC.TrainingForm
+              ReminderHelper.cancelPendingReminders pendingTrainingReminders "LMS training completed"
+              QReminder.updateByPrimaryKey reminder {DR.status = DR.SENT}
+              logInfo $
+                "All LMS trainings completed for driver " <> reminder.driverId.getId
+                  <> ", marked current training reminder as SENT and cancelled "
+                  <> show (max 0 (length pendingTrainingReminders - 1))
+                  <> " other pending training reminder(s)"
+            _ ->
+              -- Not all completed: continue with normal flow (after due date driver will be disabled)
+              processInspectionReminder
+                reminder
+                driver
+                config
+                merchantId
+                merchantOpCityId
+                "Training Video"
+                FCM.TRAINING_VIDEO
+                DMM.TRAINING_VIDEO_SMS
+                $ do
+                  logInfo $ "Disabled driver " <> reminder.driverId.getId <> " due to expired mandatory training reminder"
+        _ -> logError $ "Unknown documentType: " <> show reminder.documentType
 
 -- | Process inspection reminders (vehicle, driver inspection, or training)
 -- Handles blocking, setting approved flags, sending notifications, and scheduling next reminder
 processInspectionReminder ::
-  ( EsqDBFlow m r,
+  ( SOnboardingFlags.OnboardingFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
@@ -385,7 +404,8 @@ processInspectionReminder reminder driver config merchantId merchantOpCityId dis
       logInfo $ "Reminder " <> reminder.id.getId <> " is no longer PENDING (status: " <> maybe "not found" (show . (.status)) mbCurrentReminder <> "), skipping notification and reschedule"
 
 processDocumentExpiryReminder ::
-  ( EsqDBFlow m r,
+  ( SOnboardingFlags.OnboardingFlow m r,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     MonadFlow m,
@@ -438,12 +458,20 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                   -- Vehicle reminders use entityId = rcId only; RC invalidation and vehicle removal are in invalidateRCAndRemoveVehicleForReminder
                   let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
                       expiryReason = "Expired mandatory vehicle document reminder"
-                  DomainRC.invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
+                  invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
                   invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
                   logInfo $ "Invalidated RC " <> reminder.entityId <> " (type: " <> documentTypeName <> ") for driver " <> reminder.driverId.getId <> " due to expiry"
                 else do
                   invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
                   logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
+              -- Recompute onboarding flags once, after every invalidation above, so the derived
+              -- flags observe the documents in their final state.
+              if isVehicleRelated
+                then void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) (Id @DVRC.VehicleRegistrationCertificate reminder.entityId)
+                else
+                  if SDO.isFleetRole driver.role
+                    then void $ SStatus.runRefreshOnboardingFlagsFleet (Just driver) (Just transporterConfig) reminder.driverId
+                    else void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) reminder.driverId
             else do
               let rescheduleSeconds = fromMaybe defaultRescheduleIntervalSeconds reminderConfig.reminderRescheduleIntervalSeconds
                   scheduleAfter = fromIntegral rescheduleSeconds
@@ -469,6 +497,38 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
       when (not hasExpired || reminderConfig.isMandatory) $ do
         QReminder.updateByPrimaryKey reminder {DR.status = DR.SENT}
         logInfo $ "Reminder " <> reminder.id.getId <> " marked as SENT"
+
+-- | For the reminder job: invalidate an RC (mark its document INVALID), deactivate the RC
+--   association and remove the vehicle from the driver. Order matters — deactivate and remove
+--   first, while the RC is still valid, then invalidate.
+--
+--   @mbExtraInvalidate@ runs after the RC's own document is invalidated and before the recompute —
+--   the caller uses it to invalidate the specific expiring document (insurance, PUC, permit, …)
+--   so that the recompute sees the full picture.
+invalidateRCAndRemoveVehicleForReminder ::
+  SOnboardingFlags.OnboardingFlow m r =>
+  Id DVRC.VehicleRegistrationCertificate ->
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  m ()
+invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = do
+  rc <- QVRC.findById rcId >>= fromMaybeM (RCNotFound rcId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  mActiveAssociation <- QDRCA.findActiveAssociationByRC rc.id True
+  case mActiveAssociation of
+    Just assoc | assoc.driverId == driverId -> do
+      DomainRC.removeVehicle False driverId
+      QDRCA.deactivateRCForDriver False driverId rc.id
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+        Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
+    _ -> return ()
+  -- Legacy only: under the unified flow `approved` is derived by the recompute the caller runs
+  -- once every invalidation is done.
+  unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+    QVRC.updateApproved (Just False) rcId
+  QVRCExtra.updateVerificationStatusAndRejectReason Documents.INVALID reason rc.documentImageId
+  QImage.updateVerificationStatusAndFailureReason Documents.INVALID (ImageNotValid reason) rc.documentImageId
 
 -- | Invalidate an expired document by setting its verification status to INVALID.
 -- For vehicle types, entityId is rcId: invalidate only the doc-specific row for that document type and its image (RC itself is done by invalidateRCAndRemoveVehicleForReminder).

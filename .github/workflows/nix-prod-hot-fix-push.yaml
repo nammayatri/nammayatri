@@ -1,7 +1,6 @@
 name: Nix CI (Prod Hot Fix Push)
 
 on:
-
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.

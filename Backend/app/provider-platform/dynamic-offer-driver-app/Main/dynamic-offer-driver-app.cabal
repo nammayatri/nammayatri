@@ -530,7 +530,10 @@ library
       SharedLogic.DriverFlowStatus
       SharedLogic.DriverIdentityInfo
       SharedLogic.DriverOnboarding
+      SharedLogic.DriverOnboarding.Common
       SharedLogic.DriverOnboarding.Digilocker
+      SharedLogic.DriverOnboarding.OnboardingFlags.Flow
+      SharedLogic.DriverOnboarding.OnboardingFlags.Types
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool

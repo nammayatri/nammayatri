@@ -264,7 +264,7 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -1066,13 +1066,13 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 now <- getCurrentTime
                 if now > expiryTime
                   then do
-                    SStatus.runBlockChange (cast driverId) $
-                      SStatus.Unblock
-                        SStatus.SimplePayload
-                          { SStatus.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
-                            SStatus.spMerchantId = merchantId,
-                            SStatus.spMerchantOperatingCityId = merchantOpCityId,
-                            SStatus.spBlockedBy = DTDBT.Application
+                    SFlags.recomputeBlockFlags (cast driverId) $
+                      SFlags.Unblock
+                        SFlags.SimplePayload
+                          { SFlags.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
+                            SFlags.spMerchantId = merchantId,
+                            SFlags.spMerchantOperatingCityId = merchantOpCityId,
+                            SFlags.spBlockedBy = DTDBT.Application
                           }
                   else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)

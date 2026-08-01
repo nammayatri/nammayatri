@@ -145,6 +145,7 @@ import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociatio
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
@@ -391,7 +392,10 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  void $ SStatus.runAdminDisable Nothing personId DrInfo.DriverDisabled
+  driverPerson <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  tcForDisable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driverPerson.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId driverPerson.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound driverPerson.merchantOperatingCityId.getId)
+  SFlags.recomputeDisabledFlags (tcForDisable.unifiedOnboardingFlagsRecompute == Just True) driverPerson (SFlags.AdminDisable DrInfo.DriverDisabled)
+  void $ SStatus.runRefreshOnboardingFlagsDriver (Just driverPerson) (Just tcForDisable) personId
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -431,19 +435,19 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   void $
-    SStatus.runBlockChange personId $
-      SStatus.Block
-        SStatus.BlockPayload
-          { SStatus.bpReason = req.blockReason,
-            SStatus.bpExpiryHours = req.blockTimeInHours,
-            SStatus.bpDashboardUserName = dashboardUserName,
-            SStatus.bpMerchantId = merchantId,
-            SStatus.bpReasonCode = req.reasonCode,
-            SStatus.bpMerchantOperatingCityId = driver.merchantOperatingCityId,
-            SStatus.bpBlockedBy = DTDBT.Dashboard,
-            SStatus.bpActive = Nothing,
-            SStatus.bpMode = Nothing,
-            SStatus.bpFlag = ByDashboard
+    SFlags.recomputeBlockFlags personId $
+      SFlags.Block
+        SFlags.BlockPayload
+          { SFlags.bpReason = req.blockReason,
+            SFlags.bpExpiryHours = req.blockTimeInHours,
+            SFlags.bpDashboardUserName = dashboardUserName,
+            SFlags.bpMerchantId = merchantId,
+            SFlags.bpReasonCode = req.reasonCode,
+            SFlags.bpMerchantOperatingCityId = driver.merchantOperatingCityId,
+            SFlags.bpBlockedBy = DTDBT.Dashboard,
+            SFlags.bpActive = Nothing,
+            SFlags.bpMode = Nothing,
+            SFlags.bpFlag = ByDashboard
           }
   case req.blockTimeInHours of
     Just hrs -> do
@@ -473,13 +477,13 @@ postDriverBlock merchantShortId opCity reqDriverId = do
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (not driverInf.blocked) $
     void $
-      SStatus.runBlockChange personId $
-        SStatus.SimpleBlock
-          SStatus.SimplePayload
-            { SStatus.spModifier = Nothing,
-              SStatus.spMerchantId = merchantId,
-              SStatus.spMerchantOperatingCityId = driver.merchantOperatingCityId,
-              SStatus.spBlockedBy = DTDBT.Dashboard
+      SFlags.recomputeBlockFlags personId $
+        SFlags.SimpleBlock
+          SFlags.SimplePayload
+            { SFlags.spModifier = Nothing,
+              SFlags.spMerchantId = merchantId,
+              SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+              SFlags.spBlockedBy = DTDBT.Dashboard
             }
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
@@ -517,13 +521,13 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInf.blocked $ do
     void $
-      SStatus.runBlockChange personId $
-        SStatus.Unblock
-          SStatus.SimplePayload
-            { SStatus.spModifier = Just dashboardUserName,
-              SStatus.spMerchantId = merchantId,
-              SStatus.spMerchantOperatingCityId = driver.merchantOperatingCityId,
-              SStatus.spBlockedBy = DTDBT.Dashboard
+      SFlags.recomputeBlockFlags personId $
+        SFlags.Unblock
+          SFlags.SimplePayload
+            { SFlags.spModifier = Just dashboardUserName,
+              SFlags.spMerchantId = merchantId,
+              SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+              SFlags.spBlockedBy = DTDBT.Dashboard
             }
     now <- getCurrentTime
     void $ LF.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
