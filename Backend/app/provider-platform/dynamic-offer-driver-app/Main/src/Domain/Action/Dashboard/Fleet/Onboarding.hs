@@ -379,6 +379,11 @@ castDocumentMetadata = \case
         { documentId = l.documentId,
           tdsRate = l.tdsRate
         }
+  VehicleDocs.BusinessLicenseMetadata b ->
+    CommonOnboarding.BusinessLicenseMetadata
+      CommonOnboarding.BusinessLicenseDocumentMetadata
+        { businessLicenseNumber = b.businessLicenseNumber
+        }
   VehicleDocs.NomineeDetailsMetadata n ->
     CommonOnboarding.NomineeDetailsMetadata
       CommonOnboarding.NomineeDetailsDocumentMetadata

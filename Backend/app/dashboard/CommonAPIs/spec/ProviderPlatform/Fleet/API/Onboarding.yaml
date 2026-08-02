@@ -232,7 +232,7 @@ types:
     expiryDate: Maybe UTCTime
     metadata: Maybe DocumentMetadata
   DocumentMetadata:
-    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata | NomineeDetailsMetadata NomineeDetailsDocumentMetadata | BankingDetailsMetadata BankingDetailsDocumentMetadata"
+    enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata | BusinessLicenseMetadata BusinessLicenseDocumentMetadata | NomineeDetailsMetadata NomineeDetailsDocumentMetadata | BankingDetailsMetadata BankingDetailsDocumentMetadata"
   UDYAMDocumentMetadata:
     udyamNumber: Maybe Text
     tdsRate: Maybe Double
@@ -242,6 +242,8 @@ types:
   LDCDocumentMetadata:
     documentId: Text
     tdsRate: Maybe Double
+  BusinessLicenseDocumentMetadata:
+    businessLicenseNumber: Maybe Text
   DLDocumentMetadata:
     driverLicenseNumber: Text
     driverDateOfBirth: Maybe UTCTime

@@ -836,7 +836,10 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
         responseCode = mbDocStatus >>= (.responseCode)
         mbDocVerificationStatus = mbDocStatus >>= (mapDigilockerToResponseStatus . (.status))
 
-    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata
+    let mbDocFlowGrouping = case allDocVerificationConfigs of
+          Right driverConfs -> find (\c -> c.documentType == docType) driverConfs >>= (.documentFlowGrouping)
+          Left fleetConfs -> find (\c -> c.documentType == docType) fleetConfs >>= (.documentFlowGrouping)
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata mbDocFlowGrouping
     (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal, mbImageIdFinal, mbImageId2Final) <- case mbProcessedStatus of
       Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2)
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2)
@@ -1292,8 +1295,8 @@ checkIfDocumentValid' mode mbIsFleetDriver (Right driverConfigs) _role docType c
            )
     Nothing -> True
 
-getProcessedDriverDocuments :: DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata)
-getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL enableMetadata = do
+getProcessedDriverDocuments :: DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> Maybe DVC.DocumentFlowGrouping -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata)
+getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL enableMetadata mbDocFlowGrouping = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       (mbS3Path, mbImageId) = getImageMetaFromLatestImage entityImagesInfo docType
       lookupImage imgId =
@@ -1475,7 +1478,25 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
           return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbLdcMetadata)
         Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
-    DVC.BusinessLicense -> commonDocStatus DVC.BusinessLicense
+    DVC.BusinessLicense
+      | mbDocFlowGrouping == Just DVC.STANDARD -> do
+        let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessLicense
+        mbFoi <- QFOI.findByPrimaryKey driverId
+        let hasBusinessLicense =
+              maybe False (\foi -> isJust foi.businessLicenseNumber && isJust foi.businessLicenseImageId) mbFoi
+            mbBizLicenseMetadata =
+              if enableMetadata
+                then
+                  mbFoi <&> \foi ->
+                    BusinessLicenseMetadata
+                      BusinessLicenseDocumentMetadata
+                        { businessLicenseNumber = foi.businessLicenseNumberDec
+                        }
+                else Nothing
+            finalStatus = if hasBusinessLicense then status else if isJust mbImageId then Just INVALID else Just NO_DOC_AVAILABLE
+            rejectReason = if finalStatus == Just INVALID then (Id <$> mbImageId) >>= lookupImageFailReason else Nothing
+        return (finalStatus, reason <|> rejectReason, url, Nothing, mbS3Path, mbImageId, Nothing, mbBizLicenseMetadata)
+      | otherwise -> commonDocStatus DVC.BusinessLicense
     DVC.TaxiTransportLicense -> commonDocStatus DVC.TaxiTransportLicense
     DVC.BusinessRegistrationExtract -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessRegistrationExtract
