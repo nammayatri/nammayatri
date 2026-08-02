@@ -126,6 +126,9 @@ apis:
         - mbNameSearchString: Text
         - approvalStatus: ApprovalStatusFilter
         - onboardingAs: OnboardingAs
+        - fleetOwnerId: Text
+        - from: UTCTime
+        - to: UTCTime
       response:
         type: DriverListRes
       migrate:

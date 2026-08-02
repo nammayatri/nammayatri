@@ -1,0 +1,41 @@
+imports:
+  Summary: Dashboard.Common
+  DriverAssociationInfo: Dashboard.Common.Driver
+  ApprovalStatusFilter: Dashboard.Common.Driver
+
+module: Vehicle
+
+apis:
+  - GET: # VehicleListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - fleetOwnerId: Text
+        - vehicleNumber: Text
+        - verified: Bool
+        - approvalStatus: ApprovalStatusFilter
+        - from: UTCTime
+        - to: UTCTime
+        - requestorId: Text
+      response:
+        type: VehicleListRes
+
+types:
+  VehicleListRes:
+    - totalItems: Int
+    - summary: Summary
+    - vehicles: [VehicleListItem]
+  VehicleListItem:
+    - rcId: Text
+    - vehicleNumber: Maybe Text
+    - vehicleMake: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleClass: Maybe Text
+    - verified: Maybe Bool
+    - approved: Maybe Bool
+    - createdAt: UTCTime
+    - recentFleetInfo: Maybe DriverAssociationInfo
+    - linkedDriverInfo: Maybe DriverAssociationInfo

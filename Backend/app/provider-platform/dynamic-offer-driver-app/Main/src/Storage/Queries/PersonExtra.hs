@@ -159,68 +159,6 @@ findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
 findByEmailAndMerchantIdAndRole :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id Merchant -> Role -> m (Maybe Person)
 findByEmailAndMerchantIdAndRole email (Id merchantId) role_ = findOneWithKV [Se.And [Se.Is BeamP.email $ Se.Eq email, Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq role_]]
 
-findAllDriversWithInfoAndVehicle ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Merchant ->
-  DMOC.MerchantOperatingCity ->
-  Int ->
-  Int ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe DbHash ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe (Maybe Bool) ->
-  Maybe DriverInfo.OnboardingAs ->
-  m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString mbApprovalFilter mbOnboardingAs = do
-  dbConf <- getReplicaBeamConfig
-  result <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.limit_ (fromIntegral limitVal) $
-          B.offset_ (fromIntegral offsetVal) $
-            B.filter_'
-              ( \(person, driverInfo, vehicle) ->
-                  person.merchantId B.==?. B.val_ (getId merchant.id)
-                    B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.sqlBool_ (B.like_ person.firstName (B.val_ ("%" <> name <> "%")))) mbNameSearchString
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\middleName -> B.sqlBool_ (B.like_ middleName (B.val_ ("%" <> name <> "%")))) person.middleName) mbNameSearchString
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\name -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\lastName -> B.sqlBool_ (B.like_ lastName (B.val_ ("%" <> name <> "%")))) person.lastName) mbNameSearchString
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\blocked -> driverInfo.blocked B.==?. B.val_ blocked) mbBlocked
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\subscribed -> driverInfo.subscribed B.==?. B.val_ subscribed) mbSubscribed
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchPhoneDBHash
-                    B.&&?. case mbApprovalFilter of
-                      Nothing -> B.sqlBool_ $ B.val_ True
-                      Just Nothing -> B.sqlBool_ (B.isNothing_ driverInfo.approved)
-                      Just (Just approved) -> driverInfo.approved B.==?. B.val_ (Just approved)
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\onboardingAs -> driverInfo.onboardingAs B.==?. B.val_ (Just onboardingAs)) mbOnboardingAs
-              )
-              do
-                person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
-                driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
-                vehicle <- B.leftJoin_' (B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)) (\veh' -> BeamP.id person B.==?. BeamV.driverId veh')
-                pure (person, driverInfo, vehicle)
-  case result of
-    Right x -> do
-      let persons = fmap fst' x
-          driverInfos = fmap snd' x
-          vehicles = fmap thd' x
-      p <- catMaybes <$> mapM fromTType' persons
-      di <- catMaybes <$> mapM fromTType' driverInfos
-      v <- mapM (maybe (pure Nothing) fromTType') vehicles
-      pure $ zip3 p di v
-    Left _ -> pure []
-  where
-    fst' (x, _, _) = x
-    snd' (_, y, _) = y
-    thd' (_, _, z) = z
-
 getDriversList ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [DriverInformation] ->

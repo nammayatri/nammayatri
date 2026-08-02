@@ -120,6 +120,40 @@ findAllByDriverIds driverIds = do
   now <- getCurrentTime
   findAllWithKV [Se.And [Se.Is BeamFDVA.driverId $ Se.In (getId <$> driverIds), Se.Is BeamFDVA.isActive $ Se.Eq True, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]]
 
+findActiveOrMostRecentByDriverIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id Person] ->
+  m [FleetDriverAssociation]
+findActiveOrMostRecentByDriverIds [] = pure []
+findActiveOrMostRecentByDriverIds driverIds = do
+  now <- getCurrentTime
+  activeAssocs <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamFDVA.driverId $ Se.In (getId <$> driverIds),
+            Se.Is BeamFDVA.isActive $ Se.Eq True,
+            Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+      ]
+  let driversWithActive = M.fromList $ map (\assoc -> (assoc.driverId, ())) activeAssocs
+      driversWithoutActive = filter (\driverId -> not (M.member driverId driversWithActive)) driverIds
+  dbConf <- getReplicaBeamConfig
+  mostRecentAssocs <-
+    fmap catMaybes $
+      forM driversWithoutActive $ \driverId -> do
+        result <-
+          L.runDB dbConf $
+            L.findRows $
+              B.select $
+                B.limit_ 1 $
+                  B.orderBy_ (\fda -> B.nullsLast_ (B.desc_ fda.associatedTill)) $
+                    B.filter_ (\fda -> fda.driverId B.==. B.val_ (getId driverId)) $
+                      B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+        case result of
+          Right (row : _) -> fromTType' row
+          _ -> pure Nothing
+  pure $ activeAssocs <> mostRecentAssocs
+
 getActiveDriverIdsByFleetOwnerId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Text ->
