@@ -12,6 +12,8 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Flow
     bucketsOfFlags',
     mkOnboardingCounterKey,
     adjustOnboardingCounters,
+    OnboardingCounts (..),
+    readOnboardingCounts,
     BlockChange (..),
     BlockPayload (..),
     SimplePayload (..),
@@ -52,6 +54,7 @@ import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.OnboardingCountsExtra as QOC
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCEQuery
 import Tools.Error (BlockReasonFlag (..))
@@ -198,15 +201,35 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   let explicitlyDisabled = useUnifiedOnboardingFlagsRecompute && isJust effectiveDisabledReasonFlag
       approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else driverInfo.approved == Just True
       shouldEnable = not explicitlyDisabled && vehicleGateOk && consentGateOk && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
-  if shouldEnable && not driverInfo.enabled
+  let justEnabled = shouldEnable && not driverInfo.enabled
+  -- The association is read once and reused for both the onboardingAs reconciliation and the
+  -- fleet-scoped counter key.
+  mbFleetAssoc <-
+    if effectiveOnboardingAs == DI.FLEET_DRIVER || (useUnifiedOnboardingFlagsRecompute && justEnabled)
+      then QFDA.findByDriverId person.id True
+      else pure Nothing
+  if justEnabled
     then do
       enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId allMandatoryDocsValid
       whenJust onboardingVehicleCategory $ \category ->
         DIIQuery.updateOnboardingVehicleCategory (Just category) person.id
+      -- Enabling is the point where onboardingAs is settled: a driver holding an active fleet
+      -- association is a FLEET_DRIVER, anyone else is INDIVIDUAL. Without this the column keeps
+      -- whatever it was seeded with and drifts from the association.
+      let settledOnboardingAs = if isJust mbFleetAssoc then DI.FLEET_DRIVER else DI.INDIVIDUAL
+      when (useUnifiedOnboardingFlagsRecompute && driverInfo.onboardingAs /= Just settledOnboardingAs) $
+        DIQueryExtra.updateOnboardingAs (Just settledOnboardingAs) (cast person.id)
     else
       when (not shouldEnable && driverInfo.enabled) $
         SDO.disableDriverWithAnalytics merchantOpCityId person.id Nothing
-  mbFleetOwnerId <- if effectiveOnboardingAs == DI.FLEET_DRIVER then fmap (.fleetOwnerId) <$> QFDA.findByDriverId person.id True else pure Nothing
+  let mbFleetOwnerId = if effectiveOnboardingAs == DI.FLEET_DRIVER then (.fleetOwnerId) <$> mbFleetAssoc else Nothing
+  -- docsVerificationStatus is derived from the same documents as the flags and is written on every
+  -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
+  -- still read, so letting the unified flow move verified / approved without it would leave those
+  -- surfaces showing a stale status.
+  let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
+  when (newDocsVerificationStatus /= driverInfo.docsVerificationStatus) $
+    DIQueryExtra.updateDocsVerificationStatus newDocsVerificationStatus (cast person.id)
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
     CounterDriver
@@ -247,6 +270,13 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
       newEnabled = not explicitlyDisabled && allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
+  -- docsVerificationStatus is derived from the same documents as the flags and is written on every
+  -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
+  -- still read, so letting the unified flow move verified / approved without it would leave those
+  -- surfaces showing a stale status.
+  let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
+  when (newDocsVerificationStatus /= fleetOwnerInfo.docsVerificationStatus) $
+    QFOI.updateDocsVerificationStatus newDocsVerificationStatus person.id
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
     CounterFleetOwner
@@ -268,6 +298,11 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
   let vehicleDocItem' = vehicleDocItem
       allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' makeSelfieAadhaarPanMandatory
   rcHash <- getDbHash registrationNo
+  -- docsVerificationStatus is derived from the same documents as the flags and is written on every
+  -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
+  -- still read, so letting the unified flow move verified / approved without it would leave those
+  -- surfaces showing a stale status.
+  RCQuery.updateDocsVerificationStatusByCertificateNumberHash (Just $ computeAdminDocsVerificationStatus vehicleDocItem'.documents) rcHash
   if useUnifiedOnboardingFlagsRecompute
     then do
       mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
@@ -440,3 +475,89 @@ recomputeDisabledFlags unified person change = case change of
       unless unified $ QFOI.updateFleetOwnerEnabledStatus False person.id
       -- Stamp the fleet only; its drivers pick this up on their own recompute.
       QFOI.updateFleetOwnerDisabledReasonFlag (Just DI.FleetDisabled) person.id
+
+-- | The counts a summary row needs. `total` is deliberately not one of the delta-maintained
+--   buckets: the buckets overlap (enabled is a subset of approved) so they cannot be summed, and
+--   a recompute observes flag transitions, never entity creation -- so no delta can express a
+--   running total. Seeding it alongside the others would freeze it at rebuild time. It is counted
+--   directly instead and cached briefly.
+data OnboardingCounts = OnboardingCounts
+  { ocTotal :: Int,
+    ocApproved :: Int,
+    ocPending :: Int,
+    ocRejected :: Int,
+    ocEnabled :: Int,
+    ocBlocked :: Int,
+    ocDisabled :: Int
+  }
+
+onboardingCounterBuckets :: [Text]
+onboardingCounterBuckets = ["approved", "pending", "rejected", "enabled", "blocked", "disabled"]
+
+onboardingCounterRebuildLockTTL :: Int
+onboardingCounterRebuildLockTTL = 30
+
+onboardingTotalCacheTTL :: Int
+onboardingTotalCacheTTL = 300
+
+-- | Read the onboarding counters for one scope. A missing key means "never seeded", not zero, so
+--   the first read rebuilds from Postgres under a lock and seeds Redis; subsequent reads are pure
+--   Redis. Seeded values are plain integers so the incrby deltas from recomputeOnboardingFlags
+--   continue to apply.
+readOnboardingCounts ::
+  OnboardingFlow m r =>
+  OnboardingCounterEntity ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  m OnboardingCounts
+readOnboardingCounts entity merchantOpCityId mbFleetOwnerId = do
+  mbCached <- readAll
+  buckets <- case mbCached of
+    Just counts -> pure counts
+    Nothing -> do
+      -- Another request may be rebuilding the same scope; wait for it rather than duplicating the
+      -- COUNT(*) work, then re-read.
+      void $
+        Hedis.withLockRedisAndReturnValue rebuildLockKey onboardingCounterRebuildLockTTL $ do
+          stillCold <- isNothing <$> readAll
+          when stillCold $ do
+            counts <- rebuildFromDb
+            forM_ (zip onboardingCounterBuckets (countsToList counts)) $ \(bucket, value) ->
+              Hedis.set (keyFor bucket) value
+      fromMaybe (OnboardingCounts 0 0 0 0 0 0 0) <$> readAll
+  total <- readTotal
+  pure buckets {ocTotal = total}
+  where
+    keyFor = mkOnboardingCounterKey entity merchantOpCityId mbFleetOwnerId
+    rebuildLockKey = "Onboarding:Counts:Rebuild:" <> counterEntityTag entity <> ":" <> merchantOpCityId.getId <> maybe "" (":" <>) mbFleetOwnerId
+    readAll = do
+      values <- forM onboardingCounterBuckets $ \bucket -> Hedis.get @Int (keyFor bucket)
+      pure $ case sequence values of
+        Just [a, p, r, e, b, d] -> Just (OnboardingCounts 0 a p r e b d)
+        _ -> Nothing
+    countsToList c = [c.ocApproved, c.ocPending, c.ocRejected, c.ocEnabled, c.ocBlocked, c.ocDisabled]
+    -- Counted rather than delta-maintained, so it carries a short TTL instead of living forever.
+    readTotal = do
+      mbTotal <- Hedis.get @Int (keyFor "total")
+      case mbTotal of
+        Just total -> pure total
+        Nothing -> do
+          total <- (.obcTotal) <$> countBucketsFromDb
+          Hedis.setExp (keyFor "total") total onboardingTotalCacheTTL
+          pure total
+    countBucketsFromDb = case entity of
+      CounterDriver -> QOC.countDriverBuckets merchantOpCityId mbFleetOwnerId
+      CounterFleetOwner -> QOC.countFleetOwnerBuckets merchantOpCityId mbFleetOwnerId
+      CounterVehicle -> QOC.countVehicleBuckets merchantOpCityId mbFleetOwnerId
+    rebuildFromDb = do
+      counts <- countBucketsFromDb
+      pure
+        OnboardingCounts
+          { ocTotal = counts.obcTotal,
+            ocApproved = counts.obcApproved,
+            ocPending = counts.obcPending,
+            ocRejected = counts.obcRejected,
+            ocEnabled = counts.obcEnabled,
+            ocBlocked = counts.obcBlocked,
+            ocDisabled = counts.obcDisabled
+          }

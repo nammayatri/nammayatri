@@ -3,6 +3,7 @@ module Storage.Queries.DriverInformationExtra where
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as Common
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFlowStatus as DFS
 import Domain.Types.DriverInformation as DriverInfo
@@ -462,6 +463,15 @@ updateApproved approved driverId = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+-- | Kept in step with verified / approved by the onboarding recompute. The UI APIs and the legacy
+--   ClickHouse status counts still read this column, so it must not go stale under the unified flow.
+updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id Person.Driver -> m ()
+updateDocsVerificationStatus docsVerificationStatus driverId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDI.docsVerificationStatus docsVerificationStatus, Se.Set BeamDI.updatedAt now]
+    [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]
 
 updateOnboardingAs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.OnboardingAs -> Id Person.Driver -> m ()
 updateOnboardingAs onboardingAs driverId = do

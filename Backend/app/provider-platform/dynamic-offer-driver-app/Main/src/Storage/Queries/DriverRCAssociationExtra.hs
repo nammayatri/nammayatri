@@ -119,6 +119,33 @@ findAllLinkedByDriverId (Id driverId) = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
 
+findAllActiveByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [DriverRCAssociation]
+findAllActiveByDriverIds [] = pure []
+findAllActiveByDriverIds driverIds = do
+  now <- getCurrentTime
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDRCA.driverId $ Se.In (getId <$> driverIds),
+          Se.Is BeamDRCA.isRcActive $ Se.Eq True,
+          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now
+        ]
+    ]
+
+findAllActiveByRcIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [DriverRCAssociation]
+findAllActiveByRcIds [] = pure []
+findAllActiveByRcIds rcIds = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDRCA.rcId $ Se.In (getId <$> rcIds),
+          Se.Is BeamDRCA.isRcActive $ Se.Eq True,
+          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now
+        ]
+    ]
+    (Se.Desc BeamDRCA.associatedOn)
+    Nothing
+    Nothing
+
 findUnlinkedRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m [DriverRCAssociation]
 findUnlinkedRC (Id driverId) (Id rcId) = do
   now <- getCurrentTime

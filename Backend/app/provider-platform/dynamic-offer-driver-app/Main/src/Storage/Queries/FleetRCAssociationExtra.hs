@@ -36,6 +36,16 @@ findAllActiveAssociationByRCId (Id rcId) = do
   -- recent active fleet association, even when an RC transiently has more than one during reassignment.
   findAllWithOptionsKV [Se.And [Se.Is Beam.rcId $ Se.Eq rcId, Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]] (Se.Desc Beam.associatedOn) Nothing Nothing
 
+findAllActiveByRcIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [FleetRCAssociation]
+findAllActiveByRcIds [] = pure []
+findAllActiveByRcIds rcIds = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [Se.And [Se.Is Beam.rcId $ Se.In (getId <$> rcIds), Se.Is Beam.associatedTill $ Se.GreaterThan $ Just now]]
+    (Se.Desc Beam.associatedOn)
+    Nothing
+    Nothing
+
 findActiveAssociationByFleetOwnerId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->

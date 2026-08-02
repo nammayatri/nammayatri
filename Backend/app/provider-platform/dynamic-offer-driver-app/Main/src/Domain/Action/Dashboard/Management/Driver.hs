@@ -83,6 +83,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
 import Data.Csv
+import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.List (nub, partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
@@ -108,6 +109,8 @@ import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
 import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
+import qualified Domain.Types.FleetDriverAssociation as FDA
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as IV
 import qualified Domain.Types.Image as DImage
@@ -174,12 +177,15 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverProfileQuestions as QDriverProfileQuestions
 import qualified Storage.Queries.DriverRCAssociation as QDriverRCAssociation
+import qualified Storage.Queries.DriverRCAssociationExtra as QDRCA
 import qualified Storage.Queries.DriverReferral as QDriverReferral
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeSdkLogs as QHyperVergeSdkLogs
 import qualified Storage.Queries.HyperVergeVerification as QHyperVergeVerification
 import qualified Storage.Queries.IdfyVerification as QIdfyVerification
 import qualified Storage.Queries.Image as QImage
+import qualified Storage.Queries.OnboardingList.DriverList as QDriverList
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
@@ -322,8 +328,8 @@ approvalStatusToFilter Common.ApprovedOnly = Just True
 approvalStatusToFilter Common.RejectedOnly = Just False
 approvalStatusToFilter Common.PendingOnly = Nothing
 
-getDriverList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Flow Common.DriverListRes
-getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs = do
+getDriverList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.DriverListRes
+getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -331,8 +337,37 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   let mbOnboardingAsDom = castCommonOnboardingAsToDomain <$> mbOnboardingAs
       mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
-  driversWithInfo <- B.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString mbNameSearchString mbApprovalFilter mbOnboardingAsDom
-  items <- mapM buildDriverListItem driversWithInfo
+      driverListFilters =
+        QDriverList.emptyDriverListFilters
+          { QDriverList.dlfVerified = mbVerified,
+            QDriverList.dlfEnabled = mbEnabled,
+            QDriverList.dlfBlocked = mbBlocked,
+            QDriverList.dlfSubscribed = mbSubscribed,
+            QDriverList.dlfPhoneHash = mbSearchPhoneDBHash,
+            QDriverList.dlfVehicleNumber = mbVehicleNumberSearchString,
+            QDriverList.dlfNameSearch = mbNameSearchString,
+            QDriverList.dlfApproval = mbApprovalFilter,
+            QDriverList.dlfOnboardingAs = mbOnboardingAsDom,
+            QDriverList.dlfFleetOwnerId = mbFleetOwnerId,
+            QDriverList.dlfFrom = mbFrom,
+            QDriverList.dlfTo = mbTo
+          }
+  driversWithInfo <- B.runInReplica $ QDriverList.findDrivers merchant merchantOpCity limit offset driverListFilters
+  now <- getCurrentTime
+  -- recentFleetInfo / hasActiveRc are resolved for the whole page in a fixed number of reads:
+  -- one FDA batch, one DRCA batch, then one Person + one FOI batch over the distinct fleet owners.
+  -- Never per row.
+  let pageDriverIds = map (\(person, _, _) -> person.id) driversWithInfo
+  fleetAssocs <- B.runInReplica $ QFDA.findActiveOrMostRecentByDriverIds pageDriverIds
+  activeRcAssocs <- B.runInReplica $ QDRCA.findAllActiveByDriverIds pageDriverIds
+  let fleetAssocByDriver = HM.fromList $ map (\fda -> (fda.driverId, fda)) fleetAssocs
+      driversWithActiveRc = HS.fromList $ map (.driverId) activeRcAssocs
+      fleetOwnerIds = nub $ map (.fleetOwnerId) fleetAssocs
+  fleetOwners <- B.runInReplica $ QPerson.findAllByPersonIds fleetOwnerIds
+  fleetOwnerInfos <- B.runInReplica $ QFOI.findAllByPrimaryKeys (Id <$> fleetOwnerIds)
+  let fleetOwnerById = HM.fromList $ map (\p -> (p.id.getId, p)) fleetOwners
+      fleetOwnerInfoById = HM.fromList $ map (\foi -> (foi.fleetOwnerPersonId.getId, foi)) fleetOwnerInfos
+  items <- mapM (buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetOwnerInfoById now) driversWithInfo
   let count = length items
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.DriverListRes {totalItems = count, summary, drivers = items}
@@ -340,12 +375,39 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
     maxLimit = 20
     defaultLimit = 10
 
-buildDriverListItem :: EncFlow m r => (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
-buildDriverListItem (person, driverInformation, mbVehicle) = do
+buildDriverListItem ::
+  EncFlow m r =>
+  HM.HashMap (Id DP.Person) FDA.FleetDriverAssociation ->
+  HS.HashSet (Id DP.Person) ->
+  HM.HashMap Text DP.Person ->
+  HM.HashMap Text DFOI.FleetOwnerInformation ->
+  UTCTime ->
+  (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) ->
+  m Common.DriverListItem
+buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetOwnerInfoById now (person, driverInformation, mbVehicle) = do
   phoneNo <- mapM decrypt person.mobileNumber
-  -- recentFleetInfo + hasActiveRc: stubbed in list view; use /driver/info for full detail.
-  -- Populating them here needs per-driver FDA + DRCA + fleet-owner reads. If required, extend
-  -- findAllDriversWithInfoAndVehicle with a JOIN param rather than adding separate batch queries.
+  let mbFda = HM.lookup person.id fleetAssocByDriver
+  mbRecentFleetInfo <- case mbFda of
+    Nothing -> pure Nothing
+    Just fda -> case HM.lookup fda.fleetOwnerId fleetOwnerById of
+      Nothing -> pure Nothing
+      Just fleetOwner -> do
+        fleetOwnerMobile <- mapM decrypt fleetOwner.mobileNumber
+        let mbFoi = HM.lookup fda.fleetOwnerId fleetOwnerInfoById
+        pure $
+          Just
+            Common.DriverAssociationInfo
+              { personId = cast @DP.Person @Common.Person fleetOwner.id,
+                name = Just $ fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.lastName,
+                mobileCountryCode = fleetOwner.mobileCountryCode,
+                mobileNumber = fleetOwnerMobile,
+                fleetName = mbFoi >>= (.fleetName),
+                verified = (.verified) <$> mbFoi,
+                enabled = (.enabled) <$> mbFoi,
+                isActive = fda.isActive,
+                isAssociated = maybe False (> now) fda.associatedTill,
+                associatedTill = fda.associatedTill
+              }
   pure $
     Common.DriverListItem
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -363,8 +425,8 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         onboardingDate = driverInformation.lastEnabledOn,
         approved = driverInformation.approved,
         onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
-        recentFleetInfo = Nothing,
-        hasActiveRc = False,
+        recentFleetInfo = mbRecentFleetInfo,
+        hasActiveRc = HS.member person.id driversWithActiveRc,
         disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag
       }
   where

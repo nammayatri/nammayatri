@@ -218,6 +218,7 @@ library
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.Vehicle
       Domain.Action.Dashboard.Management.VehicleDetails
       Domain.Action.Dashboard.Management.VehicleInfo
       Domain.Action.Dashboard.Management.Volunteer
@@ -872,6 +873,10 @@ library
       Storage.Queries.MessageReportExtra
       Storage.Queries.MonetaryRewardConfigExtra
       Storage.Queries.NotificationExtra
+      Storage.Queries.OnboardingCountsExtra
+      Storage.Queries.OnboardingList.DriverList
+      Storage.Queries.OnboardingList.FleetList
+      Storage.Queries.OnboardingList.VehicleList
       Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
@@ -1038,6 +1043,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.Vehicle
       API.Action.Dashboard.Management.VehicleDetails
       API.Action.Dashboard.Management.VehicleInfo
       API.Action.Dashboard.Management.Volunteer

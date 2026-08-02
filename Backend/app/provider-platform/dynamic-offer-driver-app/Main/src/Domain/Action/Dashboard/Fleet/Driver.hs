@@ -197,6 +197,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -5098,26 +5099,54 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
   mbRequestor <- case mbRequestorId of
     Just requestorId -> B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
     Nothing -> pure Nothing
-  case entityOperationType of
-    Common.DRIVER_STATUS -> do
-      driverIds <- case mbRequestor of
-        Just person
-          | DCommon.checkFleetOwnerRole person.role ->
-            fromMaybe [] <$> CFDA.getDriverIdsByFleetOwnerId person.id.getId
-        _ -> do
-          fleetOwnerIds <- map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
-          CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
-      statusCounts <- CHDriverInfo.getStatusCountsByDriverIds driverIds
-      pure $ mkStatusSummaryResponse statusCounts
-    Common.VEHICLE_STATUS -> do
-      fleetOwnerIds <- case mbRequestor of
-        Just person | DCommon.checkFleetOwnerRole person.role -> pure [person.id.getId]
-        _ -> map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
-      statusCounts <- CHVRC.getStatusCountsByFleetOwnerIds fleetOwnerIds
-      pure $ mkStatusSummaryResponse statusCounts
-    Common.FLEET_OWNER_STATUS -> do
-      statusCounts <- CHFOI.getStatusCountsByCityId merchantOpCity.id.getId
-      pure $ mkStatusSummaryResponse statusCounts
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+    then do
+      -- Under unified, the buckets are the flag buckets the recompute maintains, so the counts
+      -- agree with the flags the grid renders. A fleet requestor is scoped to its own counters.
+      let requestorFleetOwnerId = case mbRequestor of
+            Just person | DCommon.checkFleetOwnerRole person.role -> Just person.id.getId
+            _ -> Nothing
+          counterEntity = case entityOperationType of
+            Common.DRIVER_STATUS -> OF.CounterDriver
+            Common.VEHICLE_STATUS -> OF.CounterVehicle
+            Common.FLEET_OWNER_STATUS -> OF.CounterFleetOwner
+          -- The fleet-owner grid is city-wide even for a fleet requestor, matching the legacy path.
+          mbFleetOwnerId = case entityOperationType of
+            Common.FLEET_OWNER_STATUS -> Nothing
+            _ -> requestorFleetOwnerId
+      counts <- OF.readOnboardingCounts counterEntity merchantOpCity.id mbFleetOwnerId
+      pure
+        Common.StatusSummaryResponse
+          { total = counts.ocTotal,
+            approved = counts.ocApproved,
+            pending = counts.ocPending,
+            rejected = counts.ocRejected
+          }
+    else legacyStatusSummary merchantOpCity mbRequestor
+  where
+    -- Legacy cities keep the ClickHouse docsVerificationStatus counts: those mirrors carry no
+    -- verified / approved / blocked / disabledReasonFlag columns, so they cannot serve flag buckets.
+    legacyStatusSummary merchantOpCity mbRequestor = case entityOperationType of
+      Common.DRIVER_STATUS -> do
+        driverIds <- case mbRequestor of
+          Just person
+            | DCommon.checkFleetOwnerRole person.role ->
+              fromMaybe [] <$> CFDA.getDriverIdsByFleetOwnerId person.id.getId
+          _ -> do
+            fleetOwnerIds <- map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
+            CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
+        statusCounts <- CHDriverInfo.getStatusCountsByDriverIds driverIds
+        pure $ mkStatusSummaryResponse statusCounts
+      Common.VEHICLE_STATUS -> do
+        fleetOwnerIds <- case mbRequestor of
+          Just person | DCommon.checkFleetOwnerRole person.role -> pure [person.id.getId]
+          _ -> map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
+        statusCounts <- CHVRC.getStatusCountsByFleetOwnerIds fleetOwnerIds
+        pure $ mkStatusSummaryResponse statusCounts
+      Common.FLEET_OWNER_STATUS -> do
+        statusCounts <- CHFOI.getStatusCountsByCityId merchantOpCity.id.getId
+        pure $ mkStatusSummaryResponse statusCounts
 
 getDriverVehicleInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
 getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do

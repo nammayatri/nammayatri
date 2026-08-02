@@ -64,6 +64,8 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.MerchantMessage as QMM
+import qualified Storage.Queries.OnboardingList.DriverList as QDriverList
+import qualified Storage.Queries.OnboardingList.FleetList as QFleetList
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -402,20 +404,15 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
             _ -> do
               tuples <-
                 B.runInReplica $
-                  QPerson.findAllDriversWithInfoAndVehicle
+                  QDriverList.findDrivers
                     merchant
                     merchantOpCity
                     limit
                     offset
-                    Nothing
-                    Nothing
-                    Nothing
-                    Nothing
-                    mbSearchDbHash
-                    mbSearch
-                    mbSearch
-                    Nothing
-                    Nothing
+                    QDriverList.emptyDriverListFilters
+                      { QDriverList.dlfPhoneHash = mbSearchDbHash,
+                        QDriverList.dlfNameSearch = mbSearch
+                      }
               pure $ map (\(person, _, _) -> person) tuples
         pure drivers
   recipients <- mapM buildRecipientItem persons
@@ -562,13 +559,13 @@ resolveRecipientIdsForSelectAll merchant merchantOpCity mbSelectAllRoles mbFleet
           <$> sequence
             [ if CommAPI.ROLE_DRIVER `elem` rolesToFetch
                 then do
-                  drivers <- QPerson.findAllDriversWithInfoAndVehicle merchant merchantOpCity selectAllMaxLimit 0 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                  drivers <- QDriverList.findDrivers merchant merchantOpCity selectAllMaxLimit 0 QDriverList.emptyDriverListFilters
                   pure $ map (\(p, _, _) -> (p.id.getId, DDelivery.RR_DRIVER)) drivers
                 else pure [],
               if CommAPI.ROLE_FLEET_OWNER `elem` rolesToFetch
                 then do
-                  fleetOwners <- QFOI.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0) Nothing Nothing Nothing
-                  pure $ map (\fo -> (fo.fleetOwnerPersonId.getId, DDelivery.RR_FLEET_OWNER)) fleetOwners
+                  fleetOwners <- QFleetList.findFleetOwners merchantOpCity.id Nothing Nothing Nothing Nothing Nothing Nothing (Just selectAllMaxLimit) (Just 0) Nothing Nothing Nothing
+                  pure $ map (\(fo, _) -> (fo.fleetOwnerPersonId.getId, DDelivery.RR_FLEET_OWNER)) fleetOwners
                 else pure [],
               if CommAPI.ROLE_OPERATOR `elem` rolesToFetch
                 then do
