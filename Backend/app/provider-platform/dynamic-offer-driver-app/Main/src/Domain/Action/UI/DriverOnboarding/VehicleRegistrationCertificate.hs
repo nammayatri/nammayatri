@@ -327,7 +327,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         whenJust mbExistingRC $ \existingRC -> do
           now <- getCurrentTime
           let updatedRC = existingRC {DVRC.fleetOwnerId = Just fleetOwnerId.getId}
-          RCQuery.upsert updatedRC
+          void $ RCQuery.upsert updatedRC
           mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId fleetOwnerId updatedRC.id now
           when (isNothing mbFleetAssoc) $
             createFleetRCAssociationIfPossible transporterConfig fleetOwnerId updatedRC
@@ -629,7 +629,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
         Just vehicleRC -> do
           let isInvalid = vehicleRC.verificationStatus == Documents.INVALID
           logInfo $ "initiateRCCreation: Upserting RC with verificationStatus=" <> show vehicleRC.verificationStatus <> ", failedRules=" <> show vehicleRC.failedRules <> ", registrationNumber=" <> show vehicleRC.unencryptedCertificateNumber <> ", vehicleVariant=" <> show vehicleRC.vehicleVariant <> ", vehicleClass=" <> show vehicleRC.vehicleClass
-          RCQuery.upsert vehicleRC
+          void $ RCQuery.upsert vehicleRC
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
           -- Create reminders only for non-INVALID RCs
           unless isInvalid $ do

@@ -1058,6 +1058,7 @@ castToManagementStatusRes res =
       verified = res.verified,
       approved = res.approved,
       blocked = res.blocked,
+      blockedReason = res.blockedReason,
       onboardingAs = castMgmtOnboardingAs <$> res.onboardingAs,
       disabledReasonFlag = castMgmtDisabledReasonFlag <$> res.disabledReasonFlag,
       recentFleetInfo = castMgmtFleetInfoToAssociationInfo <$> res.recentFleetInfo,

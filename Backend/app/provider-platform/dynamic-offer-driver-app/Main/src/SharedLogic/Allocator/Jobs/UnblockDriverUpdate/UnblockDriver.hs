@@ -51,7 +51,7 @@ unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let driverId = jobData.driverId
   driver <- BF.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   let merchantId = driver.merchantId
-  SFlags.recomputeBlockFlags (cast driverId) $
+  SFlags.markBlockFlags (cast driverId) $
     SFlags.Unblock
       SFlags.SimplePayload
         { SFlags.spModifier = Just "AUTOMATICALLY_UNBLOCKED",

@@ -47,13 +47,11 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
       normalizedOffset = Just $ max 0 $ fromMaybe 0 mbOffset
       targetOpCity = defaultOpCityId
       mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
-      -- `enabled` takes precedence over the legacy `onlyEnabled` when both are supplied.
       mbEnabledEffective = maybe mbOnlyEnabled Just mbEnabled
   fleetOwnersWithPersons <- QFleetList.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbBlocked mbToDate normalizedLimit normalizedOffset mbVerified mbApprovalFilter mbEnabledEffective
   let personMap = HM.fromList $ (\(_, p) -> (p.id, p)) <$> fleetOwnersWithPersons
   mapMaybeM (toApiItem personMap targetOpCity) (fst <$> fleetOwnersWithPersons)
   where
-    -- Was clamped to 10, which silently capped the grid regardless of what the caller asked for.
     clampLimit :: Int -> Int
     clampLimit = max 1 . min 50
     toApiItem personMap fallbackOpCityId fleetOwnerInfo = do

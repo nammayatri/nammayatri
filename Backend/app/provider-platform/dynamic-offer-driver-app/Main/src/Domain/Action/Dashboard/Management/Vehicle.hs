@@ -49,9 +49,6 @@ getVehicleList merchantShortId opCity mbLimit mbOffset mbFleetOwnerId mbVehicleN
   mbRequestor <- case mbRequestorId of
     Just requestorId -> B.runInReplica $ QPerson.findById (Id requestorId :: Id DP.Person)
     Nothing -> pure Nothing
-  -- A fleet requestor is pinned to its own fleet regardless of what the caller passed, so the
-  -- scope cannot be widened by supplying someone else's fleetOwnerId. Admin and ops get the
-  -- city-wide grid with fleetOwnerId as an ordinary filter.
   let scopedFleetOwnerId = case mbRequestor of
         Just person | SDO.isFleetRole person.role -> Just person.id.getId
         _ -> mbFleetOwnerId
@@ -60,13 +57,9 @@ getVehicleList merchantShortId opCity mbLimit mbOffset mbFleetOwnerId mbVehicleN
       mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
   mbCertificateNumberHash <- getDbHash `traverse` mbVehicleNumber
   rcs <- B.runInReplica $ QVehicleList.findVehicles merchant.id merchantOpCity.id limit offset scopedFleetOwnerId mbCertificateNumberHash mbVerified mbApprovalFilter mbFrom mbTo
-  -- recentFleetInfo / linkedDriverInfo are resolved for the whole page in a fixed number of reads:
-  -- one FRCA batch, one DRCA batch, then one Person and one FOI batch over the distinct owners.
   let rcIds = map (.id) rcs
   fleetAssocs <- B.runInReplica $ QFRCA.findAllActiveByRcIds rcIds
   driverAssocs <- B.runInReplica $ QDRCA.findAllActiveByRcIds rcIds
-  -- Both batches come back ordered by associatedOn DESC, so keeping the first entry per RC keeps
-  -- the most recent association when one transiently has more than one.
   let fleetAssocByRc = HM.fromListWith (\_ existing -> existing) $ map (\fra -> (fra.rcId, fra)) fleetAssocs
       driverAssocByRc = HM.fromListWith (\_ existing -> existing) $ map (\dra -> (dra.rcId, dra)) driverAssocs
       fleetOwnerIds = nub $ map (.fleetOwnerId) fleetAssocs

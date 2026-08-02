@@ -375,6 +375,7 @@ data DriverInformationRes = DriverInformationRes
     verified :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    blockedReason :: Maybe Text,
     blockExpiryTime :: Maybe UTCTime,
     subscribed :: Bool,
     paymentPending :: Bool,
@@ -1066,7 +1067,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 now <- getCurrentTime
                 if now > expiryTime
                   then do
-                    SFlags.recomputeBlockFlags (cast driverId) $
+                    SFlags.markBlockFlags (cast driverId) $
                       SFlags.Unblock
                         SFlags.SimplePayload
                           { SFlags.spModifier = Just "AUTOMATICALLY_UNBLOCKED",
@@ -1692,7 +1693,7 @@ buildOperatorInfo person = do
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DriverInformation -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> Maybe FDA.FleetDriverAssociation -> Maybe FDA.FleetDriverAssociation -> Maybe Bool -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral operatorId mbInactiveFda mbActiveFda mbFleetInfo = do
   (activeFleet, fleetRequest, fleetOwnerName') <-
-    if mbFleetInfo == Just True
+    if mbFleetInfo == Just True || driverInfo.onboardingAs == Just DriverInfo.FLEET_DRIVER
       then do
         let fleetOwnerIds = catMaybes [(.fleetOwnerId) <$> mbActiveFda, (.fleetOwnerId) <$> mbInactiveFda]
         fleetOwners <- QPerson.findAllByPersonIds fleetOwnerIds
@@ -1837,6 +1838,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           createdAt = registeredAt,
           forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
           approved = driverInfo.approved,
+          blockedReason = driverInfo.blockedReason,
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
           ..

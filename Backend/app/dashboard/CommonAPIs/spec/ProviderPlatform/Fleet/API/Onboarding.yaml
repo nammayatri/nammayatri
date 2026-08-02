@@ -215,6 +215,7 @@ types:
     verified: Bool
     approved: Maybe Bool
     blocked: Bool
+    blockedReason: Maybe Text
     onboardingAs: Maybe OnboardingAs
     disabledReasonFlag: Maybe DisabledReasonFlag
     recentFleetInfo: Maybe DriverAssociationInfo

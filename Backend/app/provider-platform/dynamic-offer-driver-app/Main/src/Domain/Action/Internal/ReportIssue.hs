@@ -180,7 +180,7 @@ handleDrunkAndDriveViolation ride = do
           let entityData = Notify.DrunkAndDriveViolationWarningData {driverId = ride.driverId.getId, drunkAndDriveViolationCount}
           Notify.drunkAndDriveViolationWarningOverlay person.merchantOperatingCityId person fcmOverlayReq entityData
       else
-        SFlags.recomputeBlockFlags (cast ride.driverId) $
+        SFlags.markBlockFlags (cast ride.driverId) $
           SFlags.Block
             SFlags.BlockPayload
               { SFlags.bpReason = Just "DRUNK_AND_DRIVE_VIOLATION",

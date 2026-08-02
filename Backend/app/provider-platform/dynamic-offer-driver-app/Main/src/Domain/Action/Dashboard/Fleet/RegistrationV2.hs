@@ -60,6 +60,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
@@ -277,12 +278,8 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
         Just FOI.NORMAL_FLEET
           | panValid && aadhaarValid -> do
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
-            let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-            mbEnabled <- do
-              fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
-              tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
-              SFlags.recomputeDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
-              SStatus.runRefreshOnboardingFlagsFleet (Just fleetPersonForEnable) (Just tcForEnable) fleetOwnerId
+            let wasDisabled = maybe True (\foi -> maybe (not foi.enabled) (const True) foi.disabledReasonFlag) mbFleetOwnerInfo
+            mbEnabled <- enableFleetOwnerOnDocsValid fleetOwnerId
             case mbEnabled of
               Just True -> do
                 when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
@@ -292,12 +289,8 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
         Just FOI.BUSINESS_FLEET
           | panValid && aadhaarValid && gstValid -> do
             mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId
-            let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-            mbEnabled <- do
-              fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
-              tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
-              SFlags.recomputeDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
-              SStatus.runRefreshOnboardingFlagsFleet (Just fleetPersonForEnable) (Just tcForEnable) fleetOwnerId
+            let wasDisabled = maybe True (\foi -> maybe (not foi.enabled) (const True) foi.disabledReasonFlag) mbFleetOwnerInfo
+            mbEnabled <- enableFleetOwnerOnDocsValid fleetOwnerId
             case mbEnabled of
               Just True -> do
                 when wasDisabled $ sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId
@@ -305,6 +298,14 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
               _ -> pure False
           | otherwise -> pure False
         _ -> pure False
+
+enableFleetOwnerOnDocsValid :: Id DP.Person -> Flow (Maybe Bool)
+enableFleetOwnerOnDocsValid fleetOwnerId = do
+  fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
+  tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
+  SGuard.withOnboardingAction tcForEnable SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerId) $ do
+    SFlags.markDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
+  fmap (.enabled) <$> QFOI.findByPrimaryKey fleetOwnerId
 
 castFleetType :: Common.FleetType -> FOI.FleetType
 castFleetType = \case

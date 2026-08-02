@@ -163,7 +163,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let inCooldown = dailyCooldownActive || weeklyCooldownActive
   when (not inCooldown && driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
-    SFlags.recomputeBlockFlags (cast driverId) $
+    SFlags.markBlockFlags (cast driverId) $
       SFlags.SimpleBlock
         SFlags.SimplePayload
           { SFlags.spModifier = Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS",

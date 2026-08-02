@@ -43,7 +43,7 @@ blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetric
 blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason blockTimeInHours blockReasonFlag = do
   now <- getCurrentTime
   logInfo $ "Temporarily blocking driver, driverId: " <> driverId.getId
-  SFlags.recomputeBlockFlags driverId $
+  SFlags.markBlockFlags driverId $
     SFlags.Block
       SFlags.BlockPayload
         { SFlags.bpReason = Just blockedReason,

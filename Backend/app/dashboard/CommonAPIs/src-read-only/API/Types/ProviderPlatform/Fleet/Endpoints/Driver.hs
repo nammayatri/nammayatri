@@ -1076,7 +1076,7 @@ data SortOn
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data StatusSummaryResponse = StatusSummaryResponse {total :: Kernel.Prelude.Int, approved :: Kernel.Prelude.Int, pending :: Kernel.Prelude.Int, rejected :: Kernel.Prelude.Int}
+data StatusSummaryResponse = StatusSummaryResponse {total :: Kernel.Prelude.Int, verified :: Kernel.Prelude.Int, approved :: Kernel.Prelude.Int, pending :: Kernel.Prelude.Int, rejected :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
