@@ -18,7 +18,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -48,30 +48,27 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
-  SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
-  when (merchant.overwriteAssociation == Just True) $
-    QRCAssociation.endAllRCAssociationsForDriver driverId
-
-  DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
-
-  QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
-  Analytics.handleDriverAnalyticsAndFlowStatus
-    transporterConfig
-    driverOperatorAssociation.driverId
-    Nothing
-    ( \driverInfo -> do
-        activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner driverOperatorAssociation.driverId.getId DSP.DRIVER
-        AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig operator.id.getId 1 activeSubCount driverInfo.enabled
-    )
-    ( \driverInfo -> do
-        DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
-    )
-  QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
-
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
-    if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) (cast driverId)
-      else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
+  SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver (cast driverId)) $ do
+    SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
+    when (merchant.overwriteAssociation == Just True) $
+      QRCAssociation.endAllRCAssociationsForDriver driverId
+    DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
+    QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
+    Analytics.handleDriverAnalyticsAndFlowStatus
+      transporterConfig
+      driverOperatorAssociation.driverId
+      Nothing
+      ( \driverInfo -> do
+          activeSubCount <- QSubscriptionPurchaseExtra.countActiveSubscriptionsForOwner driverOperatorAssociation.driverId.getId DSP.DRIVER
+          AnalyticsExtra.adjustOperatorDriverAssociationAnalytics transporterConfig operator.id.getId 1 activeSubCount driverInfo.enabled
+      )
+      ( \driverInfo -> do
+          DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
+      )
+    QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
+    unless (transporterConfig.requiresOnboardingInspection == Just True) $
+      unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+        Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title

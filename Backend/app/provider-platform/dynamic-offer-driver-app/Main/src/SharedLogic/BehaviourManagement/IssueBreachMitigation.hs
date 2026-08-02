@@ -191,7 +191,7 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
                 void $ Redis.setExp isNotificationPendingKey notificationEntityData (blockTimeInHours * 60 * 60)
           IBHard -> do
             logInfo $ "Blocking driver " <> driverInfo.driverId.getId <> " due to issue breach rate " <> show ibRate <> " and completed booking count " <> show completedBookingCount <> ". Reason: " <> show blockReasonFlag
-            SFlags.recomputeBlockFlags (cast driverInfo.driverId) $
+            SFlags.markBlockFlags (cast driverInfo.driverId) $
               SFlags.Block
                 SFlags.BlockPayload
                   { SFlags.bpReason = Just $ "ISSUE_BREACH_" <> show issueType,

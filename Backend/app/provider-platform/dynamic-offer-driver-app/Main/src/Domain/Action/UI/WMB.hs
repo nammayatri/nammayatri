@@ -54,12 +54,11 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
-import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Route as QR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -477,7 +476,7 @@ postFleetConsent ::
     ) ->
     Flow APISuccess
   )
-postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
+postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   driverId <- fromMaybeM (DriverNotFoundWithId) mbDriverId
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   fleetDriverAssociation <- FDV.findByDriverId driverId False >>= fromMaybeM (InactiveFleetDriverAssociationNotFound driverId.getId)
@@ -485,36 +484,30 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   when (isJust fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot consent to driver-initiated request. Fleet owner must approve first"
   onboardingVehicleCategory <- fleetDriverAssociation.onboardingVehicleCategory & fromMaybeM DriverOnboardingVehicleCategoryNotFound
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
-  SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
-
-  -- Check if driver has any active rides (not completed or cancelled)
-  mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
-  when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
-
-  FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-  when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
-  Analytics.handleDriverAnalyticsAndFlowStatus
-    transporterConfig
-    fleetDriverAssociation.driverId
-    Nothing
-    ( \_ -> do
-        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetDriverAssociation.fleetOwnerId) driver.id
-    )
-    ( \driverInfo -> do
-        DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
-    )
-  QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
-
-  whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId -> do
-    DOR.makeDriverReferredByOperator merchantOperatingCityId driverId referredOperatorId
-
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
-    if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) (cast driverId)
-      else Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
+  SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver (cast driverId)) $ do
+    SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
+    mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
+    when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
+    FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
+    Analytics.handleDriverAnalyticsAndFlowStatus
+      transporterConfig
+      fleetDriverAssociation.driverId
+      Nothing
+      ( \_ -> do
+          Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetDriverAssociation.fleetOwnerId) driver.id
+      )
+      ( \driverInfo -> do
+          DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
+      )
+    QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
+    whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId ->
+      DOR.makeDriverReferredByOperator merchantOperatingCityId driverId referredOperatorId
+    unless (transporterConfig.requiresOnboardingInspection == Just True) $
+      unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+        Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

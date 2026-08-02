@@ -69,7 +69,6 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
-import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Digilocker
@@ -80,6 +79,7 @@ import SharedLogic.DriverOnboarding.Digilocker
     verifyDigiLockerEnabled,
   )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
@@ -90,7 +90,6 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -1362,14 +1361,16 @@ postDriverLinkToFleet ::
   Flow APISuccess
 postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
   let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
   case req.isRevoke of
     Just True -> do
       case fdaForFleetOwner of
-        Just fda | not fda.isActive -> do
-          FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
-          SA.syncDriverOnboardingAsWithFDA driverId
+        Just fda
+          | not fda.isActive ->
+            SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver driverId) $
+              FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
         Just _ -> throwError $ InvalidRequest "Direct revoke is not allowed for active fleet associations"
         Nothing -> throwError $ InvalidRequest "No fleet association found to revoke"
     _ -> do
@@ -1377,11 +1378,9 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
         Just fda | fda.isActive -> throwError $ InvalidRequest "Driver is already linked to this fleet"
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
-          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-          SA.guardDriverNotAssociated merchant driverId (any (.isActive) driverFleetAssocs)
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
-          FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
-          SA.syncDriverOnboardingAsWithFDA driverId
+          SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver driverId) $
+            FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
   return Success
 
 -- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on

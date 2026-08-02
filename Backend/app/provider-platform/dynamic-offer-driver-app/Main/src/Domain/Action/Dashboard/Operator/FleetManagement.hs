@@ -38,6 +38,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder
@@ -244,8 +245,8 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
     $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
   if skipOtpVerification
-    then do
-      SA.endFleetAssociationsIfAllowed merchantOpCityId transporterConfig fleetOwner
+    then SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetFleetOwner fleetOwner.id) $ do
+      SA.endFleetAssociations merchantOpCityId transporterConfig fleetOwner
       fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
       QFOA.create fleetOperatorAssociation
     else do
@@ -303,10 +304,11 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
     )
     $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
-  when (transporterConfig.allowMultiFleetOperatorLink /= Just True) $ do
-    SA.endFleetAssociationsIfAllowed merchantOpCityId transporterConfig fleetOwner
-  fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
-  QFOA.create fleetOperatorAssociation
+  SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetFleetOwner fleetOwner.id) $ do
+    when (transporterConfig.allowMultiFleetOperatorLink /= Just True) $
+      SA.endFleetAssociations merchantOpCityId transporterConfig fleetOwner
+    fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
+    QFOA.create fleetOperatorAssociation
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   when allowCacheDriverFlowStatus $ do
     DriverMode.incrementOperatorStatusKeyForFleetOwner operator.id.getId fleetOwner.id.getId

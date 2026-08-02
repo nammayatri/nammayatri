@@ -1,0 +1,761 @@
+# Driver onboarding — endpoint / field reference
+#
+# What this file is for: the onboarding flags (verified, approved, enabled, blocked,
+# blockedReason, disabledReasonFlag) are all written by ONE code path —
+# SharedLogic/DriverOnboarding/OnboardingFlags/Flow.hs recomputeOnboardingFlags — but they are
+# read back from several different endpoints, each with its own field names and its own query
+# params that decide whether a field is populated at all. This records, per endpoint, exactly
+# which params must be sent to get which fields.
+#
+# A field being absent from a response does NOT mean the flag is unset: several are gated behind
+# a query param and return null when the param is not sent.
+#
+# Nested objects are shown by INDENTATION — a field with children is an object (or a list of
+# objects, marked "[Type]"), and the children are its fields.
+#
+# Keep this updated as endpoints change. Deliberately NOT documented:
+#   - GET /driver/{driverId}/documents/info (dashboard Management) — unused, do not build on it.
+#   - GET /fleetOwner/list — driver-app UI endpoint, not a dashboard API.
+
+conventions:
+  surfaces:
+    ui: called by the driver app with TokenAuth
+    dashboard: called by provider-dashboard with ApiAuthV2, proxied to the driver app
+  flag_source: |
+    verified / approved / enabled / blocked / blockedReason / disabledReasonFlag all live on
+    DriverInformation (drivers) or FleetOwnerInformation (fleet owners).
+    NOTE: FleetOwnerInformation has NO blockedReason column — that field is always null for a
+    fleet owner, on every endpoint.
+  unified_flow: |
+    transporterConfig.unifiedOnboardingFlagsRecompute gates the new behaviour:
+      - true  : approved is derived from the documents; enabled requires approved == true;
+                fleet disablement is pulled by the driver on its own recompute; Redis bucket
+                counters are maintained on every flag transition.
+      - false : legacy behaviour, approved is left null/false and counters are not maintained.
+    docsVerificationStatus is written on EVERY recompute regardless of this flag, because the UI
+    APIs and the legacy ClickHouse counts still read it.
+
+endpoints:
+  # ---------------------------------------------------------------------------------------------
+  - name: register-status-ui
+    purpose: |
+      What the driver app polls throughout onboarding: per-document verification state plus
+      the resulting flags, so the app knows which document to collect next and whether the driver
+      may go online yet.
+    surface: ui
+    method: GET
+    path: /driver/register/status
+    handler: Main/src/Domain/Action/UI/DriverOnboarding/Status.hs:statusHandler
+    response_type: StatusRes (same file)
+    shared_computation: SharedLogic/DriverOnboarding/Status.hs:statusHandler' -> StatusRes'
+    query_params:
+      makeSelfieAadhaarPanMandatory: # Bool. Treats selfie/aadhaar/pan as mandatory when deciding
+                                     # verified/enabled. Changes the FLAGS, not just the display.
+      providePrefillDetails:         # Bool. REQUIRED for driverLicenseDetails and
+                                     # vehicleRegistrationCertificateDetails; null without it.
+      onboardingVehicleCategory:     # VehicleCategory. Which category's document set to evaluate.
+      useHVSdkForDL:                 # Bool. HyperVerge SDK variant of the DL status.
+      onlyMandatoryDocs:             # Bool. Restricts driverDocuments to the mandatory set.
+      useDriverLanguage:             # Bool. Localises verificationMessage to person.language.
+      enableDocumentMetadata:        # Bool. REQUIRED for DocumentStatusItem.metadata, which is
+                                     # where BANK DETAILS live. Null without it.
+    response:
+      enabled:            # Bool. Driver may go online. Under unified flow requires approved == true.
+      verified:           # Bool. All mandatory docs valid.
+      approved:           # Maybe Bool. null = pending, false = rejected. Derived from docs under
+                          # unified flow; left null/false in legacy.
+      blocked:            # Bool.
+      blockedReason:      # Maybe Text. Always null for fleet owners (no such column on FOI).
+      disabledReasonFlag: # Maybe DisabledReasonFlag. FleetDisabled is set/cleared by the driver's
+                          # own recompute when its fleet owner is disabled.
+      onboardingAs:       # Maybe OnboardingAs. FLEET_DRIVER | INDIVIDUAL. Settled on the enable
+                          # transition from the driver's active FleetDriverAssociation.
+      manualVerificationRequired: # Maybe Bool, from transporterConfig.requiresOnboardingInspection.
+      recentFleetInfo:    # Maybe FleetInfo. null for fleet-role persons by design.
+        id:               # Text. THIS IS fleetOwnerId — not named fleetOwnerId.
+        isActive:         # Bool. = fda.isActive
+        associatedTill:   # Maybe UTCTime. = fda.associatedTill
+        isAssociated:     # Bool.
+        fleetName:        # Maybe Text.
+        ownerName:        # Text.
+        phoneNumber:      # Maybe Text.
+        address:          # Address.
+        chargesEnabled:   # Maybe Bool.
+        createdAt:        # UTCTime.
+        requestReason:    # Maybe Text.
+        responseReason:   # Maybe Text.
+      driverDocuments:    # [DocumentStatusItem]
+        documentType:        # DocumentType.
+        verificationStatus:  # ResponseStatus.
+        verificationMessage: # Maybe Text. Localised when useDriverLanguage=true.
+        verificationUrl:     # Maybe BaseUrl.
+        s3Path:              # Maybe Text.
+        imageId:             # Maybe Text.
+        imageId2:            # Maybe Text.
+        expiryDate:          # Maybe UTCTime.
+        metadata:            # Maybe DocumentMetadata. ONLY when enableDocumentMetadata=true.
+                             # A 15-constructor union; the banking one is:
+          BankingDetailsMetadata:
+            accountNumber:   # Maybe Text.
+            ifscCode:        # Maybe Text.
+            nameAtBank:      # Maybe Text.
+            upiId:           # Maybe Text.
+      vehicleDocuments:   # [VehicleDocumentItem]
+        registrationNo:              # Text. THIS IS THE RC NUMBER — there is no `rcNo` field.
+        userSelectedVehicleCategory: # VehicleCategory.
+        verifiedVehicleCategory:     # Maybe VehicleCategory.
+        isVerified:                  # Bool.
+        isActive:                    # Bool.
+        isApproved:                  # Bool.
+        vehicleModel:                # Maybe Text.
+        dateOfUpload:                # Maybe UTCTime.
+        documentExpiry:              # Maybe UTCTime.
+        docsVerificationStatus:      # Maybe DocsVerificationStatus.
+        s3Path:                      # Maybe Text.
+        imageId:                     # Maybe Text.
+        documents:                   # [DocumentStatusItem] — same shape as driverDocuments above.
+      commonDocuments:    # [CommonDocumentItem]. UI-only; dropped by the dashboard variant.
+        documentType:       # DocumentType.
+        documentData:       # Text.
+        verificationStatus: # ResponseStatus.
+        rejectReason:       # Maybe Text.
+        documentImageId:    # Maybe Text.
+      driverLicenseDetails: # Maybe [DLDetails]. Needs providePrefillDetails=true.
+      vehicleRegistrationCertificateDetails: # Maybe [RCDetails]. Needs providePrefillDetails=true.
+        vehicleRegistrationCertNumber: # Text. RC number.
+        vehicleClass:                  # Text.
+        fitnessExpiry:                 # UTCTime.
+        insuranceExpiry:               # Maybe UTCTime.
+        failedRules:                   # [Text].
+        verificationStatus:            # Maybe VerificationStatus.
+      digilockerStatus:           # Maybe SessionStatus. UI-only; needs digilockerEnabled config.
+      digilockerResponseCode:     # Maybe Text.
+      digilockerAuthorizationUrl: # Maybe Text. Only when transporterConfig.digilockerEnabled.
+
+  # ---------------------------------------------------------------------------------------------
+  - name: register-status-dashboard-fleet
+    purpose: |
+      The same onboarding view for ops or a fleet operator inspecting one driver — used to
+      answer "which document is blocking this driver from being enabled?".
+    surface: dashboard
+    method: GET
+    path: /register/status            # helper: /register/status/{fleetOwnerId}
+    handler: Main/src/Domain/Action/Dashboard/Fleet/Onboarding.hs:getOnboardingRegisterStatus
+    response_type: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.StatusRes
+    note: |
+      Same statusHandler' computation as register-status-ui, then castStatusRes. commonDocuments
+      and the digilocker fields are dropped by that cast.
+    query_params:
+      driverId:                      # Id Driver. Whose status to read.
+      makeSelfieAadhaarPanMandatory: # Bool. As above — affects the flags.
+      onboardingVehicleCategory:     # VehicleCategory.
+      providePrefillDetails:         # Bool. Needed for the DL/RC detail lists.
+      onlyMandatoryDocs:             # Bool.
+      docsVerificationStatus:        # DocsVerificationStatus. Filters vehicleDocuments to one
+                                     # status (ADMIN_APPROVED | ADMIN_PENDING | ADMIN_REJECTED).
+      enableDocumentMetadata:        # Bool. Needed for bank details in DocumentStatusItem.metadata.
+    response:
+      enabled:            # Bool.
+      verified:           # Bool.
+      approved:           # Maybe Bool.
+      blocked:            # Bool.
+      blockedReason:      # Maybe Text. Always null for fleet owners.
+      disabledReasonFlag: # Maybe DisabledReasonFlag.
+      onboardingAs:       # Maybe OnboardingAs.
+      manualVerificationRequired: # Maybe Bool.
+      recentFleetInfo:    # Maybe DriverAssociationInfo — the DASHBOARD shape, which differs from
+                          # the UI's FleetInfo above.
+        personId:         # Id Person. THIS IS fleetOwnerId — not named fleetOwnerId.
+        isActive:         # Bool.
+        associatedTill:   # Maybe UTCTime.
+        isAssociated:     # Bool.
+        name:             # Maybe Text.
+        fleetName:        # Maybe Text.
+        mobileCountryCode: # Maybe Text.
+        mobileNumber:     # Maybe Text.
+        verified:         # Maybe Bool. Describes the FLEET OWNER, not the driver.
+        enabled:          # Maybe Bool. Describes the FLEET OWNER, not the driver.
+      driverDocuments:    # [DocumentStatusItem] — same shape as register-status-ui.
+      vehicleDocuments:   # [VehicleDocumentItem] — .registrationNo is the RC number.
+      driverLicenseDetails:                  # Maybe [DLDetails].
+      vehicleRegistrationCertificateDetails: # Maybe [RCDetails].
+
+  # ---------------------------------------------------------------------------------------------
+  - name: profile-ui
+    purpose: |
+      The driver app's own profile screen: identity, linked vehicle, subscription dues,
+      payout/bank state and the onboarding flags. Read on app open, not during onboarding.
+    surface: ui
+    method: GET
+    path: /driver/profile             # POST /driver/profile/info returns the same type
+    handler: Main/src/Domain/Action/UI/Driver.hs:getInformation
+    response_type: DriverInformationRes (same file)
+    query_params:
+      toss:        # Int. A/B bucketing.
+      tenant:      # Text.
+      context:     # Text.
+      serviceName: # ServiceNames. Which subscription plan's dues to report.
+      fleetInfo:   # Bool. TRUE bypasses the onboardingAs check and always populates
+                   # recentFleetInfo. Otherwise (false or absent) it is derived from
+                   # onboardingAs == FLEET_DRIVER. So a fleet driver does not need the param;
+                   # pass it to force fleet info for an INDIVIDUAL driver, which is the only way
+                   # to surface a lapsed association.
+    response:
+      enabled:            # Bool.
+      verified:           # Bool.
+      approved:           # Maybe Bool.
+      blocked:            # Bool. ORed with overchargingBlocked, so it can be true while
+                          # driverInformation.blocked is false.
+      blockedReason:      # Maybe Text. Free text.
+      blockedReasonFlag:  # Maybe BlockReasonFlag. Enum — distinct from blockedReason.
+      blockExpiryTime:    # Maybe UTCTime.
+      disabledReasonFlag: # Maybe DisabledReasonFlag.
+      hasActiveRc:        # Bool only — does NOT carry the RC number.
+      fleetOwnerId:       # Maybe Text. Marked deprecate-later in source; prefer recentFleetInfo.
+      recentFleetInfo:    # Maybe FleetInfo. Populated when fleetInfo=true OR
+                          # onboardingAs == FLEET_DRIVER.
+        id:               # Text. THIS IS fleetOwnerId.
+        isActive:         # Bool.
+        associatedTill:   # Maybe UTCTime.
+        fleetName:        # Maybe Text.
+        ownerName:        # Text.
+      activeFleet:        # Maybe FleetInfo — the currently-active association only. Same shape.
+      linkedVehicle:      # Maybe VehicleAPIEntity
+        registrationNo:   # Text. The vehicle number.
+        variant:          # VehicleVariant.
+        model:            # Text.
+        color:            # Text.
+      bankDetails:        # Maybe BankAccountResp. ONLY when merchant.onlinePayment is true.
+                          # Does NOT carry the account number — see bankAccountNumber below.
+        chargesEnabled:     # Maybe Bool.
+        detailsSubmitted:   # Maybe Bool.
+        payoutsEnabled:     # Maybe Bool.
+        paymentMode:        # Maybe Text.
+        requirements:       # Maybe value.
+        futureRequirements: # Maybe value.
+      bankAccountNumber:      # Maybe Text. Behind a separate config branch from bankDetails.
+      bankIfsc:               # Maybe Text. Same branch.
+      bankVerificationStatus: # Maybe Text. Same branch.
+      upiId:                  # Maybe Text. = driverInformation.payoutVpa.
+      payoutVpa:              # Maybe Text. Distinct from payerVpa (the subscription payer).
+
+  # ---------------------------------------------------------------------------------------------
+  - name: driver-info-dashboard
+    purpose: |
+      Support lookup for a single driver by any one identifier (phone, vehicle, DL, RC, email,
+      wallet). The most complete read surface — used to answer "why is this driver blocked or
+      disabled?".
+    surface: dashboard
+    method: GET
+    path: /driver/info                # helper: /driver/info/{fleetOwnerId}/{mbFleet}
+    handler: Main/src/Domain/Action/Dashboard/RideBooking/Driver.hs:getDriverInfo
+    response_type: DriverInfoRes
+    note: The most complete read surface. Lookup is by ONE of the query params below.
+    query_params:
+      personId:          # Id Driver.
+      mobileNumber:      # Text, with mobileCountryCode.
+      mobileCountryCode: # Text.
+      vehicleNumber:     # Text.
+      dlNumber:          # Text.
+      rcNumber:          # Text.
+      email:             # Text.
+      walletId:          # Text.
+      # No param gates the flags here — all are returned unconditionally.
+    response:
+      enabled:            # Bool.
+      verified:           # Bool.
+      approved:           # Maybe Bool.
+      blocked:            # Bool.
+      blockedReason:      # Maybe Text.
+      blockLiftTime:      # Maybe UTCTime.
+      disabledReasonFlag: # Maybe DisabledReasonFlag.
+      vehicleNumber:      # Maybe Text. The RC / vehicle number.
+      recentFleetInfo:    # Maybe DriverAssociationInfo
+        personId:         # Id Person. THIS IS fleetOwnerId.
+        isActive:         # Bool.
+        associatedTill:   # Maybe UTCTime.
+        isAssociated:     # Bool.
+        name:             # Maybe Text.
+        fleetName:        # Maybe Text.
+        mobileNumber:     # Maybe Text.
+        verified:         # Maybe Bool. The FLEET OWNER's flag.
+        enabled:          # Maybe Bool. The FLEET OWNER's flag.
+      activeFleetInfo:    # Maybe DriverAssociationInfo — active association only. Same shape.
+      operatorInfo:       # Maybe DriverAssociationInfo — operator, not fleet. Same shape.
+      vehicleRegistrationDetails: # [DriverRCAssociationAPIEntity]
+        isRcActive:       # Bool.
+        associatedTill:   # Maybe UTCTime.
+        details:          # VehicleRegistrationCertificateAPIEntity
+          certificateNumber: # Text. THE RC NUMBER for this linked RC.
+          vehicleClass:      # Maybe Text.
+          fitnessExpiry:     # Maybe UTCTime.
+          insuranceValidity: # Maybe UTCTime.
+          verificationStatus: # VerificationStatus.
+      bankAccountNumber:      # Maybe Text, from DriverBankAccount.accountId.
+      bankIfsc:               # Maybe Text.
+      bankVerificationStatus: # Maybe Text. "VERIFIED" when detailsSubmitted, else "PENDING".
+      upiId:                  # Maybe Text.
+      walletId:               # Maybe Text.
+
+  # ---------------------------------------------------------------------------------------------
+  - name: driver-list-dashboard
+    purpose: |
+      The onboarding driver grid: paged, filterable list of drivers in a city for ops review
+      and triage.
+    surface: dashboard
+    method: GET
+    path: /driver/list
+    handler: Main/src/Domain/Action/Dashboard/Management/Driver.hs:getDriverList
+    query: Main/src/Storage/Queries/OnboardingList/DriverList.hs:findDrivers
+    response_type: DriverListRes
+    note: |
+      The query picks its driving table from the filter set (see the module header in
+      DriverList.hs). Tables that only filter are applied as EXISTS semi-joins; tables needed for
+      the response are fetched by id in one batch each.
+    query_params:
+      limit:                     # Int, capped at 20.
+      offset:                    # Int. Deep offsets are O(offset) — prefer narrowing filters.
+      verified:                  # Bool.
+      enabled:                   # Bool.
+      blocked:                   # Bool.
+      subscribed:                # Bool.
+      phone:                     # Text. EXACT match (hashed). Most selective — drives the query.
+      vehicleNumberSearchString: # Text. EXACT match on registration_no, NOT a substring search.
+      mbNameSearchString:        # Text. Partial, ORed across first/middle/last name.
+      approvalStatus:            # ApprovalStatusFilter: ApprovedOnly | RejectedOnly | PendingOnly.
+                                 # PendingOnly means approved IS NULL.
+      onboardingAs:              # OnboardingAs.
+      fleetOwnerId:              # Text. Matches CURRENT associations only
+                                 # (is_active AND associated_till > now).
+      from:                      # UTCTime, on person.created_at.
+      to:                        # UTCTime, on person.created_at.
+    response:
+      totalItems:       # Int. Row count for the same filter set as the page.
+      summary:          # Summary
+        totalCount:     # Int.
+        count:          # Int. Rows on this page.
+      drivers:          # [DriverListItem]
+        driverId:           # Id Driver.
+        firstName:          # Text.
+        middleName:         # Maybe Text.
+        lastName:           # Maybe Text.
+        phoneNo:            # Maybe Text.
+        vehicleNo:          # Maybe Text.
+        enabled:            # Bool.
+        verified:           # Bool.
+        approved:           # Maybe Bool.
+        blocked:            # Bool.
+        subscribed:         # Bool.
+        disabledReasonFlag: # Maybe DisabledReasonFlag.
+        onboardingAs:       # Maybe OnboardingAs.
+        onboardingDate:     # Maybe UTCTime.
+        onRide:             # Bool.
+        active:             # Bool.
+        hasActiveRc:        # Bool.
+        recentFleetInfo:    # Maybe DriverAssociationInfo. Active association, else the MOST RECENT
+                            # one (findActiveOrMostRecentByDriverIds) — so this may be a LAPSED
+                            # association. Check .isActive before treating it as current.
+          personId:         # Id Person. THIS IS fleetOwnerId.
+          isActive:         # Bool. FALSE means the association has ended.
+          associatedTill:   # Maybe UTCTime.
+          fleetName:        # Maybe Text.
+          name:             # Maybe Text.
+          verified:         # Maybe Bool. The FLEET OWNER's flag.
+          enabled:          # Maybe Bool. The FLEET OWNER's flag.
+
+  # ---------------------------------------------------------------------------------------------
+  - name: vehicle-list-dashboard
+    purpose: |
+      The onboarding vehicle grid: paged, filterable list of RCs city-wide, or scoped to one
+      fleet for a fleet user, with the current fleet and driver links per vehicle.
+    surface: dashboard
+    method: GET
+    path: /vehicle/list
+    handler: Main/src/Domain/Action/Dashboard/Management/Vehicle.hs:getVehicleList
+    query: Main/src/Storage/Queries/OnboardingList/VehicleList.hs:findVehicles
+    response_type: VehicleListRes
+    query_params:
+      limit:          # Int, capped at 50.
+      offset:         # Int.
+      fleetOwnerId:   # Text. IGNORED for a fleet requestor — see requestorId.
+      vehicleNumber:  # Text. EXACT match on certificateNumberHash (the column is encrypted, so a
+                      # partial match is not possible).
+      verified:       # Bool.
+      approvalStatus: # ApprovalStatusFilter.
+      from:           # UTCTime, on rc.created_at.
+      to:             # UTCTime, on rc.created_at.
+      requestorId:    # Text. If this person has a fleet role, scope is FORCED to their own fleet
+                      # and the fleetOwnerId param is ignored — a fleet user cannot widen scope.
+    response:
+      totalItems:     # Int.
+      summary:        # Summary
+        totalCount:   # Int.
+        count:        # Int.
+      vehicles:       # [VehicleListItem]
+        rcId:          # Text.
+        vehicleNumber: # Maybe Text. Decrypted RC number.
+        vehicleMake:   # Maybe Text.
+        vehicleModel:  # Maybe Text.
+        vehicleColor:  # Maybe Text.
+        vehicleClass:  # Maybe Text.
+        verified:      # Maybe Bool. RC flag.
+        approved:      # Maybe Bool. RC flag. A vehicle has no enabled/blocked/disabled.
+        createdAt:     # UTCTime.
+        recentFleetInfo:  # Maybe DriverAssociationInfo. CURRENT fleet link only — null if ended.
+          personId:       # Id Person. THIS IS fleetOwnerId.
+          isActive:       # Bool.
+          associatedTill: # Maybe UTCTime.
+          fleetName:      # Maybe Text.
+        linkedDriverInfo: # Maybe DriverAssociationInfo. CURRENT driver link only — null if ended.
+          personId:       # Id Person. Here it is the DRIVER's id, not a fleet owner.
+          isActive:       # Bool.
+          associatedTill: # Maybe UTCTime.
+          name:           # Maybe Text.
+          mobileNumber:   # Maybe Text.
+
+  # ---------------------------------------------------------------------------------------------
+  - name: status-summary-dashboard
+    purpose: |
+      The counts row rendered above the onboarding grids — approved / pending / rejected
+      totals for drivers, vehicles or fleet owners.
+    surface: dashboard
+    method: GET
+    path: /fleet/{entityOperationType}/statusSummary
+    handler: Main/src/Domain/Action/Dashboard/Fleet/Driver.hs:getDriverFleetStatusSummary
+    response_type: StatusSummaryResponse
+    path_params:
+      entityOperationType: # DRIVER_STATUS | VEHICLE_STATUS | FLEET_OWNER_STATUS
+    query_params:
+      fleetOwnerId: # Text. Bound as the requestor id. If it resolves to a fleet-role person, the
+                    # driver and vehicle counts are scoped to that fleet. FLEET_OWNER_STATUS is
+                    # always city-wide, matching the legacy path.
+    response:
+      total:    # Int. NOT a delta-maintained bucket — a recompute observes flag transitions, never
+                # entity creation, so this is a COUNT(*) behind a short-TTL key.
+      approved: # Int.
+      pending:  # Int. approved IS NULL.
+      rejected: # Int.
+    behaviour: |
+      Under unifiedOnboardingFlagsRecompute the buckets are read from the Redis counters the
+      recompute maintains, so they agree with the flags the grids render. A cold key rebuilds from
+      Postgres under a lock and seeds Redis.
+      In legacy cities the endpoint keeps its ClickHouse docsVerificationStatus counts — those
+      mirror tables carry no verified/approved/blocked/disabledReasonFlag columns and cannot serve
+      flag buckets at all.
+
+# Cross-cutting naming, worth knowing before you go looking for a field:
+#   fleetOwnerId  is never exposed under that name. Dashboard: DriverAssociationInfo.personId.
+#                 UI: FleetInfo.id.
+#   rcNo          is never exposed under that name. It is registrationNo (UI documents,
+#                 linkedVehicle), vehicleNumber (dashboard driver info / vehicle list), or
+#                 certificateNumber (vehicleRegistrationDetails[].details).
+#   verified/enabled inside a *AssociationInfo describe the FLEET OWNER, not the driver.
+
+# =================================================================================================
+# ACTION APIs
+#
+# Everything above is a READ surface. Below are the endpoints that MUTATE onboarding state.
+#
+# The rule under unifiedOnboardingFlagsRecompute:
+#   verified / approved / enabled are DERIVED by recomputeOnboardingFlags
+#     (SharedLogic/DriverOnboarding/OnboardingFlags/Flow.hs). Never write them from a handler.
+#   disabledReasonFlag / blocked / onboardingAs are INPUTS. A handler may write these, and must
+#     then let the recompute settle everything downstream.
+#
+#   shouldEnable = not explicitlyDisabled && vehicleGateOk && consentGateOk
+#                    && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
+#
+# So any action that changes something a GATE reads must be followed by a recompute:
+#   consentGateOk  <- active FleetDriverAssociation
+#   vehicleGateOk  <- active DriverRCAssociation
+#   approvedGateOk <- documents
+#   explicitlyDisabled <- disabledReasonFlag
+#
+# `blocked` is ORTHOGONAL: shouldEnable never reads it, so blocked && enabled is a legal state and
+# block/unblock are idempotent. FleetOwnerInformation.blocked has no writer and no reader — fleet
+# block/unblock is UNSUPPORTED; use disable.
+#
+# Preconditions are modelled in SharedLogic/DriverOnboarding/OnboardingFlags/Guard.hs as a pure
+# function over (ActionVerb, EntitySnapshot); a violation THROWS. Every action below runs inside
+# withOnboardingAction, which is the single place the guard and the post-recompute are applied.
+#
+# Two classes of guard, with different scope:
+#   association guards (live ride, already-associated, RC-not-active-with-another-driver) run on
+#     EVERY city -- a live ride blocks an association change whether or not flags are derived
+#   flag-state preconditions and the post-recompute run ONLY under unifiedOnboardingFlagsRecompute
+#
+# Each action below records:
+#   pre_validation  — the flag state required BEFORE the action is allowed
+#   writes          — what the handler itself writes (inputs only, never derived flags)
+#   post_validation — what must be RE-DERIVED afterwards, because the action changed a gate input
+#
+# skipFleetChecks (a request-body flag on addVehicle) is INTENTIONALLY retained. It is not an
+# identity bypass — fleetOwnerId is resolved server-side from the requestor — it only skips two
+# data-consistency checks so ops can correct vehicle ownership. Residual effect worth knowing:
+# skipping the second check lets an RC be pulled into a fleet while another fleet's driver still
+# holds an active association, which ends that association and disables that driver on their next
+# recompute.
+
+actions:
+  driver:
+    - name: enable
+      method: POST
+      path: /driver/{driverId}/enable
+      handler: Domain/Action/Dashboard/RideBooking/Driver.hs:postDriverEnable
+      pre_validation: |
+        Driver must be administratively disabled (disabledReasonFlag = AdminDisabled or
+        DriverDisabled). A driver disabled because their FLEET is disabled cannot be enabled here —
+        enable the fleet instead.
+      writes: disabledReasonFlag := Nothing
+      post_validation: driver
+      note: |
+        Under unified this no longer forces enabled=True. It clears the input and lets the
+        recompute decide, so a driver whose documents fail the gates stays disabled. Welcome
+        alerts still fire, from enableDriver, on the real transition.
+
+    - name: disable
+      method: POST
+      path: /driver/{driverId}/disable
+      handler: Domain/Action/Dashboard/Management/Driver.hs:postDriverDisable
+      pre_validation: not already disabled
+      writes: disabledReasonFlag := Just DriverDisabled
+      post_validation: driver
+
+    - name: block / blockWithReason
+      method: POST
+      path: /driver/{driverId}/block | /blockWithReason
+      handler: Domain/Action/Dashboard/Management/Driver.hs:postDriverBlock, postDriverBlockWithReason
+      pre_validation: none — orthogonal to onboarding state; idempotent
+      writes: blocked, blockedReason, blockReasonFlag (via markBlockFlags)
+      post_validation: none required
+
+    - name: unblock
+      method: POST
+      path: /driver/{driverId}/unblock
+      handler: Domain/Action/Dashboard/Management/Driver.hs:postDriverUnblock
+      pre_validation: none — idempotent
+      writes: blocked := False
+      post_validation: driver
+      note: needed because a driver may have become enable-able while blocked
+
+    - name: delete
+      method: DELETE
+      path: /driver/{driverId}/permanentlyDelete
+      handler: SharedLogic/DeleteDriver.hs
+      pre_validation: driver must NOT be enabled; no rides; role must be DRIVER
+      writes: deletes the DriverInformation row
+      post_validation: none
+
+    - name: unlinkDL / unlinkAadhaar / deleteAadhaar / deletePanCard
+      method: POST
+      path: /driver/{driverId}/unlinkDL | /unlinkAadhaar | /deleteAadhaar | /deletePanCard
+      pre_validation: the document must exist
+      writes: document invalidation
+      post_validation: driver
+      note: unlinkAadhaar honours aadhaarVerificationRequired; deleteAadhaar does not
+
+    - name: setRCStatus (activate / deactivate)
+      method: POST
+      path: /driver/{driverId}/setRCStatus | /rc/setStatus (UI) | /fleet/vehicleDriverRCstatus
+      handler: Domain/Action/UI/DriverOnboarding/VehicleRegistrationCertificate.hs:linkRCStatus
+      pre_validation: |
+        Activate: driver enabled and not blocked; RC verificationStatus VALID and approved;
+        mandatory vehicle docs valid; the association must exist. Deactivate: no live ride on
+        the RC, and only the driver the RC is currently active with may deactivate it.
+      writes: DriverRCAssociation.isRcActive only -- associatedTill is untouched, so the
+        association survives and can be re-activated
+      post_validation: driver
+      note: |
+        The guard verb is chosen from the request (Activate vs Deactivate), because the two
+        directions have different preconditions. Changes vehicleGateOk either way.
+
+    - name: unlinkVehicle
+      method: POST
+      path: /driver/{driverId}/unlinkVehicle
+      handler: Domain/Action/Dashboard/RideBooking/Driver.hs:postDriverUnlinkVehicle
+      pre_validation: no live ride on the RC
+      writes: deactivates the current RC (isRcActive := False) and deletes the Vehicle row;
+        associatedTill is untouched
+      post_validation: driver
+
+    - name: deleteRC / endRCAssociation / fleet unlink
+      method: POST
+      path: /driver/{driverId}/deleteRC | /endRCAssociation | /{driverId}/{vehicleNo}/fleet/unlink
+      handler: Domain/Action/UI/DriverOnboarding/VehicleRegistrationCertificate.hs:deleteRC
+      pre_validation: |
+        No live ride on the RC. deleteRC additionally refuses while the RC is still ACTIVE with
+        this driver -- "Deactivate Vehicle first to delete!" -- so deactivate precedes delete.
+      writes: DriverRCAssociation.associatedTill := now AND isRcActive := False. This ENDS the
+        association; re-activating is not possible, the RC must be linked again.
+      post_validation: driver
+      note: |
+        endRCAssociation deactivates first and then ends, so it is the two-step form of the same
+        thing. Fleet unlink additionally honours deactivateRCOnUnlink and only disables the
+        driver when disableDriverWhenUnlinkingVehicle is set.
+
+  fleet_driver_association:
+    - name: verifyJoiningOtp
+      method: POST
+      path: /fleet/verifyJoiningOtp
+      handler: Domain/Action/Dashboard/Fleet/Driver.hs:postDriverFleetVerifyJoiningOtp
+      pre_validation: fleet owner enabled (checkFleetOwnerVerification); driver not already associated
+      writes: creates FleetDriverAssociation
+      post_validation: driver
+
+    - name: approveDriver (approve)
+      method: POST
+      path: /fleet/approveDriver
+      pre_validation: a pending driver-initiated request must exist (requestReason set in fleet_driver_association table)
+      writes: FleetDriverAssociation.isActive := True
+      post_validation: driver
+
+    - name: approveDriver (reject)
+      method: POST
+      path: /fleet/approveDriver
+      pre_validation: a pending driver-initiated request must exist (requestReason set in fleet_driver_association table)
+      writes: isActive := False, associatedTill := now
+      post_validation: driver
+      note: |
+        Changes consentGateOk. Previously the approve arm recomputed and the reject arm did not,
+        so a rejected driver kept enabled=True.
+
+    - name: removeDriver
+      method: POST
+      path: /{requestorId}/{driverId}/fleet/remove/driver
+      pre_validation: no live ride
+      writes: ends FleetDriverAssociation and all RC associations; syncs onboardingAs
+      post_validation: driver
+      note: both the FLEET_OWNER and OPERATOR branches recompute
+
+    - name: addDrivers (bulk CSV)
+      method: POST
+      path: /fleet/addDrivers
+      pre_validation: fleet owner enabled
+      writes: |
+        For an EXISTING driver: ends their current fleet and RC associations, writes onboardingAs.
+        For any driver: creates the new FleetDriverAssociation INACTIVE and sends a consent link.
+      post_validation: driver — only for the existing-driver teardown; a new driver has nothing to derive
+      note: |
+        The enabling transition happens at consent, not here.
+
+        This endpoint doubles as "resend the fleet consent SMS", because it is idempotent while
+        consent is still pending: checkFleetDriverAssociation tests for an ACTIVE association, so
+        a driver with a pending (inactive) one falls through and the block re-runs;
+        createFleetDriverAssociationIfNotExists then matches the existing inactive row and no-ops
+        rather than creating a duplicate (it only backfills onboardingVehicleCategory), and the
+        deep link is sent again.
+
+        Two boundaries on that:
+          - once the driver has ACCEPTED, isAssociated is True and the whole block is skipped, so
+            no SMS is sent -- resend only works while consent is pending
+          - the existing-driver teardown re-runs on every call, so if the driver has since become
+            associated with a DIFFERENT fleet, a resend tears that association down
+
+    - name: fleet consent (driver accepts)
+      method: POST
+      path: /fleet/consent
+      handler: Domain/Action/UI/WMB.hs:postFleetConsent
+      pre_validation: not a driver-initiated request; no active rides
+      writes: FleetDriverAssociation.isActive := True
+      post_validation: driver
+      note: this is where consentGateOk becomes satisfiable
+
+    - name: addVehicle
+      method: POST
+      path: /driver/{driverId}/addVehicle
+      handler: Domain/Action/Dashboard/RideBooking/Driver.hs:postDriverAddVehicle
+      pre_validation: |
+        RC must be linkable; vehicle not already linked; RC limit not reached. Cross-fleet
+        ownership and RC-active-with-another-driver are enforced by the guard, not the handler.
+      writes: creates the DriverRCAssociation or FleetRCAssociation
+      post_validation: vehicle
+
+  fleet_owner:
+    - name: verifyAccount (enable)
+      method: POST
+      path: /verifyAccount
+      handler: Domain/Action/Dashboard/Management/Account.hs:postAccountVerifyAccount
+      pre_validation: fleet must be administratively disabled
+      writes: disabledReasonFlag := Nothing
+      post_validation: fleet owner
+
+    - name: verifyAccount (disable)
+      method: POST
+      path: /verifyAccount
+      pre_validation: no active rides under the fleet (ensureNoActiveRidesUnderFleet)
+      writes: disabledReasonFlag := Just AdminDisabled
+      post_validation: fleet owner
+      note: |
+        Drivers are NOT fanned out to. A FLEET_DRIVER picks up FleetDisabled on its own next
+        recompute, and drops it again when the fleet is re-enabled or when the driver leaves the
+        fleet. Fan-out for a large fleet must be a scheduled job, never inline.
+
+    - name: updateFleetOwnerInfo
+      method: POST
+      path: /{driverId}/updateFleetOwnerInfo
+      pre_validation: none
+      writes: profile columns; fleetType, and person.role when fleetType changes
+      post_validation: fleet owner — only when fleetType changed
+      note: fleetType moves person.role, which changes WHICH document config the derivation reads
+
+  vehicle:
+    - name: addVehicle / addRC withoutDriver / register rc
+      method: POST
+      path: /{mobileNo}/fleet/addVehicle | /fleet/addRC/withoutDriver | /{driverId}/register/rc
+      pre_validation: fleet owner enabled; RC not owned by another fleet; RC limit not reached
+      writes: creates/updates the RC, sets fleetOwnerId, creates associations
+      post_validation: vehicle
+      note: skipFleetChecks currently bypasses the cross-fleet ownership check — see header
+
+    - name: linkRCWithDriver
+      method: POST
+      path: /fleet/linkRCWithDriver/{fleetOwnerId}
+      pre_validation: |
+        driver enabled, not blocked, verified; RC verificationStatus VALID; RC belongs to this
+        fleet; mandatory vehicle docs valid; RC limit not reached. The strictest precondition set
+        in the codebase and the model for the others.
+      writes: creates DriverRCAssociation (inactive)
+      post_validation: vehicle, driver
+
+    - name: fleet unlink (vehicle from driver)
+      method: POST
+      path: /{driverId}/{vehicleNo}/fleet/unlink
+      pre_validation: driver active in the fleet; no live ride on the RC
+      writes: ends the DriverRCAssociation
+      post_validation: driver
+      note: gated additionally on disableDriverWhenUnlinkingVehicle
+
+    - name: remove vehicle from fleet
+      method: POST
+      path: /{fleetOwnerId}/{vehicleNo}/fleet/remove/vehicle
+      pre_validation: vehicle not linked to an active fleet driver; RC owned by this fleet; no live ride
+      writes: rc.fleetOwnerId := Nothing; ends FleetRCAssociation
+      post_validation: vehicle
+
+    - name: updateVehicleVariant / bulkReviewRCVariant
+      method: POST
+      path: /updateVehicleVariant/{driverId} | /bulkReviewRCVariant
+      handler: Domain/Action/Dashboard/Management/Driver.hs:postDriverUpdateVehicleVariant, postDriverBulkReviewRCVariant
+      pre_validation: none on flags — the RC must exist
+      writes: |
+        vehicleVariant (+ reviewedAt / reviewRequired for the bulk review form).
+        Under unified it uses updateVehicleVariantWithoutVerificationStatus, so it no longer
+        force-sets verificationStatus = VALID as a side effect of writing a variant.
+        Legacy keeps the original coupled query.
+      post_validation: vehicle
+      note: |
+        verificationStatus is now derived by the recompute rather than set implicitly. Changing a
+        variant can change which document set applies, so the RC is re-derived.
+
+    - name: updateRCInvalidStatus / updateRCInvalidStatusByRCNumber
+      method: POST
+      path: /updateRCInvalidStatus/{driverId} | /updateRCInvalidStatusByRCNumber
+      handler: Domain/Action/Dashboard/Management/Driver.hs:postDriverUpdateRCInvalidStatus
+      pre_validation: none on flags — the RC must exist
+      writes: vehicleVariant, reviewRequired, and verificationStatus := VALID
+      post_validation: none
+      note: |
+        Left coupled on purpose: marking an invalid RC valid is this endpoint's stated purpose,
+        unlike the variant endpoints above where it was an unintended side effect.
+        Caveat: these two ignore merchantShortId / opCity, so an RC id from any merchant is
+        accepted. Not changed here.

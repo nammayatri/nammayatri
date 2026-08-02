@@ -2423,6 +2423,7 @@ types:
     - extras: Maybe Text
   StatusSummaryResponse:
     - total: Int
+    - verified: Int
     - approved: Int
     - pending: Int
     - rejected: Int

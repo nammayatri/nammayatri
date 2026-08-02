@@ -66,6 +66,7 @@ data StatusRes = StatusRes
     verified :: Bool,
     approved :: Maybe Bool,
     blocked :: Bool,
+    blockedReason :: Maybe Text,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     disabledReasonFlag :: Maybe DriverInfo.DisabledReasonFlag,
     recentFleetInfo :: Maybe DOVT.FleetInfo,

@@ -136,7 +136,7 @@ dispatchConsequence ctx driverId = \case
   CET.HardBlock params -> do
     logWarning $ "Hard blocking driver " <> driverId.getId <> ", duration: " <> show params.blockDurationHours <> "h"
     let reasonFlag = parseBlockReasonFlag params.blockReasonTag
-    SFlags.recomputeBlockFlags (cast driverId) $
+    SFlags.markBlockFlags (cast driverId) $
       SFlags.Block
         SFlags.BlockPayload
           { SFlags.bpReason = Just params.blockReason,
@@ -162,7 +162,7 @@ dispatchConsequence ctx driverId = \case
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.HARD_BLOCK tag params.blockDurationHours params.blockReason (A.Object mempty) params.cooldownHours
   CET.PermanentBlock params -> do
     logWarning $ "Permanently blocking driver " <> driverId.getId <> ", reason: " <> params.blockReason
-    SFlags.recomputeBlockFlags (cast driverId) $
+    SFlags.markBlockFlags (cast driverId) $
       SFlags.SimpleBlock
         SFlags.SimplePayload
           { SFlags.spModifier = Just "BehaviorManagementFramework",

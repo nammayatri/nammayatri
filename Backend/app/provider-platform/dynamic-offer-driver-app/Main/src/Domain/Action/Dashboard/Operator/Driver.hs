@@ -82,6 +82,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Common as SCommonOnb
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
 import qualified SharedLogic.FleetOperatorStats as FleetOpStats
@@ -306,15 +307,13 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
                       ofiVehicles =
                         [ SFlags.VehicleDocsEntry
                             { vdeRegistrationNo = registrationNo,
-                              -- Inspection approval waives the InspectionHub gate; the recompute
-                              -- itself just reads whatever documents it is handed.
                               vdeItem = vehicleDocItem {VDocs.documents = map SCommonOnb.overrideInspectionHubAsValid vehicleDocItem.documents},
                               vdeConfigs = allDocumentVerificationConfigs,
                               vdeMakeSelfieAadhaarPanMandatory = Nothing
                             }
                         ]
                     }
-                  enableBotFlow
+                  (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
           else QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
@@ -694,9 +693,10 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
-      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
-      when (merchant.overwriteAssociation == Just True) $
-        QDRC.endAllRCAssociationsForDriver person.id
+      SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver person.id) $ do
+        SA.endDriverAssociations merchantOpCityId transporterConfig person
+        when (merchant.overwriteAssociation == Just True) $
+          QDRC.endAllRCAssociationsForDriver person.id
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -729,11 +729,11 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       otp <- Redis.get key >>= fromMaybeM OtpNotFound
       when (otp /= req.otp) $ throwError InvalidOtp
 
-      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
-      when (merchant.overwriteAssociation == Just True) $
-        QDRC.endAllRCAssociationsForDriver person.id
-
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
+      SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver person.id) $ do
+        SA.endDriverAssociations merchantOpCityId transporterConfig person
+        when (merchant.overwriteAssociation == Just True) $
+          QDRC.endAllRCAssociationsForDriver person.id
+        verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success
 
@@ -1037,11 +1037,11 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
                 QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
           else do
-            applyDocRejections req.entityType reqId validatedDocs
             person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
-            if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-              then void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) driverId
-              else QDI.updateByPrimaryKey driverInfo {DDI.approved = Just False, DDI.verified = False}
+            SGuard.withOnboardingAction transporterConfig SGuard.Reject (SGuard.TargetDriver driverId) $ do
+              applyDocRejections req.entityType reqId validatedDocs
+              unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+                QDI.updateByPrimaryKey driverInfo {DDI.approved = Just False, DDI.verified = False}
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
         let fleetOwnerId = Kernel.Types.Id.Id reqId
@@ -1051,17 +1051,17 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
           then do
             -- Sync dependency-docs check; the heavy fleet recompute (sets `enabled` + cascades) is forked.
             fleetPerson <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
-            -- Throws (naming the offending docs) if any BotApproval dependency doc isn't VALID.
-            SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
-            unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-              QFOIExtra.updateFleetOwnerApprovedAndEnabledStatus (Just True) True fleetOwnerInfo.fleetOwnerPersonId
+            SGuard.withOnboardingAction transporterConfig SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerInfo.fleetOwnerPersonId) $ do
+              SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
+              unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+                QFOIExtra.updateFleetOwnerApprovedAndEnabledStatus (Just True) True fleetOwnerInfo.fleetOwnerPersonId
             pure (DRR.COMPLETED, Nothing, Nothing)
           else do
-            applyDocRejections req.entityType reqId validatedDocs
             person <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
-            if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-              then void $ SStatus.runRefreshOnboardingFlagsFleet (Just person) (Just transporterConfig) fleetOwnerInfo.fleetOwnerPersonId
-              else QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False, DFOI.approved = Just False}
+            SGuard.withOnboardingAction transporterConfig SGuard.Reject (SGuard.TargetFleetOwner fleetOwnerInfo.fleetOwnerPersonId) $ do
+              applyDocRejections req.entityType reqId validatedDocs
+              unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+                QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False, DFOI.approved = Just False}
             pure (DRR.REJECTED, Nothing, Just person)
       API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
         let rcId = Kernel.Types.Id.Id reqId

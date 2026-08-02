@@ -64,6 +64,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -167,11 +168,11 @@ disableDriverForMandatoryReminder ::
   m ()
 disableDriverForMandatoryReminder transporterConfig driverId now documentTypeName = do
   driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (InternalError "DriverInformation not found")
-  when driverInfo.enabled $ do
-    -- Reminder-expired disable is sticky: admin must explicitly re-enable (recompute won't).
-    driverPersonForDisable <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-    SFlags.recomputeDisabledFlags (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) driverPersonForDisable (SFlags.AdminDisable DDriverInfoDI.DriverDisabled)
-    logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
+  when driverInfo.enabled $
+    SGuard.withOnboardingAction transporterConfig SGuard.Disable (SGuard.TargetDriver driverId) $ do
+      driverPersonForDisable <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      SFlags.markDisabledFlags (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) driverPersonForDisable (SFlags.AdminDisable DDriverInfoDI.DriverDisabled)
+      logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
 
   let isActive = False
   let mode = DDriverInfo.OFFLINE
@@ -287,11 +288,9 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
               FCM.VEHICLE_INSPECTION
               DMM.VEHICLE_INSPECTION_SMS
               $ do
-                -- Invalidate RC, deactivate association and remove vehicle (only when not on ride)
                 let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
-                invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
-                when (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
-                  void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rcId
+                SGuard.withOnboardingAction transporterConfig SGuard.Deactivate (SGuard.TargetVehicleById rcId) $
+                  invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
                 logInfo $ "Invalidated RC " <> reminder.entityId <> " and removed vehicle for driver " <> reminder.driverId.getId <> " due to expired mandatory vehicle inspection reminder"
         DVC.DriverInspectionHub ->
           processInspectionReminder
@@ -455,23 +454,17 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
               -- For all vehicle-related docs: invalidate RC and remove vehicle; then invalidate the specific document
               if isVehicleRelated
                 then do
-                  -- Vehicle reminders use entityId = rcId only; RC invalidation and vehicle removal are in invalidateRCAndRemoveVehicleForReminder
                   let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
                       expiryReason = "Expired mandatory vehicle document reminder"
-                  invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
-                  invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
-                  logInfo $ "Invalidated RC " <> reminder.entityId <> " (type: " <> documentTypeName <> ") for driver " <> reminder.driverId.getId <> " due to expiry"
+                  SGuard.withOnboardingAction transporterConfig SGuard.Deactivate (SGuard.TargetVehicleById rcId) $ do
+                    invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
+                    invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
+                    logInfo $ "Invalidated RC " <> reminder.entityId <> " (type: " <> documentTypeName <> ") for driver " <> reminder.driverId.getId <> " due to expiry"
                 else do
-                  invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
-                  logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
-              -- Recompute onboarding flags once, after every invalidation above, so the derived
-              -- flags observe the documents in their final state.
-              if isVehicleRelated
-                then void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) (Id @DVRC.VehicleRegistrationCertificate reminder.entityId)
-                else
-                  if SDO.isFleetRole driver.role
-                    then void $ SStatus.runRefreshOnboardingFlagsFleet (Just driver) (Just transporterConfig) reminder.driverId
-                    else void $ SStatus.runRefreshOnboardingFlagsDriver (Just driver) (Just transporterConfig) reminder.driverId
+                  let target = if SDO.isFleetRole driver.role then SGuard.TargetFleetOwner reminder.driverId else SGuard.TargetDriver reminder.driverId
+                  SGuard.withOnboardingAction transporterConfig SGuard.Reject target $ do
+                    invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
+                    logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do
               let rescheduleSeconds = fromMaybe defaultRescheduleIntervalSeconds reminderConfig.reminderRescheduleIntervalSeconds
                   scheduleAfter = fromIntegral rescheduleSeconds

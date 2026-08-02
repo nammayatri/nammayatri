@@ -119,6 +119,17 @@ updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone re
     )
     [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
 
+updateVehicleVariantWithoutVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.VehicleVariant -> Maybe Bool -> Maybe Bool -> m ()
+updateVehicleVariantWithoutVerificationStatus (Id vehicleRegistrationCertificateId) variant reviewDone reviewRequired = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamVRC.updatedAt now]
+        <> [Se.Set BeamVRC.reviewedAt (Just now) | isJust reviewDone]
+        <> [Se.Set BeamVRC.reviewRequired reviewRequired | isJust reviewRequired]
+        <> [Se.Set BeamVRC.vehicleVariant variant | isJust variant]
+    )
+    [Se.Is BeamVRC.id (Se.Eq vehicleRegistrationCertificateId)]
+
 findByRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => EncryptedHashedField 'AsEncrypted Text -> m (Maybe VehicleRegistrationCertificate)
 findByRC certNumber = do
   let certNumberHash = certNumber & (.hash)

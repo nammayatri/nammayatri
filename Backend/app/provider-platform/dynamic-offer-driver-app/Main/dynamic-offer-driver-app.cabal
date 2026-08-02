@@ -534,6 +534,7 @@ library
       SharedLogic.DriverOnboarding.Common
       SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.OnboardingFlags.Flow
+      SharedLogic.DriverOnboarding.OnboardingFlags.Guard
       SharedLogic.DriverOnboarding.OnboardingFlags.Types
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
@@ -873,7 +874,6 @@ library
       Storage.Queries.MessageReportExtra
       Storage.Queries.MonetaryRewardConfigExtra
       Storage.Queries.NotificationExtra
-      Storage.Queries.OnboardingCountsExtra
       Storage.Queries.OnboardingList.DriverList
       Storage.Queries.OnboardingList.FleetList
       Storage.Queries.OnboardingList.VehicleList

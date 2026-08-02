@@ -43,8 +43,8 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -136,18 +136,18 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           existingFleetAssocs <- QFDA.findAllByDriverId personId True
           unless (null existingFleetAssocs) $
             throwError (InvalidRequest "Fleet-linked drivers cannot apply an operator referral code; their operator is derived from the fleet")
-          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-          SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
-          DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-          mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId personId dr.driverId False
-          case mbExistingInactiveAssoc of
-            Just existingAssoc -> do
-              now <- getCurrentTime
-              QDOA.updateByPrimaryKey existingAssoc {DDOA.isActive = True, DDOA.associatedOn = Just now, DDOA.updatedAt = now}
-            Nothing -> do
-              driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd True
-              void $ QDOA.create driverOperatorAssData
+          SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver personId) $ do
+            SA.endDriverAssociations merchantOpCityId transporterConfig person
+            DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
+            mbExistingInactiveAssoc <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId personId dr.driverId False
+            case mbExistingInactiveAssoc of
+              Just existingAssoc -> do
+                now <- getCurrentTime
+                QDOA.updateByPrimaryKey existingAssoc {DDOA.isActive = True, DDOA.associatedOn = Just now, DDOA.updatedAt = now}
+              Nothing -> do
+                driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd True
+                void $ QDOA.create driverOperatorAssData
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig
             personId
