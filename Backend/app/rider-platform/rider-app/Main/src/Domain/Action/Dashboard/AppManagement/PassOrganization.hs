@@ -33,7 +33,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime)
+import Kernel.Utils.Common (fork, fromMaybeM, generateGUID, getCurrentTime)
 import qualified Kernel.Utils.Common as Utils
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Merchant as QMerchant
@@ -150,14 +150,17 @@ postPassOrganizationPassDetailsVerify :: (Id.ShortId DMerchant.Merchant -> Conte
 postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
   now <- Utils.getCurrentTime
-  forM_ req.verifications $ \pdV -> do
+  validTill <- DPassDetails.computeValidTill now callerMoc.id
+
+  validated <- forM req.verifications $ \pdV -> do
     pd <- QPassDetails.findById pdV.passDetailsId >>= fromMaybeM (PassDetailsNotFound pdV.passDetailsId.getId)
     unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+    pure (pdV, pd)
+  forM_ validated $ \(pdV, pd) -> do
     let mergedRemark = pdV.remark <|> pd.remark
         mergedNumberOfStages = pdV.numberOfStages <|> pd.numberOfStages
         mergedAcademicYearStart = pdV.academicYearStart <|> pd.academicYearStart
         mergedAcademicYearEnd = pdV.academicYearEnd <|> pd.academicYearEnd
-    validTill <- DPassDetails.computeValidTill now callerMoc.id
     QPassDetails.updateVerificationStatus
       pdV.verificationStatus
       validTill
@@ -166,6 +169,15 @@ postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
       mergedAcademicYearStart
       mergedAcademicYearEnd
       [pdV.passDetailsId]
+
+  let newlyCollegeVerified =
+        [ pd.personId
+          | (pdV, pd) <- validated,
+            pdV.verificationStatus == DPassDetails.CLG_VERIFIED,
+            pd.verificationStatus /= DPassDetails.CLG_VERIFIED
+        ]
+  unless (null newlyCollegeVerified) $
+    fork "notify CLG verified students" $ DPassDetails.notifyStudentPassVerified newlyCollegeVerified
   pure APISuccess.Success
 
 postPassOrganizationUpdate :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DPerson.Person -> PassOrganizationAPI.PassOrganizationUpdateReq -> Environment.Flow APISuccess.APISuccess)

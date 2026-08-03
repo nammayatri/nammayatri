@@ -65,5 +65,6 @@ PassOrganization:
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

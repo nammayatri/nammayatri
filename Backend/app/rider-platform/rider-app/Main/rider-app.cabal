@@ -741,6 +741,7 @@ library
       Storage.Queries.PassCategoryExtra
       Storage.Queries.PassDetailsExtra
       Storage.Queries.PassExtra
+      Storage.Queries.PassOrganizationExtra
       Storage.Queries.PassTypeExtra
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PersonExtra
@@ -1531,6 +1532,7 @@ library
       Storage.Queries.OrphanInstances.Pass
       Storage.Queries.OrphanInstances.PassCategory
       Storage.Queries.OrphanInstances.PassDetails
+      Storage.Queries.OrphanInstances.PassOrganization
       Storage.Queries.OrphanInstances.PassType
       Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person

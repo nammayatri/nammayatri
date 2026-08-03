@@ -12,6 +12,7 @@ module Domain.Action.UI.PassDetails
     parsePassEnum,
     parseVerificationStatus,
     computeValidTill,
+    notifyStudentPassVerified,
   )
 where
 
@@ -22,6 +23,7 @@ import qualified Data.ByteString as BS
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Time
+import Domain.Types.EmptyDynamicParam (EmptyDynamicParam (..))
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DMerchant
@@ -47,6 +49,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types (GeneralVehicleType (..), GetTransitRoutesReq (..), MultiModalLeg, SortingType (..))
 import qualified Kernel.External.MultiModal.OpenTripPlanner.Types as OTPTypes
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Storage.Hedis as Hedis
@@ -58,6 +61,7 @@ import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Person as SLP
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
@@ -70,6 +74,7 @@ import qualified Storage.Queries.PassOrganization as QPassOrganization
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.MultiModal as TMultiModal
+import qualified Tools.Notifications as TNotifications
 
 parsePassEnum :: Kernel.Prelude.Text -> Environment.Flow DPassType.PassEnum
 parsePassEnum "StudentPass" = pure DPassType.StudentPass
@@ -85,18 +90,30 @@ parseVerificationStatus "REJECTED" = pure DPassDetails.REJECTED
 parseVerificationStatus "EXPIRED" = pure DPassDetails.EXPIRED
 parseVerificationStatus _ = Utils.throwError $ InvalidRequest "Invalid verification status"
 
+-- Default page size, and the ceiling a caller can ask for. Kept above any
+-- realistic per-city organization count so clients that send no limit keep
+-- seeing the whole list.
+maxOrganizationsLimit :: Int
+maxOrganizationsLimit = 200
+
 getGetOrganizations ::
   ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
       Id.Id DMerchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Int ->
+    Kernel.Prelude.Maybe Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.Flow [PassDetailsAPI.GetOrganizationResp]
   )
-getGetOrganizations (mbPersonId, _merchantId) passEnumText = do
+getGetOrganizations (mbPersonId, _merchantId) passEnumText mbLimit mbOffset mbSearchString = do
   passEnum <- parsePassEnum passEnumText
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  organizations <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum (DPerson.merchantOperatingCityId person) passEnum
+  let limitVal = min maxOrganizationsLimit $ max 1 (fromMaybe maxOrganizationsLimit mbLimit)
+      offsetVal = max 0 (fromMaybe 0 mbOffset)
+      mbSearch = mbSearchString >>= \searchString -> let trimmed = T.strip searchString in if T.null trimmed then Nothing else Just trimmed
+  organizations <- QPassOrganization.findAllByMerchantOperatingCityIdAndPassEnumWithSearch (DPerson.merchantOperatingCityId person) passEnum mbSearch limitVal offsetVal
   pure $ map mkPassOrganizationResp organizations
 
 mkPassOrganizationResp :: DPassOrganization.PassOrganization -> PassDetailsAPI.GetOrganizationResp
@@ -186,6 +203,23 @@ computeValidTill now moid = do
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) (Just (CQRC.findByMerchantOperatingCityId moid)) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
   let durationDays = maybe 365 (.validityDurationDays) riderConfig.studentPassVerifyConfig
   pure $ Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
+
+studentPassVerifiedPNKey :: Kernel.Prelude.Text
+studentPassVerifiedPNKey = "STUDENT_PASS_CLG_VERIFIED"
+
+newtype StudentPassVerifiedEntityData = StudentPassVerifiedEntityData
+  { notificationKey :: Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON)
+
+notifyStudentPassVerified :: [Id.Id DPerson.Person] -> Environment.Flow ()
+notifyStudentPassVerified personIds = do
+  persons <- QPerson.findAllByPersonIds (map Id.getId personIds)
+  forM_ persons $ \person ->
+    when (isJust person.deviceToken) $ do
+      let entity = Notification.Entity Notification.Product person.id.getId (StudentPassVerifiedEntityData {notificationKey = studentPassVerifiedPNKey})
+          templateParams = [("name", SLP.getName person)]
+      TNotifications.dynamicNotifyPerson person (TNotifications.createNotificationReq studentPassVerifiedPNKey Utils.identity) EmptyDynamicParam entity Nothing templateParams Nothing Nothing
 
 updatePassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPassDetails.PassDetails -> Environment.Flow ()
 updatePassDetail req person passDetail = do
@@ -429,16 +463,19 @@ getPassDetailsData ::
       Id.Id DMerchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.Flow PassDetailsAPI.PassDetailsDataResp
+    Environment.Flow PassDetailsAPI.PassDetailsData
   )
 getPassDetailsData (mbPersonId, _) passEnumText = do
   passEnum <- parsePassEnum passEnumText
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  passDetail <- QPassDetails.findByPersonId person.id passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
-  org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
-  decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
-  pure $ mkPassDetailResp decGuardianMobile passDetail org
+  mbPassDetail <- QPassDetails.findByPersonId person.id passEnum
+  case mbPassDetail of
+    Nothing -> pure $ PassDetailsAPI.PassDetailsData {passDetailsDataResp = Nothing}
+    Just passDetail -> do
+      org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
+      decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
+      pure $ PassDetailsAPI.PassDetailsData {passDetailsDataResp = Just $ mkPassDetailResp decGuardianMobile passDetail org}
 
 mkPassDetailResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
 mkPassDetailResp decGuardianMobile DPassDetails.PassDetails {..} org =

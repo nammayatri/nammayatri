@@ -62,6 +62,8 @@ types:
     validTill: UTCTime
     remark: Maybe Text
 
+  PassDetailsData:
+    passDetailsDataResp: "(Maybe PassDetailsDataResp)"
 
   PassStatusResp:
     verificationStatus: VerificationStatus
@@ -86,6 +88,10 @@ apis:
       auth: TokenAuth
       params:
         passEnum: Text
+      query:
+        searchString: Text
+        limit: Int
+        offset: Int
       response:
         type: "[GetOrganizationResp]"
   - POST:
@@ -103,7 +109,7 @@ apis:
       params:
         passEnum: Text
       response:
-        type: PassDetailsDataResp
+        type: PassDetailsData
   - GET:
       endpoint: /passDetails/{passEnum}/verificationStatus
       auth: TokenAuth

@@ -25,13 +25,18 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text
+  ( TokenAuth :> "getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "searchString"
+           Kernel.Prelude.Text
       :> Get
            '[JSON]
            [API.Types.UI.PassDetails.GetOrganizationResp]
       :<|> TokenAuth
       :> "passDetails"
-      :> Capture "passEnum" Kernel.Prelude.Text
+      :> Capture
+           "passEnum"
+           Kernel.Prelude.Text
       :> "update"
       :> ReqBody
            '[JSON]
@@ -47,7 +52,7 @@ type API =
       :> "data"
       :> Get
            '[JSON]
-           API.Types.UI.PassDetails.PassDetailsDataResp
+           API.Types.UI.PassDetails.PassDetailsData
       :<|> TokenAuth
       :> "passDetails"
       :> Capture
@@ -85,9 +90,12 @@ getGetOrganizations ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.PassDetails.GetOrganizationResp]
   )
-getGetOrganizations a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getGetOrganizations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getGetOrganizations a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getGetOrganizations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postPassDetailsUpdate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -104,7 +112,7 @@ getPassDetailsData ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Environment.FlowHandler API.Types.UI.PassDetails.PassDetailsDataResp
+    Environment.FlowHandler API.Types.UI.PassDetails.PassDetailsData
   )
 getPassDetailsData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
