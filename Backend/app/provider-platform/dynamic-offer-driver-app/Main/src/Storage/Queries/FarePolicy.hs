@@ -73,6 +73,7 @@ update' farePolicy = do
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
       Se.Set BeamFP.rideExtraTimeChargeGracePeriod $ farePolicy.rideExtraTimeChargeGracePeriod,
       Se.Set BeamFP.congestionCharge $ farePolicy.congestionChargeMultiplier,
+      Se.Set BeamFP.fareRecomputeCapEnabled $ farePolicy.fareRecomputeCapEnabled,
       Se.Set BeamFP.description $ farePolicy.description,
       Se.Set BeamFP.updatedAt now
     ]
@@ -150,6 +151,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.rideExtraTimeChargeGracePeriod = rideExtraTimeChargeGracePeriod,
         BeamFP.congestionCharge = congestionChargeMultiplier,
+        BeamFP.fareRecomputeCapEnabled = fareRecomputeCapEnabled,
         BeamFP.perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
         BeamFP.cardChargePerDistanceUnitMultiplier = cardCharge >>= (.perDistanceUnitMultiplier),
         BeamFP.fixedCardCharge = cardCharge >>= (.fixed),
@@ -263,6 +265,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeC
               rideExtraTimeChargeGracePeriod = rideExtraTimeChargeGracePeriod,
               additionalCongestionCharge = 0,
               congestionChargeMultiplier = congestionCharge,
+              fareRecomputeCapEnabled = fareRecomputeCapEnabled,
               perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
               cardCharge =
                 Just $

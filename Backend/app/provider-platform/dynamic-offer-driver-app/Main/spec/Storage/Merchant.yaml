@@ -997,6 +997,8 @@ TransporterConfig:
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
+      fareRecomputeBufferPercent: Maybe Double
+      fareRecomputeBufferAmount: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney

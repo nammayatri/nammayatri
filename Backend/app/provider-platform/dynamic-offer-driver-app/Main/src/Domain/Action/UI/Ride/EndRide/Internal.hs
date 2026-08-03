@@ -294,13 +294,17 @@ processEndRideFinance ::
   TransporterConfig ->
   m ()
 processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
-  -- Compute fare components
-  let totalFare = fromMaybe 0 ride.fare
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+      walletFinanceEnabled = isPrepaidSubscriptionAndWalletEnabled || thresholdConfig.driverWalletConfig.enableDriverWallet
+  let capEnabled = walletFinanceEnabled && fromMaybe False booking.fareRecomputeCapEnabled
+      rawTotalFare = fromMaybe 0 ride.fare
+      cappedTotalFare = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
+      mbFareCap = if capEnabled && cappedTotalFare < rawTotalFare then Just cappedTotalFare else Nothing
+      totalFare = fromMaybe rawTotalFare mbFareCap
       gstAmount = fromMaybe 0 newFareParams.govtCharges
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       parkingAmount = fromMaybe 0 newFareParams.parkingCharge
-      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-      isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+      baseFare = max 0 (totalFare - gstAmount - tollAmount - parkingAmount)
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False thresholdConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       -- When wallet isolation is enabled, scope all prepaid ops to the ride's vehicle category.
       mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (Variant.castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
@@ -326,8 +330,8 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     _ -> pure ()
 
   -- 2. Wallet Flow
-  when (isPrepaidSubscriptionAndWalletEnabled || thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
-    createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
+  when walletFinanceEnabled $ do
+    createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson mbFareCap
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
   AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
@@ -470,8 +474,9 @@ createDriverWalletTransaction ::
   DI.DriverInformation ->
   TransporterConfig ->
   Maybe DP.Person ->
+  Maybe HighPrecMoney -> -- Fare-recompute cap (estimate + buffer), when enabled and exceeded
   m ()
-createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig mbDriver = do
+createDriverWalletTransaction ride booking fareParams driverInfo transporterConfig mbDriver mbFareCap = do
   let isVat = fromMaybe False fareParams.isVatTaxType
       totalFare = fromMaybe 0 ride.fare
       rawTaxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2), pre-discount
@@ -522,7 +527,12 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               vatAbsorbed = rawTaxAmount - postTax
            in (postTax, max 0 (rawBaseFare - customerDiscountAmount), vatAbsorbed)
 
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+  let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+      (holdCounterparty, holdOwnerId) = case ride.fleetOwnerId of
+        Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+        Nothing -> (counterpartyDriver, ride.driverId.getId)
+  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 $ do
+    voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       -- Persist the computed ledger write mode on the booking for reconciliation
@@ -542,7 +552,10 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 BoothOnline -> pure False
                 _ -> pure True
 
-    let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+    let deductionScale = case mbFareCap of
+          Just cap | not isOnline && totalFare > 0 && cap < totalFare -> cap.getHighPrecMoney / totalFare.getHighPrecMoney
+          _ -> 1
+        capDeduction amt = HighPrecMoney (amt.getHighPrecMoney * deductionScale)
 
     let panLinkTdsEnabled = panAadhaarLinkTdsEnabled transporterConfig.taxConfig
         configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
@@ -575,7 +588,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
         pure $ (.totalEarnings) <$> mbStats
     let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate transporterConfig.taxConfig
-        baseFareForTds = max 0 baseFare
+        baseFareForTds = capDeduction (max 0 baseFare)
         mbTdsAmount = do
           rate <- effectiveTdsRate
           let rawAmount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
@@ -771,7 +784,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             then do
               transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
               void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline
-            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash
+            else void $ transfer OwnerLiability GovtIndirect (capDeduction taxAmount) taxRefCash
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
         void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
@@ -860,9 +873,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
-
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 makeDriverLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
 makeDriverLeaderBoardKey leaderBoardType isCached merchantOpCityId fromDate toDate =

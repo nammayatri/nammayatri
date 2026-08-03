@@ -69,6 +69,7 @@ import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
+import SharedLogic.Finance.Wallet (addPrepaidOfferHold, addWalletOfferHold, applyFareRecomputeBuffer, cashWalletCheckEnabled, estimateBufferedStatutoryDeductions, shouldCheckCashWallet)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
@@ -76,6 +77,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -158,6 +160,8 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       else return M.empty
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
+  let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   -- Handle queue skip for timed-out special zone drivers before marking them inactive.
@@ -182,6 +186,14 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
             else searchReq
     let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
+    let holdOwnerId = fromMaybe dPoolRes.driverPoolResult.driverId.getId dPoolRes.driverPoolResult.fleetOwnerId
+    when (cashWalletCheckEnabled transporterConfig.driverWalletConfig && shouldCheckCashWallet searchTry.paymentInstrument) $ do
+      let offerFare = searchTry.baseFare + fromMaybe 0 tripQuoteDetail.govtCharges + fromMaybe 0 tripQuoteDetail.tollCharges + fromMaybe 0 tripQuoteDetail.driverParkingCharge
+          offerDeduction = estimateBufferedStatutoryDeductions transporterConfig.driverWalletConfig transporterConfig.taxConfig (Just offerFare) tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge
+      when (offerDeduction > 0) $ addWalletOfferHold holdOwnerId searchTry.id.getId offerDeduction validTill
+    when isPrepaidEnabled $ do
+      let prepaidOfferHold = applyFareRecomputeBuffer transporterConfig.driverWalletConfig searchTry.baseFare
+      when (prepaidOfferHold > 0) $ addPrepaidOfferHold holdOwnerId searchTry.id.getId prepaidOfferHold validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
     let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData

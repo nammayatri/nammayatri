@@ -722,7 +722,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     paymentMode :: Maybe MP.PaymentMode,
     currentRideTripCategoryValidForForwardBatching :: [Text],
     excludeDriverIds :: [Id DP.Driver],
-    prevAttemptedDriverIds :: [Id DP.Driver]
+    prevAttemptedDriverIds :: [Id DP.Driver],
+    mbSearchTryId :: Maybe Text
   }
 
 calculateDriverPool ::
@@ -762,6 +763,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             paymentInstrument,
             rideFare,
             taxConfig = transporterConfig.taxConfig,
+            driverWalletConfig = transporterConfig.driverWalletConfig,
             excludeDriverIds = excludeDriverIds,
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = poolStage == DriverSelection,
@@ -848,6 +850,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             paymentInstrument,
             rideFare,
             taxConfig = transporterConfig.taxConfig,
+            driverWalletConfig = transporterConfig.driverWalletConfig,
             excludeDriverIds = excludeDriverIds,
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = True,
@@ -866,7 +869,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             isValueAddNP,
             onlinePayment,
             now,
-            paymentMode
+            paymentMode,
+            mbSearchTryId
           }
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
   let totalCandidates = length sortedCandidates

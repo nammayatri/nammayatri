@@ -288,6 +288,7 @@ handler merchantId req validatedReq = do
             billingCategory = billingCategory,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
+            fareRecomputeCapEnabled = mbFarePolicy >>= (.fareRecomputeCapEnabled),
             specialLocationTag = driverQuote.specialLocationTag,
             specialLocationName = searchRequest.specialLocationName,
             specialZoneOtpCode = Nothing,

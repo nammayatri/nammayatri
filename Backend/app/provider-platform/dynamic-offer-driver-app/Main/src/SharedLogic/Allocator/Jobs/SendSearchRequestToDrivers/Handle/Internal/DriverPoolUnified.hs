@@ -241,6 +241,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     paymentMode = searchReq.paymentMode,
                     excludeDriverIds = excludeDriverIds,
                     prevAttemptedDriverIds = prevAttemptedDriverIds,
+                    mbSearchTryId = Just searchTry.id.getId,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -388,6 +389,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         paymentMode = searchReq.paymentMode,
                         excludeDriverIds = [],
                         prevAttemptedDriverIds = [],
+                        mbSearchTryId = Just searchTry.id.getId,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq onRideDrivers poolType currentSearchInfo

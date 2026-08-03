@@ -17,6 +17,7 @@ module SharedLogic.Finance.Prepaid
     getPrepaidAvailableBalanceByOwner,
     getSubscriptionRemainingAvailableBalance,
     createPrepaidHold,
+    findPendingPrepaidHoldByReference,
     voidPrepaidHold,
     creditPrepaidBalance,
     debitPrepaidBalance,
