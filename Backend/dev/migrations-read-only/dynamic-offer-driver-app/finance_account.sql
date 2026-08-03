@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.finance_account ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN description text ;
 ALTER TABLE atlas_driver_offer_bpp.finance_account ADD COLUMN sub_ledger text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_account ALTER COLUMN balance TYPE numeric(30,2);

@@ -76,6 +76,11 @@ LedgerEntry:
 
   sqlType:
     metadataV2: "json"
+    amount: numeric(30,15)
+    fromStartingBalance: numeric(30,15)
+    toStartingBalance: numeric(30,15)
+    fromEndingBalance: numeric(30,15)
+    toEndingBalance: numeric(30,15)
 
   beamType:
     metadataV2: Maybe Value
