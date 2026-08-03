@@ -199,6 +199,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
       Se.Set Beam.passCode passCode,
       Se.Set Beam.passEnum passEnum,
+      Se.Set Beam.passId (Kernel.Types.Id.getId <$> passId),
       Se.Set Beam.passName passName,
       Se.Set Beam.passPhotoMediaId (Kernel.Types.Id.getId <$> passPhotoMediaId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),

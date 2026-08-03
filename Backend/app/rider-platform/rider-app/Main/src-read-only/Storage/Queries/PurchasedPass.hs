@@ -89,6 +89,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
       Se.Set Beam.usedTripCount usedTripCount,
+      Se.Set Beam.vehicleType (Kernel.Prelude.Just vehicleType),
       Se.Set Beam.verificationValidity (Just verificationValidity),
       Se.Set Beam.updatedAt _now
     ]
