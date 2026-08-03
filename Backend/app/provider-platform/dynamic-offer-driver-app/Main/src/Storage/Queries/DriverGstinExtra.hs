@@ -1,6 +1,7 @@
 module Storage.Queries.DriverGstinExtra where
 
 import Domain.Types.DriverGstin
+import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -52,13 +53,14 @@ findGSTInByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Pers
 findGSTInByDriverId personId = do
   findOneWithKV [Se.Is Beam.driverId $ Se.Eq personId.getId]
 
-updateVerificationStatusWithPlaceDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Documents.VerificationStatus -> Maybe Text -> Maybe Text -> Id DP.Person -> m ()
-updateVerificationStatusWithPlaceDetails status mbPincode mbStateName driverId = do
+updateVerificationStatusWithPlaceDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Documents.VerificationStatus -> Maybe Text -> Maybe Text -> Id Image.Image -> Id DP.Person -> m ()
+updateVerificationStatusWithPlaceDetails status mbPincode mbStateName documentImageId1 driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.verificationStatus status,
       Se.Set Beam.pincode mbPincode,
       Se.Set Beam.stateName mbStateName,
+      Se.Set Beam.documentImageId1 documentImageId1.getId,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.driverId $ Se.Eq driverId.getId]
