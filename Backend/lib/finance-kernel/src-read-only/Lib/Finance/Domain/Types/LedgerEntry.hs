@@ -13,10 +13,17 @@ import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.Extra.LedgerEntry as ReExport
 import qualified Lib.Finance.Domain.Types.Extra.LedgerEntry
+import qualified Lib.Finance.Types.ChargeValue
+import qualified Lib.Finance.Types.TaxRate
 import qualified Tools.Beam.UtilsTH
 
 data LedgerEntry = LedgerEntry
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    appliedCommissionValue :: Kernel.Prelude.Maybe Lib.Finance.Types.ChargeValue.ChargeValue,
+    appliedDirectTaxRates :: Kernel.Prelude.Maybe Lib.Finance.Types.TaxRate.TdsRateTable,
+    appliedIndirectTaxDirection :: Kernel.Prelude.Maybe Lib.Finance.Types.TaxRate.IndirectTaxRemittanceDirection,
+    appliedTaxExclusive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    appliedTaxRate :: Kernel.Prelude.Maybe Lib.Finance.Types.ChargeValue.ChargeValue,
     concernedIndividualId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     createdBy :: Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType,

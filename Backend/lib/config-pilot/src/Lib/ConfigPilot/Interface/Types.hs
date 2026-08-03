@@ -118,6 +118,7 @@ data SConfigType (cfg :: ConfigType) where
   SIssueConfigRider :: SConfigType 'IssueConfigRider
   SIssueConfigDriver :: SConfigType 'IssueConfigDriver
   SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
+  SFinanceRefTypeConfig :: SConfigType 'FinanceRefTypeConfig
 
 deriving instance Show (SConfigType cfg)
 

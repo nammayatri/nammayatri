@@ -11,10 +11,19 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Finance.Core.Types
 import qualified Lib.Finance.Domain.Types.LedgerEntry
+import qualified Lib.Finance.Types.ChargeValue
+import qualified Lib.Finance.Types.TaxRate
 import Tools.Beam.UtilsTH
 
 data LedgerEntryT f = LedgerEntryT
   { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    appliedCommissionValueAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    appliedCommissionValueType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Types.ChargeValue.ChargeValueType)),
+    appliedDirectTaxRates :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    appliedIndirectTaxDirection :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Types.TaxRate.IndirectTaxRemittanceDirection)),
+    appliedTaxExclusive :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    appliedTaxRateType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Types.ChargeValue.ChargeValueType)),
+    appliedTaxRateValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     concernedIndividualId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     createdBy :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType)),

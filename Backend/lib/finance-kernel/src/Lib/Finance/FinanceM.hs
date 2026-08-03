@@ -32,7 +32,12 @@ module Lib.Finance.FinanceM
     FinanceCtx (..),
 
     -- * Account Roles
-    AccountRole (..),
+    module Lib.Finance.Types.AccountRole,
+
+    -- * Derivation
+    module Lib.Finance.Posting,
+    module Lib.Finance.Types.RefTypeConfig,
+    module Lib.Finance.Types.ChargeValue,
 
     -- * The Monad
     FinanceM,
@@ -43,6 +48,11 @@ module Lib.Finance.FinanceM
     transfer,
     transfer_,
     transferPending,
+    transferWithTaxAndCommission,
+    transferWithTaxAndCommission_,
+    transferPendingWithTaxAndCommission,
+    TaxTransferResult (..),
+    getKernelRecordedTaxRefs,
     transferAllowZero,
     transferWithoutAttribution,
     getEntryIds,
@@ -68,6 +78,7 @@ where
 import Control.Applicative ((<|>))
 import Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import Control.Monad.State.Strict (MonadState, StateT, gets, modify', runStateT)
+import qualified Data.HashMap.Strict as HM
 import Domain.Types.Invoice (InvoiceType, IssuedToType)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -80,6 +91,7 @@ import Lib.Finance.Core.Types (HasActorInfo)
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsRateReason (..))
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
+import qualified Lib.Finance.Domain.Types.FinanceRefTypeConfig as DRC
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType, IndirectTaxTransaction)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice (Invoice)
@@ -89,7 +101,13 @@ import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, I
 import Lib.Finance.Invoice.Service (createDirectTaxEntry, createIndirectTaxEntry, createInvoice)
 import Lib.Finance.Ledger.Interface (LedgerEntryInput (..))
 import Lib.Finance.Ledger.Service (createEntry, createEntryWithBalanceUpdate)
+import Lib.Finance.Posting
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Finance.Storage.CachedQueries.FinanceRefTypeConfig as CQRefType
+import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
+import Lib.Finance.Types.AccountRole
+import Lib.Finance.Types.ChargeValue
+import Lib.Finance.Types.RefTypeConfig
 
 -- | The financial context for a transaction.
 --   Carried implicitly via ReaderT — no more manual argument threading.
@@ -125,6 +143,18 @@ data FinanceCtx = FinanceCtx
     panOfParty :: Maybe Text,
     panType :: Maybe Text,
     tdsRateReason :: Maybe TdsRateReason,
+    -- | Gates the direct-tax move only. Indirect tax and commission derive
+    --   unconditionally: they replace legs the domain already posts, one for
+    --   one. TDS relocates cohort selection and the s194O threshold out of the
+    --   domain, so it waits for this.
+    refTypeConfigurability :: Bool,
+    -- | Per-driver materialised TDS rate; wins over the cohort lookup so the
+    --   two sources cannot disagree.
+    tdsRateOverride :: Maybe ChargeValue,
+    -- | Lifetime earnings for the s194O threshold gate. The one input that
+    --   changes between postings, which is why it lives here and not in the
+    --   profile.
+    cumulativeEarnings :: Maybe HighPrecMoney,
     emitLedgerEntries :: Bool,
     fromLocationAddress :: Maybe Text,
     issuedToName :: Maybe Text
@@ -156,44 +186,18 @@ data InvoiceConfig = InvoiceConfig
 -- | Accumulated state within a FinanceM computation.
 --   Entry IDs from all transfers are collected automatically.
 data FinanceState = FinanceState
-  { collectedEntryIds :: [Id LE.LedgerEntry]
+  { collectedEntryIds :: [Id LE.LedgerEntry],
+    -- | Resolved once per 'runFinance' block, on first use. 'Nothing' means not
+    --   yet loaded — distinct from a resolved-but-empty profile.
+    refTypeProfile :: Maybe (HM.HashMap Text DRC.FinanceRefTypeConfig),
+    -- | Ref types whose tax transaction this block already wrote, so the
+    --   invoice sweep does not write a second one.
+    kernelRecordedTaxRefs :: [Text]
   }
   deriving (Eq, Show, Generic)
 
 emptyState :: FinanceState
-emptyState = FinanceState {collectedEntryIds = []}
-
--- | Declarative account roles.
---   Instead of calling 10+ separate getOrCreate*Account functions,
---   just say what role you need and the context fills in the details.
-data AccountRole
-  = -- Wallet flow accounts
-    BuyerAsset
-  | BuyerExternal
-  | BuyerControl
-  | BuyerExpense
-  | OwnerLiability
-  | OwnerExpense
-  | OwnerControl
-  | GovtIndirect
-  | GovtDirect
-  | GovtExpense
-  | PlatformAsset
-  | PrepaidOwner
-  | SellerAsset
-  | SellerLiability
-  | SellerRideCredit
-  | SellerRevenue
-  | SellerExpense
-  | GovtDirectAsset
-  | GovtDirectExpense
-  | ParkingFeeRecipient
-  | PGPaymentExpense
-  | PGPaymentLiability
-  | PGPayoutExpense
-  | PGPayoutLiability
-  | PGGstAsset
-  deriving (Eq, Show, Generic)
+emptyState = FinanceState {collectedEntryIds = [], refTypeProfile = Nothing, kernelRecordedTaxRefs = []}
 
 -- | The FinanceM monad transformer.
 --   ReaderT for context threading, StateT for entry ID collection,
@@ -548,7 +552,8 @@ transfer fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                appliedTreatment = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -584,7 +589,8 @@ transferWithoutAttribution fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                appliedTreatment = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -621,7 +627,8 @@ transfer_ fromRole toRole amount refType = do
               metadata = Nothing,
               merchantId = ctx.merchantId,
               merchantOperatingCityId = ctx.merchantOpCityId,
-              settlementStatus = Nothing
+              settlementStatus = Nothing,
+              appliedTreatment = Nothing
             }
     _ <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
     pure ()
@@ -660,7 +667,8 @@ transferPending fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                appliedTreatment = Nothing
               }
       result <- liftFinanceM (createEntry entryInput)
       collectEntryId result.id
@@ -698,7 +706,8 @@ transferAllowZero fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = Nothing,
+                appliedTreatment = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -896,3 +905,176 @@ recordDirectTax config = do
           }
   txn <- lift (createDirectTaxEntry input)
   pure txn.id
+
+-- | What 'transferWithTaxAndCommission' posted, so callers that must mirror it
+--   — the commission reversal at EndRide, for one — can read the amounts off
+--   the result instead of recomputing them.
+data TaxTransferResult = TaxTransferResult
+  { netEntryId :: Maybe (Id LE.LedgerEntry),
+    netAmount :: HighPrecMoney,
+    indirectTaxEntryIds :: [Id LE.LedgerEntry],
+    indirectTaxAmount :: HighPrecMoney,
+    directTaxEntryId :: Maybe (Id LE.LedgerEntry),
+    directTaxAmount :: HighPrecMoney,
+    commissionEntryIds :: [Id LE.LedgerEntry],
+    commissionAmount :: HighPrecMoney
+  }
+  deriving (Eq, Show, Generic)
+
+getKernelRecordedTaxRefs :: (Monad m) => FinanceM m [Text]
+getKernelRecordedTaxRefs = gets (.kernelRecordedTaxRefs)
+
+-- | Resolve the treatment governing this transaction, once per 'runFinance'
+--   block. Prefers what the transaction already posted over the current
+--   catalogue, so a refund expands the way its charge did.
+resolveProfileMemo :: (BeamFlow.BeamFlow m r) => FinanceM m (HM.HashMap Text DRC.FinanceRefTypeConfig)
+resolveProfileMemo =
+  gets (.refTypeProfile) >>= \case
+    Just p -> pure p
+    Nothing -> do
+      ctx <- ask
+      prior <- lift (QLedger.findAllByReferenceId ctx.referenceId)
+      let fromPrior = CQRefType.profileFromEntries prior
+      p <-
+        if HM.null fromPrior
+          then lift (CQRefType.profileFromCatalogue ctx.merchantOpCityId)
+          else pure fromPrior
+      modify' (\st -> st {refTypeProfile = Just p})
+      pure p
+
+-- | Post a charge and everything the catalogue says follows from it: the
+--   indirect-tax leg, the TDS leg, and the commission leg with its own tax.
+--
+--   The amount is gross unless the ref type is configured exclusive. Account
+--   roles stay the caller's: derived legs are rewrites of the pair, never a
+--   pair invented here.
+transferWithTaxAndCommission ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  DerivedRefs ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m TaxTransferResult
+transferWithTaxAndCommission = postDerived LE.SETTLED True
+
+-- | As 'transferWithTaxAndCommission', but nothing is collected onto invoices —
+--   the derived counterpart of 'transfer_'.
+transferWithTaxAndCommission_ ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  DerivedRefs ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m TaxTransferResult
+transferWithTaxAndCommission_ = postDerived LE.SETTLED False
+
+transferPendingWithTaxAndCommission ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  DerivedRefs ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m TaxTransferResult
+transferPendingWithTaxAndCommission = postDerived LE.PENDING True
+
+postDerived ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  LE.EntryStatus ->
+  Bool ->
+  DerivedRefs ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  FinanceM m TaxTransferResult
+postDerived status collectLegs refs fromRole toRole amount refType = do
+  ctx <- ask
+  if amount <= 0 || not ctx.emitLedgerEntries
+    then pure (emptyResult amount)
+    else do
+      profile <- resolveProfileMemo
+      let env =
+            Env
+              { envMode = if ctx.isOnline then Online else Cash,
+                envTdsRateReason = ctx.tdsRateReason,
+                envTdsRateOverride = ctx.tdsRateOverride,
+                envCumulativeEarnings = ctx.cumulativeEarnings
+              }
+          posting = Posting {refType = refType, payer = fromRole, payee = toRole, amount = amount}
+          -- With the flag off the domain still computes and posts TDS itself,
+          -- so dropping the ref here is what stops us posting it twice.
+          refs' = if ctx.refTypeConfigurability then refs else refs {directTaxRef = Nothing}
+          expanded = expandPosting profile env refs' posting
+          legs = if collectLegs then expanded else map (\l -> l {collect = False}) expanded
+          treatment = HM.lookup refType profile
+      posted <- traverse (emitLeg status treatment) legs
+      let pairs = zip legs posted
+          idsOf k = [i | (l, Just i) <- pairs, l.isDerivedTax == k]
+          sumOf k = sum [l.amount | l <- legs, l.isDerivedTax == k]
+      forM_ [l | l <- legs, isJust l.isDerivedTax] $ \l ->
+        modify' (\st -> st {kernelRecordedTaxRefs = l.refType : st.kernelRecordedTaxRefs})
+      pure
+        TaxTransferResult
+          { netEntryId = listToMaybe (idsOf Nothing),
+            netAmount = sumOf Nothing,
+            indirectTaxEntryIds = idsOf (Just IndirectTax),
+            indirectTaxAmount = sumOf (Just IndirectTax),
+            directTaxEntryId = listToMaybe (idsOf (Just DirectTax)),
+            directTaxAmount = sumOf (Just DirectTax),
+            commissionEntryIds = [],
+            commissionAmount = 0
+          }
+  where
+    emptyResult amt =
+      TaxTransferResult
+        { netEntryId = Nothing,
+          netAmount = amt,
+          indirectTaxEntryIds = [],
+          indirectTaxAmount = 0,
+          directTaxEntryId = Nothing,
+          directTaxAmount = 0,
+          commissionEntryIds = [],
+          commissionAmount = 0
+        }
+
+-- | Write one expanded leg through the same single-leg path the primitives use,
+--   stamping the treatment that produced it.
+emitLeg ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  LE.EntryStatus ->
+  Maybe DRC.FinanceRefTypeConfig ->
+  Leg ->
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+emitLeg status treatment leg
+  | leg.amount <= 0 = pure Nothing
+  | otherwise = do
+    ctx <- ask
+    fromAcc <- account leg.from
+    toAcc <- account leg.to
+    let entryInput =
+          LedgerEntryInput
+            { fromAccountId = fromAcc.id,
+              toAccountId = toAcc.id,
+              concernedIndividualId = ctx.concernedIndividualId,
+              amount = leg.amount,
+              currency = ctx.currency,
+              entryType = LE.Expense,
+              status = status,
+              referenceType = leg.refType,
+              referenceId = ctx.referenceId,
+              entityReferenceId = ctx.entityReferenceId,
+              entityReferenceType = ctx.entityReferenceType,
+              metadata = Nothing,
+              merchantId = ctx.merchantId,
+              merchantOperatingCityId = ctx.merchantOpCityId,
+              settlementStatus = Nothing,
+              appliedTreatment = if isJust leg.isDerivedTax then treatment else Nothing
+            }
+    result <-
+      liftFinanceM $
+        if status == LE.PENDING then createEntry entryInput else createEntryWithBalanceUpdate entryInput
+    when leg.collect $ collectEntryId result.id
+    pure (Just result.id)

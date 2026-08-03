@@ -1,0 +1,85 @@
+# Finance Kernel - Ref-Type level tax & commission configuration
+# Namma-DSL YAML specification
+#
+# The catalogue of per-city defaults. What actually governs a posting is the
+# treatment stamped on the transaction's earlier ledger legs; this table is read
+# only when a transaction has none yet.
+
+imports:
+  UTCTime: Kernel.Prelude
+  ChargeValue: Lib.Finance.Types.ChargeValue
+  ChargeValueType: Lib.Finance.Types.ChargeValue
+  Value: Data.Aeson
+  TdsRateTable: Lib.Finance.Types.TaxRate
+  IndirectTaxRemittanceDirection: Lib.Finance.Types.TaxRate
+
+FinanceRefTypeConfig:
+  tableName: finance_ref_type_config
+  derives: "Generic,Show,Eq,ToJSON,FromJSON,ToSchema"
+
+  fields:
+    id: Id FinanceRefTypeConfig
+    merchantId: Text
+    merchantOperatingCityId: Text
+    # stores `show` of the app's reference-type constructor
+    referenceType: Text
+    taxRate: Maybe ChargeValue
+    # False (default) => the amount passed in is gross and tax is carved out of
+    # it. True => the amount is the taxable base and tax rides on top.
+    isTaxExclusive: Bool
+    indirectTaxDirection: Maybe IndirectTaxRemittanceDirection
+    commissionValue: Maybe ChargeValue
+    # [(TdsRateReason, ChargeValue)] plus the s194O threshold; read as a unit
+    # and never filtered on, so it persists as JSON.
+    directTaxRates: Maybe TdsRateTable
+    enabled: Bool
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  beamFields:
+    taxRate:
+      taxRateType: Maybe ChargeValueType
+      taxRateValue: Maybe HighPrecMoney
+    commissionValue:
+      commissionValueType: Maybe ChargeValueType
+      commissionValueAmount: Maybe HighPrecMoney
+
+  fromTType:
+    directTaxRates: directTaxRates >>= Kernel.Utils.JSON.valueToMaybe|E
+    taxRate: Lib.Finance.Types.ChargeValue.mkChargeValue taxRateType taxRateValue|E
+    commissionValue: Lib.Finance.Types.ChargeValue.mkChargeValue commissionValueType commissionValueAmount|E
+
+  toTType:
+    directTaxRates: Data.Aeson.toJSON <$> directTaxRates|E
+    taxRateType: Lib.Finance.Types.ChargeValue.chargeValueType <$> taxRate|E
+    taxRateValue: Lib.Finance.Types.ChargeValue.chargeValueAmount <$> taxRate|E
+    commissionValueType: Lib.Finance.Types.ChargeValue.chargeValueType <$> commissionValue|E
+    commissionValueAmount: Lib.Finance.Types.ChargeValue.chargeValueAmount <$> commissionValue|E
+
+  sqlType:
+    directTaxRates: "json"
+
+  beamType:
+    directTaxRates: Maybe Value
+
+  default:
+    isTaxExclusive: "false"
+    enabled: "true"
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, referenceType]
+      unique: true
+
+  queries:
+    findAllByOpCity:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

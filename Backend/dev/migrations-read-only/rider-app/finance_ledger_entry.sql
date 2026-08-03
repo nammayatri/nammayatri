@@ -76,3 +76,40 @@ CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_entity_reference_id ON atlas_
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN metadata_v2 json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_tax_rate_value double precision ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_tax_rate_type text ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_tax_exclusive boolean ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_indirect_tax_direction text ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_direct_tax_rates json ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_commission_value_type text ;
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN applied_commission_value_amount double precision ;
+DROP INDEX finance_ledger_entry_idx_to_account_id_timestamp;
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_timestamp_to_account_id ON atlas_app.finance_ledger_entry USING btree (timestamp, to_account_id);
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

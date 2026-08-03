@@ -70,7 +70,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
+import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, noDerivedRefs, runFinance, settleEntry, transfer, transferPending, transferPendingWithTaxAndCommission, transferWithTaxAndCommission_, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
@@ -652,11 +652,12 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
           pure $ (.totalEarnings) <$> mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
           cancelIsVat = fromMaybe False booking.fareParams.isVatTaxType
-          -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
-          cancellationTaxDest = if cancelIsVat then OwnerLiability else GovtIndirect
+          -- Both components are written in the Owner shape; the tax component's
+          -- catalogue direction decides whether it stays with the driver (VAT)
+          -- or is redirected to GovtIndirect (GST).
           cancellationComponents =
-            [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
-              (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
+            [ (baseCancellation, walletReferenceCustomerCancellationCharges),
+              (gstOnCancellation, walletReferenceCustomerCancellationGST)
             ]
           mbTdsRate =
             if panAadhaarLinkTdsEnabled transporterConfig.taxConfig
@@ -685,14 +686,17 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
       result <- runFinance ctx $ do
         mapM_
-          ( \(amt, ref, dest) -> do
+          ( \(amt, ref) -> do
               -- Two legs through BuyerExternal (nets to 0), mirroring the online ride-payment ledger.
               void $ transferPending BuyerAsset BuyerExternal amt ref
-              void $ transferPending BuyerExternal dest amt ref
+              void $ transferPendingWithTaxAndCommission noDerivedRefs BuyerExternal OwnerLiability amt ref
           )
           cancellationComponents
-        whenJust mbTdsAmount $ \tdsAmount ->
-          void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+        -- TDS stays the domain's job until the city is flagged on; the kernel
+        -- drops directTaxRef when the flag is off, so this cannot double-post.
+        unless ctx.refTypeConfigurability $
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
         invoice
           InvoiceConfig
             { invoiceType = RideCancellation,
@@ -793,14 +797,10 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
       -- No overdue amounts configured => no reduction: the driver keeps the full fee.
       overdueCharge = fromMaybe cancellationFee (mbCancellationDuesDetails >>= (.overdueCancellationCharge))
       overdueTax = fromMaybe cancellationFeeTax (mbCancellationDuesDetails >>= (.overdueCancellationTax))
-      -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
-      cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
       -- When a cancellation goes overdue the driver only gets the (lower) overdue charge; the
       -- platform keeps the (cancellation - overdue) difference as SellerRevenue.
       overdueBenefit = max 0 (cancellationFee - overdueCharge)
       overdueBenefitTax = max 0 (cancellationFeeTax - overdueTax)
-      -- Benefit tax: VAT portion is the platform's revenue, GST is remitted to govt.
-      overdueBenefitTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then SellerRevenue else GovtIndirect
       -- Only the driver's entries reach a payout, so only these ever carry a settlementStatus.
       overdueDriverRefs = [walletReferenceOverdueCancellationCharge, walletReferenceOverdueCancellationTax]
       overdueAllRefs = overdueDriverRefs <> [walletReferenceCancellationOverdueBenefit, walletReferenceCancellationOverdueBenefitTax]
@@ -832,7 +832,7 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
                 transfer_ BuyerExternal OwnerLiability baseCancellation walletReferenceCustomerCancellationCharges
               when (gstCancellation > 0) $ do
                 transfer_ BuyerAsset BuyerExternal gstCancellation walletReferenceCustomerCancellationGST
-                transfer_ BuyerExternal cancellationTaxDest gstCancellation walletReferenceCustomerCancellationGST
+                void $ transferWithTaxAndCommission_ noDerivedRefs BuyerExternal OwnerLiability gstCancellation walletReferenceCustomerCancellationGST
             case result of
               Left err -> logError $ "Failed to book settled cancellation charge after overdue for bookingId: " <> refId <> " - " <> show err
               Right _ -> logInfo $ "Reversed overdue and booked settled cancellation charge for bookingId: " <> refId <> " base=" <> show baseCancellation <> " tax=" <> show gstCancellation
@@ -849,16 +849,6 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
               then (mbCancellationDuesDetails >>= (.cancellationFee), mbCancellationDuesDetails >>= (.cancellationFeeTax))
               else (overdueCharge <$ mbCancellationDuesDetails, overdueTax <$ mbCancellationDuesDetails)
       whenJust ride.fareParametersId $ QFP.updateCancellationCharges effectiveCancellationFee effectiveCancellationTax
-      let cancelInclusive = fromMaybe 0 effectiveCancellationFee + fromMaybe 0 effectiveCancellationTax
-          cancelServiceVatAmount = case transporterConfig.taxConfig.serviceVatPercentage of
-            Just pct -> HighPrecMoney (cancelInclusive.getHighPrecMoney * (toRational pct / 100))
-            Nothing -> 0
-      when (cancelServiceVatAmount > 0) $ do
-        ctx <- buildCancellationFinanceCtx booking ride transporterConfig
-        result <- runFinance ctx $ void $ transferWithoutAttribution GovtExpense OwnerLiability cancelServiceVatAmount walletReferenceCancellationVATInput
-        case result of
-          Left err -> logError $ "Failed to book cancellation service VAT for bookingId: " <> refId <> " - " <> show err
-          Right _ -> logInfo $ "Booked cancellation service VAT for bookingId: " <> refId <> " amount=" <> show cancelServiceVatAmount
       -- Commission on the settled cancellation fee. The PENDING guard keeps it single: a fee folded
       -- into the next ride's fare is marked PAID and commissioned at EndRide, yet can still reach
       -- this branch afterwards. Never emitted at cancel time — an unpaid fee would leave a Draft
@@ -919,14 +909,14 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
               transfer_ BuyerExternal OwnerLiability overdueCharge walletReferenceOverdueCancellationCharge
             when (overdueTax > 0) $ do
               transfer_ BuyerAsset BuyerExternal overdueTax walletReferenceOverdueCancellationTax
-              transfer_ BuyerExternal cancellationTaxDest overdueTax walletReferenceOverdueCancellationTax
+              void $ transferWithTaxAndCommission_ noDerivedRefs BuyerExternal OwnerLiability overdueTax walletReferenceOverdueCancellationTax
             -- Platform keeps (cancellation - overdue) as SellerRevenue; funded by the customer (BuyerExternal nets to 0).
             when (overdueBenefit > 0) $ do
               transfer_ BuyerAsset BuyerExternal overdueBenefit walletReferenceCancellationOverdueBenefit
               transfer_ BuyerExternal SellerRevenue overdueBenefit walletReferenceCancellationOverdueBenefit
             when (overdueBenefitTax > 0) $ do
               transfer_ BuyerAsset BuyerExternal overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
-              transfer_ BuyerExternal overdueBenefitTaxDest overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
+              void $ transferWithTaxAndCommission_ noDerivedRefs BuyerExternal SellerRevenue overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
           case result of
             Left err -> logError $ "Failed to create overdue cancellation ledger entries: " <> show err
             Right _ -> logInfo $ "Created overdue cancellation ledger entries for bookingId: " <> refId <> " charge=" <> show overdueCharge <> " tax=" <> show overdueTax <> " benefit=" <> show overdueBenefit <> " benefitTax=" <> show overdueBenefitTax

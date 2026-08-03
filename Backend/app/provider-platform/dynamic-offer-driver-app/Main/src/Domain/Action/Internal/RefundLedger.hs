@@ -28,7 +28,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance (AccountRole (..), FinanceCtx (..), runFinance, transfer, transferPending)
+import Lib.Finance (AccountRole (..), DerivedRefs (..), FinanceCtx (..), LegFlow (..), noDerivedRefs, runFinance, transferPendingWithTaxAndCommission, transferWithTaxAndCommission)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
@@ -131,11 +131,15 @@ data PostMode = Pending | Settled
 -- | Post the legs in one finance transaction; throws on failure so the caller redelivers.
 postLegs :: FinanceCtx -> PostMode -> [(AccountRole, AccountRole, HighPrecMoney, Text)] -> Text -> Flow ()
 postLegs ctx mode legs refundRequestId = do
+  -- Refund slices are prorated portions of what was charged, never a fresh
+  -- gross, so nothing is derived here. The catalogue contributes direction
+  -- only: on a refund the government leg is a source, not a destination.
+  let refundRefs = noDerivedRefs {flow = RefundLeg}
   res <- runFinance ctx {entityReferenceId = Just refundRequestId, entityReferenceType = Just LE.RefundRequest} $
     forM_ legs $ \(fromRole, toRole, amount, refType) ->
       void $ case mode of
-        Pending -> transferPending fromRole toRole amount refType
-        Settled -> transfer fromRole toRole amount refType
+        Pending -> transferPendingWithTaxAndCommission refundRefs fromRole toRole amount refType
+        Settled -> transferWithTaxAndCommission refundRefs fromRole toRole amount refType
   case res of
     Left err -> throwError $ InternalError $ "Refund ledger write failed for " <> refundRequestId <> ": " <> show err
     Right _ -> pure ()
@@ -177,7 +181,6 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
     cancellationTotal = fromMaybe 0 req.cancellationComponentTotal
     -- Taxes return to where they sat forward: driver in VAT markets, government in GST.
     cancelTaxDest = if isVatMarket then OwnerLiability else GovtIndirect
-    benefitTaxSource = if isVatMarket then SellerExpense else GovtIndirect
     -- Full precision, no rounding: legs must sum to the component exactly and a full refund must
     -- claw back exactly the charged commission (the commission aggregate nets to zero).
     rideFareLegs comp baseRef vatRef =
@@ -203,7 +206,7 @@ refundLegs deductFromDriver mbCommissionVatPct cancellationCommissionGross (over
             <> [(SellerExpense, BuyerExternal, sliceBase, Wallet.walletReferenceCancellationRefundCommission) | sliceBase > 0]
             <> [(SellerExpense, BuyerExternal, sliceVat, Wallet.walletReferenceCancellationRefundCommissionVAT) | sliceVat > 0]
             <> [(SellerExpense, BuyerExternal, benefitSlice, Wallet.walletReferenceCancellationOverdueBenefitRefund) | benefitSlice > 0]
-            <> [(benefitTaxSource, BuyerExternal, benefitTaxSlice, Wallet.walletReferenceCancellationOverdueBenefitRefundTax) | benefitTaxSlice > 0]
+            <> [(SellerExpense, BuyerExternal, benefitTaxSlice, Wallet.walletReferenceCancellationOverdueBenefitRefundTax) | benefitTaxSlice > 0]
     driverOnlyLegs comp baseRef vatRef =
       [ (OwnerLiability, BuyerExternal, comp.fareAmount, baseRef),
         (OwnerLiability, BuyerExternal, comp.vatAmount, vatRef)

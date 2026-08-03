@@ -18,6 +18,7 @@ import qualified Lib.Finance.Domain.Types.Account
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import qualified Lib.Finance.Storage.Beam.BeamFlow
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as Beam
+import qualified Lib.Finance.Types.ChargeValue
 import qualified Sequelize as Se
 
 create :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry -> m ())
@@ -25,6 +26,9 @@ create = createWithKV
 
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry] -> m ())
 createMany = traverse_ create
+
+findAllByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findAllByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
 findByEntityReference ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -141,6 +145,13 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
+      Se.Set Beam.appliedCommissionValueAmount (Lib.Finance.Types.ChargeValue.chargeValueAmount <$> appliedCommissionValue),
+      Se.Set Beam.appliedCommissionValueType (Lib.Finance.Types.ChargeValue.chargeValueType <$> appliedCommissionValue),
+      Se.Set Beam.appliedDirectTaxRates (Data.Aeson.toJSON <$> appliedDirectTaxRates),
+      Se.Set Beam.appliedIndirectTaxDirection appliedIndirectTaxDirection,
+      Se.Set Beam.appliedTaxExclusive appliedTaxExclusive,
+      Se.Set Beam.appliedTaxRateType (Lib.Finance.Types.ChargeValue.chargeValueType <$> appliedTaxRate),
+      Se.Set Beam.appliedTaxRateValue (Lib.Finance.Types.ChargeValue.chargeValueAmount <$> appliedTaxRate),
       Se.Set Beam.concernedIndividualId concernedIndividualId,
       Se.Set Beam.createdBy createdBy,
       Se.Set Beam.createdById createdById,
@@ -180,6 +191,11 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
       Just
         Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry
           { amount = amount,
+            appliedCommissionValue = Lib.Finance.Types.ChargeValue.mkChargeValue appliedCommissionValueType appliedCommissionValueAmount,
+            appliedDirectTaxRates = appliedDirectTaxRates >>= Kernel.Utils.JSON.valueToMaybe,
+            appliedIndirectTaxDirection = appliedIndirectTaxDirection,
+            appliedTaxExclusive = appliedTaxExclusive,
+            appliedTaxRate = Lib.Finance.Types.ChargeValue.mkChargeValue appliedTaxRateType appliedTaxRateValue,
             concernedIndividualId = concernedIndividualId,
             createdAt = createdAt,
             createdBy = createdBy,
@@ -218,6 +234,13 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
   toTType' (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
     Beam.LedgerEntryT
       { Beam.amount = amount,
+        Beam.appliedCommissionValueAmount = Lib.Finance.Types.ChargeValue.chargeValueAmount <$> appliedCommissionValue,
+        Beam.appliedCommissionValueType = Lib.Finance.Types.ChargeValue.chargeValueType <$> appliedCommissionValue,
+        Beam.appliedDirectTaxRates = Data.Aeson.toJSON <$> appliedDirectTaxRates,
+        Beam.appliedIndirectTaxDirection = appliedIndirectTaxDirection,
+        Beam.appliedTaxExclusive = appliedTaxExclusive,
+        Beam.appliedTaxRateType = Lib.Finance.Types.ChargeValue.chargeValueType <$> appliedTaxRate,
+        Beam.appliedTaxRateValue = Lib.Finance.Types.ChargeValue.chargeValueAmount <$> appliedTaxRate,
         Beam.concernedIndividualId = concernedIndividualId,
         Beam.createdAt = createdAt,
         Beam.createdBy = createdBy,

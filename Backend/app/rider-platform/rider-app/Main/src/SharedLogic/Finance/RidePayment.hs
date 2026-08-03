@@ -159,8 +159,10 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import Data.Foldable.Extra (findM)
 import qualified Data.List as List
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FinanceRefType as DFRT
 import Domain.Types.Invoice (InvoiceType (Ride, RideCancellation))
 import qualified Domain.Types.Invoice as DInvType
 import qualified Domain.Types.Person
@@ -185,78 +187,78 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 -- ---------------------------------------------------------------------------
 
 ridePaymentRefRideFare :: Text
-ridePaymentRefRideFare = "RideFare"
+ridePaymentRefRideFare = RD.rideFinanceRefToText RD.RideFare
 
 ridePaymentRefGST :: Text
-ridePaymentRefGST = "RideGST"
+ridePaymentRefGST = RD.rideFinanceRefToText RD.RideGST
 
 ridePaymentRefPlatformFee :: Text
-ridePaymentRefPlatformFee = "PlatformFee"
+ridePaymentRefPlatformFee = DFRT.financeRefToText DFRT.PlatformFee
 
 ridePaymentRefTip :: Text
-ridePaymentRefTip = "RideTip"
+ridePaymentRefTip = DFRT.financeRefToText DFRT.RideTip
 
 ridePaymentRefCancellationFee :: Text
-ridePaymentRefCancellationFee = "CancellationFee"
+ridePaymentRefCancellationFee = RD.rideFinanceRefToText RD.CancellationFee
 
 ridePaymentRefCancellationGST :: Text
-ridePaymentRefCancellationGST = "CancellationGST"
+ridePaymentRefCancellationGST = RD.rideFinanceRefToText RD.CancellationGST
 
 ridePaymentRefOfferDiscount :: Text
-ridePaymentRefOfferDiscount = "OfferDiscount"
+ridePaymentRefOfferDiscount = DFRT.financeRefToText DFRT.OfferDiscount
 
 ridePaymentRefCashbackPayout :: Text
-ridePaymentRefCashbackPayout = "CashbackPayout"
+ridePaymentRefCashbackPayout = DFRT.financeRefToText DFRT.CashbackPayout
 
 ridePaymentRefCashbackPayoutTransfer :: Text
-ridePaymentRefCashbackPayoutTransfer = "CashbackPayoutTransfer"
+ridePaymentRefCashbackPayoutTransfer = DFRT.financeRefToText DFRT.CashbackPayoutTransfer
 
 ridePaymentRefTollFare :: Text
-ridePaymentRefTollFare = "TollFare"
+ridePaymentRefTollFare = RD.rideFinanceRefToText RD.TollFare
 
 ridePaymentRefTollVAT :: Text
-ridePaymentRefTollVAT = "TollVAT"
+ridePaymentRefTollVAT = RD.rideFinanceRefToText RD.TollVAT
 
 ridePaymentRefParkingCharge :: Text
-ridePaymentRefParkingCharge = "ParkingCharge"
+ridePaymentRefParkingCharge = RD.rideFinanceRefToText RD.ParkingCharge
 
 ridePaymentRefParkingVAT :: Text
-ridePaymentRefParkingVAT = "ParkingVAT"
+ridePaymentRefParkingVAT = RD.rideFinanceRefToText RD.ParkingVAT
 
 -- | Platform-absorbed VAT on the discount portion: BAP funds this via
 --   BuyerExpense → BuyerAsset, and the amount is paid across to the BPP
 --   via the buyer-external path where it settles to the driver under the
 --   BaseRide line.
 ridePaymentRefRideVatOnDiscount :: Text
-ridePaymentRefRideVatOnDiscount = "RideVatOnDiscount"
+ridePaymentRefRideVatOnDiscount = DFRT.financeRefToText DFRT.RideVatOnDiscount
 
 -- Per-component refund reference types. One base + one VAT leg per refunded
 -- component; all-caps VAT matches the ride-side 'TollVAT'.
 ridePaymentRefRideFareRefund :: Text
-ridePaymentRefRideFareRefund = "RideFareRefund"
+ridePaymentRefRideFareRefund = RD.rideFinanceRefToText RD.RideFareRefund
 
 ridePaymentRefRideFareRefundVAT :: Text
-ridePaymentRefRideFareRefundVAT = "RideFareRefundVAT"
+ridePaymentRefRideFareRefundVAT = RD.rideFinanceRefToText RD.RideFareRefundVAT
 
 ridePaymentRefTollRefund :: Text
-ridePaymentRefTollRefund = "TollRefund"
+ridePaymentRefTollRefund = RD.rideFinanceRefToText RD.TollRefund
 
 ridePaymentRefTollRefundVAT :: Text
-ridePaymentRefTollRefundVAT = "TollRefundVAT"
+ridePaymentRefTollRefundVAT = RD.rideFinanceRefToText RD.TollRefundVAT
 
 ridePaymentRefParkingRefund :: Text
-ridePaymentRefParkingRefund = "ParkingRefund"
+ridePaymentRefParkingRefund = RD.rideFinanceRefToText RD.ParkingRefund
 
 ridePaymentRefParkingRefundVAT :: Text
-ridePaymentRefParkingRefundVAT = "ParkingRefundVAT"
+ridePaymentRefParkingRefundVAT = RD.rideFinanceRefToText RD.ParkingRefundVAT
 
 -- Refund of a cancellation fee. Distinct from the charge-side 'CancellationFee' /
 -- 'CancellationGST' — those record the fee, these record giving it back.
 ridePaymentRefCancellationFeeRefund :: Text
-ridePaymentRefCancellationFeeRefund = "CancellationFeeRefund"
+ridePaymentRefCancellationFeeRefund = RD.rideFinanceRefToText RD.CancellationFeeRefund
 
 ridePaymentRefCancellationFeeRefundVAT :: Text
-ridePaymentRefCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
+ridePaymentRefCancellationFeeRefundVAT = RD.rideFinanceRefToText RD.CancellationFeeRefundVAT
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -320,6 +322,9 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       supplierId = Nothing,
       panOfParty = Nothing,
       panType = Nothing,
+      refTypeConfigurability = False,
+      tdsRateOverride = Nothing,
+      cumulativeEarnings = Nothing,
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
       fromLocationAddress = fromLocationAddress,

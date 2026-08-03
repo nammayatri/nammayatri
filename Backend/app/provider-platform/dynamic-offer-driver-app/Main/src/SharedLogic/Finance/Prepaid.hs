@@ -32,6 +32,7 @@ where
 import qualified Data.List as DL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
+import qualified Domain.Types.FinanceRefType as DFRT
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SubscriptionPurchase as DSP
@@ -83,25 +84,25 @@ counterpartyFleetOwner :: CounterpartyType
 counterpartyFleetOwner = FLEET_OWNER
 
 subscriptionPurchaseReferenceType :: Text
-subscriptionPurchaseReferenceType = "SubscriptionPurchase"
+subscriptionPurchaseReferenceType = DFRT.financeRefToText DFRT.SubscriptionPurchase
 
 subscriptionCreditReferenceType :: Text
-subscriptionCreditReferenceType = "SubscriptionCredit"
+subscriptionCreditReferenceType = DFRT.financeRefToText DFRT.SubscriptionCredit
 
 subscriptionRideReferenceType :: Text
-subscriptionRideReferenceType = "RideRevenueRecognition"
+subscriptionRideReferenceType = DFRT.financeRefToText DFRT.RideRevenueRecognition
 
 prepaidRideDebitReferenceType :: Text
-prepaidRideDebitReferenceType = "RideSubscriptionDebit"
+prepaidRideDebitReferenceType = DFRT.financeRefToText DFRT.RideSubscriptionDebit
 
 expiryRevenueRecognitionReferenceType :: Text
-expiryRevenueRecognitionReferenceType = "ExpiryRevenueRecognition"
+expiryRevenueRecognitionReferenceType = DFRT.financeRefToText DFRT.ExpiryRevenueRecognition
 
 expiryCreditTransferReferenceType :: Text
-expiryCreditTransferReferenceType = "ExpiryCreditTransfer"
+expiryCreditTransferReferenceType = DFRT.financeRefToText DFRT.ExpiryCreditTransfer
 
 tdsReimbursementReferenceType :: Text
-tdsReimbursementReferenceType = "TDSReimbursement"
+tdsReimbursementReferenceType = DFRT.financeRefToText DFRT.TDSReimbursement
 
 encodePrepaidSubLedger :: DVC.VehicleCategory -> Text
 encodePrepaidSubLedger = \case
@@ -427,7 +428,8 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                     metadata = metadata,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
+                    settlementStatus = Nothing,
+                    appliedTreatment = Nothing
                   }
           entryRes <- createEntry entryInput
           case entryRes of
@@ -596,7 +598,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           metadata = Nothing,
                           merchantId = merchantId,
                           merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
+                          settlementStatus = Nothing,
+                          appliedTreatment = Nothing
                         }
                 result <- createEntryWithBalanceUpdate gstEntry
                 pure $ either (const Nothing) (Just . (.id)) result
@@ -626,7 +629,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                               metadata = Nothing,
                               merchantId = merchantId,
                               merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
+                              settlementStatus = Nothing,
+                              appliedTreatment = Nothing
                             }
                     result <- createEntryWithBalanceUpdate liabilityEntry
                     pure $ either (const Nothing) (Just . (.id)) result
@@ -658,7 +662,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                               metadata = Nothing,
                               merchantId = merchantId,
                               merchantOperatingCityId = merchantOperatingCityId,
-                              settlementStatus = Nothing
+                              settlementStatus = Nothing,
+                              appliedTreatment = Nothing
                             }
                     result <- createEntryWithBalanceUpdate tdsEntry
                     pure $ either (const Nothing) (Just . (.id)) result
@@ -687,7 +692,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           metadata = metadata,
                           merchantId = merchantId,
                           merchantOperatingCityId = merchantOperatingCityId,
-                          settlementStatus = Nothing
+                          settlementStatus = Nothing,
+                          appliedTreatment = Nothing
                         }
                 result <- createEntryWithBalanceUpdate creditEntry
                 pure $ either (const Nothing) (Just . (.id)) result
@@ -837,7 +843,8 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
                       metadata = Nothing,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
+                      settlementStatus = Nothing,
+                      appliedTreatment = Nothing
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
@@ -987,7 +994,8 @@ handleSubscriptionExpiry purchase = do
                       metadata = Nothing,
                       merchantId = merchantId,
                       merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
+                      settlementStatus = Nothing,
+                      appliedTreatment = Nothing
                     }
             _ <- createEntryWithBalanceUpdate revenueEntry
             pure ()
@@ -1009,7 +1017,8 @@ handleSubscriptionExpiry purchase = do
                     metadata = Nothing,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = Nothing
+                    settlementStatus = Nothing,
+                    appliedTreatment = Nothing
                   }
           _ <- createEntryWithBalanceUpdate creditTransferEntry
           pure ()

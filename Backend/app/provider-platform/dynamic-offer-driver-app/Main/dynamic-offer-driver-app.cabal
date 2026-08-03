@@ -439,6 +439,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
+      Domain.Types.FinanceRefType
       Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.InitiatedBy
@@ -761,6 +762,7 @@ library
       Storage.ConfigPilot.Config.DocumentVerificationConfig
       Storage.ConfigPilot.Config.DriverPoolConfig
       Storage.ConfigPilot.Config.Exophone
+      Storage.ConfigPilot.Config.FinanceRefTypeConfig
       Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig
       Storage.ConfigPilot.Config.GoHomeConfig
       Storage.ConfigPilot.Config.IssueConfig
