@@ -1,0 +1,108 @@
+# local-stack — self-hosted Namma Yatri rider backend
+
+Brings up a **working** rider-app backend (API + Postgres + Redis + Kafka +
+encryption service) in Docker, with a seeded merchant and a test rider, so the
+full login flow works end to end.
+
+```bash
+cd Backend/dev/local-stack
+./setup.sh
+```
+
+First run takes ~10 minutes (it compiles librdkafka). After that, `docker compose up -d`
+starts everything in seconds.
+
+When it finishes you get:
+
+```
+POST /v2/auth                  200  authId=…
+POST /v2/auth/{id}/verify      200  token=…
+POST /v2/serviceability/origin 200  serviceable=true
+*** Backend is fully operational ***
+```
+
+| URL | What |
+|-----|------|
+| `http://localhost:8014/swagger` | Swagger UI — 60 endpoints (**no trailing slash**, see Gotchas) |
+| `http://localhost:8014/openapi` | OpenAPI spec (JSON) |
+| `localhost:5434` | Postgres (`postgres` / `root`, db `atlas_dev`, schema `atlas_app`) |
+
+Demo script for showing it works: `./demo.sh` (or `demo.ps1` on Windows).
+
+---
+
+## Why this exists — three problems it solves
+
+### 1. The current upstream backend cannot be run by outsiders
+
+The database builds fine (421/422 migrations, 252 tables) but comes up **empty**.
+Nothing in the repo inserts a row into `atlas_app.merchant`, and
+`dev/local-testing-data/rider-app.sql` only creates a test rider *per merchant
+that already exists*. Merchants come from `dev/config-sync`, which pulls from
+Namma Yatri's own databases, or from an S3 bundle that returns `AccessDenied`.
+
+So this stack pins upstream commit **`03a7531` (2023-03-02)** — the last
+baseline that is self-contained and seeds a real merchant (`YATRI`).
+
+### 2. The published Docker images are broken
+
+`ghcr.io/nammayatri/nammayatri:*` is Ubuntu 18.04 and ships **librdkafka 0.11
+(Feb 2018)**, but `rider-app-exe` needs >= 1.0 — it calls `rd_kafka_destroy_flags()`,
+which doesn't exist in 0.11, and no newer copy is present anywhere in the image:
+
+```
+rider-app-exe: symbol lookup error: undefined symbol: rd_kafka_destroy_flags
+```
+
+`Dockerfile.rider` fixes this by building librdkafka 1.9.2 from source **on the
+same 18.04 base**. Taking a prebuilt one from a modern distro does not work — it
+pulls in OpenSSL 3 and a newer glibc, and the loader then fails with
+`libpthread.so.0: symbol __libc_vfork ... not defined`.
+
+### 3. Encryption is mandatory, not optional
+
+rider-app encrypts PII (phone numbers) via **passetto**. Without it, every auth
+request returns `500 INTERNAL_ERROR`. `passetto-db` is seeded with the
+pre-generated keys that match the encrypted values in the seed data — that's why
+the test rider's number decrypts correctly (`999...001`).
+
+---
+
+## Gotchas
+
+**Use `/swagger`, not `/swagger/`.** With a trailing slash the page's relative
+asset paths resolve to `/swagger/swagger-ui.css` and 404, leaving a blank page.
+The static files are served from the root, and `swagger-initializer.js` derives
+the spec URL via `window.location.href.replace("/swagger", "/openapi")`.
+
+**Port 8014, not 8013.** rider-app runs with `network_mode: host` (the dhall
+configs hardcode `localhost` for Postgres/Redis/Kafka/passetto). Host-network
+ports aren't forwarded out of the Docker Desktop VM, so a small `socat` proxy
+re-exposes the API on `localhost:8014`.
+
+**Migration ordering.** `setup.sh` applies only the base schema; rider-app runs
+`dev/migrations/rider-app` itself on every startup. Applying them beforehand
+causes `column ... already exists` failures. Test data is loaded *after*
+rider-app has migrated.
+
+---
+
+## Known limitations
+
+- **This is the 2023 baseline, not current `main`.** Running today's backend
+  would need a full Haskell build *and* merchant config we don't have.
+- `GET /v2/profile` returns 500 — it needs a WhatsApp provider and another
+  service that aren't configured. Optional integrations; core flows are fine.
+- Kafka connection warnings in the logs are harmless.
+- No BPP (driver side) — this is the rider platform only, so a search returns no
+  quotes. Enough to validate auth and serviceability.
+
+## Layout
+
+```
+setup.sh            one-shot bring-up / verify / down / clean
+docker-compose.yml  the stack
+Dockerfile.rider    librdkafka fix
+demo.sh, demo.ps1   scripted end-to-end demo
+2023/               pinned upstream tree (fetched by setup.sh, gitignored)
+```

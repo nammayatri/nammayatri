@@ -1,0 +1,108 @@
+# Self-hosted Namma Yatri rider backend (2023 baseline).
+#
+# Networking note: the dhall configs hardcode `localhost` for Postgres, Redis,
+# Kafka and passetto (only the *ports* are env-overridable). Rather than patch
+# the upstream configs, the services that rider-app talks to publish their ports
+# on the Docker host, and rider-app itself runs with network_mode: host so that
+# `localhost` resolves to the same place. `proxy` then re-exposes the API on
+# 8014 so it is reachable from Windows (host-network ports are not forwarded
+# out of the Docker Desktop VM).
+#
+# Run via ./setup.sh — it fetches the pinned upstream tree that ./2023 refers to.
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: ny-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: atlas_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - ny-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d atlas_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: ny-redis
+    ports:
+      - "6379:6379"
+
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: ny-kafka
+    network_mode: host
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:29092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+
+  # Encryption sidecar. rider-app calls this to encrypt/decrypt PII (phone
+  # numbers); without it every auth request fails with a 500.
+  passetto-db:
+    image: postgres:12.3
+    container_name: ny-passetto-db
+    environment:
+      POSTGRES_DB: passetto
+      POSTGRES_USER: passetto
+      POSTGRES_PASSWORD: passetto
+    volumes:
+      # Pre-generated keys that match the encrypted values in the seed data.
+      - ./2023/Backend/dev/sql-seed/passetto-seed.sql:/docker-entrypoint-initdb.d/create_schema.sql:ro
+
+  passetto:
+    image: juspayin/passetto-hs:0b18530
+    container_name: ny-passetto
+    command: demo
+    depends_on:
+      - passetto-db
+    environment:
+      PASSETTO_PG_BACKEND_CONN_STRING: postgresql://passetto:passetto@ny-passetto-db:5432/passetto
+    ports:
+      - "8021:8012"
+
+  rider-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.rider
+    image: ny-rider:patched
+    container_name: ny-rider
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/rider-app-exe"]
+    environment:
+      DB_PRIMARY_PORT: "5434"
+      REDIS_PORT: "6379"
+      KAFKA_BROKER_PORT: "29092"
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # rider-app runs these migrations itself on every startup.
+      - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
+  # rider-app uses host networking, so its port lives inside the Docker VM and
+  # isn't published to Windows. This forwards it to localhost:8014.
+  proxy:
+    image: alpine/socat
+    container_name: ny-proxy
+    command: tcp-listen:8013,fork,reuseaddr tcp-connect:172.17.0.1:8013
+    ports:
+      - "8014:8013"
+    restart: unless-stopped
+
+volumes:
+  ny-pgdata:

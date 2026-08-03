@@ -1,0 +1,47 @@
+# Patched rider-app image.
+#
+# The published image (ghcr.io/nammayatri/nammayatri:03a7531) is Ubuntu 18.04 and
+# ships librdkafka 0.11 (Feb 2018), but rider-app-exe requires >= 1.0 — it calls
+# rd_kafka_destroy_flags(), which does not exist in 0.11. No newer copy exists
+# anywhere in the image, so the binary dies on startup with:
+#
+#   rider-app-exe: symbol lookup error: undefined symbol: rd_kafka_destroy_flags
+#
+# Taking librdkafka from a modern distro doesn't work either: it drags in
+# OpenSSL 3 and a newer glibc, which breaks the loader on 18.04. So build
+# librdkafka from source on the SAME 18.04 base — identical glibc, no ABI
+# conflict, same soname (librdkafka.so.1) — and drop it in.
+
+# ARGs consumed by a FROM must be declared before the first FROM.
+ARG RIDER_IMAGE=ghcr.io/nammayatri/nammayatri:03a7531
+ARG LIBRDKAFKA_VERSION=1.9.2
+
+FROM ubuntu:18.04 AS libbuild
+ARG LIBRDKAFKA_VERSION
+# bionic is EOL; fall back to old-releases if the main archive 404s.
+RUN set -eux; \
+    (apt-get update || (sed -i 's|archive.ubuntu.com|old-releases.ubuntu.com|g; s|security.ubuntu.com|old-releases.ubuntu.com|g' /etc/apt/sources.list && apt-get update)); \
+    apt-get install -y --no-install-recommends \
+        build-essential ca-certificates wget libssl-dev zlib1g-dev libsasl2-dev; \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+# Note: no `#` comments inside this RUN — the line continuations collapse it
+# into a single shell line, so a comment would swallow everything after it.
+# --tries/--timeout guard against flaky network during the build.
+RUN set -eux; \
+    wget -q --tries=5 --timeout=30 --retry-connrefused \
+        "https://github.com/confluentinc/librdkafka/archive/refs/tags/v${LIBRDKAFKA_VERSION}.tar.gz"; \
+    tar xzf "v${LIBRDKAFKA_VERSION}.tar.gz"; \
+    cd "librdkafka-${LIBRDKAFKA_VERSION}"; \
+    ./configure --prefix=/usr; \
+    make -j"$(nproc)"; \
+    make install
+
+# Fail the build early if the symbol we need still isn't there.
+RUN nm -D /usr/lib/librdkafka.so.1 | grep -q rd_kafka_destroy_flags
+
+FROM ${RIDER_IMAGE}
+COPY --from=libbuild /usr/lib/librdkafka.so.1 /usr/lib/x86_64-linux-gnu/librdkafka.so.1
+RUN ldconfig 2>/dev/null || true
+WORKDIR /opt/app
