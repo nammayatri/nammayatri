@@ -40,13 +40,13 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
   - GET: # GetDocumentAPI
-      endpoint: /getDocument/{imageId}
+      endpoint: /getDocument/{entityId}
       auth: ApiAuthV2
       params:
-        imageId: Id Image
+        entityId: Text
       query:
-        documentId: Text
         docType: DocumentType
+        entityType: EntityType
       response:
         type: GetDocumentResponse
       migrate:
@@ -404,10 +404,14 @@ types:
     - medicalCertificate: [Text]
     - commonDocuments: [CommonDocumentItem]
   GetDocumentResponse:
-    - imageBase64: Text
+    - imageBase64: Maybe Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
-    - createdAt: UTCTime
+    - createdAt: Maybe UTCTime
     - commonDocumentData: Maybe Text
+    - rejectReason: Maybe Text
+  EntityType:
+    enum: "ImageEntity,DocumentEntity"
+    derive: "HttpInstance"
   DocumentType:
     - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,DriverInspectionFormImage,TrainingFormImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,BankAccount,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails"
     - derive: "HttpInstance, 'HideSecrets"
