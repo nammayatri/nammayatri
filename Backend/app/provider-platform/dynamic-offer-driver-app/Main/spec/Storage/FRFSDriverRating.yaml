@@ -1,0 +1,49 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+
+FRFSDriverRating:
+  tableName: frfs_driver_rating
+
+  fields:
+    id : Id FRFSDriverRating
+    bookingId : Text
+    driverId : Id Person
+    operatorBadgeToken : Text
+    fleetNumber : Maybe Text
+    gtfsId : Maybe Text
+    driverRatingValue : Maybe Int
+    fleetRatingValue : Maybe Int
+    feedbackDetails : Maybe Text
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+
+  constraints:
+    id: PrimaryKey
+    bookingId: SecondaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findByBookingId:
+      kvFunction: findOneWithKV
+      where:
+        eq: [bookingId]
+
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where:
+        eq: [driverId]
+
+    updateRating:
+      kvFunction: updateOneWithKV
+      params: [driverRatingValue, fleetRatingValue, feedbackDetails, updatedAt]
+      where:
+        and: [id]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

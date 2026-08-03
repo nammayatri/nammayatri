@@ -14,3 +14,13 @@ ALTER TABLE atlas_app.frfs_ticket_booking_feedback ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking_feedback ADD COLUMN feedback_details text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking_feedback ADD COLUMN driver_rating integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking_feedback ADD COLUMN fleet_rating integer ;

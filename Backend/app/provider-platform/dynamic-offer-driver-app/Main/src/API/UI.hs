@@ -30,6 +30,7 @@ import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
+import qualified API.Action.UI.FRFSDriverRatingInternal as FRFSDriverRatingInternal
 import qualified API.Action.UI.FRFSFleetOperator as FRFSFleetOperator
 import qualified API.Action.UI.Faq as Faq
 import qualified API.Action.UI.FareCalculator as FareCalculator
@@ -185,6 +186,7 @@ type API =
            :<|> QueueRank.API
            :<|> Aarokya.API
            :<|> FRFSFleetOperator.API
+           :<|> FRFSDriverRatingInternal.API
        )
 
 handler :: FlowServer API
@@ -264,3 +266,4 @@ handler =
     :<|> QueueRank.handler
     :<|> Aarokya.handler
     :<|> FRFSFleetOperator.handler
+    :<|> FRFSDriverRatingInternal.handler

@@ -41,6 +41,10 @@ data AutocompleteRes = AutocompleteRes {routes :: [FRFSRouteAPI], stops :: [FRFS
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BookingDriverRatingReq = BookingDriverRatingReq {driverRating :: Data.Maybe.Maybe Kernel.Prelude.Int, feedbackDetails :: Data.Maybe.Maybe Data.Text.Text, fleetRating :: Data.Maybe.Maybe Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data BookingFareAcceptedReq = BookingFareAcceptedReq {isFareAccepted :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -70,6 +74,7 @@ data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Data.Text.Text, latency 
 data FRFSBookingFeedbackReq
   = BookingFareAccepted BookingFareAcceptedReq
   | BookingFeedback BookingFeedbackReq
+  | BookingDriverRating BookingDriverRatingReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

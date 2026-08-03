@@ -330,8 +330,13 @@ types:
   BookingFeedbackReq:
     feedbackDetails: Text
 
+  BookingDriverRatingReq:
+    driverRating: Maybe Int
+    fleetRating: Maybe Int
+    feedbackDetails: Maybe Text
+
   FRFSBookingFeedbackReq:
-    enum: "BookingFareAccepted BookingFareAcceptedReq, BookingFeedback BookingFeedbackReq"
+    enum: "BookingFareAccepted BookingFareAcceptedReq, BookingFeedback BookingFeedbackReq, BookingDriverRating BookingDriverRatingReq"
 
   FRFSPossibleStopsReq:
     stationCodes: [Text]

@@ -83,6 +83,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), GimsTripInfo (..), StopInfo (..), StopSchedule (..))
 import qualified SharedLogic.FRFSCancel as FRFSCancel
@@ -101,6 +102,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
+import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.JourneyLeg as CQJourneyLeg
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -1239,16 +1241,19 @@ postFrfsBookingFeedback ::
     Environment.Flow APISuccess.APISuccess
   )
 postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
-  void $ CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
 
-  let (isFareAccepted, feedbackDetails) = case req of
-        API.Types.UI.FRFSTicketService.BookingFareAccepted fareAcceptedReq -> (Just fareAcceptedReq.isFareAccepted, Nothing)
-        API.Types.UI.FRFSTicketService.BookingFeedback feedbackReq -> (Nothing, Just feedbackReq.feedbackDetails)
+  let (isFareAccepted, feedbackDetails, mbDriverRating, mbFleetRating) = case req of
+        FRFSTicketService.BookingFareAccepted fareAcceptedReq -> (Just fareAcceptedReq.isFareAccepted, Nothing, Nothing, Nothing)
+        FRFSTicketService.BookingFeedback feedbackReq -> (Nothing, Just feedbackReq.feedbackDetails, Nothing, Nothing)
+        FRFSTicketService.BookingDriverRating ratingReq -> (Nothing, ratingReq.feedbackDetails, ratingReq.driverRating, ratingReq.fleetRating)
+  whenJust mbDriverRating $ \v -> unless (v >= 1 && v <= 5) $ throwError (InvalidRequest "Driver rating value should be between 1 and 5")
+  whenJust mbFleetRating $ \v -> unless (v >= 1 && v <= 5) $ throwError (InvalidRequest "Fleet rating value should be between 1 and 5")
 
   existingFeedback <- QFRFSTicketBookingFeedback.findByBookingId bookingId
   case existingFeedback of
-    Just _ -> void $ QFRFSTicketBookingFeedback.updateByBookingId isFareAccepted feedbackDetails bookingId
+    Just _ -> void $ QFRFSTicketBookingFeedback.updateByBookingId isFareAccepted feedbackDetails mbDriverRating mbFleetRating bookingId
     Nothing -> do
       feedbackId <- generateGUID
       now <- getCurrentTime
@@ -1258,6 +1263,8 @@ postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
                 bookingId = bookingId,
                 isFareAccepted = isFareAccepted,
                 feedbackDetails = feedbackDetails,
+                driverRating = mbDriverRating,
+                fleetRating = mbFleetRating,
                 merchantId = merchantId,
                 merchantOperatingCityId = booking.merchantOperatingCityId,
                 createdAt = now,
@@ -1265,7 +1272,34 @@ postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
               }
       void $ QFRFSTicketBookingFeedback.create feedback
 
+  case req of
+    FRFSTicketService.BookingDriverRating ratingReq -> forwardShuttleDriverRating merchant booking ratingReq
+    _ -> pure ()
+
   return APISuccess.Success
+
+-- | Forward a shuttle driver rating to dynamic-offer-driver-app (BPP) so it can update the
+-- driver's DriverStats and the bus/fleet aggregate. Skips (with a log) when the boarded
+-- driver is unknown, so the rider's own feedback still persists.
+forwardShuttleDriverRating :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.BookingDriverRatingReq -> Environment.Flow ()
+forwardShuttleDriverRating merchant booking ratingReq =
+  when (isJust ratingReq.driverRating || isJust ratingReq.fleetRating) $
+    case booking.driverId of
+      Nothing -> logWarning $ "FRFS driver rating: booking " <> booking.id.getId <> " has no driverId; skipping BPP forward."
+      Just driverBadge -> do
+        mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
+        let ratingBppReq =
+              CallBPPInternal.FRFSDriverRatingReq
+                { bookingId = booking.id.getId,
+                  driverBadgeToken = driverBadge,
+                  driverRating = ratingReq.driverRating,
+                  fleetRating = ratingReq.fleetRating,
+                  feedbackDetails = ratingReq.feedbackDetails,
+                  fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber,
+                  gtfsId = mbGtfsId,
+                  merchantId = merchant.driverOfferMerchantId
+                }
+        void $ CallBPPInternal.sendFrfsDriverRating merchant.driverOfferApiKey merchant.driverOfferBaseUrl ratingBppReq
 
 tryStationsAPIWithOSRMDistances :: Id Merchant.Merchant -> MerchantOperatingCity -> LatLong -> [FRFSStationAPI] -> DIBC.IntegratedBPPConfig -> Environment.Flow [FRFSStationAPI]
 tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integratedBPPConfig = do

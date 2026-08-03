@@ -317,6 +317,7 @@ library
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FleetDriverAssociation
       Domain.Action.UI.FleetOwnerList
+      Domain.Action.UI.FRFSDriverRatingInternal
       Domain.Action.UI.FRFSFleetOperator
       Domain.Action.UI.Insurance
       Domain.Action.UI.Invoice
@@ -831,6 +832,8 @@ library
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.FleetRcDailyStatsExtra
+      Storage.Queries.FRFSDriverRatingExtra
+      Storage.Queries.FRFSFleetRatingExtra
       Storage.Queries.Geometry
       Storage.Queries.GeometryGeom
       Storage.Queries.HyperVergeVerificationExtra
@@ -1049,6 +1052,7 @@ library
       API.Action.UI.File
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
+      API.Action.UI.FRFSDriverRatingInternal
       API.Action.UI.FRFSFleetOperator
       API.Action.UI.Insurance
       API.Action.UI.Invoice
@@ -1129,6 +1133,7 @@ library
       API.Types.UI.FareCalculator
       API.Types.UI.FinanceInvoice
       API.Types.UI.FleetOwnerList
+      API.Types.UI.FRFSDriverRatingInternal
       API.Types.UI.FRFSFleetOperator
       API.Types.UI.Insurance
       API.Types.UI.Invoice
@@ -1247,6 +1252,8 @@ library
       Domain.Types.FleetRCAssociation
       Domain.Types.FleetRcDailyStats
       Domain.Types.FleetRouteAssociation
+      Domain.Types.FRFSDriverRating
+      Domain.Types.FRFSFleetRating
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
       Domain.Types.HyperVergeSdkLogs
@@ -1433,6 +1440,8 @@ library
       Storage.Beam.FleetRCAssociation
       Storage.Beam.FleetRcDailyStats
       Storage.Beam.FleetRouteAssociation
+      Storage.Beam.FRFSDriverRating
+      Storage.Beam.FRFSFleetRating
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
       Storage.Beam.HyperVergeSdkLogs
@@ -1624,6 +1633,8 @@ library
       Storage.Queries.FleetRCAssociation
       Storage.Queries.FleetRcDailyStats
       Storage.Queries.FleetRouteAssociation
+      Storage.Queries.FRFSDriverRating
+      Storage.Queries.FRFSFleetRating
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
       Storage.Queries.HyperVergeSdkLogs
@@ -1713,6 +1724,8 @@ library
       Storage.Queries.OrphanInstances.FleetOwnerInformation
       Storage.Queries.OrphanInstances.FleetRCAssociation
       Storage.Queries.OrphanInstances.FleetRcDailyStats
+      Storage.Queries.OrphanInstances.FRFSDriverRating
+      Storage.Queries.OrphanInstances.FRFSFleetRating
       Storage.Queries.OrphanInstances.IffcoTokioInsurance
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.IntegratedBPPConfig

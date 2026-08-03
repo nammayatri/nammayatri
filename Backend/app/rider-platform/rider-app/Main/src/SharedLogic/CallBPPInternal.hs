@@ -133,6 +133,49 @@ callCustomerFCM apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callCustomerFCMClient bppRideId (Just apiKey)) "CallCustomerFCM" callCustomerFCMApi
 
+-- FRFS shuttle driver rating: delivered to dynamic-offer-driver-app so it can update the
+-- driver's DriverStats and the bus/fleet aggregate. Field names must match the BPP request type.
+data FRFSDriverRatingReq = FRFSDriverRatingReq
+  { bookingId :: Text,
+    driverBadgeToken :: Text,
+    driverRating :: Maybe Int,
+    fleetRating :: Maybe Int,
+    feedbackDetails :: Maybe Text,
+    fleetNumber :: Maybe Text,
+    gtfsId :: Maybe Text,
+    merchantId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type FrfsDriverRatingAPI =
+  "internal"
+    :> "frfs"
+    :> "driver"
+    :> "rating"
+    :> Header "token" Text
+    :> ReqBody '[JSON] FRFSDriverRatingReq
+    :> Post '[JSON] APISuccess
+
+frfsDriverRatingClient :: Maybe Text -> FRFSDriverRatingReq -> EulerClient APISuccess
+frfsDriverRatingClient = client frfsDriverRatingApi
+
+frfsDriverRatingApi :: Proxy FrfsDriverRatingAPI
+frfsDriverRatingApi = Proxy
+
+sendFrfsDriverRating ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  FRFSDriverRatingReq ->
+  m APISuccess
+sendFrfsDriverRating apiKey internalUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsDriverRatingClient (Just apiKey) req) "SendFrfsDriverRating" frfsDriverRatingApi
+
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Text,
     rating :: Maybe Int,
