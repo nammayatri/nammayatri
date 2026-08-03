@@ -120,3 +120,5 @@ library:
     - base64-bytestring
     - unix
     - beckn-spec
+    - config-pilot
+    - yudhishthira

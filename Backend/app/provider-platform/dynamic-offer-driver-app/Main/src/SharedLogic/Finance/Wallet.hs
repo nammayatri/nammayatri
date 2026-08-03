@@ -158,10 +158,12 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Data.Time as Time
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FinanceRefType as DFRT
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -185,171 +187,171 @@ import Tools.Error (MerchantPaymentMethodError (..))
 -- Reference type constants (PascalCase, abbreviations in all caps)
 
 walletReferenceBaseRide :: Text
-walletReferenceBaseRide = "BaseRide"
+walletReferenceBaseRide = RD.rideFinanceRefToText RD.BaseRide
 
 walletReferenceGSTOnline :: Text
-walletReferenceGSTOnline = "GSTOnline"
+walletReferenceGSTOnline = RD.rideFinanceRefToText RD.GSTOnline
 
 walletReferenceTollCharges :: Text
-walletReferenceTollCharges = "TollCharges"
+walletReferenceTollCharges = RD.rideFinanceRefToText RD.TollCharges
 
 walletReferenceParkingCharges :: Text
-walletReferenceParkingCharges = "ParkingCharges"
+walletReferenceParkingCharges = RD.rideFinanceRefToText RD.ParkingCharges
 
 walletReferenceTDSDeductionOnline :: Text
-walletReferenceTDSDeductionOnline = "TDSDeductionOnline"
+walletReferenceTDSDeductionOnline = RD.rideFinanceRefToText RD.TDSDeductionOnline
 
 walletReferenceGSTCash :: Text
-walletReferenceGSTCash = "GSTCash"
+walletReferenceGSTCash = RD.rideFinanceRefToText RD.GSTCash
 
 walletReferenceTDSDeductionCash :: Text
-walletReferenceTDSDeductionCash = "TDSDeductionCash"
+walletReferenceTDSDeductionCash = RD.rideFinanceRefToText RD.TDSDeductionCash
 
 walletReferenceTopup :: Text
-walletReferenceTopup = "WalletTopup"
+walletReferenceTopup = DFRT.financeRefToText DFRT.WalletTopup
 
 walletReferencePayout :: Text
-walletReferencePayout = "WalletPayout"
+walletReferencePayout = DFRT.financeRefToText DFRT.WalletPayout
 
 walletReferenceDriverCancellationCharges :: Text
-walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
+walletReferenceDriverCancellationCharges = DFRT.financeRefToText DFRT.DriverCancellationCharges
 
 walletReferenceCustomerCancellationCharges :: Text
-walletReferenceCustomerCancellationCharges = "CustomerCancellationCharges"
+walletReferenceCustomerCancellationCharges = RD.rideFinanceRefToText RD.CustomerCancellationCharges
 
 walletReferenceCustomerCancellationGST :: Text
-walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
+walletReferenceCustomerCancellationGST = RD.rideFinanceRefToText RD.CustomerCancellationGST
 
 walletReferenceTDSDeductionCancellation :: Text
-walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
+walletReferenceTDSDeductionCancellation = RD.rideFinanceRefToText RD.TDSDeductionCancellation
 
 walletReferenceOverdueCancellationCharge :: Text
-walletReferenceOverdueCancellationCharge = "OverdueCancellationCharge"
+walletReferenceOverdueCancellationCharge = RD.rideFinanceRefToText RD.OverdueCancellationCharge
 
 walletReferenceOverdueCancellationTax :: Text
-walletReferenceOverdueCancellationTax = "OverdueCancellationTax"
+walletReferenceOverdueCancellationTax = RD.rideFinanceRefToText RD.OverdueCancellationTax
 
 walletReferenceCancellationOverdueBenefit :: Text
-walletReferenceCancellationOverdueBenefit = "CancellationOverdueBenefit"
+walletReferenceCancellationOverdueBenefit = RD.rideFinanceRefToText RD.CancellationOverdueBenefit
 
 walletReferenceCancellationOverdueBenefitTax :: Text
-walletReferenceCancellationOverdueBenefitTax = "CancellationOverdueBenefitTax"
+walletReferenceCancellationOverdueBenefitTax = RD.rideFinanceRefToText RD.CancellationOverdueBenefitTax
 
 walletReferenceCommissionOnline :: Text
-walletReferenceCommissionOnline = "CommissionOnline"
+walletReferenceCommissionOnline = RD.rideFinanceRefToText RD.CommissionOnline
 
 walletReferenceCommissionCash :: Text
-walletReferenceCommissionCash = "CommissionCash"
+walletReferenceCommissionCash = RD.rideFinanceRefToText RD.CommissionCash
 
 walletReferenceCommissionVATOnline :: Text
-walletReferenceCommissionVATOnline = "CommissionVATOnline"
+walletReferenceCommissionVATOnline = RD.rideFinanceRefToText RD.CommissionVATOnline
 
 walletReferenceCommissionVATCash :: Text
-walletReferenceCommissionVATCash = "CommissionVATCash"
+walletReferenceCommissionVATCash = RD.rideFinanceRefToText RD.CommissionVATCash
 
 -- Commission on a cancellation fee (no Online/Cash suffix — matches the cancellation ref family).
 walletReferenceCancellationCommission :: Text
-walletReferenceCancellationCommission = "CancellationCommission"
+walletReferenceCancellationCommission = RD.rideFinanceRefToText RD.CancellationCommission
 
 walletReferenceCancellationCommissionVAT :: Text
-walletReferenceCancellationCommissionVAT = "CancellationCommissionVAT"
+walletReferenceCancellationCommissionVAT = RD.rideFinanceRefToText RD.CancellationCommissionVAT
 
 walletReferenceDeductedAtPaymentByPlatform :: Text
-walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
+walletReferenceDeductedAtPaymentByPlatform = RD.rideFinanceRefToText RD.DeductedAtPaymentByPlatform
 
 walletReferenceVATOnline :: Text
-walletReferenceVATOnline = "VATOnline"
+walletReferenceVATOnline = RD.rideFinanceRefToText RD.VATOnline
 
 walletReferenceVATCash :: Text
-walletReferenceVATCash = "VATCash"
+walletReferenceVATCash = RD.rideFinanceRefToText RD.VATCash
 
 walletReferenceVATInput :: Text
-walletReferenceVATInput = "VATInput"
+walletReferenceVATInput = RD.rideFinanceRefToText RD.VATInput
 
 walletReferenceCancellationVATInput :: Text
-walletReferenceCancellationVATInput = "CancellationVATInput"
+walletReferenceCancellationVATInput = RD.rideFinanceRefToText RD.CancellationVATInput
 
 walletReferenceTips :: Text
-walletReferenceTips = "Tips"
+walletReferenceTips = RD.rideFinanceRefToText RD.Tips
 
 -- | BAP-absorbed customer-visible discount (subsidy paid to driver by BAP).
 --   Split by payment mode so reporting can separate the two flows.
 walletReferenceDiscountsOnline :: Text
-walletReferenceDiscountsOnline = "DiscountsOnline"
+walletReferenceDiscountsOnline = RD.rideFinanceRefToText RD.DiscountsOnline
 
 walletReferenceDiscountsCash :: Text
-walletReferenceDiscountsCash = "DiscountsCash"
+walletReferenceDiscountsCash = RD.rideFinanceRefToText RD.DiscountsCash
 
 walletReferenceD2DReferral :: Text
-walletReferenceD2DReferral = "D2DReferral"
+walletReferenceD2DReferral = DFRT.financeRefToText DFRT.D2DReferral
 
 -- | Reference type for airport booth cash recharge (idempotent by referenceId; booth operator took amount)
 walletReferenceAirportCashRecharge :: Text
-walletReferenceAirportCashRecharge = "AirportCashRecharge"
+walletReferenceAirportCashRecharge = DFRT.financeRefToText DFRT.AirportCashRecharge
 
 -- | Reference type for airport booth cash withdrawal/reversal (debit; idempotent by referenceId)
 walletReferenceAirportCashWithdrawal :: Text
-walletReferenceAirportCashWithdrawal = "AirportCashWithdrawal"
+walletReferenceAirportCashWithdrawal = DFRT.financeRefToText DFRT.AirportCashWithdrawal
 
 -- | Reference type for airport entry fee GST ledger entry at EndRide (third party GST)
 walletReferenceAirportEntryFeeGST :: Text
-walletReferenceAirportEntryFeeGST = "AirportEntryFeeGST"
+walletReferenceAirportEntryFeeGST = DFRT.financeRefToText DFRT.AirportEntryFeeGST
 
 -- | Reference type for airport entry fee (airport portion) ledger entry at EndRide (third party charges)
 walletReferenceAirportEntryFee :: Text
-walletReferenceAirportEntryFee = "AirportEntryFee"
+walletReferenceAirportEntryFee = DFRT.financeRefToText DFRT.AirportEntryFee
 
 walletReferenceWalletIncentive :: Text
-walletReferenceWalletIncentive = "WalletIncentive"
+walletReferenceWalletIncentive = DFRT.financeRefToText DFRT.WalletIncentive
 
 -- Per-component refund refTypes. Same string values as the BAP side
 -- (SharedLogic.Finance.RidePayment) so cap/settlement reconcile across BAP+BPP.
 -- All-caps VAT matches the ride-side 'TollVAT'.
 walletReferenceRideFareRefund :: Text
-walletReferenceRideFareRefund = "RideFareRefund"
+walletReferenceRideFareRefund = RD.rideFinanceRefToText RD.RideFareRefund
 
 walletReferenceRideFareRefundVAT :: Text
-walletReferenceRideFareRefundVAT = "RideFareRefundVAT"
+walletReferenceRideFareRefundVAT = RD.rideFinanceRefToText RD.RideFareRefundVAT
 
 walletReferenceTollRefund :: Text
-walletReferenceTollRefund = "TollRefund"
+walletReferenceTollRefund = RD.rideFinanceRefToText RD.TollRefund
 
 walletReferenceTollRefundVAT :: Text
-walletReferenceTollRefundVAT = "TollRefundVAT"
+walletReferenceTollRefundVAT = RD.rideFinanceRefToText RD.TollRefundVAT
 
 walletReferenceParkingRefund :: Text
-walletReferenceParkingRefund = "ParkingRefund"
+walletReferenceParkingRefund = RD.rideFinanceRefToText RD.ParkingRefund
 
 walletReferenceParkingRefundVAT :: Text
-walletReferenceParkingRefundVAT = "ParkingRefundVAT"
+walletReferenceParkingRefundVAT = RD.rideFinanceRefToText RD.ParkingRefundVAT
 
 -- BPP-only: the platform's commission slice on a Case-2 ride-fare refund.
 walletReferenceRideFareRefundCommission :: Text
-walletReferenceRideFareRefundCommission = "RideFareRefundCommission"
+walletReferenceRideFareRefundCommission = RD.rideFinanceRefToText RD.RideFareRefundCommission
 
 walletReferenceRideFareRefundCommissionVAT :: Text
-walletReferenceRideFareRefundCommissionVAT = "RideFareRefundCommissionVAT"
+walletReferenceRideFareRefundCommissionVAT = RD.rideFinanceRefToText RD.RideFareRefundCommissionVAT
 
 -- Refund of a cancellation fee (driver-side legs).
 walletReferenceCancellationFeeRefund :: Text
-walletReferenceCancellationFeeRefund = "CancellationFeeRefund"
+walletReferenceCancellationFeeRefund = RD.rideFinanceRefToText RD.CancellationFeeRefund
 
 walletReferenceCancellationFeeRefundVAT :: Text
-walletReferenceCancellationFeeRefundVAT = "CancellationFeeRefundVAT"
+walletReferenceCancellationFeeRefundVAT = RD.rideFinanceRefToText RD.CancellationFeeRefundVAT
 
 -- The platform's commission slice given back on a driver-deducted cancellation-fee refund.
 walletReferenceCancellationRefundCommission :: Text
-walletReferenceCancellationRefundCommission = "CancellationRefundCommission"
+walletReferenceCancellationRefundCommission = RD.rideFinanceRefToText RD.CancellationRefundCommission
 
 walletReferenceCancellationRefundCommissionVAT :: Text
-walletReferenceCancellationRefundCommissionVAT = "CancellationRefundCommissionVAT"
+walletReferenceCancellationRefundCommissionVAT = RD.rideFinanceRefToText RD.CancellationRefundCommissionVAT
 
 -- The platform-kept overdue benefit given back on a driver-deducted cancellation-fee refund.
 walletReferenceCancellationOverdueBenefitRefund :: Text
-walletReferenceCancellationOverdueBenefitRefund = "CancellationOverdueBenefitRefund"
+walletReferenceCancellationOverdueBenefitRefund = RD.rideFinanceRefToText RD.CancellationOverdueBenefitRefund
 
 walletReferenceCancellationOverdueBenefitRefundTax :: Text
-walletReferenceCancellationOverdueBenefitRefundTax = "CancellationOverdueBenefitRefundTax"
+walletReferenceCancellationOverdueBenefitRefundTax = RD.rideFinanceRefToText RD.CancellationOverdueBenefitRefundTax
 
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance
@@ -587,6 +589,9 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         supplierId = sId,
         panOfParty = panDecrypted,
         panType = panTypeText,
+        refTypeConfigurability = fromMaybe False transporterConfig.driverWalletConfig.enableRefTypeConfigurability,
+        tdsRateOverride = Nothing,
+        cumulativeEarnings = Nothing,
         tdsRateReason = rateReason,
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
@@ -669,6 +674,11 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         supplierId = Nothing,
         panOfParty = panDecrypted,
         panType = panTypeText,
+        -- No transporterConfig in scope here; TDS derivation stays off for
+        -- this builder, which is the conservative default.
+        refTypeConfigurability = False,
+        tdsRateOverride = Nothing,
+        cumulativeEarnings = Nothing,
         tdsRateReason = rateReason,
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
@@ -743,7 +753,8 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
                     metadata = metadata,
                     merchantId = merchantId,
                     merchantOperatingCityId = merchantOperatingCityId,
-                    settlementStatus = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing
+                    settlementStatus = if delta > 0 && referenceType `elem` walletCreditRefs then Just UNSETTLED else Nothing,
+                    appliedTreatment = Nothing
                   }
           entryRes <- createEntryWithBalanceUpdate entryInput
           case entryRes of

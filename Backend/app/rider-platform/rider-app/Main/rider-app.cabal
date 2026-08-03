@@ -399,6 +399,7 @@ library
       Domain.Types.Extra.TicketBooking
       Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
+      Domain.Types.FinanceRefType
       Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.HotSpot
@@ -680,6 +681,7 @@ library
       Storage.ConfigPilot.Config.BecknConfig
       Storage.ConfigPilot.Config.CancellationReason
       Storage.ConfigPilot.Config.Exophone
+      Storage.ConfigPilot.Config.FinanceRefTypeConfig
       Storage.ConfigPilot.Config.FRFSConfig
       Storage.ConfigPilot.Config.HotSpotConfig
       Storage.ConfigPilot.Config.InsuranceConfig

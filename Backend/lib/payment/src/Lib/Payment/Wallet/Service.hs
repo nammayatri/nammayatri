@@ -173,6 +173,9 @@ mkLoyaltyFinanceCtx wallet refId =
       issuedToName = Nothing,
       panOfParty = Nothing,
       panType = Nothing,
+      refTypeConfigurability = False,
+      tdsRateOverride = Nothing,
+      cumulativeEarnings = Nothing,
       tdsRateReason = Nothing,
       emitLedgerEntries = True
     }

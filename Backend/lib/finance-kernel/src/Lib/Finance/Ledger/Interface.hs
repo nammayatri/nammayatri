@@ -15,6 +15,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Id (Id)
 import Lib.Finance.Domain.Types.Account (Account)
+import Lib.Finance.Domain.Types.FinanceRefTypeConfig (FinanceRefTypeConfig)
 import Lib.Finance.Domain.Types.LedgerEntry (EntityReferenceType, EntryStatus, EntryType, LedgerEntryMetadata, SettlementStatus)
 
 -- | Input for creating a ledger entry
@@ -34,6 +35,10 @@ data LedgerEntryInput = LedgerEntryInput
     metadata :: Maybe LedgerEntryMetadata,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
-    settlementStatus :: Maybe SettlementStatus
+    settlementStatus :: Maybe SettlementStatus,
+    -- | The treatment that produced this leg, when it was derived rather than
+    --   written by hand. Read back by 'resolveProfile' so a later refund
+    --   expands the same way the charge did.
+    appliedTreatment :: Maybe FinanceRefTypeConfig
   }
   deriving (Eq, Show, Generic)

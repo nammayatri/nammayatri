@@ -31,6 +31,9 @@ module Domain.SharedLogic.RideDiscount
     applyRideDiscount,
     parseProjectFareParamsBreakup,
     projectedFareParamTags,
+    RideFinanceRefType (..),
+    rideFinanceRefToText,
+    rideFinanceRefFromText,
     isProjectedFareParamTag,
   )
 where
@@ -185,3 +188,69 @@ parseProjectFareParamsBreakup pairs =
                 parkingChargeTax = get "PARKING_CHARGE_TAX"
               }
         else Nothing
+
+-- | Ride-lifecycle finance reference types, shared by BAP and BPP.
+--
+--   Kept here beside 'ProjectFareParamsBreakup' so the wire contract — the
+--   breakup, its tag names and the ref types that key it — lives in one
+--   module. Constructor names are byte-identical to the string literals they
+--   replace, so @show@ is the storage encoding and no historical ledger row
+--   changes meaning.
+data RideFinanceRefType
+  = BaseRide
+  | CancellationCommission
+  | CancellationCommissionVAT
+  | CancellationFee
+  | CancellationFeeRefund
+  | CancellationFeeRefundVAT
+  | CancellationGST
+  | CancellationOverdueBenefit
+  | CancellationOverdueBenefitRefund
+  | CancellationOverdueBenefitRefundTax
+  | CancellationOverdueBenefitTax
+  | CancellationRefundCommission
+  | CancellationRefundCommissionVAT
+  | CancellationVATInput
+  | CommissionCash
+  | CommissionOnline
+  | CommissionVATCash
+  | CommissionVATOnline
+  | CustomerCancellationCharges
+  | CustomerCancellationGST
+  | DeductedAtPaymentByPlatform
+  | DiscountsCash
+  | DiscountsOnline
+  | GSTCash
+  | GSTOnline
+  | OverdueCancellationCharge
+  | OverdueCancellationTax
+  | ParkingCharge
+  | ParkingCharges
+  | ParkingRefund
+  | ParkingRefundVAT
+  | ParkingVAT
+  | RideFare
+  | RideFareRefund
+  | RideFareRefundCommission
+  | RideFareRefundCommissionVAT
+  | RideFareRefundVAT
+  | RideGST
+  | TDSDeductionCancellation
+  | TDSDeductionCash
+  | TDSDeductionOnline
+  | Tips
+  | TollCharges
+  | TollFare
+  | TollRefund
+  | TollRefundVAT
+  | TollVAT
+  | VATCash
+  | VATInput
+  | VATOnline
+  deriving (Eq, Ord, Show, Read, Generic, Bounded, Enum, ToJSON, FromJSON, ToSchema)
+
+rideFinanceRefToText :: RideFinanceRefType -> Text
+rideFinanceRefToText = show
+
+rideFinanceRefFromText :: Text -> Maybe RideFinanceRefType
+rideFinanceRefFromText = readMaybe . toString

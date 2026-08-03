@@ -54,7 +54,8 @@ parseDriverWalletConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m Driver
 parseDriverWalletConfig merchantOperatingCityId mbVal = do
   let def =
         DriverWalletConfig
-          { enableDriverWallet = False,
+          { enableRefTypeConfigurability = Nothing,
+            enableDriverWallet = False,
             driverWalletPayoutThreshold = 0,
             gstPercentage = 0.0,
             enableWalletPayout = False,

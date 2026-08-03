@@ -93,7 +93,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
+import Lib.Finance (AccountRole (..), DerivedRefs (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, noDerivedRefs, runFinance, transfer, transferWithTaxAndCommission, transfer_)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -582,19 +582,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               gatedAmount = applyThresholdBenefit transporterConfig.taxConfig mbCumulativeEarnings mbPanCard baseFareForTds rawAmount
           if gatedAmount > 0 then Just gatedAmount else Nothing
 
-    let serviceVatAmount =
-          case transporterConfig.taxConfig.serviceVatPercentage of
-            Just pct
-              | isVat ->
-                let baseForServiceVat =
-                      if isOnline
-                        then case mbProjectedBreakup of
-                          Just b -> RD.projectFareParamsBreakupTotal b - commissionAmount
-                          Nothing -> totalFare - commissionAmount
-                        else max 0 (customerDiscountAmount - commissionAmount)
-                 in HighPrecMoney (baseForServiceVat.getHighPrecMoney * (toRational pct / 100))
-            _ -> HighPrecMoney 0.0
-
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
@@ -618,22 +605,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                           isExternalCharge = isExt,
                           groupId = Just gId,
                           itemType = Just ty
-                        }
-                  else Nothing
-              -- Standalone Fare line, no Tax pair (groupId = Nothing).
-              mkStandaloneFare desc descType amt =
-                if amt > 0
-                  then
-                    Just
-                      InvoiceLineItem
-                        { description = desc,
-                          descriptionType = Just descType,
-                          quantity = 1,
-                          unitPrice = amt,
-                          lineTotal = amt,
-                          isExternalCharge = False,
-                          groupId = Nothing,
-                          itemType = Just Fare
                         }
                   else Nothing
               -- Adjustment line (Tip positive / Platform Commission negative).
@@ -668,14 +639,12 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                       mkPair "g-parking" Fare True "Parking Charges" ParkingCharges parkingAmount,
                       mkPair "g-parking" Tax True "Parking Charges Tax" ParkingChargesTax parkingVatAmount
                     ]
-              showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
                 [ mkAdjustment "Tip" Tip tipAmount,
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionBaseAmount),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Commission VAT" PlatformCommissionTax (negate commissionVatAmount),
                   if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission" CancellationCommission (negate cancellationCommissionBase),
-                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat),
-                  if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Cancellation Commission VAT" CancellationCommissionTax (negate cancellationCommissionVat)
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         rideGstBreakdown =
@@ -749,34 +718,31 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 transfer_ BuyerAsset BuyerExternal amt ref
                 void $ transfer BuyerExternal OwnerLiability amt ref
               else void $ transfer BuyerControl OwnerControl amt ref
-      if isVat
-        then do
-          let rideEarningComponents =
-                [ (baseFare, walletReferenceBaseRide),
-                  (taxAmount, if isOnline then taxRefOnline else taxRefCash),
-                  (tollWithVat, walletReferenceTollCharges),
-                  (parkingWithVat, walletReferenceParkingCharges)
-                ]
-          forM_ rideEarningComponents postEarning
-        else do
-          let rideEarningComponents =
-                [ (baseFare, walletReferenceBaseRide),
-                  (tollWithVat, walletReferenceTollCharges),
-                  (parkingWithVat, walletReferenceParkingCharges)
-                ]
-          forM_ rideEarningComponents postEarning
-          -- GST tax: online → BAP routes customer's GST to govt via BPP (2-leg);
-          --          cash   → driver remits cash-collected GST from wallet.
-          if isOnline
-            then do
-              transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
-              void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline
-            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash
-      -- TDS — driver wallet reduces in both modes (cash driver owes platform).
-      whenJust mbTdsAmount $ \tdsAmount ->
-        void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
-      when (isVat && serviceVatAmount > 0) $
-        void $ transferWithoutAttribution GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
+      -- The fare components are the same in both regimes. The tax component is
+      -- written in the Owner shape and its catalogue direction decides where it
+      -- lands: with the driver under VAT, redirected to GovtIndirect under GST.
+      -- That is what the old `if isVat` split was doing by hand.
+      let rideEarningComponents =
+            [ (baseFare, walletReferenceBaseRide),
+              (tollWithVat, walletReferenceTollCharges),
+              (parkingWithVat, walletReferenceParkingCharges)
+            ]
+      forM_ rideEarningComponents postEarning
+      when (taxAmount > 0) $ do
+        let taxRef = if isOnline then taxRefOnline else taxRefCash
+        when isOnline $ transfer_ BuyerAsset BuyerExternal taxAmount taxRef
+        void $
+          transferWithTaxAndCommission
+            noDerivedRefs
+            (if isOnline then BuyerExternal else BuyerControl)
+            (if isOnline then OwnerLiability else OwnerControl)
+            taxAmount
+            taxRef
+      -- TDS stays the domain's job until the city is flagged on; the kernel
+      -- drops directTaxRef when the flag is off, so this cannot double-post.
+      unless ctx.refTypeConfigurability $
+        whenJust mbTdsAmount $ \tdsAmount ->
+          void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
@@ -840,13 +806,23 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 periodEnd = Nothing
               }
       commissionResult <- runFinance ctx $ do
-        void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef
-        when (commissionVatAmount > 0) $
-          void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef
-        when (cancellationCommissionBase > 0) $
-          void $ transfer OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission
-        when (cancellationCommissionVat > 0) $
-          void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT
+        -- Commission is posted gross; the catalogue splits out its own tax and
+        -- names the VAT leg, so splitGrossByVatPct is no longer needed here.
+        void $
+          transferWithTaxAndCommission
+            noDerivedRefs {indirectTaxRef = Just commissionVatRef}
+            OwnerLiability
+            SellerRevenue
+            commissionAmount
+            commissionRef
+        when (cancellationCommissionAmount > 0) $
+          void $
+            transferWithTaxAndCommission
+              noDerivedRefs {indirectTaxRef = Just walletReferenceCancellationCommissionVAT}
+              OwnerLiability
+              SellerRevenue
+              cancellationCommissionAmount
+              walletReferenceCancellationCommission
         -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
         when shouldReverseCommissionWalletDebit $ do
           void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform

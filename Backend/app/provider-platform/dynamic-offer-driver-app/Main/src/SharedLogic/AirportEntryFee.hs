@@ -33,11 +33,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
-  ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
+  ( AccountRole (OwnerLiability, ParkingFeeRecipient),
     CounterpartyType (DRIVER),
+    DerivedRefs (..),
     FinanceCtx (..),
+    noDerivedRefs,
     runFinance,
-    transfer,
+    transferWithTaxAndCommission,
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -120,12 +122,9 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     -- Derive the mode from the booking's payment method rather than hardcoding.
     isOnline <- Wallet.resolveIsOnlineFromBooking booking
-    let gstBreakup =
-          fromMaybe transporterConfig.taxConfig.rideGst transporterConfig.taxConfig.airportEntryFeeGst
-        gstRate = fromMaybe 0 (FareCalculator.computeTotalGstRate gstBreakup)
-        airportPortion = if gstRate >= 0 then totalFee / (1 + realToFrac gstRate) else totalFee
-        gstAmount = totalFee - airportPortion
-        ctx =
+    -- The fee is quoted GST-inclusive; the catalogue splits it and routes the
+    -- tax, so the manual (1 + rate) division is gone.
+    let ctx =
           FinanceCtx
             { merchantId = booking.providerId.getId,
               merchantOpCityId = booking.merchantOperatingCityId.getId,
@@ -149,6 +148,9 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
               supplierId = Nothing,
               panOfParty = Nothing,
               panType = Nothing,
+              refTypeConfigurability = False,
+              tdsRateOverride = Nothing,
+              cumulativeEarnings = Nothing,
               tdsRateReason = Nothing,
               emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
               fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
@@ -157,8 +159,17 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
     result <-
       runFinance ctx $
         do
-          void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST
-          void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee
+          -- The fee is quoted GST-inclusive, so one gross posting: the
+          -- catalogue splits it and CompanyDirect routes the tax to
+          -- GovtIndirect. With no catalogue row this is a single leg for
+          -- 'totalFee', which is why the manual split below still runs.
+          void $
+            transferWithTaxAndCommission
+              noDerivedRefs {indirectTaxRef = Just Wallet.walletReferenceAirportEntryFeeGST}
+              OwnerLiability
+              ParkingFeeRecipient
+              totalFee
+              Wallet.walletReferenceAirportEntryFee
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()

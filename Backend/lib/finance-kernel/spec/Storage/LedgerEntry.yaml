@@ -2,6 +2,10 @@
 # Namma-DSL YAML specification
 
 imports:
+  ChargeValue: Lib.Finance.Types.ChargeValue
+  ChargeValueType: Lib.Finance.Types.ChargeValue
+  TdsRateTable: Lib.Finance.Types.TaxRate
+  IndirectTaxRemittanceDirection: Lib.Finance.Types.TaxRate
   UTCTime: Kernel.Prelude
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
@@ -62,6 +66,14 @@ LedgerEntry:
     toEndingBalance: Maybe HighPrecMoney
     merchantId: Text
     merchantOperatingCityId: Text
+    # The treatment that produced this leg, stamped at post time so a refund
+    # months later expands the same way the charge did. Null on legs that were
+    # not derived, and on every row written before this existed.
+    appliedTaxRate: Maybe ChargeValue
+    appliedTaxExclusive: Maybe Bool
+    appliedIndirectTaxDirection: Maybe IndirectTaxRemittanceDirection
+    appliedCommissionValue: Maybe ChargeValue
+    appliedDirectTaxRates: Maybe TdsRateTable
     settlementStatus: Maybe SettlementStatus
     settlementId: Maybe Text
     settlementTimestamp: Maybe UTCTime
@@ -76,15 +88,33 @@ LedgerEntry:
 
   sqlType:
     metadataV2: "json"
+    appliedDirectTaxRates: "json"
+
+  beamFields:
+    appliedTaxRate:
+      appliedTaxRateType: Maybe ChargeValueType
+      appliedTaxRateValue: Maybe HighPrecMoney
+    appliedCommissionValue:
+      appliedCommissionValueType: Maybe ChargeValueType
+      appliedCommissionValueAmount: Maybe HighPrecMoney
 
   beamType:
     metadataV2: Maybe Value
+    appliedDirectTaxRates: Maybe Value
 
   fromTType:
     metadataV2: metadataV2 >>= Kernel.Utils.JSON.valueToMaybe|E
+    appliedDirectTaxRates: appliedDirectTaxRates >>= Kernel.Utils.JSON.valueToMaybe|E
+    appliedTaxRate: Lib.Finance.Types.ChargeValue.mkChargeValue appliedTaxRateType appliedTaxRateValue|E
+    appliedCommissionValue: Lib.Finance.Types.ChargeValue.mkChargeValue appliedCommissionValueType appliedCommissionValueAmount|E
 
   toTType:
     metadataV2: Data.Aeson.toJSON <$> metadataV2|E
+    appliedDirectTaxRates: Data.Aeson.toJSON <$> appliedDirectTaxRates|E
+    appliedTaxRateType: Lib.Finance.Types.ChargeValue.chargeValueType <$> appliedTaxRate|E
+    appliedTaxRateValue: Lib.Finance.Types.ChargeValue.chargeValueAmount <$> appliedTaxRate|E
+    appliedCommissionValueType: Lib.Finance.Types.ChargeValue.chargeValueType <$> appliedCommissionValue|E
+    appliedCommissionValueAmount: Lib.Finance.Types.ChargeValue.chargeValueAmount <$> appliedCommissionValue|E
 
   constraints:
     id: PrimaryKey
@@ -105,6 +135,10 @@ LedgerEntry:
       kvFunction: findAllWithKV
       where:
         and: [referenceType, referenceId]
+
+    findAllByReferenceId:
+      kvFunction: findAllWithKV
+      where: referenceId
 
     findByEntityReference:
       kvFunction: findAllWithKV

@@ -51,7 +51,8 @@ let
           if svc == "db-manager-backend"
           then "reverse_proxy ${addr} {\n\t\t\theader_up -Origin\n\t\t}"
           else "reverse_proxy ${addr}";
-      in "\thandle_path /${svc}/* {\n\t\t${proxy}\n\t}\n"
+      in
+      "\thandle_path /${svc}/* {\n\t\t${proxy}\n\t}\n"
     else
     # builtins.trace prints to stderr at eval time, mirroring the old
     # `echo "  WARN: skipping $svc — not in ports file" >&2`.
