@@ -155,8 +155,7 @@ driverInfoScoped merchant opCity driverInfo =
 --   NULL / False, so a lapsed row cannot satisfy a fleetOwnerId filter.
 fleetAssocMatches :: UTCTime -> DriverListFilters -> BeamFDA.FleetDriverAssociationT (B.QGenExpr B.QValueContext Postgres s) -> B.QGenExpr B.QValueContext Postgres s Bool
 fleetAssocMatches now f fda =
-  fda.isActive B.==. B.val_ True
-    B.&&. fda.associatedTill B.>. B.val_ (Just now)
+  fda.associatedTill B.>. B.val_ (Just now)
     B.&&. maybe (B.val_ True) (\fleetOwnerId -> fda.fleetOwnerId B.==. B.val_ fleetOwnerId) f.dlfFleetOwnerId
 
 vehicleMatches :: Merchant -> DMOC.MerchantOperatingCity -> DriverListFilters -> BeamV.VehicleT (B.QGenExpr B.QValueContext Postgres s) -> B.QGenExpr B.QValueContext Postgres s Bool
