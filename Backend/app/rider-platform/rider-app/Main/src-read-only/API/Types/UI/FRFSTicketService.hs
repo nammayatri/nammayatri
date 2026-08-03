@@ -275,6 +275,14 @@ data FRFSRefundAttemptAPI = FRFSRefundAttemptAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSRescheduleReq = FRFSRescheduleReq {offered :: Data.Maybe.Maybe [FRFSRescheduleSeatReq], tripId :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRescheduleSeatReq = FRFSRescheduleSeatReq {category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType, seatIds :: [(Kernel.Types.Id.Id Domain.Types.Seat.Seat)]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSRouteAPI = FRFSRouteAPI
   { code :: Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,

@@ -141,6 +141,14 @@ types:
     tripId: Maybe Text
     isSpotBooking: Maybe Bool
 
+  FRFSRescheduleSeatReq:
+    category: FRFSQuoteCategoryType
+    seatIds: [(Id Seat)]
+
+  FRFSRescheduleReq:
+    tripId: Text
+    offered: Maybe [FRFSRescheduleSeatReq]
+
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
     description: Text
@@ -674,6 +682,17 @@ apis:
       auth: TokenAuth
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  # Reschedule a confirmed reserved-seat booking to another trip on the same route/stops, same fare
+  - POST:
+      endpoint: /frfs/booking/{bookingId}/reschedule
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSRescheduleReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
   # Booking Cancel Status
   - GET:
