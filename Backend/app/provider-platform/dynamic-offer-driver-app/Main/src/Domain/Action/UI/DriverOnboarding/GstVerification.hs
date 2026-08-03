@@ -329,7 +329,7 @@ onVerifyGstHandler person imageId1 imageId2 output = do
       legalNameMissing = isFleet && isNothing mbLegalName
       verificationStatus = if isActive && not legalNameMissing then Documents.VALID else Documents.INVALID
       mbPrincipalAddr = output.principalPlaceOfBusinessFields
-  DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) person.id
+  DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) imageId1 person.id
   when isFleet $ do
     QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id
     when (verificationStatus == Documents.VALID) $ QFOI.updateFleetName mbLegalName person.id
