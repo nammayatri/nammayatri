@@ -498,6 +498,42 @@ endpoints:
 
 actions:
   driver:
+    - name: updateOnboardingAs (dashboard)
+      method: POST
+      path: /{requestorId}/{driverId}/fleet/driver/update
+      handler: Domain/Action/Dashboard/Fleet/Driver.hs:postDriverFleetDriverUpdate
+      purpose: |
+        Dashboard write of DriverInformation.onboardingAs (INDIVIDUAL / FLEET_DRIVER). Routed
+        through the one shared writer SGuard.setOnboardingAs, so both surfaces get the same
+        guard and the same validation.
+      request:
+        onboardingAs: Maybe Common.OnboardingAs -- cast via castCommonOnboardingAsToDomain
+      pre_validation: |
+        withOnboardingAction Link / TargetDriver (association guards on every city, flag-state
+        preconditions under the unified flag), plus: the driver must NOT be enabled --
+        an enabled driver 400s with "onboardingAs cannot be changed while the driver is enabled".
+        Rationale: the documents a driver onboarded with are role-specific, so the role may only
+        be set while they are still pre-enable.
+      writes: DriverInformation.onboardingAs
+      post_validation: driver
+
+    - name: updateOnboardingAs (driver app / UI)
+      method: POST
+      path: /driver/profile
+      handler: Domain/Action/UI/Driver.hs:updateDriver
+      purpose: driver-app profile update carrying onboardingAs; same shared writer as the dashboard.
+      request:
+        onboardingAs: Maybe DriverInfo.OnboardingAs
+      pre_validation: identical to the dashboard entry -- SGuard.setOnboardingAs is the only writer.
+      writes: DriverInformation.onboardingAs
+      post_validation: driver
+      note: |
+        The recompute settles onboardingAs itself on the enabled false -> true transition: an
+        active fleet association makes the driver FLEET_DRIVER, and an existing FLEET_DRIVER is
+        never downgraded to INDIVIDUAL when the association ends, since they may be relinked to
+        another fleet with the same fleet-driver documents. That settle is the derivation, not a
+        user action, so it writes directly rather than through setOnboardingAs.
+
     - name: enable
       method: POST
       path: /driver/{driverId}/enable
@@ -601,6 +637,71 @@ actions:
       pre_validation: fleet owner enabled (checkFleetOwnerVerification); driver not already associated
       writes: creates FleetDriverAssociation
       post_validation: driver
+
+    - name: linkToFleet (request)
+      method: POST
+      path: /driver/linkToFleet
+      handler: Domain/Action/UI/DriverOnboardingV2.hs:postDriverLinkToFleet
+      purpose: |
+        Driver-app (UI) side of the fleet-join handshake. The driver asks to join a fleet; the
+        request lands as an inactive FleetDriverAssociation carrying requestReason, which is
+        exactly what the dashboard approveDriver arms look for as their pending request.
+      request:
+        fleetOwnerId: Text
+        requestReason: Maybe Text -- defaults to "Driver requested to join fleet"
+        onboardingVehicleCategory: Maybe VehicleCategory -- defaults to CAR
+        isRevoke: Maybe Bool
+      pre_validation: |
+        no active association with this fleet (else "Driver is already linked to this fleet");
+        no pending request with this fleet (else "Driver already has a pending fleet association
+        request with this fleet"); wrapped in withOnboardingAction Link/TargetDriver, so the
+        association guards and the unified flag-state preconditions both apply
+      writes: creates FleetDriverAssociation with isActive := False and requestReason set
+      post_validation: driver
+
+    - name: linkToFleet (revoke)
+      method: POST
+      path: /driver/linkToFleet
+      handler: Domain/Action/UI/DriverOnboardingV2.hs:postDriverLinkToFleet
+      purpose: driver withdraws their own pending fleet-join request before the fleet acts on it.
+      request:
+        fleetOwnerId: Text
+        isRevoke: Bool -- True selects this arm
+      pre_validation: |
+        an association with this fleet must exist (else "No fleet association found to revoke")
+        and it must be inactive -- an active association cannot be revoked this way (else
+        "Direct revoke is not allowed for active fleet associations"); wrapped in
+        withOnboardingAction Unlink/TargetDriver
+      writes: revokeFleetDriverAssociation
+      post_validation: driver
+
+    - name: changeFleetOwner
+      method: POST
+      path: /fleet/driver/{driverId}/changeFleetOwner
+      handler: Domain/Action/Dashboard/Fleet/Driver.hs:postDriverFleetDriverChangeFleetOwner
+      purpose: |
+        Move an already-onboarded, working fleet driver from one fleet to another in a single
+        dashboard action. Distinct from the add/link flows, which target a driver who has not
+        been enabled yet: this one is deliberately restricted to a driver who is already live.
+      request:
+        newFleetOwnerId: Text
+        reason: Maybe Text
+      pre_validation: |
+        driver's onboardingAs must be FLEET_DRIVER (else "Driver is not a FLEET_DRIVER");
+        driver must be enabled (else "Driver is not enabled") -- moving a half-onboarded driver
+        goes through the ordinary add/link path instead; target person must hold a fleet-owner
+        role (else "Target is not a fleet owner") and pass checkFleetOwnerVerification against
+        merchant.fleetOwnerEnabledCheck; then withOnboardingAction Link / TargetDriver applies
+        the association guards on every city and the flag-state preconditions under the unified
+        flag.
+      writes: |
+        ends every existing driver association (endDriverAssociations), then creates an active
+        FleetDriverAssociation against newFleetOwnerId carrying reason as requestReason
+      post_validation: driver
+      note: |
+        The recompute that withOnboardingAction runs afterwards re-derives consentGateOk from the
+        new association, so the driver stays enabled across the move rather than dropping out and
+        being re-enabled.
 
     - name: approveDriver (approve)
       method: POST

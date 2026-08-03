@@ -48,7 +48,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
-  SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver (cast driverId)) $ do
+  SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver (cast driverId)) $ do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     when (merchant.overwriteAssociation == Just True) $
       QRCAssociation.endAllRCAssociationsForDriver driverId

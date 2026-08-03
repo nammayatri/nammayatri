@@ -70,6 +70,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetTripTransactionsV2,
     postDriverFleetDriverUpdate,
+    postDriverFleetDriverChangeFleetOwner,
     postDriverFleetApproveDriver,
     getDriverFleetDriverListStats,
     getDriverFleetVehicleListStats,
@@ -747,3 +748,10 @@ getDriverVehicleInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Mayb
 getDriverVehicleInfo merchantShortId opCity apiTokenInfo vehicleNo rcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverVehicleInfo) vehicleNo rcId
+
+postDriverFleetDriverChangeFleetOwner :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Common.ChangeDriverFleetOwnerReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetDriverChangeFleetOwner merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  T.withTransactionStoring transaction $
+    Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverChangeFleetOwner) driverId req
