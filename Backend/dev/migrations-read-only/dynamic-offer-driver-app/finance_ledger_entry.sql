@@ -76,3 +76,12 @@ CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_entity_reference_id ON atlas_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ADD COLUMN metadata_v2 json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ALTER COLUMN to_starting_balance TYPE numeric(30,15);
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ALTER COLUMN to_ending_balance TYPE numeric(30,15);
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ALTER COLUMN from_starting_balance TYPE numeric(30,15);
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ALTER COLUMN from_ending_balance TYPE numeric(30,15);
+ALTER TABLE atlas_driver_offer_bpp.finance_ledger_entry ALTER COLUMN amount TYPE numeric(30,15);
