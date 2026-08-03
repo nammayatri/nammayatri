@@ -7,6 +7,7 @@ import qualified Data.Aeson as A
 import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (Day)
+import Domain.Types.CommonDocumentData (renderCommonDocumentData)
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -40,6 +41,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
@@ -219,7 +221,8 @@ data DocumentStatusItem = DocumentStatusItem
     imageId :: Maybe Text,
     imageId2 :: Maybe Text,
     documentExpiry :: Maybe UTCTime,
-    metadata :: Maybe DocumentMetadata
+    metadata :: Maybe DocumentMetadata,
+    commonDocumentData :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -354,6 +357,7 @@ fetchProcessedVehicleDocumentsWithRC ::
   m [VehicleDocumentItem]
 fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
   processedVehicles <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
       associations <- DRAQuery.findAllLinkedByDriverId person.id
@@ -383,14 +387,16 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
     documents <-
       vehicleDocumentTypes `forM` \docType -> do
         (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbMetadata) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
+        mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
+        let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata}
+            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata, commonDocumentData = mbCommonDocData}
           Nothing -> do
             (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing}
+            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing, commonDocumentData = mbCommonDocData}
 
     let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
@@ -439,7 +445,9 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              return $ DocumentStatusItem {documentType = docType, documentId = Nothing, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
+              mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
+              let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
+              return $ DocumentStatusItem {documentType = docType, documentId = Nothing, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
           return
             [ VehicleDocumentItem
                 { registrationNo = vehicle.registrationNo,
@@ -471,6 +479,7 @@ fetchInprogressVehicleDocuments ::
   m [VehicleDocumentItem]
 fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
   mbVerificationReqRecord <- case entityImagesInfo.entity of
     IQuery.PersonEntity person -> do
       -- Driver inspection or status handler
@@ -518,7 +527,9 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl, _, mbS3Path, mbImageId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-                      return $ DocumentStatusItem {documentType = docType, documentId = Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing}
+                      mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
+                      let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
+                      return $ DocumentStatusItem {documentType = docType, documentId = Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
                   let mbRcIdText = (.getId) <$> mbRcId
                       mbRcImage =
                         find

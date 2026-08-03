@@ -808,8 +808,10 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
     let mbDocStatus = if isDigiLockerEnabled then DocStatus.getDocStatus docType digilockerDocStatusMap else Nothing
         responseCode = mbDocStatus >>= (.responseCode)
         mbDocVerificationStatus = mbDocStatus >>= (mapDigilockerToResponseStatus . (.status))
+    mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) docType
+    let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
 
-    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo docType useHVSdkForDL enableMetadata
+    (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata
     (status, mbReason, mbUrl, mbExpiryFinal, mbS3PathFinal, mbImageIdFinal, mbImageId2Final, mbDocumentIdFinal) <- case mbProcessedStatus of
       Just VALID -> pure (VALID, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbDocumentId)
       Just s -> pure (s, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbDocumentId)
@@ -819,7 +821,7 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
 
     mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
-    return $ DocumentStatusItem {documentType = docType, documentId = mbDocumentIdFinal, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal, metadata = mbMetadata}
+    return $ DocumentStatusItem {documentType = docType, documentId = mbDocumentIdFinal, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal, metadata = mbMetadata, commonDocumentData = mbCommonDocData}
 
 getDriverDocTypes ::
   OnboardingFlow m r =>
@@ -969,8 +971,8 @@ activateRCAutomatically personId merchantOpCity rcNumber = do
           }
   void $ DomainRC.linkRCStatus (personId, merchantOpCity.merchantId, merchantOpCity.id) False rcStatusReq
 
-getProcessedDriverDocuments :: OnboardingFlow m r => DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> DVC.DocumentType -> Maybe Bool -> Bool -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata, Maybe Text)
-getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL enableMetadata = do
+getProcessedDriverDocuments :: OnboardingFlow m r => DP.Role -> Id DP.Person -> IQuery.EntityImagesInfo -> Maybe DCDOD.CommonDriverOnboardingDocuments -> DVC.DocumentType -> Maybe Bool -> Bool -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text, Maybe DocumentMetadata, Maybe Text)
+getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata = do
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
       (mbS3Path, mbImageId) = getImageMetaFromLatestImage entityImagesInfo docType
       lookupImage imgId =
@@ -980,8 +982,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       lookupImageFailReason imgId =
         extractImageFailReason (find (\img -> img.id == imgId) entityImagesInfo.entityImages >>= (.failureReason))
       commonDocStatus dt = do
-        mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
-        let (status, reason, url) = checkImageValidity entityImagesInfo dt
+        let mbDoc = mbCommonDoc
+            (status, reason, url) = checkImageValidity entityImagesInfo dt
         case mbDoc of
           Just doc ->
             let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage doc.documentImageId
@@ -1030,7 +1032,6 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.ProfilePhoto -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.ProfilePhoto
-
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.UploadProfile -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.UploadProfile
@@ -1126,7 +1127,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           let hasImage = not . null $ IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo DVC.UDYAMCertificate [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
           return (if hasImage then Just MANUAL_VERIFICATION_REQUIRED else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.TANCertificate -> do
-      mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) DVC.TANCertificate
+      let mbDoc = mbCommonDoc
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.TANCertificate
       case mbDoc of
         Just doc -> do
@@ -1140,7 +1141,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           return (Just (mapStatus doc.verificationStatus), doc.rejectReason <|> reason, url, Nothing, s3, iid, Nothing, mbTanMetadata, Just doc.id.getId)
         Nothing -> return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.LDCCertificate -> do
-      mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) DVC.LDCCertificate
+      let mbDoc = mbCommonDoc
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LDCCertificate
       case mbDoc of
         Just doc -> do

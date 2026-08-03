@@ -357,6 +357,7 @@ types:
     - verificationMessage: Maybe Text
     - s3Path: Maybe Text
     - expiryDate: Maybe UTCTime
+    - commonDocumentData: Maybe Text
   VehicleDocumentItem:
     - registrationNo: Text
     - userSelectedVehicleCategory: VehicleCategory
@@ -406,6 +407,7 @@ types:
     - imageBase64: Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
     - createdAt: UTCTime
+    - commonDocumentData: Maybe Text
   DocumentType:
     - enum: "DriverLicense,VehicleRegistrationCertificate,PanCard,VehiclePermitImage,VehiclePUCImage,VehicleInsuranceImage,VehicleFitnessCertificateImage,VehicleInspectionImage,DriverInspectionFormImage,TrainingFormImage,ProfilePhotoImage,VehicleNOC,Permissions,SubscriptionPlan,AadhaarCard,ProfileDetails,SocialSecurityNumber,GSTCertificate,BackgroundVerification,UploadProfileImage,BusinessLicense,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,BankAccount,PanAadhaarLink,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval,NomineeDetails,DriverVehicleNOC,FleetRegistration,NationalID,WorkingHoursMeter,IndividualLegalEntityId,IndividualTAXDetails,IndividualCompanyDetails,LegalEntityLegalEntityId,LegalEntityTAXDetails,LegalEntityCompanyDetails"
     - derive: "HttpInstance, 'HideSecrets"

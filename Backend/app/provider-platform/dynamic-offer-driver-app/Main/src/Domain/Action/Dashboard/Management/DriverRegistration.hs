@@ -489,14 +489,14 @@ getDriverRegistrationDocumentsCommonList =
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Maybe Common.DocumentType -> Maybe Text -> Flow Common.GetDocumentResponse
 getDriverRegistrationGetDocument merchantShortId _ imageId mbDocType mbDocumentId = do
   merchant <- findMerchantByShortId merchantShortId
-  resolvedImageId <- case (mbDocType, mbDocumentId) of
-    (Just docType, Just documentId) ->
-      resolveImageIdFromDomainDoc (mapDocumentType docType) documentId
-        >>= maybe (pure (cast imageId)) pure
-    _ -> pure (cast imageId)
+  (resolvedImageId, mbCommonDocData) <- case (mbDocType, mbDocumentId) of
+    (Just docType, Just documentId) -> do
+      (mbImgId, mbData) <- resolveImageIdFromDomainDoc (mapDocumentType docType) documentId
+      pure (fromMaybe (cast imageId) mbImgId, mbData)
+    _ -> pure (cast imageId, Nothing)
   img <- getImage merchant.id resolvedImageId
   image <- QImage.findById resolvedImageId >>= fromMaybeM (InternalError "Image not found by image id")
-  pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus, createdAt = image.createdAt}
+  pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus, createdAt = image.createdAt, commonDocumentData = mbCommonDocData}
   where
     castVerificationStatus :: VerificationStatus -> Common.VerificationStatus
     castVerificationStatus = \case
@@ -507,25 +507,25 @@ getDriverRegistrationGetDocument merchantShortId _ imageId mbDocType mbDocumentI
       UNAUTHORIZED -> Common.UNAUTHORIZED
       PULL_REQUIRED -> Common.PENDING
 
-resolveImageIdFromDomainDoc :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image))
+resolveImageIdFromDomainDoc :: DVC.DocumentType -> Text -> Flow (Maybe (Id DImage.Image), Maybe Text)
 resolveImageIdFromDomainDoc docType docId = case docType of
-  DVC.DriverLicense -> fmap (.documentImageId1) <$> QDL.findById (Id docId)
-  DVC.VehicleRegistrationCertificate -> fmap (.documentImageId) <$> QRC.findById (Id docId)
-  DVC.PanCard -> fmap (.documentImageId1) <$> QPan.findById (Id docId)
-  DVC.GSTCertificate -> fmap (.documentImageId1) <$> QGstin.findById (Id docId)
-  DVC.VehiclePUC -> fmap (.documentImageId) <$> QVPUC.findByPrimaryKey (Id docId)
-  DVC.VehiclePermit -> fmap (.documentImageId) <$> QVPermit.findByPrimaryKey (Id docId)
-  DVC.VehicleInsurance -> fmap (.documentImageId) <$> QVI.findByPrimaryKey (Id docId)
-  DVC.VehicleFitnessCertificate -> fmap (.documentImageId) <$> QFC.findByPrimaryKey (Id docId)
-  DVC.VehicleNOC -> fmap (.documentImageId) <$> QVNOC.findByPrimaryKey (Id docId)
-  DVC.BusinessLicense -> fmap (.documentImageId) <$> QBL.findByPrimaryKey (Id docId)
-  DVC.UDYAMCertificate -> fmap (.documentImageId) <$> QUdyam.findById (Id docId)
+  DVC.DriverLicense -> (,Nothing) . fmap (.documentImageId1) <$> QDL.findById (Id docId)
+  DVC.VehicleRegistrationCertificate -> (,Nothing) . fmap (.documentImageId) <$> QRC.findById (Id docId)
+  DVC.PanCard -> (,Nothing) . fmap (.documentImageId1) <$> QPan.findById (Id docId)
+  DVC.GSTCertificate -> (,Nothing) . fmap (.documentImageId1) <$> QGstin.findById (Id docId)
+  DVC.VehiclePUC -> (,Nothing) . fmap (.documentImageId) <$> QVPUC.findByPrimaryKey (Id docId)
+  DVC.VehiclePermit -> (,Nothing) . fmap (.documentImageId) <$> QVPermit.findByPrimaryKey (Id docId)
+  DVC.VehicleInsurance -> (,Nothing) . fmap (.documentImageId) <$> QVI.findByPrimaryKey (Id docId)
+  DVC.VehicleFitnessCertificate -> (,Nothing) . fmap (.documentImageId) <$> QFC.findByPrimaryKey (Id docId)
+  DVC.VehicleNOC -> (,Nothing) . fmap (.documentImageId) <$> QVNOC.findByPrimaryKey (Id docId)
+  DVC.BusinessLicense -> (,Nothing) . fmap (.documentImageId) <$> QBL.findByPrimaryKey (Id docId)
+  DVC.UDYAMCertificate -> (,Nothing) . fmap (.documentImageId) <$> QUdyam.findById (Id docId)
   DVC.AadhaarCard -> do
     mbAadhaar <- QAadhaarCard.findByPrimaryKey (Id docId)
-    pure $ mbAadhaar >>= \aa -> aa.aadhaarFrontImageId <|> aa.aadhaarBackImageId
+    pure (mbAadhaar >>= \aa -> aa.aadhaarFrontImageId <|> aa.aadhaarBackImageId, Nothing)
   _ -> do
     mbCd <- QCommonDriverOnboardingDocuments.findById (Id docId)
-    pure $ mbCd >>= (.documentImageId)
+    pure (mbCd >>= (.documentImageId), mbCd <&> DCommonDocData.renderCommonDocumentData . (.documentData))
 
 domainTableDocumentTypes :: Set.Set DVC.DocumentType
 domainTableDocumentTypes =
@@ -708,7 +708,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   let createDocumentEntry = do
         documentId <- generateGUID
         now <- getCurrentTime
-        typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType (mapDocumentType documentType) documentData)
+        let typedDocumentData = DCommonDocData.parseCommonDocumentDataSafe (mapDocumentType documentType) documentData
         let documentEntry =
               DCommonDoc.CommonDriverOnboardingDocuments
                 { id = documentId,
@@ -1129,7 +1129,8 @@ castDocStatusItem item =
       verificationStatus = castMgmtResponseStatus item.verificationStatus,
       verificationMessage = item.verificationMessage,
       s3Path = item.s3Path,
-      expiryDate = item.documentExpiry
+      expiryDate = item.documentExpiry,
+      commonDocumentData = item.commonDocumentData
     }
 
 castMgmtDLDetails :: SStatus.DLDetails -> Common.DLDetails
@@ -2073,7 +2074,7 @@ approveAndUpdateCommonDocument req _mId _mOpCityId = do
   -- Update document with new data if provided, otherwise just update verification status
   updatedDocument <- case req.updatedDocumentData of
     Just newData -> do
-      typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType document.documentType newData)
+      let typedDocumentData = DCommonDocData.parseCommonDocumentDataSafe document.documentType newData
       pure document {DCommonDoc.documentData = typedDocumentData, DCommonDoc.verificationStatus = VALID}
     Nothing -> pure document {DCommonDoc.verificationStatus = VALID}
 
