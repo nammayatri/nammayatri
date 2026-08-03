@@ -17,7 +17,8 @@ When it finishes you get:
 ```
 POST /v2/auth                  200  authId=…
 POST /v2/auth/{id}/verify      200  token=…
-POST /v2/serviceability/origin 200  serviceable=true
+POST /v2/serviceability/origin 200  Algiers      serviceable=true
+POST /v2/serviceability/origin 200  Bangalore    serviceable=false
 *** Backend is fully operational ***
 ```
 
@@ -68,6 +69,71 @@ the test rider's number decrypts correctly (`999...001`).
 
 ---
 
+## Algeria service areas
+
+`algeria-geofences.sql` repoints the backend from the upstream Indian service
+areas to **Algiers, Oran and Annaba**. `setup.sh` applies it automatically;
+`./setup.sh algeria` re-applies it on its own.
+
+Serviceability is one query — `Main/src/Storage/Queries/Geometry.hs`:
+
+```sql
+SELECT * FROM atlas_app.geometry
+ WHERE region IN (<merchant.origin_restriction>)
+   AND ST_Contains(geom, ST_Point(lon, lat));
+```
+
+So a city is **two pieces of data and zero lines of code**: a `geometry` row
+(name + boundary), and that name listed in the merchant's origin/destination
+restriction. A fourth city is one more row and one more array element.
+
+Boundaries are the OpenStreetMap wilaya relations (`admin_level=4`), simplified
+to ~55 m to keep the file reviewable — 33k points down to 2.6k. Verified:
+
+| Point | Serviceable |
+|-------|-------------|
+| Algiers centre / Algiers airport / Bab Ezzouar | ✅ |
+| Oran centre / Es Senia airport | ✅ |
+| Annaba centre | ✅ |
+| Constantine | ❌ |
+| Bangalore | ❌ |
+
+The two negatives matter — they prove the Indian areas were *replaced*, not
+merely added to.
+
+> **SRID 0, not 4326.** Matches the existing rows and the `ST_Point()` the
+> application builds. PostGIS refuses `ST_Contains` across mismatched SRIDs.
+
+> **Redis caches the merchant.** The service-area restriction lives on the
+> merchant row, which `Storage/CachedQueries/Merchant.hs` caches. Change it in
+> Postgres without dropping the cache and the API keeps serving the old areas.
+> `setup.sh` flushes Redis for you.
+
+### What is *not* just config: the country code
+
+Cities are data, but the **country is hard-coded**. `POST /v2/auth` rejects an
+Algerian number outright:
+
+```
+{"errorPayload":[
+  {"expectation":"(length(mobileNumber) == 10 and mobileNumber matches regex /^[0-9]*$/)"},
+  {"expectation":"mobileCountryCode matches regex /^\\+91$/"}],
+ "errorCode":"REQUEST_VALIDATION_FAILURE"}
+```
+
+From `Main/src/Domain/Action/UI/Registration.hs`:
+
+```haskell
+validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+```
+
+Making this configurable is a small source change, but it is a *source* change —
+it needs a Haskell rebuild, which this stack (running a prebuilt image)
+deliberately avoids. The demo therefore still logs in with the `+91` test rider;
+the geofence result is independent of the phone number.
+
+---
+
 ## Gotchas
 
 **Use `/swagger`, not `/swagger/`.** With a trailing slash the page's relative
@@ -100,9 +166,10 @@ rider-app has migrated.
 ## Layout
 
 ```
-setup.sh            one-shot bring-up / verify / down / clean
-docker-compose.yml  the stack
-Dockerfile.rider    librdkafka fix
-demo.sh, demo.ps1   scripted end-to-end demo
-2023/               pinned upstream tree (fetched by setup.sh, gitignored)
+setup.sh              one-shot bring-up / verify / algeria / down / clean
+docker-compose.yml    the stack
+Dockerfile.rider      librdkafka fix
+algeria-geofences.sql Algiers / Oran / Annaba service areas
+demo.sh, demo.ps1     scripted end-to-end demo
+2023/                 pinned upstream tree (fetched by setup.sh, gitignored)
 ```

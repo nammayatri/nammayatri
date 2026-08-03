@@ -3,6 +3,7 @@
 #
 #   ./setup.sh          full setup (fetch tree, build, start, seed, verify)
 #   ./setup.sh verify   just re-run the API checks against a running stack
+#   ./setup.sh algeria  re-apply the Algeria service areas, then verify
 #   ./setup.sh down     stop everything (keeps the database volume)
 #   ./setup.sh clean    stop everything and delete the database volume
 set -euo pipefail
@@ -102,6 +103,22 @@ seed_db() {
   ok "base schema applied"
 }
 
+seed_algeria() {
+  # Must run *after* rider-app has migrated: atlas_app.geometry only exists
+  # once its migrations have been applied.
+  log "Applying Algeria service areas (Algiers, Oran, Annaba)"
+  docker cp algeria-geofences.sql ny-postgres:/tmp/algeria-geofences.sql
+  $PG -q -v ON_ERROR_STOP=1 -f /tmp/algeria-geofences.sql >/dev/null \
+    || die "could not apply algeria-geofences.sql"
+  # The merchant row (which carries the service-area restriction) is cached in
+  # Redis, so the API would otherwise keep serving the previous service areas.
+  docker exec ny-redis redis-cli FLUSHALL >/dev/null
+  $PG -t -c "SELECT region || ' (' || ST_NPoints(geom) || ' pts)'
+               FROM atlas_app.geometry
+              WHERE region IN ('Algiers','Oran','Annaba') ORDER BY region;" \
+    | sed 's/^ */    /' | grep -v '^ *$'
+}
+
 show_db_state() {
   # The merchant (YATRI) comes from rider-app-seed.sql: it seeds an
   # `organization` row, which migration 1014 (transform-org-to-whitelisted-provider)
@@ -162,19 +179,30 @@ verify() {
   [ -n "$token" ] || die "OTP verification failed"
   ok "POST /v2/auth/{id}/verify      200  token=$token"
 
+  # Positive: Algiers city centre must be inside the service area.
+  svc=$(curl -s --max-time 20 -X POST "$base/v2/serviceability/origin" \
+      -H 'content-type: application/json' -H "token: $token" \
+      -d '{"location":{"lat":36.7538,"lon":3.0588}}')
+  printf '%s' "$svc" | grep -q '"serviceable":true' || die "Algiers should be serviceable: $svc"
+  ok "POST /v2/serviceability/origin 200  Algiers      serviceable=true"
+
+  # Negative: proves the Algeria swap actually replaced the Indian service
+  # areas rather than just adding to them. Without this, an always-true
+  # serviceability endpoint would pass the check above.
   svc=$(curl -s --max-time 20 -X POST "$base/v2/serviceability/origin" \
       -H 'content-type: application/json' -H "token: $token" \
       -d '{"location":{"lat":12.9715987,"lon":77.5945627}}')
-  printf '%s' "$svc" | grep -q '"serviceable":true' || die "serviceability check failed: $svc"
-  ok "POST /v2/serviceability/origin 200  serviceable=true"
+  printf '%s' "$svc" | grep -q '"serviceable":false' || die "Bangalore should NOT be serviceable: $svc"
+  ok "POST /v2/serviceability/origin 200  Bangalore    serviceable=false"
 
   printf '\n\033[1;32m*** Backend is fully operational ***\033[0m\n\n'
 }
 
 case "${1:-up}" in
-  down)  docker compose down; exit 0 ;;
-  clean) docker compose down -v; rm -rf "$TREE_DIR"; exit 0 ;;
+  down)   docker compose down; exit 0 ;;
+  clean)  docker compose down -v; rm -rf "$TREE_DIR"; exit 0 ;;
   verify) verify; exit 0 ;;
+  algeria) seed_algeria; verify; exit 0 ;;
 esac
 
 preflight
@@ -195,5 +223,6 @@ seed_db
 log "Starting rider-app (it applies its own migrations) + proxy"
 docker compose up -d rider-app proxy
 wait_for_api
+seed_algeria
 verify
 show_db_state
