@@ -1728,10 +1728,11 @@ getFinanceManagementFinanceInvoicePdf ::
   Maybe KET.Language ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Text -> -- rideId
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLanguage mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLanguage mbLimit mbOffset mbRideId mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1740,7 +1741,11 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoicesAll <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
+  invoicesAll <- case (mbInvoiceId, mbInvoiceNumber, mbRideId) of
+    (Nothing, Nothing, Just rideId) -> do
+      ride <- QRide.findById (Id rideId) >>= fromMaybeM (InvalidRequest $ "Ride not found: " <> rideId)
+      QFinanceInvoiceExtra.findByReferenceIdWithOptions ride.bookingId.getId mbInvoiceType mbIssuedToType (maybe [] pure mbStatus) (Just limit) (Just offset)
+    _ -> fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
 
   -- When no explicit status filter is sent, exclude Voided/Cancelled rows so
   -- the PDF endpoint never renders a dead invoice. Caller can request these

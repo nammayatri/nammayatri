@@ -58,6 +58,7 @@ apis:
         offset: Int
         invoiceId: Text
         invoiceNumber: Text
+        rideId: Text # Resolve the invoice via the ride's booking (invoice.referenceId); combine with invoiceType to pick Ride vs Commission
         from: UTCTime
         to: UTCTime
         invoiceType: InvoiceType

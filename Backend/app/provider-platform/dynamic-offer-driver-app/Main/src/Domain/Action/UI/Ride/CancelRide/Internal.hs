@@ -738,7 +738,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                                     }
                               else Nothing
                           ],
-              referenceId = Nothing,
+              referenceId = Just booking.id.getId,
               isVat = cancelIsVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
