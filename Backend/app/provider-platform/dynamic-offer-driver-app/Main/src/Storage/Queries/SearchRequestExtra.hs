@@ -95,11 +95,10 @@ findSearchRequestById srIds =
 
 findRecentByRiderIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id RD.RiderDetails] -> Int -> m [SearchRequest]
 findRecentByRiderIds riderIds limit =
-  findAllWithOptionsDb
+  findAllFromKvRedis
     [Se.Is BeamSR.riderId $ Se.In (Just . getId <$> riderIds)]
-    (Se.Desc BeamSR.createdAt)
-    (Just limit)
-    Nothing
+    (Just $ Se.Desc BeamSR.createdAt)
+    <&> take limit
 
 -- findSearchRequestById ::
 --   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
