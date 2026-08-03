@@ -78,6 +78,7 @@ Booking:
     estimatedDuration: Maybe Seconds
     estimatedStaticDuration: Maybe Seconds
     fareParams: FareParameters
+    fareRecomputeCapEnabled: Maybe Bool
     riderName: Maybe Text
     paymentMethodId: Maybe (Id MerchantPaymentMethod)
     tollCharges: Maybe HighPrecMoney

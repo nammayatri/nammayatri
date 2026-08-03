@@ -9,7 +9,6 @@ module Storage.Queries.Person.GetNearestDrivers
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
-    estimateDeductionsFromConfig,
   )
 where
 
@@ -110,6 +109,8 @@ data NearestDriversReq = NearestDriversReq
     minWalletAmountForScheduledRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     taxConfig :: DTC.TaxConfig,
+    driverWalletConfig :: DTC.DriverWalletConfig,
+    mbSearchTryId :: Maybe Text,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
@@ -377,7 +378,9 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
                 let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
                     (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
                 mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-                pure $ maybe False (>= (fare + threshold)) mbBalance
+                prepaidOfferHolds <- getPrepaidOfferHoldTotal ownerId
+                ownPrepaidOfferHold <- maybe (pure 0) (getPrepaidOfferHoldAmount ownerId) mbSearchTryId
+                pure $ maybe False (\b -> b - (prepaidOfferHolds - ownPrepaidOfferHold) >= applyFareRecomputeBuffer driverWalletConfig fare + threshold) mbBalance
             )
             results
         _ -> pure results
@@ -385,8 +388,8 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
   let cashRequirement =
         case minWalletAmountForCashRides of
           Just minAmt
-            | isPrepaidEnabled && shouldCheckCashWallet paymentInstrument ->
-              Just (minAmt + estimateDeductionsFromConfig taxConfig rideFare govtCharges tollCharges parkingCharge)
+            | cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument ->
+              Just (minAmt + estimateBufferedStatutoryDeductions driverWalletConfig taxConfig ((\bf -> bf + fromMaybe 0 govtCharges + fromMaybe 0 tollCharges + fromMaybe 0 parkingCharge) <$> rideFare) govtCharges tollCharges parkingCharge)
           _ -> Nothing
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
@@ -403,8 +406,10 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
     checkBalance (counterpartyType, ownerId) required = do
-      mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
-      pure $ maybe False (>= required) mbBalance
+      mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
+      offerHolds <- getWalletOfferHoldTotal ownerId
+      ownOfferHold <- maybe (pure 0) (getWalletOfferHoldAmount ownerId) mbSearchTryId
+      pure $ maybe False (\b -> b - (offerHolds - ownOfferHold) >= required) mbBalance
 
     passesLiabilityGates cashReq airportReq applyScheduledGate r = do
       -- Scheduled-ride wallet gate first (short-circuits the cash/airport balance fetches on failure).
@@ -447,3 +452,16 @@ estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkin
           baseFare = totalFare - gstAmount - tollAmount - parkingAmount
           tdsRate = Just taxConfig.invalidPanTdsRate.rate
        in gstAmount + estimateWalletDeductions tdsRate baseFare
+    passesLiabilityGates cashReq airportReq r = do
+      let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
+          cashAccount = (cashCp, cashOwner)
+          airportAccount = (counterpartyDriver, r.driverId.getId)
+      case (cashReq, airportReq) of
+        (Nothing, Nothing) -> pure True
+        (Just c, Nothing) -> checkBalance cashAccount c
+        (Nothing, Just a) -> checkBalance airportAccount a
+        (Just c, Just a)
+          | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
+          | otherwise -> do
+            cashOk <- checkBalance cashAccount c
+            if cashOk then checkBalance airportAccount a else pure False

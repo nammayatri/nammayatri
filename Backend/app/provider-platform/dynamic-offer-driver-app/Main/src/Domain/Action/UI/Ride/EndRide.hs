@@ -105,6 +105,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import SharedLogic.Finance.Wallet (applyFareRecomputeBuffer)
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
@@ -998,16 +999,60 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               pickupGateId = booking.pickupGateId,
               fareSettlementType = booking.fareSettlementType
             }
-      let finalFare = Fare.fareSum fareParams Nothing
+      let recomputedFare = Fare.fareSum fareParams Nothing
+          fareCap = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
+          capApplies = fromMaybe False booking.fareRecomputeCapEnabled && recomputedFare > fareCap
+          finalFareParams =
+            if capApplies
+              then absorbFareRecomputeExcess (Fare.computeTotalGstRate thresholdConfig.taxConfig.rideGst) (recomputedFare - fareCap) fareParams
+              else fareParams
+          finalFare = Fare.fareSum finalFareParams Nothing
           distanceDiff = recalcDistance - oldDistance
           fareDiff = finalFare - estimatedFare
+      when capApplies $
+        logTagInfo "Fare recompute cap" $
+          "Capped recomputed fare " <> show recomputedFare <> " to " <> show finalFare <> " (cap " <> show fareCap <> ", estimate " <> show estimatedFare <> ")"
+            <> (let residual = finalFare - fareCap in if residual > 0 then " cap not fully applied, residual=" <> show residual else "")
+            <> " for booking "
+            <> booking.id.getId
       logTagInfo "Fare recalculation" $
         "Fare difference: "
           <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric merchantId fareDiff distanceDiff
-      return (recalcDistance, finalFare, Just fareParams)
+      return (recalcDistance, finalFare, Just finalFareParams)
+
+absorbFareRecomputeExcess :: Maybe Double -> HighPrecMoney -> FareParameters -> FareParameters -- TODO: Improve later
+absorbFareRecomputeExcess mbGstRate totalExcess fareParams =
+  let gstRate = if isJust fareParams.govtCharges then toRational (fromMaybe 0 mbGstRate) else 0
+      componentExcess = HighPrecMoney (totalExcess.getHighPrecMoney / (1 + gstRate))
+      (details', excessAfterDetails) = case fareParams.fareParametersDetails of
+        ProgressiveDetails det ->
+          let (extraKmFare', e1) = drainMb det.extraKmFare componentExcess
+              (rideDurationFare', e2) = drainMb det.rideDurationFare e1
+           in (ProgressiveDetails det {extraKmFare = extraKmFare', rideDurationFare = rideDurationFare'}, e2)
+        RentalDetails det ->
+          let (distBasedFare', e1) = drain det.distBasedFare componentExcess
+              (timeBasedFare', e2) = drain det.timeBasedFare e1
+           in (RentalDetails det {distBasedFare = distBasedFare', timeBasedFare = timeBasedFare'}, e2)
+        InterCityDetails det ->
+          let (extraDistanceFare', e1) = drain det.extraDistanceFare componentExcess
+              (extraTimeFare', e2) = drain det.extraTimeFare e1
+           in (InterCityDetails det {extraDistanceFare = extraDistanceFare', extraTimeFare = extraTimeFare'}, e2)
+        AmbulanceDetails det ->
+          let (distBasedFare', e1) = drain det.distBasedFare componentExcess
+           in (AmbulanceDetails det {distBasedFare = distBasedFare'}, e1)
+        slabDetails@(SlabDetails _) -> (slabDetails, componentExcess)
+      (baseFare', excessLeft) = drain fareParams.baseFare excessAfterDetails
+      drained = componentExcess - excessLeft
+      govtCharges' = (\g -> max 0 (g - HighPrecMoney (drained.getHighPrecMoney * gstRate))) <$> fareParams.govtCharges
+   in fareParams {baseFare = baseFare', fareParametersDetails = details', govtCharges = govtCharges'}
+  where
+    drain amt excess = let d = min excess (max 0 amt) in (amt - d, excess - d)
+    drainMb mbAmt excess =
+      let (amt', e) = drain (fromMaybe 0 mbAmt) excess
+       in (if amt' <= 0 then Nothing else Just amt', e)
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
 isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do

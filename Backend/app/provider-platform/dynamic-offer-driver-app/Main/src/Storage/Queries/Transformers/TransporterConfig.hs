@@ -92,6 +92,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             connectAccountChargeTimeOfDay = Nothing,
             connectAccountChargeDayOfWeek = Nothing,
             connectAccountChargeDayOfMonth = Nothing
+            fareRecomputeBufferPercent = Nothing,
+            fareRecomputeBufferAmount = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 

@@ -626,6 +626,41 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation isSched
             Nothing -> True
             Just _ -> fromMaybe True (M.lookup fp.vehicleServiceTier availabilityByTier)
   pure ([], filter checkAvailabilityConfigOnly farePolicies)
+  airportEntryFee <-
+    if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
+      then pure Nothing
+      else requiredEntryFeeForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) sreq.pickupGateId
+  isAirportRequest <- isAirportPickupArea (Just area)
+  let driverPoolCfg' = fromJust driverPoolCfg
+      currentRideTripCategoryValidForForwardBatching = driverPoolCfg'.currentRideTripCategoryValidForForwardBatching
+      calculateDriverPoolReq =
+        CalculateDriverPoolReq
+          { poolStage = Estimate,
+            driverPoolCfg = driverPoolCfg',
+            serviceTiers = [],
+            pickup = fromLocation,
+            merchantOperatingCityId = merchantOpCityId,
+            merchantId = merchant.id,
+            onlinePayment = merchant.onlinePayment,
+            isRental = False,
+            isInterCity = False,
+            rideFare = Nothing,
+            govtCharges = Nothing,
+            tollCharges = Nothing,
+            parkingCharge = Nothing,
+            airportEntryFee,
+            isAirportRequest,
+            paymentInstrument = Nothing,
+            excludeDriverIds = [],
+            prevAttemptedDriverIds = [],
+            mbSearchTryId = Nothing,
+            ..
+          }
+  (offRidePool, onRidePool, _) <- calculateDriverPool calculateDriverPoolReq
+  let driverPool = offRidePool <> onRidePool
+  logDebug $ "Search handler: driver pool " <> show driverPool
+  let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
+  return (driverPool, onlyFPWithDrivers)
 
 buildSearchRequest ::
   ( CacheFlow m r,

@@ -282,3 +282,4 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN preference_match_score dou
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_auto_accepted boolean ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN fare_recompute_cap_enabled boolean ;
