@@ -816,7 +816,6 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
-              QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
               -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
               -- it onto the pass at each transition — so the webhook never races the upload for it.
@@ -920,6 +919,7 @@ updatePurchasedPass purchasedPass today now = do
           hasChanged =
             purchasedPass.status /= newStatus
               || firstPayment.status /= newStatus
+              || firstPayment.passPhotoMediaId /= purchasedPass.passPhotoMediaId
        in return (newPass, Just newPassPayment, hasChanged)
     Nothing ->
       let newPass =
@@ -1561,17 +1561,24 @@ postMultimodalPassUploadProfilePicture (mbCallerPersonId, merchantId) purchasedP
     throwError (InvalidRequest "Pass has no purchase in progress and is not awaiting a photo")
 
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  uploadRes <- IssueAction.mediaUploadToS3 merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern req "pass-photo" personId.getId
-  let mediaId = uploadRes.fileId
+  let attachableStatuses = [DPurchasedPass.Pending, DPurchasedPass.PhotoPending, DPurchasedPass.PreBooked]
 
-  -- Attach-only: write the media id to the attachable payment row(s), never to the pass row. The
-  -- pass-list reconcile (updatePurchasedPass) is the single owner that projects the payment row's
-  -- photo onto the pass when its term activates — so an unpaid renewal or a stale Pending row
-  -- can't overwrite the photo on a currently-live pass, and a photo changed on a paid future
-  -- (PreBooked) term takes effect only when that term starts.
-  QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just mediaId) purchasedPass.id [DPurchasedPass.Pending, DPurchasedPass.PhotoPending, DPurchasedPass.PreBooked]
+  (mbUploadRes, mbFallbackBase64) <- IssueAction.mediaUploadToS3WithFallback merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern req "pass-photo" personId.getId
 
-  return uploadRes
+  -- Attach-only: write to the attachable payment row(s), never to the pass row. The pass-list
+  -- reconcile (updatePurchasedPass) is the single owner that projects the payment row's photo onto
+  -- the pass when its term activates — so an unpaid renewal or a stale Pending row can't overwrite
+  -- the photo on a currently-live pass, and a photo changed on a paid future (PreBooked) term takes
+  -- effect only when that term starts. If the S3 put failed, fall back to the inline base64 copy
+  -- instead of attaching a media id that can never be fetched.
+  case (mbUploadRes, mbFallbackBase64) of
+    (Just uploadRes, _) -> do
+      QPurchasedPassPayment.updatePassPhotoMediaIdByPurchasedPassIdAndStatus (Just uploadRes.fileId) purchasedPass.id attachableStatuses
+      return uploadRes
+    (Nothing, Just base64Photo) -> do
+      QPurchasedPassPayment.updateProfilePictureByPurchasedPassIdAndStatus (Just base64Photo) purchasedPass.id attachableStatuses
+      throwError (InvalidRequest "Pass photo S3 upload failed; stored as inline base64 fallback")
+    (Nothing, Nothing) -> throwError (InvalidRequest "Pass photo upload failed")
 
 -- | Fetch a pass photo's raw content from S3 by its media id, for rendering.
 -- Only the owner (whose id is embedded in the S3 path) may fetch it.

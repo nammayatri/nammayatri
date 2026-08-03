@@ -453,6 +453,46 @@ mediaUploadToS3 mediaFileSizeUpperLimit mediaFileUrlPattern Common.IssueMediaUpl
         QMF.updateStatusById D.FAILED uploadRes.fileId
   return uploadRes
 
+-- | Same as 'mediaUploadToS3', but the S3 put runs synchronously (not in a
+-- background fork), so a failure can be reported back to the caller instead of
+-- only being recorded on the media-file status. Returns the base64-encoded
+-- file alongside the upload result whenever the S3 put failed — 'Nothing' on
+-- success — so the caller can persist that as an inline fallback (e.g. in its
+-- own row) in place of the (now-unreachable) S3 media id.
+mediaUploadToS3WithFallback ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Int ->
+  Text ->
+  Common.IssueMediaUploadReq ->
+  Text ->
+  Text ->
+  m (Maybe Common.IssueMediaUploadRes, Maybe Text)
+mediaUploadToS3WithFallback mediaFileSizeUpperLimit mediaFileUrlPattern Common.IssueMediaUploadReq {..} domain identifier = do
+  contentType <- validateContentType fileType reqContentType
+  fileSize <- L.runIO $ withFile file ReadMode hFileSize
+  when (fileSize > fromIntegral mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- S3.createFilePath (domain <> "/") identifier fileType contentType
+  let fileUrl =
+        mediaFileUrlPattern
+          & T.replace "<DOMAIN>" domain
+          & T.replace "<FILE_PATH>" filePath
+  uploadRes <- createMediaEntry fileUrl fileType filePath
+  ( do
+      S3.put (T.unpack filePath) mediaFile
+      QMF.updateStatusById D.COMPLETED uploadRes.fileId
+      return (Just uploadRes, Nothing)
+    )
+    `catch` \(e :: SomeException) -> do
+      logError $ "S3 upload failed for issue media file " <> uploadRes.fileId.getId <> ": " <> show e
+      QMF.updateStatusById D.FAILED uploadRes.fileId
+      return (Nothing, Just mediaFile)
+
 issueMediaUpload ::
   ( BeamFlow m r,
     MonadTime m,
