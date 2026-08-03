@@ -188,6 +188,7 @@ SearchRequest:
   constraints:
     id: PrimaryKey
     transactionId: SecondaryKey
+    riderId: "!SecondaryKey" # forcing; queried in SearchRequestExtra.findRecentByRiderIds (Extra file)
 
   excludedFields:
   - merchantId
