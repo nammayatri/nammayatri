@@ -1304,7 +1304,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
     buildCommonDocument driverId = do
       id <- generateGUID
       now <- getCurrentTime
-      typedDocumentData <- either (throwError . InvalidRequest) pure (DCommonDocData.parseCommonDocumentDataByType documentType documentData)
+      let typedDocumentData = DCommonDocData.parseCommonDocumentDataSafe documentType documentData
       return $
         Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments
           { id = id,
@@ -1461,7 +1461,8 @@ noDocVehicleStatusItems = map mkNoDoc SDO.defaultVehicleDocumentTypes
           imageId = Nothing,
           imageId2 = Nothing,
           documentExpiry = Nothing,
-          metadata = Nothing
+          metadata = Nothing,
+          commonDocumentData = Nothing
         }
 
 rcVerifyStatusForRC :: RcVerifyCaller -> DVRC.VehicleRegistrationCertificate -> Bool -> Flow (Text, Bool, Maybe Bool, [SStatus.DocumentStatusItem])

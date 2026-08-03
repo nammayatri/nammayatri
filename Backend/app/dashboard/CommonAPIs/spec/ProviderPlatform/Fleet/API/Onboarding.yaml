@@ -233,6 +233,7 @@ types:
     imageId2: Maybe Text
     expiryDate: Maybe UTCTime
     metadata: Maybe DocumentMetadata
+    commonDocumentData: Maybe Text
   DocumentMetadata:
     enum: "DLMetadata DLDocumentMetadata | AadhaarMetadata AadhaarDocumentMetadata | PanMetadata PanDocumentMetadata | LocalAddressProofMetadata LocalAddressProofDocumentMetadata | GSTMetadata GSTDocumentMetadata | RCMetadata RCDocumentMetadata | VehiclePUCMetadata VehiclePUCDocumentMetadata | VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata | VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata | VehiclePermitMetadata VehiclePermitDocumentMetadata | UDYAMMetadata UDYAMDocumentMetadata | TANMetadata TANDocumentMetadata | LDCMetadata LDCDocumentMetadata | NomineeDetailsMetadata NomineeDetailsDocumentMetadata | BankingDetailsMetadata BankingDetailsDocumentMetadata"
   UDYAMDocumentMetadata:
