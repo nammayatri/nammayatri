@@ -25,7 +25,7 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
             benefitValue = benefitValue,
             currentPaymentOrderId = Kernel.Types.Id.Id <$> currentPaymentOrderId,
             deviceId = deviceId,
-            deviceSwitchCount = fromMaybe 0 deviceSwitchCount,
+            deviceSwitchCount = (fromMaybe 0 deviceSwitchCount),
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             maxValidDays = maxValidDays,

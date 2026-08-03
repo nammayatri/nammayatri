@@ -148,6 +148,7 @@ PurchasedPassPayment:
     passEnum: Maybe PassEnum
     clientSdkVersion: Maybe Version
     passId: Maybe (Id Pass)
+    availableTripCount: Maybe Int
 
   beamType:
     benefitDescription: Maybe Text

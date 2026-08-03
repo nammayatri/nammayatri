@@ -22,6 +22,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
       Just
         Domain.Types.PurchasedPassPayment.PurchasedPassPayment
           { amount = amount,
+            availableTripCount = availableTripCount,
             benefitDescription = Kernel.Prelude.fromMaybe "" benefitDescription,
             benefitType = benefitType,
             benefitValue = benefitValue,
@@ -50,6 +51,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
   toTType' (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
     Beam.PurchasedPassPaymentT
       { Beam.amount = amount,
+        Beam.availableTripCount = availableTripCount,
         Beam.benefitDescription = Kernel.Prelude.Just benefitDescription,
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,

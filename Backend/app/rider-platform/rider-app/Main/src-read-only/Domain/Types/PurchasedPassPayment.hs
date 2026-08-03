@@ -21,6 +21,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PurchasedPassPayment = PurchasedPassPayment
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    availableTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

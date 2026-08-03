@@ -522,6 +522,7 @@ library
       SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
       SharedLogic.FRFSFareCalculator
+      SharedLogic.FRFSPassOverride
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
       SharedLogic.FRFSStatus
