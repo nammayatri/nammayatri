@@ -388,6 +388,15 @@ updateHasTakenValidRide (Id personId) = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
+updateHasPassTill :: (MonadFlow m, EsqDBFlow m r) => Id Person -> T.Day -> m ()
+updateHasPassTill (Id personId) hasPassTill = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.hasPassTill (Just hasPassTill),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateReferredByCustomer personId referredByPersonId = do
   now <- getCurrentTime

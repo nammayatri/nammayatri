@@ -81,6 +81,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.External.Nandi.Types
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
@@ -389,6 +390,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
+  void $ withTryCatch "purchasePassWithPayment:registerHasPass" (FRFSPassOverride.registerHasPass personId endDate)
   return $
     PassAPI.PassSelectionAPIEntity
       { purchasedPassId = purchasedPassId,
@@ -829,6 +831,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
+              void $ withTryCatch "passOrderStatusHandler:registerHasPass" (FRFSPassOverride.registerHasPass purchasedPass.personId purchasedPassPayment.endDate)
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
               -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
               -- it onto the pass at each transition — so the webhook never races the upload for it.
@@ -985,6 +988,12 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   now <- getCurrentTime
 
   passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+
+  let liveEndDates = map (.endDate) $ filter (\p -> p.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) passEntities
+  unless (null liveEndDates) $
+    void $
+      withTryCatch "getMultimodalPassListUtil:registerHasPass" $
+        FRFSPassOverride.registerHasPass personId (maximum liveEndDates)
 
   -- Process each pass and apply updates in-memory to ensure we return the latest state
   -- without relying on read replica synchronization
