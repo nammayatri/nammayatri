@@ -117,6 +117,25 @@ seed_algeria() {
                FROM atlas_app.geometry
               WHERE region IN ('Algiers','Oran','Annaba') ORDER BY region;" \
     | sed 's/^ */    /' | grep -v '^ *$'
+
+  export_geojson
+}
+
+# Export the service areas the *database* actually holds, so the map can never
+# drift from what the API enforces. Regenerated on every run; not committed.
+export_geojson() {
+  $PG -At -c "
+    SELECT json_build_object(
+             'type','FeatureCollection',
+             'features', json_agg(json_build_object(
+               'type','Feature',
+               'properties', json_build_object('region', region),
+               'geometry', ST_AsGeoJSON(geom)::json)))
+      FROM atlas_app.geometry
+     WHERE region IN ('Algiers','Oran','Annaba');" \
+    | tr -d '\r' > demo-map/site/areas.geojson
+  [ -s demo-map/site/areas.geojson ] || die "failed to export demo-map/site/areas.geojson"
+  ok "map data exported ($(wc -c < demo-map/site/areas.geojson) bytes)"
 }
 
 show_db_state() {
@@ -195,7 +214,8 @@ verify() {
   printf '%s' "$svc" | grep -q '"serviceable":false' || die "Bangalore should NOT be serviceable: $svc"
   ok "POST /v2/serviceability/origin 200  Bangalore    serviceable=false"
 
-  printf '\n\033[1;32m*** Backend is fully operational ***\033[0m\n\n'
+  printf '\n\033[1;32m*** Backend is fully operational ***\033[0m\n'
+  printf '\033[1;36m    Service-area map: http://localhost:8015\033[0m\n\n'
 }
 
 case "${1:-up}" in
@@ -220,8 +240,8 @@ log "Starting infrastructure"
 docker compose up -d postgres redis kafka passetto-db passetto
 wait_for_pg
 seed_db
-log "Starting rider-app (it applies its own migrations) + proxy"
-docker compose up -d rider-app proxy
+log "Starting rider-app (it applies its own migrations) + proxy + map"
+docker compose up -d rider-app proxy map
 wait_for_api
 seed_algeria
 verify

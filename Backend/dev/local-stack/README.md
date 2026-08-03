@@ -24,6 +24,7 @@ POST /v2/serviceability/origin 200  Bangalore    serviceable=false
 
 | URL | What |
 |-----|------|
+| `http://localhost:8015` | **Service-area map** — click anywhere, the backend answers |
 | `http://localhost:8014/swagger` | Swagger UI — 60 endpoints (**no trailing slash**, see Gotchas) |
 | `http://localhost:8014/openapi` | OpenAPI spec (JSON) |
 | `localhost:5434` | Postgres (`postgres` / `root`, db `atlas_dev`, schema `atlas_app`) |
@@ -109,6 +110,23 @@ merely added to.
 > Postgres without dropping the cache and the API keeps serving the old areas.
 > `setup.sh` flushes Redis for you.
 
+### The map — `http://localhost:8015`
+
+A one-page visual of the same thing the terminal checks: the three boundaries
+drawn on a map, click anywhere to fire a real
+`POST /v2/serviceability/origin` and get green (served) or red (not served).
+
+Two things keep it honest:
+
+- The polygons are **exported from `atlas_app.geometry` on every run**, not
+  hand-drawn, so the map cannot drift from what the API enforces.
+- The answers are **live API calls**, not a lookup in the page.
+
+It also exists because of CORS: rider-app sends no CORS headers and 404s on
+`OPTIONS`, so a page opened from `file://` or any other port cannot call it.
+The `map` container (nginx) serves the page *and* reverse-proxies `/v2` to
+rider-app, putting both on one origin — no upstream patch needed.
+
 ### What is *not* just config: the country code
 
 Cities are data, but the **country is hard-coded**. `POST /v2/auth` rejects an
@@ -171,5 +189,7 @@ docker-compose.yml    the stack
 Dockerfile.rider      librdkafka fix
 algeria-geofences.sql Algiers / Oran / Annaba service areas
 demo.sh, demo.ps1     scripted end-to-end demo
+demo-map/             the map on :8015 (nginx conf + page)
+  site/areas.geojson  exported from the DB by setup.sh (gitignored)
 2023/                 pinned upstream tree (fetched by setup.sh, gitignored)
 ```

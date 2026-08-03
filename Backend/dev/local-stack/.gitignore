@@ -1,6 +1,9 @@
 # Pinned upstream tree fetched by setup.sh
 2023/
 
+# Exported from the database on every run by setup.sh
+demo-map/site/areas.geojson
+
 # The repo root .gitignore has a blanket `docker-compose.yml` rule; this stack's
 # compose file is source, not local scratch, so re-include it.
 !docker-compose.yml

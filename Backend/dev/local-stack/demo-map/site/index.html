@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service areas — Algeria</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --line:#262b36;
+    --fg:#e8ecf2; --muted:#9aa4b2;
+    --yes:#22c55e; --no:#ef4444; --accent:#38bdf8;
+  }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; }
+  body {
+    background:var(--bg); color:var(--fg);
+    font:16px/1.5 "Segoe UI", system-ui, sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header {
+    padding:14px 22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+  }
+  header h1 { margin:0; font-size:21px; font-weight:600; letter-spacing:.2px; }
+  header .sub { color:var(--muted); font-size:14px; }
+  .pill {
+    margin-left:auto; font-size:13px; padding:5px 12px; border-radius:999px;
+    border:1px solid var(--line); color:var(--muted); white-space:nowrap;
+  }
+  .pill.ok { color:var(--yes); border-color:rgba(34,197,94,.45); }
+  .pill.err{ color:var(--no);  border-color:rgba(239,68,68,.45); }
+
+  main { flex:1; display:flex; min-height:0; }
+  #map { flex:1; background:#0b0d11; }
+  aside {
+    width:380px; flex:none; background:var(--panel);
+    border-left:1px solid var(--line); padding:18px 20px;
+    overflow:auto; display:flex; flex-direction:column; gap:18px;
+  }
+  h2 {
+    margin:0 0 10px; font-size:12px; font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  .hint { color:var(--muted); font-size:13.5px; margin:0; }
+
+  button.pt {
+    display:block; width:100%; text-align:left; cursor:pointer;
+    margin-bottom:7px; padding:10px 13px; border-radius:9px;
+    border:1px solid var(--line); background:#1d222c; color:var(--fg);
+    font:inherit; font-size:14.5px; transition:border-color .12s, background .12s;
+  }
+  button.pt:hover { background:#252b37; border-color:#3a424f; }
+  button.pt .co { display:block; color:var(--muted); font-size:12px; margin-top:2px;
+                  font-family:ui-monospace,Consolas,monospace; }
+
+  #log { display:flex; flex-direction:column; gap:7px; }
+  .row {
+    display:flex; align-items:center; gap:11px;
+    padding:10px 13px; border-radius:9px;
+    background:#1d222c; border-left:4px solid var(--line);
+    animation:in .18s ease-out;
+  }
+  @keyframes in { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+  .row.yes { border-left-color:var(--yes); }
+  .row.no  { border-left-color:var(--no); }
+  .row .nm { flex:1; font-size:14.5px; }
+  .row .nm small { display:block; color:var(--muted); font-size:11.5px;
+                   font-family:ui-monospace,Consolas,monospace; }
+  .row .vd { font-weight:700; font-size:13px; letter-spacing:.04em; }
+  .row.yes .vd { color:var(--yes); }
+  .row.no  .vd { color:var(--no); }
+
+  footer {
+    padding:9px 22px; border-top:1px solid var(--line);
+    color:var(--muted); font-size:12.5px;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  }
+  code { font-family:ui-monospace,Consolas,monospace; color:#cbd5e1; }
+  .leaflet-tooltip.lbl {
+    background:rgba(15,17,21,.85); border:1px solid var(--line); color:var(--fg);
+    font-weight:600; font-size:13px; box-shadow:none;
+  }
+  .leaflet-tooltip.lbl::before { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Service areas — Algeria</h1>
+  <span class="sub">boundaries and answers come from our own backend, live</span>
+  <span class="pill" id="status">connecting…</span>
+</header>
+
+<main>
+  <div id="map"></div>
+  <aside>
+    <section>
+      <h2>Try a pickup point</h2>
+      <div id="buttons"></div>
+      <p class="hint">…or click anywhere on the map.</p>
+    </section>
+    <section style="flex:1">
+      <h2>Backend answers</h2>
+      <div id="log"></div>
+    </section>
+  </aside>
+</main>
+
+<footer>
+  <span>Each click is a real <code>POST /v2/serviceability/origin</code> to the backend.</span>
+  <span>Boundaries drawn from <code>atlas_app.geometry</code>.</span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const statusEl = document.getElementById('status');
+const logEl    = document.getElementById('log');
+
+function setStatus(text, kind) {
+  statusEl.textContent = text;
+  statusEl.className = 'pill' + (kind ? ' ' + kind : '');
+}
+
+const map = L.map('map', { zoomControl:true }).setView([35.5, 3.0], 6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+}).addTo(map);
+
+// Preset points. The two at the bottom are outside our service areas on
+// purpose — they show the backend really is refusing places we do not serve.
+const PRESETS = [
+  { name:'Algiers — city centre',   lat:36.7538,    lon:3.0588     },
+  { name:'Algiers — airport',       lat:36.6910,    lon:3.2154     },
+  { name:'Oran — city centre',      lat:35.6969,    lon:-0.6331    },
+  { name:'Oran — Es Senia airport', lat:35.6244,    lon:-0.6212    },
+  { name:'Annaba — city centre',    lat:36.9000,    lon:7.7667     },
+  { name:'Constantine',             lat:36.3650,    lon:6.6147     },
+  { name:'Bangalore, India',        lat:12.9715987, lon:77.5945627 },
+];
+
+const btns = document.getElementById('buttons');
+PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'pt';
+  b.innerHTML = `${p.name}<span class="co">${p.lat}, ${p.lon}</span>`;
+  b.onclick = () => { map.flyTo([p.lat, p.lon], 11, { duration:.6 }); ask(p.lat, p.lon, p.name); };
+  btns.appendChild(b);
+});
+
+let token = null;
+
+// The API sends no CORS headers, so this page is served from the same origin
+// (nginx proxies /v2 through to rider-app) and these are plain relative calls.
+async function login() {
+  setStatus('logging in…');
+  const auth = await fetch('/v2/auth', {
+    method:'POST',
+    headers:{ 'content-type':'application/json',
+              'x-bundle-version':'1.0.1', 'x-client-version':'1.0.0' },
+    // Still the +91 test rider: POST /v2/auth hard-codes the Indian dial code
+    // (Registration.hs, P.mobileIndianCode). Unrelated to the geofence result.
+    body: JSON.stringify({ mobileCountryCode:'+91', mobileNumber:'9999900001', merchantId:'YATRI' })
+  }).then(r => r.json());
+
+  const v = await fetch(`/v2/auth/${auth.authId}/verify`, {
+    method:'POST', headers:{ 'content-type':'application/json' },
+    body: JSON.stringify({ otp:'7891', deviceToken:'map-demo' })
+  }).then(r => r.json());
+
+  token = v.token;
+  setStatus('signed in · token ' + token.slice(0, 8) + '…', 'ok');
+}
+
+async function drawAreas() {
+  const fc = await fetch('areas.geojson', { cache:'no-store' }).then(r => r.json());
+  const layer = L.geoJSON(fc, {
+    style:{ color:'#38bdf8', weight:2, fillColor:'#38bdf8', fillOpacity:.13 }
+  }).addTo(map);
+
+  layer.eachLayer(l => {
+    const n = l.feature.properties.region;
+    l.bindTooltip(n, { permanent:true, direction:'center', className:'lbl' });
+  });
+
+  map.fitBounds(layer.getBounds().pad(0.45));
+  return fc.features.map(f => f.properties.region).join(' · ');
+}
+
+function addRow(name, lat, lon, serviceable) {
+  const d = document.createElement('div');
+  d.className = 'row ' + (serviceable ? 'yes' : 'no');
+  d.innerHTML = `<div class="nm">${name}<small>${lat}, ${lon}</small></div>
+                 <div class="vd">${serviceable ? '✓ SERVICEABLE' : '✕ NOT SERVED'}</div>`;
+  logEl.prepend(d);
+}
+
+async function ask(lat, lon, name) {
+  if (!token) return;
+  const r = await fetch('/v2/serviceability/origin', {
+    method:'POST',
+    headers:{ 'content-type':'application/json', token },
+    body: JSON.stringify({ location:{ lat, lon } })
+  }).then(r => r.json());
+
+  const yes = r.serviceable === true;
+  L.circleMarker([lat, lon], {
+    radius:9, weight:3,
+    color: yes ? '#22c55e' : '#ef4444',
+    fillColor: yes ? '#22c55e' : '#ef4444', fillOpacity:.55
+  }).addTo(map).bindPopup(
+    `<b>${name}</b><br>${lat}, ${lon}<br>serviceable: <b>${r.serviceable}</b>`
+  ).openPopup();
+
+  addRow(name, lat, lon, yes);
+}
+
+map.on('click', e => {
+  const lat = +e.latlng.lat.toFixed(5), lon = +e.latlng.lng.toFixed(5);
+  ask(lat, lon, 'Dropped pin');
+});
+
+(async () => {
+  try {
+    const regions = await drawAreas();
+    await login();
+    setStatus('signed in · serving ' + regions, 'ok');
+  } catch (err) {
+    setStatus('backend unreachable — is the stack up?', 'err');
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>

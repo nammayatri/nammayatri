@@ -104,5 +104,19 @@ services:
       - "8014:8013"
     restart: unless-stopped
 
+  # Visual demo: a map of the service areas that queries the live API.
+  # It also exists to solve a CORS problem -- rider-app sends no CORS headers,
+  # so the page has to be served from the same origin as the API it calls.
+  # areas.geojson is exported from the database by setup.sh.
+  map:
+    image: nginx:alpine
+    container_name: ny-map
+    ports:
+      - "8015:80"
+    volumes:
+      - ./demo-map/site:/usr/share/nginx/html:ro
+      - ./demo-map/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
 volumes:
   ny-pgdata:
