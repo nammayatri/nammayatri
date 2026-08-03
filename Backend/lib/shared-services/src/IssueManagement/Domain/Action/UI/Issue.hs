@@ -190,6 +190,7 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
 getIssueOption ::
   ( BeamFlow m r,
     EsqDBReplicaFlow m r,
+    EncFlow m r,
     CoreMetrics m
   ) =>
   (Id Person, Id Merchant, Id MerchantOperatingCity) ->
@@ -228,6 +229,10 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
               issueReport.chats ++ (mkIssueChat IssueOption optionId.getId now) :
               map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
         QIR.updateChats iReportId updatedChats
+
+        mbSelectedOptionTranslation <- CQIO.findByIdAndLanguage optionId language identifier
+        whenJust mbSelectedOptionTranslation $ \optionTranslation ->
+          forwardChatToTicketService issueReport identifier issueHandle (mkIssueOptionList issueConfig language mbRideInfoRes optionTranslation).option []
         -- Mirror the auto-generated replies shown on option selection into the
         -- ticket service, so the Xyne agent sees the same bot conversation the
         -- user does — not just the status-change replies.
@@ -594,13 +599,24 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
         QIR.updateTicketIds issueReport.id primaryResp.ticketId additionalId
+        -- issueReport (built before this API call) still has ticketId/additionalTicketIds
+        -- as Nothing; use the updated value below so forwarding carries the real
+        -- provider ticket id rather than falling back on the internal issueReportId.
+        let issueReportWithTicket = issueReport {D.ticketId = Just primaryResp.ticketId, D.additionalTicketIds = additionalId}
+        -- Replay the pre-ticket conversation (bot prompts + option taps the customer
+        -- saw before a ticket existed) onto the now-created Xyne thread, in order,
+        -- before the onCreateIssue replies below — otherwise that history is stored
+        -- locally (issueReport.chats) but never reaches Xyne at all.
+        forwardHistoricalChats chats_ issueReportWithTicket identifier issueHandle language issueConfig mbRideInfoRes
+        -- Forward the auto-generated onCreateIssue replies to the ticket service so
+        -- the Xyne agent sees the bot's opening messages too. Runs inside the
+        -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
+        -- append to (forwarding keys on issueReport.id as the Xyne threadId).
+        mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReportWithTicket identifier issueHandle message.message []) messages
       Left err -> do
+        -- Ticket creation itself failed — skip forwarding history/replies rather
+        -- than posting comments against a thread that may not exist.
         logTagInfo "Create Ticket API failed - " $ show err
-    -- Forward the auto-generated onCreateIssue replies to the ticket service so
-    -- the Xyne agent sees the bot's opening messages too. Runs inside the
-    -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
-    -- append to (forwarding keys on issueReport.id as the Xyne threadId).
-    mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) messages
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
     mkIssueReport mocId updatedChats shouldCreateTicket now = do
@@ -866,6 +882,25 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
                    then map (\message -> mkIssueChat IssueMessage message.id.getId now) messages
                    else []
                )
+
+    -- Resolves each pre-ticket Chat pointer (bot IssueMessage / user IssueOption
+    -- tap) into its actual text, mirroring recreateIssueChats's resolution, and
+    -- forwards it to the now-created Xyne thread in chronological order. Skips
+    -- MediaFile/IssueDescription entries — the frontend never includes those in
+    -- the pre-submit chats list (they're appended separately by updateChats),
+    -- and the description itself already reaches Xyne as the createTicket body.
+    forwardHistoricalChats :: (EncFlow m r, BeamFlow m r) => [Chat] -> D.IssueReport -> Identifier -> ServiceHandle m -> Language -> D.IssueConfig -> Maybe RideInfoRes -> m ()
+    forwardHistoricalChats issueChats issueReport' identifier' issueHandle' language' issueConfig' mbRideInfoRes' =
+      forM_ issueChats $ \item -> case item.chatType of
+        IssueMessage -> do
+          mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language' identifier'
+          let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language' issueConfig' mbRideInfoRes') . (: []) =<< mbIssueMessageTranslation
+          whenJust mbMessage $ \msg -> forwardChatToTicketServiceAs "Auto Reply" issueReport' identifier' issueHandle' msg.message []
+        IssueOption -> do
+          mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language' identifier'
+          let mbIssueOption = mkIssueOptionList issueConfig' language' mbRideInfoRes' <$> mbIssueOptionTranslation
+          whenJust mbIssueOption $ \opt -> forwardChatToTicketService issueReport' identifier' issueHandle' opt.option []
+        _ -> pure ()
 
     castIdentifierToClassification :: Identifier -> TIT.Classification
     castIdentifierToClassification = \case
