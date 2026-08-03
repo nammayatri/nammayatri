@@ -10,6 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import qualified Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTier = FRFSVehicleServiceTier
@@ -19,7 +20,11 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isRescheduleAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longName :: Kernel.Prelude.Text,
+    maxRescheduleCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxRescheduleDaysAhead :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxRescheduleTimeAfterStart :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     providerCode :: Kernel.Prelude.Text,

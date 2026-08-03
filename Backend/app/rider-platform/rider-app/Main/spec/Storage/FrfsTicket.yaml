@@ -451,6 +451,8 @@ FRFSTicketBooking:
     toStopIdx: Maybe Int
     holdId: Maybe Text
     tripId: Maybe Text
+    parentBookingId: Maybe (Id FRFSTicketBooking)
+    rescheduleCount: Maybe Int
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
@@ -898,6 +900,9 @@ FRFSRecon:
       kvFunction: updateWithKV
       params: [ticketStatus, updatedAt]
       where: frfsTicketBookingId
+    findAllByFrfsTicketBookingId:
+      kvFunction: findAllWithKV
+      where: frfsTicketBookingId
 
   beamFields:
     fare:
@@ -942,6 +947,7 @@ FRFSConfig:
     discount: Int
     isEventOngoing: Maybe Bool
     isCancellationAllowed: Bool
+    isRescheduleAllowed: Maybe Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
     customDates: "[Text]"
@@ -1257,6 +1263,10 @@ FRFSVehicleServiceTier:
     description: Text
     isAirConditioned: Maybe Bool
     isCancellable: Maybe Bool
+    isRescheduleAllowed: Maybe Bool
+    maxRescheduleCount: Maybe Int
+    maxRescheduleTimeAfterStart: Maybe Seconds
+    maxRescheduleDaysAhead: Maybe Int
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity

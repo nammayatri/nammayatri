@@ -20,14 +20,13 @@ import qualified Storage.Beam.FRFSTicketBooking as Beam
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
             bookingAuthCode = bookingAuthCode,
-            isSpotBooking = isSpotBooking,
             bppBankAccountNumber = bppBankAccountNumber,
             bppBankCode = bppBankCode,
             bppDelayedInterest = bppDelayedInterest,
@@ -71,6 +70,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             isFareChanged = isFareChanged,
             isMockPayment = isMockPayment,
             isSingleMode = isSingleMode,
+            isSpotBooking = isSpotBooking,
             journeyOnInitDone = journeyOnInitDone,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -79,6 +79,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             ondcOnInitReceivedAt = ondcOnInitReceivedAt,
             osBuildVersion = osBuildVersion,
             osType = osType,
+            parentBookingId = Kernel.Types.Id.Id <$> parentBookingId,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             payerVpa = payerVpa,
@@ -89,6 +90,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             quoteId = Kernel.Types.Id.Id quoteId,
             recentLocationId = Kernel.Types.Id.Id <$> recentLocationId,
             refundAmount = refundAmount,
+            rescheduleCount = rescheduleCount,
             riderId = Kernel.Types.Id.Id riderId,
             routeCode = routeCode,
             routeName = routeName,
@@ -118,7 +120,6 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
         Beam.bookingAuthCode = bookingAuthCode,
-        Beam.isSpotBooking = isSpotBooking,
         Beam.bppBankAccountNumber = bppBankAccountNumber,
         Beam.bppBankCode = bppBankCode,
         Beam.bppDelayedInterest = bppDelayedInterest,
@@ -163,6 +164,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.isFareChanged = isFareChanged,
         Beam.isMockPayment = isMockPayment,
         Beam.isSingleMode = isSingleMode,
+        Beam.isSpotBooking = isSpotBooking,
         Beam.journeyOnInitDone = journeyOnInitDone,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
@@ -171,6 +173,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.ondcOnInitReceivedAt = ondcOnInitReceivedAt,
         Beam.osBuildVersion = osBuildVersion,
         Beam.osType = osType,
+        Beam.parentBookingId = Kernel.Types.Id.getId <$> parentBookingId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.payerVpa = payerVpa,
@@ -181,6 +184,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.recentLocationId = Kernel.Types.Id.getId <$> recentLocationId,
         Beam.refundAmount = refundAmount,
+        Beam.rescheduleCount = rescheduleCount,
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeCode = routeCode,
         Beam.routeName = routeName,
@@ -197,7 +201,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.toStopIdx = toStopIdx,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
+        Beam.currency = ((Kernel.Prelude.Just . (.currency))) totalPrice,
         Beam.price = (.amount) totalPrice,
         Beam.tripId = tripId,
         Beam.validTill = validTill,
