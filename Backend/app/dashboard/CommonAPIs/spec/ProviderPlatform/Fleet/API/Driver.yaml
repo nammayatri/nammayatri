@@ -1374,6 +1374,16 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # ChangeDriverFleetOwnerAPI
+      endpoint: /fleet/driver/{driverId}/changeFleetOwner
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: ChangeDriverFleetOwnerReq
+      response:
+        type: APISuccess
+
   - GET: # GetDriverDetailsAPI
       endpoint: /fleet/driver/details
       auth: ApiAuthV2
@@ -1584,6 +1594,11 @@ types:
     - approve: Maybe Bool
     - reason: Maybe Text
     - derive: "'HideSecrets"
+  ChangeDriverFleetOwnerReq:
+    - newFleetOwnerId: Text
+    - reason: Maybe Text
+    - derive: "'HideSecrets"
+
   UpdateDriverReq:
     - firstName: Maybe Text
     - lastName: Maybe Text

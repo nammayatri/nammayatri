@@ -16,6 +16,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -44,6 +45,8 @@ data ActionVerb
   | Unblock
   | Approve
   | Reject
+  | SetOnboardingAs
+  | LinkToFleet
   deriving (Show, Eq, Generic)
 
 data GuardTarget
@@ -131,6 +134,12 @@ checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
   Add -> ok
   Approve -> ok
   Reject -> ok
+  SetOnboardingAs
+    | driverInfo.enabled -> violate "DI-8" "onboardingAs cannot be changed while the driver is enabled"
+    | otherwise -> ok
+  LinkToFleet
+    | driverInfo.enabled -> violate "DI-9" "driver is already enabled; use changeFleetOwner to move an active driver between fleets"
+    | otherwise -> ok
 
 checkVehicle :: ActionVerb -> DVRC.VehicleRegistrationCertificate -> Either GuardViolation ()
 checkVehicle verb rc = case verb of
@@ -153,6 +162,8 @@ checkVehicle verb rc = case verb of
   Delete -> ok
   Approve -> ok
   Reject -> ok
+  SetOnboardingAs -> violate "R-UNSUPPORTED" "vehicles have no onboardingAs"
+  LinkToFleet -> violate "R-UNSUPPORTED" "vehicles are not linked to fleets by this verb"
 
 checkFleet :: ActionVerb -> DFOI.FleetOwnerInformation -> Either GuardViolation ()
 checkFleet verb fleetInfo = case verb of
@@ -173,6 +184,8 @@ checkFleet verb fleetInfo = case verb of
   Delete -> ok
   Approve -> ok
   Reject -> ok
+  SetOnboardingAs -> violate "F-UNSUPPORTED" "fleet owners have no onboardingAs"
+  LinkToFleet -> ok
 
 ok :: Either GuardViolation ()
 ok = Right ()
@@ -224,7 +237,7 @@ guardNoLiveRide verb target
 --   keeps its TransporterConfig-only signature.
 guardAssociationAllowed :: OnboardingFlow m r => ActionVerb -> GuardTarget -> m ()
 guardAssociationAllowed verb target
-  | verb `notElem` [Link, Add] = pure ()
+  | verb `notElem` [Link, Add, LinkToFleet] = pure ()
   | otherwise = case target of
     TargetDriver personId -> do
       mbDriverInfo <- DIQuery.findById (cast personId)
@@ -242,7 +255,7 @@ guardAssociationAllowed verb target
 -- | RC-side association guards, previously inside the creation helpers.
 guardRcAssociationAllowed :: OnboardingFlow m r => DTC.TransporterConfig -> ActionVerb -> GuardTarget -> m ()
 guardRcAssociationAllowed transporterConfig verb target
-  | verb `notElem` [Link, Add, Activate] = pure ()
+  | verb `notElem` [Link, Add, Activate, LinkToFleet] = pure ()
   | transporterConfig.blockDriverOwnRCForFleetDrivers /= Just True = pure ()
   | otherwise = case target of
     TargetVehicleById rcId -> AC.guardRCNotActiveWithAnotherDriver rcId
@@ -288,8 +301,28 @@ withOnboardingAction transporterConfig verb target body =
 
 withOnboardingActionFanout :: OnboardingFlow m r => DTC.TransporterConfig -> ActionVerb -> GuardTarget -> m (a, RecomputeSpec) -> m a
 withOnboardingActionFanout transporterConfig verb target body =
-  AC.withAssociation (guardOnboardingAction transporterConfig verb target) $ do
-    (result, extraSpec) <- body
-    when (isUnified transporterConfig) $
-      runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)
-    pure result
+  withOnboardingActionLock target $
+    AC.withAssociation (guardOnboardingAction transporterConfig verb target) $ do
+      (result, extraSpec) <- body
+      when (isUnified transporterConfig) $
+        runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)
+      pure result
+
+onboardingActionLockTTLSeconds :: Int
+onboardingActionLockTTLSeconds = 30
+
+onboardingActionLockRetryMs :: Int
+onboardingActionLockRetryMs = 100
+
+-- | Serialise concurrent onboarding actions on the same entity: two handlers mutating the same
+--   driver would otherwise interleave their guard read, their write and their recompute, and the
+--   later recompute could observe a half-applied state. Waits for the holder rather than failing.
+withOnboardingActionLock :: OnboardingFlow m r => GuardTarget -> m a -> m a
+withOnboardingActionLock target body = case target of
+  TargetDriver personId -> locked personId.getId
+  TargetFleetOwner personId -> locked personId.getId
+  TargetVehicleById rcId -> locked rcId.getId
+  TargetVehicle registrationNo -> locked registrationNo
+  where
+    locked entityKey =
+      Hedis.withWaitAndLockRedis ("Onboarding:Action:" <> entityKey) onboardingActionLockTTLSeconds onboardingActionLockRetryMs body

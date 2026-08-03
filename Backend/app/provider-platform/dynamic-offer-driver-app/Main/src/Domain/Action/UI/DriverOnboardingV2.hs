@@ -103,6 +103,7 @@ import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDrive
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -1379,8 +1380,9 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
-          SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver driverId) $
+          SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver driverId) $ do
             FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
+            QDIExtra.updateOnboardingAs (Just DI.FLEET_DRIVER) (cast driverId)
   return Success
 
 -- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on

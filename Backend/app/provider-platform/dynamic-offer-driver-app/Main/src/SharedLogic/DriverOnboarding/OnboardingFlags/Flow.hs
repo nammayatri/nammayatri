@@ -204,13 +204,6 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
     if effectiveOnboardingAs == DI.FLEET_DRIVER || useUnifiedOnboardingFlagsRecompute
       then QFDA.findByDriverId person.id True
       else pure Nothing
-  -- onboardingAs is derived, not an input: fleet membership is the source of truth, so a driver
-  -- holding an active fleet association is a FLEET_DRIVER and anyone else is INDIVIDUAL. Settled
-  -- on every recompute, not only on the enable transition, so an association change on an already
-  -- enabled or still disabled driver is picked up too.
-  let settledOnboardingAs = if isJust mbFleetAssoc then DI.FLEET_DRIVER else DI.INDIVIDUAL
-  when (useUnifiedOnboardingFlagsRecompute && driverInfo.onboardingAs /= Just settledOnboardingAs) $
-    DIQueryExtra.updateOnboardingAs (Just settledOnboardingAs) (cast person.id)
   if justEnabled
     then do
       enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId allMandatoryDocsValid
