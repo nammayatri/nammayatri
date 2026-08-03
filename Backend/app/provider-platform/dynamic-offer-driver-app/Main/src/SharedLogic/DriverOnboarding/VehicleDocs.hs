@@ -167,7 +167,10 @@ data BankingDetailsDocumentMetadata = BankingDetailsDocumentMetadata
   { accountNumber :: Maybe T.Text,
     ifscCode :: Maybe T.Text,
     nameAtBank :: Maybe T.Text,
-    upiId :: Maybe T.Text
+    upiId :: Maybe T.Text,
+    chargesEnabled :: Maybe Bool,
+    payoutsEnabled :: Maybe Bool,
+    detailsSubmitted :: Maybe Bool
   }
   deriving (Show, Eq, Ord, Generic, A.ToJSON, A.FromJSON, ToSchema)
 

@@ -392,7 +392,10 @@ castDocumentMetadata = \case
         { accountNumber = b.accountNumber,
           ifscCode = b.ifscCode,
           nameAtBank = b.nameAtBank,
-          upiId = b.upiId
+          upiId = b.upiId,
+          chargesEnabled = b.chargesEnabled,
+          payoutsEnabled = b.payoutsEnabled,
+          detailsSubmitted = b.detailsSubmitted
         }
 
 castPanType :: DPan.PanType -> CommonDriverRegistration.PanType

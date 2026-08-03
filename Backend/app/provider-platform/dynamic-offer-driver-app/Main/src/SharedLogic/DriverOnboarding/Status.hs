@@ -94,6 +94,7 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DigilockerVerification as QDV
+import qualified Storage.Queries.DriverBankAccount as QDriverBankAccount
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as DIQuery
@@ -1179,12 +1180,20 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                 if enableMetadata
                   then
                     mbFleetInfo <&> \fi ->
-                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa}
+                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa, chargesEnabled = Nothing, payoutsEnabled = Nothing, detailsSubmitted = Nothing}
                   else Nothing
           return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
         else do
           mbDriverInfo <- DIQuery.findById (cast driverId)
+          mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
           let hasBankingDetails = maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo
+              mbChargesEnabled = (.chargesEnabled) <$> mbBankAccount
+              mbPayoutsEnabled = mbBankAccount >>= (.payoutsEnabled)
+              mbDetailsSubmitted = (.detailsSubmitted) <$> mbBankAccount
+              bankAccountStatus
+                | mbChargesEnabled == Just True && mbPayoutsEnabled == Just True = Just VALID
+                | mbDetailsSubmitted == Just True = Just MANUAL_VERIFICATION_REQUIRED
+                | otherwise = Nothing
               mbBankingMetadata =
                 if enableMetadata
                   then
@@ -1194,10 +1203,13 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
                           { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
                             ifscCode = di.driverBankAccountDetails >>= (.ifscCode),
                             nameAtBank = di.driverBankAccountDetails >>= (.nameAtBank),
-                            upiId = di.payerVpa
+                            upiId = di.payerVpa,
+                            chargesEnabled = mbChargesEnabled,
+                            payoutsEnabled = mbPayoutsEnabled,
+                            detailsSubmitted = mbDetailsSubmitted
                           }
                   else Nothing
-          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
+          return (bankAccountStatus <|> (if hasBankingDetails then Just VALID else Nothing), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: OnboardingFlow m r => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
