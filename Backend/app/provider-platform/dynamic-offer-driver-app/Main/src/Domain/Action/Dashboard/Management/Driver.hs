@@ -455,7 +455,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
 
   driverPerson <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   tcForDisable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driverPerson.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId driverPerson.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound driverPerson.merchantOperatingCityId.getId)
-  SGuard.withOnboardingAction tcForDisable SGuard.Disable (SGuard.TargetDriver personId) $
+  SGuard.withOnboardingAction tcForDisable SGuard.None SGuard.Disable (SGuard.TargetDriver personId) $
     SFlags.markDisabledFlags (tcForDisable.unifiedOnboardingFlagsRecompute == Just True) driverPerson (SFlags.AdminDisable DrInfo.DriverDisabled)
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
@@ -496,7 +496,7 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
   tcForBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForBlock SGuard.Block (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block (SGuard.TargetDriver personId) $ do
     void $
       SFlags.markBlockFlags personId $
         SFlags.Block
@@ -539,7 +539,7 @@ postDriverBlock merchantShortId opCity reqDriverId = do
   unless (merchant.id == merchantId && driver.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   tcForSimpleBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForSimpleBlock SGuard.Block (SGuard.TargetDriver personId) $
+  SGuard.withOnboardingAction tcForSimpleBlock SGuard.None SGuard.Block (SGuard.TargetDriver personId) $
     when (not driverInf.blocked) $
       void $
         SFlags.markBlockFlags personId $
@@ -585,7 +585,7 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
 
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   tcForUnblock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForUnblock SGuard.Unblock (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetDriver personId) $ do
     when driverInf.blocked $ do
       void $
         SFlags.markBlockFlags personId $
@@ -653,7 +653,7 @@ deleteDriverPermanentlyDelete merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.guardOnboardingAction transporterConfig SGuard.Delete (SGuard.TargetDriver (cast reqDriverId))
+  SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.Delete (SGuard.TargetDriver (cast reqDriverId))
   DeleteDriver.deleteDriver merchantShortId (cast reqDriverId)
 
 ---------------------------------------------------------------------
@@ -669,7 +669,7 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   let driverId_ = cast @Common.Driver @DP.Driver driverId
-  SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
     QDriverLicense.deleteByDriverId personId
     unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
       Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
@@ -687,7 +687,7 @@ postDriverUnlinkAadhaar merchantShortId opCity driverId = do
 
   _ <- B.runInReplica $ QAadhaarCard.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
 
-  SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
     QAadhaarCard.deleteByPersonId personId
     QDriverInfo.updateAadhaarVerifiedState False driverId_
     unless (transporterConfig.aadhaarVerificationRequired) $
@@ -845,7 +845,7 @@ postDriverDeleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = 
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver personId) $
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $
     DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {..}) False
 
 ---------------------------------------------------------------------
@@ -1011,7 +1011,7 @@ postDriverUpdateVehicleVariant merchantShortId opCity _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   rcNumber <- decrypt vehicleRC.certificateNumber
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
-  SGuard.withOnboardingAction transporterConfig SGuard.Approve (SGuard.TargetVehicle rcNumber) $
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Approve (SGuard.TargetVehicle rcNumber) $
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       then RCQueryExtra.updateVehicleVariantWithoutVerificationStatus vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
       else RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing

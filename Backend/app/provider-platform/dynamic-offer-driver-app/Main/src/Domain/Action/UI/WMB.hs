@@ -486,7 +486,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
   fleetOwner <- QPerson.findById (Id fleetDriverAssociation.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetDriverAssociation.fleetOwnerId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
-  SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver (cast driverId)) $ do
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id (cast driverId)) SGuard.LinkToFleet (SGuard.TargetDriver (cast driverId)) $ do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")

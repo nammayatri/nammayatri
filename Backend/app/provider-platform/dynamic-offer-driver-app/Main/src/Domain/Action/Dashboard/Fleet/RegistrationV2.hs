@@ -174,31 +174,34 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
         Just Common.NORMAL_FLEET -> DP.FLEET_OWNER
         _ -> person.role
   let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = updEmail, role = newRole}
-  void $ QP.updateByPrimaryKey updPerson
-  void $ updateFleetOwnerInfo fleetOwnerInfo req
-  -- FleetRegistration is treated as a mandatory doc — fire the funnel so recompute picks up the fresh
-  -- registeredAt / role and re-derives verified/approved/enabled.
-  void $ SStatus.runRefreshOnboardingFlagsFleet (Just updPerson) (Just transporterConfig) fleetOwnerId
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner fleetOwnerId) $ do
+    void $ QP.updateByPrimaryKey updPerson
+    void $ updateFleetOwnerInfo fleetOwnerInfo req
+    -- FleetRegistration is treated as a mandatory doc — fire the funnel so recompute picks up the fresh
+    -- registeredAt / role and re-derives verified/approved/enabled.
+    unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
+      void $ SStatus.runRefreshOnboardingFlagsFleet (Just updPerson) (Just transporterConfig) fleetOwnerId
 
-  mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
-  whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
-    fleetAssocs <- QFOA.findAllFleetAssociations fleetOwnerId.getId
-    when (null fleetAssocs) $ do
-      fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId fleetOwnerId.getId referredOperatorId DomainRC.defaultAssociationEnd
-      QFOA.create fleetOperatorAssocData
-      let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-      when allowCacheDriverFlowStatus $ do
-        DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId.getId
-      DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
-  when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
-    fleetReferral <- QDR.findById person.id
-    when (isNothing fleetReferral) $ void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (fleetOwnerId, person.merchantId, person.merchantOperatingCityId)
+    mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
+    whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
+      fleetAssocs <- QFOA.findAllFleetAssociations fleetOwnerId.getId
+      when (null fleetAssocs) $ do
+        fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId fleetOwnerId.getId referredOperatorId DomainRC.defaultAssociationEnd
+        QFOA.create fleetOperatorAssocData
+        let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+        when allowCacheDriverFlowStatus $ do
+          DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId.getId
+        DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
+    when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
+      fleetReferral <- QDR.findById person.id
+      when (isNothing fleetReferral) $ void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (fleetOwnerId, person.merchantId, person.merchantOperatingCityId)
   fork "Uploading Business License Image" $ do
     whenJust req.businessLicenseImage $ \businessLicenseImage -> do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
       image <- Image.validateImage True Nothing Nothing (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
       businessLicenseNumber <- forM req.businessLicenseNumber encrypt
-      QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
+      SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner fleetOwnerId) $
+        QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
   enabled <-
     case req.setIsEnabled of -- Required for fleets where docs are not mandatory
       Just True -> pure True
@@ -303,7 +306,7 @@ enableFleetOwnerOnDocsValid :: Id DP.Person -> Flow (Maybe Bool)
 enableFleetOwnerOnDocsValid fleetOwnerId = do
   fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
   tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
-  SGuard.withOnboardingAction tcForEnable SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerId) $ do
+  SGuard.withOnboardingAction tcForEnable SGuard.None SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerId) $ do
     SFlags.markDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
   fmap (.enabled) <$> QFOI.findByPrimaryKey fleetOwnerId
 
@@ -344,30 +347,33 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
-  void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
-  QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  -- initialize fleet analytics counters to zero (best-effort, don't block fleet owner creation)
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-    fork "initializing fleet analytics keys" $
-      Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
-  let defaultDocsVerificationStatus =
-        if transporterConfig.enableManualDocumentStatusCheck == Just True
-          then Just DDVS.ADMIN_PENDING
-          else Nothing
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner person.id) $ do
+    void $ QP.create person
+    QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
+    -- initialize fleet analytics counters to zero (best-effort, don't block fleet owner creation)
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+      fork "initializing fleet analytics keys" $
+        Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
+    let defaultDocsVerificationStatus =
+          if transporterConfig.enableManualDocumentStatusCheck == Just True
+            then Just DDVS.ADMIN_PENDING
+            else Nothing
+    createFleetOwnerInfo person.id merchantId enabled merchantOpCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
-createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
+createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
   now <- getCurrentTime
-  let fleetOwnerInfo =
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
+  let useUnifiedOnboardingFlagsRecompute = maybe False (\transporterConfig -> transporterConfig.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfig
+      fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
             merchantId = merchantId,
             fleetType = NORMAL_FLEET, -- overwrite in register
             fleetName = Nothing,
-            enabled = fromMaybe True enabled,
+            enabled = not useUnifiedOnboardingFlagsRecompute && fromMaybe True enabled,
             blocked = False,
             verified = False,
             gstNumber = Nothing,
@@ -403,7 +409,7 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             ticketPlaceId = Nothing,
             fleetDob = Nothing,
             stripeAddress = Nothing,
-            merchantOperatingCityId = mbMerchantOperatingCityId,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             isBlockedForScheduledPayout = Nothing,
             subscribed = Nothing,
             tollRouteBlockedTill = Nothing,
@@ -419,9 +425,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
-  whenJust mbMerchantOperatingCityId $ \mocId ->
-    fork ("BootstrapAggCommChain:" <> personId.getId) $
-      AggCommSched.bootstrapAggregatedCommissionChain merchantId mocId personId.getId BeckInvoice.FLEET_OWNER
+  fork ("BootstrapAggCommChain:" <> personId.getId) $
+    AggCommSched.bootstrapAggregatedCommissionChain merchantId merchantOperatingCityId personId.getId BeckInvoice.FLEET_OWNER
 
 fleetOwnerLogin ::
   ShortId DMerchant.Merchant ->
