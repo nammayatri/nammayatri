@@ -5,7 +5,6 @@ module Storage.Queries.Person.GetNearestDrivers
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
-    estimateDeductionsFromConfig,
   )
 where
 
@@ -101,6 +100,8 @@ data NearestDriversReq = NearestDriversReq
     minWalletAmountForCashRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     taxConfig :: DTC.TaxConfig,
+    driverWalletConfig :: DTC.DriverWalletConfig,
+    mbSearchTryId :: Maybe Text,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
@@ -330,7 +331,9 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
                 let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
                     (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
                 mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-                pure $ maybe False (>= (fare + threshold)) mbBalance
+                prepaidOfferHolds <- getPrepaidOfferHoldTotal ownerId
+                ownPrepaidOfferHold <- maybe (pure 0) (getPrepaidOfferHoldAmount ownerId) mbSearchTryId
+                pure $ maybe False (\b -> b - (prepaidOfferHolds - ownPrepaidOfferHold) >= applyFareRecomputeBuffer driverWalletConfig fare + threshold) mbBalance
             )
             results
         _ -> pure results
@@ -338,8 +341,8 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
   let cashRequirement =
         case minWalletAmountForCashRides of
           Just minAmt
-            | isPrepaidEnabled && shouldCheckCashWallet paymentInstrument ->
-              Just (minAmt + estimateDeductionsFromConfig taxConfig rideFare govtCharges tollCharges parkingCharge)
+            | cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument ->
+              Just (minAmt + estimateBufferedStatutoryDeductions driverWalletConfig taxConfig ((\bf -> bf + fromMaybe 0 govtCharges + fromMaybe 0 tollCharges + fromMaybe 0 parkingCharge) <$> rideFare) govtCharges tollCharges parkingCharge)
           _ -> Nothing
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
@@ -353,8 +356,10 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
       Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
     checkBalance (counterpartyType, ownerId) required = do
-      mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
-      pure $ maybe False (>= required) mbBalance
+      mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
+      offerHolds <- getWalletOfferHoldTotal ownerId
+      ownOfferHold <- maybe (pure 0) (getWalletOfferHoldAmount ownerId) mbSearchTryId
+      pure $ maybe False (\b -> b - (offerHolds - ownOfferHold) >= required) mbBalance
 
     passesLiabilityGates cashReq airportReq r = do
       let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
@@ -369,23 +374,3 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
           | otherwise -> do
             cashOk <- checkBalance cashAccount c
             if cashOk then checkBalance airportAccount a else pure False
-
-shouldCheckCashWallet :: Maybe MP.PaymentInstrument -> Bool
-shouldCheckCashWallet = \case
-  Nothing -> True
-  Just MP.Cash -> True
-  Just MP.BoothOnline -> True
-  _ -> False
-
--- | Estimate deductions (govtCharges + TDS) from fare components.
-estimateDeductionsFromConfig :: DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
-estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkingCharge_ =
-  case rideFare of
-    Nothing -> 0
-    Just totalFare ->
-      let gstAmount = fromMaybe 0 govtCharges_
-          tollAmount = fromMaybe 0 tollCharges_
-          parkingAmount = fromMaybe 0 parkingCharge_
-          baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-          tdsRate = Just taxConfig.invalidPanTdsRate.rate
-       in gstAmount + estimateWalletDeductions tdsRate baseFare

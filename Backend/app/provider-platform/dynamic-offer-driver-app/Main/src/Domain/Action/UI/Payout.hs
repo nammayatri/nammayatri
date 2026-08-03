@@ -26,7 +26,6 @@ where
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
 import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -294,6 +293,11 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
 isPayoutOrderSuccess :: IPayout.PayoutOrderStatus -> Bool
 isPayoutOrderSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
+isPayoutOrderTerminal :: IPayout.PayoutOrderStatus -> Bool
+isPayoutOrderTerminal status =
+  isPayoutOrderSuccess status
+    || status `elem` [Payout.ERROR, Payout.FAILURE, Payout.FULFILLMENTS_FAILURE, Payout.CANCELLED, Payout.FULFILLMENTS_CANCELLED]
+
 payoutSettlementAction ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -438,16 +442,21 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
     Just DPayment.DRIVER_WALLET_TRANSACTION -> do
       let driverId = Id payoutOrder.customerId
       let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
-      mbPayoutReq <- case mbPayoutRequestId of
-        Nothing -> pure Nothing
-        Just prId -> QPR.findById (Id prId)
+      when (isNothing mbPayoutRequestId) $
+        logError $ "No payoutRequest id on payoutOrder " <> payoutOrder.id.getId <> "; any wallet hold for it cannot be released"
 
       Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
         (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         let counterparty = counterpartyFromRole person.role
+        when (isPayoutOrderTerminal updPayoutStatus && not (isPayoutOrderSuccess updPayoutStatus)) $
+          whenJust mbPayoutRequestId $ \prId ->
+            voidWalletHoldByReference counterparty driverId.getId prId ("Payout terminal status: " <> show updPayoutStatus)
         when (isPayoutOrderSuccess updPayoutStatus) $ do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+          currentBal <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
+          when (currentBal < amount) $
+            logError $ "BREACH: payout debit overdraws wallet for driver " <> driverId.getId <> " balance=" <> show currentBal <> " debit=" <> show amount <> " payoutOrder=" <> payoutOrder.id.getId
           let metadata =
                 LedgerEntryMetadata
                   { driverPayable = Just (-1 * amount),
@@ -471,13 +480,16 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
               (Just metadata)
               >>= fromEitherM (\err -> InternalError ("Failed to create wallet payout entry: " <> show err))
 
-          whenJust mbPayoutReq $ \payoutReq -> do
-            mbEntryIds <- Redis.get (makePayoutEntryIdsKey payoutReq.id.getId)
+          whenJust mbPayoutRequestId $ \prId ->
+            voidWalletHoldByReference counterparty driverId.getId prId ("Payout successful, debit posted: " <> payoutOrder.id.getId)
+
+          whenJust mbPayoutRequestId $ \prId -> do
+            mbEntryIds <- Redis.get (makePayoutEntryIdsKey prId)
             case mbEntryIds of
               Just entryIds -> do
-                settleWalletEntries (map Id entryIds) payoutReq.id.getId
-                Redis.del (makePayoutEntryIdsKey payoutReq.id.getId)
-              Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> payoutReq.id.getId
+                settleWalletEntries (map Id entryIds) prId
+                Redis.del (makePayoutEntryIdsKey prId)
+              Nothing -> logInfo $ "No stashed entry IDs found for payoutRequest " <> prId
 
         let (notificationTitle, notificationMessage, notificationType) =
               if isPayoutOrderSuccess updPayoutStatus

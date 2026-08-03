@@ -152,10 +152,33 @@ module SharedLogic.Finance.Wallet
     panAadhaarLinkTdsEnabled,
     estimateWalletDeductions,
     formatStripeAddress,
+    walletReferenceStatutoryHold,
+    createWalletHold,
+    findPendingWalletHoldByReference,
+    getPendingWalletHoldAmountByReference,
+    voidWalletHoldByReference,
+    getWalletHoldBalanceByOwner,
+    getWalletAvailableBalanceByOwner,
+    makeWalletRunningBalanceLockKey,
+    addWalletOfferHold,
+    removeWalletOfferHold,
+    getWalletOfferHoldTotal,
+    getWalletOfferHoldAmount,
+    addPrepaidOfferHold,
+    removePrepaidOfferHold,
+    getPrepaidOfferHoldTotal,
+    getPrepaidOfferHoldAmount,
+    applyFareRecomputeBuffer,
+    cashWalletCheckEnabled,
+    shouldCheckCashWallet,
+    estimateBufferedStatutoryDeductions,
   )
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as Ae
+import qualified Data.Map.Strict as Map
+import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as SRB
@@ -168,6 +191,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
@@ -753,6 +777,237 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
               pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
         (Left err, _) -> pure $ Left err
         (_, Left err) -> pure $ Left err
+
+walletReferenceStatutoryHold :: Text
+walletReferenceStatutoryHold = "StatutoryDeductionHold"
+
+makeWalletRunningBalanceLockKey :: Text -> Text
+makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
+
+applyFareRecomputeBuffer :: DTC.DriverWalletConfig -> HighPrecMoney -> HighPrecMoney
+applyFareRecomputeBuffer dwc fare =
+  fare + fare * realToFrac (fromMaybe 0 dwc.fareRecomputeBufferPercent) / 100 + fromMaybe 0 dwc.fareRecomputeBufferAmount
+
+cashWalletCheckEnabled :: DTC.DriverWalletConfig -> Bool
+cashWalletCheckEnabled dwc = dwc.enableDriverWallet && isJust dwc.minWalletAmountForCashRides
+
+estimateBufferedStatutoryDeductions :: DTC.DriverWalletConfig -> DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
+estimateBufferedStatutoryDeductions dwc taxConfig mbFare govtCharges_ tollCharges_ parkingCharge_ =
+  case mbFare of
+    Nothing -> 0
+    Just fare ->
+      let bufferedFare = applyFareRecomputeBuffer dwc fare
+          fareScale = if fare > 0 then bufferedFare.getHighPrecMoney / fare.getHighPrecMoney else 1
+          gstAmount = HighPrecMoney ((fromMaybe 0 govtCharges_).getHighPrecMoney * fareScale)
+          tollAmount = fromMaybe 0 tollCharges_
+          parkingAmount = fromMaybe 0 parkingCharge_
+          baseFare = max 0 (bufferedFare - gstAmount - tollAmount - parkingAmount)
+          tdsRate = Just taxConfig.invalidPanTdsRate.rate
+       in gstAmount + estimateWalletDeductions tdsRate baseFare
+
+shouldCheckCashWallet :: Maybe DMPM.PaymentInstrument -> Bool
+shouldCheckCashWallet = \case
+  Nothing -> True
+  Just DMPM.Cash -> True
+  Just DMPM.BoothOnline -> True
+  _ -> False
+
+createWalletHold ::
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  HighPrecMoney ->
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  Text -> -- Reference ID (rideId / bookingId)
+  Maybe Text -> -- Concerned driver ID: the individual driver the hold is for, even when the wallet is the fleet's
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
+  m (Either FinanceError ())
+createWalletHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId mbConcernedDriverId metadata = do
+  let walletInput =
+        AccountInput
+          { accountType = Liability,
+            counterpartyType = Just counterpartyType,
+            counterpartyId = Just ownerId,
+            subLedger = Nothing,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+      platformInput =
+        AccountInput
+          { accountType = Asset,
+            counterpartyType = Just SELLER,
+            counterpartyId = Just merchantId,
+            subLedger = Nothing,
+            currency = currency,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId
+          }
+  mbOwnerAccount <- getOrCreateAccount walletInput
+  mbPlatformAccount <- getOrCreateAccount platformInput
+  case (mbOwnerAccount, mbPlatformAccount) of
+    (Right ownerAccount, Right platformAccount) -> do
+      mbExistingHold <- findPendingWalletHoldByReference ownerAccount.id referenceId
+      case mbExistingHold of
+        Just _ -> pure $ Right ()
+        Nothing -> do
+          let entryInput =
+                LedgerEntryInput
+                  { fromAccountId = ownerAccount.id,
+                    toAccountId = platformAccount.id,
+                    concernedIndividualId = mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing),
+                    amount = amount,
+                    currency = currency,
+                    entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                    status = PENDING,
+                    referenceType = walletReferenceStatutoryHold,
+                    referenceId = referenceId,
+                    entityReferenceId = Nothing,
+                    entityReferenceType = Nothing,
+                    metadata = metadata,
+                    merchantId = merchantId,
+                    merchantOperatingCityId = merchantOperatingCityId,
+                    settlementStatus = Nothing
+                  }
+          entryRes <- createEntry entryInput
+          pure $ void entryRes
+    (Left err, _) -> pure $ Left err
+    (_, Left err) -> pure $ Left err
+
+findPendingWalletHoldByReference ::
+  (BeamFlow m r) =>
+  Id Account ->
+  Text -> -- Reference ID
+  m (Maybe LedgerEntry)
+findPendingWalletHoldByReference ownerAccountId referenceId = do
+  entries <- getEntriesByReference walletReferenceStatutoryHold referenceId
+  pure $ find (\entry -> entry.fromAccountId == ownerAccountId && entry.status == PENDING) entries
+
+getPendingWalletHoldAmountByReference ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  Text -> -- Reference ID
+  m HighPrecMoney
+getPendingWalletHoldAmountByReference counterpartyType ownerId referenceId = do
+  mbAcc <- getWalletAccountByOwner counterpartyType ownerId
+  case mbAcc of
+    Nothing -> pure 0
+    Just acc -> maybe 0 (.amount) <$> findPendingWalletHoldByReference acc.id referenceId
+
+voidWalletHoldByReference ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  Text -> -- Reference ID
+  Text -> -- Reason
+  m ()
+voidWalletHoldByReference counterpartyType ownerId referenceId reason = do
+  mbOwnerAccount <- getWalletAccountByOwner counterpartyType ownerId
+  case mbOwnerAccount of
+    Nothing -> pure ()
+    Just ownerAccount -> do
+      entries <- getEntriesByReference walletReferenceStatutoryHold referenceId
+      let pendingEntries = filter (\entry -> entry.fromAccountId == ownerAccount.id && entry.status == PENDING) entries
+      forM_ pendingEntries $ \entry -> voidEntry entry.id reason
+
+getWalletHoldBalanceByOwner ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  m HighPrecMoney
+getWalletHoldBalanceByOwner counterpartyType ownerId = do
+  mbAcc <- getWalletAccountByOwner counterpartyType ownerId
+  case mbAcc of
+    Nothing -> pure 0
+    Just acc -> do
+      entries <- getEntriesByFromAccountStatusAndReferenceType acc.id PENDING walletReferenceStatutoryHold
+      pure $ sum $ map (.amount) entries
+
+newtype WalletOfferHold = WalletOfferHold (Text, Double)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+makeWalletOfferHoldsKey :: Text -> Text
+makeWalletOfferHoldsKey ownerId = "WalletOfferHolds:" <> ownerId
+
+makePrepaidOfferHoldsKey :: Text -> Text
+makePrepaidOfferHoldsKey ownerId = "PrepaidOfferHolds:" <> ownerId
+
+walletOfferHoldMaxScore :: Double
+walletOfferHoldMaxScore = 1e15
+
+addOfferHoldAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Text -> HighPrecMoney -> UTCTime -> m ()
+addOfferHoldAtKey key searchTryId amount validTill = do
+  now <- getCurrentTime
+  Redis.withWaitOnLockRedisWithExpiry (key <> ":lock") 3 3 $ do
+    existingRaw <- Redis.zRangeByScore key (utcToMilliseconds now) walletOfferHoldMaxScore
+    let sameTry = [(r, amt) | r <- existingRaw, Just (WalletOfferHold (stId, amt)) <- [Ae.decode (cs r)], stId == searchTryId]
+    unless (null sameTry) $ void $ Redis.zRem key (map (cs . fst) sameTry)
+    let holdAmount = maximum (realToFrac amount : map snd sameTry)
+    Redis.zAdd key [(utcToMilliseconds validTill, WalletOfferHold (searchTryId, holdAmount))]
+    Redis.expire key (max 3600 (ceiling (Time.diffUTCTime validTill now) + 60))
+
+removeOfferHoldAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
+removeOfferHoldAtKey key searchTryId = do
+  Redis.withWaitOnLockRedisWithExpiry (key <> ":lock") 3 3 $ do
+    rawItems <- Redis.zRangeByScore key 0 walletOfferHoldMaxScore
+    let matching = [r | r <- rawItems, Just (WalletOfferHold (stId, _)) <- [Ae.decode (cs r)], stId == searchTryId]
+    unless (null matching) $ void $ Redis.zRem key (map cs matching)
+
+liveOfferHoldsAtKey :: (CacheFlow m r, MonadFlow m) => Text -> m (Map.Map Text Double)
+liveOfferHoldsAtKey key = do
+  now <- getCurrentTime
+  rawItems <- Redis.zRangeByScore key (utcToMilliseconds now) walletOfferHoldMaxScore
+  pure $ Map.fromListWith max [(stId, amt) | r <- rawItems, Just (WalletOfferHold (stId, amt)) <- [Ae.decode (cs r)]]
+
+getOfferHoldTotalAtKey :: (CacheFlow m r, MonadFlow m) => Text -> m HighPrecMoney
+getOfferHoldTotalAtKey key = do
+  now <- getCurrentTime
+  _ <- Redis.zRemRangeByScore key 0 (utcToMilliseconds now)
+  holds <- liveOfferHoldsAtKey key
+  pure $ sum $ map realToFrac $ Map.elems holds
+
+getOfferHoldAmountAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m HighPrecMoney
+getOfferHoldAmountAtKey key searchTryId = do
+  holds <- liveOfferHoldsAtKey key
+  pure $ maybe 0 realToFrac $ Map.lookup searchTryId holds
+
+addWalletOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> HighPrecMoney -> UTCTime -> m ()
+addWalletOfferHold = addOfferHoldAtKey . makeWalletOfferHoldsKey
+
+removeWalletOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
+removeWalletOfferHold = removeOfferHoldAtKey . makeWalletOfferHoldsKey
+
+getWalletOfferHoldTotal :: (CacheFlow m r, MonadFlow m) => Text -> m HighPrecMoney
+getWalletOfferHoldTotal = getOfferHoldTotalAtKey . makeWalletOfferHoldsKey
+
+getWalletOfferHoldAmount :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m HighPrecMoney
+getWalletOfferHoldAmount = getOfferHoldAmountAtKey . makeWalletOfferHoldsKey
+
+addPrepaidOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> HighPrecMoney -> UTCTime -> m ()
+addPrepaidOfferHold = addOfferHoldAtKey . makePrepaidOfferHoldsKey
+
+removePrepaidOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
+removePrepaidOfferHold = removeOfferHoldAtKey . makePrepaidOfferHoldsKey
+
+getPrepaidOfferHoldTotal :: (CacheFlow m r, MonadFlow m) => Text -> m HighPrecMoney
+getPrepaidOfferHoldTotal = getOfferHoldTotalAtKey . makePrepaidOfferHoldsKey
+
+getPrepaidOfferHoldAmount :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m HighPrecMoney
+getPrepaidOfferHoldAmount = getOfferHoldAmountAtKey . makePrepaidOfferHoldsKey
+
+getWalletAvailableBalanceByOwner ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Text ->
+  m (Maybe HighPrecMoney)
+getWalletAvailableBalanceByOwner counterpartyType ownerId = do
+  mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
+  pendingHold <- getWalletHoldBalanceByOwner counterpartyType ownerId
+  pure $ (\balance -> balance - pendingHold) <$> mbBalance
 
 -- | Split a total GST amount into CGST/SGST/IGST proportionally based on GstBreakup percentages.
 --   If the total percentage is 0, returns Nothing.

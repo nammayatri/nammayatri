@@ -38,6 +38,7 @@ types:
     currentBalance: HighPrecMoney
     redeemableBalance: HighPrecMoney
     nonRedeemableBalance: HighPrecMoney
+    holdBalance: Maybe HighPrecMoney
     netEarningsBalance: HighPrecMoney
     additions: WalletItemGroup
     deductions: WalletItemGroup

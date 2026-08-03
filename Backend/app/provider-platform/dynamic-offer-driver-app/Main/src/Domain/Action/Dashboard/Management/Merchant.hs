@@ -1674,6 +1674,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     enabled :: Text,
     pickupBufferInSecsForNightShiftCal :: Text,
     disableRecompute :: Text,
+    fareRecomputeCapEnabled :: Text,
     stateEntryPermitCharges :: Text,
     conditionalCharges :: Text,
     driverCancellationPenaltyAmount :: Text,
@@ -1779,6 +1780,7 @@ instance ToNamedRecord FarePolicyCSVRow where
         "enabled" .= enabled,
         "pickup_buffer_in_secs_for_night_shift_cal" .= pickupBufferInSecsForNightShiftCal,
         "disable_recompute" .= disableRecompute,
+        "fare_recompute_cap_enabled" .= fareRecomputeCapEnabled,
         "state_entry_permit_charges" .= stateEntryPermitCharges,
         "additional_charges" .= conditionalCharges,
         "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
@@ -1883,6 +1885,7 @@ farePolicyCSVHeader =
       "enabled",
       "pickup_buffer_in_secs_for_night_shift_cal",
       "disable_recompute",
+      "fare_recompute_cap_enabled",
       "state_entry_permit_charges",
       "additional_charges",
       "driver_cancellation_penalty_amount",
@@ -1987,6 +1990,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "enabled"
       <*> r .: "pickup_buffer_in_secs_for_night_shift_cal"
       <*> r .: "disable_recompute"
+      <*> (r .: "fare_recompute_cap_enabled" <|> pure "")
       <*> r .: "state_entry_permit_charges"
       <*> r .: "additional_charges"
       <*> r .: "driver_cancellation_penalty_amount"
@@ -2639,6 +2643,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     enabled = showT fp.enabled,
                     pickupBufferInSecsForNightShiftCal = maybe "" showT farePolicy.pickupBufferInSecsForNightShiftCal,
                     disableRecompute = maybe "" showT fp.disableRecompute,
+                    fareRecomputeCapEnabled = maybe "" (T.toLower . showT) farePolicy.fareRecomputeCapEnabled,
                     stateEntryPermitCharges = stateEntryPermit,
                     conditionalCharges = conditionalChargesJson,
                     driverCancellationPenaltyAmount = maybe "" showT farePolicy.driverCancellationPenaltyAmount,
@@ -3282,7 +3287,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, ..})
+      mbFareRecomputeCapEnabled <- case cleanField row.fareRecomputeCapEnabled of
+        Just v -> pure $ Just $ mapToBool $ T.toLower v
+        Nothing -> (>>= (.fareRecomputeCapEnabled)) <$> CQFP.findById Nothing (Id idText)
+
+      return ((Just . mapToBool) row.disableRecompute, city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, enabled, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, additionalCongestionCharge = 0, merchantId = Just merchantId, merchantOperatingCityId = Just merchantOpCity, conditionalCharges = conditionalCharges, perLuggageCharge = perLuggageCharge, returnFee = returnFee, boothCharges = boothCharges, vatChargeConfig = vatChargeConfig, commissionChargeConfig = commissionChargeConfig, cancellationCommissionChargeConfig = Nothing, tollTaxChargeConfig = tollTaxChargeConfig, fareRecomputeCapEnabled = mbFareRecomputeCapEnabled, ..})
 
     validateFarePolicyType farePolicyType = \case
       InterCity _ _ -> unless (farePolicyType `elem` [FarePolicy.InterCity, FarePolicy.Progressive]) $ throwError $ InvalidRequest "Fare Policy Type not supported for intercity"

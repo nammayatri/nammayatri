@@ -1960,6 +1960,17 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       Metrics.incrementDriverResponseCounter (show sReqFD.batchNumber) (show req.response)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
+      fork "releaseOfferHoldsOnDriverReject" $ do
+        let holdOwnerId = maybe driverId.getId (.getId) sReqFD.fleetOwnerId
+        -- TODO : Handle race if needed later
+        sameFleetStillActive <- case sReqFD.fleetOwnerId of
+          Nothing -> pure False
+          Just fleetOwnerId -> do
+            activeSRFDs <- runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
+            pure $ any (\srfd -> srfd.id /= sReqFD.id && srfd.fleetOwnerId == Just fleetOwnerId) activeSRFDs
+        unless sameFleetStillActive $ do
+          FWallet.removeWalletOfferHold holdOwnerId searchTry.id.getId
+          FWallet.removePrepaidOfferHold holdOwnerId searchTry.id.getId
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
