@@ -272,6 +272,11 @@ PurchasedPassPayment:
             - status
           - passCode
 
+    updateAvailableTripCountById:
+      kvFunction: updateOneWithKV
+      params: [availableTripCount]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
