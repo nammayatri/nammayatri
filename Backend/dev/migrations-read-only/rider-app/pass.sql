@@ -110,3 +110,13 @@ ALTER TABLE atlas_app.pass ADD COLUMN form_verification_config jsonb ;
 
 ALTER TABLE atlas_app.pass ADD COLUMN vehicle_type text ;
 ALTER TABLE atlas_app.pass ADD COLUMN skip_user_photograph_capture boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN frfs_price_override_applicable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN override_benefit_config_json jsonb ;

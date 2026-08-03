@@ -49,6 +49,7 @@ Pass:
     verificationValidity: Seconds
     documentsRequired: "[PassDocumentType]"
     skipUserPhotographCapture: Maybe Bool
+    frfsPriceOverrideApplicable: Maybe Bool
     order: Int
     enable: Bool
     autoApply: Bool
@@ -58,6 +59,7 @@ Pass:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
+    overrideBenefitConfigJson: Maybe Value
 
   beamFields:
     passConfig:
@@ -89,6 +91,7 @@ Pass:
     redeemEligibilityJsonLogic: jsonb[]
     pricingTiers: jsonb
     formVerificationConfig: jsonb
+    overrideBenefitConfigJson: jsonb
 
   extraOperations:
     - EXTRA_QUERY_FILE
