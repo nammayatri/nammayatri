@@ -194,6 +194,7 @@ jobs:
       - name: Relink cache dirs
         run: |
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/dist-newrepl-dashboard-check"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
           ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
           cd "$GITHUB_WORKSPACE/Backend"
