@@ -5,6 +5,7 @@ module SharedLogic.DriverOnboarding.VehicleDocs where
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import Data.List (nub)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time (Day)
 import Domain.Types.CommonDocumentData (renderCommonDocumentData)
@@ -23,6 +24,10 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.ReviewRequest as DRR
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleFitnessCertificate as VFC
+import qualified Domain.Types.VehicleInsurance as VIns
+import qualified Domain.Types.VehiclePUC as VPUC
+import qualified Domain.Types.VehiclePermit as VPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions (runInReplica)
@@ -387,7 +392,10 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
     documents <-
       vehicleDocumentTypes `forM` \docType -> do
         (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbMetadata) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
-        mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
+        mbCommonDoc <-
+          if docType `Set.member` SDO.domainTableDocumentTypes
+            then pure Nothing
+            else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
         let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
         case mbStatus of
           Just status -> do
@@ -445,7 +453,10 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
 
           documents <-
             vehicleDocumentTypes `forM` \docType -> do
-              mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
+              mbCommonDoc <-
+                if docType `Set.member` SDO.domainTableDocumentTypes
+                  then pure Nothing
+                  else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
               let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
               return $ DocumentStatusItem {documentType = docType, documentId = Nothing, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
           return
@@ -527,7 +538,10 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl, _, mbS3Path, mbImageId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-                      mbCommonDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
+                      mbCommonDoc <-
+                        if docType `Set.member` SDO.domainTableDocumentTypes
+                          then pure Nothing
+                          else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType mbPersonId docType
                       let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
                       return $ DocumentStatusItem {documentType = docType, documentId = Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
                   let mbRcIdText = (.getId) <$> mbRcId
@@ -563,6 +577,34 @@ computeAdminDocsVerificationStatus docs
   | all ((== VALID) . (.verificationStatus)) docs = DDVS.ADMIN_APPROVED
   | otherwise = DDVS.ADMIN_PENDING
 
+mkRCMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> m DocumentMetadata
+mkRCMetadata vehicleRC = do
+  vehicleNumberPlate <- decrypt vehicleRC.certificateNumber
+  pure $ RCMetadata RCDocumentMetadata {fitnessExpiry = vehicleRC.fitnessExpiry, vehicleNumberPlate, vehicleVariant = show <$> vehicleRC.vehicleVariant, vehicleManufacturer = vehicleRC.vehicleManufacturer, vehicleModel = vehicleRC.vehicleModel, vehicleModelYear = vehicleRC.vehicleModelYear, vehicleColor = vehicleRC.vehicleColor}
+
+mkVehiclePUCMetadata :: OnboardingFlow m r => Maybe VPUC.VehiclePUC -> m (Maybe DocumentMetadata)
+mkVehiclePUCMetadata mbDoc = forM mbDoc $ \doc -> do
+  mbPucNo <- mapM decrypt doc.pucNumber
+  pure $ VehiclePUCMetadata VehiclePUCDocumentMetadata {pucNumber = mbPucNo, pucExpiry = doc.pucExpiry}
+
+mkVehiclePermitMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VPermit.VehiclePermit -> m (Maybe DocumentMetadata)
+mkVehiclePermitMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
+  pNo <- decrypt doc.permitNumber
+  rcNo <- decrypt vehicleRC.certificateNumber
+  pure $ VehiclePermitMetadata VehiclePermitDocumentMetadata {permitNumber = pNo, permitExpiry = doc.permitExpiry, regionCovered = doc.regionCovered, rcNumber = rcNo}
+
+mkVehicleFitnessMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VFC.VehicleFitnessCertificate -> m (Maybe DocumentMetadata)
+mkVehicleFitnessMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
+  appNo <- decrypt doc.applicationNumber
+  rcNo <- decrypt vehicleRC.certificateNumber
+  pure $ VehicleFitnessMetadata VehicleFitnessCertificateDocumentMetadata {fitnessExpiry = doc.fitnessExpiry, applicationNumber = appNo, rcNumber = rcNo}
+
+mkVehicleInsuranceMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> Maybe VIns.VehicleInsurance -> m (Maybe DocumentMetadata)
+mkVehicleInsuranceMetadata vehicleRC mbDoc = forM mbDoc $ \doc -> do
+  polNo <- decrypt doc.policyNumber
+  rcNo <- decrypt vehicleRC.certificateNumber
+  pure $ VehicleInsuranceMetadata VehicleInsuranceDocumentMetadata {policyNumber = polNo, insuranceExpiry = doc.policyExpiry, insuranceProvider = doc.policyProvider, rcNumber = rcNo}
+
 getProcessedVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata)
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo = do
   let entity = entityImagesInfo.entity
@@ -580,91 +622,27 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
             | status == INVALID && not (null vehicleRC.failedRules) = Just $ T.intercalate ", " vehicleRC.failedRules
             | otherwise = vehicleRC.rejectReason
           (s3, iid) = lookupImage vehicleRC.documentImageId
-      mbMetadata <-
-        if enableMetadata
-          then do
-            vehicleNumberPlate <- decrypt vehicleRC.certificateNumber
-            pure $
-              Just $
-                RCMetadata
-                  RCDocumentMetadata
-                    { fitnessExpiry = vehicleRC.fitnessExpiry,
-                      vehicleNumberPlate,
-                      vehicleVariant = show <$> vehicleRC.vehicleVariant,
-                      vehicleManufacturer = vehicleRC.vehicleManufacturer,
-                      vehicleModel = vehicleRC.vehicleModel,
-                      vehicleModelYear = vehicleRC.vehicleModelYear,
-                      vehicleColor = vehicleRC.vehicleColor
-                    }
-          else pure Nothing
+      mbMetadata <- if enableMetadata then Just <$> mkRCMetadata vehicleRC else pure Nothing
       return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
     DVC.VehiclePermit -> do
       mbDoc <- listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      mbMetadata <-
-        if enableMetadata
-          then forM mbDoc $ \doc -> do
-            pNo <- decrypt doc.permitNumber
-            rcNo <- decrypt vehicleRC.certificateNumber
-            pure $
-              VehiclePermitMetadata
-                VehiclePermitDocumentMetadata
-                  { permitNumber = pNo,
-                    permitExpiry = doc.permitExpiry,
-                    regionCovered = doc.regionCovered,
-                    rcNumber = rcNo
-                  }
-          else pure Nothing
+      mbMetadata <- if enableMetadata then mkVehiclePermitMetadata vehicleRC mbDoc else pure Nothing
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid, mbMetadata)
     DVC.VehicleFitnessCertificate -> do
       mbDoc <- listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      mbMetadata <-
-        if enableMetadata
-          then forM mbDoc $ \doc -> do
-            appNo <- decrypt doc.applicationNumber
-            rcNo <- decrypt vehicleRC.certificateNumber
-            pure $
-              VehicleFitnessMetadata
-                VehicleFitnessCertificateDocumentMetadata
-                  { fitnessExpiry = doc.fitnessExpiry,
-                    applicationNumber = appNo,
-                    rcNumber = rcNo
-                  }
-          else pure Nothing
+      mbMetadata <- if enableMetadata then mkVehicleFitnessMetadata vehicleRC mbDoc else pure Nothing
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
     DVC.VehicleInsurance -> do
       mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      mbMetadata <-
-        if enableMetadata
-          then forM mbDoc $ \doc -> do
-            polNo <- decrypt doc.policyNumber
-            rcNo <- decrypt vehicleRC.certificateNumber
-            pure $
-              VehicleInsuranceMetadata
-                VehicleInsuranceDocumentMetadata
-                  { policyNumber = polNo,
-                    insuranceExpiry = doc.policyExpiry,
-                    insuranceProvider = doc.policyProvider,
-                    rcNumber = rcNo
-                  }
-          else pure Nothing
+      mbMetadata <- if enableMetadata then mkVehicleInsuranceMetadata vehicleRC mbDoc else pure Nothing
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, mbMetadata)
     DVC.VehiclePUC -> do
       mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-      mbMetadata <-
-        if enableMetadata
-          then forM mbDoc $ \doc -> do
-            mbPucNo <- mapM decrypt doc.pucNumber
-            pure $
-              VehiclePUCMetadata
-                VehiclePUCDocumentMetadata
-                  { pucNumber = mbPucNo,
-                    pucExpiry = doc.pucExpiry
-                  }
-          else pure Nothing
+      mbMetadata <- if enableMetadata then mkVehiclePUCMetadata mbDoc else pure Nothing
       return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid, mbMetadata)
     DVC.VehicleNOC -> do
       mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id

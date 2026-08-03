@@ -322,6 +322,12 @@ data DriverDocument = DriverDocument
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data EntityType
+  = ImageEntity
+  | DocumentEntity
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data FitnessApproveDetails = FitnessApproveDetails
   { applicationNumber :: Kernel.Prelude.Text,
     categoryOfVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -358,10 +364,11 @@ instance Kernel.Types.HideSecrets.HideSecrets GenerateAadhaarOtpRes where
   hideSecrets = Kernel.Prelude.identity
 
 data GetDocumentResponse = GetDocumentResponse
-  { imageBase64 :: Kernel.Prelude.Text,
+  { imageBase64 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
-    createdAt :: Kernel.Prelude.UTCTime,
-    commonDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    commonDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -728,11 +735,10 @@ type GetDriverRegistrationDocumentsList =
   )
 
 type GetDriverRegistrationGetDocument =
-  ( "getDocument" :> Capture "imageId" (Kernel.Types.Id.Id Dashboard.Common.Image) :> QueryParam "docType" DocumentType
-      :> QueryParam
-           "documentId"
-           Kernel.Prelude.Text
-      :> Get '[JSON] GetDocumentResponse
+  ( "getDocument" :> Capture "entityId" Kernel.Prelude.Text :> QueryParam "docType" DocumentType :> QueryParam "entityType" EntityType
+      :> Get
+           '[JSON]
+           GetDocumentResponse
   )
 
 type PostDriverRegistrationDocumentUpload =
@@ -916,7 +922,7 @@ type PostDriverRegistrationTriggerReminderHelper =
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
   { getDriverRegistrationDocumentsList :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DocumentsListResponse,
-    getDriverRegistrationGetDocument :: Kernel.Types.Id.Id Dashboard.Common.Image -> Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient GetDocumentResponse,
+    getDriverRegistrationGetDocument :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe DocumentType -> Kernel.Prelude.Maybe EntityType -> EulerHS.Types.EulerClient GetDocumentResponse,
     postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp,
     postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationVerifyBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp,
@@ -971,6 +977,8 @@ data DriverRegistrationUserActionType
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(mkHttpInstancesForEnum ''DocumentType)
+
+$(mkHttpInstancesForEnum ''EntityType)
 
 $(mkHttpInstancesForEnum ''ServiceType)
 

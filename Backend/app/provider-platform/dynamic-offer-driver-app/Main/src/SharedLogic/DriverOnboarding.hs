@@ -26,6 +26,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistrat
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
@@ -121,6 +122,25 @@ isFleetRole :: Person.Role -> Bool
 isFleetRole Person.FLEET_OWNER = True
 isFleetRole Person.FLEET_BUSINESS = True
 isFleetRole _ = False
+
+domainTableDocumentTypes :: Set.Set DVC.DocumentType
+domainTableDocumentTypes =
+  Set.fromList
+    [ DVC.DriverLicense,
+      DVC.VehicleRegistrationCertificate,
+      DVC.AadhaarCard,
+      DVC.PanCard,
+      DVC.VehiclePUC,
+      DVC.VehiclePermit,
+      DVC.VehicleInsurance,
+      DVC.VehicleFitnessCertificate,
+      DVC.VehicleNOC,
+      DVC.DriverVehicleNOC,
+      DVC.SocialSecurityNumber,
+      DVC.BackgroundVerification,
+      DVC.GSTCertificate,
+      DVC.UDYAMCertificate
+    ]
 
 notifyErrorToSupport ::
   Person ->
