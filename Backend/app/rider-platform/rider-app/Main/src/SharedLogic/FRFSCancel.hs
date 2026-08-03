@@ -74,34 +74,37 @@ handleCancelledStatus ::
   Text ->
   Bool ->
   m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
-handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
+handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId isCounterCancellation = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
-  val :: Maybe Text <- Redis.get (FRFSUtils.makecancelledTtlKey booking.id)
-  if val /= Just messageId && counterCancellationPossible
-    then do
-      void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
-      void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
-      void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
-    else do
-      void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
-      void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
-      void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
-      void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
-      void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
-      void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
-      void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
-  releaseSeatsIfHeld booking quoteCategories
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
+  unless (booking.status `elem` [DFRFSTicketBooking.CANCELLED, DFRFSTicketBooking.COUNTER_CANCELLED]) $ do
+    if isCounterCancellation
+      then do
+        void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
+        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
+        void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just False) booking.id
+        void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
+      else do
+        void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
+        void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
+        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
+        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
+        void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
+        void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
+        void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
+        void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+    bapConfig <-
+      getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
+        >>= fromMaybeM (InternalError "Beckn Config not found")
+    let bookingWithRefund = booking {DFRFSTicketBooking.refundAmount = Just refundAmount}
+    updateTotalOrderValueAndSettlementAmount bookingWithRefund quoteCategories bapConfig
   void $ CQP.clearPSCache booking.riderId
-  bapConfig <-
-    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
-      >>= fromMaybeM (InternalError "Beckn Config not found")
-  updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
+  unless isCounterCancellation $ do
+    releaseSeatsIfHeld booking quoteCategories
+    void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   return (mRiderNumber, person.mobileCountryCode, fareParameters)
 
 -- | Side effects (SMS + Google Wallet) that require concrete Flow due to generic-lens constraints.
