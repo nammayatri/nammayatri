@@ -121,7 +121,7 @@ updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
   let currentDate = show $ utctDay istTime
   expirationPeriod <- getExpirationSeconds timeDiffFromUtc
   safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue) driverId timeDiffFromUtc
-  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
@@ -165,7 +165,7 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
     void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayAddedCoins) driverId
     expirationPeriod <- getExpirationSeconds timeDiffFromUtc
     safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
-    Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+    Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 driverCoinsEvent :: (EventFlow m r, Finance.HasActorInfo m r) => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> m ()
 driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap = do
@@ -809,12 +809,13 @@ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId event
       pure False
 
 getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
-getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
+getCoinAccumulationByDriverIdKey driverId currentDate =
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
 
 setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> Int -> m ()
 setCoinAccumulationByDriverIdKey driverId currentDate count expirationPeriod = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
@@ -917,7 +918,7 @@ getCohortValidRideCount driverId tripCategoryType metricWindow =
 safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
 safeIncrBy key value driverId timeDiffFromUtc = do
   _ <- getCoinsByDriverId driverId timeDiffFromUtc
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby key value
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby key value
 
 mkMetroRideCountByDriverIdKey :: Id DP.Person -> DCT.MetroRideType -> Text
 mkMetroRideCountByDriverIdKey driverId metroRideType = "DriverMetroRideCount:DriverId:" <> driverId.getId <> ":MetroRideType:" <> show metroRideType
