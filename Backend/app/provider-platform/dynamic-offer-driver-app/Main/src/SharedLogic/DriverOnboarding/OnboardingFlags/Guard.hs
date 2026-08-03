@@ -1,5 +1,6 @@
 module SharedLogic.DriverOnboarding.OnboardingFlags.Guard
   ( ActionVerb (..),
+    Actor (..),
     GuardTarget (..),
     RecomputeSpec (..),
     EntitySnapshot (..),
@@ -47,6 +48,18 @@ data ActionVerb
   | Reject
   | SetOnboardingAs
   | LinkToFleet
+  deriving (Show, Eq, Generic)
+
+-- | Who the action runs on behalf of. Every post-onboarding action -- one performed on an entity
+--   that is already enabled -- names its actor, so the actor's own flags can gate it. 'None' is
+--   reserved for the onboarding and registration stages, where the flags are still being derived
+--   and there is no enabled actor to hold to account yet.
+data Actor
+  = ActorFleet (Id DP.Person)
+  | ActorDriver (Id DP.Person)
+  | -- | Fleet owner and driver both act: both sets of flags have to pass.
+    ActorFleetAndDriver (Id DP.Person) (Id DP.Person)
+  | None
   deriving (Show, Eq, Generic)
 
 data GuardTarget
@@ -109,6 +122,10 @@ checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
       violate "DI-3" "driver is not administratively disabled; enablement is derived from documents"
     | driverInfo.disabledReasonFlag == Just DI.FleetDisabled ->
       violate "DI-6" "driver is disabled because its fleet is disabled; enable the fleet instead"
+    | not driverInfo.verified ->
+      violate "DI-2" "driver is not verified; enablement is derived from documents"
+    | driverInfo.approved /= Just True ->
+      violate "DI-2" "driver is not approved; enablement is derived from documents"
     | otherwise -> ok
   Disable
     | isJust driverInfo.disabledReasonFlag -> violate "DI-3" "driver is already disabled"
@@ -170,6 +187,10 @@ checkFleet verb fleetInfo = case verb of
   Enable
     | isNothing fleetInfo.disabledReasonFlag ->
       violate "FI-1" "fleet owner is not administratively disabled; enablement is derived from documents"
+    | not fleetInfo.verified ->
+      violate "FI-2" "fleet owner is not verified; enablement is derived from documents"
+    | fleetInfo.approved /= Just True ->
+      violate "FI-2" "fleet owner is not approved; enablement is derived from documents"
     | otherwise -> ok
   Disable
     | isJust fleetInfo.disabledReasonFlag -> violate "FI-1" "fleet owner is already disabled"
@@ -186,6 +207,23 @@ checkFleet verb fleetInfo = case verb of
   Reject -> ok
   SetOnboardingAs -> violate "F-UNSUPPORTED" "fleet owners have no onboardingAs"
   LinkToFleet -> ok
+
+-- | The actor is the person performing the action, as opposed to the entity it is performed on.
+--   A fleet owner or driver that is itself disabled or blocked may not mutate the drivers and
+--   vehicles under it. Roles that carry no onboarding flags (admin, operator) are unconstrained.
+checkActorFleet :: DFOI.FleetOwnerInformation -> Either GuardViolation ()
+checkActorFleet fleetInfo
+  | fleetInfo.blocked = violate "ACTOR-2" "acting fleet owner is blocked"
+  | isJust fleetInfo.disabledReasonFlag = violate "ACTOR-3" "acting fleet owner is disabled"
+  | not fleetInfo.enabled = violate "ACTOR-1" "acting fleet owner is not enabled"
+  | otherwise = ok
+
+checkActorDriver :: DI.DriverInformation -> Either GuardViolation ()
+checkActorDriver driverInfo
+  | driverInfo.blocked = violate "ACTOR-2" "acting driver is blocked"
+  | isJust driverInfo.disabledReasonFlag = violate "ACTOR-3" "acting driver is disabled"
+  | not driverInfo.enabled = violate "ACTOR-1" "acting driver is not enabled"
+  | otherwise = ok
 
 ok :: Either GuardViolation ()
 ok = Right ()
@@ -264,12 +302,53 @@ guardRcAssociationAllowed transporterConfig verb target
       whenJust mbRc $ \rc -> AC.guardRCNotActiveWithAnotherDriver rc.id
     _ -> pure ()
 
-guardOnboardingAction :: OnboardingFlow m r => DTC.TransporterConfig -> ActionVerb -> GuardTarget -> m ()
-guardOnboardingAction transporterConfig verb target = do
+-- | Driver- and vehicle-scoped actions are the ones performed on behalf of a fleet owner or
+--   driver; a fleet-owner-scoped action is an administrative one on the fleet itself, so the
+--   actor's own flags do not gate it.
+isActorGovernedTarget :: GuardTarget -> Bool
+isActorGovernedTarget = \case
+  TargetDriver _ -> True
+  TargetVehicle _ -> True
+  TargetVehicleById _ -> True
+  TargetFleetOwner _ -> False
+
+-- | Which half of the actor a verb holds to account. A fleet owner answers for everything it
+--   initiates, so it is checked for every verb. The acting driver is only answerable for verbs that
+--   put them or their vehicle into service: teardown (unlink, deactivate, delete, reject) and the
+--   onboarding verbs have to stay available while the driver is still disabled, or a disabled driver
+--   could never be cleaned up -- nor onboarded, since they are disabled until their documents land.
+--   So the call site names both actors whenever both exist, and this decides what that means.
+driverActorGoverned :: ActionVerb -> Bool
+driverActorGoverned verb = verb `elem` [Link, Activate, Add]
+
+guardActorAllowed :: OnboardingFlow m r => ActionVerb -> GuardTarget -> Actor -> m ()
+guardActorAllowed verb target actor
+  | not (isActorGovernedTarget target) = pure ()
+  | otherwise = case actor of
+    None -> pure ()
+    ActorFleet fleetOwnerId -> checkFleetActor fleetOwnerId
+    ActorDriver driverPersonId -> when (driverActorGoverned verb) $ checkDriverActor driverPersonId
+    ActorFleetAndDriver fleetOwnerId driverPersonId -> do
+      checkFleetActor fleetOwnerId
+      when (driverActorGoverned verb) $ checkDriverActor driverPersonId
+  where
+    checkFleetActor fleetOwnerId = do
+      mbFleetInfo <- QFOI.findByPrimaryKey fleetOwnerId
+      whenJust mbFleetInfo $ \fleetInfo -> report (checkActorFleet fleetInfo)
+    checkDriverActor driverPersonId = do
+      mbDriverInfo <- DIQuery.findById (cast driverPersonId)
+      whenJust mbDriverInfo $ \driverInfo -> report (checkActorDriver driverInfo)
+    report = \case
+      Right () -> pure ()
+      Left violation -> reportViolation verb target violation
+
+guardOnboardingAction :: OnboardingFlow m r => DTC.TransporterConfig -> Actor -> ActionVerb -> GuardTarget -> m ()
+guardOnboardingAction transporterConfig actor verb target = do
   guardNoLiveRide verb target
   guardAssociationAllowed verb target
   guardRcAssociationAllowed transporterConfig verb target
   when (isUnified transporterConfig) $ do
+    guardActorAllowed verb target actor
     mbSnapshot <- loadSnapshot target
     whenJust mbSnapshot $ \snapshot ->
       case checkPrecondition verb snapshot of
@@ -295,14 +374,14 @@ runRecomputeSpec transporterConfig spec = do
   forM_ (nub spec.rsVehicleIds) $ \rcId ->
     void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) rcId
 
-withOnboardingAction :: OnboardingFlow m r => DTC.TransporterConfig -> ActionVerb -> GuardTarget -> m a -> m a
-withOnboardingAction transporterConfig verb target body =
-  withOnboardingActionFanout transporterConfig verb target ((,mempty) <$> body)
+withOnboardingAction :: OnboardingFlow m r => DTC.TransporterConfig -> Actor -> ActionVerb -> GuardTarget -> m a -> m a
+withOnboardingAction transporterConfig actor verb target body =
+  withOnboardingActionFanout transporterConfig actor verb target ((,mempty) <$> body)
 
-withOnboardingActionFanout :: OnboardingFlow m r => DTC.TransporterConfig -> ActionVerb -> GuardTarget -> m (a, RecomputeSpec) -> m a
-withOnboardingActionFanout transporterConfig verb target body =
+withOnboardingActionFanout :: OnboardingFlow m r => DTC.TransporterConfig -> Actor -> ActionVerb -> GuardTarget -> m (a, RecomputeSpec) -> m a
+withOnboardingActionFanout transporterConfig actor verb target body =
   withOnboardingActionLock target $
-    AC.withAssociation (guardOnboardingAction transporterConfig verb target) $ do
+    AC.withAssociation (guardOnboardingAction transporterConfig actor verb target) $ do
       (result, extraSpec) <- body
       when (isUnified transporterConfig) $
         runRecomputeSpec transporterConfig (defaultRecomputeSpec target <> extraSpec)

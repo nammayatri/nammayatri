@@ -1593,7 +1593,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
 
   whenJust req.onboardingAs $ \reqOnboardingAs -> do
     transporterConfigForOnboardingAs <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    SGuard.withOnboardingAction transporterConfigForOnboardingAs SGuard.SetOnboardingAs (SGuard.TargetDriver person.id) $
+    SGuard.withOnboardingAction transporterConfigForOnboardingAs SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver person.id) $
       QDIExtra.updateOnboardingAs (Just reqOnboardingAs) (cast person.id)
 
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""

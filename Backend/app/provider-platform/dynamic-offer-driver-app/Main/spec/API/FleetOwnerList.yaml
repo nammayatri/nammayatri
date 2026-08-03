@@ -6,6 +6,7 @@ imports:
   Address: Kernel.External.Payment.Stripe.Types
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
   ApprovalStatusFilter: Dashboard.Common.Driver
+  DisabledReasonFlag: Domain.Types.DriverInformation
 module: FleetOwnerList
 
 types:
@@ -25,6 +26,7 @@ types:
     - email: Maybe Text
     - mobileNumber: Maybe Text
     - docsVerificationStatus: Maybe DocsVerificationStatus
+    - disabledReasonFlag: Maybe DisabledReasonFlag
     - mobileCountryCode: Maybe Text
     - createdAt: Maybe UTCTime
 

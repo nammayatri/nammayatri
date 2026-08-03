@@ -79,6 +79,7 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
                   mobileCountryCode = person.mobileCountryCode,
                   email = person.email,
                   docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus,
+                  disabledReasonFlag = fleetOwnerInfo.disabledReasonFlag,
                   createdAt = Just fleetOwnerInfo.createdAt
                 }
 

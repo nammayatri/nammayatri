@@ -744,6 +744,11 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
 
 ---------------------------------------------------------------------
 
+castDisabledReasonFlag :: DI.DisabledReasonFlag -> Dashboard.Common.Driver.DisabledReasonFlag
+castDisabledReasonFlag DI.FleetDisabled = Dashboard.Common.Driver.FleetDisabled
+castDisabledReasonFlag DI.AdminDisabled = Dashboard.Common.Driver.AdminDisabled
+castDisabledReasonFlag DI.DriverDisabled = Dashboard.Common.Driver.DriverDisabled
+
 castCommonOnboardingAsToDomain :: Dashboard.Common.Driver.OnboardingAs -> DI.OnboardingAs
 castCommonOnboardingAsToDomain Dashboard.Common.Driver.FLEET_DRIVER = DI.FLEET_DRIVER
 castCommonOnboardingAsToDomain Dashboard.Common.Driver.INDIVIDUAL = DI.INDIVIDUAL
@@ -864,7 +869,7 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig (maybe (SGuard.ActorDriver personId) (\fleetOwnerId -> SGuard.ActorFleetAndDriver (Id fleetOwnerId) personId) rc.fleetOwnerId) SGuard.Unlink (SGuard.TargetDriver personId) $ do
     when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
     void $ QRCAssociation.endAssociationForRC personId rc.id
     when ((driverInfo.onboardingVehicleCategory /= Just DVC.BUS && isNotVipOfficer) && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $
@@ -892,7 +897,7 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetVehicle vehicleNo) $ do
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleet $ Id fleetOwnerId_) SGuard.Unlink (SGuard.TargetVehicle vehicleNo) $ do
     associations <- QRCAssociation.findAllActiveAssociationByRCId vehicleRC.id ----- Here ending all the association of the vehicle with the fleet drivers
     forM_ associations $ \assoc -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_ True
@@ -1200,7 +1205,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
       Redis.withLockRedis (driverAssociationC personId) 10 $ do
         -- Check if there's an active association before ending it
         mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
-        SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver personId) $ do
+        SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.Unlink (SGuard.TargetDriver personId) $ do
           QRCAssociation.endAllRCAssociationsForDriver personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
@@ -1226,7 +1231,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           Redis.withLockRedis (driverAssociationC personId) 10 $ do
             -- Check if there's an active association before ending it
             mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
-            SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver personId) $ do
+            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.Unlink (SGuard.TargetDriver personId) $ do
               DOV.endOperatorDriverAssociation entityId personId
               whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
               when (isJust mbActiveAssociation) $ adjustOperatorAnalytics transporterConfig personId entityId (-1)
@@ -2434,7 +2439,8 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
     (Just DP.OPERATOR, Just entityId) -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction transporterConfig (if req.isActivate then SGuard.Activate else SGuard.Deactivate) (SGuard.TargetDriver personId) $
+  let actor = maybe SGuard.None (\entityId -> SGuard.ActorFleetAndDriver (Id entityId) personId) mbEntityId
+  SGuard.withOnboardingAction transporterConfig actor (if req.isActivate then SGuard.Activate else SGuard.Deactivate) (SGuard.TargetDriver personId) $
     void $ DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
@@ -2560,7 +2566,7 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
     -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
     when (newFleetType /= fleetOwnerInfo.fleetType) $ do
       fleetTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      SGuard.withOnboardingAction fleetTransporterConfig SGuard.Approve (SGuard.TargetFleetOwner personId) $
+      SGuard.withOnboardingAction fleetTransporterConfig SGuard.None SGuard.Approve (SGuard.TargetFleetOwner personId) $
         QPerson.updatePersonRole personId (DRegV2.castFleetTypeToRole newFleetType)
 
   QPerson.updateFleetOwnerDetails personId updDriver
@@ -2659,6 +2665,7 @@ getFleetOrOperatorInfo person = do
             operatorReferralCode = Nothing,
             blocked = False,
             enabled = True,
+            disabledReasonFlag = Nothing,
             verified = True,
             gstNumber = Nothing,
             gstImageId = Nothing,
@@ -2804,6 +2811,7 @@ getFleetOrOperatorInfo person = do
             linkedDriverIds = map (\assoc -> assoc.driverId.getId) linkedDrivers,
             docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
             addressDocumentType = DDriver.castToCommon <$> addressDocumentType,
+            disabledReasonFlag = castDisabledReasonFlag <$> disabledReasonFlag,
             ..
           }
 
@@ -2877,7 +2885,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
-      SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
           QRCAssociation.endAllRCAssociationsForDriver person.id
@@ -2906,7 +2914,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
       -- onboarded operator required only for new drivers
-      SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
           QRCAssociation.endAllRCAssociationsForDriver person.id
@@ -2967,7 +2975,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
     let validLinkedRCs = filter (\rc' -> rc'.verificationStatus /= Documents.INVALID) rcs
     unless (length validLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
-    SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetVehicleById rc.id) $
+    SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driver.id) SGuard.Link (SGuard.TargetVehicleById rc.id) $
       createDriverRCAssociationIfPossible transporterConfig driver.id rc
   return Success
 
@@ -3694,7 +3702,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       (person, isNew) <- fetchOrCreatePerson moc req_
       (if isNew then pure False else DDriver.checkFleetDriverAssociation fleetOwner.id person.id)
         >>= \isAssociated -> unless isAssociated $
-          SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+          SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver fleetOwner.id person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
             unless isNew $ do
               SA.endDriverAssociations moc.id transporterConfig person
               when (merchant.overwriteAssociation == Just True) $
@@ -3715,7 +3723,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
       (if isNew then pure False else DDriver.checkDriverOperatorAssociation person.id operator.id)
         >>= \isAssociated ->
           unless isAssociated $
-            SGuard.withOnboardingAction transporterConfigForOperator SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+            SGuard.withOnboardingAction transporterConfigForOperator (SGuard.ActorFleetAndDriver operator.id person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
               SA.associateDriverWithOperator merchant moc person operator isNew req_.driverPhoneNumber req_.driverOnboardingVehicleCategory
               QDIExtra.updateOnboardingAs (Just DI.INDIVIDUAL) (cast person.id)
       pure person.id
@@ -4562,7 +4570,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
 
   (pnType, messageBuilder) <- case req.approve of
     Just True -> do
-      SGuard.withOnboardingAction transporterConfig SGuard.Approve (SGuard.TargetDriver driverId) $ do
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.Approve (SGuard.TargetDriver driverId) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig driver
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
         when (merchant.overwriteAssociation == Just True) $ do
@@ -4581,7 +4589,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
           )
       pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
     _ -> do
-      SGuard.withOnboardingAction transporterConfig SGuard.Reject (SGuard.TargetDriver driverId) $
+      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.Reject (SGuard.TargetDriver driverId) $
         QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
       pure
         ( "FLEET_REQUEST_REJECTED",
@@ -4620,7 +4628,7 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
   unless (DCommon.checkFleetOwnerRole newFleetOwner.role) $
     throwError $ InvalidRequest "Target is not a fleet owner"
   DCommon.checkFleetOwnerVerification newFleetOwner.id.getId merchant.fleetOwnerEnabledCheck
-  SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver newFleetOwner.id personId) SGuard.Link (SGuard.TargetDriver personId) $ do
     SA.endDriverAssociations moc.id transporterConfig person
     FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) True req.reason (Just merchant.id) (Just moc.id)
   pure Success
@@ -4733,7 +4741,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
   -- overrides to FLEET_DRIVER whenever an active FDA exists. Fleet membership stays the
   -- source of truth; dashboard write is authoritative only when driver has no active FDA.
   whenJust req.onboardingAs $ \reqOnboardingAs ->
-    SGuard.withOnboardingAction transporterConfig SGuard.SetOnboardingAs (SGuard.TargetDriver personId) $
+    SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver personId) $
       QDIExtra.updateOnboardingAs (Just $ castCommonOnboardingAsToDomain reqOnboardingAs) (cast personId)
 
   pure Success

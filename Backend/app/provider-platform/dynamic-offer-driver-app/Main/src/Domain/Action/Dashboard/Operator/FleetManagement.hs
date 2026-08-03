@@ -245,7 +245,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
     $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
   if skipOtpVerification
-    then SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetFleetOwner fleetOwner.id) $ do
+    then SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleet operator.id) SGuard.Link (SGuard.TargetFleetOwner fleetOwner.id) $ do
       SA.endFleetAssociations merchantOpCityId transporterConfig fleetOwner
       fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd
       QFOA.create fleetOperatorAssociation
@@ -304,7 +304,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
     )
     $ throwError (InvalidRequest "Fleet already associated with another operator. Multiple operator links not allowed for this city.")
 
-  SGuard.withOnboardingAction transporterConfig SGuard.Link (SGuard.TargetFleetOwner fleetOwner.id) $ do
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleet operator.id) SGuard.Link (SGuard.TargetFleetOwner fleetOwner.id) $ do
     when (transporterConfig.allowMultiFleetOperatorLink /= Just True) $
       SA.endFleetAssociations merchantOpCityId transporterConfig fleetOwner
     fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId DomainRC.defaultAssociationEnd

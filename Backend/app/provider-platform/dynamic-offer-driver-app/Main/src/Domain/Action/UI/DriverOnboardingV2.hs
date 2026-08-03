@@ -1370,7 +1370,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
       case fdaForFleetOwner of
         Just fda
           | not fda.isActive ->
-            SGuard.withOnboardingAction transporterConfig SGuard.Unlink (SGuard.TargetDriver driverId) $
+            SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.Unlink (SGuard.TargetDriver driverId) $
               FDA.revokeFleetDriverAssociation driverId req.fleetOwnerId
         Just _ -> throwError $ InvalidRequest "Direct revoke is not allowed for active fleet associations"
         Nothing -> throwError $ InvalidRequest "No fleet association found to revoke"
@@ -1380,7 +1380,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
-          SGuard.withOnboardingAction transporterConfig SGuard.LinkToFleet (SGuard.TargetDriver driverId) $ do
+          SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $ do
             FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
             QDIExtra.updateOnboardingAs (Just DI.FLEET_DRIVER) (cast driverId)
   return Success

@@ -24,12 +24,14 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person ()
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.PersonExtra (updatePersonRole)
-import Tools.Error (FleetOwnerNotFoundError (FleetOwnerNotFound), TransporterError (TransporterConfigNotFound))
+import Tools.Error (FleetOwnerNotFoundError (FleetOwnerNotFound), MerchantError (MerchantNotFound), TransporterError (TransporterConfigNotFound))
 
 -- This function will not be called.
 getAccountFetchUnverifiedAccounts ::
@@ -49,26 +51,25 @@ postAccountVerifyAccount ::
   Kernel.Types.Beckn.Context.City ->
   Common.VerifyAccountReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} = do
+postAccountVerifyAccount merchantShortId opCity Common.VerifyAccountReq {..} = do
   let enabled = case status of
         Common.Approved -> True
         _ -> False
   let fleetOwnerId' = Kernel.Types.Id.cast fleetOwnerId
   fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId' >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId'.getId)
   let wasDisabled = not fleetOwnerInfo.enabled
+  fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if enabled
     then do
-      fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
-      tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetOwnerPerson.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetOwnerPerson.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetOwnerPerson.merchantOperatingCityId.getId)
-      SGuard.withOnboardingAction tc SGuard.Enable (SGuard.TargetFleetOwner fleetOwnerId') $
+      SGuard.withOnboardingAction tc SGuard.None SGuard.Enable (SGuard.TargetFleetOwner fleetOwnerId') $
         SFlags.markDisabledFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson SFlags.AdminEnable
       when wasDisabled $ do
-        person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
-        DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
-    else do
-      fleetOwnerPerson <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
-      tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetOwnerPerson.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetOwnerPerson.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetOwnerPerson.merchantOperatingCityId.getId)
-      SGuard.withOnboardingAction tc SGuard.Disable (SGuard.TargetFleetOwner fleetOwnerId') $
+        DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' merchantOpCityId
+    else
+      SGuard.withOnboardingAction tc SGuard.None SGuard.Disable (SGuard.TargetFleetOwner fleetOwnerId') $
         SFlags.markDisabledFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson (SFlags.AdminDisable DI.AdminDisabled)
   pure Kernel.Types.APISuccess.Success
 
@@ -78,17 +79,19 @@ putAccountUpdateRole ::
   Kernel.Types.Id.Id Dashboard.Common.Person ->
   Common.DashboardAccessType ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
+putAccountUpdateRole merchantShortId opCity personId' accessType = do
   let personId = Kernel.Types.Id.cast personId'
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
   when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo) $ do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+    merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let defaultDocsVerificationStatus =
           if transporterConfig.enableManualDocumentStatusCheck == Just True
             then Just DDVS.ADMIN_PENDING
             else Nothing
-    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
+    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) person.merchantOperatingCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
   where

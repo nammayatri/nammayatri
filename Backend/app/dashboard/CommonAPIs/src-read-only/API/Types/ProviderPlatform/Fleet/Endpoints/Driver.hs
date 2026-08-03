@@ -742,6 +742,7 @@ data FleetOwnerInfoRes = FleetOwnerInfoRes
     mobileNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
+    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
     fleetType :: Kernel.Prelude.Text,
     verified :: Kernel.Prelude.Bool,
     approvedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

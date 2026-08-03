@@ -63,6 +63,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -142,7 +143,9 @@ fleetOwnerRegister req mbEnabled = do
           let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
           image <- Image.validateImage True Nothing Nothing (person.id, merchant.id, merchantOpCityId) req'
           gstNumber <- forM req.gstNumber encrypt
-          QFOI.updateGstImage gstNumber (Just image.imageId.getId) person.id
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+          SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner person.id) $
+            QFOI.updateGstImage gstNumber (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
 
 getOperatorIdFromReferralCode :: Maybe Text -> Flow (Maybe Text)
@@ -158,27 +161,28 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
-  void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
-  QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  let defaultDocsVerificationStatus =
-        if transporterConfig.enableManualDocumentStatusCheck == Just True
-          then Just DDVS.ADMIN_PENDING
-          else Nothing
-      -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
-      -- recomputeFleetVerifiedAndEnabled), so register as not-enabled. Legacy (non-BOT) keeps the
-      -- existing default-enabled behavior.
-      mbEnabled' = if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True then Just False else mbEnabled
-  createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
-  whenJust mbReferredOperatorId $ \referredOperatorId -> do
-    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId DomainRC.defaultAssociationEnd
-    QFOA.create fleetOperatorAssData
-    let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-    when allowCacheDriverFlowStatus $ do
-      DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId person.id.getId
-    DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
-  when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
-    void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner person.id) $ do
+    void $ QP.create person
+    QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
+    let defaultDocsVerificationStatus =
+          if transporterConfig.enableManualDocumentStatusCheck == Just True
+            then Just DDVS.ADMIN_PENDING
+            else Nothing
+        -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
+        -- recomputeFleetVerifiedAndEnabled), so register as not-enabled. Legacy (non-BOT) keeps the
+        -- existing default-enabled behavior.
+        mbEnabled' = if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True then Just False else mbEnabled
+    createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId merchantOperatingCity.id ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
+    whenJust mbReferredOperatorId $ \referredOperatorId -> do
+      fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId DomainRC.defaultAssociationEnd
+      QFOA.create fleetOperatorAssData
+      let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+      when allowCacheDriverFlowStatus $ do
+        DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId person.id.getId
+      DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
+    when (transporterConfig.generateReferralCodeForFleet == Just True) $ do
+      void $ DR.generateReferralCode (Just DP.FLEET_OWNER) (person.id, merchantId, merchantOpCityId)
   pure person
 
 createPanInfo :: Id DP.Person -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
@@ -189,12 +193,14 @@ createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just pa
   void $ Registration.postDriverRegisterPancardHelper (Just personId, merchantId, merchantOperatingCityId) True False panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
-createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId mbMerchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId merchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
   now <- getCurrentTime
   mbGstNumberEnc <- forM mbGstNumber encrypt
-  let fleetType = fromMaybe NORMAL_FLEET mbFleetType
-      enabled = fromMaybe True mbEnabled
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
+  let useUnifiedOnboardingFlagsRecompute = maybe False (\transporterConfig -> transporterConfig.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfig
+      fleetType = fromMaybe NORMAL_FLEET mbFleetType
+      enabled = not useUnifiedOnboardingFlagsRecompute && fromMaybe True mbEnabled
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
@@ -241,7 +247,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             registeredAt = Nothing,
             isEligibleForSubscription = True,
             ticketPlaceId = mbTicketPlaceId,
-            merchantOperatingCityId = mbMerchantOperatingCityId,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             payoutRegistrationOrderId = Nothing,
             docsVerificationStatus = mbDocsVerificationStatus,
             address = Nothing,
@@ -253,9 +259,8 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
           }
   QFOI.create fleetOwnerInfo
   -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
-  whenJust mbMerchantOperatingCityId $ \mocId ->
-    fork ("BootstrapAggCommChain:" <> personId.getId) $
-      AggCommSched.bootstrapAggregatedCommissionChain merchantId mocId personId.getId BeckInvoice.FLEET_OWNER
+  fork ("BootstrapAggCommChain:" <> personId.getId) $
+    AggCommSched.bootstrapAggregatedCommissionChain merchantId merchantOperatingCityId personId.getId BeckInvoice.FLEET_OWNER
 
 fleetOwnerLogin ::
   FleetOwnerLoginReq ->

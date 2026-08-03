@@ -39,6 +39,7 @@ imports:
   OnboardingAs: Dashboard.Common.Driver
   ApprovalStatusFilter: Dashboard.Common.Driver
   DriverAssociationInfo: Dashboard.Common.Driver
+  DisabledReasonFlag: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -2110,6 +2111,7 @@ types:
     - mobileNo: Maybe Text
     - blocked: Bool
     - enabled: Bool
+    - disabledReasonFlag: Maybe DisabledReasonFlag
     - fleetType: Text
     - verified: Bool
     - approvedBy: Maybe Text
