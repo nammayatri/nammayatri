@@ -322,6 +322,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             startDate,
             endDate,
             benefitDescription = pass.benefitDescription,
+            availableTripCount = FRFSPassOverride.maxTripCountFromPass pass,
             isDashboard = Just isDashboard,
             benefitType = benefitType,
             benefitValue = benefitValue,
