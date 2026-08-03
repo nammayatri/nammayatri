@@ -98,6 +98,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG ''SearchRequestT ['id] [['transactionId]])
+$(enableKVPG ''SearchRequestT ['id] [['riderId], ['transactionId]])
 
 $(mkTableInstances ''SearchRequestT "search_request")
