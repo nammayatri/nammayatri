@@ -42,6 +42,9 @@ type API =
            "filterServiceAndJrnyType"
            Kernel.Prelude.Bool
       :> QueryParam
+           "hasPasses"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "newServiceTiers"
            [BecknV2.FRFS.Enums.ServiceTierType]
       :> Post
@@ -623,10 +626,11 @@ postMultimodalInitiate ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalInitiate a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalInitiate a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalInitiate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

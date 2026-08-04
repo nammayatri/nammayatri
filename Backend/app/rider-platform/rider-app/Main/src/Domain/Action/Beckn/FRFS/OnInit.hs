@@ -36,6 +36,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
@@ -122,17 +123,36 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
+  booking' <- if isFareChanged then dropPassOverrideOnFareChange booking else pure booking
+  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking'
 
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
-  when allLegsOnInitDone $ do
+      payableBookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
+  when (allLegsOnInitDone && not (null payableBookings)) $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
-      (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-      baskets <- createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      (vendorSplitDetails, amount) <- createVendorSplitFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+      baskets <- createBasketFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
+      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
+
+dropPassOverrideOnFareChange ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  FTBooking.FRFSTicketBooking ->
+  m FTBooking.FRFSTicketBooking
+dropPassOverrideOnFareChange booking = case booking.overrideAppliedEntityId of
+  Nothing -> pure booking
+  Just entityId -> do
+    logError $ "OnInit:dropPassOverrideOnFareChange fare changed under a pass-covered booking, dropping override bookingId=" <> booking.id.getId
+    released <- withTryCatch "onInit:dropOverrideReleaseTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId))
+    case released of
+      Left err -> do
+        logError $ "OnInit:dropPassOverrideOnFareChange trip release failed, keeping override fields for retry bookingId=" <> booking.id.getId <> " err=" <> show err
+        pure booking
+      Right _ -> do
+        QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing booking.id
+        pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing}
 
 createPayments ::
   ( EsqDBReplicaFlow m r,
@@ -167,9 +187,11 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         return updatedPaymentOrder
   case mbPaymentOrder of
     Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings
-    Nothing -> do
-      markBookingFailed `mapM_` bookings
-      throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
+    Nothing
+      | amount <= 0 -> mapM_ markBookingPaidWithoutOrder bookings
+      | otherwise -> do
+        markBookingFailed `mapM_` bookings
+        throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
     markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
@@ -177,4 +199,9 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         isTestTransaction <- asks (.isMetroTestTransaction)
         let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
         void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
-    markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
+    markBookingFailed booking = do
+      void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
+      void $ withTryCatch "onInit:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+
+    markBookingPaidWithoutOrder booking =
+      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id

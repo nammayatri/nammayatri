@@ -18,6 +18,7 @@ import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
+import qualified Domain.Types.PurchasedPassPayment
 import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Seat
@@ -133,6 +134,7 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
     childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     crisSdkResponse :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
+    purchasedPassPaymentId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     seatIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
     skipBooking :: Kernel.Prelude.Bool,
     ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

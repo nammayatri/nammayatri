@@ -1344,8 +1344,8 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
         isCancellable = Nothing
       }
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> m LegInfo
-mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg journeyLegs = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> Maybe [FRFSPassOverride.PassCandidate] -> m LegInfo
+mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg journeyLegs mbPassCandidates = do
   let fallbackFare = journeyLeg.estimatedMinFare
   let distance = journeyLeg.distance
   let duration = journeyLeg.duration
@@ -1383,19 +1383,25 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
           Nothing
       else pure []
   overridePasses <-
-    if integratedBPPConfig.passOverrideApplicable == Just True
-      then do
+    if integratedBPPConfig.passOverrideApplicable /= Just True
+      then pure []
+      else do
         now' <- getCurrentTime
-        FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType (fromMaybe now' journeyLeg.fromDepartureTime)
-      else pure []
+        let tripTime = fromMaybe now' journeyLeg.fromDepartureTime
+        case mbPassCandidates of
+          Just candidates -> do
+            tripDay <- FRFSPassOverride.localTripDay person tripTime
+            pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay
+          Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass
   let overridePurchasedPassIds = map (.purchasedPassPayment.purchasedPassId) overridePasses
       adultUnitPrice = (mbFareParameters <&> (.priceItems)) >>= find (\priceItem -> priceItem.categoryType == ADULT) <&> (.unitPrice)
+      overridePriceItems = maybe [] (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) . (.priceItems)) mbFareParameters
       applicablePasses =
         maybe
           []
-          (map FRFSPassOverride.mkPassOptionAPIEntity . FRFSPassOverride.passOptionsForQuote overridePasses serviceTierType totalTicketQuantity)
+          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig overridePasses serviceTierType unitPrice overridePriceItems)
           adultUnitPrice
-  let hasApplicablePass =
+  let hasTicketFreePass =
         shouldCheckPass
           && any
             ( \p ->
@@ -1423,7 +1429,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
           Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
           Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
           Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
-  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser && not hasApplicablePass
+  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser && not hasTicketFreePass
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
   (mbEstimatedFare, mbChildFare, categories) <-
@@ -1469,7 +1475,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         entrance = Nothing,
         exit = Nothing,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
-        hasApplicablePasses = Just hasApplicablePass,
+        hasApplicablePasses = Just hasTicketFreePass,
         observingFailures = Just observingFailures,
         isCancellable = Nothing
       }
