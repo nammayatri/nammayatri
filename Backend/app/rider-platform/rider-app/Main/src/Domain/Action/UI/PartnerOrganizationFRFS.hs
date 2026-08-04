@@ -597,7 +597,8 @@ mkQuoteRes (quote, quoteCategories) = do
   singleAdultTicketPrice <- find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice) & fromMaybeM (InternalError "Single Adult Ticket Price not found.")
   return $
     FRFSTypes.FRFSQuoteAPIRes
-      { quoteId = quote.id,
+      { applicablePasses = [],
+        quoteId = quote.id,
         _type = quote._type,
         price = singleAdultTicketPrice.amount,
         priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,

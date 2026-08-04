@@ -102,6 +102,7 @@ types:
     passNumber: Text
     passEntity: PassDetailsAPIEntity
     tripsLeft: Maybe Int
+    availableTripCount: Maybe Int
     lastVerifiedVehicleNumber: Maybe Text
     isAutoVerified: Bool
     status: StatusType

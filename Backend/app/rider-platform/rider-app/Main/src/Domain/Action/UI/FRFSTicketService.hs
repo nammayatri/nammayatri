@@ -94,6 +94,7 @@ import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOpe
 import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
@@ -699,6 +700,21 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
         Left _ -> return []
   return $ FRFSSearchAPIRes quotes searchReqId
 
+enrichQuotesWithPassOverride ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  DIBC.IntegratedBPPConfig ->
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Domain.Types.FRFSSearch.FRFSSearch ->
+  m [FRFSPassOverride.ApplicablePass]
+enrichQuotesWithPassOverride integratedBppConfig personId search =
+  if integratedBppConfig.passOverrideApplicable /= Just True
+    then pure []
+    else do
+      now <- getCurrentTime
+      QP.findById personId >>= \case
+        Nothing -> pure []
+        Just person -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBppConfig person search.vehicleType now
+
 getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
 getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
@@ -760,6 +776,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
             >>= \case
               Left _ -> pure Nothing
               Right mbResp -> pure mbResp
+  applicablePassesForSearch <- enrichQuotesWithPassOverride integratedBppConfig personId search
   mapM
     ( \(quote, quoteCategories) -> do
         let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
@@ -790,6 +807,9 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
           FRFSTicketService.FRFSQuoteAPIRes
             { quoteId = quote.id,
               _type = quote._type,
+              applicablePasses =
+                map FRFSPassOverride.mkPassOptionAPIEntity $
+                  FRFSPassOverride.passOptionsForQuote applicablePassesForSearch serviceTierType adultQuantity singleAdultTicketPrice,
               price = singleAdultTicketPrice.amount,
               priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
               quantity = adultQuantity,

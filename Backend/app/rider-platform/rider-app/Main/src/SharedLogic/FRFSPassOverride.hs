@@ -5,6 +5,7 @@ module SharedLogic.FRFSPassOverride
     FixedSaving (..),
     ApplicablePass (..),
     PassOption (..),
+    mkPassOptionAPIEntity,
     passOptionsForQuote,
     maxTripCountFromPass,
     registerHasPass,
@@ -20,6 +21,7 @@ module SharedLogic.FRFSPassOverride
   )
 where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
 import qualified Data.Time as T
@@ -31,6 +33,7 @@ import qualified Domain.Types.PurchasedPassPayment as DPPP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import qualified Storage.CachedQueries.Pass as CQPass
@@ -167,7 +170,8 @@ data PassOption = PassOption
   { purchasedPassPaymentId :: Id DPPP.PurchasedPassPayment,
     passId :: Id DPass.Pass,
     passName :: Maybe Text,
-    overriddenPrice :: Price
+    overriddenPrice :: Price,
+    availableTripCount :: Maybe Int
   }
   deriving (Show, Generic)
 
@@ -177,7 +181,8 @@ passOptionsForQuote applicablePasses mbServiceTier quantity basePrice =
       { purchasedPassPaymentId = applicablePass.purchasedPassPayment.id,
         passId = applicablePass.pass.id,
         passName = applicablePass.purchasedPassPayment.passName,
-        overriddenPrice = overridden
+        overriddenPrice = overridden,
+        availableTripCount = applicablePass.availableTripCount
       }
     | applicablePass <- applicablePasses,
       coversTier applicablePass,
@@ -204,7 +209,7 @@ applyOverrideBenefit benefit basePrice
   | otherwise = basePrice
   where
     isEnabled = fromMaybe False
-    discounted saving = basePrice {amount = max 0 (basePrice.amount - saving)}
+    discounted saving = mkPrice (Just basePrice.currency) (max 0 (basePrice.amount - saving))
 
 data ConsumeResult
   = Consumed Int
@@ -233,7 +238,7 @@ getRemainingTripCount payment = case payment.availableTripCount of
         logInfo $ "FRFSPassOverride: seeded tripCount paymentId=" <> payment.id.getId <> " allowance=" <> show allowance
         pure (Just allowance)
 
-consumeTrip :: (MonadFlow m, Redis.HedisFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> m ConsumeResult
+consumeTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> m ConsumeResult
 consumeTrip payment = case payment.availableTripCount of
   Nothing -> pure Unmetered
   Just _ -> do
@@ -249,7 +254,7 @@ consumeTrip payment = case payment.availableTripCount of
         QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
         pure $ Consumed (fromIntegral remaining)
 
-refundTrip :: (MonadFlow m, Redis.HedisFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> Int -> m ()
+refundTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> Int -> m ()
 refundTrip payment grantedAllowance = when (isJust payment.availableTripCount) $ do
   let key = makeTripCountKey payment.id
   current <- fromMaybe grantedAllowance <$> Redis.safeGet key
@@ -283,3 +288,13 @@ checkHasPass person today =
   Redis.safeGet (makeHasPassKey person.id) >>= \case
     Just hasLivePass -> pure hasLivePass
     Nothing -> pure $ maybe False (>= today) person.hasPassTill
+
+mkPassOptionAPIEntity :: PassOption -> FRFSTicketServiceAPI.FRFSPassOptionAPIEntity
+mkPassOptionAPIEntity passOption =
+  FRFSTicketServiceAPI.FRFSPassOptionAPIEntity
+    { purchasedPassPaymentId = passOption.purchasedPassPaymentId,
+      passId = passOption.passId,
+      passName = passOption.passName,
+      overriddenPrice = mkPriceAPIEntity passOption.overriddenPrice,
+      availableTripCount = passOption.availableTripCount
+    }
