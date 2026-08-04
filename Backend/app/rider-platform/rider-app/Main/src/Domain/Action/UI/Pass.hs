@@ -313,6 +313,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         QPurchasedPass.create purchasedPass
         return newPurchasedPassId
 
+  mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -322,7 +323,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             startDate,
             endDate,
             benefitDescription = pass.benefitDescription,
-            availableTripCount = FRFSPassOverride.maxTripCountFromPass pass,
+            availableTripCount = mbMaxTripCount,
             isDashboard = Just isDashboard,
             benefitType = benefitType,
             benefitValue = benefitValue,
@@ -398,7 +399,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
-  void $ withTryCatch "purchasePassWithPayment:registerHasPass" (FRFSPassOverride.registerHasPass personId endDate)
+  when (initialStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+    void $ withTryCatch "purchasePassWithPayment:registerHasPass" (FRFSPassOverride.registerHasPass personId endDate)
   return $
     PassAPI.PassSelectionAPIEntity
       { purchasedPassId = purchasedPassId,
@@ -616,7 +618,6 @@ buildPassAPIEntity mbLanguage person pass = do
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
         documentsRequired = pass.documentsRequired,
-        skipUserPhotographCapture = pass.skipUserPhotographCapture,
         eligibility = eligibility,
         name = name,
         description = description,
@@ -675,10 +676,6 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         maxDays = purchasedPass.maxValidDays,
         description = description,
         documentsRequired = [],
-        -- Not reachable here: this entity is built from purchasedPass, which carries no passId.
-        -- Blanked like documentsRequired -- capture config only matters pre-purchase, and a
-        -- skip-configured pass never reaches PhotoPending anyway (the webhook activates it directly).
-        skipUserPhotographCapture = Nothing,
         eligibility = True,
         name = name,
         code = purchasedPass.passCode,
@@ -736,7 +733,12 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         purchasedPass.id
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
-  availableTripCount <- maybe (pure Nothing) FRFSPassOverride.getRemainingTripCount mbLivePayment
+  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbLivePayment >>= (.passId))
+  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbOverridePass
+  availableTripCount <- case (mbLivePayment, mbBenefit) of
+    (Just livePayment, Just benefit) -> FRFSPassOverride.remainingTrips livePayment benefit
+    _ -> pure Nothing
+  let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
 
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
@@ -763,6 +765,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         passEntity = passDetailsEntity,
         tripsLeft = tripsLeft,
         availableTripCount = availableTripCount,
+        unlimitedTripCount = unlimitedTripCount,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,
@@ -796,11 +799,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      -- A pass configured with skipUserPhotographCapture never collects a photo, so it must
-      -- not be held in PhotoPending waiting for one it will never receive.
-      mbPass <- maybe (pure Nothing) CQPass.findById purchasedPassPayment.passId
-      let skipPhoto = fromMaybe False (mbPass >>= (.skipUserPhotographCapture))
-      let hasProfilePicture = skipPhoto || isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
+      let hasProfilePicture = isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
       let mbPassStatus = convertPaymentStatusToPurchasedPassStatus hasProfilePicture (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]

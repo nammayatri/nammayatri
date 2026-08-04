@@ -48,7 +48,6 @@ Pass:
     maxValidDays: Maybe Int
     verificationValidity: Seconds
     documentsRequired: "[PassDocumentType]"
-    skipUserPhotographCapture: Maybe Bool
     frfsPriceOverrideApplicable: Maybe Bool
     order: Int
     enable: Bool

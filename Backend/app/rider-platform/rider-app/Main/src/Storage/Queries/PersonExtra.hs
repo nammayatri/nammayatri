@@ -395,7 +395,20 @@ updateHasPassTill (Id personId) hasPassTill = do
     [ Se.Set BeamP.hasPassTill (Just hasPassTill),
       Se.Set BeamP.updatedAt now
     ]
-    [Se.Is BeamP.id (Se.Eq personId)]
+    [ Se.Is BeamP.id (Se.Eq personId),
+      Se.Is BeamP.hasPassTill (Se.LessThan (Just hasPassTill))
+    ]
+
+setHasPassTillIfUnset :: (MonadFlow m, EsqDBFlow m r) => Id Person -> T.Day -> m ()
+setHasPassTillIfUnset (Id personId) hasPassTill = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.hasPassTill (Just hasPassTill),
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id (Se.Eq personId),
+      Se.Is BeamP.hasPassTill (Se.Eq Nothing)
+    ]
 
 updateReferredByCustomer :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m () -- TODO: move this once DSL Bug Fixed
 updateReferredByCustomer personId referredByPersonId = do

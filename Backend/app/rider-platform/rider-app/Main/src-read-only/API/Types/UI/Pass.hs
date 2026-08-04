@@ -46,7 +46,6 @@ data PassAPIEntity = PassAPIEntity
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
     referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    skipUserPhotographCapture :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
@@ -129,7 +128,8 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     purchaseDate :: Data.Time.Day,
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
-    tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int
+    tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    unlimitedTripCount :: Kernel.Prelude.Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

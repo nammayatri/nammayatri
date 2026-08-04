@@ -571,6 +571,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             fromStationAddress = fromStation'.address,
             toStationAddress = toStation'.address,
             vehicleNumber = Nothing,
+            hasApplicablePass = Nothing,
             isSingleMode = Just True,
             cloudType = Nothing,
             clientSdkVersion = Nothing,
@@ -738,6 +739,9 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
   let bookingRes =
         FRFSTypes.FRFSTicketBookingStatusAPIRes
           { FRFSTypes._type = booking._type,
+            overrideType = booking.overrideType,
+            overriddenTotalPrice = mkPriceAPIEntity . mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
+            appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
             bookingId = booking.id,
             city = merchantOperatingCity.city,
             createdAt = booking.createdAt,
@@ -836,7 +840,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
               ( \quoteCategory -> FRFSTypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity = quoteCategory.selectedQuantity, seatIds = Nothing}
               )
               updatedQuoteCategories
-      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing Nothing Nothing
+      bookingRes <- postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote selectedQuoteCategories Nothing Nothing Nothing (Just False) integratedBPPConfig Nothing Nothing Nothing Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

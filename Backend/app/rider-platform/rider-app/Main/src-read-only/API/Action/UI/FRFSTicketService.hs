@@ -159,6 +159,9 @@ type API =
            "city"
            Kernel.Types.Beckn.Context.City
       :> QueryParam
+           "hasPasses"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "integratedBppConfigId"
            (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
       :> QueryParam
@@ -193,6 +196,12 @@ type API =
            "searchId"
            (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
       :> "quote"
+      :> QueryParam
+           "hasPasses"
+           Kernel.Prelude.Bool
+      :> QueryParam
+           "tripTime"
+           Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
@@ -517,13 +526,14 @@ postFrfsSearch ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
     Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
-postFrfsSearch a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+postFrfsSearch a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postFrfsDiscoverySearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -540,9 +550,11 @@ getFrfsSearchQuote ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
   )
-getFrfsSearchQuote a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsSearchQuote (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getFrfsSearchQuote a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsSearchQuote (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postFrfsQuoteConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

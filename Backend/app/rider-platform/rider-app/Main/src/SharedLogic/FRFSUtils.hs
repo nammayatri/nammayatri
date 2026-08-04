@@ -88,6 +88,7 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSFareCalculator as Reexport
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -864,62 +865,66 @@ createPaymentOrder ::
   [Payment.Basket] ->
   Bool ->
   m (Maybe DOrder.PaymentOrder)
-createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment = do
-  nwAddress <- asks (.nwAddress)
-  logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
-  logInfo $ "createPayments basket" <> show basket
-  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  personEmail <- mapM decrypt person.email
-  (orderId, orderShortId) <- getPaymentIds
-  results <- processPayments orderId `mapM` bookings
-  let (ticketBookingPayments', allPaymentCategories) = unzip results
-  QFRFSTicketBookingPaymentCategory.createMany (concat allPaymentCategories)
-  QFRFSTicketBookingPayment.createMany ticketBookingPayments'
-  isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
-  let isSingleMode = case bookings of
-        [_] -> True
-        _ -> False
-  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
-  staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
-  udf1 <- SLUtils.getPersonUdf1 person
-  let createOrderReq =
-        Payment.CreateOrderReq
-          { orderId = orderId.getId,
-            orderShortId = orderShortId,
-            amount = amount,
-            customerId = staticCustomerId,
-            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
-            customerPhone = personPhone,
-            customerFirstName = person.firstName,
-            customerLastName = person.lastName,
-            createMandate = Nothing,
-            mandateMaxAmount = Nothing,
-            mandateFrequency = Nothing,
-            mandateEndDate = Nothing,
-            mandateStartDate = Nothing,
-            optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            webhookUrl = Just nwAddress,
-            splitSettlementDetails = splitSettlementDetails,
-            basket = basket,
-            paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing,
-            paymentFilter = Nothing,
-            udf1 = udf1
-          }
-  let mocId = merchantOperatingCityId
-      commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
-      commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion (Just isMockPayment)
-  mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
-  isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
-      groupId = listToMaybe $ sort (bookings <&> (.id.getId))
-  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
-  mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
+createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment
+  | amount <= 0 && not (null bookings) && all (FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) bookings = do
+    logInfo $ "createPaymentOrder: skipping order, fully overridden bookings=" <> show (bookings <&> (.id.getId))
+    pure Nothing
+  | otherwise = do
+    nwAddress <- asks (.nwAddress)
+    logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
+    logInfo $ "createPayments basket" <> show basket
+    personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+    personEmail <- mapM decrypt person.email
+    (orderId, orderShortId) <- getPaymentIds
+    results <- processPayments orderId `mapM` bookings
+    let (ticketBookingPayments', allPaymentCategories) = unzip results
+    QFRFSTicketBookingPaymentCategory.createMany (concat allPaymentCategories)
+    QFRFSTicketBookingPayment.createMany ticketBookingPayments'
+    isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
+    isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
+    let isSingleMode = case bookings of
+          [_] -> True
+          _ -> False
+    splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
+    staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+    udf1 <- SLUtils.getPersonUdf1 person
+    let createOrderReq =
+          Payment.CreateOrderReq
+            { orderId = orderId.getId,
+              orderShortId = orderShortId,
+              amount = amount,
+              customerId = staticCustomerId,
+              customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
+              customerPhone = personPhone,
+              customerFirstName = person.firstName,
+              customerLastName = person.lastName,
+              createMandate = Nothing,
+              mandateMaxAmount = Nothing,
+              mandateFrequency = Nothing,
+              mandateEndDate = Nothing,
+              mandateStartDate = Nothing,
+              optionsGetUpiDeepLinks = Nothing,
+              metadataExpiryInMins = Nothing,
+              metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+              webhookUrl = Just nwAddress,
+              splitSettlementDetails = splitSettlementDetails,
+              basket = basket,
+              paymentRules = Nothing,
+              autoRefundPostSuccess = Nothing,
+              paymentFilter = Nothing,
+              udf1 = udf1
+            }
+    let mocId = merchantOperatingCityId
+        commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
+        commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
+        commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
+        createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion (Just isMockPayment)
+    mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId merchantOperatingCityId Nothing paymentType
+    isMetroTestTransaction <- asks (.isMetroTestTransaction)
+    let createWalletCall = TWallet.createWallet merchantId merchantOperatingCityId
+        groupId = listToMaybe $ sort (bookings <&> (.id.getId))
+    orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId mbPaymentOrderValidTill Nothing paymentType isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) isMockPayment groupId
+    mapM (\resp -> DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing paymentType createOrderReq resp isMockPayment groupId Nothing) orderResp
   where
     getPaymentIds = do
       orderShortId <- generateShortId
@@ -1079,11 +1084,13 @@ totalOrderValue paymentBookingStatus booking =
 -- TODO :: This function called in Ticket Cancellation flow does not properly handle multiple quote category, whe enabling cancellation for multiple categories this needs to be rectified.
 updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
 updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig = do
-  paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  mbPaymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+    throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
       finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
       finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
-  tOrderPrice <- totalOrderValue paymentBooking.status booking
+  tOrderPrice <- maybe (pure booking.totalPrice) (\paymentBooking -> totalOrderValue paymentBooking.status booking) mbPaymentBooking
   let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
@@ -1202,7 +1209,7 @@ createBasketFromBookings ::
   m [Payment.Basket]
 createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType mbEnableOffer = do
   logDebug $ "mbEnableOffer: " <> show mbEnableOffer
-  let totalAmount = sum $ map (\booking -> booking.totalPrice.amount) allJourneyBookings
+  let totalAmount = sum $ map (\booking -> fromMaybe booking.totalPrice.amount booking.overriddenAmount) allJourneyBookings
       dummyBasket =
         [ Payment.Basket
             { Payment.id = "no_basket",
@@ -1220,13 +1227,15 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
           quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
           (mbAdultOfferSKUProductId', mbChildOfferSKUProductId') <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
-          let mbAdultOfferSKUProductId = Payment.substituteVehicleTypeInOfferSKU booking.vehicleType booking.serviceTierType mbAdultOfferSKUProductId'
-              mbChildOfferSKUProductId = Payment.substituteVehicleTypeInOfferSKU booking.vehicleType booking.serviceTierType mbChildOfferSKUProductId'
+          let mbAdultOfferSKUProductId = Payment.substituteOverrideTypeInOfferSKU booking.overrideType booking.vehicleType booking.serviceTierType mbAdultOfferSKUProductId'
+              mbChildOfferSKUProductId = Payment.substituteOverrideTypeInOfferSKU booking.overrideType booking.vehicleType booking.serviceTierType mbChildOfferSKUProductId'
+          mbBenefit <- FRFSPassOverride.benefitForOverrideAppliedEntity booking.overrideAppliedEntityId
           let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
-              adultQuantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)
-              childQuantity = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.quantity)
-              adultUnitPrice = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice.amount)
-              childUnitPrice = find (\category -> category.categoryType == CHILD) fareParameters.priceItems <&> (.unitPrice.amount)
+              applyBenefit price = maybe price (\benefit -> FRFSPassOverride.applyOverrideBenefit benefit price) mbBenefit
+              skuForCategory category = case category of
+                ADULT -> mbAdultOfferSKUProductId
+                CHILD -> mbChildOfferSKUProductId
+                _ -> Just ("no_basket_" <> T.toLower (show category))
               -- separate basket line per category, each keyed by its own offer SKU id
               mkBasket mbOfferSKUProductId mbQuantity mbUnitPrice =
                 case (mbQuantity, mbUnitPrice) of
@@ -1239,10 +1248,35 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
                           }
                       ]
                   _ -> []
-              adultBasket = mkBasket mbAdultOfferSKUProductId adultQuantity adultUnitPrice
-              childBasket = mkBasket mbChildOfferSKUProductId childQuantity childUnitPrice
-              baskets = adultBasket <> childBasket
-          return $ if null baskets then dummyBasket else baskets
+              categoryItem category = find (\c -> c.categoryType == category) fareParameters.priceItems
+              baskets
+                | isJust booking.overrideType =
+                  concatMap
+                    ( \priceItem ->
+                        mkBasket
+                          (skuForCategory priceItem.categoryType)
+                          (Just priceItem.quantity)
+                          (Just (applyBenefit priceItem.unitPrice).amount)
+                    )
+                    fareParameters.priceItems
+                | otherwise =
+                  mkBasket mbAdultOfferSKUProductId (categoryItem ADULT <&> (.quantity)) (categoryItem ADULT <&> (.unitPrice.amount))
+                    <> mkBasket mbChildOfferSKUProductId (categoryItem CHILD <&> (.quantity)) (categoryItem CHILD <&> (.unitPrice.amount))
+              basketTotal = sum $ map (\b -> b.unitPrice * HighPrecMoney (toRational b.quantity)) baskets
+          if null baskets
+            then return dummyBasket
+            else
+              if maybe False (\overridden -> basketTotal /= overridden) booking.overriddenAmount
+                then do
+                  logError $
+                    "createBasketFromBookings: basket total does not match overriddenAmount, dropping offer basket bookingId="
+                      <> booking.id.getId
+                      <> " basketTotal="
+                      <> show basketTotal
+                      <> " overriddenAmount="
+                      <> show booking.overriddenAmount
+                  return dummyBasket
+                else return baskets
         _ -> return dummyBasket
 
 -- TODO :: To be deprecated, and unified with SharedLogic.PaymentVendorSplits.createVendorSplit
@@ -1264,7 +1298,7 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
           then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
           else
             foldl
-              (\accAmt item -> accAmt + item.totalPrice.amount)
+              (\accAmt item -> accAmt + fromMaybe item.totalPrice.amount item.overriddenAmount)
               0.0
               allJourneyBookings
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
@@ -1278,7 +1312,7 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
               ( \item -> do
                   integBppConfig <- SIBC.findIntegratedBPPConfigById item.integratedBppConfigId
                   vendorSplitDetailsList <- QVendorSplitDetails.findAllByIntegratedBPPConfigId integBppConfig.id
-                  let amountPerBooking = if isFRFSTestingEnabled then 1.0 else item.totalPrice.amount
+                  let amountPerBooking = if isFRFSTestingEnabled then 1.0 else fromMaybe item.totalPrice.amount item.overriddenAmount
                   return (item.id, (amountPerBooking, vendorSplitDetailsList))
               )
               allJourneyBookings
