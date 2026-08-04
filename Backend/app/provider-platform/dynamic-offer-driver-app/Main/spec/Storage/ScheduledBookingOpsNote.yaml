@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Booking: Domain.Types.Booking
+  OpsNoteType: Domain.Types.OpsNote
+  OpsNoteStatus: Domain.Types.OpsNote
+
+ScheduledBookingOpsNote:
+  tableName: scheduled_booking_ops_note
+
+  fields:
+    id: Id ScheduledBookingOpsNote
+    transactionId: Text
+    bookingId: Maybe (Id Booking)
+    noteType: OpsNoteType
+    content: Maybe Text
+    status: OpsNoteStatus
+    createdByDashboardUserId: Maybe Text
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    transactionId: "!SecondaryKey"
+
+  queries:
+    findByTransactionId:
+      kvFunction: findAllWithKV
+      where: transactionId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    updateNote:
+      kvFunction: updateOneWithKV
+      params: [status, content, updatedAt]
+      where: id
+
+  sqlType:
+    noteType: character varying (36)
+    status: character varying (36)
+
+  default:
+    status: "'PENDING'"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

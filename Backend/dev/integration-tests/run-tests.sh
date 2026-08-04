@@ -48,6 +48,7 @@ LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
+SCHEDULED_DIR="$SCRIPT_DIR/collections/ScheduledBookingFlow"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
@@ -548,6 +549,7 @@ run_pan_hard_check() {
 }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
+run_scheduled() { run_frfs "$SCHEDULED_DIR" "SCHEDULED BOOKING" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
 run_sms() {
     echo ""
@@ -781,6 +783,9 @@ case "${1:-}" in
         ;;
     rental)
         run_rental "${2:-}" "${3:-}"
+        ;;
+    scheduled)
+        run_scheduled "${2:-}" "${3:-}"
         ;;
     fleet)
         run_fleet "${2:-}" "${3:-}"

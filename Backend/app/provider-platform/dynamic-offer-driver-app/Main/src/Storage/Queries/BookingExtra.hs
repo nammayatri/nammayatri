@@ -73,6 +73,31 @@ findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => T
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
+-- | All bookings sharing a transactionId, oldest first. A single transactionId spans
+-- multiple bookings across reallocation (bookingId changes, transactionId stays), so this
+-- is the basis for reconstructing the reallocation history for an ops/scheduled booking.
+findAllByTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Booking]
+findAllByTransactionId txnId =
+  findAllWithKVAndConditionalDB
+    [Se.Is BeamB.transactionId $ Se.Eq txnId]
+    (Just (Se.Asc BeamB.createdAt))
+
+-- | Scheduled bookings still relevant to ops: scheduled, in the given statuses, and with a
+-- startTime inside the window. Used by the ops dashboard "upcoming scheduled bookings" list.
+-- Filtered to a single pickup-city (booking.merchantOperatingCityId). Not paginated here;
+-- the caller sorts by startTime and paginates in-memory (the matching set is bounded).
+findScheduledUpcomingBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [BookingStatus] -> UTCTime -> UTCTime -> m [Booking]
+findScheduledUpcomingBookings merchantOpCityId statuses fromTime toTime =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
+          Se.Is BeamB.isScheduled $ Se.Eq (Just True),
+          Se.Is BeamB.status $ Se.In statuses,
+          Se.Is BeamB.startTime $ Se.GreaterThanOrEq fromTime,
+          Se.Is BeamB.startTime $ Se.LessThanOrEq toTime
+        ]
+    ]
+
 findByTransactionIdAndStatuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
 findByTransactionIdAndStatuses transactionId statusList =
   findAllWithKVAndConditionalDB

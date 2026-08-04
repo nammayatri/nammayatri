@@ -111,6 +111,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
       API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
@@ -132,6 +133,7 @@ library
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.ScheduledBooking
       API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
