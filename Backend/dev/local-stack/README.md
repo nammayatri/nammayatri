@@ -25,9 +25,14 @@ POST /v2/serviceability/origin 200  Bangalore    serviceable=false
 | URL | What |
 |-----|------|
 | `http://localhost:8015` | **Service-area map** — click anywhere, the backend answers |
-| `http://localhost:8014/swagger` | Swagger UI — 60 endpoints (**no trailing slash**, see Gotchas) |
-| `http://localhost:8014/openapi` | OpenAPI spec (JSON) |
-| `localhost:5434` | Postgres (`postgres` / `root`, db `atlas_dev`, schema `atlas_app`) |
+| `http://localhost:8014/swagger` | Rider (BAP) Swagger UI — 60 endpoints (**no trailing slash**) |
+| `http://localhost:8014/openapi` | Rider OpenAPI spec (JSON) |
+| `http://localhost:8017/swagger` | **Driver (BPP) Swagger UI — 99 endpoints** |
+| `http://localhost:8017/openapi` | Driver OpenAPI spec (JSON) |
+| `localhost:5434` | Postgres (`postgres` / `root`, db `atlas_dev`) |
+
+Two schemas in one database: `atlas_app` (rider) and `atlas_driver_offer_bpp`
+(driver).
 
 Demo script for showing it works: `./demo.sh` (or `demo.ps1` on Windows).
 
@@ -172,6 +177,62 @@ deliberately avoids. The demo therefore still logs in with the `+91` test rider;
 the geofence result is independent of the phone number.
 
 ---
+
+## The driver side (BPP)
+
+Runs from the **same image** — it already contains every executable in the
+repo — with a different entrypoint (`dynamic-offer-driver-app-exe`), its own
+schema and its own migrations. No second build.
+
+Seeded with 2 merchants, 12 drivers, 12 vehicles and 2 fare policies, and
+`verify` registers and logs in a new driver on every run.
+
+**Seeding order is not interchangeable**, and getting it wrong fails in a way
+that is hard to read later:
+
+1. `sql-seed/dynamic-offer-driver-app-seed.sql` — schema + 13 base tables
+   including `organization`. Contains **no data**.
+2. `local-testing-data/dynamic-offer-driver-app.sql` — organizations, drivers,
+   vehicles, fare policies, inserted into `organization`.
+3. Migrations, applied by driver-app at startup. Migration **0050**
+   (`rename-org-to-merchant`) renames `organization` → `merchant`, carrying
+   those rows across.
+
+So the data must be loaded **before driver-app starts**. Load it afterwards and
+every insert fails, because `organization` no longer exists. This is the same
+trap as the rider side, which is why `local-testing-data/rider-app.sql` is
+deliberately never applied.
+
+> Driver auth takes the merchant **UUID**, not the `shortId` the rider side
+> uses. An unknown number is fine — `auth` calls `createDriverWithDetails`, so
+> registration and login are the same call.
+
+## Not connected yet: rider → driver
+
+Both sides run, but a rider search does **not** reach the driver side. It fails
+earlier:
+
+```
+POST /v2/rideSearch  ->  {"errorCode":"GOOGLE_MAPS_API_ERROR"}
+```
+
+The rider app resolves distance and route *before* going out over BECKN, and
+the merchant is configured to use Google for all of it:
+
+```
+get_distances | get_routes | snap_to_road | get_place_name | auto_complete
+Google        | Google     | Google       | Google         | Google
+```
+
+There is no API key, so it fails. Two ways forward:
+
+- **`mock-google-exe`** — already in the image, purpose-built for this. Gets the
+  flow working end to end, with fake distances.
+- **OSRM** — `Maps_OSRM` already exists in `merchant_service_config`, so it is a
+  config switch plus a real OSRM server with an Algeria extract. Correct
+  routing, considerably more setup.
+
+Only after that can BECKN wiring (registry, gateway, subscriber IDs) be tested.
 
 ## Gotchas
 

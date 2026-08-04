@@ -94,6 +94,21 @@ services:
       - ./2023/Backend/dev:/opt/app/dev:ro
     restart: unless-stopped
 
+  # The driver side (BPP). Same image — it already contains every executable in
+  # the repo, so no second build — just a different entrypoint, a different
+  # schema (atlas_driver_offer_bpp) and its own migrations.
+  driver-app:
+    image: ny-rider:patched
+    container_name: ny-driver
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/dynamic-offer-driver-app-exe"]
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # It applies dev/migrations/dynamic-offer-driver-app itself on startup.
+      - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
   # rider-app uses host networking, so its port lives inside the Docker VM and
   # isn't published to Windows. This forwards it to localhost:8014.
   proxy:
@@ -102,6 +117,15 @@ services:
     command: tcp-listen:8013,fork,reuseaddr tcp-connect:172.17.0.1:8013
     ports:
       - "8014:8013"
+    restart: unless-stopped
+
+  # Same trick for the driver app: 8016 inside the VM -> 8017 on Windows.
+  driver-proxy:
+    image: alpine/socat
+    container_name: ny-driver-proxy
+    command: tcp-listen:8016,fork,reuseaddr tcp-connect:172.17.0.1:8016
+    ports:
+      - "8017:8016"
     restart: unless-stopped
 
   # Visual demo: a map of the service areas that queries the live API.

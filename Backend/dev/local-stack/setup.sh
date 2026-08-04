@@ -110,6 +110,41 @@ seed_db() {
   ok "base schema applied"
 }
 
+seed_driver_db() {
+  log "Seeding the driver side (schema + drivers + fare policy)"
+  # Ordering here is not interchangeable, and getting it wrong fails silently
+  # in a way that is hard to read later:
+  #
+  #   1. sql-seed        creates atlas_driver_offer_bpp and 13 base tables,
+  #                      including `organization`. It contains no data at all.
+  #   2. local-testing-data  inserts the organizations, drivers, vehicles and
+  #                      fare policies -- into `organization`.
+  #   3. migrations      run when driver-app starts, and migration 0050
+  #                      (rename-org-to-merchant) renames organization ->
+  #                      merchant, carrying those rows across.
+  #
+  # So the data must be loaded BEFORE driver-app starts. Load it afterwards and
+  # every insert fails, because `organization` no longer exists.
+  #
+  # This is also why the rider side does NOT load its equivalent test data:
+  # rider-app-seed.sql already carries its merchant, and
+  # local-testing-data/rider-app.sql targets the pre-migration rider schema.
+  docker cp "$TREE_DIR/Backend/dev/sql-seed/dynamic-offer-driver-app-seed.sql" \
+            ny-postgres:/tmp/driver-seed.sql
+  docker cp "$TREE_DIR/Backend/dev/local-testing-data/dynamic-offer-driver-app.sql" \
+            ny-postgres:/tmp/driver-data.sql
+
+  $PG -q -f /tmp/driver-seed.sql >/dev/null 2>&1 || true
+  $PG -q -f /tmp/driver-data.sql >/dev/null 2>&1 || true
+
+  $PG -t -c "SELECT '  organizations=' || (SELECT count(*) FROM atlas_driver_offer_bpp.organization)
+                 || '  drivers='       || (SELECT count(*) FROM atlas_driver_offer_bpp.person WHERE role='DRIVER')
+                 || '  vehicles='      || (SELECT count(*) FROM atlas_driver_offer_bpp.vehicle)
+                 || '  fare policies=' || (SELECT count(*) FROM atlas_driver_offer_bpp.fare_policy);" \
+    2>/dev/null | tr -s ' ' | grep -v '^ *$' | sed 's/^ */  /' \
+    || die "driver seed did not load"
+}
+
 seed_algeria() {
   # Must run *after* rider-app has migrated: atlas_app.geometry only exists
   # once its migrations have been applied.
@@ -174,10 +209,15 @@ show_db_state() {
   # and errors out against the migrated tables. It isn't needed either — the
   # OTP login flow creates the rider row on first sign-in.
   log "Database state"
-  $PG -t -c "SELECT 'tables='   || (SELECT count(*) FROM information_schema.tables
-                                    WHERE table_schema='atlas_app')
-                 || '  merchant=' || (SELECT count(*) FROM atlas_app.merchant)
-                 || '  person='   || (SELECT count(*) FROM atlas_app.person);" \
+  $PG -t -c "SELECT 'rider  tables=' || (SELECT count(*) FROM information_schema.tables
+                                         WHERE table_schema='atlas_app')
+                 || '  merchant='    || (SELECT count(*) FROM atlas_app.merchant)
+                 || '  person='      || (SELECT count(*) FROM atlas_app.person);" \
+    | tr -d ' \r' | grep -v '^$' | sed 's/^/    /'
+  $PG -t -c "SELECT 'driver tables=' || (SELECT count(*) FROM information_schema.tables
+                                         WHERE table_schema='atlas_driver_offer_bpp')
+                 || '  merchant='    || (SELECT count(*) FROM atlas_driver_offer_bpp.merchant)
+                 || '  drivers='     || (SELECT count(*) FROM atlas_driver_offer_bpp.person WHERE role='DRIVER');" \
     | tr -d ' \r' | grep -v '^$' | sed 's/^/    /'
 }
 
@@ -190,6 +230,17 @@ wait_for_api() {
   done
   echo "--- rider-app logs ---"; docker logs ny-rider 2>&1 | tail -25
   die "rider-app did not come up"
+}
+
+wait_for_driver_api() {
+  log "Waiting for driver-app on :8017"
+  for _ in $(seq 1 60); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:8017/openapi || true)
+    [ "$code" = "200" ] && { ok "driver API is up"; return; }
+    sleep 3
+  done
+  echo "--- driver-app logs ---"; docker logs ny-driver 2>&1 | tail -25
+  die "driver-app did not come up"
 }
 
 verify() {
@@ -264,8 +315,40 @@ verify() {
   printf '%s' "$svc" | grep -q '"serviceable":false' || die "Bangalore should NOT be serviceable: $svc"
   ok "POST /v2/serviceability/origin 200  Bangalore    serviceable=false"
 
+  verify_driver
+
   printf '\n\033[1;32m*** Backend is fully operational ***\033[0m\n'
   printf '\033[1;36m    Service-area map: http://localhost:8015\033[0m\n\n'
+}
+
+verify_driver() {
+  log "Verifying the driver side"
+  local base="http://localhost:8017" code mid r authid token
+
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$base/openapi" 2>/dev/null) || true
+  [ "$code" = "200" ] || die "driver /openapi not serving (HTTP ${code:-000})"
+  ok "GET  /openapi                  200"
+
+  # Driver auth takes the merchant UUID, not the shortId the rider side uses.
+  mid=$($PG -At -c "SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id='NAMMA_YATRI_PARTNER';" \
+        | tr -d ' \r')
+  [ -n "$mid" ] || die "NAMMA_YATRI_PARTNER merchant missing — driver seed did not migrate"
+  ok "merchant NAMMA_YATRI_PARTNER    $mid"
+
+  # An unknown number is fine: auth calls createDriverWithDetails, so this
+  # exercises registration and login in one go.
+  r=$(curl -s --max-time 20 -X POST "$base/ui/auth" -H 'content-type: application/json' \
+        -d "{\"mobileNumber\":\"9999901234\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"$mid\"}")
+  authid=$(printf '%s' "$r" | sed -nE 's/.*"authId":"([^"]+)".*/\1/p')
+  [ -n "$authid" ] || die "driver login failed: $r"
+  ok "POST /ui/auth                  200  authId=$authid"
+
+  token=$(curl -s --max-time 20 -X POST "$base/ui/auth/$authid/verify" \
+        -H 'content-type: application/json' \
+        -d '{"otp":"7891","deviceToken":"setup-check"}' \
+        | sed -nE 's/.*"token":"([^"]+)".*/\1/p')
+  [ -n "$token" ] || die "driver OTP verification failed"
+  ok "POST /ui/auth/{id}/verify      200  token=$token"
 }
 
 case "${1:-up}" in
@@ -290,9 +373,13 @@ log "Starting infrastructure"
 docker compose up -d postgres redis kafka passetto-db passetto
 wait_for_pg
 seed_db
-log "Starting rider-app (it applies its own migrations) + proxy + map"
-docker compose up -d rider-app proxy map
+# Both services must be seeded before either starts: each applies its own
+# migrations on startup, and the driver test data has to be in place first.
+seed_driver_db
+log "Starting rider-app and driver-app (each applies its own migrations)"
+docker compose up -d rider-app proxy map driver-app driver-proxy
 wait_for_api
+wait_for_driver_api
 seed_algeria
 verify
 show_db_state
