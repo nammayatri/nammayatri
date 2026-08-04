@@ -144,8 +144,10 @@ library
       API.Types.ProviderPlatform.Operator.Driver
       API.Types.ProviderPlatform.Operator.Endpoints.Driver
       API.Types.ProviderPlatform.Operator.Endpoints.FleetManagement
+      API.Types.ProviderPlatform.Operator.Endpoints.FrfsTripManagement
       API.Types.ProviderPlatform.Operator.Endpoints.Registration
       API.Types.ProviderPlatform.Operator.FleetManagement
+      API.Types.ProviderPlatform.Operator.FrfsTripManagement
       API.Types.ProviderPlatform.Operator.Registration
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.AlertIncident
