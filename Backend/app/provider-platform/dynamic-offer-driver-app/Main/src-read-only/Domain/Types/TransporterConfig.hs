@@ -194,6 +194,7 @@ data TransporterConfig = TransporterConfig
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     feedbackNotificationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FeedbackNotificationConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    forceDirectCalling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fraudAuthCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fraudAuthCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     freeTrialDays :: Kernel.Prelude.Int,

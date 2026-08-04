@@ -118,6 +118,12 @@ table has the same staleness window.
   as the kill switch: `rider_config` is ConfigPilot-served, so flipping it
   between Newman steps needs a Redis flush *plus* a rider-app restart to clear
   the in-process cache — neither of which newman can do.
+- **`forceDirectCalling`** (`transporter_config` break-glass override that serves
+  the rider's real number as `DIRECT` on active rides regardless of the merchant
+  option or rider consent, for use while exophones are down). Untestable
+  in-collection for the same cache reason as the kill switch: raising it needs a
+  Redis flush plus a `dynamic-offer-driver-app` restart between Newman steps. The
+  default-false path is what this suite exercises.
 - **Third-party BAP/BPP behaviour** — out of scope per the spec; the BPP refuses
   the consent tag from non-value-add NPs (not currently covered by automated
   tests).

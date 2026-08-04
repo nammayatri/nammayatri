@@ -1022,3 +1022,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN airport_entry_f
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN unified_onboarding_flags_recompute boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN force_direct_calling boolean  default false;
