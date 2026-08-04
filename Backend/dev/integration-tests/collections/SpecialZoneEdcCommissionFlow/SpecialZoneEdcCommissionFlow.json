@@ -1,0 +1,845 @@
+{
+ "info": {
+  "name": "SpecialZoneEdcCommissionFlow",
+  "description": "Special-zone (booth / Paytm EDC) commission flow. Drives a BHARAT_TAXI Delhi airport booth booking paid via Paytm EDC (paymentInstrument=BoothOnline, paymentMethodId=PAYTM_EDC), simulates the Paytm EDC S2S success callback, and asserts the booking is confirmed and the EDC order collected only the commission (fareSettlementType=CommissionOnly). SCAFFOLD - not yet run end-to-end; see README.md for prerequisites and the steps marked TODO.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "item": [
+  {
+   "name": "BAP - Login",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.environment.set('bap_dashboard_token', d.authToken);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"email\": \"juspay_admin@dashboard.com\",\n    \"password\": \"juspay_admin\"\n}"
+    },
+    "url": {
+     "raw": "{{bap_dashboard_url}}/user/login",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "user",
+      "login"
+     ]
+    }
+   }
+  },
+  {
+   "name": "BAP - Switch Merchant And City",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "if (d.authToken) {",
+       "    pm.environment.set('bap_dashboard_token', d.authToken);",
+       "}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"city\": \"{{city}}\",\n    \"otp\": \"{{switch_otp}}\"\n}"
+    },
+    "url": {
+     "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "user",
+      "switchMerchantAndCity"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Seed: Paytm EDC service config (update if exists)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('update ran (2xx)', function () { pm.expect(pm.response.code).to.be.below(300); });",
+       "console.log('rows updated:', d.rowcount);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/update",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "update"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_app\",\n  \"table_name\": \"merchant_service_config\",\n  \"set\": {\n    \"config_json\": \"{\\\"paytmMid\\\":\\\"{{edc_paytm_mid}}\\\",\\\"channelId\\\":\\\"{{edc_channel_id}}\\\",\\\"clientId\\\":\\\"{{edc_client_id}}\\\",\\\"merchantKey\\\":\\\"{{edc_merchant_key}}\\\",\\\"baseUrl\\\":\\\"{{mockServerUrl}}/paytm\\\",\\\"callbackUrl\\\":\\\"{{bap_app_url}}/s2s/payment/paytm/edc/callback\\\"}\"\n  },\n  \"touch_updated_at\": true,\n  \"where_clause\": [\n    {\n      \"column_name\": \"merchant_id\",\n      \"val\": \"{{bap_merchant_id}}\",\n      \"op\": \"=\"\n    },\n    {\n      \"column_name\": \"service_name\",\n      \"val\": \"Payment_PaytmEDC\",\n      \"op\": \"=\"\n    }\n  ]\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "Point the Payment_PaytmEDC config at the mock server. Harmless if 0 rows (insert step follows)."
+   }
+  },
+  {
+   "name": "Seed: Paytm EDC service config (insert if missing)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('seed ok (2xx)', function () { pm.expect(pm.response.code).to.be.below(300); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/insert",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "insert"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_app\",\n  \"table_name\": \"merchant_service_config\",\n  \"values\": {\n    \"merchant_id\": \"{{bap_merchant_id}}\",\n    \"merchant_operating_city_id\": \"{{merchant_operating_city_id}}\",\n    \"service_name\": \"Payment_PaytmEDC\",\n    \"config_json\": \"{\\\"paytmMid\\\":\\\"{{edc_paytm_mid}}\\\",\\\"channelId\\\":\\\"{{edc_channel_id}}\\\",\\\"clientId\\\":\\\"{{edc_client_id}}\\\",\\\"merchantKey\\\":\\\"{{edc_merchant_key}}\\\",\\\"baseUrl\\\":\\\"{{mockServerUrl}}/paytm\\\",\\\"callbackUrl\\\":\\\"{{bap_app_url}}/s2s/payment/paytm/edc/callback\\\"}\"\n  },\n  \"touch_timestamps\": true,\n  \"on_conflict_do_nothing\": true\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "createRideBookingPaymentOrder needs a Payment_PaytmEDC row or it throws MerchantServiceConfigNotFound."
+   }
+  },
+  {
+   "name": "Seed: special zone fareSettlementType=CommissionOnly (TODO: confirm schema/zone id)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('update ran (2xx)', function () { pm.expect(pm.response.code).to.be.below(300); });",
+       "console.log('rows updated:', d.rowcount);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/update",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "update"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"special_location\",\n  \"set\": {\n    \"fare_settlement_type\": \"CommissionOnly\"\n  },\n  \"touch_updated_at\": true,\n  \"where_clause\": [\n    {\n      \"column_name\": \"location_name\",\n      \"val\": \"%IGI%\",\n      \"op\": \"LIKE\"\n    }\n  ]\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "TODO: verify schema + WHERE. fareSettlementType lives on the BPP special_location and drives the EDC amount (Payment.hs:188). The fare policy for the zone must also carry a non-zero commission so the BPP returns commission on on_init."
+   }
+  },
+  {
+   "name": "Ride Search",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('searchId is returned', function () { pm.expect(d.searchId).to.be.a('string'); });",
+       "pm.environment.set('searchId', d.searchId);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"fareProductType\": \"ONE_WAY\",\n  \"contents\": {\n    \"origin\": {\n      \"address\": {\n        \"area\": \"T1: IGI Airport\",\n        \"areaCode\": \"\",\n        \"building\": \"\",\n        \"city\": \"\",\n        \"country\": \"India\",\n        \"state\": \"\",\n        \"street\": \"\",\n        \"ward\": \"\"\n      },\n      \"gps\": {\n        \"lat\": 28.551335292,\n        \"lon\": 77.11669564249999\n      }\n    },\n    \"destination\": {\n      \"address\": {\n        \"area\": \"ncdc\",\n        \"areaCode\": \"\",\n        \"building\": \"\",\n        \"city\": \"\",\n        \"country\": \"India\",\n        \"state\": \"\",\n        \"street\": \"\",\n        \"ward\": \"\"\n      },\n      \"gps\": {\n        \"lat\": 28.552335292000002,\n        \"lon\": 77.1176956425\n      }\n    },\n    \"numberOfLuggages\": 1,\n    \"isReallocationEnabled\": true\n  }\n}"
+    },
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/search/{{customerId}}/rideSearch",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "search",
+      "{{customerId}}",
+      "rideSearch"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Get Quotes",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "var hasQuotes = d.quotes && d.quotes.length > 0;",
+       "",
+       "if (hasQuotes) {",
+       "    var quote = d.quotes[0];",
+       "    var quoteId = (quote.onDemandCab && quote.onDemandCab.id) || (quote.onRentalCab && quote.onRentalCab.id);",
+       "    pm.environment.set('quoteId', quoteId);",
+       "    pm.test('Quotes found', function () { pm.expect(quoteId).to.be.a('string'); });",
+       "} else {",
+       "    var attempt = 1;",
+       "    var maxAttempts = 6;",
+       "    var pollInterval = 2000;",
+       "    var bapUrl = pm.environment.get('bap_dashboard_url');",
+       "    var token = pm.environment.get('bap_dashboard_token');",
+       "    var searchId = pm.environment.get('searchId');",
+       "    var customerId = pm.environment.get('customerId');",
+       "    var merchantId = pm.environment.get('bap_short_id');",
+       "    var city = pm.environment.get('city');",
+       "    ",
+       "    function poll() {",
+       "        attempt++;",
+       "        console.log('Polling quotes attempt ' + attempt);",
+       "        pm.sendRequest({",
+       "            url: bapUrl + '/bap/' + merchantId + '/' + city + '/rideBooking/quote/' + searchId + '/' + customerId + '/result',",
+       "            method: 'GET',",
+       "            header: {",
+       "                'Accept': 'application/json, text/plain, */*',",
+       "                'token': token",
+       "            }",
+       "        }, function (err, res) {",
+       "            if (err) {",
+       "                console.log('Error polling quotes:', err);",
+       "            } else {",
+       "                var resData = res.json() || {};",
+       "                var quotes = resData.quotes || [];",
+       "                if (quotes.length > 0) {",
+       "                    var quote = quotes[0];",
+       "                    var quoteId = (quote.onDemandCab && quote.onDemandCab.id) || (quote.onRentalCab && quote.onRentalCab.id);",
+       "                    pm.environment.set('quoteId', quoteId);",
+       "                    console.log('Found quotes on attempt ' + attempt + ', quoteId: ' + quoteId);",
+       "                    pm.test('Quotes found after polling', function () { pm.expect(quoteId).to.be.a('string'); });",
+       "                    return;",
+       "                }",
+       "            }",
+       "            if (attempt >= maxAttempts) {",
+       "                pm.test('Failed to fetch quotes after ' + maxAttempts + ' attempts', function () {",
+       "                    throw new Error('Quotes empty after ' + maxAttempts + ' attempts');",
+       "                });",
+       "            } else {",
+       "                setTimeout(poll, pollInterval);",
+       "            }",
+       "        });",
+       "    }",
+       "    ",
+       "    setTimeout(poll, pollInterval);",
+       "}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/quote/{{searchId}}/{{customerId}}/result",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "quote",
+      "{{searchId}}",
+      "{{customerId}}",
+      "result"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Rider Registration Auth",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('authId is present', function () { pm.expect(d.authId).to.be.a('string'); });",
+       "pm.environment.set('authId', d.authId);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"mobileCountryCode\": \"+91\",\n    \"mobileNumber\": \"{{test_mobile_number}}\",\n    \"otpChannel\": \"SMS\"\n}"
+    },
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/registration/auth",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "registration",
+      "auth"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Rider Registration Verify",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('person is present', function () { pm.expect(d.person).to.be.an('object'); });",
+       "pm.test('person id is present', function () { pm.expect(d.person.id).to.be.a('string'); });",
+       "pm.environment.set('riderId', d.person.id);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"deviceToken\": \"booth-device-token\",\n    \"otp\": \"{{login_otp}}\",\n    \"whatsappNotificationEnroll\": \"OPT_IN\"\n}"
+    },
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/registration/{{authId}}/verify",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "registration",
+      "{{authId}}",
+      "verify"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Update Rider Profile",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"firstName\": \"{{firstName}}\",\n    \"middleName\": \"{{middleName}}\",\n    \"lastName\": \"{{lastName}}\"\n}"
+    },
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/profile/update/{{riderId}}",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "profile",
+      "update",
+      "{{riderId}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Confirm Booking (Paytm EDC)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('bookingId present', function () { pm.expect(d.bookingId).to.be.a('string'); });",
+       "pm.environment.set('bookingId', d.bookingId);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/confirm/rideSearch/{{riderId}}/quotes/{{quoteId}}/confirm?paymentInstrument=BoothOnline&paymentMethodId=PAYTM_EDC",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "confirm",
+      "rideSearch",
+      "{{riderId}}",
+      "quotes",
+      "{{quoteId}}",
+      "confirm"
+     ],
+     "query": [
+      {
+       "key": "paymentInstrument",
+       "value": "BoothOnline"
+      },
+      {
+       "key": "paymentMethodId",
+       "value": "PAYTM_EDC"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Get Booking Details",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "var hasOtp = d.bookingDetails && d.bookingDetails.contents && d.bookingDetails.contents.otpCode;",
+       "",
+       "if (hasOtp) {",
+       "    var otpCode = d.bookingDetails.contents.otpCode;",
+       "    pm.environment.set('bookingOtpCode', otpCode);",
+       "    console.log('Booking OTP Code:', otpCode);",
+       "    pm.test('Booking OTP Code found', function () { pm.expect(otpCode).to.be.a('string'); });",
+       "} else {",
+       "    var attempt = 1;",
+       "    var maxAttempts = 6;",
+       "    var pollInterval = 2000;",
+       "    var bapUrl = pm.environment.get('bap_dashboard_url');",
+       "    var token = pm.environment.get('bap_dashboard_token');",
+       "    var bookingId = pm.environment.get('bookingId');",
+       "    var riderId = pm.environment.get('riderId');",
+       "    var merchantId = pm.environment.get('bap_short_id');",
+       "    var city = pm.environment.get('city');",
+       "    ",
+       "    function poll() {",
+       "        attempt++;",
+       "        console.log('Polling booking details attempt ' + attempt);",
+       "        pm.sendRequest({",
+       "            url: bapUrl + '/bap/' + merchantId + '/' + city + '/rideBooking/booking/ridebooking/' + bookingId + '/' + riderId,",
+       "            method: 'POST',",
+       "            header: {",
+       "                'Accept': 'application/json, text/plain, */*',",
+       "                'token': token,",
+       "                'Content-Length': '0'",
+       "            }",
+       "        }, function (err, res) {",
+       "            if (err) {",
+       "                console.log('Error polling booking details:', err);",
+       "            } else {",
+       "                var resData = res.json() || {};",
+       "                var otp = resData.bookingDetails && resData.bookingDetails.contents && resData.bookingDetails.contents.otpCode;",
+       "                if (otp) {",
+       "                    pm.environment.set('bookingOtpCode', otp);",
+       "                    console.log('Found OTP Code on attempt ' + attempt + ': ' + otp);",
+       "                    pm.test('Booking OTP Code found after polling', function () { pm.expect(otp).to.be.a('string'); });",
+       "                    return;",
+       "                }",
+       "            }",
+       "            if (attempt >= maxAttempts) {",
+       "                pm.test('Failed to fetch OTP Code after ' + maxAttempts + ' attempts', function () {",
+       "                    throw new Error('OTP Code empty after ' + maxAttempts + ' attempts');",
+       "                });",
+       "            } else {",
+       "                setTimeout(poll, pollInterval);",
+       "            }",
+       "        });",
+       "    }",
+       "    ",
+       "    setTimeout(poll, pollInterval);",
+       "}",
+       "",
+       "try { var b = pm.response.json();",
+       "  if (b.commissionCharge != null) { pm.environment.set('commissionCharge', b.commissionCharge); console.log('commissionCharge', b.commissionCharge); }",
+       "} catch (e) {}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{bap_dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/booking/ridebooking/{{bookingId}}/{{riderId}}",
+     "host": [
+      "{{bap_dashboard_url}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "rideBooking",
+      "booking",
+      "ridebooking",
+      "{{bookingId}}",
+      "{{riderId}}"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Read Payment Order (capture orderId + shortId)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('payment order exists', function () { pm.expect(d.count).to.be.above(0); });",
+       "if (d.rows && d.rows[0]) {",
+       "  pm.environment.set('orderId', d.rows[0].id);",
+       "  pm.environment.set('orderShortId', d.rows[0].short_id);",
+       "  pm.environment.set('orderAmount', d.rows[0].amount);",
+       "  console.log('order', d.rows[0].id, d.rows[0].short_id, 'amount', d.rows[0].amount, 'status', d.rows[0].status);",
+       "  // CommissionOnly: EDC amount should equal the commission",
+       "  var cc = pm.environment.get('commissionCharge');",
+       "  if (cc != null) { pm.test('EDC order amount == commission', function () { pm.expect(Number(d.rows[0].amount)).to.be.closeTo(Number(cc), 0.01); }); }",
+       "}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/select",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "select"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_app\",\n  \"table_name\": \"payment_order\",\n  \"select\": [\n    \"id\",\n    \"short_id\",\n    \"amount\",\n    \"status\"\n  ],\n  \"where_clause\": [\n    {\n      \"column_name\": \"domain_entity_id\",\n      \"val\": \"{{bookingId}}\",\n      \"op\": \"=\"\n    }\n  ],\n  \"limit\": 1\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "createRideBookingPaymentOrder stores the order with domain_entity_id = bookingId."
+   }
+  },
+  {
+   "name": "Simulate Paytm EDC Callback (success)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('callback acked (2xx)', function () { pm.expect(pm.response.code).to.be.below(300); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{bap_app_url}}/s2s/payment/paytm/edc/callback",
+     "host": [
+      "{{bap_app_url}}"
+     ],
+     "path": [
+      "s2s",
+      "payment",
+      "paytm",
+      "edc",
+      "callback"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     },
+     "raw": "{\n  \"head\": {\n    \"requestTimestamp\": \"2026-01-01 00:00:00\",\n    \"checksum\": \"MOCK_EDC_CHECKSUM\"\n  },\n  \"body\": {\n    \"resultInfo\": {\n      \"resultStatus\": \"S\",\n      \"resultCodeId\": \"0000\",\n      \"resultCode\": \"0000\",\n      \"resultMsg\": \"Success\"\n    },\n    \"merchantRefereneceNo\": \"{{orderId}}\",\n    \"merchantTransactionId\": \"{{orderShortId}}\"\n  }\n}"
+    },
+    "description": "No checksum/auth validation on this endpoint (see paytmEdcCallbackHandler). resultStatus=S -> CHARGED -> confirmRideBookingFromPaymentOrder sends confirm to BPP."
+   }
+  },
+  {
+   "name": "Verify Payment Order CHARGED",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('order row found', function () { pm.expect(d.count).to.be.above(0); });",
+       "if (d.rows && d.rows[0]) {",
+       "  pm.test('order CHARGED', function () { pm.expect(String(d.rows[0].status)).to.eql('CHARGED'); });",
+       "  console.log('fulfillment', d.rows[0].payment_fulfillment_status);",
+       "}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/select",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "select"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_app\",\n  \"table_name\": \"payment_order\",\n  \"select\": [\n    \"status\",\n    \"payment_fulfillment_status\"\n  ],\n  \"where_clause\": [\n    {\n      \"column_name\": \"id\",\n      \"val\": \"{{orderId}}\",\n      \"op\": \"=\"\n    }\n  ],\n  \"limit\": 1\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "After the success callback the order status must be CHARGED and confirm forwarded to the BPP."
+   }
+  },
+  {
+   "name": "Cleanup: clear mock overrides",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('cleanup ok', function () { pm.expect(pm.response.code).to.be.below(300); });"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "DELETE",
+    "header": [],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/override",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "override"
+     ]
+    }
+   }
+  }
+ ],
+ "event": []
+}
