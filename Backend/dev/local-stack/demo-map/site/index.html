@@ -9,7 +9,7 @@
   :root {
     --bg:#0f1115; --panel:#171a21; --line:#262b36;
     --fg:#e8ecf2; --muted:#9aa4b2;
-    --yes:#22c55e; --no:#ef4444; --accent:#38bdf8;
+    --yes:#22c55e; --no:#ef4444; --accent:#38bdf8; --warn:#f59e0b;
   }
   * { box-sizing:border-box; }
   html,body { height:100%; margin:0; }
@@ -53,6 +53,12 @@
   button.pt:hover { background:#252b37; border-color:#3a424f; }
   button.pt .co { display:block; color:var(--muted); font-size:12px; margin-top:2px;
                   font-family:ui-monospace,Consolas,monospace; }
+  button.pt.route { border-color:#3b5bdb; background:#1b2340; }
+  button.pt.route:hover { background:#222c52; border-color:#4c6ef5; }
+  button.pt.route.armed { border-color:var(--warn); background:#3a2f14; color:#ffd8a8; }
+
+  .row.route { border-left-color:#4c6ef5; }
+  .row .vd.km { color:#748ffc; }
 
   #log { display:flex; flex-direction:column; gap:7px; }
   .row {
@@ -95,6 +101,13 @@
 <main>
   <div id="map"></div>
   <aside>
+    <section>
+      <h2>Plan a ride — real routing</h2>
+      <div id="routes"></div>
+      <button class="pt route" id="pickTwo">Pick two points on the map</button>
+      <p class="hint" id="routeHint">Routes come from our own engine, not Google.</p>
+    </section>
+
     <section>
       <h2>Try a pickup point</h2>
       <div id="buttons"></div>
@@ -220,8 +233,120 @@ async function ask(lat, lon, name) {
   addRow(name, lat, lon, yes);
 }
 
+// ---------------------------------------------------------------- routing
+// These go through POST /v2/rideSearch — the same call the passenger app
+// makes — so what gets drawn is the route the backend actually computed, not
+// a separate query to the routing engine. Proves the whole chain:
+//   rider-app -> maps-shim -> OSRM
+const ROUTES = [
+  { name:'Algiers centre → Bab Ezzouar', from:[36.7538, 3.0588], to:[36.7169, 3.1836] },
+  { name:'Algiers → Oran',               from:[36.7538, 3.0588], to:[35.6969, -0.6331] },
+  { name:'Algiers → Constantine',        from:[36.7538, 3.0588], to:[36.3650, 6.6147] },
+  { name:'Oran → Tlemcen',               from:[35.6969, -0.6331], to:[34.8828, -1.3150] },
+];
+
+let routeLayer = null, pins = [], picking = false, pickA = null;
+
+const routesEl = document.getElementById('routes');
+ROUTES.forEach(r => {
+  const b = document.createElement('button');
+  b.className = 'pt route';
+  b.innerHTML = `${r.name}<span class="co">plan this ride</span>`;
+  b.onclick = () => planRide(r.from, r.to, r.name);
+  routesEl.appendChild(b);
+});
+
+const pickBtn = document.getElementById('pickTwo');
+const routeHint = document.getElementById('routeHint');
+pickBtn.onclick = () => {
+  picking = true; pickA = null;
+  pickBtn.classList.add('armed');
+  pickBtn.textContent = 'Click the pickup point…';
+  routeHint.textContent = 'Then click where the passenger is going.';
+};
+
+function clearRoute() {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  pins.forEach(p => map.removeLayer(p));
+  pins = [];
+}
+
+async function planRide(from, to, name) {
+  if (!token) return;
+  clearRoute();
+  setStatus('calculating route…');
+
+  const addr = (area) => ({ area, city:'Algiers', country:'Algeria', state:'Alger',
+                            building:'1', areaCode:'16000', street:'-', door:'1' });
+  const body = {
+    fareProductType: 'ONE_WAY',
+    contents: {
+      origin:      { address: addr('pickup'),      gps: { lat: from[0], lon: from[1] } },
+      destination: { address: addr('destination'), gps: { lat: to[0],   lon: to[1]   } },
+    },
+  };
+
+  let r;
+  try {
+    r = await fetch('/v2/rideSearch', {
+      method:'POST',
+      headers:{ 'content-type':'application/json', token },
+      body: JSON.stringify(body),
+    }).then(x => x.json());
+  } catch (err) {
+    setStatus('route request failed', 'err');
+    return;
+  }
+
+  if (!r.routeInfo || !r.routeInfo.points || !r.routeInfo.points.length) {
+    setStatus('no route found', 'err');
+    addRow(name, from[0], from[1], false);
+    return;
+  }
+
+  const line = r.routeInfo.points.map(p => [p.lat, p.lon]);
+  routeLayer = L.polyline(line, { color:'#4c6ef5', weight:5, opacity:.9 }).addTo(map);
+  pins = [
+    L.circleMarker(from, { radius:8, weight:3, color:'#22c55e', fillColor:'#22c55e', fillOpacity:.7 })
+      .addTo(map).bindTooltip('Pickup'),
+    L.circleMarker(to, { radius:8, weight:3, color:'#ef4444', fillColor:'#ef4444', fillOpacity:.7 })
+      .addTo(map).bindTooltip('Destination'),
+  ];
+  map.fitBounds(routeLayer.getBounds().pad(0.15));
+
+  const km = (r.routeInfo.distance / 1000).toFixed(1);
+  const mins = r.routeInfo.duration / 60;
+  const time = mins >= 60 ? `${(mins / 60).toFixed(1)} h` : `${Math.round(mins)} min`;
+
+  const d = document.createElement('div');
+  d.className = 'row route';
+  d.innerHTML = `<div class="nm">${name}<small>${line.length} route points · from our own engine</small></div>
+                 <div class="vd km">${km} km · ${time}</div>`;
+  logEl.prepend(d);
+  setStatus(`route: ${km} km, ${time}`, 'ok');
+}
+
 map.on('click', e => {
   const lat = +e.latlng.lat.toFixed(5), lon = +e.latlng.lng.toFixed(5);
+
+  if (picking) {
+    if (!pickA) {
+      clearRoute();
+      pickA = [lat, lon];
+      pins.push(L.circleMarker(pickA, { radius:8, weight:3, color:'#22c55e',
+        fillColor:'#22c55e', fillOpacity:.7 }).addTo(map).bindTooltip('Pickup'));
+      pickBtn.textContent = 'Now click the destination…';
+      return;
+    }
+    picking = false;
+    pickBtn.classList.remove('armed');
+    pickBtn.textContent = 'Pick two points on the map';
+    routeHint.textContent = 'Routes come from our own engine, not Google.';
+    planRide(pickA, [lat, lon], 'Your route');
+    pickA = null;
+    return;
+  }
+
   ask(lat, lon, 'Dropped pin');
 });
 
