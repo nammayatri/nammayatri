@@ -32,6 +32,8 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
     assertDebitEqualsCredit,
     buildJournalRequestFromItems,
     saveSapJournalEntries,
+    formatSAPDate,
+    formatSAPTime,
   )
 where
 
@@ -39,8 +41,9 @@ import Control.Applicative ((<|>))
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Data.Time (timeOfDayToTime)
-import Data.Time.Calendar (addDays)
+import Data.Time.Calendar (addDays, toGregorian)
 import Data.Time.Clock (UTCTime (..), secondsToDiffTime)
+import Data.Time.LocalTime (TimeOfDay (..), timeToTimeOfDay)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig as DMSC

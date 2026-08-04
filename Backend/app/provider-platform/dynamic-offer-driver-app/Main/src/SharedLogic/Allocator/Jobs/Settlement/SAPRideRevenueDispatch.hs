@@ -1,5 +1,15 @@
 module SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
   ( runSAPRideRevenueDispatchJob,
+    -- JV event labels → sap_journal_entry.description (phase-1). May become a dedicated field later.
+    onlineRideRevRecLabel,
+    offlineCashRideLabel,
+    buyerAppSettlementLabel,
+    driverEarningAccrualLabel,
+    payoutToClearingLabel,
+    payoutClearingToBankLabel,
+    tdsDeductionLabel,
+    tdsReimbursementLabel,
+    rideRevenueJvLabels,
   )
 where
 
@@ -20,6 +30,46 @@ import SharedLogic.Allocator (AllocatorJobType (..), SAPRideRevenueDispatchJobDa
 import SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
 import SharedLogic.Allocator.Jobs.Settlement.SAPDispatchCommon
 import Storage.Beam.SchedulerJob ()
+
+-- ---------------------------------------------------------------------------
+-- JV event labels (written to sap_journal_entry.description; shared with SAP GET drill-down)
+-- ---------------------------------------------------------------------------
+
+onlineRideRevRecLabel :: Text
+onlineRideRevRecLabel = "OnlineRideRevRec"
+
+offlineCashRideLabel :: Text
+offlineCashRideLabel = "OfflineCashRide"
+
+buyerAppSettlementLabel :: Text
+buyerAppSettlementLabel = "BuyerAppSettlement"
+
+driverEarningAccrualLabel :: Text
+driverEarningAccrualLabel = "DriverEarningAccrual"
+
+payoutToClearingLabel :: Text
+payoutToClearingLabel = "PayoutToClearing"
+
+payoutClearingToBankLabel :: Text
+payoutClearingToBankLabel = "PayoutClearingToBank"
+
+tdsDeductionLabel :: Text
+tdsDeductionLabel = "TdsDeduction"
+
+tdsReimbursementLabel :: Text
+tdsReimbursementLabel = "TdsReimbursement"
+
+rideRevenueJvLabels :: [Text]
+rideRevenueJvLabels =
+  [ onlineRideRevRecLabel,
+    offlineCashRideLabel,
+    buyerAppSettlementLabel,
+    driverEarningAccrualLabel,
+    payoutToClearingLabel,
+    payoutClearingToBankLabel,
+    tdsDeductionLabel,
+    tdsReimbursementLabel
+  ]
 
 -- ---------------------------------------------------------------------------
 -- AccountMapping keys (must match MerchantServiceConfig SAP_Journal seed / 0011 migration)
@@ -103,7 +153,7 @@ dispatchRideRevenue sapCfg token params totals = do
       sapCfg
       token
       params
-      "OnlineRideRevRec"
+      onlineRideRevRecLabel
       buyerAppReceivableAcct
       totals.onlineRideRevRec
   settleOk <- dispatchBuyerAppSettlement sapCfg token params totals.buyerAppSettlement
@@ -112,7 +162,7 @@ dispatchRideRevenue sapCfg token params totals = do
       sapCfg
       token
       params
-      "OfflineCashRide"
+      offlineCashRideLabel
       driverBalanceAcct
       totals.offlineCashRide
   accrualOk <- dispatchDriverEarningAccrual sapCfg token params totals.driverEarningAccrual
@@ -224,7 +274,7 @@ dispatchBuyerAppSettlement sapCfg token params totals = do
       [ mkItem bId "1" bankAcct acctMap Debit totals.settledAmount currency,
         mkItem bId "2" buyerAppReceivableAcct acctMap Credit totals.settledAmount currency
       ]
-  postRevenueRecognitionJV sapCfg token params "BuyerAppSettlement" totals.txnCount items
+  postRevenueRecognitionJV sapCfg token params buyerAppSettlementLabel totals.txnCount items
 
 -- 4. Driver earning accrual: Dr RIDE_FARE_REVENUE / Cr DRIVER_BALANCE
 dispatchDriverEarningAccrual ::
@@ -254,7 +304,7 @@ dispatchDriverEarningAccrual sapCfg token params totals = do
       [ mkItem bId "1" rideFareRevenueAcct acctMap Debit totals.accrualAmount currency,
         mkItem bId "2" driverBalanceAcct acctMap Credit totals.accrualAmount currency
       ]
-  postRevenueRecognitionJV sapCfg token params "DriverEarningAccrual" totals.txnCount items
+  postRevenueRecognitionJV sapCfg token params driverEarningAccrualLabel totals.txnCount items
 
 -- 5. Payout: DRIVER_BALANCE → PAYOUT_CLEARING → BANK (two balanced JVs in one request via two headers is heavier;
 --    phase-1: single multi-line JV with clearing in the middle nets Dr==Cr)
@@ -286,7 +336,7 @@ dispatchPayout sapCfg token params totals = do
       [ mkItem bId1 "1" driverBalanceAcct acctMap Debit amount currency,
         mkItem bId1 "2" payoutClearingAcct acctMap Credit amount currency
       ]
-  ok1 <- postRevenueRecognitionJV sapCfg token params "PayoutToClearing" totals.txnCount items1
+  ok1 <- postRevenueRecognitionJV sapCfg token params payoutToClearingLabel totals.txnCount items1
   -- JV2: Dr PAYOUT_CLEARING / Cr BANK
   bId2 <- getNextBatchId
   items2 <-
@@ -294,7 +344,7 @@ dispatchPayout sapCfg token params totals = do
       [ mkItem bId2 "1" payoutClearingAcct acctMap Debit amount currency,
         mkItem bId2 "2" bankAcct acctMap Credit amount currency
       ]
-  ok2 <- postRevenueRecognitionJV sapCfg token params "PayoutClearingToBank" totals.txnCount items2
+  ok2 <- postRevenueRecognitionJV sapCfg token params payoutClearingToBankLabel totals.txnCount items2
   pure $ ok1 && ok2
 
 -- 6. TDS: deduction Dr DRIVER_BALANCE / Cr TDS_PAYABLE; reimbursement Dr TDS_RECEIVABLE / Cr DRIVER_BALANCE
@@ -327,7 +377,7 @@ dispatchTds sapCfg token params totals = do
             [ mkItem bId "1" driverBalanceAcct acctMap Debit totals.deductionAmount currency,
               mkItem bId "2" tdsPayableAcct acctMap Credit totals.deductionAmount currency
             ]
-        postRevenueRecognitionJV sapCfg token params "TdsDeduction" totals.deductionCount items
+        postRevenueRecognitionJV sapCfg token params tdsDeductionLabel totals.deductionCount items
   reimbOk <-
     if totals.reimbursementAmount == 0
       then do
@@ -342,7 +392,7 @@ dispatchTds sapCfg token params totals = do
             [ mkItem bId "1" tdsReceivableAcct acctMap Debit totals.reimbursementAmount currency,
               mkItem bId "2" driverBalanceAcct acctMap Credit totals.reimbursementAmount currency
             ]
-        postRevenueRecognitionJV sapCfg token params "TdsReimbursement" totals.reimbursementCount items
+        postRevenueRecognitionJV sapCfg token params tdsReimbursementLabel totals.reimbursementCount items
   pure $ dedOk && reimbOk
 
 scheduleNextRideRevenueJob ::

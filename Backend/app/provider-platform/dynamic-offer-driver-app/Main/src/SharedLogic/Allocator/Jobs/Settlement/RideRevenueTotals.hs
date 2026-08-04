@@ -5,11 +5,20 @@ module SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
     DriverEarningAccrualTotals (..),
     PayoutTotals (..),
     TdsTotals (..),
+    RideFareITTRow (..),
+    DriverEarningAccrualRow (..),
+    WalletPayoutRow (..),
+    TdsDeductionRow (..),
     fetchRideRevenueTotals,
+    findRideFareITTRowsByLedgerTaxRefs,
+    findBaseRideOwnerLiabilityRows,
+    findWalletPayoutRows,
+    findTdsDeductionRows,
   )
 where
 
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
@@ -21,6 +30,12 @@ import qualified Lib.Finance.Domain.Types.Account as AccountDomain
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DTTDomain
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerDomain
+import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
+import qualified Lib.Finance.Storage.Beam.BeamFlow
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
+import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLE
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Beam.Common as BeamCommon
 
@@ -91,6 +106,8 @@ data RideRevenueTotals = RideRevenueTotals
 
 type RideRevenueTotalsFlow m r = (EsqDBFlow m r, MonadFlow m, CacheFlow m r)
 
+type BeamTable2 s table1 table2 = B.Q Postgres BeamCommon.AtlasDB s (table1 (B.QExpr Postgres s), table2 (B.QExpr Postgres s))
+
 fetchRideRevenueTotals ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -117,6 +134,10 @@ fetchRideRevenueTotals merchantOpCityId fromTime toTime = do
   payout <- fetchPayoutTotals merchantOpCityId fromTime toTime
   tds <- fetchTdsTotals merchantOpCityId fromTime toTime
   pure RideRevenueTotals {..}
+
+-- ---------------------------------------------------------------------------
+-- OnlineRideRevRec/OfflineCashRide aggregated/per-row queries
+-- ---------------------------------------------------------------------------
 
 -- | RideFare/Output ITT aggregate filtered by SETTLED GST/VAT ledger tax refs
 -- (online: GSTOnline/VATOnline; cash: GSTCash/VATCash).
@@ -145,8 +166,21 @@ fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
         txnCount = count
       }
 
+-- | Per-row shape for SAP JV drill-down. Same join/filter as
+-- `findRideFareITTTotalsByLedgerTaxRefs` — keep WHERE in sync when changing either.
+data RideFareITTRow = RideFareITTRow
+  { referenceId :: Text,
+    taxableValue :: HighPrecMoney,
+    cgstAmount :: HighPrecMoney,
+    sgstAmount :: HighPrecMoney,
+    igstAmount :: HighPrecMoney,
+    transactionDate :: UTCTime
+  }
+  deriving (Generic, Show, Eq)
+
 -- | SUM RideFare/Output ITT rows whose booking also has a SETTLED tax ledger leg
 -- with the given online-or-cash reference types.
+-- Keep filter/join identical to `findRideFareITTRowsByLedgerTaxRefs` (dashboard drill-down).
 findRideFareITTTotalsByLedgerTaxRefs ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -170,27 +204,7 @@ findRideFareITTTotalsByLedgerTaxRefs merchantOpCityId startTime endTime taxRefA 
                   B.as_ @Int B.countAll_
                 )
             )
-            $ B.filter_'
-              ( \(itt, le) ->
-                  itt.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
-                    B.&&?. le.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
-                    B.&&?. itt.transactionType B.==?. B.val_ ITTDomain.RideFare
-                    B.&&?. itt.gstCreditType B.==?. B.val_ ITTDomain.Output
-                    B.&&?. B.sqlBool_ (itt.transactionDate B.>=. B.val_ startTime)
-                    B.&&?. B.sqlBool_ (itt.transactionDate B.<=. B.val_ endTime)
-                    B.&&?. le.status B.==?. B.val_ LedgerDomain.SETTLED
-                    B.&&?. B.sqlBool_ (B.isNothing_ le.reversalOf)
-              )
-              do
-                itt <- B.all_ (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
-                le <-
-                  B.join_
-                    (BeamCommon.financeLedgerEntry BeamCommon.atlasDB)
-                    ( \le ->
-                        le.referenceId B.==. itt.referenceId
-                          B.&&. (le.referenceType B.==. B.val_ taxRefA B.||. le.referenceType B.==. B.val_ taxRefB)
-                    )
-                pure (itt, le)
+            $ rideFareITTSettledLedgerBase merchantOpCityId startTime endTime taxRefA taxRefB
   case res of
     Right [row] -> pure row
     Right _ -> pure (Nothing, Nothing, Nothing, Nothing, 0)
@@ -198,6 +212,86 @@ findRideFareITTTotalsByLedgerTaxRefs merchantOpCityId startTime endTime taxRefA 
       L.logError ("findRideFareITTTotalsByLedgerTaxRefs" :: Text) $
         "failed for mocId=" <> merchantOpCityId.getId <> " taxRefs=" <> taxRefA <> "/" <> taxRefB <> " error=" <> show err
       pure (Nothing, Nothing, Nothing, Nothing, 0)
+
+-- | Row-level twin of `findRideFareITTTotalsByLedgerTaxRefs` for
+-- `getFinanceManagementFinanceSapJournalsTransactions` (RevenueRecognition drill-down).
+-- Same WHERE/join; no aggregate_ — paginated ITT rows.
+findRideFareITTRowsByLedgerTaxRefs ::
+  (RideRevenueTotalsFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  m [RideFareITTRow]
+findRideFareITTRowsByLedgerTaxRefs merchantOpCityId startTime endTime taxRefA taxRefB mbLimit mbOffset = do
+  let limitVal = fromIntegral $ min 100 $ fromMaybe 20 mbLimit
+      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\(itt, _le) -> B.desc_ itt.transactionDate) $
+                rideFareITTSettledLedgerBase merchantOpCityId startTime endTime taxRefA taxRefB
+  case res of
+    Right rows ->
+      pure $
+        map
+          ( \(itt, _le) ->
+              RideFareITTRow
+                { referenceId = BeamITT.referenceId itt,
+                  taxableValue = BeamITT.taxableValue itt,
+                  cgstAmount = BeamITT.cgstAmount itt,
+                  sgstAmount = BeamITT.sgstAmount itt,
+                  igstAmount = BeamITT.igstAmount itt,
+                  transactionDate = BeamITT.transactionDate itt
+                }
+          )
+          rows
+    Left err -> do
+      L.logError ("findRideFareITTRowsByLedgerTaxRefs" :: Text) $
+        "failed for mocId=" <> merchantOpCityId.getId <> " taxRefs=" <> taxRefA <> "/" <> taxRefB <> " error=" <> show err
+      pure []
+
+-- NOTE: Common join/filter logic is shared with `findRideFareITTRowsByLedgerTaxRefs`.
+rideFareITTSettledLedgerBase ::
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Text ->
+  Text ->
+  BeamTable2 s BeamITT.IndirectTaxTransactionT BeamLE.LedgerEntryT
+rideFareITTSettledLedgerBase merchantOpCityId startTime endTime taxRefA taxRefB =
+  B.filter_'
+    ( \(itt, le) ->
+        itt.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+          B.&&?. le.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+          B.&&?. itt.transactionType B.==?. B.val_ ITTDomain.RideFare
+          B.&&?. itt.gstCreditType B.==?. B.val_ ITTDomain.Output
+          B.&&?. B.sqlBool_ (itt.transactionDate B.>=. B.val_ startTime)
+          B.&&?. B.sqlBool_ (itt.transactionDate B.<=. B.val_ endTime)
+          B.&&?. le.status B.==?. B.val_ LedgerDomain.SETTLED
+          B.&&?. B.sqlBool_ (B.isNothing_ le.reversalOf)
+    )
+    do
+      itt <- B.all_ (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
+      le <-
+        B.join_
+          (BeamCommon.financeLedgerEntry BeamCommon.atlasDB)
+          ( \le ->
+              le.referenceId B.==. itt.referenceId
+                B.&&. (le.referenceType B.==. B.val_ taxRefA B.||. le.referenceType B.==. B.val_ taxRefB)
+          )
+      pure (itt, le)
+
+-- ---------------------------------------------------------------------------
+-- BuyerAppSettlement/DriverEarningAccrual aggregated/per-row queries
+-- ---------------------------------------------------------------------------
 
 -- | Buyer-app settlement — blocked on WS2 (BAP settlement feed). Soft-skip with 0.
 fetchBuyerAppSettlementTotals ::
@@ -210,6 +304,10 @@ fetchBuyerAppSettlementTotals merchantOpCityId _fromTime _toTime = do
   logError $
     "fetchBuyerAppSettlementTotals not implemented (depends on WS2); returning zeros for mocId=" <> merchantOpCityId.getId
   pure BuyerAppSettlementTotals {settledAmount = 0, txnCount = 0}
+
+-- ---------------------------------------------------------------------------
+-- DriverEarningAccrual aggregated/per-row queries
+-- ---------------------------------------------------------------------------
 
 -- | Driver earning accrual: SUM BaseRide legs that credit OwnerLiability
 -- (BuyerExternal → OwnerLiability). Excludes cash Control tracking and the
@@ -227,6 +325,15 @@ fetchDriverEarningAccrualTotals merchantOpCityId fromTime toTime = do
       { accrualAmount = fromMaybe 0 mbAmount,
         txnCount = count
       }
+
+-- | Per-row shape for SAP JV drill-down. Same join/filter as
+-- `findBaseRideOwnerLiabilityTotals` — keep WHERE in sync when changing either.
+data DriverEarningAccrualRow = DriverEarningAccrualRow
+  { referenceId :: Text,
+    amount :: HighPrecMoney,
+    timestamp :: UTCTime
+  }
+  deriving (Generic, Show, Eq)
 
 findBaseRideOwnerLiabilityTotals ::
   (RideRevenueTotalsFlow m r) =>
@@ -246,23 +353,7 @@ findBaseRideOwnerLiabilityTotals merchantOpCityId startTime endTime = do
                   B.as_ @Int B.countAll_
                 )
             )
-            $ B.filter_'
-              ( \(le, acc) ->
-                  le.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
-                    B.&&?. le.referenceType B.==?. B.val_ Wallet.walletReferenceBaseRide
-                    B.&&?. acc.accountType B.==?. B.val_ AccountDomain.Liability
-                    B.&&?. le.status B.==?. B.val_ LedgerDomain.SETTLED
-                    B.&&?. B.sqlBool_ (le.timestamp B.>=. B.val_ startTime)
-                    B.&&?. B.sqlBool_ (le.timestamp B.<=. B.val_ endTime)
-                    B.&&?. B.sqlBool_ (B.isNothing_ le.reversalOf)
-              )
-              do
-                le <- B.all_ (BeamCommon.financeLedgerEntry BeamCommon.atlasDB)
-                acc <-
-                  B.join_
-                    (BeamCommon.financeAccount BeamCommon.atlasDB)
-                    (\acc -> acc.id B.==. le.toAccountId)
-                pure (le, acc)
+            $ baseRideOwnerLiabilityBase merchantOpCityId startTime endTime
   case res of
     Right [row] -> pure row
     Right _ -> pure (Nothing, 0)
@@ -270,6 +361,76 @@ findBaseRideOwnerLiabilityTotals merchantOpCityId startTime endTime = do
       L.logError ("findBaseRideOwnerLiabilityTotals" :: Text) $
         "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
       pure (Nothing, 0)
+
+-- | Row-level twin of `findBaseRideOwnerLiabilityTotals` for
+-- `getFinanceManagementFinanceSapJournalsTransactions` (RevenueRecognition drill-down).
+findBaseRideOwnerLiabilityRows ::
+  (RideRevenueTotalsFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [DriverEarningAccrualRow]
+findBaseRideOwnerLiabilityRows merchantOpCityId startTime endTime mbLimit mbOffset = do
+  let limitVal = fromIntegral $ min 100 $ fromMaybe 20 mbLimit
+      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\(le, _acc) -> B.desc_ le.timestamp) $
+                baseRideOwnerLiabilityBase merchantOpCityId startTime endTime
+  case res of
+    Right rows ->
+      pure $
+        map
+          ( \(le, _acc) ->
+              DriverEarningAccrualRow
+                { referenceId = BeamLE.referenceId le,
+                  amount = BeamLE.amount le,
+                  timestamp = BeamLE.timestamp le
+                }
+          )
+          rows
+    Left err -> do
+      L.logError ("findBaseRideOwnerLiabilityRows" :: Text) $
+        "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
+      pure []
+
+-- NOTE: Common join/filter logic is shared with `findBaseRideOwnerLiabilityRows`.
+baseRideOwnerLiabilityBase ::
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  BeamTable2 s BeamLE.LedgerEntryT BeamAccount.AccountT
+baseRideOwnerLiabilityBase merchantOpCityId startTime endTime =
+  B.filter_'
+    ( \(le, acc) ->
+        le.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+          B.&&?. le.referenceType B.==?. B.val_ Wallet.walletReferenceBaseRide
+          B.&&?. acc.accountType B.==?. B.val_ AccountDomain.Liability
+          B.&&?. le.status B.==?. B.val_ LedgerDomain.SETTLED
+          B.&&?. B.sqlBool_ (le.timestamp B.>=. B.val_ startTime)
+          B.&&?. B.sqlBool_ (le.timestamp B.<=. B.val_ endTime)
+          B.&&?. B.sqlBool_ (B.isNothing_ le.reversalOf)
+    )
+    do
+      le <- B.all_ (BeamCommon.financeLedgerEntry BeamCommon.atlasDB)
+      acc <-
+        B.join_
+          (BeamCommon.financeAccount BeamCommon.atlasDB)
+          (\acc -> acc.id B.==. le.toAccountId)
+      pure (le, acc)
+
+-- ---------------------------------------------------------------------------
+-- Payout aggregated/per-row queries
+-- ---------------------------------------------------------------------------
+
+--- pg_payout_settlement_report????
 
 -- | Successful wallet payouts (Juspay today). WS4 (Stripe/bank-file/gating) is an
 -- extension of eligibility/channels, not required for this aggregate.
@@ -289,6 +450,7 @@ fetchPayoutTotals merchantOpCityId fromTime toTime = do
 
 -- | SUM SETTLED WalletPayout ledger legs (driver liability debit on success).
 -- Single-leg createWalletEntryDelta — no account join needed.
+-- Keep filter identical to `findWalletPayoutRows` (KV drill-down).
 findWalletPayoutTotals ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -325,6 +487,49 @@ findWalletPayoutTotals merchantOpCityId startTime endTime = do
         "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
       pure (Nothing, 0)
 
+-- | Per-row shape for SAP JV drill-down (PayoutToClearing / PayoutClearingToBank share this source).
+data WalletPayoutRow = WalletPayoutRow
+  { referenceId :: Text,
+    amount :: HighPrecMoney,
+    timestamp :: UTCTime
+  }
+  deriving (Generic, Show, Eq)
+
+-- | Row-level twin of `findWalletPayoutTotals` via KV
+-- (`Lib.Finance.Storage.Queries.LedgerEntryExtra.findSettledByReferenceTypeAndDateRange`).
+-- Keep WHERE in sync with the Beam aggregate used by SAP dispatch.
+findWalletPayoutRows ::
+  (RideRevenueTotalsFlow m r, Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [WalletPayoutRow]
+findWalletPayoutRows merchantOpCityId startTime endTime mbLimit mbOffset = do
+  entries <-
+    QLedgerEntryExtra.findSettledByReferenceTypeAndDateRange
+      Wallet.walletReferencePayout
+      merchantOpCityId.getId
+      startTime
+      endTime
+      mbLimit
+      mbOffset
+  pure $
+    map
+      ( \e ->
+          WalletPayoutRow
+            { referenceId = e.referenceId,
+              amount = e.amount,
+              timestamp = e.timestamp
+            }
+      )
+      entries
+
+-- ---------------------------------------------------------------------------
+-- TDS aggregated/per-row queries
+-- ---------------------------------------------------------------------------
+
 -- | TDS deduction: Dr DRIVER_BALANCE / Cr TDS_PAYABLE (from direct_tax_transaction Deducted).
 --   Reimbursement (Dr TDS_RECEIVABLE / Cr DRIVER_BALANCE) stays 0 until WS8 FO TDS-cert workflow.
 fetchTdsTotals ::
@@ -350,6 +555,7 @@ fetchTdsTotals merchantOpCityId fromTime toTime = do
 -- tdsTreatment, and created at invoice time from GovtDirect legs that post
 -- SETTLED. Online/cash share one SAP TDS JV, so payment-mode classification
 -- via ledger is unnecessary.
+-- Keep filter identical to `findTdsDeductionRows` (KV drill-down).
 findTdsDeductionTotals ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -383,3 +589,41 @@ findTdsDeductionTotals merchantOpCityId startTime endTime = do
       L.logError ("findTdsDeductionTotals" :: Text) $
         "failed for mocId=" <> merchantOpCityId.getId <> " error=" <> show err
       pure (Nothing, 0)
+
+-- | Per-row shape for SAP JV drill-down (TdsDeduction).
+data TdsDeductionRow = TdsDeductionRow
+  { referenceId :: Text,
+    tdsAmount :: HighPrecMoney,
+    transactionDate :: UTCTime
+  }
+  deriving (Generic, Show, Eq)
+
+-- | Row-level twin of `findTdsDeductionTotals` via KV
+-- (`Lib.Finance.Storage.Queries.DirectTaxTransactionExtra.findDeductedByDateRange`).
+-- Keep WHERE in sync with the Beam aggregate used by SAP dispatch.
+findTdsDeductionRows ::
+  (RideRevenueTotalsFlow m r, Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [TdsDeductionRow]
+findTdsDeductionRows merchantOpCityId startTime endTime mbLimit mbOffset = do
+  entries <-
+    QDirectTaxExtra.findDeductedByDateRange
+      merchantOpCityId.getId
+      startTime
+      endTime
+      mbLimit
+      mbOffset
+  pure $
+    map
+      ( \e ->
+          TdsDeductionRow
+            { referenceId = e.referenceId,
+              tdsAmount = e.tdsAmount,
+              transactionDate = e.transactionDate
+            }
+      )
+      entries

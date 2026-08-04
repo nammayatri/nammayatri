@@ -19,7 +19,6 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch
 where
 
 import qualified Data.Map.Strict as M
-import Data.Time.Clock (UTCTime (..))
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.SAP.Config as SAPConfig

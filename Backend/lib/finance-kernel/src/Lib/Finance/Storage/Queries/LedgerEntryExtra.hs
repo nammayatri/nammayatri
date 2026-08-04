@@ -69,6 +69,33 @@ findByReferenceTypesAndDateRange referenceTypes merchantOperatingCityId startTim
         ]
     ]
 
+-- | Row-level twin of SAP payout aggregate (`findWalletPayoutTotals` in RideRevenueTotals).
+-- Same filters: referenceType + mocId + SETTLED + timestamp range + no reversal.
+-- Uses KV (`findAllWithOptionsKV`); mocId/status are WHERE filters, not secondary keys.
+findSettledByReferenceTypeAndDateRange ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Domain.LedgerEntry]
+findSettledByReferenceTypeAndDateRange referenceType merchantOperatingCityId startTime endTime mbLimit mbOffset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.status $ Se.Eq Domain.SETTLED,
+          Se.Is Beam.timestamp $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.timestamp $ Se.LessThanOrEq endTime,
+          Se.Is Beam.reversalOf $ Se.Eq Nothing
+        ]
+    ]
+    (Se.Desc Beam.timestamp)
+    (Just $ min 100 $ fromMaybe 20 mbLimit)
+    mbOffset
+
 -- | Find ALL ledger entries by referenceId (no referenceType filter)
 findAllByReferenceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>

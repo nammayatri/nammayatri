@@ -209,6 +209,7 @@ apis:
         type: SapJournalListRes
 
   # ----- SAP Journal Transactions (drill-down by transactionType + postingDate) -----
+  # description: optional JV label filter (sap_journal_entry.description). Absent → all events for type.
   - GET: # SapJournalTransactionsAPI
       endpoint: /finance/sapJournals/transactions
       mandatoryQuery:
@@ -219,6 +220,7 @@ apis:
         limit: Int
         offset: Int
         subscriptionId: Text
+        description: Text
         fromTime: UTCTime
         toTime: UTCTime
       auth: ApiAuthV2
