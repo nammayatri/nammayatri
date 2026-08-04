@@ -50,6 +50,7 @@ module Tools.Payment
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
     substituteVehicleTypeInOfferSKU,
+    substituteOverrideTypeInOfferSKU,
     mkOfferBasket,
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
@@ -853,11 +854,22 @@ offerSKUVehicleServiceTierTypePlaceholder = MessageBuilder.templateText "VEHICLE
 offerSKUVehicleTypePlaceholder :: Text
 offerSKUVehicleTypePlaceholder = MessageBuilder.templateText "VEHICLE_TYPE"
 
+offerSKUOverrideTypePlaceholder :: Text
+offerSKUOverrideTypePlaceholder = MessageBuilder.templateText "OVERRIDE_TYPE"
+
 substituteVehicleTypeInOfferSKU :: (Show a, Show b) => a -> Maybe b -> Maybe Text -> Maybe Text
 substituteVehicleTypeInOfferSKU vehicleType mbVehicleServiceTierType =
+  substituteOverrideTypeInOfferSKU (Nothing :: Maybe Text) vehicleType mbVehicleServiceTierType
+
+substituteOverrideTypeInOfferSKU :: (Show a, Show b, Show c) => Maybe c -> a -> Maybe b -> Maybe Text -> Maybe Text
+substituteOverrideTypeInOfferSKU mbOverrideType vehicleType mbVehicleServiceTierType =
   fmap
     ( T.replace offerSKUVehicleTypePlaceholder (T.pack (show vehicleType))
         . T.replace offerSKUVehicleServiceTierTypePlaceholder (maybe "" (T.pack . show) mbVehicleServiceTierType)
+        -- The template carries no separator before {#OVERRIDE_TYPE#}; the value brings its own.
+        -- With no override the placeholder resolves to "" and the SKU is byte-identical to what
+        -- the template rendered before the placeholder existed.
+        . T.replace offerSKUOverrideTypePlaceholder (maybe "" (\overrideType -> "_" <> T.toLower (T.pack (show overrideType))) mbOverrideType)
     )
 
 mkOfferBasket ::

@@ -59,6 +59,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -122,7 +123,9 @@ validateRequest DOrder {..} = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+  mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+    throwError (FRFSTicketBookingPaymentNotFound booking.id.getId)
   now <- getCurrentTime
   if booking.validTill < now
     then do
@@ -131,7 +134,8 @@ validateRequest DOrder {..} = do
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
-      void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
+      void $ withTryCatch "onConfirmValidate:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -164,9 +168,12 @@ onConfirmFailure bapConfig ticketBooking = do
   logInfo $ "onConfirmFailure: " <> show ticketBooking
   merchant <- QMerch.findById ticketBooking.merchantId >>= fromMaybeM (MerchantNotFound ticketBooking.merchantId.getId)
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
+  mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking
+  unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered ticketBooking.overriddenAmount) $
+    throwError (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
-  void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
+  void $ withTryCatch "onConfirmFailure:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure ticketBooking.searchId ticketBooking.overrideAppliedEntityId)
+  whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical ticketBooking
 
 onConfirm ::
@@ -278,15 +285,23 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
-  txn <- runInReplica $ HQPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
-  paymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let paymentBookingStatus = paymentBooking.status
+  -- No payment transaction of its own -- the money moved at pass purchase -- so the txn fields
+  -- point at the pass payment. totalOrderValue still reports the FULL fare: open settlement item,
+  -- do not reintroduce a blanket settlementType guard. See .cursor/docs/20-frfs-pass-fare-override.md
+  let isPassCovered = FRFSPassOverride.isFullyPassCovered booking.overriddenAmount
+  mbTxn <-
+    if isPassCovered
+      then pure Nothing
+      else do
+        transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
+        Just <$> (runInReplica $ HQPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId"))
+  mbPaymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  let transactionRefNumber' = if isPassCovered then booking.overrideAppliedEntityId else booking.paymentTxnId
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
       finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational fareParameters.totalQuantity
-  tOrderPrice <- FRFSUtils.totalOrderValue paymentBookingStatus booking
+  tOrderPrice <- maybe (pure booking.totalPrice) (\pb -> FRFSUtils.totalOrderValue pb.status booking) mbPaymentBooking
   let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational (length tickets)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   let reconEntry =
@@ -310,13 +325,13 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
             Recon.settlementDate = Nothing,
             Recon.settlementReferenceNumber = Nothing,
             Recon.sourceStationCode = Just fromStation.code,
-            Recon.transactionUUID = txn.txnUUID,
+            Recon.transactionUUID = mbTxn >>= (.txnUUID),
             Recon.ticketNumber = Just "",
             Recon.ticketQty = Just fareParameters.totalQuantity,
             Recon.time = show now,
-            Recon.txnId = txn.txnId,
+            Recon.txnId = mbTxn >>= (.txnId),
             Recon.totalOrderValue = tOrderValue,
-            Recon.transactionRefNumber = Just transactionRefNumber,
+            Recon.transactionRefNumber = transactionRefNumber',
             Recon.merchantId = Just booking.merchantId,
             Recon.merchantOperatingCityId = Just booking.merchantOperatingCityId,
             Recon.createdAt = now,

@@ -36,6 +36,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
@@ -122,17 +123,46 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   let booking = oldBooking {FTBooking.totalPrice = totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
+  booking' <- if isFareChanged then dropPassOverrideOnFareChange booking else pure booking
+  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking'
 
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
-  when allLegsOnInitDone $ do
+      -- A fully covered leg is already CONFIRMING with the BPP and has no order of its own. It
+      -- counts towards allLegsOnInitDone, but it must stay out of the payment list: createPayments
+      -- would write it a FRFSTicketBookingPayment row and markBookingApproved would drag it back
+      -- from CONFIRMING to APPROVED, so payment success would confirm it with the BPP a second time.
+      payableBookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
+  when (allLegsOnInitDone && not (null payableBookings)) $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
-      (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-      baskets <- createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      (vendorSplitDetails, amount) <- createVendorSplitFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+      baskets <- createBasketFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
+      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
   where
     key journeyId = "initJourney-" <> journeyId
+
+-- A fare change under a pass-covered booking has never been observed (is_fare_changed has never
+-- been true across ~30M bookings). Rather than guess a new discount from a fare the rider was
+-- never shown, give the trip back and let the booking settle at the full fare -- the status
+-- response drops overrideType/overriddenTotalPrice, so the client can say so.
+dropPassOverrideOnFareChange ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  FTBooking.FRFSTicketBooking ->
+  m FTBooking.FRFSTicketBooking
+dropPassOverrideOnFareChange booking = case booking.overrideAppliedEntityId of
+  Nothing -> pure booking
+  Just entityId -> do
+    logError $ "OnInit:dropPassOverrideOnFareChange fare changed under a pass-covered booking, dropping override bookingId=" <> booking.id.getId
+    -- Clear only once the trip is actually back: overrideAppliedEntityId is the only thing naming
+    -- which pass paid. Keeping it on failure is not free -- see .cursor/docs/20-frfs-pass-fare-override.md
+    released <- withTryCatch "onInit:dropOverrideReleaseTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId))
+    case released of
+      Left err -> do
+        logError $ "OnInit:dropPassOverrideOnFareChange trip release failed, keeping override fields for retry bookingId=" <> booking.id.getId <> " err=" <> show err
+        pure booking
+      Right _ -> do
+        QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing booking.id
+        pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing}
 
 createPayments ::
   ( EsqDBReplicaFlow m r,
@@ -167,9 +197,16 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         return updatedPaymentOrder
   case mbPaymentOrder of
     Just paymentOrder -> mapM_ (markBookingApproved paymentOrder) bookings
-    Nothing -> do
-      markBookingFailed `mapM_` bookings
-      throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
+    Nothing
+      -- NOT how pass-covered bookings get approved: those are confirmed directly in
+      -- postFrfsQuoteV2ConfirmUtil's isFullyPassCovered branch, which never calls init, so they
+      -- never reach on_init at all -- and inside a journey payableBookings filters them out
+      -- above. This is a safety net for a genuinely zero-fare booking, and insurance if covered
+      -- bookings are ever routed through init. Do not "fix" the covered flow by editing it.
+      | amount <= 0 -> mapM_ markBookingPaidWithoutOrder bookings
+      | otherwise -> do
+        markBookingFailed `mapM_` bookings
+        throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
     markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
@@ -177,4 +214,9 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         isTestTransaction <- asks (.isMetroTestTransaction)
         let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
         void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
-    markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
+    markBookingFailed booking = do
+      void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
+      void $ withTryCatch "onInit:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+
+    markBookingPaidWithoutOrder booking =
+      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id

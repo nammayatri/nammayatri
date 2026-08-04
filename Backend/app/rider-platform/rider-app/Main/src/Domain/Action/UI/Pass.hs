@@ -307,6 +307,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         QPurchasedPass.create purchasedPass
         return newPurchasedPassId
 
+  mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -316,7 +317,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             startDate,
             endDate,
             benefitDescription = pass.benefitDescription,
-            availableTripCount = FRFSPassOverride.maxTripCountFromPass pass,
+            availableTripCount = mbMaxTripCount,
             isDashboard = Just isDashboard,
             benefitType = benefitType,
             benefitValue = benefitValue,
@@ -668,9 +669,6 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         maxDays = purchasedPass.maxValidDays,
         description = description,
         documentsRequired = [],
-        -- Not reachable here: this entity is built from purchasedPass, which carries no passId.
-        -- Blanked like documentsRequired -- capture config only matters pre-purchase, and a
-        -- skip-configured pass never reaches PhotoPending anyway (the webhook activates it directly).
         skipUserPhotographCapture = Nothing,
         eligibility = True,
         name = name,
@@ -730,6 +728,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
   availableTripCount <- maybe (pure Nothing) FRFSPassOverride.getRemainingTripCount mbLivePayment
+  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbLivePayment >>= (.passId))
+  unlimitedTripCount <- maybe (pure False) FRFSPassOverride.isUnlimitedPass mbOverridePass
 
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
@@ -756,6 +756,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         passEntity = passDetailsEntity,
         tripsLeft = tripsLeft,
         availableTripCount = availableTripCount,
+        unlimitedTripCount = unlimitedTripCount,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,
@@ -789,8 +790,6 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      -- A pass configured with skipUserPhotographCapture never collects a photo, so it must
-      -- not be held in PhotoPending waiting for one it will never receive.
       mbPass <- maybe (pure Nothing) CQPass.findById purchasedPassPayment.passId
       let skipPhoto = fromMaybe False (mbPass >>= (.skipUserPhotographCapture))
       let hasProfilePicture = skipPhoto || isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId

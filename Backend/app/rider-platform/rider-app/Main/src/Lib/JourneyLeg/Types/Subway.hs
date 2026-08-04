@@ -11,12 +11,14 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RecentLocation as DRecentLocation
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Lib.JourneyModule.Types as JL
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 
 data SubwayLegRequestSearchData = SubwayLegRequestSearchData
   { quantity :: Int,
@@ -46,7 +48,8 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     isSingleMode :: Maybe Bool,
     mbEnableOffer :: Maybe Bool,
     categorySelectionReq :: [FRFSCategorySelectionReq],
-    mbIsMockPayment :: Maybe Bool
+    mbIsMockPayment :: Maybe Bool,
+    mbPurchasedPassPaymentId :: Maybe (Id DPPP.PurchasedPassPayment)
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
@@ -63,7 +66,9 @@ data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
 data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
     journeyLeg :: DJourneyLeg.JourneyLeg,
-    journeyLegs :: [DJourneyLeg.JourneyLeg]
+    journeyLegs :: [DJourneyLeg.JourneyLeg],
+    -- Loaded once per journey by getAllLegsInfo; Nothing means resolve per leg.
+    passCandidates :: Maybe [FRFSPassOverride.PassCandidate]
   }
 
 data SubwayLegRequest

@@ -125,7 +125,8 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     purchaseDate :: Data.Time.Day,
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
-    tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int
+    tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    unlimitedTripCount :: Kernel.Prelude.Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

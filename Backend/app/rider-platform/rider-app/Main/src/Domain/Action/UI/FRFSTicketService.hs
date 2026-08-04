@@ -521,8 +521,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       Just origin -> tryStationsAPIWithOSRMDistances mId merchantOpCity origin stations integratedBPPConfig
       Nothing -> return stations
 
-postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = do
+postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   let platformType = fromMaybe DIBC.APPLICATION req.platformType
   merchantOperatingCityId <-
@@ -565,7 +565,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId mbNewServ
       <> show finalServiceTier
       <> ", routeCode="
       <> show req.routeCode
-  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing -- the journey leg upsert function is not required here
+  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses -- the journey leg upsert function is not required here
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -634,8 +634,9 @@ postFrfsSearchHandler ::
   [DFRFSQuote.FRFSQuoteType] ->
   Bool ->
   Maybe Text ->
+  Maybe Bool ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
+postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId mbHasPasses = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType_)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_))) >>= fromMaybeM (InternalError "Beckn Config not found")
   cloudType <- asks (.cloudType)
@@ -694,29 +695,37 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   QFRFSSearch.create searchReq
   JMU.measureLatency (CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq mbFare frfsRouteDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId) "CallExternalBPP.search postFrfsSearchHandler"
   quotes <-
-    JMU.measureLatency (withTryCatch "getFrfsSearchQuote" (getFrfsSearchQuote (Just personId, merchantId) searchReqId)) "getFrfsSearchQuote postFrfsSearchHandler"
+    JMU.measureLatency (withTryCatch "getFrfsSearchQuote" (getFrfsSearchQuote (Just personId, merchantId) searchReqId mbHasPasses tripTime)) "getFrfsSearchQuote postFrfsSearchHandler"
       >>= \case
         Right frfsQuotes -> return frfsQuotes
         Left _ -> return []
   return $ FRFSSearchAPIRes quotes searchReqId
 
+-- Offered against the trip's departure rather than the clock. Search runs after trip selection and
+-- trips can be booked ~8 days out, so `now` is wrong in both directions: a pass starting tomorrow
+-- would not be offered for a trip next week, and one expiring tonight would be offered for a trip
+-- after it lapses. Only the *offer* trusts this -- confirm re-derives the departure from the waybill
+-- schedule (getScheduledTripStartTime), so a client cannot spend a trip by lying about the time.
 enrichQuotesWithPassOverride ::
   (CacheFlow m r, EsqDBFlow m r) =>
   DIBC.IntegratedBPPConfig ->
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Domain.Types.FRFSSearch.FRFSSearch ->
+  Maybe Bool ->
+  Maybe UTCTime ->
   m [FRFSPassOverride.ApplicablePass]
-enrichQuotesWithPassOverride integratedBppConfig personId search =
+enrichQuotesWithPassOverride integratedBppConfig personId search mbClientHasPasses mbTripTime =
   if integratedBppConfig.passOverrideApplicable /= Just True
     then pure []
     else do
       now <- getCurrentTime
+      let tripTime = fromMaybe now mbTripTime
       QP.findById personId >>= \case
         Nothing -> pure []
-        Just person -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBppConfig person search.vehicleType now
+        Just person -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBppConfig person search.vehicleType tripTime mbClientHasPasses
 
-getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
-getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
+getFrfsSearchQuote :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> m [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
+getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   search <- QFRFSSearch.findById searchId_ >>= fromMaybeM (InvalidRequest "Invalid search id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
@@ -776,7 +785,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
             >>= \case
               Left _ -> pure Nothing
               Right mbResp -> pure mbResp
-  applicablePassesForSearch <- enrichQuotesWithPassOverride integratedBppConfig personId search
+  applicablePassesForSearch <- enrichQuotesWithPassOverride integratedBppConfig personId search mbHasPasses mbTripTime
   mapM
     ( \(quote, quoteCategories) -> do
         let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
@@ -809,7 +818,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
               _type = quote._type,
               applicablePasses =
                 map FRFSPassOverride.mkPassOptionAPIEntity $
-                  FRFSPassOverride.passOptionsForQuote applicablePassesForSearch serviceTierType adultQuantity singleAdultTicketPrice,
+                  FRFSPassOverride.passOptionsForQuote integratedBppConfig applicablePassesForSearch serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
               price = singleAdultTicketPrice.amount,
               priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
               quantity = adultQuantity,
@@ -882,11 +891,11 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing
+      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing req.purchasedPassPaymentId
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing req.purchasedPassPaymentId
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -894,7 +903,7 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
 postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasFlowEnv m r '["seatBookingConfirmAPIRateLimitOptions" ::: APIRateLimitOptions], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId mbIsMockPayment =
   ActorInfo.withMbPersonIdActorInfo mbPersonId $
-    postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing, isSpotBooking = Nothing})
+    postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId_) quoteId mbIsMockPayment (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing, crisSdkResponse = Nothing, enableOffer = Nothing, tripId = Nothing, isSpotBooking = Nothing, purchasedPassPaymentId = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -1004,7 +1013,13 @@ getFrfsBookingStatusWithActor (mbPersonId, merchantId_) bookingId = do
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person) booking person (\_ _ -> pure ())
+  -- An action, not a value: building it up front costs a query on every status call and, worse,
+  -- snapshots the booking before frfsBookingStatus makes any status transition.
+  let noPaymentRes = do
+        latestBooking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId latestBooking.quoteId
+        buildFRFSTicketBookingStatusAPIRes latestBooking quoteCategories Nothing
+  frfsBookingStatus (personId, merchantId_) (integratedBppConfig.platformType == DIBC.MULTIMODAL) (withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes) booking person (\_ _ -> pure ())
   where
     withPaymentStatusResponseHandler ::
       ( EncFlow m r,
@@ -1018,16 +1033,25 @@ getFrfsBookingStatusWithActor (mbPersonId, merchantId_) bookingId = do
       DIBC.IntegratedBPPConfig ->
       DFRFSTicketBooking.FRFSTicketBooking ->
       DP.Person ->
+      m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes ->
       ((DFRFSTicketBookingPayment.FRFSTicketBookingPayment, DPaymentOrder.PaymentOrder, Maybe DPayment.PaymentStatusResp) -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes) ->
       m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-    withPaymentStatusResponseHandler integratedBppConfig booking person action = do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person booking.riderId
-      let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-          commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity booking.merchantOperatingCityId
-      paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrder.id orderStatusCall
-      action (paymentBooking, paymentOrder, Just paymentStatusResponse)
+    withPaymentStatusResponseHandler integratedBppConfig booking person noPaymentRes action = do
+      mbPaymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
+      case mbPaymentBooking of
+        -- Built here, not up front: the caller's snapshot predates any status transition
+        -- frfsBookingStatus makes, and building it eagerly costs a query on every status call.
+        Nothing | FRFSPassOverride.isFullyPassCovered booking.overriddenAmount -> noPaymentRes
+        Nothing -> throwError $ InvalidRequest "Payment booking not found for approved TicketBookingId"
+        Just paymentBooking -> withPaymentOrder paymentBooking
+      where
+        withPaymentOrder paymentBooking = do
+          paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+          let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person booking.riderId
+          let orderStatusCall = Payment.orderStatus booking.merchantId booking.merchantOperatingCityId Nothing (getPaymentType (integratedBppConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType) (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
+              commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity booking.merchantOperatingCityId
+          paymentStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrder.id orderStatusCall
+          action (paymentBooking, paymentOrder, Just paymentStatusResponse)
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
 getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory = do
