@@ -21,6 +21,7 @@ en =
       languageUpdated = \lang -> "✅ Language changed to *" <> lang <> "*.",
       moreLanguages = "➕ More languages",
       setupFailed = \err -> "Setup failed: " <> err <> "\nSend \"book\" to try again.",
+      welcomeBack = \name -> "Welcome back, " <> name <> "! \128075",
       personNotFound = "Looks like you're new! Let's get you set up.",
       otpSent = "An OTP has been sent to your phone. Please enter the OTP:",
       invalidOtp = "That doesn't look like a valid OTP. Please enter the 4 or 6 digit code:",

@@ -52,6 +52,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SavedReqLocation as DSRL
 import Environment (Flow)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import Kernel.Types.Common (Meters (..), Seconds (..))
 import Kernel.Types.Id (Id (..))
@@ -60,6 +61,7 @@ import qualified Safety.Domain.Types.Sos as SafetySos
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Search as SLS
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.PersonExtra as Person
 import qualified Storage.Queries.Ride as QR
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error (BookingError (BookingDoesNotExist), GenericError (InvalidRequest))
@@ -74,8 +76,19 @@ mkBackendHandle merchantId mocId ctx =
   BackendHandle
     { authenticate = \phone ->
         runBot "authenticate" $ do
+          -- Independent lookup, purely to capture segment/displayName — the
+          -- SAME check createPersonWithPhoneNumber does internally, but that
+          -- function only ever returns a bare Id, so we ask again here rather
+          -- than touch its signature (it has other callers, e.g. Select.hs).
+          mobileDbHash <- getDbHash phone
+          mbExistingPerson <- Person.findByMobileNumberAndMerchantId "+91" mobileDbHash merchantId
           personId <- Reg.createPersonWithPhoneNumber merchantId phone Nothing
-          pure BotAuth {personId = personId.getId},
+          pure
+            AuthResult
+              { auth = BotAuth {personId = personId.getId},
+                segment = maybe NewUser (const ExistingApp) mbExistingPerson,
+                displayName = mbExistingPerson >>= (\p -> p.firstName)
+              },
       getSavedLocations = \auth ->
         runBot "getSavedLocations" $ do
           res <- DSavedReqLocation.getSavedReqLocations (Id auth.personId)

@@ -185,7 +185,16 @@ ensureAuth env ev hook ctx = do
                 reply env to (s.setupFailed err.botErrorMessage)
                 save env ev ctx {state = Idle}
                 pure Nothing
-              Right auth -> do
+              Right authResult -> do
+                -- The one point segment/displayName are ever knowable (see
+                -- Types.hs's AuthResult doc). A returning, named person gets a
+                -- one-time "welcome back" here — flow-agnostic (no booking
+                -- wire strings), so every flow that calls ensureAuth gets this
+                -- for free, not just the booking flow.
+                let auth = authResult.auth
+                case (authResult.segment, authResult.displayName) of
+                  (ExistingApp, Just name) -> reply env to (s.welcomeBack name)
+                  _ -> pure ()
                 ctx2 <- hook auth (ctx {personId = Just auth.personId} :: FlowContext)
                 env.persons.setPerson uk StoredPerson {personId = auth.personId, language = ctx2.language}
                 save env ev ctx2

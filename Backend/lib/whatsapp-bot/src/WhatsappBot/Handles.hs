@@ -20,7 +20,10 @@ import WhatsappBot.Types
 -- resolved rider handle; the adapter maps it to @(Id Person, Id Merchant)@.
 data BackendHandle m = BackendHandle
   { -- | 10-digit phone -> resolved rider (prod: find-or-create, no OTP; D2/D3).
-    authenticate :: Text -> m (Either BotError BotAuth),
+    --   Returns 'AuthResult' (not bare 'BotAuth') so the caller can tell a
+    --   newly-created person from an already-known one, instead of that fact
+    --   being discarded at the find-or-create call site.
+    authenticate :: Text -> m (Either BotError AuthResult),
     getSavedLocations :: BotAuth -> m (Either BotError [BotSavedLocation]),
     -- | query text, bias point (origin) -> predictions.
     searchPlaces :: BotAuth -> Text -> Maybe LatLon -> m (Either BotError [BotPrediction]),
