@@ -11,6 +11,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock (utctDay)
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
+import Data.Time.LocalTime (localTimeToUTC, minutesToTimeZone)
 import qualified Domain.Types.DriverGstin as DDriverGstin
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
@@ -112,7 +114,22 @@ generateEInvoiceForInvoice invoice = do
                 "GSTEInvoice: built payload, calling GSP generateEInvoice. payload="
                   <> TL.toStrict (AesonText.encodeToLazyText payload)
                   <> ctx
-              eInvResp <- GSTEInvoice.generateEInvoice cfg authToken payload
+              -- If the GSP rejects the token (GSP752), it means the token died
+              -- before/at use (the GSP hands out short, shared session tokens).
+              -- Drop the cached token, re-authenticate, and retry the call ONCE;
+              -- by the retry the GSP has usually rotated to a fresh token.
+              attempt1 <- try @_ @SomeException $ GSTEInvoice.generateEInvoice cfg authToken payload
+              eInvResp <- case attempt1 of
+                Right resp -> pure resp
+                Left err ->
+                  if isAuthTokenExpiredError err
+                    then do
+                      logWarning $ "GSTEInvoice: GSP rejected auth token (GSP752); invalidating cache and retrying once." <> ctx
+                      Redis.del (snd (authTokenCacheScope cfg))
+                      freshToken <- getOrRefreshAuthToken cfg
+                      logDebug $ "GSTEInvoice: retry with fresh auth token, tokenLength=" <> show (T.length freshToken) <> ctx
+                      GSTEInvoice.generateEInvoice cfg freshToken payload
+                    else throwM err
               logInfo $
                 "GSTEInvoice: GSP responded status="
                   <> eInvResp.status
@@ -255,7 +272,9 @@ formatInvoiceDate t =
    in pad2 d <> "/" <> pad2 m <> "/" <> show y
 
 -- | Get a cached GST e-invoice auth token from Redis, or authenticate and cache a new one.
---   TTL is set to (tokenExpiry - 60) seconds for safety.
+--   TokenExpiry from the GSP is an ABSOLUTE IST wall-clock timestamp (not a
+--   duration), so the cache TTL is set to (expiry - now - safetyMargin). This
+--   guarantees a token is never served from Redis past its actual lifetime.
 --   The Redis key is scoped per-config (aspId + gstin + userName) so that
 --   different merchant credential sets that share a GSTIN do not collide.
 getOrRefreshAuthToken ::
@@ -268,8 +287,7 @@ getOrRefreshAuthToken ::
   GSTEInvoiceConfig ->
   m Text
 getOrRefreshAuthToken config = do
-  let (gstin, scopeKey) = configScope config
-      redisKey = "GSTEInvoice:authToken:" <> scopeKey
+  let (gstin, redisKey) = authTokenCacheScope config
   cached <- Redis.get redisKey
   case cached of
     Just token -> do
@@ -278,26 +296,64 @@ getOrRefreshAuthToken config = do
     Nothing -> do
       logInfo $ "GSTEInvoice: Fetching new auth token for GSTIN " <> gstin
       authResp <- GSTEInvoice.authenticateEInvoice config
-      let fallbackTtl = 3000 :: Int
-      expirySeconds <- case readMaybe (T.unpack authResp.tokenExpiry) of
-        Just s -> pure s
+      now <- getCurrentTime
+      -- TokenExpiry looks like "2026-07-20 17:03:26" and is an absolute IST
+      -- (UTC+5:30) wall-clock time. Parse it and convert to UTC; DO NOT treat
+      -- it as a seconds count (readMaybe @Int always fails on it).
+      let istZone = minutesToTimeZone 330 -- IST = UTC+05:30
+          safetyMargin = 60 :: Int
+          -- If the expiry ever fails to parse, re-authenticate soon rather than
+          -- caching a possibly-dead token for a long time.
+          fallbackTtl = 300 :: Int
+          mbExpiryUtc =
+            localTimeToUTC istZone
+              <$> parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S" (T.unpack authResp.tokenExpiry)
+      ttl <- case mbExpiryUtc of
+        Just expiryUtc ->
+          pure $ floor (realToFrac (diffUTCTime expiryUtc now) :: Double) - safetyMargin
         Nothing -> do
           logWarning $
             "GSTEInvoice: failed to parse tokenExpiry="
               <> show authResp.tokenExpiry
               <> " for scope="
-              <> scopeKey
+              <> redisKey
               <> " (gstin="
               <> gstin
               <> "); falling back to "
               <> show fallbackTtl
               <> "s"
           pure fallbackTtl
-      let ttl = max 3000 (expirySeconds - 60)
-      Redis.setExp redisKey authResp.authToken ttl
+      -- Only cache when the token has meaningful life left beyond the safety
+      -- margin. A token at/near expiry is not cached, so the next call
+      -- re-authenticates (cache miss) instead of serving a dead token.
+      if ttl > 0
+        then do
+          logInfo $
+            "GSTEInvoice: caching auth token for GSTIN "
+              <> gstin
+              <> " ttl="
+              <> show ttl
+              <> "s tokenExpiry="
+              <> authResp.tokenExpiry
+          Redis.setExp redisKey authResp.authToken ttl
+        else
+          logWarning $
+            "GSTEInvoice: not caching auth token for GSTIN "
+              <> gstin
+              <> " — remaining life <= safety margin (tokenExpiry="
+              <> authResp.tokenExpiry
+              <> ")"
       pure authResp.authToken
-  where
-    -- Returns (gstin-for-logging, per-config unique scope key for Redis).
-    configScope :: GSTEInvoiceConfig -> (Text, Text)
-    configScope (CharteredInfoEInvoiceConfig cfg) =
-      (cfg.gstin, cfg.aspId <> ":" <> cfg.gstin <> ":" <> cfg.userName)
+
+-- | Returns (gstin-for-logging, per-config Redis key) for the e-invoice auth token.
+--   Scoped by aspId + gstin + userName so different credential sets never collide.
+authTokenCacheScope :: GSTEInvoiceConfig -> (Text, Text)
+authTokenCacheScope (CharteredInfoEInvoiceConfig cfg) =
+  (cfg.gstin, "GSTEInvoice:authToken:" <> cfg.aspId <> ":" <> cfg.gstin <> ":" <> cfg.userName)
+
+-- | GSP752 ("AuthToken not found or expired") is thrown as an InternalError whose
+--   shown text embeds the GSP error body. Detect it so we can invalidate + retry once.
+isAuthTokenExpiredError :: SomeException -> Bool
+isAuthTokenExpiredError e =
+  let msg = T.pack (show e)
+   in "GSP752" `T.isInfixOf` msg || "AuthToken not found or expired" `T.isInfixOf` msg
