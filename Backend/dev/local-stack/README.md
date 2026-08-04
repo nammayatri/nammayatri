@@ -207,6 +207,57 @@ deliberately never applied.
 > uses. An unknown number is fine — `auth` calls `createDriverWithDetails`, so
 > registration and login are the same call.
 
+## OSRM — real Algerian routing
+
+```bash
+./osrm-prepare.sh          # download + build the graph (one-off, ~10 min)
+docker compose up -d osrm
+```
+
+Builds a routing graph from the **real Algerian road network** (OpenStreetMap
+via Geofabrik, 285 MB extract → 1.6 GB graph). Free, self-hosted, unlimited, no
+API key. Preprocessing peaked at **931 MB RAM**, so it runs comfortably on a
+laptop.
+
+Verified directly against the engine on `:5001`:
+
+| Route | Result |
+|---|---|
+| Algiers centre → Bab Ezzouar | 13.7 km, 17 min |
+| Algiers → Oran | **415.6 km, 4.7 h** |
+
+Street names come back as real Algerian data in both languages
+(`Rue Larbi Tebessi شارع العربي التبسي`).
+
+### The catch: this baseline's OSRM cannot do routes
+
+`osrm-config.sql` switches `get_distances`, `get_routes` and `snap_to_road` to
+OSRM. Distances and snap-to-road are fine. Routes are not:
+
+```
+E500 INTERNAL_ERROR: Function getRoutes is not provided by service OSRM
+```
+
+`Kernel.External.Maps.Interface.OSRM` in shared-kernel `28bae0f` exports only
+`callOsrmMatch`, `getDistances` and `getOSRMTable`. **There is no `getRoutes`
+implementation.** So in this 2023 baseline, routing has to come from Google —
+and `mock-google` has no Directions endpoint either (it implements
+DistanceMatrix, PlaceName and SnapToRoad only).
+
+Three ways out:
+
+1. **A translation shim** — a small service that speaks Google's
+   `/directions/json` and answers it from OSRM underneath. Free, no rebuild, no
+   key. The response shape is small (`DirectionsResp → Route → Leg → Step`) and
+   OSRM already returns every field needed, including the encoded polyline in
+   the same format Google uses. Costs us a component to maintain.
+2. **A real Google key** — works immediately, but it is metered and needs an
+   international payment card.
+3. **A newer backend** — later versions may implement OSRM routing, but moving
+   off this baseline needs the full Haskell build.
+
+Until one of those lands, a ride search still cannot complete.
+
 ## Not connected yet: rider → driver
 
 Both sides run, but a rider search does **not** reach the driver side. It fails

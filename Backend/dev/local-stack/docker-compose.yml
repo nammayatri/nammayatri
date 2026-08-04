@@ -138,6 +138,33 @@ services:
       - ./2023/Backend/app/mocks/google/mock-data:/opt/app/app/mocks/google/mock-data:ro
     restart: unless-stopped
 
+  # Real routing for Algeria. merchant_service_config already carries
+  #   Maps_OSRM -> {"osrmUrl": "localhost:5000", "radiusDeviation": 20}
+  # so this is a configuration change, not a code change. Host networking so
+  # that `localhost:5000` means the same thing here as it does to rider-app.
+  #
+  # The graph is built by ./osrm-prepare.sh into the ny-osrm-data volume; this
+  # only serves it. mld matches how the graph was prepared -- osrm-routed
+  # refuses to start if the algorithm and the graph disagree.
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    container_name: ny-osrm
+    network_mode: host
+    command: osrm-routed --algorithm mld --port 5000 /data/algeria-latest.osrm
+    volumes:
+      - ny-osrm-data:/data:ro
+    restart: unless-stopped
+
+  # OSRM on host networking is invisible from Windows; this exposes it on 5001
+  # so routes can be inspected directly. Not needed by the backend.
+  osrm-proxy:
+    image: alpine/socat
+    container_name: ny-osrm-proxy
+    command: tcp-listen:5000,fork,reuseaddr tcp-connect:172.17.0.1:5000
+    ports:
+      - "5001:5000"
+    restart: unless-stopped
+
   # rider-app uses host networking, so its port lives inside the Docker VM and
   # isn't published to Windows. This forwards it to localhost:8014.
   proxy:
@@ -173,3 +200,8 @@ services:
 
 volumes:
   ny-pgdata:
+  # Built by ./osrm-prepare.sh rather than by compose, because preprocessing is
+  # a one-off that takes far longer than a container start and should not be
+  # repeated on every `up`.
+  ny-osrm-data:
+    external: true
