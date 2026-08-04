@@ -33,6 +33,7 @@ extra-source-files:
     test/resources/golden/sos-trigger.json
     test/resources/golden/status-tracking.json
     test/resources/golden/token-expiry-reauth.json
+    test/resources/golden/welcome-back.json
 
 source-repository head
   type: git

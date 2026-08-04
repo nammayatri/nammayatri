@@ -76,6 +76,11 @@ data LanguageStrings = LanguageStrings
     moreLanguages :: Text,
     -- Auth flow
     setupFailed :: Text -> Text,
+    -- | Shown once, only when 'WhatsappBot.Types.AuthResult.segment' is
+    -- 'WhatsappBot.Types.ExistingApp' AND a display name is known — an
+    -- already-known person's first WhatsApp contact, distinct from the
+    -- default 'welcome' shown to a fresh number.
+    welcomeBack :: Text -> Text,
     -- Registration (OTP-based) — retained for copy fidelity though the port
     -- uses silent onboarding; personNotFound/otpSent still surface in flows.
     personNotFound :: Text,

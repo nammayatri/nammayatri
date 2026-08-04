@@ -152,6 +152,29 @@ data BotBookingDetails = BotBookingDetails
 newtype BotAuth = BotAuth {personId :: Text}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | Which identity segment a fresh 'WhatsappBot.Handles.authenticate' call
+-- resolved to. A real sum type, not a Bool, so a third segment (e.g. "linked
+-- via the app's temp-code handoff", @/v2/auth/get-token@) can be added later
+-- without another breaking change to every consumer.
+data AuthSegment
+  = -- | found by Person.findByMobileNumberAndMerchantId
+    ExistingApp
+  | -- | no match; a fresh Person record was just created
+    NewUser
+  deriving (Show, Eq, Generic)
+
+-- | The richer result of a fresh 'WhatsappBot.Handles.authenticate' call — only
+-- produced at the moment of first login (the 'BackendHandle' call site inside
+-- 'WhatsappBot.Env.ensureAuth'), never carried around afterward. Everywhere
+-- else in the engine keeps using plain 'BotAuth', unchanged, so this type adds
+-- no risk to the existing call sites that build a 'BotAuth' directly.
+data AuthResult = AuthResult
+  { auth :: BotAuth,
+    segment :: AuthSegment,
+    displayName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
+
 -- | Profile fields the engine updates on first registration (@engine.ts:1443@).
 newtype BotProfileUpdate = BotProfileUpdate {language :: Maybe Text}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
