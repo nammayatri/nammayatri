@@ -259,9 +259,15 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
           -- Refund Notify
           fork "Process Refunds Notifications" $ do
             case newPaymentFulfillmentStatus of
-              DPayment.FulfillmentRefundInitiated -> TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
-              DPayment.FulfillmentRefundFailed -> TNotifications.notifyPaymentFulfillment Notification.REFUND_FAILED paymentOrder.id personId paymentService
-              DPayment.FulfillmentRefunded -> TNotifications.notifyPaymentFulfillment Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundInitiated ->
+                unless (isFrfsBookingPaymentService paymentService) $
+                  TNotifications.notifyPaymentFulfillment Notification.REFUND_PENDING paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefundFailed ->
+                unless (isFrfsBookingPaymentService paymentService) $
+                  TNotifications.notifyPaymentFulfillment Notification.REFUND_FAILED paymentOrder.id personId paymentService
+              DPayment.FulfillmentRefunded ->
+                unless (isFrfsBookingPaymentService paymentService) $
+                  TNotifications.notifyPaymentFulfillment Notification.REFUND_SUCCESS paymentOrder.id personId paymentService
               DPayment.FulfillmentPending -> do
                 when (paymentOrder.status /= updatedPaymentOrder.status && updatedPaymentOrder.status == Payment.CHARGED) $ do
                   TNotifications.notifyPaymentFulfillment Notification.FULFILLMENT_PENDING paymentOrder.id personId paymentService
@@ -402,6 +408,16 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                   }
           void $ QRecon.create reconEntry
 
+-- Refund notifications for these services are fired inside
+-- `bookingsRefundStatusHandler` at the moment the FRFS booking payment row
+-- transitions. Keep this list in sync with the dispatch in `refundStatusHandler`.
+isFrfsBookingPaymentService :: DOrder.PaymentServiceType -> Bool
+isFrfsBookingPaymentService = \case
+  DOrder.FRFSBooking -> True
+  DOrder.FRFSBusBooking -> True
+  DOrder.FRFSMultiModalBooking -> True
+  _ -> False
+
 refundStatusHandler ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -443,6 +459,7 @@ refundStatusHandler paymentOrder paymentServiceType = do
       mapM_
         ( \bookingPayment -> do
             let bookingPaymentId = bookingPayment.id
+                previousStatus = bookingPayment.status
                 bookingId = bookingPayment.frfsTicketBookingId
             mbBooking <- QFRFSTicketBooking.findById bookingId
             case mbBooking of
@@ -450,14 +467,25 @@ refundStatusHandler paymentOrder paymentServiceType = do
               Just booking -> do
                 when (booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]) $ do
                   QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-            case refund.status of
-              Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
-              Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
-              _ -> do
-                case isRefundApiCallSuccess of
-                  Nothing -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPaymentId
-                  Just True -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED bookingPaymentId
-                  Just False -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
+            let newStatus = case refund.status of
+                  Payment.REFUND_SUCCESS -> DFRFSTicketBookingPayment.REFUNDED
+                  Payment.REFUND_FAILURE -> DFRFSTicketBookingPayment.REFUND_FAILED
+                  _ -> case isRefundApiCallSuccess of
+                    Nothing -> DFRFSTicketBookingPayment.REFUND_PENDING
+                    Just True -> DFRFSTicketBookingPayment.REFUND_INITIATED
+                    Just False -> DFRFSTicketBookingPayment.REFUND_FAILED
+            when (previousStatus /= newStatus) $ do
+              QFRFSTicketBookingPayment.updateStatusById newStatus bookingPaymentId
+              whenJust mbBooking $ \booking -> do
+                let mbCategory = case newStatus of
+                      DFRFSTicketBookingPayment.REFUNDED -> Just Notification.REFUND_SUCCESS
+                      DFRFSTicketBookingPayment.REFUND_FAILED -> Just Notification.REFUND_FAILED
+                      DFRFSTicketBookingPayment.REFUND_INITIATED -> Just Notification.REFUND_PENDING
+                      DFRFSTicketBookingPayment.REFUND_PENDING -> Just Notification.REFUND_PENDING
+                      _ -> Nothing
+                whenJust mbCategory $ \category ->
+                  fork "notify FRFS refund status" $
+                    TNotifications.notifyPaymentFulfillment category paymentOrder.id booking.riderId paymentServiceType
         )
         bookingPayments
 
