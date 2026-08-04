@@ -1195,13 +1195,14 @@ computeIsCancellable ::
 computeIsCancellable booking integratedBPPConfig = do
   mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (CQFRFS.findByMerchantOperatingCityId booking.merchantOperatingCityId (Just [])))
   let configCancellable = maybe True (.isCancellationAllowed) mbFrfsConfig
+      (userCancellationAllowed, _) = SIBC.frfsCancellationFlags integratedBPPConfig
   let mbServiceTierType = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
   case mbServiceTierType of
     Just serviceTierType -> do
       mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
       let vstCancellable = fromMaybe True (mbVst >>= (.isCancellable))
-      return $ Just (configCancellable && vstCancellable)
-    Nothing -> return $ Just configCancellable
+      return $ Just (configCancellable && vstCancellable && userCancellationAllowed)
+    Nothing -> return $ Just (configCancellable && userCancellationAllowed)
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
 castCategoryToMode Spec.METRO = DTrip.Metro

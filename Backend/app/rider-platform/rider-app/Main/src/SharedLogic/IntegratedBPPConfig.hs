@@ -14,6 +14,13 @@ import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
 import Tools.Error
 
+frfsCancellationFlags :: IntegratedBPPConfig -> (Bool, Bool)
+frfsCancellationFlags integratedBPPConfig =
+  case integratedBPPConfig.providerConfig of
+    ONDC ONDCBecknConfig {providerInfo = Just pInfo} ->
+      (pInfo.isCancellationAllowed, fromMaybe True pInfo.isTechnicalCancellationAllowed)
+    _ -> (True, True)
+
 findMaybeIntegratedBPPConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe (Id IntegratedBPPConfig) ->

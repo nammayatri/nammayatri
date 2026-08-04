@@ -151,8 +151,13 @@ getProviderName integrationBPPConfig =
     (_, DIBC.ONDC _) -> "ONDC Services"
     (_, DIBC.CRIS _) -> "CRIS Subway"
 
-mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
-mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
+getQREncoding :: DIBC.IntegratedBPPConfig -> Maybe DIBC.QREncoding
+getQREncoding integratedBPPConfig = case integratedBPPConfig.providerConfig of
+  DIBC.ONDC ondcConfig -> ondcConfig.qrEncoding
+  _ -> Nothing
+
+mkTicketAPI :: Maybe DIBC.QREncoding -> DT.FRFSTicket -> APITypes.FRFSTicketAPI
+mkTicketAPI qrEncoding DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
 
 mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Maybe (Id DPO.PartnerOrganization) -> m APITypes.FRFSStationAPI
 mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do
@@ -177,7 +182,7 @@ safeTail xs = Just (last xs)
 
 mkFRFSConfigAPI :: Config.FRFSConfig -> APITypes.FRFSConfigAPIRes
 mkFRFSConfigAPI Config.FRFSConfig {..} = do
-  APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
+  APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, cityId = merchantOperatingCityId, ..}
 
 mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) => Maybe (Id DPO.PartnerOrganization) -> DIBC.IntegratedBPPConfig -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
 mkPOrgStationAPI mbPOrgId integratedBPPConfig stationAPI = do

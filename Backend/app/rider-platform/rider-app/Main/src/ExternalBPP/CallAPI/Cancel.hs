@@ -30,6 +30,9 @@ import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
 
+data CancellationInitiator = UserInitiated | Technical
+  deriving (Eq, Show)
+
 -- Caller should handle sideEffectData and call cancelJourney based on the cancellationType
 cancel ::
   ( CacheFlow m r,
@@ -54,14 +57,19 @@ cancel ::
   MerchantOperatingCity ->
   BecknConfig ->
   Spec.CancellationType ->
+  CancellationInitiator ->
   DBooking.FRFSTicketBooking ->
   m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
-cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
+cancel merchant merchantOperatingCity bapConfig cancellationType initiator booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   frfsConfig <-
     getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOperatingCity.id (Just [])))
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-  unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
+  let (userCancellationAllowed, technicalCancellationAllowed) = SIBC.frfsCancellationFlags integratedBPPConfig
+      providerCancellationAllowed = case initiator of
+        UserInitiated -> userCancellationAllowed
+        Technical -> technicalCancellationAllowed
+  unless (frfsConfig.isCancellationAllowed && providerCancellationAllowed) $ throwError CancellationNotSupported
   let mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
   whenJust mbServiceTierType $ \serviceTierType -> do
     mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id

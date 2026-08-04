@@ -16,6 +16,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.FleetOperatorTripAction
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RouteDetailsAPI
@@ -121,6 +122,7 @@ data FRFSCategorySelectionReq = FRFSCategorySelectionReq
 data FRFSConfigAPIRes = FRFSConfigAPIRes
   { bookingEndTime :: Kernel.Prelude.UTCTime,
     bookingStartTime :: Kernel.Prelude.UTCTime,
+    cityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     customDates :: [Data.Text.Text],
     customEndTime :: Data.Text.Text,
     discount :: Kernel.Prelude.Int,
@@ -350,6 +352,7 @@ data FRFSTicketAPI = FRFSTicketAPI
     description :: Data.Maybe.Maybe Data.Text.Text,
     isReturnTicket :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     qrData :: Data.Text.Text,
+    qrEncoding :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.QREncoding,
     scannedByVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
     status :: Domain.Types.FRFSTicketStatus.FRFSTicketStatus,
     ticketNumber :: Data.Text.Text,
@@ -361,6 +364,7 @@ data FRFSTicketAPI = FRFSTicketAPI
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+    bppOrderId :: Data.Maybe.Maybe Data.Text.Text,
     city :: Kernel.Types.Beckn.Context.City,
     createdAt :: Kernel.Prelude.UTCTime,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
