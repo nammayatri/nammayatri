@@ -200,6 +200,8 @@ data DriverListItem = DriverListItem
     onRide :: Kernel.Prelude.Bool,
     active :: Kernel.Prelude.Bool,
     onboardingDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onboardingAs :: Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs,
     recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
