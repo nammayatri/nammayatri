@@ -73,8 +73,20 @@ the test rider's number decrypts correctly (`999...001`).
 ## Algeria service areas
 
 `algeria-geofences.sql` repoints the backend from the upstream Indian service
-areas to **Algiers, Oran and Annaba**. `setup.sh` applies it automatically;
-`./setup.sh algeria` re-applies it on its own.
+areas to Algeria. `setup.sh` applies it automatically; `./setup.sh algeria`
+re-applies it on its own.
+
+Coverage is a switch, because both sets of boundaries are always loaded and
+only the merchant's restriction changes:
+
+```bash
+./setup.sh algeria                    # nationwide (default)
+COVERAGE=cities ./setup.sh algeria    # Algiers, Oran, Annaba only
+```
+
+**Nationwide is one national border, not 58 wilayas.** Note it is a real
+border, not "no geofence" — a NULL restriction would mean `Unrestricted`,
+i.e. the whole world, which is why Tunis and Oujda still get refused.
 
 Serviceability is one query — `Main/src/Storage/Queries/Geometry.hs`:
 
@@ -88,19 +100,28 @@ So a city is **two pieces of data and zero lines of code**: a `geometry` row
 (name + boundary), and that name listed in the merchant's origin/destination
 restriction. A fourth city is one more row and one more array element.
 
-Boundaries are the OpenStreetMap wilaya relations (`admin_level=4`), simplified
-to ~55 m to keep the file reviewable — 33k points down to 2.6k. Verified:
+Boundaries come from OpenStreetMap, simplified with
+`ST_SimplifyPreserveTopology` to keep the file reviewable:
+
+| Region | OSM relation | Level | Tolerance | Points |
+|---|---|---|---|---|
+| Algeria | 192756 | 2 (country) | ~200 m | 12109 → 1533 |
+| Algiers | 157062 | 4 (wilaya) | ~55 m | 13215 → 655 |
+| Oran | 1259187 | 4 | ~55 m | 7737 → 1152 |
+| Annaba | 1455599 | 4 | ~55 m | 12047 → 778 |
+
+Verified against the national boundary:
 
 | Point | Serviceable |
 |-------|-------------|
-| Algiers centre / Algiers airport / Bab Ezzouar | ✅ |
-| Oran centre / Es Senia airport | ✅ |
-| Annaba centre | ✅ |
-| Constantine | ❌ |
-| Bangalore | ❌ |
+| Algiers (centre + airport), Oran, Annaba | ✅ |
+| Constantine, Sétif, Batna, Tlemcen, Ghardaïa | ✅ |
+| Béchar, Adrar, Tamanrasset (Sahara) | ✅ |
+| Tunis 🇹🇳 / Oujda 🇲🇦 | ❌ |
+| Bangalore 🇮🇳 | ❌ |
 
-The two negatives matter — they prove the Indian areas were *replaced*, not
-merely added to.
+The negatives matter — they prove the Indian areas were *replaced* rather than
+added to, and that nationwide still means Algeria rather than everywhere.
 
 > **SRID 0, not 4326.** Matches the existing rows and the `ST_Point()` the
 > application builds. PostGIS refuses `ST_Contains` across mismatched SRIDs.

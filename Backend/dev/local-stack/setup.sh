@@ -17,6 +17,13 @@ UPSTREAM_REPO="https://github.com/nammayatri/nammayatri.git"
 UPSTREAM_SHA="03a753113af1fdcddf3378d9dc2fc31170e385e4"
 TREE_DIR="2023"
 
+# Which service areas the backend serves.
+#   nationwide  the whole of Algeria, one national border   (default)
+#   cities      Algiers, Oran and Annaba only
+# Both sets of boundaries are always loaded; this only picks which apply, so
+# switching costs one UPDATE:  COVERAGE=cities ./setup.sh algeria
+COVERAGE="${COVERAGE:-nationwide}"
+
 PG="docker exec ny-postgres psql -U postgres -d atlas_dev"
 
 log() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -106,16 +113,32 @@ seed_db() {
 seed_algeria() {
   # Must run *after* rider-app has migrated: atlas_app.geometry only exists
   # once its migrations have been applied.
-  log "Applying Algeria service areas (Algiers, Oran, Annaba)"
+  log "Applying Algeria service areas (coverage: $COVERAGE)"
   docker cp algeria-geofences.sql ny-postgres:/tmp/algeria-geofences.sql
   $PG -q -v ON_ERROR_STOP=1 -f /tmp/algeria-geofences.sql >/dev/null \
     || die "could not apply algeria-geofences.sql"
-  # The merchant row (which carries the service-area restriction) is cached in
-  # Redis, so the API would otherwise keep serving the previous service areas.
+
+  # The geometry rows are always loaded; coverage is only which of them the
+  # merchant is allowed to serve. That keeps switching to a single UPDATE.
+  case "$COVERAGE" in
+    nationwide) regions="ARRAY['Algeria']" ;;
+    cities)     regions="ARRAY['Algiers', 'Oran', 'Annaba']" ;;
+    *) die "COVERAGE must be 'nationwide' or 'cities', got '$COVERAGE'" ;;
+  esac
+  $PG -q -v ON_ERROR_STOP=1 -c "
+    UPDATE atlas_app.merchant
+       SET origin_restriction = $regions, destination_restriction = $regions;" >/dev/null \
+    || die "could not set coverage"
+
+  # The merchant row (which carries the restriction) is cached in Redis, so the
+  # API would otherwise keep serving the previous service areas.
   docker exec ny-redis redis-cli FLUSHALL >/dev/null
+
+  $PG -t -c "SELECT '  serving: ' || array_to_string(origin_restriction, ', ')
+               FROM atlas_app.merchant;" | sed 's/^ */  /' | grep -v '^ *$'
   $PG -t -c "SELECT region || ' (' || ST_NPoints(geom) || ' pts)'
                FROM atlas_app.geometry
-              WHERE region IN ('Algiers','Oran','Annaba') ORDER BY region;" \
+              WHERE region IN ('Algeria','Algiers','Oran','Annaba') ORDER BY region;" \
     | sed 's/^ */    /' | grep -v '^ *$'
 
   export_geojson
@@ -124,6 +147,9 @@ seed_algeria() {
 # Export the service areas the *database* actually holds, so the map can never
 # drift from what the API enforces. Regenerated on every run; not committed.
 export_geojson() {
+  # Export exactly the regions the merchant is allowed to serve, read back from
+  # the merchant row itself. The map then cannot show a different coverage from
+  # the one the API enforces.
   $PG -At -c "
     SELECT json_build_object(
              'type','FeatureCollection',
@@ -132,7 +158,7 @@ export_geojson() {
                'properties', json_build_object('region', region),
                'geometry', ST_AsGeoJSON(geom)::json)))
       FROM atlas_app.geometry
-     WHERE region IN ('Algiers','Oran','Annaba');" \
+     WHERE region = ANY (SELECT unnest(origin_restriction) FROM atlas_app.merchant);" \
     | tr -d '\r' > demo-map/site/areas.geojson
   [ -s demo-map/site/areas.geojson ] || die "failed to export demo-map/site/areas.geojson"
   ok "map data exported ($(wc -c < demo-map/site/areas.geojson) bytes)"
@@ -198,12 +224,36 @@ verify() {
   [ -n "$token" ] || die "OTP verification failed"
   ok "POST /v2/auth/{id}/verify      200  token=$token"
 
-  # Positive: Algiers city centre must be inside the service area.
+  # Positive: Algiers city centre must be inside the service area under either
+  # coverage setting.
   svc=$(curl -s --max-time 20 -X POST "$base/v2/serviceability/origin" \
       -H 'content-type: application/json' -H "token: $token" \
       -d '{"location":{"lat":36.7538,"lon":3.0588}}')
   printf '%s' "$svc" | grep -q '"serviceable":true' || die "Algiers should be serviceable: $svc"
   ok "POST /v2/serviceability/origin 200  Algiers      serviceable=true"
+
+  # Coverage-dependent: Constantine is in Algeria but is not one of the three
+  # cities, so it distinguishes the two settings rather than just passing.
+  svc=$(curl -s --max-time 20 -X POST "$base/v2/serviceability/origin" \
+      -H 'content-type: application/json' -H "token: $token" \
+      -d '{"location":{"lat":36.3650,"lon":6.6147}}')
+  if [ "$COVERAGE" = "nationwide" ]; then
+    printf '%s' "$svc" | grep -q '"serviceable":true' \
+      || die "nationwide: Constantine should be serviceable: $svc"
+    ok "POST /v2/serviceability/origin 200  Constantine  serviceable=true"
+  else
+    printf '%s' "$svc" | grep -q '"serviceable":false' \
+      || die "cities: Constantine should NOT be serviceable: $svc"
+    ok "POST /v2/serviceability/origin 200  Constantine  serviceable=false"
+  fi
+
+  # Negative: a neighbouring country must be refused even nationwide. This is
+  # what makes 'nationwide' meaningfully different from 'no geofence at all'.
+  svc=$(curl -s --max-time 20 -X POST "$base/v2/serviceability/origin" \
+      -H 'content-type: application/json' -H "token: $token" \
+      -d '{"location":{"lat":36.8065,"lon":10.1815}}')
+  printf '%s' "$svc" | grep -q '"serviceable":false' || die "Tunis should NOT be serviceable: $svc"
+  ok "POST /v2/serviceability/origin 200  Tunis (TN)   serviceable=false"
 
   # Negative: proves the Algeria swap actually replaced the Indian service
   # areas rather than just adding to them. Without this, an always-true

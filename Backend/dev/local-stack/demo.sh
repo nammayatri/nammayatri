@@ -48,9 +48,12 @@ ask() {
 }
 ask "Algiers - city centre"  36.7538     3.0588
 ask "Algiers - airport"      36.6910     3.2154
-ask "Oran - city centre"     35.6969    -0.6331
-ask "Annaba - city centre"   36.9000     7.7667
-ask "Constantine (not ours)" 36.3650     6.6147
+ask "Oran"                   35.6969    -0.6331
+ask "Annaba"                 36.9000     7.7667
+ask "Constantine"            36.3650     6.6147
+ask "Tamanrasset (Sahara)"   22.7850     5.5228
+ask "Tunis, Tunisia"         36.8065    10.1815
+ask "Oujda, Morocco"         34.6867    -1.9114
 ask "Bangalore, India"       12.9715987 77.5945627
 
 printf '\n\033[1;33m=== DONE - backend fully operational, serving Algeria ===\033[0m\n\n'

@@ -37,12 +37,15 @@ Write-Host ""
 Write-Host "=== 5. Authenticated business call: is this pickup point serviceable? ===" -ForegroundColor Cyan
 $hdr = @{ "content-type" = "application/json"; "token" = $verify.token }
 $points = @(
-    @{ name = "Algiers - city centre";  lat = 36.7538;     lon = 3.0588 },
-    @{ name = "Algiers - airport";      lat = 36.6910;     lon = 3.2154 },
-    @{ name = "Oran - city centre";     lat = 35.6969;     lon = -0.6331 },
-    @{ name = "Annaba - city centre";   lat = 36.9000;     lon = 7.7667 },
-    @{ name = "Constantine (not ours)"; lat = 36.3650;     lon = 6.6147 },
-    @{ name = "Bangalore, India";       lat = 12.9715987;  lon = 77.5945627 }
+    @{ name = "Algiers - city centre"; lat = 36.7538;    lon = 3.0588 },
+    @{ name = "Algiers - airport";     lat = 36.6910;    lon = 3.2154 },
+    @{ name = "Oran";                  lat = 35.6969;    lon = -0.6331 },
+    @{ name = "Annaba";                lat = 36.9000;    lon = 7.7667 },
+    @{ name = "Constantine";           lat = 36.3650;    lon = 6.6147 },
+    @{ name = "Tamanrasset (Sahara)";  lat = 22.7850;    lon = 5.5228 },
+    @{ name = "Tunis, Tunisia";        lat = 36.8065;    lon = 10.1815 },
+    @{ name = "Oujda, Morocco";        lat = 34.6867;    lon = -1.9114 },
+    @{ name = "Bangalore, India";      lat = 12.9715987; lon = 77.5945627 }
 )
 foreach ($p in $points) {
     $body = '{"location":{"lat":' + $p.lat + ',"lon":' + $p.lon + '}}'

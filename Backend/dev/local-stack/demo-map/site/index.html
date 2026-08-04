@@ -127,16 +127,21 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution:'&copy; OpenStreetMap contributors', maxZoom:19
 }).addTo(map);
 
-// Preset points. The two at the bottom are outside our service areas on
-// purpose — they show the backend really is refusing places we do not serve.
+// Preset points, spread across the country plus three places outside it. The
+// foreign ones are deliberate: they show the backend really is refusing what
+// it does not serve, rather than saying yes to everything.
 const PRESETS = [
-  { name:'Algiers — city centre',   lat:36.7538,    lon:3.0588     },
-  { name:'Algiers — airport',       lat:36.6910,    lon:3.2154     },
-  { name:'Oran — city centre',      lat:35.6969,    lon:-0.6331    },
-  { name:'Oran — Es Senia airport', lat:35.6244,    lon:-0.6212    },
-  { name:'Annaba — city centre',    lat:36.9000,    lon:7.7667     },
-  { name:'Constantine',             lat:36.3650,    lon:6.6147     },
-  { name:'Bangalore, India',        lat:12.9715987, lon:77.5945627 },
+  { name:'Algiers — city centre', lat:36.7538,    lon:3.0588     },
+  { name:'Algiers — airport',     lat:36.6910,    lon:3.2154     },
+  { name:'Oran',                  lat:35.6969,    lon:-0.6331    },
+  { name:'Annaba',                lat:36.9000,    lon:7.7667     },
+  { name:'Constantine',           lat:36.3650,    lon:6.6147     },
+  { name:'Tlemcen',               lat:34.8828,    lon:-1.3150    },
+  { name:'Ghardaïa',              lat:32.4900,    lon:3.6667     },
+  { name:'Tamanrasset (Sahara)',  lat:22.7850,    lon:5.5228     },
+  { name:'Tunis, Tunisia',        lat:36.8065,    lon:10.1815    },
+  { name:'Oujda, Morocco',        lat:34.6867,    lon:-1.9114    },
+  { name:'Bangalore, India',      lat:12.9715987, lon:77.5945627 },
 ];
 
 const btns = document.getElementById('buttons');
