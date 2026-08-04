@@ -99,8 +99,12 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
     bapConfig <-
       getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
         >>= fromMaybeM (InternalError "Beckn Config not found")
-    let bookingWithRefund = booking {DFRFSTicketBooking.refundAmount = Just refundAmount}
-    updateTotalOrderValueAndSettlementAmount bookingWithRefund quoteCategories bapConfig
+    -- Counter cancellation: the refund is carried only by new negative recon rows, so the original rows must keep their full settlement value (skip updateTotalOrderValueAndSettlementAmount, which would reduce them too).
+    if isCounterCancellation
+      then createCounterCancelReconEntries booking bapConfig refundAmount mRiderNumber fareParameters
+      else do
+        let bookingWithRefund = booking {DFRFSTicketBooking.refundAmount = Just refundAmount}
+        updateTotalOrderValueAndSettlementAmount bookingWithRefund quoteCategories bapConfig
   void $ CQP.clearPSCache booking.riderId
   unless isCounterCancellation $ do
     releaseSeatsIfHeld booking quoteCategories

@@ -284,8 +284,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
           `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
+    -- No netting here: the refund is already booked as negative recon rows at on_cancel, and this branch runs on every status poll.
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
-      FRFSUtils.updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
       withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
