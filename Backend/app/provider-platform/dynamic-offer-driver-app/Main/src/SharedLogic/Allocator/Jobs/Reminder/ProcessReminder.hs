@@ -256,7 +256,7 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
   if reminder.documentType `elem` documentExpiryTypes
     then processDocumentExpiryReminder reminder driver config merchantId merchantOpCityId
     else do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       case reminder.documentType of
         DVC.InspectionHub -> do
           -- If overdue and mandatory but driver is on ride, reschedule instead of removing vehicle
@@ -506,7 +506,7 @@ invalidateRCAndRemoveVehicleForReminder ::
   m ()
 invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = do
   rc <- QVRC.findById rcId >>= fromMaybeM (RCNotFound rcId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mActiveAssociation <- QDRCA.findActiveAssociationByRC rc.id True
   case mActiveAssociation of
     Just assoc | assoc.driverId == driverId -> do

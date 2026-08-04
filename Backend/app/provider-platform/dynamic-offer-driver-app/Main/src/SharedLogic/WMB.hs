@@ -558,7 +558,7 @@ linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumbe
                 isActivate = True
               }
       void $ DomainRC.linkRCStatus (driverId, merchantId, merchantOperatingCityId) False rcStatusReq
-      wmbLinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      wmbLinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
       when (wmbLinkTC.unifiedOnboardingFlagsRecompute == Just True) $
         void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbLinkTC) driverId
     createRCAssociation = do
@@ -591,7 +591,7 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
     >>= \case
       Just rc -> DAQuery.endAssociationForRC driverId rc.id
       Nothing -> pure ()
-  wmbUnlinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  wmbUnlinkTC <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   when (wmbUnlinkTC.unifiedOnboardingFlagsRecompute == Just True) $
     void $ SStatus.runRefreshOnboardingFlagsDriver Nothing (Just wmbUnlinkTC) driverId
 

@@ -142,7 +142,7 @@ fleetOwnerRegister req mbEnabled = do
           let req' = Image.ImageValidateRequest {imageType = DVC.GSTCertificate, image = gstImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
           image <- Image.validateImage True Nothing Nothing (person.id, merchant.id, merchantOpCityId) req'
           gstNumber <- forM req.gstNumber encrypt
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
           SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner person.id) $
             QFOI.updateGstImage gstNumber (Just image.imageId.getId) person.id
       return $ FleetOwnerRegisterRes {personId = person.id.getId}
@@ -196,7 +196,7 @@ createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.Fleet
 createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId merchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
   now <- getCurrentTime
   mbGstNumberEnc <- forM mbGstNumber encrypt
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   let useUnifiedOnboardingFlagsRecompute = maybe False (\transporterConfig -> transporterConfig.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfig
       fleetType = fromMaybe NORMAL_FLEET mbFleetType
       enabled = not useUnifiedOnboardingFlagsRecompute && fromMaybe True mbEnabled

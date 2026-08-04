@@ -976,7 +976,7 @@ verify tokenId req mbClientId mbXForwardedFor = do
   fork "Decrement Auth IP Counter" $ do
     mbClientIP <- extractClientIP mbXForwardedFor
     whenJust mbClientIP $ \clientIP -> do
-      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQMerchantCfg.findAllByMerchantOperatingCityId person.merchantOperatingCityId (Just [])))
+      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Nothing)
       SMC.decrementCustomerAuthCountersByIP clientIP merchantConfigs
   void $ Person.updateDeviceToken deviceToken person.id
   personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
@@ -1131,7 +1131,6 @@ resend tokenId mbSenderHash = do
   let otpCode = authValueHash
   otpChannel <- getPersonOTPChannel person.id
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
-
   mobileNumber <- mapM decrypt person.mobileNumber
   receiverEmail <- mapM decrypt person.email
 

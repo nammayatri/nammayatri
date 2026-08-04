@@ -2525,7 +2525,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         DVC.LDCCertificate -> do
           rejectImage imageId
           -- LDC reject also resets the fleet owner's TDS: explicit rate from the request, else the configured default (mirrors approve)
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
           let mbTdsRate = imageRejectReq.tdsRate <|> ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate)
           QFOI.updateTdsRate mbTdsRate image.personId
         docType

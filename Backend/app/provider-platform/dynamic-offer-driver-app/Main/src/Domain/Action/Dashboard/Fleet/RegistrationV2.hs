@@ -305,7 +305,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
 enableFleetOwnerOnDocsValid :: Id DP.Person -> Flow (Maybe Bool)
 enableFleetOwnerOnDocsValid fleetOwnerId = do
   fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
-  tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId fleetPersonForEnable.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
+  tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
   SGuard.withOnboardingAction tcForEnable SGuard.None SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerId) $ do
     SFlags.markDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
   fmap (.enabled) <$> QFOI.findByPrimaryKey fleetOwnerId
@@ -369,7 +369,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
 createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
   now <- getCurrentTime
-  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   let useUnifiedOnboardingFlagsRecompute = maybe False (\transporterConfig -> transporterConfig.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfig
       fleetOwnerInfo =
         FOI.FleetOwnerInformation

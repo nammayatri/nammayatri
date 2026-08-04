@@ -1360,7 +1360,7 @@ postDriverLinkToFleet ::
   Flow APISuccess
 postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
   let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
   case req.isRevoke of
