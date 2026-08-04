@@ -210,6 +210,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
   whenJust mbJourneyId $ \journeyId -> do
     QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  Metrics.incrementFRFSTicketConfirmedCounter merchant.name booking.merchantOperatingCityId.getId (show booking.vehicleType) (show $ fromMaybe "unknown" booking.serviceTierType) booking.providerId
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking

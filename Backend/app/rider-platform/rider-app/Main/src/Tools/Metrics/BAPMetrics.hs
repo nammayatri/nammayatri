@@ -144,6 +144,13 @@ incrementVehicleWaybillStatusCounter merchantName merchantOperatingCityId waybil
   let vehicleWaybillStatusCounter = bmContainer.vehicleWaybillStatusCounter
   liftIO $ P.withLabel vehicleWaybillStatusCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, waybillStatus) P.incCounter
 
+incrementFRFSTicketConfirmedCounter :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> Text -> m ()
+incrementFRFSTicketConfirmedCounter merchantName merchantOperatingCityId vehicleType serviceType providerId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let frfsTicketConfirmedCounter = bmContainer.frfsTicketConfirmedCounter
+  liftIO $ P.withLabel frfsTicketConfirmedCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleType, serviceType, providerId) P.incCounter
+
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)
 
