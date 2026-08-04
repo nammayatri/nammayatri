@@ -9,6 +9,8 @@ imports:
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  Pass: Domain.Types.Pass
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   HighPrecMoney: Kernel.Types.Common
@@ -84,6 +86,7 @@ types:
     routeCode: Maybe Text
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
+    applicablePasses: "[FRFSPassOptionAPIEntity]"
 
     derive: "Show"
 
@@ -106,6 +109,14 @@ types:
     tnc: Maybe Text
     code: Maybe Text
     eligibility: Bool
+    derive: "Show"
+
+  FRFSPassOptionAPIEntity:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    passId: Id Pass
+    passName: Maybe Text
+    overriddenPrice: PriceAPIEntity
+    availableTripCount: Maybe Int
     derive: "Show"
 
   CategoryInfoResponse:
