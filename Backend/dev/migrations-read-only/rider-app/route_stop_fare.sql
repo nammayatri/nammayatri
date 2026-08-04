@@ -28,11 +28,9 @@ ALTER TABLE atlas_app.route_stop_fare ADD COLUMN offered_amount double precision
 
 ------- SQL updates -------
 
-CREATE INDEX CONCURRENTLY route_stop_fare_idx_end_stop_code_start_stop_code ON atlas_app.route_stop_fare USING btree (end_stop_code, start_stop_code);
 
 
 ------- SQL updates -------
 
-DROP INDEX IF EXISTS atlas_app.route_stop_fare_idx_end_stop_code_start_stop_code;
 CREATE INDEX CONCURRENTLY route_stop_fare_idx_end_stop_code ON atlas_app.route_stop_fare USING btree (end_stop_code);
 CREATE INDEX CONCURRENTLY route_stop_fare_idx_start_stop_code ON atlas_app.route_stop_fare USING btree (start_stop_code);

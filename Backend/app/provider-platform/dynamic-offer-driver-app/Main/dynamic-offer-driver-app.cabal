@@ -220,6 +220,7 @@ library
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
@@ -1085,6 +1086,7 @@ library
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.ScheduledBooking
       API.Action.Dashboard.Management.SearchTry
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
