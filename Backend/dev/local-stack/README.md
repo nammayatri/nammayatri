@@ -24,7 +24,7 @@ POST /v2/serviceability/origin 200  Bangalore    serviceable=false
 
 | URL | What |
 |-----|------|
-| `http://localhost:8015` | **Service-area map** — click anywhere, the backend answers |
+| `http://localhost:8025` | **Service-area map** — click anywhere, the backend answers |
 | `http://localhost:8014/swagger` | Rider (BAP) Swagger UI — 60 endpoints (**no trailing slash**) |
 | `http://localhost:8014/openapi` | Rider OpenAPI spec (JSON) |
 | `http://localhost:8017/swagger` | **Driver (BPP) Swagger UI — 99 endpoints** |
@@ -136,7 +136,7 @@ added to, and that nationwide still means Algeria rather than everywhere.
 > Postgres without dropping the cache and the API keeps serving the old areas.
 > `setup.sh` flushes Redis for you.
 
-### The map — `http://localhost:8015`
+### The map — `http://localhost:8025`
 
 A one-page visual of the same thing the terminal checks: the three boundaries
 drawn on a map, click anywhere to fire a real
@@ -229,7 +229,16 @@ Verified directly against the engine on `:5001`:
 Street names come back as real Algerian data in both languages
 (`Rue Larbi Tebessi شارع العربي التبسي`).
 
-### The catch: this baseline's OSRM cannot do routes
+### Ride search works
+
+```
+POST /v2/rideSearch  ->  searchId, 328 route points, 13687 m, 996 s
+```
+
+Those numbers come from the Algerian road graph, through
+`rider-app -> maps-shim -> OSRM`, confirmed in OSRM's access log.
+
+### Why a shim is needed at all
 
 `osrm-config.sql` switches `get_distances`, `get_routes` and `snap_to_road` to
 OSRM. Distances and snap-to-road are fine. Routes are not:
@@ -244,46 +253,46 @@ implementation.** So in this 2023 baseline, routing has to come from Google —
 and `mock-google` has no Directions endpoint either (it implements
 DistanceMatrix, PlaceName and SnapToRoad only).
 
-Three ways out:
+**`maps-shim` is the answer** (`maps-shim/server.js`, ~150 lines, no
+dependencies). It speaks Google's Directions API and answers from OSRM, so the
+backend keeps thinking it is talking to Google. `osrm-config.sql` therefore
+leaves `get_routes = 'Google'` and repoints `googleMapsUrl` at the shim.
 
-1. **A translation shim** — a small service that speaks Google's
-   `/directions/json` and answers it from OSRM underneath. Free, no rebuild, no
-   key. The response shape is small (`DirectionsResp → Route → Leg → Step`) and
-   OSRM already returns every field needed, including the encoded polyline in
-   the same format Google uses. Costs us a component to maintain.
-2. **A real Google key** — works immediately, but it is metered and needs an
-   international payment card.
-3. **A newer backend** — later versions may implement OSRM routing, but moving
-   off this baseline needs the full Haskell build.
+Anything that is not `/directions/json` is forwarded untouched to mock-google,
+so one `googleMapsUrl` still covers place names and autocomplete.
 
-Until one of those lands, a ride search still cannot complete.
+OSRM and Google use the same polyline encoding, so geometry passes through
+unmodified; it is decoded only to compute step endpoints and route bounds.
+
+The alternative was a paid Google key. This costs nothing and needs no card;
+the trade-off is a component we own. If a future backend implements OSRM
+routing natively, it can simply be deleted.
 
 ## Not connected yet: rider → driver
 
-Both sides run, but a rider search does **not** reach the driver side. It fails
-earlier:
+Search succeeds and returns a real route, but comes back with
+`"quotes": [], "estimates": []`, and `atlas_driver_offer_bpp.search_request`
+stays empty. The driver side never hears about it.
+
+The reason is in the merchant row:
 
 ```
-POST /v2/rideSearch  ->  {"errorCode":"GOOGLE_MAPS_API_ERROR"}
+gateway_url  = http://localhost:8015/v1
+registry_url = http://localhost:8020
 ```
 
-The rider app resolves distance and route *before* going out over BECKN, and
-the merchant is configured to use Google for all of it:
+A BAP does not call a BPP directly. It posts `/search` to a **BECKN gateway**,
+which looks participants up in a **registry** and broadcasts. Neither is
+running, so the call fails and the search ends with no quotes.
 
-```
-get_distances | get_routes | snap_to_road | get_place_name | auto_complete
-Google        | Google     | Google       | Google         | Google
-```
+**Neither binary is in the published image** — it ships `beckn-cli-exe`, but
+`beckn-gateway` and `mock-registry` come from a separate repository
+(`nammayatri/beckn-gateway`, a stack extra-dep) and are not among the
+executables in `/opt/app`. Running them means building them, which is the same
+Haskell build that blocks the `+91` phone-number change.
 
-There is no API key, so it fails. Two ways forward:
-
-- **`mock-google-exe`** — already in the image, purpose-built for this. Gets the
-  flow working end to end, with fake distances.
-- **OSRM** — `Maps_OSRM` already exists in `merchant_service_config`, so it is a
-  config switch plus a real OSRM server with an Algeria extract. Correct
-  routing, considerably more setup.
-
-Only after that can BECKN wiring (registry, gateway, subscriber IDs) be tested.
+So the remaining work is one problem, not two: **get a build**, and both the
+gateway and the country code are unblocked together.
 
 ## Gotchas
 
@@ -322,7 +331,7 @@ docker-compose.yml    the stack
 Dockerfile.rider      librdkafka fix
 algeria-geofences.sql Algiers / Oran / Annaba service areas
 demo.sh, demo.ps1     scripted end-to-end demo
-demo-map/             the map on :8015 (nginx conf + page)
+demo-map/             the map on :8025 (nginx conf + page)
   site/areas.geojson  exported from the DB by setup.sh (gitignored)
 2023/                 pinned upstream tree (fetched by setup.sh, gitignored)
 ```

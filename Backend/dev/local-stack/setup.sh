@@ -318,7 +318,7 @@ verify() {
   verify_driver
 
   printf '\n\033[1;32m*** Backend is fully operational ***\033[0m\n'
-  printf '\033[1;36m    Service-area map: http://localhost:8015\033[0m\n\n'
+  printf '\033[1;36m    Service-area map: http://localhost:8025\033[0m\n\n'
 }
 
 verify_driver() {

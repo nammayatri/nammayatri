@@ -9,6 +9,23 @@
 # out of the Docker Desktop VM).
 #
 # Run via ./setup.sh — it fetches the pinned upstream tree that ./2023 refers to.
+#
+# RESERVED PORTS — do not use these for anything we add. The merchant row and
+# the upstream dhall configs point at them, so squatting on one makes the
+# backend talk to the wrong service and fail in a thoroughly confusing way:
+#
+#   8013  rider-app (BAP)          8016  driver-app (BPP)
+#   8015  beckn-gateway            8020  mock-registry
+#   8019  mock-google              5000  osrm
+#
+# 8015 and 8020 have no service here yet: beckn-gateway and mock-registry are
+# not in the published image (it ships beckn-cli-exe only), so they would have
+# to be built. They are left free regardless -- an earlier version of this file
+# put the map on 8015 and the shim on 8020, and ride search then failed because
+# rider-app dutifully sent its BECKN /search to the map's nginx.
+#
+# Ours live above the reserved range: 8025 map, 8030 maps-shim, and the
+# Windows-facing proxies on 8014 / 8017 / 5001.
 
 services:
   postgres:
@@ -165,6 +182,25 @@ services:
       - "5001:5000"
     restart: unless-stopped
 
+  # Google Directions -> OSRM translator. See maps-shim/server.js for why this
+  # is necessary: this baseline cannot get routes from OSRM, and mock-google
+  # has no /directions/json. The backend keeps talking "Google"; the answers
+  # come from the Algerian road graph. Non-route requests are forwarded to
+  # mock-google, so one googleMapsUrl still covers everything.
+  maps-shim:
+    image: node:20-alpine
+    container_name: ny-maps-shim
+    network_mode: host
+    working_dir: /app
+    command: node server.js
+    environment:
+      PORT: "8030"
+      OSRM_URL: "http://localhost:5000"
+      MOCK_GOOGLE_URL: "http://localhost:8019"
+    volumes:
+      - ./maps-shim:/app:ro
+    restart: unless-stopped
+
   # rider-app uses host networking, so its port lives inside the Docker VM and
   # isn't published to Windows. This forwards it to localhost:8014.
   proxy:
@@ -192,7 +228,7 @@ services:
     image: nginx:alpine
     container_name: ny-map
     ports:
-      - "8015:80"
+      - "8025:80"
     volumes:
       - ./demo-map/site:/usr/share/nginx/html:ro
       - ./demo-map/nginx.conf:/etc/nginx/conf.d/default.conf:ro

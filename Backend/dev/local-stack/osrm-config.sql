@@ -9,14 +9,22 @@
 -- Split of responsibilities after this runs:
 --
 --   get_distances  OSRM     road distances, not straight lines
---   get_routes     OSRM     the actual reason for all of this
 --   snap_to_road   OSRM     GPS traces onto real roads
---   get_place_name Google   -> mock-google; OSRM is a router, not a geocoder
---   auto_complete  Google   -> mock-google, same reason
+--   get_routes     Google   -> maps-shim -> OSRM   (see below)
+--   get_place_name Google   -> maps-shim -> mock-google
+--   auto_complete  Google   -> maps-shim -> mock-google
 --
--- Address search and autocomplete are the remaining gap: mock-google returns
--- fixture data for those. A real deployment needs a geocoder (Nominatim
--- self-hosted, or a paid provider). It does not block ride search.
+-- get_routes stays on "Google" deliberately. OSRM cannot serve it in this
+-- baseline -- Kernel.External.Maps.Interface.OSRM exports only callOsrmMatch,
+-- getDistances and getOSRMTable, so selecting OSRM fails with
+--     "Function getRoutes is not provided by service OSRM"
+-- Instead the Google endpoint is repointed at maps-shim, which speaks the
+-- Directions API and answers from OSRM. The backend cannot tell, and the
+-- routes come from the real Algerian road graph rather than a fixture.
+--
+-- Address search and autocomplete still return mock-google's fixture data,
+-- forwarded through the shim. A real deployment needs a geocoder (Nominatim
+-- self-hosted, or a paid provider). Neither blocks ride search.
 --
 -- Idempotent: safe to re-run.
 
@@ -26,8 +34,19 @@ BEGIN;
 -- 1057-merchant-config-changes.sql inserts it for every merchant.
 UPDATE atlas_app.merchant_service_usage_config
    SET get_distances = 'OSRM',
-       get_routes    = 'OSRM',
+       get_routes    = 'Google',   -- served by maps-shim, backed by OSRM
        snap_to_road  = 'OSRM';
+
+-- Repoint "Google" at the shim rather than at mock-google directly. The shim
+-- forwards everything except /directions/json straight through, so place
+-- names and autocomplete are unaffected. googleKey is preserved: it is an
+-- encrypted value and the shim ignores it, but the backend still decrypts it.
+UPDATE atlas_app.merchant_service_config
+   SET config_json = json_build_object(
+         'googleMapsUrl',  'http://localhost:8030/',
+         'googleRoadsUrl', 'http://localhost:8030/',
+         'googleKey',      config_json ->> 'googleKey')
+ WHERE service_name = 'Maps_Google';
 
 -- Driver (BPP). Its migrations insert Maps_OSRM too, so in a normal run this
 -- INSERT does nothing. It is kept as a guard: switching the usage config to a
@@ -47,7 +66,14 @@ SELECT m.id,
 
 UPDATE atlas_driver_offer_bpp.merchant_service_usage_config
    SET get_distances = 'OSRM',
-       get_routes    = 'OSRM',
+       get_routes    = 'Google',   -- served by maps-shim, backed by OSRM
        snap_to_road  = 'OSRM';
+
+UPDATE atlas_driver_offer_bpp.merchant_service_config
+   SET config_json = json_build_object(
+         'googleMapsUrl',  'http://localhost:8030/',
+         'googleRoadsUrl', 'http://localhost:8030/',
+         'googleKey',      config_json ->> 'googleKey')
+ WHERE service_name = 'Maps_Google';
 
 COMMIT;
