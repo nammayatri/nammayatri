@@ -182,6 +182,10 @@ clearCityCache merchantOpCityId =
 -- CoinsConfig create/update bumps a city+vehicleCategory generation so all
 -- drivers refetch without deleting every per-driver key (bulk-safe).
 -- Person.driverTag update only deletes that driver's hash keys.
+--
+-- All Gen/Hash ops go through master-cloud Redis (same pattern as coin
+-- balance / valid-ride-count) so AWS and GCP pods share one generation
+-- counter and do not serve stale 304s from a cloud-local Gen key.
 
 allVehicleCategories :: [DTV.VehicleCategory]
 allVehicleCategories =
@@ -217,44 +221,54 @@ driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId =
 
 getDriverIncentiveConfigGeneration :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> m Integer
 getDriverIncentiveConfigGeneration mocId vehicleCategory =
-  fromMaybe 0 <$> Hedis.safeGet (driverIncentiveConfigGenRedisKey mocId vehicleCategory)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+    fromMaybe 0 <$> Hedis.safeGet (driverIncentiveConfigGenRedisKey mocId vehicleCategory)
 
 -- | Returns cached ETag only when it was written under the current generation.
 getDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> m (Maybe Text)
-getDriverIncentiveConfigHash mocId vehicleCategory driverId = do
-  gen <- getDriverIncentiveConfigGeneration mocId vehicleCategory
-  mbETag <- Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId)
-  pure $
-    mbETag >>= \eTag ->
-      if etagGeneration eTag == Just gen then Just eTag else Nothing
+getDriverIncentiveConfigHash mocId vehicleCategory driverId =
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ do
+    mbETag <- Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId)
+    gen <- fromMaybe 0 <$> Hedis.safeGet (driverIncentiveConfigGenRedisKey mocId vehicleCategory)
+    pure $
+      mbETag >>= \eTag ->
+        if etagGeneration eTag == Just gen then Just eTag else Nothing
 
 setDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> Text -> m ()
 setDriverIncentiveConfigHash mocId vehicleCategory driverId eTag = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId) eTag expTime
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+    Hedis.setExp (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId) eTag expTime
 
 -- | After CoinsConfig create/update: bump generation so all drivers miss cache
 -- without a city-wide delete of per-driver keys.
 clearDriverIncentiveConfigHash :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m ()
 clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory =
-  case mbVehicleCategory of
-    Just vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)
-    Nothing -> mapM_ (\vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)) allVehicleCategories
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+    case mbVehicleCategory of
+      Just vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)
+      Nothing -> mapM_ (\vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)) allVehicleCategories
 
 -- | After Person.driverTag update: drop only this driver's cached ETags.
 clearDriverIncentiveConfigHashForDriver :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> m ()
 clearDriverIncentiveConfigHashForDriver merchantOpCityId driverId =
-  mapM_
-    ( \vc -> void $ Hedis.del (driverIncentiveConfigHashRedisKey merchantOpCityId.getId vc driverId.getId)
-    )
-    allVehicleCategories
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
+    mapM_
+      ( \vc -> void $ Hedis.del (driverIncentiveConfigHashRedisKey merchantOpCityId.getId vc driverId.getId)
+      )
+      allVehicleCategories
 
--- | ETag format: "<generation>:<contentHash>"
+-- | ETag format: one quoted entity-tag "<generation>:<digest>"
+-- (contentHash must be the bare digest, not already quoted).
 mkDriverIncentiveConfigETag :: Integer -> Text -> Text
-mkDriverIncentiveConfigETag gen contentHash = T.pack (show gen) <> ":" <> contentHash
+mkDriverIncentiveConfigETag gen contentHash =
+  let digest = T.dropAround (== '"') contentHash
+   in "\"" <> T.pack (show gen) <> ":" <> digest <> "\""
 
+-- | Parse generation from "<generation>:<digest>" (tolerates a missing outer quote pair).
 etagGeneration :: Text -> Maybe Integer
 etagGeneration eTag =
-  case T.break (== ':') eTag of
-    (genText, rest) | not (T.null rest) -> readMaybe (T.unpack genText)
-    _ -> Nothing
+  let bare = T.dropAround (== '"') eTag
+   in case T.break (== ':') bare of
+        (genText, rest) | not (T.null rest) -> readMaybe (T.unpack genText)
+        _ -> Nothing

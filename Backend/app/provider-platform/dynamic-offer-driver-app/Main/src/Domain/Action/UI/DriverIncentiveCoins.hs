@@ -272,7 +272,7 @@ toConfigItem selected ridesThreshold =
 
 computeDriverIncentiveConfigETag :: [API.DriverIncentiveCoinConfigItem] -> Text
 computeDriverIncentiveConfigETag items =
-  T.cons '"' (T.pack (show (Hash.hashWith Hash.SHA256 (BS.toStrict (encode items))))) `T.snoc` '"'
+  T.pack (show (Hash.hashWith Hash.SHA256 (BS.toStrict (encode items))))
 
 isRidesCompletedFunction :: DCT.DriverCoinsFunctionType -> Bool
 isRidesCompletedFunction = \case
