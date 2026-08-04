@@ -87,11 +87,12 @@ import Tools.Utils (emailBasedonEmailVerificationMandate)
 postRegistrationV2LoginOtp ::
   ShortId DMerchant.Merchant ->
   City.City ->
+  Maybe Text ->
   Bool ->
   Common.FleetOwnerLoginReqV2 ->
   Flow Common.FleetOwnerLoginResV2
-postRegistrationV2LoginOtp merchantShortId opCity enabled req = do
-  fleetOwnerLogin merchantShortId opCity Nothing (Just enabled) req
+postRegistrationV2LoginOtp merchantShortId opCity mbDashboardPersonId enabled req = do
+  fleetOwnerLogin merchantShortId opCity Nothing (Just enabled) (Id <$> mbDashboardPersonId) req
 
 postRegistrationV2VerifyOtp ::
   ShortId DMerchant.Merchant ->
@@ -342,11 +343,15 @@ getOperatorIdFromReferralCode (Just refCode) = do
   case result of
     SuccessCode val -> return $ Just val
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Maybe (Id DP.Person) -> Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled mbDashboardPersonId = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
-  person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
+  person' <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
+  isDashboardPersonIdTaken <- maybe (pure False) (fmap isJust . QP.findById) mbDashboardPersonId
+  let person = case mbDashboardPersonId of
+        Just dashboardPersonId | not isDashboardPersonIdTaken -> person' {DP.id = dashboardPersonId}
+        _ -> person'
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner person.id) $ do
     void $ QP.create person
@@ -433,9 +438,10 @@ fleetOwnerLogin ::
   City.City ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe (Id DP.Person) ->
   Common.FleetOwnerLoginReqV2 ->
   Flow Common.FleetOwnerLoginResV2
-fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
+fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonId req = do
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mobileNumber = req.mobileNumber
@@ -455,7 +461,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
       -- Operator won't reach here as it has separate sign up flow --
       let personAuth = buildFleetOwnerAuthReq merchant.id opCity req
       deploymentVersion <- asks (.version)
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId
       pure person.id
   let useFakeOtpM = useFakeSms smsCfg
   otp <- maybe generateOTPCode (return . show) useFakeOtpM

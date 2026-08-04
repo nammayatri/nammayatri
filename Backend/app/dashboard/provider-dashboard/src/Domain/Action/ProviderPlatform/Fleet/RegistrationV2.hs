@@ -53,7 +53,7 @@ postRegistrationV2LoginOtp merchantShortId opCity req = do
   mbPerson <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode
   let req' = buildFleetOwnerRegisterReqV2 merchantShortId opCity req
   fleetOwnerRole <- QRole.findByDashboardAccessType DRole.FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show DRole.FLEET_OWNER)
-  res <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2LoginOtp) enabled req
+  res <- Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2LoginOtp) ((.id.getId) <$> mbPerson) enabled req
   when (isNothing mbPerson) $ do
     let personId = cast @Common.Person @DP.Person res.personId
     createFleetOwnerDashboardOnly fleetOwnerRole merchant req' personId

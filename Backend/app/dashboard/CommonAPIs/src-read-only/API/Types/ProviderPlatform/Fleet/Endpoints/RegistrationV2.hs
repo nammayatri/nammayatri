@@ -122,10 +122,11 @@ type API = ("fleet" :> (PostRegistrationV2V2LoginOtpHelper :<|> PostRegistration
 type PostRegistrationV2LoginOtp = ("v2" :> "login" :> "otp" :> ReqBody '[JSON] FleetOwnerLoginReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostRegistrationV2V2LoginOtpHelper =
-  ( "v2" :> "login" :> "otp" :> MandatoryQueryParam "enabled" Kernel.Prelude.Bool :> ReqBody '[JSON] FleetOwnerLoginReqV2
-      :> Post
+  ( "v2" :> "login" :> "otp" :> QueryParam "dashboardPersonId" Kernel.Prelude.Text :> MandatoryQueryParam "enabled" Kernel.Prelude.Bool
+      :> ReqBody
            '[JSON]
-           FleetOwnerLoginResV2
+           FleetOwnerLoginReqV2
+      :> Post '[JSON] FleetOwnerLoginResV2
   )
 
 type PostRegistrationV2VerifyOtp = ("v2" :> "verify" :> "otp" :> ReqBody '[JSON] FleetOwnerVerifyReqV2 :> Post '[JSON] FleetOwnerVerifyResV2)
@@ -182,7 +183,7 @@ type GetRegistrationV2ProfileLanguage = ("profile" :> "language" :> Get '[JSON] 
 type GetRegistrationV2ProfileLanguageHelper = ("profile" :> "language" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> Get '[JSON] FleetOwnerLanguageRes)
 
 data RegistrationV2APIs = RegistrationV2APIs
-  { postRegistrationV2LoginOtp :: Kernel.Prelude.Bool -> FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient FleetOwnerLoginResV2,
+  { postRegistrationV2LoginOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient FleetOwnerLoginResV2,
     postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2,
     postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,

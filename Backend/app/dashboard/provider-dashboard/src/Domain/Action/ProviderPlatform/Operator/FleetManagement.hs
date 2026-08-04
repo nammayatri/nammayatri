@@ -79,7 +79,7 @@ postFleetManagementFleetCreate merchantShortId opCity apiTokenInfo req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   res <-
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
-      Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetCreate) (Just enabled) apiTokenInfo.personId.getId req
+      Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetCreate) (Just enabled) ((.id.getId) <$> mbPerson) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
     let personId = Kernel.Types.Id.cast @API.Types.ProviderPlatform.Fleet.RegistrationV2.Person @DP.Person res.personId
     DRegistration.createFleetOwnerDashboardOnly fleetOwnerRole merchant req' personId
@@ -101,7 +101,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity apiTokenInfo req = do
   let req' = DRegistrationV2.buildFleetOwnerRegisterReqV2 merchantShortId opCity createReq
   res <-
     SharedLogic.Transaction.withResponseTransactionStoring transaction $
-      Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) apiTokenInfo.personId.getId req
+      Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetLinkSendOtp) ((.id.getId) <$> mbPerson) apiTokenInfo.personId.getId req
   when (isNothing mbPerson) $ do
     fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleNotFound $ show FLEET_OWNER)
     let personId = Kernel.Types.Id.cast @API.Types.ProviderPlatform.Fleet.RegistrationV2.Person @DP.Person res.fleetOwnerId

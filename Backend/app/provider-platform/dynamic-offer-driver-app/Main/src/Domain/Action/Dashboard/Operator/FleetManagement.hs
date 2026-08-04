@@ -119,11 +119,12 @@ postFleetManagementFleetCreate ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Common.FleetOwnerLoginReqV2 ->
   Environment.Flow Common.FleetOwnerLoginResV2
-postFleetManagementFleetCreate merchantShortId opCity mbEnabled requestorId req = do
-  DRegistrationV2.fleetOwnerLogin merchantShortId opCity (Just requestorId) mbEnabled req
+postFleetManagementFleetCreate merchantShortId opCity mbEnabled mbDashboardPersonId requestorId req = do
+  DRegistrationV2.fleetOwnerLogin merchantShortId opCity (Just requestorId) mbEnabled (Id <$> mbDashboardPersonId) req
 
 ---------------------------------------------------------------------
 -- TODO should we remove?
@@ -188,10 +189,11 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
 postFleetManagementFleetLinkSendOtp ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Text ->
   Common.FleetOwnerSendOtpReq ->
   Environment.Flow Common.FleetOwnerSendOtpRes
-postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req False
+postFleetManagementFleetLinkSendOtp merchantShortId opCity mbDashboardPersonId requestorId req = postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req False (Id <$> mbDashboardPersonId)
 
 postFleetManagementFleetLinkSendOtpUtil ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -199,8 +201,9 @@ postFleetManagementFleetLinkSendOtpUtil ::
   Kernel.Prelude.Text ->
   Common.FleetOwnerSendOtpReq ->
   Bool ->
+  Kernel.Prelude.Maybe (Id DP.Person) ->
   Environment.Flow Common.FleetOwnerSendOtpRes
-postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req skipOtpVerification = do
+postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req skipOtpVerification mbDashboardPersonId = do
   let phoneNumber = req.mobileCountryCode <> req.mobileNumber
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeFleetLinkHitsCountKey phoneNumber) sendOtpRateLimitOptions
@@ -225,7 +228,7 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
                 }
         let personAuth = DRegistrationV2.buildFleetOwnerAuthReq merchant.id opCity createReq
         deploymentVersion <- asks (.version)
-        personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
+        personData <- DRegistrationV2.createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId
         -- Fleet owner info is created with NORMAL_FLEET by default (can be overwritten in register)
         void $ DRegistrationV2.enableFleetIfPossible personData.id Nothing (Just FOI.NORMAL_FLEET) merchantOpCityId Nothing
         pure personData

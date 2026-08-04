@@ -26,6 +26,8 @@ apis:
             auth: NoAuth
             mandatoryQuery:
               - enabled: Bool
+            query:
+              - dashboardPersonId: Text
             request:
               type: FleetOwnerLoginReqV2
             response:

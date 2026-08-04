@@ -56,6 +56,7 @@ apis:
               - requestorId: Text
             query:
               - enabled: Bool
+              - dashboardPersonId: Text
             request:
               type: FleetOwnerLoginReqV2
             response:
@@ -91,6 +92,8 @@ apis:
             auth: ApiAuthV2
             mandatoryQuery:
               - requestorId: Text
+            query:
+              - dashboardPersonId: Text
             request:
               type: FleetOwnerSendOtpReq
             response:
