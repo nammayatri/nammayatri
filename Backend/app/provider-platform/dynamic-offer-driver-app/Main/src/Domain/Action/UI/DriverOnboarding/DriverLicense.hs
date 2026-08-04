@@ -289,7 +289,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 Documents.VALID -> cleanupImages >> throwError DriverAlreadyLinked
                 Documents.INVALID -> do
                   -- Only now call findByDLNumber (needed to check DND ownership/status)
-                  mDnd <- Query.findByDLNumber normalizedDLNumber
+                  mDnd <- findDlNumberOwner normalizedDLNumber driverLicenseNumber
                   case mDnd of
                     Just dnd -> handleDndFromOtherDriver dnd (Just drd)
                     Nothing -> do
@@ -298,7 +298,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 _ -> throwError DLDocumentInProcessing
           Nothing -> do
             -- No DRD — must call findByDLNumber to check if license is claimed elsewhere
-            mDnd <- Query.findByDLNumber normalizedDLNumber
+            mDnd <- findDlNumberOwner normalizedDLNumber driverLicenseNumber
             case mDnd of
               Just dnd -> handleDndFromOtherDriver dnd Nothing
               Nothing -> proceedWith dobForNew
@@ -307,6 +307,14 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
     else runBody
   return Success
   where
+    -- Look up the DL number owner by the normalized number; if none found, fall back to the raw
+    -- (un-normalized) number for backward compatibility with rows written before normalization was introduced.
+    findDlNumberOwner normalized raw = do
+      mDnd <- Query.findByDLNumber normalized
+      case mDnd of
+        Just _ -> pure mDnd
+        Nothing -> Query.findByDLNumber raw
+
     getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
