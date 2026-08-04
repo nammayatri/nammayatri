@@ -31,6 +31,8 @@ where
 
 import Control.Applicative ((<|>))
 import Data.List (partition)
+import qualified Data.List as List
+import qualified Domain.Types.DocumentOnboardingStage as DOS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
@@ -147,6 +149,43 @@ checkIfDocumentValid' mode mbIsFleetDriver (Right driverConfigs) _role docType c
            )
     Nothing -> True
 
+documentOnboardingStageTag :: DOS.DocumentOnboardingStage -> Text
+documentOnboardingStageTag = \case
+  DOS.PersonalOnboarding -> "PersonalOnboarding"
+  DOS.VehicleDetailsStage -> "VehicleDetailsStage"
+  DOS.CompanyOnboarding -> "CompanyOnboarding"
+  DOS.TaxAndLegal _ -> "TaxAndLegal"
+  DOS.BankDetails -> "BankDetails"
+
+documentOnboardingStageOf :: DocVerificationConfigs -> DP.Role -> Maybe DVC.VehicleCategory -> DDVC.DocumentType -> Maybe DOS.DocumentOnboardingStage
+documentOnboardingStageOf (Left fleetConfigs) role _mbCategory docType =
+  (.documentOnboardingStage) =<< findFleetConfigForRole docType role fleetConfigs
+documentOnboardingStageOf (Right driverConfigs) _role mbCategory docType =
+  (.documentOnboardingStage)
+    =<< ( find (\c -> c.documentType == docType && maybe False (== c.vehicleCategory) mbCategory) driverConfigs
+            <|> find (\c -> c.documentType == docType) driverConfigs
+        )
+
+checkAllDocsByStage ::
+  (DDVC.DocumentType -> Maybe DOS.DocumentOnboardingStage) ->
+  (DocumentStatusItem -> Maybe Bool) ->
+  [DocumentStatusItem] ->
+  Maybe Bool
+checkAllDocsByStage stageOf checkDoc docs =
+  allValid $ map anyStageValid $ groupOn (fmap documentOnboardingStageTag . stageOf) docs
+  where
+    anyStageValid tagDocs = anyValid $ map (allValid . map checkDoc) $ groupOn stageOf tagDocs
+    allValid results
+      | Just False `elem` results = Just False
+      | Nothing `elem` results = Nothing
+      | otherwise = Just True
+    anyValid results
+      | Just True `elem` results = Just True
+      | Nothing `elem` results = Nothing
+      | otherwise = Just False
+    groupOn :: Ord b => (DDVC.DocumentType -> b) -> [DocumentStatusItem] -> [[DocumentStatusItem]]
+    groupOn f = List.groupBy (\x y -> f x.documentType == f y.documentType) . List.sortOn (f . (.documentType))
+
 checkAllDriverDocsValid' ::
   MandatoryMode ->
   Maybe Bool ->
@@ -157,7 +196,8 @@ checkAllDriverDocsValid' ::
   Maybe Bool ->
   Bool
 checkAllDriverDocsValid' mode mbIsFleetDriver allDocVerificationConfigs role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
-  all (\doc -> checkIfDocumentValid' mode mbIsFleetDriver allDocVerificationConfigs role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+  let isValid doc = checkIfDocumentValid' mode mbIsFleetDriver allDocVerificationConfigs role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory
+  checkAllDocsByStage (documentOnboardingStageOf allDocVerificationConfigs role (Just vehicleCategory)) (Just . isValid) driverDocuments == Just True
 
 -- | Are all isMandatory driver docs VALID? Excludes isMandatoryForEnabling-only docs. Drives
 --   @verified@. (Sibling checkAllDriverDocsValidForEnabling uses the isMandatoryForEnabling set → @enabled@.)
@@ -188,7 +228,9 @@ checkAllVehicleDocsValid' ::
   Bool
 checkAllVehicleDocsValid' mode driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory = do
   -- Vehicle docs are not subject to the fleet-driver/DCO applicableTo split → Nothing.
-  all (\doc -> checkIfDocumentValid' mode Nothing (Right driverDocConfs) DP.DRIVER doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
+  let category = fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
+      isValid doc = checkIfDocumentValid' mode Nothing (Right driverDocConfs) DP.DRIVER doc.documentType category doc.verificationStatus makeSelfieAadhaarPanMandatory
+  checkAllDocsByStage (documentOnboardingStageOf (Right driverDocConfs) DP.DRIVER (Just category)) (Just . isValid) vehicleDoc.documents == Just True
 
 -- | Are all isMandatory vehicle docs VALID? Excludes isMandatoryForEnabling-only docs. Drives
 --   @verified@. (Sibling checkAllVehicleDocsValidForEnabling uses the isMandatoryForEnabling set → @enabled@.)
@@ -202,16 +244,13 @@ checkAllVehicleDocsValidForVerified = checkAllVehicleDocsValid' ForVerified
 computeApprovedFromDocs :: Maybe Bool -> DocVerificationConfigs -> DP.Role -> [DocumentStatusItem] -> Maybe Bool
 computeApprovedFromDocs mbIsFleetDriver configs role docs =
   let approvalDocs = filter (docSupportsApproval mbIsFleetDriver configs role) docs
-      statuses = map (.verificationStatus) approvalDocs
-   in if null approvalDocs
-        then Just True
-        else
-          if INVALID `elem` statuses || FAILED `elem` statuses
-            then Just False
-            else
-              if all (== VALID) statuses
-                then Just True
-                else Nothing
+   in checkAllDocsByStage (documentOnboardingStageOf configs role Nothing) computeApprovedDoc' approvalDocs
+  where
+    computeApprovedDoc' d = case d.verificationStatus of
+      VALID -> Just True
+      INVALID -> Just False
+      FAILED -> Just False
+      _ -> Nothing
 
 docSupportsApproval :: Maybe Bool -> DocVerificationConfigs -> DP.Role -> DocumentStatusItem -> Bool
 docSupportsApproval _mbIsFleetDriver (Left fleetConfigs) role d =

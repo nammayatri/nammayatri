@@ -1057,12 +1057,6 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
       return (mapStatus <$> (mbSSN <&> (.verificationStatus)), mbSSN >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
-    DVC.ProfilePhoto -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.ProfilePhoto
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
-    DVC.UploadProfile -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.UploadProfile
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.PanCard -> do
       mbPanCard <- QDPC.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbPanCard
@@ -1083,12 +1077,6 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
       if (mbBackgroundVerification <&> (.reportStatus)) == Just Documents.VALID
         then return (Just VALID, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing, Nothing)
         else return (Nothing, Nothing, Nothing, mbBackgroundVerification <&> (.expiresAt), mbS3Path, mbImageId, Nothing, Nothing, Nothing)
-    DVC.DrivingSchoolCertificate -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.DrivingSchoolCertificate
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
-    DVC.PoliceVerificationCertificate -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.PoliceVerificationCertificate
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.LocalResidenceProof -> do
       let (status, reason, url) = checkImageValidity entityImagesInfo DVC.LocalResidenceProof
       -- Fleet owners store the local address triplet in fleet_owner_information; drivers in driver_identity_info.
@@ -1155,9 +1143,6 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
             pure $ Just $ LDCMetadata LDCDocumentMetadata {tdsRate = mbFoi >>= (.tdsRate)}
           else pure Nothing
       return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, mbLdcMetadata, Nothing)
-    DVC.BusinessRegistrationExtract -> do
-      let (status, reason, url) = checkImageValidity entityImagesInfo DVC.BusinessRegistrationExtract
-      return (status, reason, url, Nothing, mbS3Path, mbImageId, Nothing, Nothing, Nothing)
     DVC.NomineeDetails -> do
       mbIdentityInfo <- QDII.findByDriverId driverId
       let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
