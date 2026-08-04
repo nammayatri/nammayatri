@@ -119,6 +119,12 @@ services:
     network_mode: host
     working_dir: /opt/app
     entrypoint: ["/opt/app/rider-app-exe"]
+    # Wait for a database that actually accepts connections. Without this the
+    # app can start first on a host reboot, fail its migrations, and sit there
+    # returning SqlError on every request instead of retrying.
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       DB_PRIMARY_PORT: "5434"
       REDIS_PORT: "6379"
@@ -138,6 +144,9 @@ services:
     network_mode: host
     working_dir: /opt/app
     entrypoint: ["/opt/app/dynamic-offer-driver-app-exe"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
       # It applies dev/migrations/dynamic-offer-driver-app itself on startup.
