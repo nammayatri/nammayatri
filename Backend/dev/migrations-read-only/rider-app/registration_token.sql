@@ -21,3 +21,8 @@ ALTER TABLE atlas_app.registration_token ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.registration_token ADD COLUMN created_via_partner_org_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.registration_token ADD COLUMN merchant_operating_city_id character (36) ;

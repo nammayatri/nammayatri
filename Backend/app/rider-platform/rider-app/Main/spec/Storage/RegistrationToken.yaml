@@ -29,11 +29,21 @@ RegistrationToken:
     tokenExpiry : Int
     entityId : Text
     merchantId : Text
+    merchantOperatingCityId : Text
     entityType : RTEntityType
     createdAt : UTCTime
     updatedAt : UTCTime
     info : Maybe Text
     createdViaPartnerOrgId : Maybe (Id PartnerOrganization)
+
+  beamType:
+    merchantOperatingCityId: Maybe Text
+  sqlType:
+    merchantOperatingCityId: character (36)
+  toTType:
+    merchantOperatingCityId: Kernel.Prelude.Just|I
+  fromTType:
+    merchantOperatingCityId: Storage.Queries.Transformers.RegistrationToken.getMerchantOperatingCityId merchantOperatingCityId merchantId|EM
 
   excludedFields: [merchantOperatingCityId]
   constraints:

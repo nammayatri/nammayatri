@@ -38,3 +38,9 @@ ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN driver_offer_merchant_o
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN std_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN cloud_type text ;
+ALTER TABLE atlas_app.merchant_operating_city ADD COLUMN cloud_base_url text ;

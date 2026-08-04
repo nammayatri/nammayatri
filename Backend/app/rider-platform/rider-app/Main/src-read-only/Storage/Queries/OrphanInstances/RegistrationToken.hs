@@ -7,13 +7,16 @@ import qualified Domain.Types.RegistrationToken
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.RegistrationToken as Beam
+import qualified Storage.Queries.Transformers.RegistrationToken
 
 instance FromTType' Beam.RegistrationToken Domain.Types.RegistrationToken.RegistrationToken where
   fromTType' (Beam.RegistrationTokenT {..}) = do
+    merchantOperatingCityId' <- Storage.Queries.Transformers.RegistrationToken.getMerchantOperatingCityId merchantOperatingCityId merchantId
     pure $
       Just
         Domain.Types.RegistrationToken.RegistrationToken
@@ -29,6 +32,7 @@ instance FromTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Regist
             id = Kernel.Types.Id.Id id,
             info = info,
             merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId',
             token = token,
             tokenExpiry = tokenExpiry,
             updatedAt = updatedAt,
@@ -50,6 +54,7 @@ instance ToTType' Beam.RegistrationToken Domain.Types.RegistrationToken.Registra
         Beam.id = Kernel.Types.Id.getId id,
         Beam.info = info,
         Beam.merchantId = merchantId,
+        Beam.merchantOperatingCityId = Kernel.Prelude.Just merchantOperatingCityId,
         Beam.token = token,
         Beam.tokenExpiry = tokenExpiry,
         Beam.updatedAt = updatedAt,

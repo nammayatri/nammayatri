@@ -4,6 +4,8 @@ imports:
   Country: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
   ShortId: Kernel.Types.Id
+  CloudType: Kernel.Types.Version
+  BaseUrl: Kernel.Prelude
 
 MerchantOperatingCity:
   tableName: merchant_operating_city
@@ -20,14 +22,23 @@ MerchantOperatingCity:
     long: Double
     distanceUnit: Kernel.Types.Common.DistanceUnit
     stdCode: Maybe Text
+    cloudType: Maybe CloudType
+    cloudBaseUrl: Maybe BaseUrl
 
   beamFields:
     distanceUnit:
       distanceUnit: Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit
+  beamType:
+    cloudType: Maybe Text
+    cloudBaseUrl: Maybe Text
   toTType:
     distanceUnit: Kernel.Prelude.Just|I
+    cloudType: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
+    cloudBaseUrl: (Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl)|I
   fromTType:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    cloudType: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    cloudBaseUrl: (Kernel.Prelude.pure . (Kernel.Prelude.>>= Kernel.Prelude.parseBaseUrl))|MI
 
   excludedFields: [merchantOperatingCityId]
 

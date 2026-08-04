@@ -794,6 +794,7 @@ library
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
+      Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.RentalDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest

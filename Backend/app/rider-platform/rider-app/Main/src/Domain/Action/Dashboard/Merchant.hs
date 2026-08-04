@@ -882,6 +882,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           stdCode = Just cityStdCode,
           country = req.country,
           distanceUnit = fromMaybe Meter req.distanceUnit,
+          cloudType = Nothing,
+          cloudBaseUrl = Nothing,
           createdAt = currentTime,
           updatedAt = currentTime
         }

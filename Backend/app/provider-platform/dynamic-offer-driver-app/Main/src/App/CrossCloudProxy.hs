@@ -27,6 +27,7 @@ import Kernel.Types.Version (CloudType (..))
 import qualified Network.HTTP.Client as Http
 import qualified Network.Wai as Wai
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.RegistrationToken as QRT
 import Tools.Auth (authTokenCacheKey, merchantIdFallback)
 import qualified "utils" Utils.Common.CrossCloudProxy as CCP
@@ -40,11 +41,16 @@ crossCloudProxy manager env =
 resolveOwner :: Text -> Flow (Maybe (CloudType, BaseUrl))
 resolveOwner token = do
   mbAuthCached :: Maybe (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) <- Redis.safeGet (authTokenCacheKey token)
-  mbMerchantId <- case mbAuthCached of
-    Just (_, merchantId, _) -> pure (Just merchantId)
-    Nothing -> fmap (merchantIdFallback . Id @DM.Merchant . (.merchantId)) <$> QRT.findByToken token
-  case mbMerchantId of
+  mbIds <- case mbAuthCached of
+    Just (_, merchantId, mocId) -> pure (Just (merchantId, mocId))
+    Nothing -> fmap (\sr -> (merchantIdFallback (Id sr.merchantId), Id sr.merchantOperatingCityId)) <$> QRT.findByToken token
+  case mbIds of
     Nothing -> pure Nothing
-    Just merchantId -> IM.withInMemCache ["crossCloudProxy:merchantCloud", merchantId.getId] 60 $ do
-      mbMerchant :: Maybe DM.Merchant <- CQM.findById merchantId
-      pure $ mbMerchant >>= \merchant -> (,) <$> merchant.cloudType <*> merchant.cloudBaseUrl
+    Just (merchantId, mocId) -> IM.withInMemCache ["crossCloudProxy:mocCloud", mocId.getId] 60 $ do
+      mbMoc :: Maybe DMOC.MerchantOperatingCity <- CQMOC.findById mocId
+      let mocPair = mbMoc >>= \moc -> (,) <$> moc.cloudType <*> moc.cloudBaseUrl
+      case mocPair of
+        Just p -> pure (Just p)
+        Nothing -> do
+          mbMerchant :: Maybe DM.Merchant <- CQM.findById merchantId
+          pure $ mbMerchant >>= \merchant -> (,) <$> merchant.cloudType <*> merchant.cloudBaseUrl

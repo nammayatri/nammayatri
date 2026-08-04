@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.MerchantOperatingCity where
 
+import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -16,10 +17,13 @@ import qualified Storage.Beam.MerchantOperatingCity as Beam
 
 instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.MerchantOperatingCity where
   fromTType' (Beam.MerchantOperatingCityT {..}) = do
+    cloudBaseUrl' <- (Kernel.Prelude.pure . (Kernel.Prelude.>>= Kernel.Prelude.parseBaseUrl)) cloudBaseUrl
     pure $
       Just
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
           { city = city,
+            cloudBaseUrl = cloudBaseUrl',
+            cloudType = (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack)) cloudType,
             country = country,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverOfferMerchantOperatingCityId = driverOfferMerchantOperatingCityId,
@@ -38,6 +42,8 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
   toTType' (Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..}) = do
     Beam.MerchantOperatingCityT
       { Beam.city = city,
+        Beam.cloudBaseUrl = Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl cloudBaseUrl,
+        Beam.cloudType = Kernel.Prelude.fmap Kernel.Prelude.show cloudType,
         Beam.country = country,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverOfferMerchantOperatingCityId = driverOfferMerchantOperatingCityId,
