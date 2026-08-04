@@ -642,7 +642,17 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       void $ L.runIO $ Slack.publishMessage slackConfig message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles
+    -- Resolve pre-ticket history BEFORE creating the ticket. createTicket's
+    -- body becomes message #1 on the Xyne thread (it's what bootstraps it) —
+    -- if that body were always 'description' (the text typed last, right
+    -- before submit), it would land ahead of the earlier bot/option history
+    -- once that history gets replayed afterward, inverting the real order.
+
+    resolvedHistory <- resolveHistoricalChats chats_ identifier language issueConfig mbRideInfoRes
+    let (ticketBody, remainingHistory) = case resolvedHistory of
+          [] -> (description, [])
+          (firstEntry : rest) -> ((case firstEntry of Left x -> x; Right x -> x), rest)
+    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles ticketBody
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -651,11 +661,15 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
         -- as Nothing; use the updated value below so forwarding carries the real
         -- provider ticket id rather than falling back on the internal issueReportId.
         let issueReportWithTicket = issueReport {D.ticketId = Just primaryResp.ticketId, D.additionalTicketIds = additionalId}
-        -- Replay the pre-ticket conversation (bot prompts + option taps the customer
-        -- saw before a ticket existed) onto the now-created Xyne thread, in order,
-        -- before the onCreateIssue replies below — otherwise that history is stored
-        -- locally (issueReport.chats) but never reaches Xyne at all.
-        forwardHistoricalChats chats_ issueReportWithTicket identifier issueHandle language issueConfig mbRideInfoRes
+        -- Replay whatever pre-ticket history didn't already become the ticket
+        -- body, in order.
+        forwardResolvedHistory remainingHistory issueReportWithTicket identifier issueHandle
+        -- If there was history, 'description' didn't go out as the ticket body
+        -- (the first historical entry took that slot instead) — forward it now,
+        -- as a normal customer message, so it lands after the history it
+        -- chronologically follows rather than ahead of it.
+        unless (null resolvedHistory) $
+          forwardChatToTicketService issueReportWithTicket identifier issueHandle description []
         -- Forward the auto-generated onCreateIssue replies to the ticket service so
         -- the Xyne agent sees the bot's opening messages too. Runs inside the
         -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
@@ -775,8 +789,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Text -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles ticketBody = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -797,7 +811,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             disposition = merchantCfg.kaptureDisposition,
             queue = merchantCfg.kaptureQueue,
             issueId = Just issue.id.getId,
-            issueDescription = description,
+            issueDescription = ticketBody,
             mediaFiles = Just (riderMediaFileUrls <> dashboardMediaFileUrls),
             name = Just $ fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName,
             phoneNo = phoneNumber,
@@ -932,23 +946,34 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
                )
 
     -- Resolves each pre-ticket Chat pointer (bot IssueMessage / user IssueOption
-    -- tap) into its actual text, mirroring recreateIssueChats's resolution, and
-    -- forwards it to the now-created Xyne thread in chronological order. Skips
-    -- MediaFile/IssueDescription entries — the frontend never includes those in
-    -- the pre-submit chats list (they're appended separately by updateChats),
-    -- and the description itself already reaches Xyne as the createTicket body.
-    forwardHistoricalChats :: (EncFlow m r, BeamFlow m r) => [Chat] -> D.IssueReport -> Identifier -> ServiceHandle m -> Language -> D.IssueConfig -> Maybe RideInfoRes -> m ()
-    forwardHistoricalChats issueChats issueReport' identifier' issueHandle' language' issueConfig' mbRideInfoRes' =
-      forM_ issueChats $ \item -> case item.chatType of
-        IssueMessage -> do
-          mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language' identifier'
-          let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language' issueConfig' mbRideInfoRes') . (: []) =<< mbIssueMessageTranslation
-          whenJust mbMessage $ \msg -> forwardChatToTicketServiceAs "Auto Reply" issueReport' identifier' issueHandle' msg.message []
-        IssueOption -> do
-          mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language' identifier'
-          let mbIssueOption = mkIssueOptionList issueConfig' language' mbRideInfoRes' <$> mbIssueOptionTranslation
-          whenJust mbIssueOption $ \opt -> forwardChatToTicketService issueReport' identifier' issueHandle' opt.option []
-        _ -> pure ()
+    -- tap) into its actual text, mirroring recreateIssueChats's resolution.
+    -- Returns entries in chronological order as 'Left' (bot/"Auto Reply") or
+    -- 'Right' (user-authored) text, WITHOUT forwarding anything yet — the
+    -- caller needs the resolved list before deciding the createTicket body
+    -- (see 'forwardResolvedHistory' below for why). Skips MediaFile/
+    -- IssueDescription entries — the frontend never includes those in the
+    -- pre-submit chats list (they're appended separately by updateChats).
+    resolveHistoricalChats :: (BeamFlow m r) => [Chat] -> Identifier -> Language -> D.IssueConfig -> Maybe RideInfoRes -> m [Either Text Text]
+    resolveHistoricalChats issueChats identifier' language' issueConfig' mbRideInfoRes' =
+      fmap catMaybes $
+        forM issueChats $ \item -> case item.chatType of
+          IssueMessage -> do
+            mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language' identifier'
+            let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language' issueConfig' mbRideInfoRes') . (: []) =<< mbIssueMessageTranslation
+            pure $ Left . (.message) <$> mbMessage
+          IssueOption -> do
+            mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language' identifier'
+            let mbIssueOption = mkIssueOptionList issueConfig' language' mbRideInfoRes' <$> mbIssueOptionTranslation
+            pure $ Right . (.option) <$> mbIssueOption
+          _ -> pure Nothing
+
+    -- Forwards already-resolved history entries (see 'resolveHistoricalChats')
+    -- onto the now-created Xyne thread, in order.
+    forwardResolvedHistory :: (EncFlow m r, BeamFlow m r) => [Either Text Text] -> D.IssueReport -> Identifier -> ServiceHandle m -> m ()
+    forwardResolvedHistory resolvedHistory issueReport' identifier' issueHandle' =
+      forM_ resolvedHistory $ \case
+        Left botMessage -> forwardChatToTicketServiceAs "Auto Reply" issueReport' identifier' issueHandle' botMessage []
+        Right userText -> forwardChatToTicketService issueReport' identifier' issueHandle' userText []
 
     castIdentifierToClassification :: Identifier -> TIT.Classification
     castIdentifierToClassification = \case
