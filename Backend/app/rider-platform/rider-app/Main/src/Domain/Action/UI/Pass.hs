@@ -133,7 +133,9 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
   when (null passCategories) $
     logError $ "getMultimodalPassAvailablePasses: no pass categories for mocId " <> person.merchantOperatingCityId.getId
 
-  localTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  localTime <- getLocalCurrentTime timeDiffFromUtc
   (eligibilityLogics, _mbVersion) <-
     TDL.getAppDynamicLogic (Id.cast person.merchantOperatingCityId) LYT.PASS_PURCHASE_ELIGIBILITY localTime Nothing Nothing
 
