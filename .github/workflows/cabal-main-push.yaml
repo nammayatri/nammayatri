@@ -6,10 +6,6 @@ on:
       - "main"
   workflow_dispatch:
 
-concurrency:
-  group: cabal-build-${{ github.ref_name }}
-  cancel-in-progress: false
-
 permissions:
   contents: write
   pull-requests: write
@@ -32,6 +28,9 @@ jobs:
     needs: [check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
     if: needs.check-conditions.outputs.should-proceed == 'true'
+    concurrency:
+      group: cabal-build-${{ github.ref_name }}
+      cancel-in-progress: false
     strategy:
       matrix:
         include:
@@ -65,17 +64,15 @@ jobs:
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle, cabal store, HIE and repl caches"
+            echo "Cache key changed, busting dist-newstyle, cabal store and HIE caches"
             rm -rf "$CACHE_ROOT/dist-newstyle"
             rm -rf "$CACHE_ROOT/.cabal-dir/store"
             rm -rf "$CACHE_ROOT/hie"
-            rm -rf "$CACHE_ROOT/dist-newrepl-dashboard-check"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-dashboard-check"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
 
       - name: Link HIE dirs to persistent cache
         run: |
@@ -184,6 +181,9 @@ jobs:
     needs: [check-conditions, cabal-build]
     if: needs.check-conditions.outputs.should-proceed == 'true'
     continue-on-error: true
+    concurrency:
+      group: cabal-build-${{ github.ref_name }}
+      cancel-in-progress: false
     runs-on: x86_64_main_push
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
@@ -194,9 +194,8 @@ jobs:
       - name: Relink cache dirs
         run: |
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/dist-newrepl-dashboard-check"
+          mkdir -p "$CACHE_ROOT/dist-newstyle"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
           cd "$GITHUB_WORKSPACE/Backend"
           grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
             [ -d "$pkg" ] || continue
@@ -251,10 +250,59 @@ jobs:
           mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/cabal-dir-path.txt"
           rm -f dist-newstyle.tar.zst build-path.txt cabal-dir-path.txt
 
+      - name: Mark commit as minio-pushed
+        run: |
+          git tag "minio-pushed/${{ github.sha }}"
+          git push origin "minio-pushed/${{ github.sha }}"
+
+  dashboard-repl-push:
+    name: Build & Push Dashboard Repl Cache
+    needs: [check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    continue-on-error: true
+    concurrency:
+      group: cabal-repl-push-${{ github.ref_name }}
+      cancel-in-progress: false
+    runs-on: x86_64_main_repl_push
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore repl cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-repl-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          KEY_FILE="$CACHE_ROOT/.cache-key-repl"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dashboard-repl-check, cabal-dir and HIE caches"
+            rm -rf "$CACHE_ROOT/dist-newrepl-dashboard-check"
+            rm -rf "$CACHE_ROOT/.cabal-dir"
+            rm -rf "$CACHE_ROOT/hie"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newrepl-dashboard-check" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
+          cd "$GITHUB_WORKSPACE/Backend"
+          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
+            [ -d "$pkg" ] || continue
+            mkdir -p "$CACHE_ROOT/hie/$pkg"
+            rm -rf "$pkg/.hie"
+            ln -sfn "$CACHE_ROOT/hie/$pkg" "$pkg/.hie"
+          done
+
       - name: Build repl artifacts (dashboard-repl-check)
         run: |
+          CACHE_ROOT=$HOME/ny-cabal-repl-cache/${RUNNER_NAME}/${{ github.ref_name }}
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}/.cabal-dir
+            export CABAL_DIR=$CACHE_ROOT/.cabal-dir
             mkdir -p \$CABAL_DIR
             printf 'active-repositories: :none\n' > \$CABAL_DIR/config
             export CABAL_CONFIG=\$CABAL_DIR/config
@@ -271,7 +319,26 @@ jobs:
           MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
           mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
 
-          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
+          CACHE_ROOT=$HOME/ny-cabal-repl-cache/${RUNNER_NAME}/${{ github.ref_name }}
+
+          # Copy non-reproducible .a files referenced by addDependentFile in .hi files,
+          # same reasoning as cabal-build's equivalent step: this machine's dist-newrepl-dashboard-check
+          # is its own independent build, not derived from dist-newstyle, so it needs its own .nix-deps.
+          rm -rf "$CACHE_ROOT/.nix-deps"
+          mkdir -p "$CACHE_ROOT/.nix-deps"
+          cd "$CACHE_ROOT"
+          for hi in $(find dist-newrepl-dashboard-check -name "*.hi" -print -quit 2>/dev/null); do
+            strings "$hi" | grep -oE '/nix/store/[^ ]+\.a$' | sort -u | while read -r dep; do
+              if [ -f "$dep" ]; then
+                rel="${dep#/}"
+                mkdir -p ".nix-deps/$(dirname "$rel")"
+                cp --no-preserve=mode,ownership "$dep" ".nix-deps/$rel"
+                echo "Cached nix dep: $dep"
+              fi
+            done
+            break
+          done
+          cd -
 
           tar -I 'zstd -T0 -3' -cf dashboard-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-dashboard-check/
           mc cp dashboard-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dashboard-check.tar.zst"
@@ -285,10 +352,13 @@ jobs:
           mc cp cache-root.txt "minio/haskell-cache/cabal-repl/${{ github.sha }}/cache-root.txt"
           rm -f cache-root.txt
 
-      - name: Mark commit as minio-pushed
-        run: |
-          git tag "minio-pushed/${{ github.sha }}"
-          git push origin "minio-pushed/${{ github.sha }}"
+          # This machine's own $GITHUB_WORKSPACE is what's baked into the .hi files this
+          # job just wrote, since dist-newrepl-dashboard-check is built here now (not on
+          # x86_64_main_push) — PR repl-check consumers must bind-mount onto THIS path,
+          # not cabal-build's build-path.txt.
+          echo "$GITHUB_WORKSPACE" > build-path.txt
+          mc cp build-path.txt "minio/haskell-cache/cabal-repl/${{ github.sha }}/build-path.txt"
+          rm -f build-path.txt
 
   cabal-build-times:
     name: Analyze Cabal Build Times
