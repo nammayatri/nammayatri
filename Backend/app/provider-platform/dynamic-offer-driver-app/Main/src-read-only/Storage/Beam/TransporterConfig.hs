@@ -191,6 +191,7 @@ data TransporterConfigT f = TransporterConfigT
     fcmUrl :: B.C f Kernel.Prelude.Text,
     feedbackNotificationConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     fleetAlertThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    forceDirectCalling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fraudAuthCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fraudAuthCountWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     freeTrialDays :: B.C f Kernel.Prelude.Int,

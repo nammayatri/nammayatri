@@ -1382,6 +1382,7 @@ TransporterConfig:
     blockDriverOwnRCForFleetDrivers: Maybe Bool # When True, fleet-linked drivers cannot onboard/activate their own (non-fleet) RC
     overrideOperatorDriverJoiningWithDeepLink: Maybe Bool
     mandateEmailVerification: Maybe Bool
+    forceDirectCalling: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1934,6 +1935,7 @@ TransporterConfig:
     allowGstReupload: "false"
     isGstPanLinkCheckRequired: "false"
     useCategoryBasedVerificationPriorityList: "true"
+    forceDirectCalling: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

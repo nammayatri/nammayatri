@@ -258,7 +258,7 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   driverNumber <- RD.getDriverNumber rideDetail
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  resolvedCalling <- resolveCallingNumber booking ride (transporterConfig >>= DTC.driverCallingOption) (RideCommon.mkExoPhone mbExophone booking)
+  resolvedCalling <- resolveCallingNumber booking ride (transporterConfig >>= DTC.driverCallingOption) (fromMaybe False (transporterConfig >>= DTC.forceDirectCalling)) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   let goHomeReqId = ride.driverGoHomeRequestId
@@ -325,7 +325,7 @@ otpRideCreate driver otpCode booking clientId = do
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  resolvedCalling <- resolveCallingNumber booking ride (DTC.driverCallingOption transporterConfig) (RideCommon.mkExoPhone mbExophone booking)
+  resolvedCalling <- resolveCallingNumber booking ride (DTC.driverCallingOption transporterConfig) (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling
   where
@@ -561,8 +561,9 @@ getRiderNumbers ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
   DTC.CallingOption ->
+  Bool ->
   m (Maybe (Text, Text, Bool))
-getRiderNumbers booking option
+getRiderNumbers booking option forceDirect
   | not (allowsDirectCalling option) = pure Nothing
   | otherwise =
     case booking.riderId of
@@ -573,18 +574,21 @@ getRiderNumbers booking option
           Nothing -> pure Nothing
           Just rider -> do
             bareNumber <- decrypt rider.mobileNumber
-            pure $ Just (bareNumber, rider.mobileCountryCode, maybe True (shouldShareRiderMobileNumber option) rider.consentToShareMobileNumber)
+            pure $ Just (bareNumber, rider.mobileCountryCode, forceDirect || maybe True (shouldShareRiderMobileNumber option) rider.consentToShareMobileNumber)
 
 resolveCallingNumber ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
   DRide.Ride ->
   Maybe DTC.CallingOption ->
+  Bool ->
   Text ->
   m RideCommon.ResolvedCalling
-resolveCallingNumber booking ride mbOption exoPhone = do
-  mbNumbers <- case mbOption of
-    Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderNumbers booking option
+resolveCallingNumber booking ride mbOption forceDirect exoPhone = do
+  let activeRide = ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED]
+      effectiveOption = if forceDirect then Just DTC.DirectCall else mbOption
+  mbNumbers <- case effectiveOption of
+    Just option | activeRide -> getRiderNumbers booking option forceDirect
     _ -> pure Nothing
   let anonymous = RideCommon.CallingNumberAPIEntity {number = exoPhone, countryCode = Nothing, numberType = RideCommon.ANONYMOUS}
   pure $ case mbNumbers of
