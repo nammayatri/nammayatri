@@ -725,6 +725,16 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
+  mbLivePayment <-
+    listToMaybe
+      <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+        (Just 1)
+        Nothing
+        purchasedPass.id
+        [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+        today
+  availableTripCount <- maybe (pure Nothing) FRFSPassOverride.getRemainingTripCount mbLivePayment
+
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
         PassAPI.PassDetailsAPIEntity
@@ -749,6 +759,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         passNumber = let s = show purchasedPass.passNumber in T.pack $ replicate (8 - length s) '0' ++ s,
         passEntity = passDetailsEntity,
         tripsLeft = tripsLeft,
+        availableTripCount = availableTripCount,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,
