@@ -36,8 +36,10 @@ import qualified Data.Map.Strict as Map
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (TransporterError (TransporterConfigNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Reconciliation.Job as ReconJob
 import qualified Lib.Finance.Reconciliation.Recipe as ReconRecipe
 import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
@@ -54,7 +56,7 @@ import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSu
 import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest as PrepaidPgPayoutVsPayoutRequest
 import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction as PrepaidSubscriptionPurchaseVsTransaction
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | App-side dispatch table. Extend this map when a new recipe module lands.
 --   Kept as a list-comprehension over a where-bound 'allRecipes' so the
@@ -112,8 +114,8 @@ runReconciliationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   -- Per-merchant kill switch. Old runner honoured this via
   -- transporterConfig.reconciliationJobsEnabled; keep the same contract so
   -- staging / unmigrated merchants can be paused without deleting jobs.
-  mbTc <- SCTC.findByMerchantOpCityId opCityId Nothing
-  let enabled = maybe False (fromMaybe False . (.reconciliationJobsEnabled)) mbTc
+  tc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
+  let enabled = fromMaybe False tc.reconciliationJobsEnabled
   if not enabled
     then do
       logInfo $

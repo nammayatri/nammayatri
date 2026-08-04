@@ -16,6 +16,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Reconciliation.Job as ReconJob
 import qualified Lib.Finance.Reconciliation.Sweep as ReconSweep
 import qualified Lib.Finance.Reconciliation.Types as ReconT
@@ -26,7 +27,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 runReconciliationSweepJob ::
   forall m r c.
@@ -55,7 +56,7 @@ runReconciliationSweepJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
       mid = Just (Id scope.merchantId)
       moc = Just (Id scope.merchantOperatingCityId)
 
-  mbTc <- SCTC.findByMerchantOpCityId opCityId Nothing
+  mbTc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) Nothing
   let enabled = maybe False (fromMaybe False . (.reconciliationJobsEnabled)) mbTc
   if not enabled
     then do

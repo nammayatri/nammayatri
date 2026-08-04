@@ -381,7 +381,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
     updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
   whenJust mbClientIP $ \clientIP -> fork "Driver Auth IP Fraud Check" $ do
     transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
         >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
   checkSlidingWindowLimit (authHitsCountKey person)
@@ -739,7 +739,7 @@ verify tokenId req mbXForwardedFor = do
   fork "Decrement Auth IP Counter" $ do
     mbClientIP <- extractClientIP mbXForwardedFor
     whenJust mbClientIP $ \clientIP -> do
-      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) (Just (SCTC.findByMerchantOpCityId (Id merchantOperatingCityId) Nothing))
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing
       whenJust mbTransporterConfig $ decrementAuthCountersByIP merchantOperatingCityId clientIP
   _ <- QP.updateDeviceToken deviceToken person.id
   when isNewPerson $
@@ -974,7 +974,6 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
   _ <- QR.create token
   void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
-  -- Verification flow
   fork "generating the referral code for driver" $ do
     void $ generateReferralCode (Just person.role) (person.id, person.merchantId, merchantOpCityId)
   cleanCachedTokens person.id

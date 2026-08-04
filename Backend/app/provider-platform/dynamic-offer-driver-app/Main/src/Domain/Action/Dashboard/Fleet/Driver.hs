@@ -895,7 +895,7 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant Nothing
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleet $ Id fleetOwnerId_) SGuard.Unlink (SGuard.TargetVehicle vehicleNo) $ do
     associations <- QRCAssociation.findAllActiveAssociationByRCId vehicleRC.id ----- Here ending all the association of the vehicle with the fleet drivers
     forM_ associations $ \assoc -> do
@@ -2437,7 +2437,7 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
       validateFleetOwnerWithDriverAndVehicle personId entityId merchant.id merchantOpCityId req.rcNo
     (Just DP.OPERATOR, Just entityId) -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let actor = maybe SGuard.None (\entityId -> SGuard.ActorFleetAndDriver (Id entityId) personId) mbEntityId
   SGuard.withOnboardingAction transporterConfig actor (if req.isActivate then SGuard.Activate else SGuard.Deactivate) (SGuard.TargetDriver personId) $
     void $ DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
@@ -2564,7 +2564,7 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
     FOI.updateFleetOwnerInfo updFleetOwnerInfo
     -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
     when (newFleetType /= fleetOwnerInfo.fleetType) $ do
-      fleetTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      fleetTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       SGuard.withOnboardingAction fleetTransporterConfig SGuard.None SGuard.Approve (SGuard.TargetFleetOwner personId) $
         QPerson.updatePersonRole personId (DRegV2.castFleetTypeToRole newFleetType)
 
@@ -3720,7 +3720,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
     linkDriverToOperator merchant moc operator req_ = do
       (person, isNew) <- fetchOrCreatePerson moc req_
-      transporterConfigForOperator <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) (Just (SCTC.findByMerchantOpCityId moc.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound moc.id.getId)
+      transporterConfigForOperator <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound moc.id.getId)
       (if isNew then pure False else DDriver.checkDriverOperatorAssociation person.id operator.id)
         >>= \isAssociated ->
           unless isAssociated $
@@ -4617,7 +4617,7 @@ postDriverFleetDriverChangeFleetOwner ::
 postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   moc <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> " ,city: " <> show opCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) (Just (SCTC.findByMerchantOpCityId moc.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound moc.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound moc.id.getId)
   let personId = cast @Common.Driver @DP.Person driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverInfo <- QDriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
@@ -5139,7 +5139,7 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
   mbRequestor <- case mbRequestorId of
     Just requestorId -> B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
     Nothing -> pure Nothing
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
     then do
       let requestorFleetOwnerId = case mbRequestor of

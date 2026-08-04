@@ -920,7 +920,7 @@ postDriverDeletePanCard merchantShortId opCity reqDriverId = do
   mbPanCard <- B.runInReplica $ QDriverPanCard.findByDriverId personId
   unless (isJust mbPanCard) $ throwError (InvalidRequest "Pan Card does not exist for this driver")
 
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
     QDriverPanCard.deleteByDriverId personId
     QDriverInfo.updatePanNumber Nothing driverId
