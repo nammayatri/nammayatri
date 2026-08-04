@@ -20,6 +20,13 @@ services:
       POSTGRES_DB: atlas_dev
     ports:
       - "5434:5432"
+      # Both apps are configured with a read replica on 5435 (esqDBReplicaCfg)
+      # and use it for `runInReplica` queries -- GET /v2/rideSearch/{id}/results
+      # among them, which otherwise dies with
+      #   libpq: failed (could not connect to server ... port 5435)
+      # There is no actual replica here, so 5435 is pointed at the same
+      # database. Reads simply go to the primary.
+      - "5435:5432"
     volumes:
       - ny-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -107,6 +114,28 @@ services:
       - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
       # It applies dev/migrations/dynamic-offer-driver-app itself on startup.
       - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
+  # Maps. The seeded merchant config already points Maps_Google at
+  # http://localhost:8019/ -- i.e. at this mock, not at Google -- so without it
+  # running, every ride search fails with GOOGLE_MAPS_API_ERROR before it ever
+  # reaches BECKN. It serves distances, routes, place names and autocomplete
+  # from fixture data, so no API key and no billing account are involved.
+  #
+  # Distances are fixtures, not real Algerian routing. Switching to real
+  # routing means pointing Maps_OSRM at an OSRM server with an Algeria extract
+  # -- already supported in merchant_service_config, no code change.
+  mock-google:
+    image: ny-rider:patched
+    container_name: ny-mock-google
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/mock-google-exe"]
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # mockDataPath in mock-google.dhall is "./app/mocks/google/mock-data/",
+      # resolved relative to working_dir.
+      - ./2023/Backend/app/mocks/google/mock-data:/opt/app/app/mocks/google/mock-data:ro
     restart: unless-stopped
 
   # rider-app uses host networking, so its port lives inside the Docker VM and

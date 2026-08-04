@@ -13,8 +13,8 @@ docker exec ny-postgres psql -U postgres -d atlas_dev -c "SELECT (SELECT count(*
 
 Write-Host ""
 Write-Host "=== 2b. Service areas: Algeria ===" -ForegroundColor Cyan
-docker exec ny-postgres psql -U postgres -d atlas_dev -c "SELECT region, ST_NPoints(geom) AS boundary_points FROM atlas_app.geometry WHERE region IN ('Algiers','Oran','Annaba') ORDER BY region;"
-docker exec ny-postgres psql -U postgres -d atlas_dev -c "SELECT short_id, origin_restriction AS serves FROM atlas_app.merchant;"
+docker exec ny-postgres psql -U postgres -d atlas_dev -c "SELECT region, ST_NPoints(geom) AS boundary_points FROM atlas_app.geometry WHERE region IN ('Algeria','Algiers','Oran','Annaba') ORDER BY region;"
+docker exec ny-postgres psql -U postgres -d atlas_dev -c "SELECT short_id, origin_restriction AS currently_serving FROM atlas_app.merchant;"
 
 Write-Host ""
 Write-Host "=== 3. Login: request OTP ===" -ForegroundColor Cyan
@@ -55,5 +55,22 @@ foreach ($p in $points) {
 }
 
 Write-Host ""
-Write-Host "=== DONE - backend fully operational, serving Algeria ===" -ForegroundColor Yellow
+Write-Host "=== 6. The DRIVER side (a separate service, port 8017) ===" -ForegroundColor Cyan
+docker exec ny-postgres psql -U postgres -d atlas_dev -c "SELECT (SELECT count(*) FROM atlas_driver_offer_bpp.merchant) AS merchants, (SELECT count(*) FROM atlas_driver_offer_bpp.person WHERE role='DRIVER') AS drivers, (SELECT count(*) FROM atlas_driver_offer_bpp.vehicle) AS vehicles, (SELECT count(*) FROM atlas_driver_offer_bpp.fare_policy) AS fare_policies;"
+
+Write-Host ""
+Write-Host "=== 7. A driver signs up and logs in ===" -ForegroundColor Cyan
+$d = "http://localhost:8017"
+$mid = (docker exec ny-postgres psql -U postgres -d atlas_dev -At -c "SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id='NAMMA_YATRI_PARTNER';").Trim()
+$dbody = '{"mobileNumber":"9999905555","mobileCountryCode":"+91","merchantId":"' + $mid + '"}'
+$dauth = Invoke-RestMethod -Uri "$d/ui/auth" -Method Post -Headers @{ "content-type" = "application/json" } -Body $dbody
+Write-Host "   driver authId: $($dauth.authId)" -ForegroundColor Green
+$dver = Invoke-RestMethod -Uri "$d/ui/auth/$($dauth.authId)/verify" -Method Post `
+    -Headers @{ "content-type" = "application/json" } `
+    -Body '{"otp":"7891","deviceToken":"demo-driver"}'
+Write-Host "   driver token : $($dver.token)" -ForegroundColor Green
+Write-Host "   role         : $($dver.person.role)" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "=== DONE - both sides operational, serving Algeria ===" -ForegroundColor Yellow
 Write-Host ""
