@@ -40,6 +40,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
               else case bookingStatus of
                 FRFSBooking status -> getFRFSLegStatusFromBooking status
                 FRFSTicket DFRFSTicket.CANCELLED -> JLTypes.Cancelled
+                FRFSTicket DFRFSTicket.RESCHEDULED -> JLTypes.Cancelled
                 FRFSTicket DFRFSTicket.USED -> JLTypes.Completed
                 FRFSTicket DFRFSTicket.EXPIRED -> JLTypes.Completed
                 Feedback _ -> JLTypes.Completed
@@ -58,6 +59,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
       DFRFSBooking.COUNTER_CANCELLED -> JLTypes.Cancelled
       DFRFSBooking.CANCEL_INITIATED -> JLTypes.Cancelled
       DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> JLTypes.InPlan
+      DFRFSBooking.RESCHEDULED -> JLTypes.Cancelled
 
 getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, TrackingStatus, Maybe UTCTime)
 getWalkAllStatuses journeyLeg = do

@@ -204,3 +204,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_payment_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_spot_booking boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN reschedule_count integer ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN parent_booking_id character varying(36) ;

@@ -146,6 +146,7 @@ onStatus _merchant booking (Booking dOrder) = do
       Ticket.COUNTER_CANCELLED -> "CANCELLED"
       Ticket.CANCEL_INITIATED -> "CANCELLED"
       Ticket.TECHNICAL_CANCEL_REJECTED -> "UNCLAIMED"
+      Ticket.RESCHEDULED -> "CANCELLED"
 
     updateTicketStatuses :: [Utils.TicketStatus] -> [Utils.TicketStatus]
     updateTicketStatuses = fmap (\ts@Utils.TicketStatus {} -> ts {Utils.status = Ticket.USED})

@@ -94,7 +94,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
-  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && booking'.status /= DFRFSTicketBooking.RESCHEDULED && validTillWithBuffer < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
@@ -298,6 +298,11 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
     DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
         let paymentBookingStatus = maybe FRFSTicketService.NEW makeTicketBookingPaymentAPIStatus (paymentStatusResp <&> (.status))
+        buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
+          `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
+    DFRFSTicketBooking.RESCHEDULED -> do
+      withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
+        let paymentBookingStatus = maybe FRFSTicketService.NEW (makeTicketBookingPaymentAPIStatus . (.status)) paymentStatusResp
         buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
           `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
   where
