@@ -72,5 +72,36 @@ Write-Host "   driver token : $($dver.token)" -ForegroundColor Green
 Write-Host "   role         : $($dver.person.role)" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "=== DONE - both sides operational, serving Algeria ===" -ForegroundColor Yellow
+Write-Host "=== 8. Our own routing engine - real Algerian roads ===" -ForegroundColor Cyan
+$routes = @(
+    @{ name = "Algiers centre -> Bab Ezzouar"; from = "3.0588,36.7538"; to = "3.1836,36.7169" },
+    @{ name = "Algiers -> Oran";               from = "3.0588,36.7538"; to = "-0.6331,35.6969" },
+    @{ name = "Algiers -> Constantine";        from = "3.0588,36.7538"; to = "6.6147,36.3650" }
+)
+foreach ($r in $routes) {
+    $o = Invoke-RestMethod -Uri "http://localhost:5001/route/v1/driving/$($r.from);$($r.to)?overview=false"
+    $km = [math]::Round($o.routes[0].distance / 1000, 1)
+    $hrs = $o.routes[0].duration / 3600
+    $time = if ($hrs -ge 1) { "{0:N1} hours" -f $hrs } else { "{0:N0} min" -f ($hrs * 60) }
+    Write-Host ("   {0,-32} {1,8} km   {2}" -f $r.name, $km, $time) -ForegroundColor Green
+}
+Write-Host "   (no Google, no API key - OpenStreetMap data on our own server)" -ForegroundColor DarkGray
+
+Write-Host ""
+Write-Host "=== 9. A real ride search in Algiers ===" -ForegroundColor Cyan
+$search = @{
+    fareProductType = "ONE_WAY"
+    contents = @{
+        origin = @{ address = @{ area="Alger Centre"; city="Algiers"; country="Algeria"; state="Alger"; building="1"; areaCode="16000"; street="Rue Didouche Mourad"; door="1" }; gps = @{ lat=36.7538; lon=3.0588 } }
+        destination = @{ address = @{ area="Bab Ezzouar"; city="Algiers"; country="Algeria"; state="Alger"; building="2"; areaCode="16000"; street="Route"; door="2" }; gps = @{ lat=36.7169; lon=3.1836 } }
+    }
+} | ConvertTo-Json -Depth 6
+$sr = Invoke-RestMethod -Uri "$b/v2/rideSearch" -Method Post -Headers @{ "content-type"="application/json"; "token"=$verify.token } -Body $search
+Write-Host "   searchId      : $($sr.searchId)" -ForegroundColor Green
+Write-Host "   route distance: $([math]::Round($sr.routeInfo.distance/1000,2)) km" -ForegroundColor Green
+Write-Host "   route duration: $([math]::Round($sr.routeInfo.duration/60,1)) min" -ForegroundColor Green
+Write-Host "   route points  : $($sr.routeInfo.points.Count)  (the actual line drawn on the map)" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "=== DONE - both sides operational, serving Algeria, real routing ===" -ForegroundColor Yellow
 Write-Host ""
