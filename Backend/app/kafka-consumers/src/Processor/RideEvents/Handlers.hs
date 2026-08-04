@@ -195,8 +195,8 @@ handleNammaTags ev = withRideAndBooking ev $ \ride booking -> do
         isJust mbDriverMobileHash
           && isJust mbRiderMobileHash
           && mbDriverMobileHash == mbRiderMobileHash
-  now <- getCurrentTime
-  let merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
+  rideEndTime <- maybe getCurrentTime pure ride.tripEndTime
+  let merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) rideEndTime
   priorRidesSameCustomer <-
     QRide.countPriorCompletedRidesWithSameCustomer
       (cast ride.driverId)
@@ -208,8 +208,8 @@ handleNammaTags ev = withRideAndBooking ev $ \ride booking -> do
         riderBlockedForCoins
           || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
       rideDurationSeconds =
-        maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) ride.tripStartTime
-  void $
+        maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime rideEndTime tStart)) ride.tripStartTime
+  nammaTags <-
     withTryCatch "ride-events:computeNammaTags" $
       LYDL.computeNammaTagsWithDebugLog
         LYDL.Driver
@@ -217,6 +217,7 @@ handleNammaTags ev = withRideAndBooking ev $ \ride booking -> do
         Yudhishthira.RideEnd
         (Just booking.transactionId)
         (Y.EndRideTagData ride booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds)
+  QRide.updateRideTags (ride.rideTags <> eitherToMaybe nammaTags) ride.id
 
 ------------------------------------------------------------
 -- P1b-4 : Fleet + Operator analytics
