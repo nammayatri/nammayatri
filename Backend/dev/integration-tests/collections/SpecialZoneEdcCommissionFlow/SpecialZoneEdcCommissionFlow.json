@@ -180,7 +180,7 @@
    }
   },
   {
-   "name": "Seed: special zone fareSettlementType=CommissionOnly (TODO: confirm schema/zone id)",
+   "name": "Read Special Location Id (IGI Airport)",
    "event": [
     {
      "listen": "test",
@@ -188,8 +188,56 @@
       "type": "text/javascript",
       "exec": [
        "var d = pm.response.json();",
-       "pm.test('update ran (2xx)', function () { pm.expect(pm.response.code).to.be.below(300); });",
-       "console.log('rows updated:', d.rowcount);"
+       "pm.test('IGI special_location found', function () { pm.expect(d.count).to.be.above(0); });",
+       "if (d.rows && d.rows[0]) {",
+       "  pm.environment.set('specialLocationId', d.rows[0].id);",
+       "  console.log('specialLocationId', d.rows[0].id, 'existing fare_settlement_type', d.rows[0].fare_settlement_type);",
+       "}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/select",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "select"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"special_location\",\n  \"select\": [\n    \"id\",\n    \"location_name\",\n    \"fare_settlement_type\"\n  ],\n  \"where_clause\": [\n    {\n      \"column_name\": \"location_name\",\n      \"val\": \"%IGI%\",\n      \"op\": \"LIKE\"\n    }\n  ],\n  \"limit\": 50\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "Resolve the exact special_location row so the following updates target it by id, not a LIKE guess."
+   }
+  },
+  {
+   "name": "Seed: special_location fareSettlementType=CommissionOnly",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('special_location updated', function () { pm.expect(d.rowcount).to.eql(1); });"
       ]
      }
     }
@@ -215,14 +263,114 @@
     },
     "body": {
      "mode": "raw",
-     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"special_location\",\n  \"set\": {\n    \"fare_settlement_type\": \"CommissionOnly\"\n  },\n  \"touch_updated_at\": true,\n  \"where_clause\": [\n    {\n      \"column_name\": \"location_name\",\n      \"val\": \"%IGI%\",\n      \"op\": \"LIKE\"\n    }\n  ]\n}",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"special_location\",\n  \"set\": {\n    \"fare_settlement_type\": \"CommissionOnly\"\n  },\n  \"touch_updated_at\": true,\n  \"where_clause\": [\n    {\n      \"column_name\": \"id\",\n      \"val\": \"{{specialLocationId}}\",\n      \"op\": \"=\"\n    }\n  ]\n}",
      "options": {
       "raw": {
        "language": "json"
       }
      }
     },
-    "description": "TODO: verify schema + WHERE. fareSettlementType lives on the BPP special_location and drives the EDC amount (Payment.hs:188). The fare policy for the zone must also carry a non-zero commission so the BPP returns commission on on_init."
+    "description": "fareSettlementType=CommissionOnly is what makes the EDC collect only the commission (Payment.hs:188)."
+   }
+  },
+  {
+   "name": "Read Fare Policy Ids for zone (asserts fare policy is configured)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "// This is the load-bearing check that the zone actually has a fare policy wired up \u2014",
+       "// if it's empty, Get Quotes further down will time out with no useful signal.",
+       "pm.test('zone has at least one fare_product/fare_policy mapped (quotes can be produced)', function () {",
+       "  pm.expect(d.count).to.be.above(0);",
+       "});",
+       "if (d.rows && d.rows.length) {",
+       "  var ids = [...new Set(d.rows.map(function (r) { return r.fare_policy_id; }))];",
+       "  pm.environment.set('farePolicyIdsJson', JSON.stringify(ids));",
+       "  console.log('fare_policy ids for zone:', ids);",
+       "}"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/select",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "select"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"fare_product\",\n  \"select\": [\n    \"fare_policy_id\",\n    \"area\",\n    \"vehicle_variant\"\n  ],\n  \"where_clause\": [\n    {\n      \"column_name\": \"area\",\n      \"val\": \"Pickup_{{specialLocationId}}%\",\n      \"op\": \"LIKE\"\n    }\n  ],\n  \"limit\": 50\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "Confirms the special zone has a fare_product -> fare_policy mapping in this env, i.e. quotes can actually be produced for it (fare_product.area = 'Pickup_<specialLocationId>[_Gate_<id>]'). Empty result means the zone isn't configured for quoting at all \u2014 fix that before debugging EDC."
+   }
+  },
+  {
+   "name": "Seed: Fare Policy commission (fixed amount, not %)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('fare_policy commission seeded', function () { pm.expect(d.rowcount).to.be.above(0); });",
+       "console.log('fare_policy rows updated with commission:', d.rowcount);"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": {
+     "raw": "{{mockServerUrl}}/mock/sql/update",
+     "host": [
+      "{{mockServerUrl}}"
+     ],
+     "path": [
+      "mock",
+      "sql",
+      "update"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_driver_offer_bpp\",\n  \"table_name\": \"fare_policy\",\n  \"set\": {\"commission_charge_config\": \"{\\\"value\\\":\\\"{{edc_commission_amount}}\\\",\\\"appliesOn\\\":[\\\"RideFare\\\"]}\"},\n  \"touch_updated_at\": true,\n  \"where_clause\": [{\"column_name\": \"id\", \"val\": {{farePolicyIdsJson}}, \"op\": \"IN\"}]\n}",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     }
+    },
+    "description": "commission_charge_config is a flat FareChargeConfig JSON. value has NO '%' suffix, so parseCodeValue treats it as ParsedFixed -> applyParsedValue ignores the fare base and returns the constant directly (FareCalculator.hs: 'ParsedFixed amount -> amount'). So the EDC commission for this zone becomes exactly {{edc_commission_amount}} regardless of ride distance/fare. NOTE: this overwrites commission_charge_config wholesale for every fare_policy the zone routes to (all vehicle variants) \u2014 acceptable for a dedicated test env, but don't run against a shared one without expecting that side effect."
    }
   },
   {
@@ -681,7 +829,9 @@
        "  // CommissionOnly: EDC amount should equal the commission",
        "  var cc = pm.environment.get('commissionCharge');",
        "  if (cc != null) { pm.test('EDC order amount == commission', function () { pm.expect(Number(d.rows[0].amount)).to.be.closeTo(Number(cc), 0.01); }); }",
-       "}"
+       "}",
+       "var expected = pm.environment.get('edc_commission_amount');",
+       "if (expected != null) { pm.test('EDC order amount == constant commission', function () { pm.expect(Number(pm.environment.get('orderAmount'))).to.be.closeTo(Number(expected), 0.01); }); }"
       ]
      }
     }
