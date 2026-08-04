@@ -16,6 +16,7 @@ import qualified Domain.Types.VehicleCategory as DTV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InvalidRequest))
@@ -127,14 +128,14 @@ clearCache :: DTCC.CoinsConfig -> Environment.Flow ()
 clearCache coinsConfig = do
   let merchantOpCityId = ID.Id coinsConfig.merchantOptCityId
       clearCacheForVehicleCategory = CQConfig.clearCache coinsConfig.eventName coinsConfig.eventFunction merchantOpCityId
+  CQConfig.clearDriverIncentiveConfigHash merchantOpCityId coinsConfig.vehicleCategory
   case coinsConfig.vehicleCategory of
     Just vc -> clearCacheForVehicleCategory vc coinsConfig.serviceTierType (fromMaybe DCT.DynamicOfferTrip coinsConfig.tripCategoryType)
     -- Still clear city-wide ConfigPilot cache even if vehicleCategory is missing.
     Nothing -> CQConfig.clearCityCache merchantOpCityId
-  -- Drop ConfigPilot in-mem / Redis bucket so EndRide does not keep stale timeBounds.
-  LCP.invalidateConfigInMem LYTCP.CoinsConfig
-  -- Invalidate driver incentiveConfig ETag so clients refetch after create/update.
-  CQConfig.clearDriverIncentiveConfigHash merchantOpCityId coinsConfig.vehicleCategory
+  -- Drop ConfigPilot in-mem / Redis bucket on both clouds so EndRide /
+  -- incentiveConfig do not keep stale CoinsConfig after create/update.
+  Hedis.runInMultiCloudRedisWrite $ LCP.invalidateConfigInMem LYTCP.CoinsConfig
 
 processingTranslations :: DTCC.CoinsConfig -> [Common.EventMessage] -> Environment.Flow ()
 processingTranslations coinsConfig eventMessageLs = do

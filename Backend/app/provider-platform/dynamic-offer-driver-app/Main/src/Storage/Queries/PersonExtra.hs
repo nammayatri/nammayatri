@@ -51,6 +51,7 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
+import qualified Storage.CachedQueries.CoinsConfig as CQCoinsConfig
 import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLicense ()
@@ -696,9 +697,12 @@ updateDeviceToken token personId = do
 updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
 updateDriverTag driverTag personId = do
   now <- getCurrentTime
+  mbPerson <- findOneWithKV [Se.Is BeamP.id $ Se.Eq (getId personId)]
   updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set driverTag}
+  whenJust mbPerson $ \person ->
+    CQCoinsConfig.clearDriverIncentiveConfigHashForDriver person.merchantOperatingCityId personId
 
 findByOperatorBadgeTokenAndMerchantId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
