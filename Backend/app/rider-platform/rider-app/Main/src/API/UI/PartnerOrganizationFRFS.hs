@@ -33,6 +33,7 @@ import EulerHS.Prelude hiding (map)
 import Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
@@ -71,6 +72,18 @@ type API =
                   :<|> "upsertPersonAndQuoteConfirm"
                     :> ReqBody '[JSON] DPOFRFS.UpsertPersonAndQuoteConfirmReq
                     :> Post '[JSON] DPOFRFS.UpsertPersonAndQuoteConfirmRes
+                  :<|> "routes"
+                    :> QueryParam "city" Context.City
+                    :> QueryParam "vehicleType" Spec.VehicleCategory
+                    :> Get '[JSON] [DFRFSTypes.FRFSRouteAPI]
+                  :<|> "stations"
+                    :> QueryParam "city" Context.City
+                    :> QueryParam "vehicleType" Spec.VehicleCategory
+                    :> QueryParam "routeCode" Text
+                    :> Get '[JSON] [DFRFSTypes.FRFSStationAPI]
+                  :<|> "config"
+                    :> QueryParam "city" Context.City
+                    :> Get '[JSON] DFRFSTypes.FRFSConfigAPIRes
               )
            :<|> "shareTicketInfo"
              :> Capture "ticketBookingId" (Id DFTB.FRFSTicketBooking)
@@ -95,6 +108,9 @@ handler =
         :<|> getConfigByStationIds pOrg
         :<|> getFareV2 pOrg
         :<|> upsertPersonAndQuoteConfirm pOrg
+        :<|> getRoutesByCity pOrg
+        :<|> getStationsByRouteCode pOrg
+        :<|> getConfigByCity pOrg
 
 upsertPersonAndGetFare :: PartnerOrganization -> Maybe (Id DIBC.IntegratedBPPConfig) -> DPOFRFS.GetFareReq -> FlowHandler DPOFRFS.GetFareResp
 upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogTag $ do
@@ -160,6 +176,27 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPP
 
     getConfigHitsCountKey :: Text
     getConfigHitsCountKey = "BAP:FRFS:PartnerOrgId:" <> getId partnerOrg.orgId <> ":GetConfig:hitsCount"
+
+getRoutesByCity :: PartnerOrganization -> Maybe Context.City -> Maybe Spec.VehicleCategory -> FlowHandler [DFRFSTypes.FRFSRouteAPI]
+getRoutesByCity partnerOrg mbCity mbVehicleType = withFlowHandlerAPI . withLogTag $ do
+  city <- mbCity & fromMaybeM (InvalidRequest "city query param is required")
+  DPOFRFS.getRoutesByCity partnerOrg city (fromMaybe Spec.METRO mbVehicleType)
+  where
+    withLogTag = Log.withLogTag ("FRFS:GetRoutes:PartnerOrgId:" <> getId partnerOrg.orgId)
+
+getStationsByRouteCode :: PartnerOrganization -> Maybe Context.City -> Maybe Spec.VehicleCategory -> Maybe Text -> FlowHandler [DFRFSTypes.FRFSStationAPI]
+getStationsByRouteCode partnerOrg mbCity mbVehicleType mbRouteCode = withFlowHandlerAPI . withLogTag $ do
+  city <- mbCity & fromMaybeM (InvalidRequest "city query param is required")
+  DPOFRFS.getStationsByRouteCode partnerOrg city (fromMaybe Spec.METRO mbVehicleType) mbRouteCode
+  where
+    withLogTag = Log.withLogTag ("FRFS:GetStations:PartnerOrgId:" <> getId partnerOrg.orgId)
+
+getConfigByCity :: PartnerOrganization -> Maybe Context.City -> FlowHandler DFRFSTypes.FRFSConfigAPIRes
+getConfigByCity partnerOrg mbCity = withFlowHandlerAPI . withLogTag $ do
+  city <- mbCity & fromMaybeM (InvalidRequest "city query param is required")
+  DFRFSTicketService.getFrfsConfig (Nothing, partnerOrg.merchantId) city
+  where
+    withLogTag = Log.withLogTag ("FRFS:GetConfig:PartnerOrgId:" <> getId partnerOrg.orgId)
 
 shareTicketInfo :: Id DFTB.FRFSTicketBooking -> FlowHandler DPOFRFS.ShareTicketInfoResp
 shareTicketInfo bookingId = withFlowHandlerAPI . withLogTag $ do

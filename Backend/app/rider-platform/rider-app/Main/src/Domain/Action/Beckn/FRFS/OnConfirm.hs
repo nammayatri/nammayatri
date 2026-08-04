@@ -134,7 +134,7 @@ validateRequest DOrder {..} = do
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
-      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL updatedBooking
+      void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
     else return (merchant, booking, quoteCategories)
 
@@ -168,7 +168,7 @@ onConfirmFailure bapConfig ticketBooking = do
   bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
   void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
-  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking
+  void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical ticketBooking
 
 onConfirm ::
   ( CacheFlow m r,

@@ -130,6 +130,7 @@ data ProviderLevelInfo = ProviderLevelInfo
     oneWayTicketLimit :: Int,
     roundTripTicketLimit :: Int,
     isCancellationAllowed :: Bool,
+    isTechnicalCancellationAllowed :: Maybe Bool,
     bookingEndTime :: UTCTime,
     bookingStartTime :: UTCTime
   }

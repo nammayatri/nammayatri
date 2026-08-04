@@ -297,6 +297,7 @@ types:
     description: Maybe Text
     createdAt: UTCTime
     isReturnTicket: Maybe Bool
+    qrEncoding: Maybe Domain.Types.IntegratedBPPConfig.QREncoding
     derive: "Show"
 
   FRFSBookingPaymentAPI:
@@ -350,6 +351,7 @@ types:
     maxFreeTicketCashback: Maybe Int
     ticketsBookedInEvent: Int
     providerId: Maybe Text
+    cityId: Id MerchantOperatingCity
     derive: "Show"
 
   FRFSRouteAPI:
@@ -501,6 +503,7 @@ apis:
       query:
         startStationCode: Text
         endStationCode: Text
+        platformType: PlatformType
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
 

@@ -455,10 +455,11 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  let tickets =
+  let qrEncoding = FRFSUtils.getQREncoding integratedBppConfig
+      tickets =
         map
           ( \DFRFSTicket.FRFSTicket {..} ->
-              FRFSTicketService.FRFSTicketAPI {..}
+              FRFSTicketService.FRFSTicketAPI {qrEncoding, ..}
           )
           tickets'
       fareParameters = FRFSUtils.mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)

@@ -16,6 +16,8 @@ module Domain.Action.UI.PartnerOrganizationFRFS
   ( upsertPersonAndGetToken,
     getFareV2,
     getConfigByStationIds,
+    getRoutesByCity,
+    getStationsByRouteCode,
     shareTicketInfo,
     mkLatLong,
     upsertPersonAndQuoteConfirm,
@@ -43,6 +45,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Data.OpenApi hiding (description, email, info, name, title)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.FRFSTicketService as DFRFSTicketService
 import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import Domain.Types.FRFSConfig
@@ -204,7 +207,8 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     paymentStatus :: FRFSTypes.FRFSBookingPaymentStatusAPI,
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction),
     googleWalletJWTUrl :: Maybe Text,
-    providerId :: Maybe Text
+    providerId :: Maybe Text,
+    bppOrderId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -425,6 +429,14 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPCo
           providerId = Just providerInfo.providerId
         }
 
+getRoutesByCity :: PartnerOrganization -> Context.City -> Spec.VehicleCategory -> Flow [FRFSTypes.FRFSRouteAPI]
+getRoutesByCity partnerOrg city vehicleType =
+  DFRFSTicketService.getFrfsRoutes (Nothing, partnerOrg.merchantId) Nothing (Just DIBC.PARTNERORG) Nothing city vehicleType
+
+getStationsByRouteCode :: PartnerOrganization -> Context.City -> Spec.VehicleCategory -> Maybe Text -> Flow [FRFSTypes.FRFSStationAPI]
+getStationsByRouteCode partnerOrg city vehicleType mbRouteCode =
+  DFRFSTicketService.getFrfsStations (Nothing, partnerOrg.merchantId) (Just city) Nothing Nothing Nothing (Just DIBC.PARTNERORG) mbRouteCode Nothing vehicleType
+
 shareTicketInfo :: Id DFTB.FRFSTicketBooking -> Flow ShareTicketInfoResp
 shareTicketInfo ticketBookingId = do
   -- TODO: Make it findAllWithKVAndConditionalDB
@@ -433,11 +445,11 @@ shareTicketInfo ticketBookingId = do
   when (null tickets') $
     throwError $ FRFSTicketsForBookingDoesNotExist ticketBookingId.getId
 
-  let tickets = map Utils.mkTicketAPI tickets'
-
   ticketBooking <- B.runInReplica $ QFTB.findById ticketBookingId >>= fromMaybeM (FRFSTicketBookingNotFound ticketBookingId.getId)
-  paymentBooking <- B.runInReplica $ QFTBP.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity ticketBooking
+  let tickets = map (Utils.mkTicketAPI (Utils.getQREncoding integratedBPPConfig)) tickets'
+
+  paymentBooking <- B.runInReplica $ QFTBP.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
   fromStation' <- OTPRest.getStationByGtfsIdAndStopCode ticketBooking.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| ticketBooking.fromStationCode ||+ "")
   toStation' <- OTPRest.getStationByGtfsIdAndStopCode ticketBooking.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| ticketBooking.toStationCode ||+ "")
   city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
@@ -460,6 +472,7 @@ shareTicketInfo ticketBookingId = do
         partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId,
         city = city.city,
         googleWalletJWTUrl = ticketBooking.googleWalletJWTUrl,
+        bppOrderId = ticketBooking.bppOrderId,
         ..
       }
   where
