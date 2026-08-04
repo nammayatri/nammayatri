@@ -58,18 +58,45 @@ getCoinsIncentiveConfig ::
   Maybe Text ->
   Flow (Headers '[Header "ETag" Text] [API.DriverIncentiveCoinConfigItem])
 getCoinsIncentiveConfig (mbPersonId, merchantId, merchantOpCityId) mbIfNoneMatch = do
-  (transporterConfig, _driverId, vehCategory, driver) <- loadDriverContext mbPersonId merchantId merchantOpCityId
+  (transporterConfig, driverId, vehCategory, driver) <- loadDriverContext mbPersonId merchantId merchantOpCityId
   let mocId = merchantOpCityId.getId
-  mbCachedETag <- CQCoinsConfig.getDriverIncentiveConfigHash mocId vehCategory
+  mbCachedETag <- CQCoinsConfig.getDriverIncentiveConfigHash mocId vehCategory driverId.getId
   case (mbIfNoneMatch, mbCachedETag) of
     (Just clientETag, Just cachedETag)
       | clientETag == cachedETag ->
         throwError DriverIncentiveCoinConfigNotModified
     _ -> do
-      items <- buildConfigItems transporterConfig merchantId merchantOpCityId vehCategory driver.driverTag
-      let eTag = computeDriverIncentiveConfigETag items
-      CQCoinsConfig.setDriverIncentiveConfigHash mocId vehCategory eTag
+      (items, eTag, shouldCache) <-
+        buildIncentiveConfigWithStableGeneration mocId vehCategory transporterConfig merchantId merchantOpCityId driver.driverTag 3
+      when shouldCache $
+        CQCoinsConfig.setDriverIncentiveConfigHash mocId vehCategory driverId.getId eTag
       pure $ addHeader eTag items
+
+-- | Build config items and pair with generation only when gen is unchanged
+-- across the build (avoids caching new-gen + stale content if CoinsConfig
+-- is updated mid-request). Retries a few times if generation moves.
+buildIncentiveConfigWithStableGeneration ::
+  Text ->
+  DTV.VehicleCategory ->
+  DTC.TransporterConfig ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe [LYT.TagNameValueExpiry] ->
+  Int ->
+  Flow ([API.DriverIncentiveCoinConfigItem], Text, Bool)
+buildIncentiveConfigWithStableGeneration mocId vehCategory transporterConfig merchantId merchantOpCityId driverTag attemptsLeft = do
+  genBefore <- CQCoinsConfig.getDriverIncentiveConfigGeneration mocId vehCategory
+  items <- buildConfigItems transporterConfig merchantId merchantOpCityId vehCategory driverTag
+  genAfter <- CQCoinsConfig.getDriverIncentiveConfigGeneration mocId vehCategory
+  let contentHash = computeDriverIncentiveConfigETag items
+      eTag = CQCoinsConfig.mkDriverIncentiveConfigETag genAfter contentHash
+  if genBefore == genAfter
+    then pure (items, eTag, True)
+    else
+      if attemptsLeft > 1
+        then buildIncentiveConfigWithStableGeneration mocId vehCategory transporterConfig merchantId merchantOpCityId driverTag (attemptsLeft - 1)
+        else -- Generation kept moving; return fresh body but do not cache a possibly mismatched ETag.
+          pure (items, eTag, False)
 
 getCoinsIncentiveRideCount ::
   ( Maybe (Id SP.Person),
@@ -245,7 +272,7 @@ toConfigItem selected ridesThreshold =
 
 computeDriverIncentiveConfigETag :: [API.DriverIncentiveCoinConfigItem] -> Text
 computeDriverIncentiveConfigETag items =
-  T.cons '"' (T.pack (show (Hash.hashWith Hash.SHA256 (BS.toStrict (encode items))))) `T.snoc` '"'
+  T.pack (show (Hash.hashWith Hash.SHA256 (BS.toStrict (encode items))))
 
 isRidesCompletedFunction :: DCT.DriverCoinsFunctionType -> Bool
 isRidesCompletedFunction = \case
