@@ -776,6 +776,8 @@ types:
     - onRide: Bool
     - active: Bool
     - onboardingDate: Maybe UTCTime
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
     - approved: Maybe Bool
     - onboardingAs: Maybe OnboardingAs
     - recentFleetInfo: Maybe DriverAssociationInfo

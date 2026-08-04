@@ -422,6 +422,8 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
         onRide = driverInformation.onRide,
         active = driverInformation.active,
         onboardingDate = driverInformation.lastEnabledOn,
+        createdAt = person.createdAt,
+        updatedAt = person.updatedAt,
         approved = driverInformation.approved,
         onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
         recentFleetInfo = mbRecentFleetInfo,
