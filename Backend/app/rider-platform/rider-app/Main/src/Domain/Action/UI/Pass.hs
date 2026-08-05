@@ -816,6 +816,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
+              when (isJust purchasedPassPayment.profilePicture) $ QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
               -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
               -- it onto the pass at each transition — so the webhook never races the upload for it.
