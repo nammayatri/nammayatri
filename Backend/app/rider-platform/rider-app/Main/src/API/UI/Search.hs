@@ -439,7 +439,11 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             -- preliminaryLeg for bus is to be Nothing only when firstMileRemoved is True
             BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (if isFirstMileRemoved then (\_ _ -> pure Nothing) else getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
             BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
-            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False personId searchRequest.id.getId blacklistedServiceTiers blacklistedFareQuoteTypes) "buildTrainAllViaRoutes"
+            -- Once a city is migrated, subway route discovery happens in the FRFS search flow that the
+            -- client calls directly, so the multimodal path stops building via routes for it.
+            BecknV2.OnDemand.Enums.SUBWAY
+              | riderConfig.enableSubwayFrfsSearch == Just True -> return ([], [])
+              | otherwise -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False personId searchRequest.id.getId blacklistedServiceTiers blacklistedFareQuoteTypes) "buildTrainAllViaRoutes"
             _ -> return ([], [])
         | otherwise = return ([], [])
   (directSingleModeRoutes, viaRouteDetails) <- result

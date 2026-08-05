@@ -471,6 +471,7 @@ library
       ExternalBPP.Flow.Common
       ExternalBPP.Flow.Fare
       ExternalBPP.Flow.Select
+      ExternalBPP.Flow.Subway
       Lib.JourneyLeg.Bus
       Lib.JourneyLeg.Common.FRFS
       Lib.JourneyLeg.Common.FRFSJourneyUtils
