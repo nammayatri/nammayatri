@@ -144,6 +144,7 @@ data RiderConfig = RiderConfig
     passExpiryReminderBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passExpiryReminderNextRunLocalTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
+    passExtraConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.PassExtraConfig,
     passStatusUpdateBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -241,6 +242,9 @@ data ExternalSOSConfig = ExternalSOSConfig
 data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data PassExtraConfig = PassExtraConfig {profilePhotoRefill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, profilePhotoRefillMaxSdkVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RiderInvoiceConfig = RiderInvoiceConfig
   { ledgerEmitEnabled :: Kernel.Prelude.Bool,

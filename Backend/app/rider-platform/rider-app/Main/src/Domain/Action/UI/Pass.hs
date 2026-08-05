@@ -67,6 +67,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
+import Kernel.Types.Version (Version, textToVersion)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -869,8 +870,12 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
 updatePurchasedPass ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    IssueManagement.Storage.BeamFlow.BeamFlow m r,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
+  Maybe Version ->
   DPurchasedPass.PurchasedPass ->
   DT.Day ->
   UTCTime ->
@@ -880,7 +885,9 @@ updatePurchasedPass ::
 -- payment row (never the pass row), so this read path owns both the PhotoPending -> Active/PreBooked
 -- transition and the normal term-based reconcile. Date-expired PhotoPending passes fall through to
 -- the expiry fallback below.
-updatePurchasedPass purchasedPass today now = do
+updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
+  mbRefilledPhoto <- refillProfilePictureFromS3 mbClientSdkVersion purchasedPass
+
   latestPayments <-
     QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
       (Just 1)
@@ -900,6 +907,10 @@ updatePurchasedPass purchasedPass today now = do
             | firstPayment.startDate <= today = DPurchasedPass.Active
             | otherwise = DPurchasedPass.PreBooked
 
+          newProfilePicture = firstPayment.profilePicture <|> mbRefilledPhoto <|> purchasedPass.profilePicture
+
+          isChangedProfilePicture = newProfilePicture /= purchasedPass.profilePicture
+
           newPass =
             purchasedPass
               { DPurchasedPass.startDate = firstPayment.startDate,
@@ -908,7 +919,8 @@ updatePurchasedPass purchasedPass today now = do
                 DPurchasedPass.passPhotoMediaId = firstPayment.passPhotoMediaId <|> purchasedPass.passPhotoMediaId,
                 DPurchasedPass.usedTripCount = Just 0,
                 DPurchasedPass.deviceSwitchCount = 0,
-                DPurchasedPass.updatedAt = now
+                DPurchasedPass.updatedAt = now,
+                DPurchasedPass.profilePicture = newProfilePicture
               }
 
           newPassPayment =
@@ -921,6 +933,7 @@ updatePurchasedPass purchasedPass today now = do
             purchasedPass.status /= newStatus
               || firstPayment.status /= newStatus
               || firstPayment.passPhotoMediaId /= purchasedPass.passPhotoMediaId
+              || isChangedProfilePicture
        in return (newPass, Just newPassPayment, hasChanged)
     Nothing ->
       let newPass =
@@ -929,6 +942,43 @@ updatePurchasedPass purchasedPass today now = do
                 DPurchasedPass.updatedAt = now
               }
        in return (newPass, Nothing, True)
+
+-- ToDo: needs to be removed once the desired state is attained.
+refillProfilePictureFromS3 ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    IssueManagement.Storage.BeamFlow.BeamFlow m r,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Maybe Version ->
+  DPurchasedPass.PurchasedPass ->
+  m (Maybe Text)
+refillProfilePictureFromS3 mbClientSdkVersion purchasedPass =
+  case purchasedPass.passPhotoMediaId of
+    Just mediaId | isNothing purchasedPass.profilePicture -> do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))
+
+      let mbPassExtraConfig = mbRiderConfig >>= (.passExtraConfig)
+          refillEnabled = (mbPassExtraConfig >>= (.profilePhotoRefill)) == Just True
+          mbMaxSdkVersion = (either (const Nothing) Just . textToVersion) =<< (mbPassExtraConfig >>= (.profilePhotoRefillMaxSdkVersion))
+          isLegacyClient = case (mbClientSdkVersion, mbMaxSdkVersion) of
+            (Just clientVersion, Just maxVersion) -> clientVersion < maxVersion
+            _ -> False
+      if not (refillEnabled && isLegacyClient)
+        then return Nothing
+        else
+          ( do
+              base64Photo <- fetchPassPhotoFromS3 purchasedPass.personId mediaId
+              QPurchasedPass.updateProfilePictureById (Just base64Photo) purchasedPass.id
+              return (Just base64Photo)
+          )
+            -- A missing or unreadable S3 object degrades to "no photo"; it must never fail the pass list.
+            `catch` \(e :: SomeException) -> do
+              logError $ "Pass photo refill failed for purchased pass " <> purchasedPass.id.getId <> ": " <> show e
+              return Nothing
+    _ -> return Nothing
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -977,7 +1027,7 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   -- Process each pass and apply updates in-memory to ensure we return the latest state
   -- without relying on read replica synchronization
   updatedPassEntities <- forM passEntities $ \purchasedPass -> do
-    (updatedPass, mbPayment, shouldUpdateDB) <- updatePurchasedPass purchasedPass today now
+    (updatedPass, mbPayment, shouldUpdateDB) <- updatePurchasedPass person.clientSdkVersion purchasedPass today now
     QPurchasedPassPayment.expireOlderPaymentsByPurchasedPassId purchasedPass.id today
     when shouldUpdateDB $ do
       case (updatedPass.status, mbPayment) of
@@ -986,6 +1036,8 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         (_, Just firstPreBookedPayment) -> do
           QPurchasedPassPayment.updateStatusByOrderId updatedPass.status firstPreBookedPayment.orderId
           QPurchasedPass.updatePurchaseData purchasedPass.id updatedPass.startDate updatedPass.endDate updatedPass.status updatedPass.benefitDescription updatedPass.benefitType updatedPass.benefitValue updatedPass.passAmount
+          when (updatedPass.profilePicture /= purchasedPass.profilePicture) $
+            QPurchasedPass.updateProfilePictureById updatedPass.profilePicture purchasedPass.id
           -- Project the activating term's photo onto the pass. whenJust-guarded so a photo-less
           -- renewal payment can't null out an existing pass photo.
           whenJust firstPreBookedPayment.passPhotoMediaId $ \paymentPhotoMediaId ->
@@ -1621,7 +1673,17 @@ postMultimodalPassUpdateProfilePictureUtil personId merchantId purchasedPassId m
 -- | Fetch a pass photo's raw content from S3 by media id, verifying the file
 -- belongs to the given person (their id is embedded in the S3 path). Shared by
 -- the customer GET endpoint and the dashboard render flow.
-fetchPassPhotoFromS3 :: Id.Id DP.Person -> Id.Id DMF.MediaFile -> Environment.Flow Text
+fetchPassPhotoFromS3 ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    IssueManagement.Storage.BeamFlow.BeamFlow m r,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  Id.Id DP.Person ->
+  Id.Id DMF.MediaFile ->
+  m Text
 fetchPassPhotoFromS3 personId mediaId = do
   mediaFile <- QMediaFile.findById mediaId >>= fromMaybeM (InvalidRequest "Pass photo not found")
   s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Pass photo has no associated S3 path")
