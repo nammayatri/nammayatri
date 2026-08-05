@@ -496,3 +496,84 @@ jobs:
       - name: Stop the build container
         if: ${{ always() }}
         run: docker rm -f "$CONTAINER" || true
+
+  # ---------------------------------------------------------------- publish
+  publish:
+    name: "publish image"
+    needs: build
+    runs-on: ubuntu-latest
+    # Only the four executables are needed from the build, and they are already
+    # verified as Linux x86-64 ELF by the time this runs.
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the workflow and the runtime Dockerfile
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github
+            Backend/dev/local-stack
+          sparse-checkout-cone-mode: false
+
+      - name: Fetch the binaries this run just built
+        uses: actions/download-artifact@v4
+        with:
+          name: ny-backend-binaries-${{ github.run_id }}
+          path: Backend/dev/local-stack/bin
+
+      - name: Check what we are about to ship
+        run: |
+          set -euo pipefail
+          cd Backend/dev/local-stack/bin
+          # download-artifact does not preserve the executable bit.
+          chmod +x ./*-exe
+          ls -lh
+          for f in *-exe; do
+            file -b "$f" | grep -q 'ELF 64-bit.*x86-64' \
+              || { echo "FAILED: $f is not a Linux x86-64 ELF"; exit 1; }
+          done
+          echo "four Linux x86-64 executables, ready to package"
+
+      - name: Log in to the container registry
+        # GITHUB_TOKEN is enough for GHCR in the repo's own namespace; no secret
+        # to configure, and it works unchanged if this repo moves to the org.
+        run: echo "${{ secrets.GITHUB_TOKEN }}" \
+          | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push
+        # Namespaced by whoever owns the repo, so moving this to the company org
+        # publishes to the company org with no edit.
+        run: |
+          set -euo pipefail
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          image="ghcr.io/$owner/ny-backend"
+          ref="${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}"
+          tag="${ref:0:7}-${{ github.run_number }}"
+
+          cd Backend/dev/local-stack
+          # Same Dockerfile the local stack uses: it puts a modern librdkafka on
+          # the published base image (which ships 0.11, too old for these
+          # binaries) and copies the four executables into /opt/app.
+          docker build -f Dockerfile.rider -t "$image:$tag" -t "$image:latest" .
+
+          docker push "$image:$tag"
+          docker push "$image:latest"
+
+          {
+            echo "### image"
+            echo '```'
+            echo "$image:$tag"
+            echo "$image:latest"
+            echo '```'
+            echo "Deploy with:"
+            echo '```bash'
+            echo "docker pull $image:latest"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show what is in it
+        run: |
+          set -euo pipefail
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          docker run --rm --entrypoint ls "ghcr.io/$owner/ny-backend:latest" -lh /opt/app

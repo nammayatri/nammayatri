@@ -75,19 +75,22 @@ def main() -> int:
     names = {s.get("name") for s in steps}
     problems = []
 
-    # ---- 1. every run: block must be valid shell -------------------------
-    for s in steps:
-        run = s.get("run")
-        if not run:
-            continue
-        script = re.sub(r"\$\{\{[^}]*\}\}", "EXPR", run)
-        with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
-            f.write(script)
-            tmp = f.name
-        r = subprocess.run(["bash", "-n", tmp], capture_output=True, text=True)
-        os.unlink(tmp)
-        if r.returncode:
-            problems.append(f"shell syntax error in {s.get('name')!r}:\n{r.stderr}")
+    # ---- 1. every run: block in EVERY job must be valid shell ------------
+    for job_name, job in doc["jobs"].items():
+        for s in job.get("steps", []):
+            run = s.get("run")
+            if not run:
+                continue
+            script = re.sub(r"\$\{\{[^}]*\}\}", "EXPR", run)
+            with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as f:
+                f.write(script)
+                tmp = f.name
+            r = subprocess.run(["bash", "-n", tmp], capture_output=True, text=True)
+            os.unlink(tmp)
+            if r.returncode:
+                problems.append(
+                    f"shell syntax error in {job_name}/{s.get('name')!r}:\n{r.stderr}")
+    print(f"jobs checked: {', '.join(doc['jobs'])}")
 
     # ---- 2. what actually runs on a push ---------------------------------
     print("as a push event:")
