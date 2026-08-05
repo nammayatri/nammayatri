@@ -4387,4 +4387,5 @@ def main():
 
 
 if __name__ == "__main__":
+    sys.modules.setdefault("server", sys.modules["__main__"])
     main()
