@@ -697,12 +697,10 @@ updateDeviceToken token personId = do
 updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
 updateDriverTag driverTag personId = do
   now <- getCurrentTime
-  mbPerson <- findOneWithKV [Se.Is BeamP.id $ Se.Eq (getId personId)]
   updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set driverTag}
-  whenJust mbPerson $ \person ->
-    CQCoinsConfig.clearDriverIncentiveConfigHashForDriver person.merchantOperatingCityId personId
+  CQCoinsConfig.clearDriverIncentiveConfigHashForDriver personId
 
 findByOperatorBadgeTokenAndMerchantId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

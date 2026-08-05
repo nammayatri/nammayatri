@@ -69,7 +69,7 @@ getCoinsIncentiveConfig (mbPersonId, merchantId, merchantOpCityId) mbIfNoneMatch
       (items, eTag, shouldCache) <-
         buildIncentiveConfigWithStableGeneration mocId vehCategory transporterConfig merchantId merchantOpCityId driver.driverTag 3
       when shouldCache $
-        CQCoinsConfig.setDriverIncentiveConfigHash mocId vehCategory driverId.getId eTag
+        CQCoinsConfig.setDriverIncentiveConfigHash vehCategory driverId.getId eTag
       pure $ addHeader eTag items
 
 -- | Build config items and pair with generation only when gen is unchanged
