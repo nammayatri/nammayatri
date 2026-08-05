@@ -617,9 +617,12 @@ buildSubscriptionJournalRequest sapCfg fromTime totals entryType = do
           }
       debit = totals.grossAmount
       credit = totals.netAmount + totals.cgst + totals.sgst + totals.igst
-  when (debit /= credit) $
+  when (roundTo2 debit /= roundTo2 credit) $
     throwError (InternalError $ "SAP SubscriptionPurchase debit/credit mismatch: debit=" <> show debit <> " credit=" <> show credit <> " batchId=" <> bId)
   pure SAPJournalRequest {headers = [header]}
+
+roundTo2 :: HighPrecMoney -> HighPrecMoney
+roundTo2 x = fromIntegral (round (x * 100) :: Integer) / 100
 
 -- ---------------------------------------------------------------------------
 -- SAP Journal Entry persistence
