@@ -264,7 +264,6 @@ SEEDS=(
   dev/local-testing-data/rider-dashboard.sql
   dev/sql-seed/provider-dashboard-seed.sql
   dev/local-testing-data/provider-dashboard.sql
-  dev/sql-seed/unified-dashboard-seed.sql
   dev/sql-seed/safety-dashboard-seed.sql
   dev/local-testing-data/safety-dashboard.sql
   dev/sql-seed/special-zone-seed.sql
