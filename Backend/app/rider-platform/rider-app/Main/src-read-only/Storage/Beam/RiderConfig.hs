@@ -141,6 +141,7 @@ data RiderConfigT f = RiderConfigT
     passExpiryReminderBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passExpiryReminderNextRunLocalTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
+    passExtraConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     passStatusUpdateBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
