@@ -207,6 +207,7 @@ data DriverRideRes = DriverRideRes
     enableOtpLessRide :: Bool,
     cancellationSource :: Maybe DBCR.CancellationSource,
     cancellationReasonCode :: Maybe Text,
+    cancellationReasonDescription :: Maybe Text,
     cancellationAdditionalInfo :: Maybe Text,
     cancellationCompensation :: Maybe PriceAPIEntity,
     tipAmount :: Maybe PriceAPIEntity,
@@ -558,6 +559,17 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
     Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams
     Nothing -> pure Nothing
 
+  -- Reason codes on a rider-initiated cancellation come from the rider's vocabulary, which the
+  -- driver's own reason list never contains — so the client cannot resolve them itself.
+  -- Falls back to ENGLISH rather than surfacing the raw key when a translation is missing.
+  cancellationReasonDescriptionVal <- case cancellationReason >>= (.reasonCode) of
+    Nothing -> pure Nothing
+    Just (DTCR.CancellationReasonCode code) -> do
+      mbInDriverLanguage <- resolveLabel language code
+      case mbInDriverLanguage of
+        Just _ -> pure mbInDriverLanguage
+        Nothing -> if language == KET.ENGLISH then pure Nothing else resolveLabel KET.ENGLISH code
+
   return $
     DriverRideRes
       { id = ride.id,
@@ -640,6 +652,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
         cancellationSource = fmap (\cr -> cr.source) cancellationReason,
         cancellationReasonCode = cancellationReason >>= (.reasonCode) <&> (\(DTCR.CancellationReasonCode code) -> code),
+        cancellationReasonDescription = cancellationReasonDescriptionVal,
         cancellationAdditionalInfo = cancellationReason >>= (.additionalInfo),
         cancellationCompensation = flip PriceAPIEntity ride.currency <$> ride.cancellationChargesOnCancel,
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
