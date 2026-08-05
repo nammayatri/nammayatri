@@ -174,7 +174,9 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           rideDescription = Nothing,
           ticketContext = Just Ticket.IssueTicket,
           becknIssueId = Nothing,
-          xyneChannelId = Nothing
+          xyneChannelId = Nothing,
+          xyneTicketBody = Nothing,
+          xyneSenderName = Nothing
         }
 
 throwImageError :: OnboardingFlow m r => Id Domain.Image -> DriverOnboardingError -> m b
