@@ -24,6 +24,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -63,12 +64,15 @@ postNearbyBusBooking (mbPersonId, _) req = do
       else return []
 
   recentRides <-
-    if req.requireRecentRide
-      then getRecentRides person req
-      else return []
+    if req.fetchAll == Just True
+      then getAllRecentRides person
+      else
+        if req.requireRecentRide
+          then catMaybes <$> getRecentRides person req
+          else return []
 
   -- Return the complete response
-  return $ API.Types.UI.NearbyBuses.NearbyBusesResponse simpleNearbyBuses (catMaybes recentRides)
+  return $ API.Types.UI.NearbyBuses.NearbyBusesResponse simpleNearbyBuses recentRides
 
 castToEntityType :: Spe.VehicleCategory -> Domain.Types.RecentLocation.EntityType
 castToEntityType Spe.BUS = Domain.Types.RecentLocation.BUS
@@ -82,7 +86,8 @@ castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
 getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
-  let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
+  vehicleType <- fromMaybeM (InvalidRequest "vehicleType is required when requireNearbyBuses is true") req.vehicleType
+  let vehicleCategory = castToOnDemandVehicleCategory vehicleType
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
   case mbIntegratedBPPConfig of
     Just integratedBPPConfig -> do
@@ -148,12 +153,13 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
 
 getRecentRides :: Domain.Types.Person.Person -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [Maybe API.Types.UI.NearbyBuses.RecentRide]
 getRecentRides person req = do
-  let entityType = castToEntityType req.vehicleType
+  vehicleType <- fromMaybeM (InvalidRequest "vehicleType is required when requireRecentRide is true and fetchAll is not set") req.vehicleType
+  let entityType = castToEntityType vehicleType
   recentLocations <- QRecentLocation.findRecentLocationsByEntityType entityType person.id person.merchantOperatingCityId
   forM recentLocations $ \recentLoc -> do
     case (recentLoc.fromStopCode, recentLoc.toStopCode, recentLoc.routeCode) of
       (Just fromStopCode, Just toStopCode, Just routeCode) -> do
-        let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
+        let vehicleCategory = castToOnDemandVehicleCategory vehicleType
         SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory req.platformType
           >>= \case
             [] -> return Nothing
@@ -162,7 +168,7 @@ getRecentRides person req = do
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
                           let fareRoute = CallAPI.FareRoute {segments = pure CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode, color = Nothing}, mbProviderRouteId = Nothing}
-                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRoute req.vehicleType Nothing Nothing [] [] False False
+                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRoute vehicleType Nothing Nothing [] [] False False
                       )
               return $
                 (mbFare >>= (\fare -> find (\category -> category.category == ADULT) fare.categories)) <&> \fare ->
@@ -170,9 +176,44 @@ getRecentRides person req = do
                     { fare = fare.price,
                       fromStopCode = fromStopCode,
                       routeCode = Just routeCode,
-                      toStopCode = toStopCode
+                      toStopCode = toStopCode,
+                      vehicleType = vehicleType,
+                      frequency = recentLoc.frequency,
+                      updatedAt = recentLoc.updatedAt
                     }
       _ -> return Nothing
+
+-- Maps a public-transport RecentLocation row back to the FRFS VehicleCategory it belongs to.
+castEntityTypeToVehicleCategory :: Domain.Types.RecentLocation.EntityType -> Maybe Spe.VehicleCategory
+castEntityTypeToVehicleCategory Domain.Types.RecentLocation.BUS = Just Spe.BUS
+castEntityTypeToVehicleCategory Domain.Types.RecentLocation.METRO = Just Spe.METRO
+castEntityTypeToVehicleCategory Domain.Types.RecentLocation.SUBWAY = Just Spe.SUBWAY
+castEntityTypeToVehicleCategory _ = Nothing
+
+-- Uncapped fetch for fetchAll = true, seeding the frontend's local cache; uses stored fare/frequency/updatedAt, no live fare lookups.
+getAllRecentRides :: Domain.Types.Person.Person -> Environment.Flow [API.Types.UI.NearbyBuses.RecentRide]
+getAllRecentRides person = do
+  recentLocations <- QRecentLocation.findAllPublicTransportRecentLocations person.id person.merchantOperatingCityId
+  let recentRides =
+        mapMaybe
+          ( \recentLoc -> do
+              fromStopCode <- recentLoc.fromStopCode
+              toStopCode <- recentLoc.toStopCode
+              fare <- recentLoc.fare
+              vehicleType <- castEntityTypeToVehicleCategory recentLoc.entityType
+              pure
+                API.Types.UI.NearbyBuses.RecentRide
+                  { fromStopCode = fromStopCode,
+                    toStopCode = toStopCode,
+                    fare = Kernel.Types.Price.mkPrice Nothing fare,
+                    routeCode = recentLoc.routeCode,
+                    vehicleType = vehicleType,
+                    frequency = recentLoc.frequency,
+                    updatedAt = recentLoc.updatedAt
+                  }
+          )
+          recentLocations
+  pure $ sortOn (\r -> (Down r.frequency, Down r.updatedAt)) recentRides
 
 getNextVehicleDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
