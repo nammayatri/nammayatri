@@ -241,6 +241,7 @@ data TransporterConfigT f = TransporterConfigT
     minThresholdForPassThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     minmRentalAndScheduledBookingLeadTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     missingMappingFallbackVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant),
+    allowNonFleetDriverLiveMap :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
     nightSafetyStartTime :: B.C f Kernel.Types.Common.Seconds,

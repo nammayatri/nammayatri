@@ -1027,3 +1027,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN unified_onboard
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN force_direct_calling boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_non_fleet_driver_live_map boolean ;
+
+
+------- SQL updates -------
+
