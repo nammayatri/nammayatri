@@ -309,6 +309,25 @@ services:
       - ./demo-map/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
+  # Browser view of the database, for demos and screenshots. Nothing depends on
+  # it and nothing breaks if it is stopped.
+  #
+  # Log in with: system PostgreSQL · server ny-postgres · user postgres ·
+  # password root · database atlas_dev. It reaches Postgres over the compose
+  # network, so it uses the container name and port 5432, not the published 5434.
+  adminer:
+    image: adminer:4
+    container_name: ny-adminer
+    ports:
+      - "8026:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: ny-postgres
+      ADMINER_DESIGN: dracula
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   ny-pgdata:
   # Built by ./osrm-prepare.sh rather than by compose, because preprocessing is
