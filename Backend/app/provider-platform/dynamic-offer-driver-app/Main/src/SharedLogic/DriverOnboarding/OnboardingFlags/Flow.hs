@@ -150,8 +150,11 @@ recomputeDriverFlagsArm ::
 recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver useUnifiedOnboardingFlagsRecompute = do
   driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   let effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (driverInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
-      isFleetDriver = fromMaybe (effectiveOnboardingAs == DI.FLEET_DRIVER) mbIsFleetDriver
-      allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+  isFleetDriver <-
+    if useUnifiedOnboardingFlagsRecompute
+      then pure $ fromMaybe (effectiveOnboardingAs == DI.FLEET_DRIVER) mbIsFleetDriver
+      else hasActiveFleetAssociation person.id
+  let allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       allEnablingDocsValid = checkAllDriverDocsValid' ForEnabling (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments
       newApproved =
