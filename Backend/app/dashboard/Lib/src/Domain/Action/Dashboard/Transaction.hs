@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Transaction where
 
 import Dashboard.Common
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
+import Data.Time (addUTCTime)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import Kernel.Beam.Functions as B
@@ -33,10 +34,15 @@ data ListTransactionRes = ListTransactionRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-listTransactions :: (BeamFlow m r, EncFlow m r) => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> Maybe (Id Common.Driver) -> Maybe (Id Common.Ride) -> Maybe DT.Endpoint -> m ListTransactionRes
-listTransactions _ mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint = do
+listTransactions :: (BeamFlow m r, EncFlow m r) => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> Maybe (Id Common.Driver) -> Maybe (Id Common.Ride) -> Maybe DT.Endpoint -> Maybe UTCTime -> Maybe UTCTime -> m ListTransactionRes
+listTransactions _ mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint mbFrom mbTo = do
+  (defaultedFrom, defaultedTo) <- case (mbFrom, mbTo) of
+    (Nothing, Nothing) -> do
+      now <- getCurrentTime
+      pure (Just (addUTCTime (negate (7 * 24 * 60 * 60) :: NominalDiffTime) now), Just now)
+    _ -> pure (mbFrom, mbTo)
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  transactionList <- B.runInReplica $ QT.findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint
+  transactionList <- B.runInReplica $ QT.findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint defaultedFrom defaultedTo
   transactions <- forM transactionList $ \(transaction, encPerson) -> do
     decPerson <- decrypt encPerson
     pure $ mkTransactionAPIEntity transaction decPerson

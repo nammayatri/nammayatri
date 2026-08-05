@@ -16,6 +16,7 @@
 module Storage.Queries.Transaction where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
+import qualified Data.Text as T
 import qualified Database.Beam as B
 import Domain.Types.Person as DP
 import Domain.Types.ServerName as DSN
@@ -24,7 +25,9 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Common as SBC
@@ -56,8 +59,10 @@ findAllTransactionsByLimitOffset ::
   Maybe (Id Common.Driver) ->
   Maybe (Id Common.Ride) ->
   Maybe DT.Endpoint ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m [(DT.Transaction, DP.Person)]
-findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint = do
+findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint mbFrom mbTo = do
   let limitVal = fromMaybe 5 mbLimit
       offsetVal = fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
@@ -77,6 +82,8 @@ findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffs
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideId -> transaction.commonRideId B.==?. B.val_ (Just rideId.getId)) mbRideId
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> transaction.commonDriverId B.==?. B.val_ (Just driverId.getId)) mbDriverId
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\endpoint -> transaction.endpoint B.==?. B.val_ endpoint) mbEndpoint
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fromTime -> B.sqlBool_ (transaction.createdAt B.>=. B.val_ fromTime)) mbFrom
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\toTime -> B.sqlBool_ (transaction.createdAt B.<=. B.val_ toTime)) mbTo
                 )
                 $ do
                   transaction <- B.all_ (SBC.transaction SBC.atlasDB)
@@ -89,7 +96,9 @@ findAllTransactionsByLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffs
         p <- MaybeT $ fromTType' person
         pure (t, p)
       pure $ catMaybes finalRes
-    Left _ -> pure []
+    Left err -> do
+      logError $ "findAllTransactionsByLimitOffset failed: " <> T.pack (show err)
+      throwError (InternalError $ "Failed to fetch transactions: " <> T.pack (show err))
 
 instance FromTType' BeamT.Transaction DT.Transaction where
   fromTType' BeamT.TransactionT {..} = do
