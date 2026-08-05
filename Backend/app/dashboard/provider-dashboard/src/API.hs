@@ -22,6 +22,7 @@ import qualified "lib-dashboard" API.Dashboard as Dashboard
 import qualified API.Exotel as Exotel
 import qualified API.Fleet.Registration as FReg
 import qualified API.ProviderPlatform as BPP
+import qualified API.RiderPlatform as BAP
 import qualified API.SpecialZone as SpecialZone
 import qualified Data.ByteString as BS
 import Data.OpenApi
@@ -41,6 +42,11 @@ type API =
 type MainAPI =
   Dashboard.API
     :<|> BPP.API
+    -- Dashboard unification Phase 2: the BAP ("bap"-prefixed) tree previously
+    -- served by rider-dashboard. BharatTaxiUser is intentionally not mounted
+    -- (removed with rider-dashboard; PLAN.md decision 2026-08-05).
+    :<|> BAP.API
+    :<|> BAP.APIV2
     :<|> Exotel.API
     :<|> FReg.API
     :<|> SpecialZone.API
@@ -56,6 +62,8 @@ mainServer :: FlowServer MainAPI
 mainServer =
   Dashboard.handler
     :<|> BPP.handler
+    :<|> BAP.handler
+    :<|> BAP.handlerV2
     :<|> Exotel.handler
     :<|> FReg.handler
     :<|> SpecialZone.handler
