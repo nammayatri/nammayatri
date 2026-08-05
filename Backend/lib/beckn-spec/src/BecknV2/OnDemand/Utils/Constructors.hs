@@ -42,7 +42,8 @@ emptyVehicle =
 emptyPerson :: Person
 emptyPerson =
   Person
-    { personGender = Nothing,
+    { personCreds = Nothing,
+      personGender = Nothing,
       personId = Nothing,
       personImage = Nothing,
       personName = Nothing,

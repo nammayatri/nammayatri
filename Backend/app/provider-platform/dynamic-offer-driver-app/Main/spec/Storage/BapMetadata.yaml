@@ -17,6 +17,11 @@ BapMetadata:
     name : Text
     logoUrl : Maybe BaseUrl
     domain: Maybe Text # TODO: Use Domain type here
+    staticTermsUrl : Maybe BaseUrl
+    offlineContract : Maybe Bool # OFFLINE_CONTRACT tag echoed on BAP_TERMS/BPP_TERMS -- one fact about this BAP's deal with us, not a per-vehicle-category BecknConfig setting
+    supportEmail : Maybe Text
+    supportPhone : Maybe Text
+    supportUrl : Maybe BaseUrl
 
   constraints:
     id: PrimaryKey
@@ -33,12 +38,18 @@ BapMetadata:
 
   beamType:
     logoUrl: Maybe Text
+    staticTermsUrl: Maybe Text
+    supportUrl: Maybe Text
 
   toTType:
     logoUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    supportUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   fromTType:
     logoUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    supportUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
   sqlType:
     id: character varying(255)

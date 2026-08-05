@@ -14,6 +14,11 @@ data BapMetadata = BapMetadata
   { domain :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata,
     logoUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
+    offlineContract :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    staticTermsUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
+    supportEmail :: Kernel.Prelude.Maybe Data.Text.Text,
+    supportPhone :: Kernel.Prelude.Maybe Data.Text.Text,
+    supportUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     name :: Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
