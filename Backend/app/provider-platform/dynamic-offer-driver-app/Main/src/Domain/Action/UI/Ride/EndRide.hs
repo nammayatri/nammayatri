@@ -895,7 +895,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
               numberOfLuggages = booking.numberOfLuggages,
               govtChargesRate = Just thresholdConfig.taxConfig.rideGst,
-              pickupGateId = booking.pickupGateId
+              pickupGateId = booking.pickupGateId,
+              fareSettlementType = booking.fareSettlementType
             }
       let finalFare = Fare.fareSum fareParams Nothing
           distanceDiff = recalcDistance - oldDistance

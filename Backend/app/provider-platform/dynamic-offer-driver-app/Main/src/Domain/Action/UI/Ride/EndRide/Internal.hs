@@ -102,6 +102,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.ActiveDriversList as ADL
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
@@ -297,7 +298,10 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   let totalFare = fromMaybe 0 ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
       tollAmount = fromMaybe 0 newFareParams.tollCharges
-      parkingAmount = fromMaybe 0 newFareParams.parkingCharge
+      -- totalFare (ride.fare) already excludes parking when EDC-collected (see fareSum's gate),
+      -- so subtracting it again here would double-count; zero it out in that case.
+      edcParkingCollected = SL.edcCollectsParking newFareParams.fareSettlementType
+      parkingAmount = if edcParkingCollected then 0 else fromMaybe 0 newFareParams.parkingCharge
       baseFare = totalFare - gstAmount - tollAmount - parkingAmount
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False thresholdConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
@@ -476,8 +480,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       rawTaxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2), pre-discount
       tollAmount = fromMaybe 0 fareParams.tollCharges
       tollVatAmount = fromMaybe 0 fareParams.tollFareTax -- discount does NOT apply to toll, so not scaled
-      parkingAmount = fromMaybe 0 fareParams.parkingCharge
-      parkingVatAmount = fromMaybe 0 fareParams.parkingChargeTax
+      edcParkingCollected = SL.edcCollectsParking fareParams.fareSettlementType
+      parkingAmount = if edcParkingCollected then 0 else fromMaybe 0 fareParams.parkingCharge
+      parkingVatAmount = if edcParkingCollected then 0 else fromMaybe 0 fareParams.parkingChargeTax
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       -- Commission is stored ALV-inclusive; split only at emission (pct unset ⇒ vat 0, behaviour unchanged).
       (commissionBaseAmount, commissionVatAmount) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionAmount
@@ -801,7 +806,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
       Right _ -> pure ()
 
-    let commissionAlreadyCollectedAtBooth = booking.fareSettlementType == Just CommissionOnly
+    let commissionAlreadyCollectedAtBooth = SL.commissionCollectedAtBooth booking.fareSettlementType
     when (commissionAmount + cancellationCommissionAmount > 0) $ do
       let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
           commissionVatRef = if isOnline then walletReferenceCommissionVATOnline else walletReferenceCommissionVATCash

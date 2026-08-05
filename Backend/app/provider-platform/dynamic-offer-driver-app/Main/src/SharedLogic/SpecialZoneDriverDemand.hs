@@ -291,7 +291,8 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = Nothing,
               govtChargesRate = mbTransporterConfig <&> (.taxConfig.rideGst),
-              pickupGateId = Just pickupGateId
+              pickupGateId = Just pickupGateId,
+              fareSettlementType = fullFarePolicy.fareSettlementType
             }
       let estimatedFare = SFC.fareSum fareParams (Just [])
           -- Tolls and gate parking (which now includes airport entry fee added by

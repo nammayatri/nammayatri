@@ -269,7 +269,7 @@ startRideHandler ServiceHandle {..} rideId req = do
         ( booking.isDashboardRequest
             && isRideOtpTrip booking.tripCategory
             && fromMaybe False transporterConfig.payoutRideMoneyToDriver
-            && booking.fareSettlementType /= Just SL.CommissionOnly
+            && not (SL.commissionCollectedAtBooth booking.fareSettlementType)
         )
         $ do
           -- Checking iff duplicate is there.

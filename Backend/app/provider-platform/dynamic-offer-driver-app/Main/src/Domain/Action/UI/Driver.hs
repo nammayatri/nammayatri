@@ -2136,6 +2136,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               numberOfLuggages = searchReq.numberOfLuggages,
               govtChargesRate = Just transporterConfig.taxConfig.rideGst,
               pickupGateId = searchReq.pickupGateId,
+              fareSettlementType = farePolicy'.fareSettlementType,
               ..
             }
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
