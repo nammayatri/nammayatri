@@ -806,8 +806,11 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
               serviceTierType = mbVehicleServiceTier <&> (._type)
               serviceTierName = mbVehicleServiceTier <&> (.shortName)
               routeCode = mbFirstRouteStation <&> (.code)
-          let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
-                if integratedBppConfig.platformType == DIBC.MULTIMODAL
+          -- Stations ride on the quote only for a standalone subway search, which builds no journey leg
+          -- to carry them; every other MULTIMODAL quote gets its stops from the journey.
+          let isStandaloneSubwaySearch = search.vehicleType == Spec.SUBWAY && isNothing mbJourneyLeg
+              (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
+                if integratedBppConfig.platformType == DIBC.MULTIMODAL && not isStandaloneSubwaySearch
                   then (Nothing, Nothing)
                   else (decodedRouteStations, decodeFromText quote.stationsJson)
           -- Per-sub-leg transit route details for interchange journeys. These rows are persisted
