@@ -970,7 +970,7 @@ refillProfilePictureFromS3 mbClientSdkVersion purchasedPass =
         then return Nothing
         else
           ( do
-              base64Photo <- fetchPassPhotoFromS3 purchasedPass.personId mediaId
+              base64Photo <- toPassPhotoDataUri <$> fetchPassPhotoFromS3 purchasedPass.personId mediaId
               QPurchasedPass.updateProfilePictureById (Just base64Photo) purchasedPass.id
               return (Just base64Photo)
           )
@@ -979,6 +979,11 @@ refillProfilePictureFromS3 mbClientSdkVersion purchasedPass =
               logError $ "Pass photo refill failed for purchased pass " <> purchasedPass.id.getId <> ": " <> show e
               return Nothing
     _ -> return Nothing
+
+toPassPhotoDataUri :: Text -> Text
+toPassPhotoDataUri base64Photo
+  | "data:" `T.isPrefixOf` base64Photo = base64Photo
+  | otherwise = "data:image/jpeg;base64," <> base64Photo
 
 getMultimodalPassList ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
