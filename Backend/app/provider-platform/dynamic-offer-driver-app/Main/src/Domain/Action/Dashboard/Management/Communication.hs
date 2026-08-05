@@ -398,7 +398,7 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
               if null fleetOwnerIds
                 then pure []
                 else do
-                  pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
+                  pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True) Nothing Nothing Nothing Nothing Nothing Nothing
                   pure $ map (\(_, person) -> person) pairs
             _ -> do
               tuples <-

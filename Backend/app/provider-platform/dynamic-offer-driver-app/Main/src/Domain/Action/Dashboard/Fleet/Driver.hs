@@ -748,15 +748,15 @@ getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumb
       Nothing -> pure Nothing
   case mbIsActive of
     Just True -> do
-      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just True)
+      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just True) Nothing Nothing Nothing Nothing Nothing Nothing
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Just False -> do
-      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just False)
+      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just False) Nothing Nothing Nothing Nothing Nothing Nothing
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Nothing -> do
-      pairs <- FDV.findAllDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString
+      pairs <- FDV.findAllDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString Nothing Nothing Nothing Nothing Nothing
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
 
