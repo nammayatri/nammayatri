@@ -1153,6 +1153,9 @@ TransporterConfig:
     authIpBlockedUntilInMins: Maybe Minutes
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
+    tripStartGeofenceRadius: Maybe Meters
+    tripEndGeofenceRadius: Maybe Meters
+    tripStartLeadTime: Maybe Minutes
     editLocTimeThreshold: Seconds
     editLocDriverPermissionNeeded: Bool
     rideTimeEstimatedThreshold: Seconds
@@ -1811,6 +1814,7 @@ TransporterConfig:
     scheduledRideOpenToAllThresholdMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
+    tripStartLeadTime: integer
     rideTimeEstimatedThreshold: bigint
     rideTravelledDistanceThreshold: bigint
     cancellationRatioWeightage: int
