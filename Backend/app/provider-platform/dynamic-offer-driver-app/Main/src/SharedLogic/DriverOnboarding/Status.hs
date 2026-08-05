@@ -1160,44 +1160,50 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
           else pure Nothing
       return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BankingDetails -> do
-      if SDO.isFleetRole role
-        then do
-          mbFleetInfo <- QFOI.findByPrimaryKey driverId
-          let hasBankingDetails = maybe False (isJust . (.payoutVpa)) mbFleetInfo
-              mbBankingMetadata =
+      mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
+      let mbChargesEnabled = (.chargesEnabled) <$> mbBankAccount
+          mbPayoutsEnabled = mbBankAccount >>= (.payoutsEnabled)
+          mbDetailsSubmitted = (.detailsSubmitted) <$> mbBankAccount
+          bankAccountStatus
+            | mbChargesEnabled == Just True && mbPayoutsEnabled == Just True = Just VALID
+            | mbDetailsSubmitted == Just True = Just MANUAL_VERIFICATION_REQUIRED
+            | otherwise = Nothing
+          mkBankingMetadata accountNumber ifscCode nameAtBank upiId =
+            BankingDetailsMetadata
+              BankingDetailsDocumentMetadata
+                { accountNumber,
+                  ifscCode,
+                  nameAtBank,
+                  upiId,
+                  chargesEnabled = mbChargesEnabled,
+                  payoutsEnabled = mbPayoutsEnabled,
+                  detailsSubmitted = mbDetailsSubmitted
+                }
+      (hasBankingDetails, mbBankingMetadata) <-
+        if SDO.isFleetRole role
+          then do
+            mbFleetInfo <- QFOI.findByPrimaryKey driverId
+            return
+              ( maybe False (isJust . (.payoutVpa)) mbFleetInfo,
                 if enableMetadata
-                  then
-                    mbFleetInfo <&> \fi ->
-                      BankingDetailsMetadata BankingDetailsDocumentMetadata {accountNumber = fi.payoutVpaBankAccount, ifscCode = Nothing, nameAtBank = Nothing, upiId = fi.payoutVpa, chargesEnabled = Nothing, payoutsEnabled = Nothing, detailsSubmitted = Nothing}
+                  then mbFleetInfo <&> \fi -> mkBankingMetadata fi.payoutVpaBankAccount Nothing Nothing fi.payoutVpa
                   else Nothing
-          return (if hasBankingDetails then Just VALID else Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata, Nothing)
-        else do
-          mbDriverInfo <- DIQuery.findById (cast driverId)
-          mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
-          let hasBankingDetails = maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo
-              mbChargesEnabled = (.chargesEnabled) <$> mbBankAccount
-              mbPayoutsEnabled = mbBankAccount >>= (.payoutsEnabled)
-              mbDetailsSubmitted = (.detailsSubmitted) <$> mbBankAccount
-              bankAccountStatus
-                | mbChargesEnabled == Just True && mbPayoutsEnabled == Just True = Just VALID
-                | mbDetailsSubmitted == Just True = Just MANUAL_VERIFICATION_REQUIRED
-                | otherwise = Nothing
-              mbBankingMetadata =
+              )
+          else do
+            mbDriverInfo <- DIQuery.findById (cast driverId)
+            return
+              ( maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo,
                 if enableMetadata
                   then
                     mbDriverInfo <&> \di ->
-                      BankingDetailsMetadata
-                        BankingDetailsDocumentMetadata
-                          { accountNumber = di.driverBankAccountDetails >>= (.accountNumber),
-                            ifscCode = di.driverBankAccountDetails >>= (.ifscCode),
-                            nameAtBank = di.driverBankAccountDetails >>= (.nameAtBank),
-                            upiId = di.payerVpa,
-                            chargesEnabled = mbChargesEnabled,
-                            payoutsEnabled = mbPayoutsEnabled,
-                            detailsSubmitted = mbDetailsSubmitted
-                          }
+                      mkBankingMetadata
+                        (di.driverBankAccountDetails >>= (.accountNumber))
+                        (di.driverBankAccountDetails >>= (.ifscCode))
+                        (di.driverBankAccountDetails >>= (.nameAtBank))
+                        di.payerVpa
                   else Nothing
-          return (bankAccountStatus <|> (if hasBankingDetails then Just VALID else Nothing), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata, Nothing)
+              )
+      return (bankAccountStatus <|> (if hasBankingDetails then Just VALID else Nothing), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, mbBankingMetadata, Nothing)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: OnboardingFlow m r => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()

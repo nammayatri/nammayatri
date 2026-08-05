@@ -2656,6 +2656,7 @@ getFleetOrOperatorInfo person = do
         Common.FleetOwnerInfoRes
           { id = person.id.getId,
             mobileNo = contact,
+            email = person.email,
             name = Just name,
             firstName = person.firstName,
             middleName = person.middleName,
@@ -2795,6 +2796,7 @@ getFleetOrOperatorInfo person = do
             middleName = fleetOwner.middleName,
             lastName = fleetOwner.lastName,
             mobileNo = mobileNo',
+            email = fleetOwner.email,
             roleName = Just (show fleetOwner.role),
             isEligibleForSubscription = Just isEligibleForSubscription,
             operatorName = operatorName,

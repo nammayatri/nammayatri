@@ -2109,6 +2109,7 @@ types:
     - middleName: Maybe Text
     - lastName: Maybe Text
     - mobileNo: Maybe Text
+    - email: Maybe Text
     - blocked: Bool
     - enabled: Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
