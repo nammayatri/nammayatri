@@ -467,7 +467,12 @@ mergeSpecialLocationWithExisting new Nothing =
   new{DSL.paymentModes = new.paymentModes <|> Just SL.defaultPaymentModes}
 mergeSpecialLocationWithExisting new (Just old) =
   new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
-      DSL.paymentModes = new.paymentModes <|> old.paymentModes
+      DSL.paymentModes = new.paymentModes <|> old.paymentModes,
+      DSL.fetchAllGateFareProduct = new.fetchAllGateFareProduct <|> old.fetchAllGateFareProduct,
+      DSL.render = new.render <|> old.render,
+      DSL.enforceTollRoute = new.enforceTollRoute <|> old.enforceTollRoute,
+      DSL.fareSettlementType = new.fareSettlementType <|> old.fareSettlementType,
+      DSL.boothSpecificFleet = new.boothSpecificFleet <|> old.boothSpecificFleet
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
