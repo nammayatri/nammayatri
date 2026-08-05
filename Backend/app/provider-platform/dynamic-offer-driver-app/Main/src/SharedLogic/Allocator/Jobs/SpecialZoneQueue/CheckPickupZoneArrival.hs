@@ -104,9 +104,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                     Nothing -> False
                 Nothing -> pure False
               if isInPickupZone
-                then do
-                  logInfo $ "Driver " <> driverId.getId <> " arrived at pickup zone gate " <> gateId
-                  QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Expired requestId
+                then logInfo $ "Driver " <> driverId.getId <> " is within pickup zone at gate " <> gateId <> ", keeping request as Accepted"
                 else do
                   logWarning $ "Driver " <> driverId.getId <> " no-show at gate " <> gateId <> ", removing from queue"
                   logError $
