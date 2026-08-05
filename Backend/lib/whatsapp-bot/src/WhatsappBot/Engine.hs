@@ -43,7 +43,7 @@ import Kernel.Prelude
 -- edge runs Engine -> Env and never back).
 import WhatsappBot.Env (BotEnv, btn, ensureAuth, extractPhone, mkUserKey, rawInput, reply, replyButtons, resetContext, save, scopedSessionId)
 -- Booking CREATION now lives in Flow.Booking (Engine -> Flow.Booking -> {Ride, Env}).
-import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, flexiOffered, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, regularOffered, sendPickupConfirm, sendRegularFareConfirm)
+import WhatsappBot.Flow.Booking (bookTriggers, confirmRegularBooking, flexiOffered, handleConfirmingRegularDrop, handleFlexiEndOtp, handlePickup, handlePickupConfirm, handleRegularDrop, handleRideType, menuRow, prefetchSavedLocations, promptForBookingEntry, promptForPickup, promptForRegularDrop, regularButton, regularOffered, sendPickupConfirm, sendRegularFareConfirm)
 import WhatsappBot.Handles (StoredPerson (..))
 import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLanguage, t)
 -- Instances only: LanguageStrings / LanguageInfo are dot-accessed via RDP
@@ -270,7 +270,7 @@ handleMore env ev ctx = do
       to = ev.fromPhone
       merchant = env.cfg.merchant
       items =
-        [btn s.rideTypeRegular "ride_type:regular" | flexiOffered merchant && regularOffered merchant]
+        [regularButton s | flexiOffered merchant && regularOffered merchant]
           <> [btn s.howItWorks "help", btn s.contactSupport "support", btn s.mainMenu "main_menu"]
   replyButtons env to s.moreTitle items
 

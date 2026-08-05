@@ -47,6 +47,7 @@ module WhatsappBot.Flow.Booking
     menuRow,
     flexiOffered,
     regularOffered,
+    regularButton,
 
     -- * The flow's post-auth prefetch hook
     prefetchSavedLocations,
@@ -590,6 +591,13 @@ flexiOffered merchant = merchant.flexiEnabled
 
 regularOffered :: MerchantCtx -> Bool
 regularOffered merchant = merchant.regularEnabled
+
+-- | The "switch to Regular" button — owns the @"ride_type:regular"@ wire
+-- string, same reasoning as 'menuRow': a caller outside this module (e.g.
+-- "WhatsappBot.Engine") asks for the button instead of writing the booking
+-- wire string itself.
+regularButton :: LanguageStrings -> OutButton
+regularButton s = btn s.rideTypeRegular "ride_type:regular"
 
 -- ---------------------------------------------------------------------------
 -- Small pure/effect helpers
