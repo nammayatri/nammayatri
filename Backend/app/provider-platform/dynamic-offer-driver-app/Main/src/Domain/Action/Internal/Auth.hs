@@ -22,13 +22,16 @@ import Environment
 import EulerHS.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant as QM
 import Tools.Auth (verifyPerson)
 
 data InternalResp = InternalResp
   { driverId :: Id DP.Person,
     merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id MerchantOperatingCity
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    cloudType :: Maybe Version.CloudType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -38,9 +41,11 @@ internalAuth token apiKey = do
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
   (driverId, currentMerchantId, merchantOpCityId) <- verifyPerson (fromMaybe "" token)
+  merchant <- QM.findById currentMerchantId >>= fromMaybeM (MerchantNotFound currentMerchantId.getId)
   pure $
     InternalResp
       { driverId,
         merchantId = currentMerchantId,
-        merchantOperatingCityId = merchantOpCityId
+        merchantOperatingCityId = merchantOpCityId,
+        cloudType = merchant.cloudType
       }
