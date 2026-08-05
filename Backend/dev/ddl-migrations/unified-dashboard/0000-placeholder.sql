@@ -1,1 +1,0 @@
-DO $$ BEGIN END $$;

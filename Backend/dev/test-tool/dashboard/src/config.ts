@@ -49,7 +49,6 @@ const DEFAULT_PORTS: Record<string, number> = {
   'location-tracking-service': 8081,
   'beckn-gateway': 8015,
   'mock-registry': 8020,
-  'unified-dashboard': 8022,
   'test-context-api': 7082,
   'metabase': 3001,
   'redis-commander': 8431,
