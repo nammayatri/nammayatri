@@ -337,8 +337,12 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
       _ -> do
         farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) (Just . getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
+            -- Parking already EDC-collected at the booth for these settlement types isn't the
+            -- driver's cash to hold - don't factor it into the driver's cash-wallet eligibility check.
+            edcCollectsParking = SL.edcCollectsParking farePolicy.fareSettlementType
+            driverFacingParkingCharge = if edcCollectsParking then Nothing else farePolicy.parkingCharge
         return $
-          ( farePolicy.parkingCharge,
+          ( driverFacingParkingCharge,
             farePolicy.tollCharges,
             USRD.extractDriverPickupCharges farePolicy.farePolicyDetails,
             mbDriverExtraFeeBounds <&> (.minFee),

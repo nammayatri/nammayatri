@@ -193,7 +193,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 cancellationFeeTaxExclusive = cancellationFeeTaxExclusive,
                 cancellationTax = cancellationTax,
                 parkingChargeTaxExclusive = parkingChargeTaxExclusive,
-                parkingChargeTax = parkingChargeTax
+                parkingChargeTax = parkingChargeTax,
+                fareSettlementType = fareSettlementType
               }
       Nothing -> return Nothing
 
@@ -262,5 +263,6 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.platformFee = platformFee,
         BeamFP.sgst = sgst,
         BeamFP.cgst = cgst,
-        BeamFP.driverCancellationPenaltyAmount = driverCancellationPenaltyAmount
+        BeamFP.driverCancellationPenaltyAmount = driverCancellationPenaltyAmount,
+        BeamFP.fareSettlementType = fareSettlementType
       }

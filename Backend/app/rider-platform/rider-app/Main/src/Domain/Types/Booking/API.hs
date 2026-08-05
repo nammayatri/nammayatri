@@ -64,6 +64,7 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
@@ -162,7 +163,8 @@ data BookingAPIEntity = BookingAPIEntity
     driverPreference :: Maybe [Text],
     specialLocationSupportNumber :: Maybe Text,
     commissionCharge :: Maybe HighPrecMoney,
-    refunds :: [RideRefundInfo]
+    refunds :: [RideRefundInfo],
+    fareSettlementType :: Maybe SL.FareSettlementType
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -415,7 +417,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         driverPreference = booking.driverPreference,
         specialLocationSupportNumber = booking.specialLocationSupportNumber,
         commissionCharge = booking.commission,
-        refunds = refunds
+        refunds = refunds,
+        fareSettlementType = booking.fareSettlementType
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

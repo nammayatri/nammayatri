@@ -285,7 +285,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     conditionalCharges :: [DTAC.ConditionalCharges],
     congestionChargeData :: Maybe CongestionChargeData,
     driverCancellationPenaltyAmount :: Maybe HighPrecMoney,
-    mbArea :: Maybe SL.Area
+    mbArea :: Maybe SL.Area,
+    fareSettlementType :: Maybe SL.FareSettlementType
   }
   deriving (Generic, Show)
 
@@ -342,6 +343,7 @@ farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellat
   FullFarePolicy
     { merchantId = merchantId',
       mbArea = Nothing,
+      fareSettlementType = Nothing,
       ..
     }
 
