@@ -31,6 +31,7 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirmV2,
     callOnStatusV2,
+    callOnSelectV2ForQuote,
     buildBppUrl,
     sendSafetyAlertToBAP,
     sendPhoneCallRequestUpdateToBAP,
@@ -49,13 +50,24 @@ import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
+import qualified Beckn.ACL.OnSupport as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.OnDemand.Transformer.MSIL.OnStatus as MSILOnStatus
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
+import qualified Beckn.OnDemand.Utils.MSIL.Category as MSILCategory
+import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentId as MSILFulfillmentId
+import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentState as MSILFulfillmentState
+import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
+import qualified Beckn.OnDemand.Utils.MSIL.ItemCompliance as MSILItemCompliance
+import qualified Beckn.OnDemand.Utils.MSIL.StopAuthorization as MSILStopAuthorization
+import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
+import qualified Beckn.Types.Core.Taxi.API.OnSupport as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -93,6 +105,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideDetails as DRD
@@ -214,6 +227,48 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
 
+-- | MSIL pilot: /on_select for the new Quote-based (static/scheduled) /select
+-- capability. Unlike 'callOnSelectV2' above (which answers a /select for the
+-- dynamic-offer/bidding flow asynchronously, once a driver has bid -- hence
+-- its Redis-cached message_id lookup, since /select's Ack and this call can be
+-- far apart in time), this is called synchronously from within the same
+-- request that validated the Quote: no driver bid to wait for, no
+-- SearchRequestForDriver/SearchTry exist yet for this flow (driver assignment
+-- happens later, at Confirm-time batching), so the
+-- messageId from the inbound /select is used directly instead.
+callOnSelectV2ForQuote ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  Text ->
+  DQuote.Quote ->
+  Spec.OnSelectReqMessage ->
+  m ()
+callOnSelectV2ForQuote transporter searchRequest msgId quote content = do
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+      bppSubscriberId = getShortId $ transporter.subscriberId
+  bppUri <- buildBppUrl (transporter.id)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  let vehicleCategory = Utils.mapServiceTierToCategory quote.vehicleServiceTier
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
+  logDebug $ "on_selectV2 (quote) request bpp: " <> show content
+  let onSelectReq = Spec.OnSelectReq context Nothing (Just content)
+  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnSelectV2ForQuote" "BPP" (Just searchRequest.transactionId) (Just onSelectReq) res
+
 callOnUpdateV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
@@ -246,6 +301,29 @@ callOnUpdateV2 req retryConfig merchantId = do
       (\url mappedAction jsonBody -> withRetryConfig retryConfig $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnUpdateV2" "BPP" (req.onUpdateReqContext.contextTransactionId <&> UUID.toText) (Just req) res
+
+callOnSupportV2 ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    MonadFlow m,
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
+  ) =>
+  Spec.OnSupportReq ->
+  RetryCfg ->
+  Id Merchant.Merchant ->
+  m ()
+callOnSupportV2 req retryConfig merchantId = do
+  bapUri' <- req.onSupportReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Support request context.")
+  bapUri <- parseBaseUrl bapUri'
+  bppSubscriberId <- req.onSupportReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Support request context.")
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_SUPPORT) API.onSupportAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnSupportV2" "BPP" (req.onSupportReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -551,6 +629,34 @@ rideAssignedCommon booking ride driver veh = do
           return (birthMonth == curMonth && birthDay == curDay)
         Nothing -> return False
 
+-- | MSIL pilot: shared set of Layer 2 overrides for the ride-assignment
+-- order, used identically by both consumers of Common.tfAssignedReqToOrder's
+-- output (the phased on_confirm push, buildOnConfirmMessage below, and the
+-- on_update ride-assigned push, sendRideAssignedUpdateToBAP) -- both build
+-- through the same Layer 1 path (rideAssignedCommon -> tfAssignedReqToOrder),
+-- so both need the identical fix: SCHEDULED_RIDE_ASSIGNED fulfillment-state,
+-- ON_DEMAND_* category_ids, non-ONDC breakup titles, the DELIVERY/SELF_PICKUP
+-- fulfillment.type restriction, and the SETTLEMENT_TERMS order-tag group
+-- (from tfAssignedReqToOrder's mkOrderSettlementTags, invalid at
+-- order.tags[*].descriptor.code per ONDC v2.1.0's TRV10 schema) all need the
+-- same fix here as elsewhere. Also pins order.fulfillments[*].id (and the
+-- item's fulfillment_ids) back to the quote id on_confirm first announced --
+-- Layer 1's mkFulfillmentV2 (Beckn.OnDemand.Utils.Common) uses ride.id here
+-- instead, which drifts from on_confirm's booking.quoteId and gets NACKed by
+-- ONDC Workbench's "fulfillment.id must match selection" check. See
+-- Beckn.OnDemand.Utils.MSIL.FulfillmentId. Also flips the START stop's OTP
+-- authorization.status to "CLAIMED" once the ride has started -- see
+-- Beckn.OnDemand.Utils.MSIL.StopAuthorization.
+applyMsilRideAssignedOrderOverrides :: Bool -> Text -> Bool -> Spec.Order -> Spec.Order
+applyMsilRideAssignedOrderOverrides isScheduled quoteId isRideStarted =
+  MSILTerms.dropNonConformingOrderTags
+    . MSILFulfillmentType.patchOrderFulfillmentTypes
+    . MSILCategory.overrideOrderCategoryIds isScheduled
+    . MSILFulfillmentState.overrideOrderFulfillmentState
+    . MSILBreakup.overrideOrderBreakupTitles
+    . MSILFulfillmentId.overrideOrderFulfillmentId quoteId
+    . MSILStopAuthorization.overrideOrderStopAuthorizationStatus isRideStarted
+
 buildOnConfirmMessage ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -576,10 +682,17 @@ buildOnConfirmMessage booking ride driver veh = do
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
+  onConfirmMessage' <- fromJust <$> TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
+  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      onConfirmMessage =
+        if isOndcScheduledRideSupportEnabled
+          then onConfirmMessage' {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId False (Spec.confirmReqMessageOrder onConfirmMessage')}
+          else onConfirmMessage'
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
-  pure . fromJust $ onConfirmMessage
+  pure onConfirmMessage
 
 sendOnConfirmToBAP ::
   ( MonadFlow m,
@@ -650,7 +763,18 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
-  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  rideAssignedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above. Gated on
+  -- booking.isScheduled, not the isScheduledRideAssignment parameter above --
+  -- that one only distinguishes which caller/notification path this is, not
+  -- whether the underlying booking itself is a scheduled one.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      fixMsg msg = msg {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId False (Spec.confirmReqMessageOrder msg)}
+      rideAssignedMsgV2 =
+        if isOndcScheduledRideSupportEnabled
+          then rideAssignedMsgV2' {Spec.onUpdateReqMessage = fixMsg <$> Spec.onUpdateReqMessage rideAssignedMsgV2'}
+          else rideAssignedMsgV2'
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) EmptyDynamicParam
@@ -704,7 +828,17 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       estimateId = booking.estimateId <&> (.getId)
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
+  rideStartedMsgV2' <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
+  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above -- Beckn.ACL.OnStatus's
+  -- tfOrder (RideStartedReq -> Common.tfStartReqToOrder) shares the identical
+  -- ONDC-non-compliance gaps as tfAssignedReqToOrder.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      fixMsg msg = msg {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId True (Spec.confirmReqMessageOrder msg)}
+      rideStartedMsgV2 =
+        if isOndcScheduledRideSupportEnabled
+          then rideStartedMsgV2' {Spec.onStatusReqMessage = fixMsg <$> Spec.onStatusReqMessage rideStartedMsgV2'}
+          else rideStartedMsgV2'
   void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
   fork "FleetEngine: trip enroute to dropoff on ride started" $ FleetEngine.notifyRideStarted booking ride
 
@@ -802,6 +936,10 @@ sendRideCompletedUpdateToBAP ::
   Bool ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
+  -- MSIL pilot: see applyMsilRideAssignedOrderOverrides above -- Beckn.ACL.Common.Order.tfCompleteReqToOrder
+  -- shares the identical ONDC-non-compliance gaps as tfAssignedReqToOrder.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -824,7 +962,12 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
       estimateId = booking.estimateId <&> (.getId)
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
-  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
+  rideCompletedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
+  let fixMsg msg = msg {Spec.confirmReqMessageOrder = applyMsilRideAssignedOrderOverrides booking.isScheduled booking.quoteId True (Spec.confirmReqMessageOrder msg)}
+      rideCompletedMsgV2 =
+        if isOndcScheduledRideSupportEnabled
+          then rideCompletedMsgV2' {Spec.onUpdateReqMessage = fixMsg <$> Spec.onUpdateReqMessage rideCompletedMsgV2'}
+          else rideCompletedMsgV2'
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
   fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
 
@@ -886,7 +1029,25 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
-  callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
+  onSelectMsg' <- buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy
+  -- MSIL pilot: the dynamic-offer/bidding flow's on_select (unlike the
+  -- Quote-based flow's, which already goes through MSILOnSelect) has no MSIL
+  -- override applied -- Beckn.OnDemand.Utils.MSIL.ItemCompliance and
+  -- .Breakup.overrideOrderBreakupTitles fix item.descriptor.code, item.tags,
+  -- and quote.breakup titles to match ONDC v2.1.0's TRV10 schema.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchTry.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist searchTry.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      -- Beckn.ACL.OnSelect.mkFulfillmentV2 sets fulfillment.id to
+      -- driverQuote.id (the internal DriverQuote row id) instead of
+      -- driverQuote.estimateId -- the id the original /select actually
+      -- echoed (order.fulfillments[0].id, == item.id, from the on_search
+      -- catalog). ONDC Workbench requires it stay the same value throughout
+      -- the flow and NACKs otherwise ("Fulfillment ID ... does not match
+      -- selection"), same class of bug as the on_update one -- reusing
+      -- MSILFulfillmentId here too.
+      fixMsg msg = msg {Spec.onSelectReqMessageOrder = (MSILItemCompliance.overrideOrderItemCompliance . MSILBreakup.overrideOrderBreakupTitles) <$> Spec.onSelectReqMessageOrder msg}
+      onSelectMsg = if isOndcScheduledRideSupportEnabled then fixMsg onSelectMsg' else onSelectMsg'
+  callOnSelectV2 transporter searchReq srfd searchTry onSelectMsg
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
@@ -971,7 +1132,18 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
-  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  -- Pilot: cities with enableOndcScheduledRideSupport get this push re-routed
+  -- through on_status, built in one pass by
+  -- Beckn.OnDemand.Transformer.MSIL.OnStatus.msilOnStatusMessageBuild (relabel +
+  -- fulfillment.type override), spec-correct per ONDC v2.1.0; everyone else keeps
+  -- getting it via on_update, unchanged (doc 25 s11). Do NOT dual-send on both
+  -- endpoints -- see doc 23 s10's idempotency risk: the BAP has no way to dedupe
+  -- the same event on two APIs.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  if isOndcScheduledRideSupportEnabled
+    then void $ callOnStatusV2 (MSILOnStatus.msilOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
+    else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
   fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 
 sendPhoneCallRequestUpdateToBAP ::
@@ -1017,8 +1189,8 @@ sendPhoneCallCompletedUpdateToBAP booking ride = do
   whenJust mbBookingDetails $ \bookingDetails -> do
     let phoneCallCompletedReq = ACL.PhoneCallCompletedBuildReq ACL.DPhoneCallCompletedReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-    phoneCallRequestMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallCompletedReq
-    void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig bookingDetails.merchant.id
+    phoneCallCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallCompletedReq
+    void $ callOnUpdateV2 phoneCallCompletedMsgV2 retryConfig bookingDetails.merchant.id
 
 buildBookingDetails ::
   ( CacheFlow m r,
@@ -1223,25 +1395,53 @@ sendSafetyAlertToBAP ::
 sendSafetyAlertToBAP booking ride reason driver vehicle = do
   logDebug $ "sendSafetyAlertToBAP: reason: " <> T.pack (show reason)
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  when isValueAddNP $ do
-    merchant <-
-      CQM.findById booking.providerId
-        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    let paymentUrl = Nothing
-    riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
-    riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
-        safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {reason = T.pack (show reason), ..}
+  -- Pilot: cities with enableOndcScheduledRideSupport get this push re-routed
+  -- through on_support instead of on_update; everyone else keeps the on_update
+  -- push, unchanged.
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  if isValueAddNP
+    then do
+      merchant <-
+        CQM.findById booking.providerId
+          >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+      driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
+      bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      let paymentUrl = Nothing
+      riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+      riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+      let bookingDetails = ACL.BookingDetails {..}
+          safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {reason = T.pack (show reason), ..}
 
-    retryConfig <- asks (.shortDurationRetryCfg)
-    safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
-    void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
+      retryConfig <- asks (.shortDurationRetryCfg)
+      safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
+      void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
+    else when isOndcScheduledRideSupportEnabled $ do
+      merchant <-
+        CQM.findById booking.providerId
+          >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+      retryConfig <- asks (.shortDurationRetryCfg)
+      onSupportMsgV2 <- ACL.buildOnSupportMessageV2 merchant booking Nothing (Just $ safetyReasonDescriptor reason)
+      void $ callOnSupportV2 onSupportMsgV2 retryConfig merchant.id
+
+safetyReasonDescriptor :: Enums.SafetyReasonCode -> Spec.Descriptor
+safetyReasonDescriptor reason =
+  Spec.Descriptor
+    { descriptorCode = Just $ case reason of
+        Enums.DEVIATION -> "ROUTE_DEV"
+        Enums.RIDE_STOPPAGE -> "LONG_HALT",
+      descriptorName = Just $ case reason of
+        Enums.DEVIATION -> "Route deviation"
+        Enums.RIDE_STOPPAGE -> "Long halt",
+      descriptorShortDesc = Just $ case reason of
+        Enums.DEVIATION -> "Driver has deviated from the planned route."
+        Enums.RIDE_STOPPAGE -> "Ride has stopped unexpectedly.",
+      descriptorLongDesc = Nothing
+    }
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,

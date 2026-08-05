@@ -67,6 +67,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.onSearchTTLSec onSearchTTLSec,
       Se.Set Beam.onSelectTTLSec onSelectTTLSec,
       Se.Set Beam.onStatusTTLSec onStatusTTLSec,
+      Se.Set Beam.onSupportTTLSec onSupportTTLSec,
       Se.Set Beam.onTrackTTLSec onTrackTTLSec,
       Se.Set Beam.onUpdateTTLSec onUpdateTTLSec,
       Se.Set Beam.paymentParamsJson paymentParamsJson,

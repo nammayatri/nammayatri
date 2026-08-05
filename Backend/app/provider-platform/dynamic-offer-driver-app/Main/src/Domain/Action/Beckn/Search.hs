@@ -179,6 +179,10 @@ data DSearchReq = DSearchReq
     userSdkVersion :: Maybe Version,
     userBackendAppVersion :: Maybe Text,
     riderPreferredOption :: DRPO.RiderPreferredOption,
+    -- | Nothing from the base parser -- only the MSIL layer (Beckn.OnDemand.Transformer.MSIL.Search.msilParser)
+    -- ever sets this, from the incoming category descriptor code. Everyone else's search
+    -- carries Nothing all the way through, unread.
+    isSchedule :: Maybe Bool,
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
     -- | Set only by the internal sync_search endpoint when the BAP is pricing a
@@ -543,6 +547,11 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
             domain = Just $ show Domain.MOBILITY,
             name = "THIRD PARTY BAP",
             logoUrl = Nothing, -- TODO: Parse this from on_search req
+            staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
+            offlineContract = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
+            supportEmail = Nothing,
+            supportPhone = Nothing,
+            supportUrl = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -1057,7 +1066,7 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
 
 isScheduledForSearch :: DTMT.TransporterConfig -> UTCTime -> DSearchReq -> Bool
 isScheduledForSearch tConf now dsReq =
-  maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+  maybe True not dsReq.isMultimodalSearch && (tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime || dsReq.isSchedule == Just True)
 
 validateScheduledBookingWindowForSearch :: Id DMOC.MerchantOperatingCity -> DSearchReq -> Flow ()
 validateScheduledBookingWindowForSearch merchantOpCityId sReq = do

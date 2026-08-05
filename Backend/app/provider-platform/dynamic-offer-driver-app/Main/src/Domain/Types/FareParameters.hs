@@ -87,7 +87,12 @@ data FareParameters = FareParameters
     cancellationTax :: Maybe HighPrecMoney,
     parkingChargeTaxExclusive :: Maybe HighPrecMoney,
     parkingChargeTax :: Maybe HighPrecMoney,
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    -- | The BAP-negotiated fare's delta from the estimated fare at
+    -- /select (ONDC v2.1.0 Pre-Order Bid, MSIL pilot only) -- kept as its
+    -- own field rather than folded into baseFare, so how much was
+    -- negotiated for this transaction stays visible on its own.
+    negotiatedFareDelta :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

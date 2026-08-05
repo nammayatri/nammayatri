@@ -1067,6 +1067,21 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payo
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
 
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_min_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_max_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_ondc_scheduled_ride_support boolean  default false;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_daily_coin_ride_threshold integer ;
