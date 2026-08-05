@@ -186,7 +186,9 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue =
       queue = queue,
       becknIssueId = Nothing,
       ticketContext = Just Ticket.SOSAlert,
-      xyneChannelId = Nothing
+      xyneChannelId = Nothing,
+      xyneTicketBody = Nothing,
+      xyneSenderName = Nothing
     }
   where
     sosIssueDescription = \case

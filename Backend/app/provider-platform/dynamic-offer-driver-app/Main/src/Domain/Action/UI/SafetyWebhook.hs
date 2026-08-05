@@ -106,5 +106,7 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           queue = tConfig.kaptureQueue,
           becknIssueId = Nothing,
           ticketContext = Just Ticket.IssueTicket,
-          xyneChannelId = Nothing
+          xyneChannelId = Nothing,
+          xyneTicketBody = Nothing,
+          xyneSenderName = Nothing
         }

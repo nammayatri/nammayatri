@@ -301,7 +301,9 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
           rideDescription = Nothing,
           becknIssueId = Nothing,
           ticketContext = Just Ticket.IssueTicket,
-          xyneChannelId = Nothing
+          xyneChannelId = Nothing,
+          xyneTicketBody = Nothing,
+          xyneSenderName = Nothing
         }
 
     makeVerifyDLHitsCountKey :: Text -> Text

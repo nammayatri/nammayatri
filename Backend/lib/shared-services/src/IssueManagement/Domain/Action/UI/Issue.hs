@@ -605,7 +605,57 @@ createIssueReport ::
   Identifier ->
   Maybe Text ->
   m Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReport args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+  -- Guard against a client retrying the same submission (e.g. after a
+  -- timeout on a request carrying an attachment) and ending up with two
+  -- tickets for what the customer experienced as one submit. Keyed on the
+  -- submission's stable identity, NOT mediaFiles — attachments are exactly
+  -- what's likely to differ between the original attempt and a retry (a
+  -- failed upload being dropped/retried), so keying on them would defeat
+  -- the guard for the case it's meant to catch.
+
+  let dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> T.take 200 description
+  -- Atomic claim (SETNX-style): only the request that actually creates the
+  -- key proceeds to do the work. A plain GET-then-SET has a race window —
+  -- two requests that both arrive before either has written the cache can
+  -- both see "no cache" and both create a ticket; setNxExpire is atomic at
+  -- the Redis level, so only one of two truly concurrent requests can win.
+  wonClaim <- Redis.setNxExpire dedupKey 60 (Nothing :: Maybe Common.IssueReportRes)
+  if wonClaim
+    then do
+      result <- withTryCatch "createIssueReportImpl:dedup" (createIssueReportImpl args mbLanguage req issueHandle identifier becknIssueId)
+      case result of
+        Right response -> do
+          Redis.setExp dedupKey (Just response) 60
+          pure response
+        Left err -> do
+          Redis.del dedupKey
+          throwM err
+    else awaitDedupedResponse dedupKey
+  where
+    awaitDedupedResponse dedupKey = do
+      mbVal <- Redis.get dedupKey
+      case mbVal of
+        Just (Just res) -> pure res
+        Just Nothing -> do
+          threadDelaySec $ Seconds 1
+          awaitDedupedResponse dedupKey
+        Nothing -> createIssueReport args mbLanguage req issueHandle identifier becknIssueId
+
+createIssueReportImpl ::
+  ( EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r,
+    HasField "slackNotificationConfig" r SlackNotificationConfig
+  ) =>
+  (Id Person, Id Merchant) ->
+  Maybe Language ->
+  Common.IssueReportReq ->
+  ServiceHandle m ->
+  Identifier ->
+  Maybe Text ->
+  m Common.IssueReportRes
+createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     issueOption <- CQIO.findById justOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist justOptionId.getId)
@@ -656,10 +706,19 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     -- once that history gets replayed afterward, inverting the real order.
 
     resolvedHistory <- resolveHistoricalChats chats_ identifier language issueConfig mbRideInfoRes
-    let (ticketBody, remainingHistory) = case resolvedHistory of
-          [] -> (description, [])
-          (firstEntry : rest) -> ((case firstEntry of Left x -> x; Right x -> x), rest)
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles ticketBody
+    -- xyneTicketBody/xyneSenderName are Xyne-ONLY overrides for the first
+    -- message on the thread — issueDescription/name in buildTicket stay the
+    -- real customer description/name unconditionally, because those are
+    -- shared across providers (Kapture's ticketDetails, Zendesk's rendered
+    -- "Issue Description" section + requester name, and Xyne's own
+    -- "Customer Name" metadata sidebar all read issueDescription/name
+    -- directly and must keep showing the real submission, not whichever
+    -- history entry happens to be chronologically first).
+    let (mbTicketBody, mbSenderName, remainingHistory) = case resolvedHistory of
+          [] -> (Nothing, Nothing, [])
+          (Left botMessage : rest) -> (Just botMessage, Just "Auto Reply", rest)
+          (Right userText : rest) -> (Just userText, Nothing, rest)
+    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -796,8 +855,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Text -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles ticketBody = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -818,10 +877,12 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             disposition = merchantCfg.kaptureDisposition,
             queue = merchantCfg.kaptureQueue,
             issueId = Just issue.id.getId,
-            issueDescription = ticketBody,
+            issueDescription = description,
             mediaFiles = Just (riderMediaFileUrls <> dashboardMediaFileUrls),
             name = Just $ fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName,
             phoneNo = phoneNumber,
+            xyneTicketBody = mbTicketBody,
+            xyneSenderName = mbSenderName,
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
             rideDescription = Just info,
