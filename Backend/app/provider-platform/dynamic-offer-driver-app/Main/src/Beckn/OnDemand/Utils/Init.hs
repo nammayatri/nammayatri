@@ -93,7 +93,8 @@ mkPaymentMethodInfo Spec.Payment {..}
   where
     isStripePayment = (paymentTlMethod >>= (\method -> decodeFromText $ "\"" <> method <> "\"")) == Just Spec.StripeSdk
 mkPaymentMethodInfo Spec.Payment {..} = do
-  _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
+  -- for schedule case, payment params is optional
+  let _params = fromMaybe (Spec.PaymentParams Nothing Nothing Nothing Nothing Nothing) paymentParams
   collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
   pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
   paymentInstrument <- castPaymentInstrument _params paymentTags

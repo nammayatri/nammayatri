@@ -36,7 +36,7 @@ tfCatalog :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool ->
 tfCatalog res bppConfig isValueAddNP = do
   let catalogDescriptor_ = tfCatalogDescriptor res
       catalogProviders_ = tfCatalogProviders res bppConfig isValueAddNP & Just . Data.List.singleton
-  BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_}
+  BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_, catalogTags = Nothing}
 
 tfCatalogDescriptor :: Domain.Action.Beckn.Search.DSearchRes -> Maybe BecknV2.OnDemand.Types.Descriptor
 tfCatalogDescriptor res = do

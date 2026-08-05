@@ -962,7 +962,8 @@ minimalStop =
 minimalPerson :: Spec.Person
 minimalPerson =
   Spec.Person
-    { personId = Nothing,
+    { personCreds = Nothing,
+      personId = Nothing,
       personImage = Nothing,
       personName = Nothing,
       personTags = Nothing,

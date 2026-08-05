@@ -145,6 +145,7 @@ library
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
+      Beckn.ACL.OnSupport
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
@@ -154,12 +155,30 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.MSIL.Init
+      Beckn.OnDemand.Transformer.MSIL.OnConfirm
+      Beckn.OnDemand.Transformer.MSIL.OnInit
+      Beckn.OnDemand.Transformer.MSIL.OnSearch
+      Beckn.OnDemand.Transformer.MSIL.OnSelect
+      Beckn.OnDemand.Transformer.MSIL.OnStatus
+      Beckn.OnDemand.Transformer.MSIL.Search
+      Beckn.OnDemand.Transformer.MSIL.Select
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.OnUpdate
       Beckn.OnDemand.Transformer.Search
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.MSIL.Breakup
+      Beckn.OnDemand.Utils.MSIL.Category
+      Beckn.OnDemand.Utils.MSIL.FulfillmentId
+      Beckn.OnDemand.Utils.MSIL.FulfillmentState
+      Beckn.OnDemand.Utils.MSIL.FulfillmentType
+      Beckn.OnDemand.Utils.MSIL.ItemCompliance
+      Beckn.OnDemand.Utils.MSIL.RouteInfo
+      Beckn.OnDemand.Utils.MSIL.StopAuthorization
+      Beckn.OnDemand.Utils.MSIL.Terms
+      Beckn.OnDemand.Utils.MSIL.VehicleEnergyType
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
       Beckn.OnDemand.Utils.Search
