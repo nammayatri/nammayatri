@@ -16,11 +16,11 @@ module API.Beckn.Init (API, handler) where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Beckn.ACL.OnInit as ACL
-import qualified Beckn.OnDemand.Transformer.MSIL.Init as MSILInit
-import qualified Beckn.OnDemand.Transformer.MSIL.OnInit as MSILOnInit
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.Init as OSRInit
+import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnInit as OSROnInit
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
@@ -47,7 +47,6 @@ import qualified SharedLogic.Booking as SBooking
 import SharedLogic.Cancel
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -92,17 +91,12 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
     when isOndcScheduledRideSupportEnabled $ do
       let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
-      MSILTerms.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
+      OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
 
-    -- Verifying: Layer 1's echo-based fulfillment-id parse (QuoteId vs
-    -- DriverQuoteId) is unreliable for MSIL, since our own fulfillment.type
-    -- override on /on_select collapses the signal it depends on -- see
-    -- Beckn.OnDemand.Utils.MSIL.FulfillmentType.correctFulfillmentId.
+    -- Pilot merchants: corrects Layer 1's echo-based fulfillment-id parse (unreliable once our fulfillment.type override runs) and patches in the wire item's add-ons, in one pass.
     dInitReq' <-
       if isOndcScheduledRideSupportEnabled
-        then do
-          correctedFulfillmentId <- MSILInit.correctFulfillmentId transactionId dInitReq.fulfillmentId
-          pure dInitReq {DInit.fulfillmentId = correctedFulfillmentId}
+        then OSRInit.buildOndcScheduledRideInitReq transactionId reqV2 dInitReq
         else pure dInitReq
 
     let txnId = Just transactionId
@@ -113,7 +107,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
       mbProcessed :: Maybe Text <- Redis.withMasterRedis $ Redis.get (initProcessedKey initFulfillmentId)
       unless (isJust mbProcessed) $ do
-        validatedRes <- DInit.validateRequest transporterId dInitReq'
+        validatedRes <- DInit.validateRequest transporterId dInitReq' isOndcScheduledRideSupportEnabled
         fork "init request processing" $ do
           Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
             dInitRes <-
@@ -131,15 +125,10 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
               Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
                 mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
                 let onInitMessage' = ACL.mkOnInitMessageV2 isValueAddNP dInitRes bppConfig mbFarePolicy
-                -- Building: BPP_TERMS and ROUTE_INFO, pilot-gated, added in one pass
-                -- by Beckn.OnDemand.Transformer.MSIL.OnInit.msilOnInitMessageBuild.
-                -- Reuses the isOndcScheduledRideSupportEnabled computed above the fork -- same
-                -- request, same merchant.
+                -- Pilot merchants get BPP_TERMS and ROUTE_INFO added to the on_init order.
                 onInitMessage <-
                   if isOndcScheduledRideSupportEnabled
-                    then do
-                      mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id bapId) Domain.MOBILITY
-                      MSILOnInit.msilOnInitMessageBuild dInitRes.booking.transactionId mbBapMetadata bppConfig onInitMessage'
+                    then OSROnInit.ondcScheduledRideOnInitMessageBuild dInitRes.booking bapId bppConfig onInitMessage'
                     else pure onInitMessage'
                 pure $
                   Spec.OnInitReq

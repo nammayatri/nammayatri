@@ -206,6 +206,8 @@ data QuoteBreakupTitle
   | RETURN_FEE
   | BOOTH_CHARGE
   | SCHEDULING_CHARGE
+  | NEGOTIATED_FARE_DELTA -- the accepted negotiation's total delta from the original quoted fare (see Domain.Types.FareParameters.negotiatedFareDelta)
+  | ADD_ON_CHARGES -- total charge for the rider add-ons selected at /select (see Domain.Types.FareParameters.addOnCharges)
   | PER_STOP_CHARGES
   | NYREGULAR_SUBSCRIPTION_CHARGE
   | COMMISSION

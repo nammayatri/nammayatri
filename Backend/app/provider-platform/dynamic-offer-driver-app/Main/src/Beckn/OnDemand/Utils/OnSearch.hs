@@ -215,7 +215,8 @@ mkRentalAddOns pricing = do
                               priceMinimumValue = Nothing,
                               priceOfferedValue = Nothing,
                               priceValue = Just $ highPrecMoneyToText det.perExtraKmRate
-                            }
+                            },
+                      addOnQuantity = Nothing
                     },
                   Spec.AddOn
                     { addOnId = Just "EXTRA_PER_MIN",
@@ -236,7 +237,8 @@ mkRentalAddOns pricing = do
                               priceMinimumValue = Nothing,
                               priceOfferedValue = Nothing,
                               priceValue = Just $ highPrecMoneyToText det.perExtraMinRate
-                            }
+                            },
+                      addOnQuantity = Nothing
                     }
                 ]
         _ -> Nothing
