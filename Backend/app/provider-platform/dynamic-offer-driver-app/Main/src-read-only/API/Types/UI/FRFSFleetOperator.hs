@@ -98,6 +98,7 @@ data FleetOperatorTripActionReq = FleetOperatorTripActionReq
   { action :: Domain.Types.FleetOperatorTripAction.FleetOperatorTripAction,
     gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
     gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
+    location :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)

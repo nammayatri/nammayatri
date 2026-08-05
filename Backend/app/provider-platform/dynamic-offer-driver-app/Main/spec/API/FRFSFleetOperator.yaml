@@ -56,6 +56,9 @@ types:
     gimsConductorId: Maybe Text
     gimsDriverId: Maybe Text
     vehicleNumber: Maybe Text
+    # Driver's GPS at the start/end tap. Optional so older clients / GPS-off devices still work:
+    # the backend geofence fails open (logs + allows) when it's absent.
+    location: Maybe LatLong
     derive: "Show"
 
   FleetOperatorTripActionResp:

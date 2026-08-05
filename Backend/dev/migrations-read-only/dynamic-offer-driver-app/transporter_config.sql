@@ -1146,3 +1146,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN add_driver_coun
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_lead_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_geofence_radius integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_end_geofence_radius integer ;
