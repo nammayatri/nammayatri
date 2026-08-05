@@ -209,11 +209,9 @@ driverIncentiveConfigGenRedisKey mocId vehicleCategory =
     <> show vehicleCategory
     <> ":EventName:EndRide"
 
-driverIncentiveConfigHashRedisKey :: Text -> DTV.VehicleCategory -> Text -> Text
-driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId =
-  "DriverIncentiveCoins:Config:Hash:MocId:"
-    <> mocId
-    <> ":VehicleCategory:"
+driverIncentiveConfigHashRedisKey :: DTV.VehicleCategory -> Text -> Text
+driverIncentiveConfigHashRedisKey vehicleCategory driverId =
+  "DriverIncentiveCoins:Config:Hash:VehicleCategory:"
     <> show vehicleCategory
     <> ":DriverId:"
     <> driverId
@@ -228,17 +226,17 @@ getDriverIncentiveConfigGeneration mocId vehicleCategory =
 getDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> m (Maybe Text)
 getDriverIncentiveConfigHash mocId vehicleCategory driverId =
   Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ do
-    mbETag <- Hedis.safeGet (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId)
+    mbETag <- Hedis.safeGet (driverIncentiveConfigHashRedisKey vehicleCategory driverId)
     gen <- fromMaybe 0 <$> Hedis.safeGet (driverIncentiveConfigGenRedisKey mocId vehicleCategory)
     pure $
       mbETag >>= \eTag ->
         if etagGeneration eTag == Just gen then Just eTag else Nothing
 
-setDriverIncentiveConfigHash :: (CacheFlow m r) => Text -> DTV.VehicleCategory -> Text -> Text -> m ()
-setDriverIncentiveConfigHash mocId vehicleCategory driverId eTag = do
+setDriverIncentiveConfigHash :: (CacheFlow m r) => DTV.VehicleCategory -> Text -> Text -> m ()
+setDriverIncentiveConfigHash vehicleCategory driverId eTag = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
-    Hedis.setExp (driverIncentiveConfigHashRedisKey mocId vehicleCategory driverId) eTag expTime
+    Hedis.setExp (driverIncentiveConfigHashRedisKey vehicleCategory driverId) eTag expTime
 
 -- | After CoinsConfig create/update: bump generation so all drivers miss cache
 -- without a city-wide delete of per-driver keys.
@@ -250,11 +248,11 @@ clearDriverIncentiveConfigHash merchantOpCityId mbVehicleCategory =
       Nothing -> mapM_ (\vc -> void $ Hedis.incr (driverIncentiveConfigGenRedisKey merchantOpCityId.getId vc)) allVehicleCategories
 
 -- | After Person.driverTag update: drop only this driver's cached ETags.
-clearDriverIncentiveConfigHashForDriver :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> m ()
-clearDriverIncentiveConfigHashForDriver merchantOpCityId driverId =
+clearDriverIncentiveConfigHashForDriver :: (CacheFlow m r) => Id DP.Person -> m ()
+clearDriverIncentiveConfigHashForDriver driverId =
   Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
     mapM_
-      ( \vc -> void $ Hedis.del (driverIncentiveConfigHashRedisKey merchantOpCityId.getId vc driverId.getId)
+      ( \vc -> void $ Hedis.del (driverIncentiveConfigHashRedisKey vc driverId.getId)
       )
       allVehicleCategories
 
