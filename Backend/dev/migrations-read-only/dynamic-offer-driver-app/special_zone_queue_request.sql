@@ -31,3 +31,8 @@ ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN trigger
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN trigger_request_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN vehicle_name text ;

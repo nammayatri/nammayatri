@@ -67,6 +67,7 @@ types:
     - forceNotifyDriverIds: Maybe [Text]
     - isDemandHigh: Maybe Bool
     - derive: "'HideSecrets"
+    - vehicleName: Maybe Text
 
   TriggerSpecialZoneQueueNotifyRes:
     - requestId: Text

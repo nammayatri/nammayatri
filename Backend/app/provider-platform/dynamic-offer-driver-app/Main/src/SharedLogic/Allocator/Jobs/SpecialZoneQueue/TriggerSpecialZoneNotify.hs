@@ -87,6 +87,7 @@ triggerSpecialZoneNotify Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> job
                   d.merchantId
                   gate
                   d.vehicleType
+                  d.vehicleName
                   remaining
                   mbPriorityIds
                   d.isDemandHigh
