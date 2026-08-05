@@ -312,7 +312,6 @@ const ENV_VAR_TO_PORT_KEY: Record<string, string> = {
   MOCK_GOOGLE_PORT: 'mock-google',
   MOCK_REGISTRY_PORT: 'mock-registry',
   BECKN_GATEWAY_PORT: 'beckn-gateway',
-  UNIFIED_DASHBOARD_PORT: 'unified-dashboard',
 };
 
 const ENV_TEMPLATE_RE = /\$\{([A-Z_][A-Z0-9_]*)(?::([^}]*))?\}/g;
