@@ -30,6 +30,35 @@ Nothing runs on a schedule and nothing runs on a normal push to a work branch.
 
 ## What comes out
 
+The run has two jobs. `build` compiles and publishes the executables as an
+artifact; `publish` turns them into a container image you can deploy with a
+single pull:
+
+```
+ghcr.io/<owner>/ny-backend:<source-ref>-<run>
+ghcr.io/<owner>/ny-backend:latest
+```
+
+The image is namespaced by whoever owns the repo, so moving this to the company
+org publishes to the company org with no edit. Authentication is `GITHUB_TOKEN`
+— there is no secret to configure.
+
+It is built from `Backend/dev/local-stack/Dockerfile.rider`, the same file the
+local stack uses, so the published image and a locally built one cannot drift.
+That Dockerfile also installs a modern `librdkafka` over the published base
+image, which ships 0.11 — too old for these binaries, which call
+`rd_kafka_destroy_flags()`.
+
+To deploy from it instead of building locally:
+
+```bash
+export NY_IMAGE=ghcr.io/nammayatri-algeria/ny-backend:latest
+docker compose pull rider-app
+docker compose up -d --no-build
+```
+
+
+
 | Binary | Why we need it |
 |---|---|
 | `rider-app-exe` | patched to accept `+213` |
@@ -238,6 +267,36 @@ Two caveats:
   SDK, .NET, Swift and friends first, and prints `df -h` before and after.
 
 ---
+
+## The forked dependencies
+
+The build pulls from ten outside repositories, all pinned to exact commits in
+`Backend/stack.yaml`. Every one of them is now mirrored in the company org:
+
+```
+nammayatri-algeria/beckn-gateway        nammayatri-algeria/beam
+nammayatri-algeria/shared-kernel        nammayatri-algeria/beam-mysql
+nammayatri-algeria/euler-hs             nammayatri-algeria/mysql-haskell
+nammayatri-algeria/hedis                nammayatri-algeria/bytestring-lexing
+nammayatri-algeria/passetto             nammayatri-algeria/haskell-sequelize
+```
+
+Each fork was checked to contain the exact commit the build pins — a fork that
+does not is no insurance at all. Nothing points at them yet: `stack.yaml` still
+names the upstream repos, and it should, because the forks are a fallback rather
+than a change of dependency. Switching over is a search-and-replace in
+`stack.yaml` if any upstream ever disappears.
+
+**Forking does not cover everything.** Two build-time dependencies cannot be
+forked:
+
+- `fpco/stack-build:lts-16.31`, a third-party image on Docker Hub
+- `casa.fpcomplete.com`, a live service stack 2.3.3 contacts and treats failure
+  as fatal — and FP Complete's infrastructure is already partly rotted (their
+  Hackage mirror returns 403)
+
+The published container image is what actually protects against those, because
+a finished image no longer needs any of them.
 
 ## Which source gets built
 

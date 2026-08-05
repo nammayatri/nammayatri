@@ -32,6 +32,19 @@
 # Ours live above the reserved range: 8025 map, 8030 maps-shim, and the
 # Windows-facing proxies on 8014 / 8017 / 5001.
 
+# WHICH BACKEND IMAGE THIS USES
+#
+# By default it builds one locally from ./bin (see Dockerfile.rider), which is
+# what you want while iterating. To run the image CI published instead -- no
+# binaries to download, no build:
+#
+#   export NY_IMAGE=ghcr.io/nammayatri-algeria/ny-backend:latest
+#   docker compose pull rider-app
+#   docker compose up -d --no-build
+#
+# `--no-build` matters: rider-app still declares a build section, and compose
+# would otherwise rebuild it locally and overwrite the tag you just pulled.
+
 services:
   postgres:
     image: postgis/postgis:15-3.4
