@@ -35,6 +35,7 @@ where
 import qualified API.Types.UI.Payment as PaymentAPI
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
+import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
 import Data.Aeson.Types ()
@@ -47,6 +48,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Action.UI.RidePayment as DRidePayment
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
@@ -56,6 +58,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..), Cancellatio
 
 import Domain.Types.Extra.MerchantPaymentMethod ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -95,6 +98,7 @@ import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import qualified Lib.Types.SpecialLocation as SL
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
@@ -106,6 +110,7 @@ import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDi
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.EDCMachineMappingExtra as QEDCMachineMapping
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RefundRequest as QRefundRequest
 import qualified Storage.Queries.Ride as QRide
@@ -185,10 +190,34 @@ createRideBookingPaymentOrder booking = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   paymentOrderId <- generateGUID
   orderShortId <- generateShortId
-  let amount =
-        if booking.fareSettlementType == Just SL.CommissionOnly
-          then fromMaybe 0 booking.commission
-          else booking.estimatedTotalFare.amount
+  -- Parking amount (when EDC-collected) has to be read back from the fare breakup persisted at
+  -- on_init (createFareBreakup) - the rider-app's Booking only carries fare totals, not an
+  -- itemized breakdown, so there's no other source for "just the parking portion" on this side.
+  parkingAmount <-
+    if SL.edcCollectsParking booking.fareSettlementType
+      then do
+        breakups <-
+          SFareBreakupInfo.getFareBreakupsWithFallback
+            booking.id.getId
+            DFareBreakup.BOOKING
+            (QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING)
+        let resolvedParkingAmount = case RD.parseProjectFareParamsBreakup ((\b -> (b.description, b.amount.amount)) <$> breakups) of
+              Just b -> b.parkingChargeTaxExclusive + b.parkingChargeTax
+              Nothing -> sumByDescription (show Enums.PARKING_CHARGE) breakups
+        when (resolvedParkingAmount == 0) $
+          logError $
+            "createRideBookingPaymentOrder: resolved parking amount is 0 for bookingId="
+              <> booking.id.getId
+              <> ", fareSettlementType="
+              <> show booking.fareSettlementType
+        pure resolvedParkingAmount
+      else pure 0
+  let commissionAmount = fromMaybe 0 booking.commission
+      amount = case booking.fareSettlementType of
+        Just SL.CommissionOnly -> commissionAmount
+        Just SL.ParkingOnly -> parkingAmount
+        Just SL.CommissionAndParking -> commissionAmount + parkingAmount
+        _ -> booking.estimatedTotalFare.amount
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False
@@ -254,6 +283,11 @@ createRideBookingPaymentOrder booking = do
     fork "RideBooking:PaytmEDC:StatusPoll" $
       pollPaytmEdcPaymentStatus booking.merchantId booking.merchantOperatingCityId booking.riderId (Id paymentOrderId)
   pure mbOrderResp
+
+-- | Sum fare breakup line items matching an exact description (fallback path when the breakup
+--   isn't in the canonical V2 tax-slot shape parseProjectFareParamsBreakup expects).
+sumByDescription :: Text -> [DFareBreakup.FareBreakup] -> HighPrecMoney
+sumByDescription description_ = sum . map (.amount.amount) . filter ((== description_) . (.description))
 
 -- | Background polling for Paytm EDC payment status.
 -- Reuses orderStatusHandler (via syncOrderStatus): one status fetch + fulfillment handling per attempt.

@@ -30,7 +30,7 @@ import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, throwError)
+import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, logInfo, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
@@ -50,14 +50,19 @@ import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
 
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
---   Returns Nothing if no gateId or no fee configured.
+--   Returns Nothing if no gateId, no fee configured, or the fee was already collected via booth EDC
+--   (see applyAirportEntryFee, which folds this same amount into FareParameters.parkingCharge).
 requiredEntryFeeForBooking ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   Bool ->
   Maybe Text ->
+  Maybe SL.FareSettlementType ->
   m (Maybe HighPrecMoney)
-requiredEntryFeeForBooking enabled mbGateId
+requiredEntryFeeForBooking enabled mbGateId mbFareSettlementType
   | not enabled = pure Nothing
+  | SL.edcCollectsParking mbFareSettlementType = do
+    logInfo $ "requiredEntryFeeForBooking: skipping - parking already EDC-collected, fareSettlementType: " <> show mbFareSettlementType
+    pure Nothing
   | otherwise = do
     fee <- maybe (pure 0) (FareCalculator.entryFeeForGateId . Id) mbGateId
     pure $ if fee > 0 then Just fee else Nothing
@@ -96,7 +101,7 @@ checkAirportEntryFeeBalanceBeforeStartRide ::
   SRB.Booking ->
   m ()
 checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
-  mbRequired <- requiredEntryFeeForBooking enabled booking.pickupGateId
+  mbRequired <- requiredEntryFeeForBooking enabled booking.pickupGateId booking.fareSettlementType
   whenJust mbRequired $ \required -> do
     mbAccount <- Wallet.getWalletAccountByOwner DRIVER driverId.getId
     let available = maybe 0 (.balance) mbAccount
@@ -112,7 +117,7 @@ deductAirportEntryFeeAtEndRide ::
   SRB.Booking ->
   m ()
 deductAirportEntryFeeAtEndRide enabled ride booking = do
-  mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId
+  mbTotalFee <- requiredEntryFeeForBooking enabled booking.pickupGateId booking.fareSettlementType
   whenJust mbTotalFee $ \totalFee -> do
     transporterConfig <-
       getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing

@@ -273,7 +273,8 @@ handler (UAddBaggageReq AddBaggageReq {..}) = do
             mbAdditonalChargeCategories = if null origAdditionalCategories then Nothing else Just origAdditionalCategories,
             numberOfLuggages = Just numberOfLuggages,
             govtChargesRate = Just transporterCfg.taxConfig.rideGst,
-            pickupGateId = booking.pickupGateId
+            pickupGateId = booking.pickupGateId,
+            fareSettlementType = booking.fareSettlementType
           }
 
   newFareParams <- FC.calculateFareParameters params
@@ -472,7 +473,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     mbAdditonalChargeCategories = Just $ map (.chargeCategory) booking.fareParams.conditionalCharges,
                     numberOfLuggages = booking.numberOfLuggages,
                     govtChargesRate = Just transporterConfig.taxConfig.rideGst,
-                    pickupGateId = booking.pickupGateId
+                    pickupGateId = booking.pickupGateId,
+                    fareSettlementType = booking.fareSettlementType
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now

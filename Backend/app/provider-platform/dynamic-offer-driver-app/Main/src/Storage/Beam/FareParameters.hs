@@ -19,6 +19,7 @@ import qualified Domain.Types.FareParameters as Domain
 import qualified Domain.Types.FarePolicy as FP
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH
 
 data FareParametersT f = FareParametersT
@@ -84,7 +85,8 @@ data FareParametersT f = FareParametersT
     cancellationFeeTaxExclusive :: B.C f (Maybe HighPrecMoney),
     cancellationTax :: B.C f (Maybe HighPrecMoney),
     parkingChargeTaxExclusive :: B.C f (Maybe HighPrecMoney),
-    parkingChargeTax :: B.C f (Maybe HighPrecMoney)
+    parkingChargeTax :: B.C f (Maybe HighPrecMoney),
+    fareSettlementType :: B.C f (Maybe SL.FareSettlementType)
   }
   deriving (Generic, B.Beamable)
 
