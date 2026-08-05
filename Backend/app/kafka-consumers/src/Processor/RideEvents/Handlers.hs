@@ -9,7 +9,6 @@
 module Processor.RideEvents.Handlers
   ( handleAnalyticsKafka,
     handleRideInterpolation,
-    handleNammaTags,
     handleFleetOperatorStats,
     handleGpsTollBehavior,
     handleRCStatsReminders,
@@ -20,14 +19,12 @@ module Processor.RideEvents.Handlers
 where
 
 import qualified Data.Aeson as A
-import Data.Time (addUTCTime, diffUTCTime, utctDay)
 import "dynamic-offer-driver-app" Domain.Action.UI.Ride.EndRide (RideInterpolationData (..))
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as SRB
 import "dynamic-offer-driver-app" Domain.Types.Event.RideEndedEvent (RideEndedEvent (..))
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RideRelatedNotificationConfig as DRN
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
-import qualified "dynamic-offer-driver-app" Domain.Types.Yudhishthira as Y
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Encryption as EncFlow
@@ -50,9 +47,7 @@ import Kernel.Utils.Common
     getLocalCurrentTime,
     logInfo,
     logWarning,
-    withTryCatch,
   )
-import Kernel.Utils.Time (secondsToNominalDiffTime)
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -63,7 +58,6 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (HasYudhishthiraTablesSchema)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
@@ -76,7 +70,6 @@ import qualified "dynamic-offer-driver-app" Storage.CachedQueries.RideRelatedNot
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as QRB
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverRCAssociation as QDRCA
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverStats as QDriverStats
-import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified "dynamic-offer-driver-app" Storage.Queries.RCStatsExtra as QRCStats
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as QRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.RiderDetails as QRiderDetails
@@ -168,56 +161,6 @@ handleRideInterpolation ev = withRideAndBooking ev $ \ride _booking -> do
            )
     )
     $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" ride.id.getId
-
-------------------------------------------------------------
--- P1b-3 : LYDL Namma Tags
-------------------------------------------------------------
-
-handleNammaTags ::
-  ( CacheFlow m r,
-    Esq.EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    MonadFlow m,
-    CoreMetrics.CoreMetrics m,
-    CHConfig.ClickhouseFlow m r,
-    HasYudhishthiraTablesSchema
-  ) =>
-  RideEndedEvent ->
-  m ()
-handleNammaTags ev = withRideAndBooking ev $ \ride booking -> do
-  thresholdConfig <- fetchTransporterConfig ride
-  mbDriver <- QPerson.findById ride.driverId
-  mbRiderDetails <- join <$> QRiderDetails.findById `mapM` booking.riderId
-  riderBlockedForCoins <- QRiderDetails.isRiderFlaggedForCoinZero booking.riderId
-  let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
-      mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
-      isDriverSameAsCustomer =
-        isJust mbDriverMobileHash
-          && isJust mbRiderMobileHash
-          && mbDriverMobileHash == mbRiderMobileHash
-  rideEndTime <- maybe getCurrentTime pure ride.tripEndTime
-  let merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) rideEndTime
-  priorRidesSameCustomer <-
-    QRide.countPriorCompletedRidesWithSameCustomer
-      (cast ride.driverId)
-      booking.riderId
-      ride.id
-      merchantLocalDay
-      thresholdConfig.sameRiderDriverRideCountLookbackDays
-  let shouldBlockCoinsForSameRiderFlow =
-        riderBlockedForCoins
-          || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
-      rideDurationSeconds =
-        maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime rideEndTime tStart)) ride.tripStartTime
-  nammaTags <-
-    withTryCatch "ride-events:computeNammaTags" $
-      LYDL.computeNammaTagsWithDebugLog
-        LYDL.Driver
-        (cast booking.merchantOperatingCityId)
-        Yudhishthira.RideEnd
-        (Just booking.transactionId)
-        (Y.EndRideTagData ride booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds)
-  QRide.updateRideTags (ride.rideTags <> eitherToMaybe nammaTags) ride.id
 
 ------------------------------------------------------------
 -- P1b-4 : Fleet + Operator analytics
