@@ -110,6 +110,7 @@ cancelBooking booking mbDriver transporter = do
             Notify.notifyOnCancel booking.merchantOperatingCityId ride.id booking driver bookingCancellationReason.source
   where
     buildBookingCancellationReason driverId ride merchantId = do
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { driverId = driverId,
@@ -119,10 +120,13 @@ cancelBooking booking mbDriver transporter = do
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             additionalInfo = Nothing,
+            ondcCancellationReasonId = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
             distanceUnit = booking.distanceUnit,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now
           }
 
 -- Removes a scheduled booking from Redis when it's cancelled or assigned.
