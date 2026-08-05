@@ -212,9 +212,8 @@ getFirst100PendingStuckJobs = do
 updateStatusOfJobs :: JobStatus -> [Id AnyJob] -> Flow ()
 updateStatusOfJobs newStatus jobIds = do
   now <- getCurrentTime
-  forM_ jobIds $ \jobId ->
-    updateWithKVScheduler
-      [ Se.Set BeamST.status newStatus,
-        Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
-      ]
-      [Se.Is BeamST.id $ Se.Eq (getId jobId)]
+  updateWithKVScheduler
+    [ Se.Set BeamST.status newStatus,
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+    ]
+    [Se.Is BeamST.id $ Se.In $ getId <$> jobIds]
