@@ -1009,3 +1009,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auth_ip_blocked
 
 ------- SQL updates -------
 
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN airport_entry_fee_check_at_start_ride boolean ;

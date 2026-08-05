@@ -35,6 +35,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     acStatusCheckGap :: Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
+    airportEntryFeeCheckAtStartRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     airportEntryFeeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowAadhaarReupload :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDashboardToPassVehicleDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
