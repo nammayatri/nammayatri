@@ -31,6 +31,8 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
+
+import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (listToMaybe)
@@ -56,6 +58,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DTVeh
+import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
@@ -89,6 +92,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -602,14 +606,18 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           CallBasedReq callBasedReq -> Just callBasedReq.requestor
           _ -> Nothing
     mbDriver <- maybe (QP.findById driverId) (pure . Just) mbDriverFromReq
+    mbRiderDetails <- join <$> (QRiderDetails.findById `mapM` booking.riderId)
     riderBlockedForCoins <- QRiderDetails.isRiderFlaggedForCoinZero booking.riderId
-    let merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
+    let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
+        mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
+        isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
+        merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
+        rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
     priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.sameRiderDriverRideCountLookbackDays
     let shouldBlockCoinsForSameRiderFlow = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
     when shouldBlockCoinsForSameRiderFlow $ QRiderDetails.flagRiderForCoinZero booking.riderId
-    -- Namma-tags computation moved to kafka-consumers RIDE_EVENTS_CONSUMER. Tags are
-    -- written back to the ride asynchronously by the handler.
-    let updRide = updRide'
+    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) LYT.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
+    let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     when (thresholdConfig.enableMobilityBilling == Just True) $
       fork "report Google mobility billable event" $

@@ -29,7 +29,6 @@ processRideEnded event =
       withTimeGeneric "rs-event:RideEndedEvent" $ do
         runHandler "publishToAnalyticsKafka" event Handlers.handleAnalyticsKafka
         runHandler "publishRideInterpolation" event Handlers.handleRideInterpolation
-        runHandler "computeAndStoreNammaTags" event Handlers.handleNammaTags
         runHandler "updateFleetAndOperatorStats" event Handlers.handleFleetOperatorStats
         runHandler "checkGpsTollBehavior" event Handlers.handleGpsTollBehavior
         runHandler "incrementRCStatsAndReminders" event Handlers.handleRCStatsReminders
