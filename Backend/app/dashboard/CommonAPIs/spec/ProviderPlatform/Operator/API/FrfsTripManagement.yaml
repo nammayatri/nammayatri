@@ -1,0 +1,32 @@
+imports: {}
+
+module: FrfsTripManagement
+apiPrefix: operator
+
+apis:
+  # Operator-triggered FRFS trip action (start/end/reset/rollback). Reachable only through the
+  # operator dashboard (operator-authed), so the provider-app handler invokes the shared trip-action
+  # core with checks bypassed -- the geofence/lead-time gates are for the driver app only.
+  - POST:
+      endpoint: /frfsTrip/action
+      auth: ApiAuthV2
+      name: postOperatorFrfsTripAction
+      request:
+        type: OperatorTripActionReq
+      response:
+        type: OperatorTripActionRes
+
+types:
+  # Mirror of the provider-app Domain.Types.FleetOperatorTripAction (the dashboard CommonAPIs lib
+  # cannot import the provider app, so the enum is redefined here and converted in the provider handler).
+  OperatorFleetTripAction:
+    enum: "TripStart, TripEnd, TripReset, TripRollback"
+  OperatorTripActionReq:
+    - action: OperatorFleetTripAction
+    - gimsConductorId: Maybe Text
+    - gimsDriverId: Maybe Text
+    - vehicleNumber: Maybe Text
+    - derive: "'HideSecrets"
+  OperatorTripActionRes:
+    - currentTripNumber: Int
+    - hasUpcomingTrips: Bool

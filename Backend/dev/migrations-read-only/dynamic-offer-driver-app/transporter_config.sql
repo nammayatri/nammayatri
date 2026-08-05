@@ -1022,3 +1022,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN airport_entry_f
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN unified_onboarding_flags_recompute boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_lead_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_start_geofence_radius integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN trip_end_geofence_radius integer ;
