@@ -336,6 +336,7 @@ data TransporterConfig = TransporterConfig
     vehicleCategoryExcludedFromVerification :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     videoFileSizeUpperLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
+    waivePlanChargesOnSpecialZoneRide :: Kernel.Prelude.Bool,
     weeklyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

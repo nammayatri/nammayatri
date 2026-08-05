@@ -1179,6 +1179,7 @@ TransporterConfig:
     cancellationDistDiff: Int
     considerSpecialZoneRidesForPlanCharges: Bool
     considerSpecialZoneRideChargesInFreeTrial: Bool
+    waivePlanChargesOnSpecialZoneRide: Bool
     enableUdfForOffers: Bool
     nightSafetyRouteDeviationThreshold: Meters
     nightSafetyStartTime: Seconds
@@ -1807,6 +1808,7 @@ TransporterConfig:
     cancellationDistDiff: "50"
     considerSpecialZoneRidesForPlanCharges: "true"
     considerSpecialZoneRideChargesInFreeTrial: "false"
+    waivePlanChargesOnSpecialZoneRide: "false"
     enableUdfForOffers: "false"
     stepFunctionToConvertCoins: "250"
     nightSafetyRouteDeviationThreshold: "1000"

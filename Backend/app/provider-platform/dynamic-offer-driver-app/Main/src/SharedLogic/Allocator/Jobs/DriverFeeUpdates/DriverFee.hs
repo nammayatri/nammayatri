@@ -158,7 +158,10 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
             driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-            let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
+            let numRidesForPlanCharges =
+                  if transporterConfig.waivePlanChargesOnSpecialZoneRide && driverFee.specialZoneRideCount > 0
+                    then 0 -- waive plan charges for the cycle when the driver took a special-zone ride; the special-zone fee is still billed on top
+                    else calcNumRides driverFee transporterConfig - plan.freeRideCount
 
             --------- find all payment pending cancellation penalties ------------
             cancellationPenalties <- QDF.findPendingCancellationPenaltiesForDriver (cast driverFee.driverId) serviceName merchant.id merchantOpCityId

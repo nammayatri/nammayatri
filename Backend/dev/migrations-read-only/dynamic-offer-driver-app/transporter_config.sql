@@ -1022,3 +1022,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN airport_entry_f
 
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN unified_onboarding_flags_recompute boolean ;
+
+
+------- SQL updates -------
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN waive_plan_charges_on_special_zone_ride boolean NOT NULL default false;

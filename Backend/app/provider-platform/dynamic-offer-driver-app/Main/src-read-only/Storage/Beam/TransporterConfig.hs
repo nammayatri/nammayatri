@@ -333,6 +333,7 @@ data TransporterConfigT f = TransporterConfigT
     vehicleCategoryExcludedFromVerification :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     videoFileSizeUpperLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    waivePlanChargesOnSpecialZoneRide :: B.C f Kernel.Prelude.Bool,
     weeklyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     weeklyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
