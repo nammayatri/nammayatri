@@ -148,6 +148,8 @@ type API =
       :> QueryParam "driverId" (Id Common.Driver)
       :> QueryParam "rideId" (Id Common.Ride)
       :> QueryParam "endpoint" (DT.Endpoint)
+      :> QueryParam "from" UTCTime
+      :> QueryParam "to" UTCTime
       :> Get '[JSON] DTransaction.ListTransactionRes
 
 handler :: BeamFlow' => FlowServer API
@@ -262,6 +264,6 @@ changeEnabledStatus :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeE
 changeEnabledStatus tokenInfo personId req =
   withFlowHandlerAPI' $ DPerson.changeEnabledStatus tokenInfo personId req
 
-listTransactions :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> Maybe (Id Common.Driver) -> Maybe (Id Common.Ride) -> Maybe DT.Endpoint -> FlowHandler DTransaction.ListTransactionRes
-listTransactions tokenInfo mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint =
-  withFlowHandlerAPI' $ DTransaction.listTransactions tokenInfo mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint
+listTransactions :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> Maybe (Id Common.Driver) -> Maybe (Id Common.Ride) -> Maybe DT.Endpoint -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DTransaction.ListTransactionRes
+listTransactions tokenInfo mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint mbFrom mbTo =
+  withFlowHandlerAPI' $ DTransaction.listTransactions tokenInfo mbSearchString mbLimit mbOffset mbRequestorId mbDriverId mbRideId mbEndpoint mbFrom mbTo
