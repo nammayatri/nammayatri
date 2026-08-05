@@ -92,6 +92,7 @@ data RiderConfigT f = RiderConfigT
     enableRideHailingOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRouteCacheRead :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableShareNumberWithDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableSubwayFrfsSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
     excludedVehicleVariants :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     executePaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

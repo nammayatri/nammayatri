@@ -868,3 +868,13 @@ ALTER TABLE atlas_app.rider_config ALTER COLUMN always_allowed_notification_cate
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN frfs_driver_details_lead_time_seconds int  default 1800;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_subway_frfs_search boolean ;
+
+
+------- SQL updates -------
+

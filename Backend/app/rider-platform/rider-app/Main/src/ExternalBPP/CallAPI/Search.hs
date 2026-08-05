@@ -19,10 +19,13 @@ import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.IntegratedBPPConfig (getProviderTag)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -65,21 +68,37 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
           _ -> callOndcSearch networkHostUrl
     _ -> do
       let countSearch = Metrics.incrementFRFSExternalBppCount merchant.id.getId merchantOperatingCity.id.getId (show searchReq.vehicleType) (getProviderTag integratedBPPConfig) Metrics.FRFSBppSearch
-      eOnSearchReq <- withTryCatch "callExternalBPP:directSearchFlow" $ Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
-      onSearchReq <- case eOnSearchReq of
-        Left err -> do
-          countSearch Metrics.FRFSBppFailed
-          throwM err
-        Right res -> pure res
-      if null onSearchReq.quotes
+      isCrisViaRoutesEnabled <- checkCrisViaRoutesEnabled integratedBPPConfig searchReq mbProviderRouteId
+      if isCrisViaRoutesEnabled
         then do
-          logDebug $ "Quotes are null, calling Multimodal Discovery Search"
-          countSearch Metrics.FRFSBppEmpty
-          onSearchReq' <- Flow.multimodalDiscoverySearch merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
-          processOnSearch onSearchReq'
-        else do
-          countSearch Metrics.FRFSBppSucceeded
+          -- CRIS returns every route alternative in one response, so no discovery fallback here:
+          -- an empty response means there is genuinely no subway route between the two stations.
+          -- It is still counted EMPTY rather than SUCCESS: the label describes the response, and
+          -- a provider that starts answering empty is exactly what the counter exists to surface.
+          eOnSearchReq <- withTryCatch "callExternalBPP:crisViaRoutesSearch" $ Flow.crisViaRoutesSearch merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
+          onSearchReq <- case eOnSearchReq of
+            Left err -> do
+              countSearch Metrics.FRFSBppFailed
+              throwM err
+            Right res -> pure res
+          countSearch $ if null onSearchReq.quotes then Metrics.FRFSBppEmpty else Metrics.FRFSBppSucceeded
           processOnSearch onSearchReq
+        else do
+          eOnSearchReq <- withTryCatch "callExternalBPP:directSearchFlow" $ Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
+          onSearchReq <- case eOnSearchReq of
+            Left err -> do
+              countSearch Metrics.FRFSBppFailed
+              throwM err
+            Right res -> pure res
+          if null onSearchReq.quotes
+            then do
+              logDebug $ "Quotes are null, calling Multimodal Discovery Search"
+              countSearch Metrics.FRFSBppEmpty
+              onSearchReq' <- Flow.multimodalDiscoverySearch merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
+              processOnSearch onSearchReq'
+            else do
+              countSearch Metrics.FRFSBppSucceeded
+              processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do
@@ -99,3 +118,14 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
       bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = fromStationProviderCode}) (Just $ toStation {DStation.code = toStationProviderCode}) cityForOndc
       logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
       void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id
+
+-- | Scopes the CRIS via routes search to searches that name no route at all, since it answers with
+-- every route alternative. A subway leg inside a multimodal journey refreshes the fare of a route it
+-- has already chosen, and passes that route down, so it keeps the single route behaviour.
+checkCrisViaRoutesEnabled :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> DSearch.FRFSSearch -> Maybe Text -> m Bool
+checkCrisViaRoutesEnabled integratedBPPConfig searchReq mbProviderRouteId =
+  case (integratedBPPConfig.providerConfig, searchReq.vehicleType) of
+    (CRIS _, Spec.SUBWAY) | isNothing mbProviderRouteId && isNothing searchReq.routeCode -> do
+      mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId searchReq.merchantOperatingCityId))
+      return $ fromMaybe False (mbRiderConfig >>= (.enableSubwayFrfsSearch))
+    _ -> return False
