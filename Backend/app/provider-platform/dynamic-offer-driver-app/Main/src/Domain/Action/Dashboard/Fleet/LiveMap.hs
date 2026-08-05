@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers) where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as ATD
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
+import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)
 import Domain.Action.UI.Invoice (getSourceAndDestination, notAvailableText)
 import Domain.Action.UI.Person (getPersonNumber)
@@ -28,11 +29,13 @@ import Kernel.Utils.Common (withTryCatch)
 import Kernel.Utils.Error.Throwing (fromEitherM, fromMaybeM, throwError)
 import Kernel.Utils.Logging (logError, logWarning)
 import qualified Kernel.Utils.Predicates as P
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Booking as CHB
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
@@ -52,13 +55,11 @@ getLiveMapDrivers ::
 getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
   when (radius.getMeters <= 0) . throwError $ InvalidRequest "Radius must be positive"
   latLong <- getPoint mbDriverIdForRadius mbPoint
-  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbReqFleetOwnerId
-  (mbFleetOwnerId, mbOperatorId) <- case (mbEntityRole, mbEntityId) of
-    (Just DP.FLEET_OWNER, Just entityId) -> pure (Just entityId, Nothing)
-    (Just DP.OPERATOR, Just entityId) -> pure (mbReqFleetOwnerId, Just entityId)
-    _ -> pure (Nothing, Nothing)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found for merchant: " <> merchant.id.getId <> " and city: " <> show opCity)
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing
+  let allDriversAllowed = maybe False (\tc -> tc.allowNonFleetDriverLiveMap == Just True) mbTransporterConfig
+  (mbFleetOwnerId, mbOperatorId) <- resolveScope allDriversAllowed
   filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId
   driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
   let mbPositionAndDriverInfoLs = mkTuple <$> filtredNearbyDriverLocations
@@ -70,6 +71,22 @@ getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mb
          in (mbRideId,position,) <$> mbDriverInfo
   catMaybes <$> mapM (maybe (pure Nothing) (buildMapDriverInfo merchantOpCity.country)) mbPositionAndDriverInfoLs
   where
+    resolveScope :: Bool -> Environment.Flow (Kernel.Prelude.Maybe Text, Kernel.Prelude.Maybe Text)
+    resolveScope allDriversAllowed
+      | allDriversAllowed && Kernel.Prelude.isNothing mbReqFleetOwnerId = do
+        mbReqPerson <- QP.findById (ID.Id requestorId)
+        pure $ case mbReqPerson of
+          Just reqPerson
+            | DCommon.checkFleetOwnerRole reqPerson.role -> (Just requestorId, Nothing)
+            | reqPerson.role == DP.OPERATOR -> (Nothing, Just requestorId)
+          _ -> (Nothing, Nothing)
+      | otherwise = do
+        (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbReqFleetOwnerId
+        pure $ case (mbEntityRole, mbEntityId) of
+          (Just DP.FLEET_OWNER, Just entityId) -> (Just entityId, Nothing)
+          (Just DP.OPERATOR, Just entityId) -> (mbReqFleetOwnerId, Just entityId)
+          _ -> (Nothing, Nothing)
+
     getPoint :: Kernel.Prelude.Maybe (ID.Id ATD.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.Flow LatLong
     getPoint (Just driverIdForRadius) _ = getDriverCurrentLocation (ID.cast driverIdForRadius) >>= fromEitherM InternalError . validateLatLong
     getPoint _ (Just point) = point & fromEitherM InvalidRequest . validateLatLong
