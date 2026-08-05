@@ -161,3 +161,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN client_bundle_version text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
