@@ -18,11 +18,16 @@
 #   8015  beckn-gateway            8020  mock-registry
 #   8019  mock-google              5000  osrm
 #
-# 8015 and 8020 have no service here yet: beckn-gateway and mock-registry are
-# not in the published image (it ships beckn-cli-exe only), so they would have
-# to be built. They are left free regardless -- an earlier version of this file
-# put the map on 8015 and the shim on 8020, and ride search then failed because
-# rider-app dutifully sent its BECKN /search to the map's nginx.
+# 8015 and 8020 now have services behind them. They did not until we built
+# beckn-gateway and mock-registry ourselves -- neither is in the published image,
+# which ships beckn-cli-exe only. Until then atlas_app.merchant.gateway_url
+# pointed at a port with nothing listening, so every BECKN /search the rider app
+# sent went nowhere: a search came back with a route and no price, and the
+# driver side never saw the request.
+#
+# Keeping them reserved was still right. An earlier version of this file put the
+# map on 8015 and the shim on 8020, and ride search failed because rider-app
+# dutifully sent its /search to the map's nginx.
 #
 # Ours live above the reserved range: 8025 map, 8030 maps-shim, and the
 # Windows-facing proxies on 8014 / 8017 / 5001.
@@ -150,6 +155,56 @@ services:
     volumes:
       - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
       # It applies dev/migrations/dynamic-offer-driver-app itself on startup.
+      - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
+  # The connector between the two sides. rider-app (BAP) does not call
+  # driver-app (BPP) directly: it POSTs /search to the gateway, which looks up
+  # every BPP for the domain in the registry and multicasts to them. Without it
+  # the two halves of this stack never speak.
+  #
+  # Config: dhall-configs/dev/beckn-gateway.dhall -- port 8015, Redis on 6379,
+  # registryUrl http://localhost:8020/, selfId JUSPAY.BG.1. No database.
+  beckn-gateway:
+    image: ny-rider:patched
+    container_name: ny-beckn-gateway
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/beckn-gateway-exe"]
+    depends_on:
+      - redis
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+    restart: unless-stopped
+
+  # The registry all three resolve subscribers through, and the reason
+  # signature auth works: it holds each party's public key.
+  #
+  # It needs its own schema and role (atlas_registry / atlas_registry_user),
+  # created by setup.sh from dev/sql-seed/mock-registry-seed.sql. The subscriber
+  # rows come from dev/local-testing-data/mock-registry.sql and already match
+  # this deployment exactly -- nothing had to be written by hand:
+  #
+  #   JUSPAY.BG.1                     BG   -> http://localhost:8015/v1
+  #   JUSPAY.MOBILITY.APP.UAT.1       BAP  -> http://localhost:8013/cab/v1
+  #   JUSPAY.MOBILITY.PROVIDER.UAT.3  BPP  -> http://localhost:8016/beckn/favorit0-...
+  #
+  # That last one is atlas_driver_offer_bpp.merchant.subscriber_id for
+  # NAMMA_YATRI_PARTNER, whose id is favorit0-0000-0000-0000-00000favorit.
+  # All three sign with the same dev key, so the one public key the fixture
+  # carries is correct for all of them.
+  mock-registry:
+    image: ny-rider:patched
+    container_name: ny-mock-registry
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/mock-registry-exe"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # autoMigrate = True, migrationPath dev/migrations/mock-registry.
       - ./2023/Backend/dev:/opt/app/dev:ro
     restart: unless-stopped
 

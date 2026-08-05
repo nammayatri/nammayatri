@@ -4,6 +4,11 @@
 # Exported from the database on every run by setup.sh
 demo-map/site/areas.geojson
 
+# Backend binaries downloaded from the GitHub Actions build artifact
+# (.github/workflows/algeria-backend-build.yml). ~320 MB, and rebuildable —
+# they do not belong in git. MANIFEST.txt records which run produced them.
+bin/
+
 # The repo root .gitignore has a blanket `docker-compose.yml` rule; this stack's
 # compose file is source, not local scratch, so re-include it.
 !docker-compose.yml

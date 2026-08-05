@@ -54,6 +54,30 @@ Pick one:
   2. Copy this directory to a Windows path (e.g. C:/ny-local-stack) and run it there."
       ;;
   esac
+
+  # The image is built from these; COPY would otherwise fail with "no source
+  # files were specified", which reads like a Dockerfile bug rather than a
+  # missing download.
+  local missing=""
+  local exe
+  for exe in rider-app-exe dynamic-offer-driver-app-exe \
+             beckn-gateway-exe mock-registry-exe; do
+    [ -f "bin/$exe" ] || missing="$missing $exe"
+  done
+  [ -z "$missing" ] || die \
+"missing backend binaries in ./bin:$missing
+
+These are built by the GitHub Actions workflow in this repo -- the published
+image does not contain them. rider-app-exe and dynamic-offer-driver-app-exe
+there still reject +213, and beckn-gateway-exe and mock-registry-exe are not
+in it at all.
+
+  1. Actions -> 'algeria: build backend' -> newest successful run
+     (or push to the branch algeria/build-backend to start one)
+  2. Download the artifact 'ny-backend-binaries-<run>'
+  3. Unzip the four *-exe files into $PWD/bin/ and chmod +x them
+
+See .github/scripts/algeria/README.md."
 }
 
 fetch_tree() {
@@ -108,6 +132,45 @@ seed_db() {
   $PG -q -f /tmp/pre-init.sql       >/dev/null 2>&1 || true
   $PG -q -f /tmp/rider-app-seed.sql >/dev/null 2>&1 || true
   ok "base schema applied"
+}
+
+seed_registry() {
+  log "Seeding the registry (schema + subscribers)"
+  # mock-registry does not create its own schema: mock-registry.dhall points at
+  # schema atlas_registry as user atlas_registry_user, and autoMigrate only runs
+  # dev/migrations/mock-registry, which is empty upstream. So the schema, the
+  # role and the subscriber table all come from sql-seed, and the subscriber
+  # rows from local-testing-data.
+  #
+  # The fixture rows already match this deployment, which is why none of this is
+  # hand-written: BAP JUSPAY.MOBILITY.APP.UAT.1 at :8013/cab/v1, BG JUSPAY.BG.1
+  # at :8015/v1, and BPP JUSPAY.MOBILITY.PROVIDER.UAT.3 at
+  # :8016/beckn/favorit0-0000-0000-0000-00000favorit -- which is exactly
+  # atlas_driver_offer_bpp.merchant.subscriber_id for NAMMA_YATRI_PARTNER.
+  docker cp "$TREE_DIR/Backend/dev/sql-seed/mock-registry-seed.sql" \
+            ny-postgres:/tmp/registry-seed.sql
+  docker cp "$TREE_DIR/Backend/dev/local-testing-data/mock-registry.sql" \
+            ny-postgres:/tmp/registry-data.sql
+
+  # Both are idempotent-by-tolerance rather than by design: re-running finds the
+  # role and schema already there and says so. Failing on that would make the
+  # script un-rerunnable, which is worse.
+  $PG -q -f /tmp/registry-seed.sql >/dev/null 2>&1 || true
+  $PG -q -f /tmp/registry-data.sql >/dev/null 2>&1 || true
+
+  local n
+  n=$($PG -At -c "SELECT count(*) FROM atlas_registry.subscriber;" 2>/dev/null) \
+    || die "registry schema was not created -- check sql-seed/mock-registry-seed.sql"
+  [ "${n:-0}" -gt 0 ] || die "registry has no subscribers; the gateway will find no BPP"
+
+  $PG -t -c "SELECT '  ' || type || '  ' || subscriber_id || '  -> ' || subscriber_url
+               FROM atlas_registry.subscriber
+              WHERE subscriber_id IN ('JUSPAY.BG.1','JUSPAY.MOBILITY.APP.UAT.1')
+                 OR subscriber_id = (SELECT subscriber_id
+                                       FROM atlas_driver_offer_bpp.merchant
+                                      WHERE short_id='NAMMA_YATRI_PARTNER')
+              ORDER BY type;" 2>/dev/null | grep -v '^ *$' | sed 's/^ *//'
+  ok "$n subscribers"
 }
 
 seed_driver_db() {
@@ -165,9 +228,34 @@ seed_algeria() {
        SET origin_restriction = $regions, destination_restriction = $regions;" >/dev/null \
     || die "could not set coverage"
 
+  # The driver side has its OWN geofences, and getting this wrong does not look
+  # like a geofence problem from the passenger side -- it looks like "search
+  # returns a route but no price".
+  #
+  # atlas_driver_offer_bpp ships {Karnataka}, so the BPP answered every Algerian
+  # /search the gateway forwarded with
+  #     400 RIDE_NOT_SERVICEABLE  "not serviceable due to georestrictions"
+  # which the BAP has nowhere to show. The passenger just sees no offers.
+  #
+  # Same rows, same coverage setting, copied across rather than re-imported so
+  # the two sides cannot drift. Karnataka is left in place: it restricts
+  # nothing once the merchant no longer references it.
+  $PG -q -v ON_ERROR_STOP=1 -c "
+    INSERT INTO atlas_driver_offer_bpp.geometry (id, region, geom)
+    SELECT id, region, geom FROM atlas_app.geometry
+     WHERE region IN ('Algeria', 'Algiers', 'Oran', 'Annaba')
+    ON CONFLICT (id) DO NOTHING;
+    UPDATE atlas_driver_offer_bpp.merchant
+       SET origin_restriction = $regions, destination_restriction = $regions;" >/dev/null \
+    || die "could not apply coverage to the driver side"
+
   # The merchant row (which carries the restriction) is cached in Redis, so the
-  # API would otherwise keep serving the previous service areas.
+  # API would otherwise keep serving the previous service areas. Both apps cache
+  # it, so both have to be told.
   docker exec ny-redis redis-cli FLUSHALL >/dev/null
+  docker restart ny-driver >/dev/null 2>&1 || true
+
+  place_drivers_in_algiers
 
   $PG -t -c "SELECT '  serving: ' || array_to_string(origin_restriction, ', ')
                FROM atlas_app.merchant;" | sed 's/^ */  /' | grep -v '^ *$'
@@ -177,6 +265,117 @@ seed_algeria() {
     | sed 's/^ */    /' | grep -v '^ *$'
 
   export_geojson
+}
+
+# The seeded test drivers sit in Kochi, India. A search from Algiers therefore
+# finds nobody, and "nobody nearby" is indistinguishable from "the connector is
+# broken" at the API: both give you a route and no price.
+place_drivers_in_algiers() {
+  log "Placing the test drivers in Algiers"
+
+  # THE COLUMN THAT MATTERS IS `point`, NOT lat/lon.
+  #
+  # driver_location carries lat, lon AND a PostGIS `point`. The driver-pool
+  # query does its distance test on `point`; lat/lon are carried along for
+  # display. Updating only lat/lon looks completely correct in psql and changes
+  # nothing at all -- the pool stays empty and the search still returns no
+  # price. Cost an hour.
+  #
+  # coordinates_calculated_at matters too: a driver whose position is older than
+  # the freshness window is skipped.
+  #
+  # Spread is +/-0.005 degrees, roughly +/-550 m. transporter_config here is
+  # min_radius 700 / max_radius 1500, so anything wider simply falls outside the
+  # search and the pool is empty again.
+  $PG -q -v ON_ERROR_STOP=1 -c "
+    UPDATE atlas_driver_offer_bpp.driver_location dl
+       SET lat = 36.7538 + (random() - 0.5) * 0.01,
+           lon = 3.0588  + (random() - 0.5) * 0.01,
+           coordinates_calculated_at = now(),
+           updated_at = now()
+      FROM atlas_driver_offer_bpp.person p
+     WHERE p.id = dl.driver_id
+       AND p.merchant_id = 'favorit0-0000-0000-0000-00000favorit';
+
+    UPDATE atlas_driver_offer_bpp.driver_location
+       SET point = ST_SetSRID(ST_Point(lon, lat), 4326)
+     WHERE lat BETWEEN 36.7 AND 36.8;
+
+    UPDATE atlas_driver_offer_bpp.driver_information di
+       SET active = true, on_ride = false
+      FROM atlas_driver_offer_bpp.person p
+     WHERE p.id = di.driver_id
+       AND p.merchant_id = 'favorit0-0000-0000-0000-00000favorit';" >/dev/null \
+    || die "could not place the drivers"
+
+  $PG -t -c "
+    SELECT '  ' || v.variant || '  ' || round(ST_Distance(
+             dl.point::geography,
+             ST_SetSRID(ST_Point(3.0588, 36.7538), 4326)::geography)::numeric)
+             || ' m from Algiers centre'
+      FROM atlas_driver_offer_bpp.driver_location dl
+      JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = dl.driver_id
+      JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = dl.driver_id
+     WHERE di.active AND dl.lat BETWEEN 36.7 AND 36.8
+     ORDER BY 1;" | grep -v '^ *$' | sed 's/^ *//'
+}
+
+# The end-to-end check that actually matters: an Algerian number asks for a
+# ride and gets a price back. That single assertion covers the whole chain --
+# the +213 patch, OSRM routing, the gateway, the registry, the driver-side
+# geofences and the driver pool. Every one of those failed at some point while
+# this was being built, and all but the first are invisible from the passenger
+# side: you get a route and no price, whichever link is broken.
+verify_connector() {
+  log "Verifying the BAP <-> BPP chain (search must come back with a price)"
+  local base="http://localhost:8014" auth authid token sid res n
+
+  auth=$(curl -s --max-time 20 -X POST "$base/v2/auth" \
+    -H 'content-type: application/json' \
+    -d '{"mobileCountryCode":"+213","mobileNumber":"0550123456","merchantId":"YATRI"}')
+  authid=$(printf '%s' "$auth" | sed -nE 's/.*"authId":"([^"]+)".*/\1/p')
+  [ -n "$authid" ] || die "+213 login rejected -- is this the patched rider-app-exe? $auth"
+  ok "POST /v2/auth                  200  (+213 accepted)"
+
+  token=$(curl -s --max-time 20 -X POST "$base/v2/auth/$authid/verify" \
+    -H 'content-type: application/json' -d '{"otp":"7891","deviceToken":"setup-check"}' \
+    | sed -nE 's/.*"token":"([^"]+)".*/\1/p')
+  [ -n "$token" ] || die "OTP verification failed"
+
+  sid=$(curl -s --max-time 40 -X POST "$base/v2/rideSearch" \
+    -H 'content-type: application/json' -H "token: $token" \
+    -d '{"fareProductType":"ONE_WAY","contents":{"origin":{"address":{"area":"pickup","city":"Algiers","country":"Algeria","state":"Alger","building":"1","areaCode":"16000","street":"-","door":"1"},"gps":{"lat":36.7538,"lon":3.0588}},"destination":{"address":{"area":"destination","city":"Algiers","country":"Algeria","state":"Alger","building":"1","areaCode":"16000","street":"-","door":"1"},"gps":{"lat":36.7169,"lon":3.1836}}}}' \
+    | sed -nE 's/.*"searchId":"([^"]+)".*/\1/p')
+  [ -n "$sid" ] || die "ride search returned no searchId"
+  ok "POST /v2/rideSearch            200  searchId=$sid"
+
+  # The offer arrives asynchronously: rider -> gateway -> driver-app -> on_search
+  # -> gateway -> rider. A few seconds is normal.
+  local i
+  for i in $(seq 1 12); do
+    sleep 5
+    res=$(curl -s --max-time 20 "$base/v2/rideSearch/$sid/results" -H "token: $token")
+    # The estimate id is "id" inside "estimates" -- there is no "estimateId"
+    # field. Grepping for one silently reports success as failure.
+    n=$(printf '%s' "$res" | grep -o '"estimatedFare"' | wc -l)
+    if [ "$n" -gt 0 ]; then
+      ok "GET  /v2/rideSearch/{}/results 200  $n estimate(s) after $((i * 5))s"
+      printf '%s' "$res" \
+        | grep -o '"vehicleVariant":"[A-Z_]*"\|"estimatedTotalFare":[0-9]*' \
+        | paste - - 2>/dev/null | sed 's/^/    /' | head -6
+      return
+    fi
+  done
+
+  echo "--- gateway ---";    docker logs --tail 15 ny-beckn-gateway 2>&1 | tail -5
+  echo "--- driver-app ---"; docker logs --tail 40 ny-driver 2>&1 | grep -o 'driver pool \[\]' | tail -1
+  die "search returned a route but no price after 60s.
+
+The usual causes, in the order they bit us:
+  * driver-app says RIDE_NOT_SERVICEABLE -> atlas_driver_offer_bpp geofences
+  * 'driver pool []'                     -> driver_location.point (not lat/lon!)
+                                            or drivers outside max_radius (1500 m)
+  * gateway cannot reach the BPP         -> atlas_registry.subscriber URL"
 }
 
 # Export the service areas the *database* actually holds, so the map can never
@@ -376,10 +575,16 @@ seed_db
 # Both services must be seeded before either starts: each applies its own
 # migrations on startup, and the driver test data has to be in place first.
 seed_driver_db
+# Before the gateway starts: it resolves every BPP through the registry, and an
+# empty registry means a search that reaches nobody.
+seed_registry
 log "Starting rider-app and driver-app (each applies its own migrations)"
 docker compose up -d rider-app proxy map driver-app driver-proxy
+log "Starting the BAP <-> BPP connector"
+docker compose up -d mock-registry beckn-gateway
 wait_for_api
 wait_for_driver_api
 seed_algeria
 verify
+verify_connector
 show_db_state

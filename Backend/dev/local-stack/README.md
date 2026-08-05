@@ -270,29 +270,64 @@ routing natively, it can simply be deleted.
 
 ## Not connected yet: rider → driver
 
-Search succeeds and returns a real route, but comes back with
-`"quotes": [], "estimates": []`, and `atlas_driver_offer_bpp.search_request`
-stays empty. The driver side never hears about it.
+**Fixed.** A search from an Algerian number now comes back with prices:
 
-The reason is in the merchant row:
+```
+POST /v2/auth  {"mobileCountryCode":"+213", ...}   ->  authId
+POST /v2/rideSearch                                ->  13687 m, 996 s, 328 points
+GET  /v2/rideSearch/{id}/results                   ->  4 estimates, 258 DZD
+                                                       SUV, SEDAN, HATCHBACK, AUTO_RICKSHAW
+```
+
+`./setup.sh` asserts exactly this at the end (`verify_connector`), so a
+regression fails the run rather than being discovered later.
+
+### What was wrong, and why it was one problem
+
+A BAP does not call a BPP directly. It posts `/search` to a **BECKN gateway**,
+which looks participants up in a **registry** and broadcasts. The merchant row
+had always said
 
 ```
 gateway_url  = http://localhost:8015/v1
 registry_url = http://localhost:8020
 ```
 
-A BAP does not call a BPP directly. It posts `/search` to a **BECKN gateway**,
-which looks participants up in a **registry** and broadcasts. Neither is
-running, so the call fails and the search ends with no quotes.
+but neither had a service behind it. **Neither binary is in the published
+image** — it ships `beckn-cli-exe`; `beckn-gateway` and `mock-registry` come
+from a separate repository (`nammayatri/beckn-gateway`, a stack extra-dep) and
+were not among the executables in `/opt/app`. Running them meant building them,
+which was the same Haskell build that blocked the `+91` phone-number change. One
+build unblocked both — see `.github/scripts/algeria/README.md`.
 
-**Neither binary is in the published image** — it ships `beckn-cli-exe`, but
-`beckn-gateway` and `mock-registry` come from a separate repository
-(`nammayatri/beckn-gateway`, a stack extra-dep) and are not among the
-executables in `/opt/app`. Running them means building them, which is the same
-Haskell build that blocks the `+91` phone-number change.
+### Four more things had to be true
 
-So the remaining work is one problem, not two: **get a build**, and both the
-gateway and the country code are unblocked together.
+Getting the gateway running was necessary and not sufficient. Each of these
+fails in exactly the same way from the passenger's side — a route, no price —
+so none of them is diagnosable without reading the gateway and driver logs:
+
+1. **The registry has to be seeded.** `atlas_registry` is not created by
+   `mock-registry` itself; it comes from `sql-seed/mock-registry-seed.sql` plus
+   the subscriber rows in `local-testing-data/mock-registry.sql`. Those rows
+   already match this deployment exactly — BPP
+   `JUSPAY.MOBILITY.PROVIDER.UAT.3` at
+   `:8016/beckn/favorit0-0000-0000-0000-00000favorit` is precisely
+   `atlas_driver_offer_bpp.merchant.subscriber_id` here — so nothing had to be
+   written by hand.
+2. **The driver side has its own geofences.** It shipped `{Karnataka}`, so it
+   answered every Algerian search with
+   `400 RIDE_NOT_SERVICEABLE — not serviceable due to georestrictions`, which
+   the BAP has nowhere to display.
+3. **The drivers were in Kochi.** No driver within the search radius means no
+   offer. `setup.sh` now moves them to Algiers.
+4. **`driver_location.point`, not `lat`/`lon`.** The pool query does its
+   distance test on the PostGIS `point` column. Updating lat/lon looks entirely
+   correct in psql and changes nothing — the pool stays empty and the search
+   still returns no price.
+
+All three signing parties use the same dev key, so the single public key in the
+registry fixture is correct for all of them and signature auth works unmodified
+(`disableSignatureAuth = False` throughout).
 
 ## Gotchas
 
@@ -320,8 +355,14 @@ rider-app has migrated.
 - `GET /v2/profile` returns 500 — it needs a WhatsApp provider and another
   service that aren't configured. Optional integrations; core flows are fine.
 - Kafka connection warnings in the logs are harmless.
-- No BPP (driver side) — this is the rider platform only, so a search returns no
-  quotes. Enough to validate auth and serviceability.
+- The gateway logs a 404 against `localhost:8014/v1/e1f37274-…` and a refused
+  connection to `localhost:8000` on every search. Both are stale fixture rows in
+  the registry (`another-test-cabs`, `metro-bpp`) that point at services this
+  deployment does not run. The gateway multicasts to every BPP in the domain and
+  ignores the ones that fail, so this is noise, not breakage — the real BPP on
+  `:8016` answers.
+- The binaries in `bin/` are gitignored. `MANIFEST.txt` alongside them records
+  which build produced them; `setup.sh` refuses to start without them.
 
 ## Layout
 

@@ -44,4 +44,42 @@ RUN nm -D /usr/lib/librdkafka.so.1 | grep -q rd_kafka_destroy_flags
 FROM ${RIDER_IMAGE}
 COPY --from=libbuild /usr/lib/librdkafka.so.1 /usr/lib/x86_64-linux-gnu/librdkafka.so.1
 RUN ldconfig 2>/dev/null || true
+
+# Our own build of the backend, from
+# .github/workflows/algeria-backend-build.yml. Staged into ./bin by setup.sh,
+# which refuses to build without them.
+#
+# Two of these replace what the published image ships:
+#
+#   rider-app-exe                  accepts +213 instead of only +91
+#   dynamic-offer-driver-app-exe   same, plus the driver-side +91 lookups
+#
+# and two are not in the published image at all — it ships beckn-cli-exe only:
+#
+#   beckn-gateway-exe              the BAP <-> BPP connector
+#   mock-registry-exe              the registry both sides resolve through
+#
+# Same GHC 8.8.4 / glibc 2.27 as this base image, so they load here unchanged;
+# they need the librdkafka above for exactly the same reason the originals do.
+COPY bin/rider-app-exe \
+     bin/dynamic-offer-driver-app-exe \
+     bin/beckn-gateway-exe \
+     bin/mock-registry-exe \
+     /opt/app/
+
+# COPY carries the mode from the build context, and this context is usually a
+# Windows path (Docker Desktop cannot bind-mount \\wsl.localhost, so the stack
+# is run from C:\). Windows has no execute bit to carry, so set it here rather
+# than discover it as "permission denied" in a container that will not start.
+# Also fail the build now if a binary is not the ELF we think it is.
+RUN set -eux; \
+    chmod +x /opt/app/rider-app-exe \
+             /opt/app/dynamic-offer-driver-app-exe \
+             /opt/app/beckn-gateway-exe \
+             /opt/app/mock-registry-exe; \
+    for e in rider-app-exe dynamic-offer-driver-app-exe \
+             beckn-gateway-exe mock-registry-exe; do \
+      head -c4 "/opt/app/$e" | grep -q 'ELF' || { echo "$e is not an ELF binary"; exit 1; }; \
+    done
+
 WORKDIR /opt/app
