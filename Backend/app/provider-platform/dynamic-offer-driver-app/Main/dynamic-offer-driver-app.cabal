@@ -155,30 +155,22 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.OnDemand.Transformer.Init
-      Beckn.OnDemand.Transformer.MSIL.Init
-      Beckn.OnDemand.Transformer.MSIL.OnConfirm
-      Beckn.OnDemand.Transformer.MSIL.OnInit
-      Beckn.OnDemand.Transformer.MSIL.OnSearch
-      Beckn.OnDemand.Transformer.MSIL.OnSelect
-      Beckn.OnDemand.Transformer.MSIL.OnStatus
-      Beckn.OnDemand.Transformer.MSIL.Search
-      Beckn.OnDemand.Transformer.MSIL.Select
+      Beckn.OnDemand.Transformer.OndcScheduledRide.Confirm
+      Beckn.OnDemand.Transformer.OndcScheduledRide.Init
+      Beckn.OnDemand.Transformer.OndcScheduledRide.OnConfirm
+      Beckn.OnDemand.Transformer.OndcScheduledRide.OnInit
+      Beckn.OnDemand.Transformer.OndcScheduledRide.OnSearch
+      Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect
+      Beckn.OnDemand.Transformer.OndcScheduledRide.OnStatus
+      Beckn.OnDemand.Transformer.OndcScheduledRide.Search
+      Beckn.OnDemand.Transformer.OndcScheduledRide.Select
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.OnUpdate
       Beckn.OnDemand.Transformer.Search
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
-      Beckn.OnDemand.Utils.MSIL.Breakup
-      Beckn.OnDemand.Utils.MSIL.Category
-      Beckn.OnDemand.Utils.MSIL.FulfillmentId
-      Beckn.OnDemand.Utils.MSIL.FulfillmentState
-      Beckn.OnDemand.Utils.MSIL.FulfillmentType
-      Beckn.OnDemand.Utils.MSIL.ItemCompliance
-      Beckn.OnDemand.Utils.MSIL.RouteInfo
-      Beckn.OnDemand.Utils.MSIL.StopAuthorization
-      Beckn.OnDemand.Utils.MSIL.Terms
-      Beckn.OnDemand.Utils.MSIL.VehicleEnergyType
+      Beckn.OnDemand.Utils.OndcScheduledRide.Common
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
       Beckn.OnDemand.Utils.Search
@@ -503,6 +495,7 @@ library
       Lib.LocationUpdates
       Lib.Schema
       SharedLogic.ActiveDriversList
+      SharedLogic.AddOn
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
@@ -1313,6 +1306,7 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
+      Domain.Types.AddOnConfig
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -1509,6 +1503,7 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.AddOnConfig
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -1710,6 +1705,7 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.AddOnConfig
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
