@@ -4,8 +4,27 @@
 backend on a free GitHub-hosted runner and hands back four Linux x86-64 ELF
 binaries as a build artifact.
 
-Run it from **Actions → "algeria: build backend" → Run workflow**. It never
-runs on its own — `workflow_dispatch` only.
+## Starting a build
+
+Push anything to the branch **`algeria/build-backend`**. That branch is the
+trigger and exists for no other reason:
+
+```bash
+git push --force origin algeria/osrm-routing:algeria/build-backend
+```
+
+There is a concurrency group, so pushing again supersedes the run in flight
+rather than racing it for a runner.
+
+**Why not the "Run workflow" button?** GitHub only registers a
+`workflow_dispatch` trigger when the workflow file is on the repo's *default*
+branch. Ours is not, and putting it on `main` would fire upstream's
+`cabal-main-push.yaml` — which, unlike most of the upstream workflows, has no
+`github.repository` guard, so every push to `main` on this fork would start a
+full failing cabal build. If you ever point this fork's default branch at a
+branch carrying this file, the button appears and the inputs become editable.
+
+Nothing runs on a schedule and nothing runs on a normal push to a work branch.
 
 ---
 
@@ -87,7 +106,25 @@ index and precompiled snapshot packages. Mounting an empty volume there throws
 all of it away and forces stack to re-bootstrap from FP Complete servers that
 have rotted since 2020 (their Hackage mirror now returns 403). This was the
 single biggest time sink in the whole exercise. The cache is merged *into*
-`snapshots/` with `rsync`, never mounted over the root.
+`snapshots/` with `cp -a`, never mounted over the root. Package directories
+under `snapshots/` are content-addressed, so ours sit alongside the image's and
+nothing prepopulated is lost.
+
+**The C libraries are probably already there.** That image exists to build
+Stackage, so the step checks for `librdkafka`, `libpq`, `libssl`,
+`libmysqlclient` and `libz` and does nothing if they are present. Reaching for
+apt in this image is a trap in two ways, both of which cost us a run:
+
+- `apt-get update` exits non-zero because the image carries third-party repos
+  (Confluent, NVIDIA CUDA) whose signing keys have since expired. The Ubuntu
+  archive itself is fine. Confluent is worth keeping — it is what supplies a
+  `librdkafka` new enough for `hw-kafka-client` — so it is marked
+  `[trusted=yes]` rather than removed.
+- **Do not repoint bionic at `old-releases.ubuntu.com`.** 18.04 is past its
+  normal EOL but is still on `archive.ubuntu.com` under ESM. Rewriting the
+  sources turns a working archive into `does not have a Release file`. An
+  earlier version of this workflow did exactly that "as a fallback" and broke
+  the step it was meant to rescue.
 
 **`casa.fpcomplete.com` must be reachable.** stack 2.3.3 reads the snapshot
 definition from it and treats failure as fatal — verified by blocking it, which
@@ -112,6 +149,37 @@ would be tidier, but Ubuntu 18.04 has glibc 2.27 and the Node 20 actions
 (`actions/cache`, `actions/upload-artifact`) need 2.28+. So the workflow drives
 the container with `docker run` / `docker exec` from the host, and the actions
 run on the host where they work.
+
+**Never write `inputs.x != false` for a flag that defaults to true.** This one
+cost a run and very nearly cost five hours. Because the build is triggered by a
+push, there is no `inputs` context at all — every `inputs.x` is null. GitHub
+casts operands to numbers when their types differ, and both `null` and `false`
+become `0`, so `inputs.x != false` evaluates to **false** and the step silently
+skips. Run 30993922925 skipped the `+213` patches, the gateway preparation and
+the cache restore, and reported every one of them as a normal green "skipped".
+Had the apt step not failed straight afterwards, it would have spent five hours
+building unpatched binaries with no gateway and finished successfully.
+
+Two spellings that do work:
+
+```yaml
+if: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}   # default true
+SOURCE_REF: ${{ inputs.source_ref || '03a7531...' }}                      # default string
+```
+
+`||` is fine because null is falsy, so the fallback wins. It is only the
+comparisons that lie. And mind the precedence: `always() && a || b` parses as
+`(always() && a) || b`, so parenthesise when you mean otherwise.
+
+Because reading a condition is evidently not enough, run
+`validate-workflow.py` before pushing a change to the workflow. It *evaluates*
+every `if:` as a push event, asserts that the steps which must run do, checks
+that a failed build still banks its cache and uploads its logs, runs `bash -n`
+over every `run:` block, and fails on both traps above by name:
+
+```bash
+python3 .github/scripts/algeria/validate-workflow.py
+```
 
 ---
 
