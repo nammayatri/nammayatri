@@ -34,7 +34,10 @@ import Servant hiding (throwError)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM
+import qualified Storage.Queries.MerchantAccess as QAccess
+import qualified Storage.Queries.MerchantPair as QMerchantPair
 import qualified Storage.Queries.Person as QPerson
+import qualified Tools.Auth.CapabilityShadow as Shadow
 import qualified Tools.Auth.Common as Common
 import Tools.Servant.HeaderAuth
 
@@ -89,7 +92,7 @@ verifyApi requiredAccessLevel token = do
   (personId, merchantId, city) <- Common.verifyPerson token
   logInfo "[Auth.verifyApi] verifyPerson done"
   verifiedPerson <- verifyAccessLevel requiredAccessLevel personId
-  verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
+  verifiedMerchant <- verifyServerWithPair requiredAccessLevel.serverName personId merchantId city
   _ <- verifyCity verifiedMerchant city
   pure
     ApiTokenInfo
@@ -99,6 +102,41 @@ verifyApi requiredAccessLevel token = do
         userActionType = requiredAccessLevel.userActionType,
         person = verifiedPerson
       }
+
+-- | Single-login across platforms (dashboard unification): a token is bound
+-- to ONE merchant row, but BAP and BPP merchants are separate rows (e.g.
+-- NAMMA_YATRI vs NAMMA_YATRI_PARTNER). When the token's merchant cannot serve
+-- the required platform, resolve its logical partner via merchant_pair and
+-- authorize against that instead — requiring the person to hold
+-- merchant_access on the partner for the same city. With no pair row (the
+-- pre-merge schemas, or unpaired merchants) this reduces to exactly the
+-- legacy verifyServer behavior: AccessDenied.
+verifyServerWithPair ::
+  BeamFlow m r =>
+  DSN.ServerName ->
+  Id DP.Person ->
+  Id DM.Merchant ->
+  City.City ->
+  m DM.Merchant
+verifyServerWithPair requiredServerAccess personId merchantId city = do
+  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  if requiredServerAccess `elem` merchant.serverNames
+    then return merchant
+    else do
+      mbPair <- QMerchantPair.findByMerchantId merchantId
+      partnerId <- case mbPair of
+        Nothing -> throwError AccessDenied
+        Just pair -> do
+          let partner
+                | (getId <$> pair.bapMerchantId) == Just merchantId.getId = pair.bppMerchantId
+                | otherwise = pair.bapMerchantId
+          maybe (throwError AccessDenied) pure partner
+      partnerMerchant <- QM.findById partnerId >>= fromMaybeM (MerchantNotFound partnerId.getId)
+      unless (requiredServerAccess `elem` partnerMerchant.serverNames) $ throwError AccessDenied
+      -- The person must be provisioned on the partner side too; token city
+      -- scope carries over 1:1.
+      void $ QAccess.findByPersonIdAndMerchantIdAndCity personId partnerMerchant.id city >>= fromMaybeM AccessDenied
+      return partnerMerchant
 
 instance
   forall (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType).
@@ -124,7 +162,11 @@ verifyAccessLevel requiredApiAccessLevel personId = do
   maybe (pure ()) (\a -> when (a `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ Common.checkPasswordExpiry person) person.dashboardAccessType
   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
-  unless (checkUserAccess userAccessType) $
+  let legacyAllowed = checkUserAccess userAccessType
+  -- Shadow-only capability verdict; never affects the outcome (Phase 3,
+  -- see Tools.Auth.CapabilityShadow). Runs on allow AND deny paths.
+  Shadow.shadowCheck person.id person.roleId (Shadow.mkShadowEndpointId requiredApiAccessLevel) legacyAllowed
+  unless legacyAllowed $
     throwError AccessDenied
   pure person
 

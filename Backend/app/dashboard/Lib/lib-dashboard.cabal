@@ -28,6 +28,7 @@ library
   exposed-modules:
       API.Dashboard
       API.Dashboard.AccessMatrix
+      API.Dashboard.Capability
       API.Dashboard.EmailVerification
       API.Dashboard.InternalAuth
       API.Dashboard.Merchant
@@ -35,6 +36,7 @@ library
       API.Dashboard.Registration
       API.Dashboard.Roles
       Domain.Action.Dashboard.AccessMatrix
+      Domain.Action.Dashboard.Capability
       Domain.Action.Dashboard.EmailVerification
       Domain.Action.Dashboard.InternalAuth
       Domain.Action.Dashboard.Merchant
@@ -43,9 +45,11 @@ library
       Domain.Action.Dashboard.Roles
       Domain.Action.Dashboard.Transaction
       Domain.Types.AccessMatrix
+      Domain.Types.Capability
       Domain.Types.Entity
       Domain.Types.Merchant
       Domain.Types.MerchantAccess
+      Domain.Types.MerchantPair
       Domain.Types.Person
       Domain.Types.Person.API
       Domain.Types.Person.Type
@@ -55,26 +59,41 @@ library
       Domain.Types.Transaction
       Environment
       SharedLogic.Transaction
+      Storage.Beam.AccessAudit
       Storage.Beam.AccessMatrix
       Storage.Beam.BeamFlow
+      Storage.Beam.Capability
+      Storage.Beam.CapabilityEndpoint
       Storage.Beam.Common
       Storage.Beam.Entity
       Storage.Beam.Merchant
       Storage.Beam.MerchantAccess
+      Storage.Beam.MerchantPair
       Storage.Beam.Person
+      Storage.Beam.PersonCapability
+      Storage.Beam.PersonTier
       Storage.Beam.RegistrationToken
       Storage.Beam.Role
+      Storage.Beam.RoleCapability
       Storage.Beam.Transaction
+      Storage.Queries.AccessAudit
       Storage.Queries.AccessMatrix
+      Storage.Queries.Capability
+      Storage.Queries.CapabilityEndpoint
       Storage.Queries.Entity
       Storage.Queries.Merchant
       Storage.Queries.MerchantAccess
+      Storage.Queries.MerchantPair
       Storage.Queries.Person
+      Storage.Queries.PersonCapability
+      Storage.Queries.PersonTier
       Storage.Queries.RegistrationToken
       Storage.Queries.Role
+      Storage.Queries.RoleCapability
       Storage.Queries.Transaction
       Tools.Auth
       Tools.Auth.Api
+      Tools.Auth.CapabilityShadow
       Tools.Auth.Common
       Tools.Auth.Dashboard
       Tools.Auth.Merchant

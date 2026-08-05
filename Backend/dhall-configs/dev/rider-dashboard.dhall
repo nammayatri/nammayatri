@@ -165,7 +165,7 @@ in  { esqDBCfg
     , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9991)
     , incomingAPIResponseTimeout = +15
     , is2faMandatory = True
-    , twoFaEnforcementDeadlineText = Some "2026-08-04T00:00:00Z"
+    , twoFaEnforcementDeadlineText = Some "2026-08-15T00:00:00Z"
     , twoFaOtpTTLInSecs = Some +900
     , twoFaMaxOtpVerifyAttempts = Some +5
     , totpStepSize = Some +30

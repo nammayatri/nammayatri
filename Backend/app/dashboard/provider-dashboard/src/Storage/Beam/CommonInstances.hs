@@ -15,20 +15,52 @@
 
 module Storage.Beam.CommonInstances where
 
+import qualified Data.Aeson as A
 import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH as Reexport
+import qualified Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as BeamMOC
+import Kernel.Types.HideSecrets (HideSecrets (..))
+import qualified "lib-dashboard" Storage.Beam.AccessAudit as BeamAA
 import qualified "lib-dashboard" Storage.Beam.AccessMatrix as BeamAM
+import qualified "lib-dashboard" Storage.Beam.Capability as BeamC
+import qualified "lib-dashboard" Storage.Beam.CapabilityEndpoint as BeamCE
 import qualified "lib-dashboard" Storage.Beam.Entity as BeamE
 import qualified "lib-dashboard" Storage.Beam.Merchant as BeamM
 import qualified "lib-dashboard" Storage.Beam.MerchantAccess as BeamMA
+import qualified "lib-dashboard" Storage.Beam.MerchantPair as BeamMPair
 import qualified "lib-dashboard" Storage.Beam.Person as BeamP
+import qualified "lib-dashboard" Storage.Beam.PersonCapability as BeamPC
+import qualified "lib-dashboard" Storage.Beam.PersonTier as BeamPT
 import qualified "lib-dashboard" Storage.Beam.RegistrationToken as BeamRT
 import qualified "lib-dashboard" Storage.Beam.Role as BeamR
+import qualified "lib-dashboard" Storage.Beam.RoleCapability as BeamRC
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
+
+instance HasSchemaName BeamAA.AccessAuditT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
 
 instance HasSchemaName BeamAM.AccessMatrixT where
   schemaName _ = T.pack "atlas_bpp_dashboard"
+
+instance HasSchemaName BeamC.CapabilityT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+instance HasSchemaName BeamPT.PersonTierT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+instance HasSchemaName BeamCE.CapabilityEndpointT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+instance HasSchemaName BeamPC.PersonCapabilityT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+instance HasSchemaName BeamRC.RoleCapabilityT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+-- Needed by the RiderPlatform (bap) modules mounted on this server.
+instance HideSecrets A.Value where
+  hideSecrets = Kernel.Prelude.identity
 
 -- Instance exists to satisfy shared Beam constraints; `entity` table is not
 -- created here. Any future SELECT against it will 500. See PT-employee PR notes.
@@ -39,6 +71,9 @@ instance HasSchemaName BeamM.MerchantT where
   schemaName _ = T.pack "atlas_bpp_dashboard"
 
 instance HasSchemaName BeamMA.MerchantAccessT where
+  schemaName _ = T.pack "atlas_bpp_dashboard"
+
+instance HasSchemaName BeamMPair.MerchantPairT where
   schemaName _ = T.pack "atlas_bpp_dashboard"
 
 instance HasSchemaName BeamP.PersonT where
