@@ -1,0 +1,1390 @@
+-- Capability catalog (source of truth: docs/access-unification/capability-seed.md)
+INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALUES
+    ('ops.customer.read', 'ops', '', false),
+    ('ops.customer.write', 'ops', '', false),
+    ('ops.driver.read', 'ops', '', false),
+    ('ops.driver.write', 'ops', '', false),
+    ('ops.onboarding.read', 'ops', '', false),
+    ('ops.onboarding.write', 'ops', '', false),
+    ('ops.pii.read', 'ops', '', false),
+    ('ops.ride.read', 'ops', '', false),
+    ('ops.ride.write', 'ops', '', false),
+    ('ops.issue.read', 'ops', '', false),
+    ('ops.issue.write', 'ops', '', false),
+    ('ops.sos.read', 'ops', '', false),
+    ('ops.sos.write', 'ops', '', false),
+    ('ops.payment.read', 'ops', '', false),
+    ('ops.payment.write', 'ops', '', false),
+    ('ops.wallet.read', 'ops', '', false),
+    ('ops.wallet.write', 'ops', '', false),
+    ('ops.subscription.read', 'ops', '', false),
+    ('ops.subscription.write', 'ops', '', false),
+    ('ops.communication.read', 'ops', '', false),
+    ('ops.communication.write', 'ops', '', false),
+    ('ops.vehicle.read', 'ops', '', false),
+    ('ops.vehicle.write', 'ops', '', false),
+    ('ops.airport_queue.read', 'ops', '', false),
+    ('ops.airport_queue.write', 'ops', '', false),
+    ('ops.volunteer.read', 'ops', '', false),
+    ('ops.volunteer.write', 'ops', '', false),
+    ('ops.grievance.read', 'ops', '', false),
+    ('ops.grievance.write', 'ops', '', false),
+    ('ops.membership.read', 'ops', '', false),
+    ('ops.training.read', 'ops', '', false),
+    ('ops.fleet_owner.read', 'ops', '', false),
+    ('ops.fleet_owner.write', 'ops', '', false),
+    ('agent.booking.execute', 'agent', '', false),
+    ('agent.customer.write', 'agent', '', false),
+    ('agent.ticket.read', 'agent', '', false),
+    ('agent.ticket.execute', 'agent', '', false),
+    ('agent.pass.read', 'agent', '', false),
+    ('agent.pass.execute', 'agent', '', false),
+    ('agent.pass_org.read', 'agent', '', false),
+    ('agent.pass_org.write', 'agent', '', false),
+    ('agent.pass_org.approve', 'agent', '', false),
+    ('agent.frfs.read', 'agent', '', false),
+    ('agent.frfs.execute', 'agent', '', false),
+    ('agent.edc.read', 'agent', '', false),
+    ('agent.edc.write', 'agent', '', false),
+    ('transit.master.read', 'transit', '', false),
+    ('transit.master.write', 'transit', '', false),
+    ('transit.waybill.write', 'transit', '', false),
+    ('transit.stops.read', 'transit', '', false),
+    ('transit.stops.write', 'transit', '', false),
+    ('transit.gtfs.read', 'transit', '', false),
+    ('transit.gtfs.write', 'transit', '', false),
+    ('transit.fare.read', 'transit', '', false),
+    ('transit.fare.write', 'transit', '', false),
+    ('transit.seat_layout.read', 'transit', '', false),
+    ('transit.seat_layout.write', 'transit', '', false),
+    ('transit.device.read', 'transit', '', false),
+    ('transit.device.write', 'transit', '', false),
+    ('config.merchant.read', 'config', '', false),
+    ('config.merchant.write', 'config', '', false),
+    ('config.fare_policy.read', 'config', '', false),
+    ('config.fare_policy.write', 'config', '', false),
+    ('config.fare_policy.export', 'config', '', false),
+    ('config.geo.read', 'config', '', false),
+    ('config.geo.write', 'config', '', false),
+    ('config.issue.read', 'config', '', false),
+    ('config.issue.write', 'config', '', false),
+    ('config.namma_tag.read', 'config', '', false),
+    ('config.namma_tag.write', 'config', '', false),
+    ('config.dynamic_logic.read', 'config', '', false),
+    ('config.dynamic_logic.write', 'config', '', false),
+    ('config.config_pilot.read', 'config', '', false),
+    ('config.config_pilot.write', 'config', '', false),
+    ('config.plan.read', 'config', '', false),
+    ('config.plan.write', 'config', '', false),
+    ('config.coins.read', 'config', '', false),
+    ('config.coins.write', 'config', '', false),
+    ('config.rewards.read', 'config', '', false),
+    ('config.rewards.write', 'config', '', false),
+    ('config.offer.read', 'config', '', false),
+    ('config.offer.write', 'config', '', false),
+    ('config.knowledge.read', 'config', '', false),
+    ('config.knowledge.write', 'config', '', false),
+    ('config.firebase.read', 'config', '', false),
+    ('config.firebase.write', 'config', '', false),
+    ('config.registry.read', 'config', '', false),
+    ('config.registry.write', 'config', '', false),
+    ('config.release.read', 'config', '', false),
+    ('config.release.write', 'config', '', false),
+    ('config.scheduler.execute', 'config', '', false),
+    ('config.failover.execute', 'config', '', false),
+    ('city.launch.read', 'city', '', false),
+    ('city.launch.write', 'city', '', false),
+    ('city.merchant_onboarding.read', 'city', '', false),
+    ('city.merchant_onboarding.write', 'city', '', false),
+    ('city.merchant_onboarding.approve', 'city', '', false),
+    ('fleet.driver.read', 'fleet', '', false),
+    ('fleet.driver.write', 'fleet', '', false),
+    ('fleet.vehicle.read', 'fleet', '', false),
+    ('fleet.vehicle.write', 'fleet', '', false),
+    ('fleet.trip.read', 'fleet', '', false),
+    ('fleet.trip.write', 'fleet', '', false),
+    ('fleet.earnings.read', 'fleet', '', false),
+    ('fleet.live.read', 'fleet', '', false),
+    ('fleet.onboarding.read', 'fleet', '', false),
+    ('fleet.onboarding.write', 'fleet', '', false),
+    ('fleet.profile.read', 'fleet', '', false),
+    ('fleet.profile.write', 'fleet', '', false),
+    ('fleet.operator.read', 'fleet', '', false),
+    ('fleet.operator.write', 'fleet', '', false),
+    ('finance.report.read', 'finance', '', false),
+    ('finance.settlement.read', 'finance', '', false),
+    ('finance.settlement.export', 'finance', '', false),
+    ('finance.reconciliation.read', 'finance', '', false),
+    ('finance.reconciliation.execute', 'finance', '', false),
+    ('finance.payout.read', 'finance', '', false),
+    ('finance.payout.write', 'finance', '', false),
+    ('finance.adjustment.write', 'finance', '', false),
+    ('finance.ledger.read', 'finance', '', false),
+    ('finance.insurance.read', 'finance', '', false),
+    ('finance.fleet.read', 'finance', '', false),
+    ('finance.invoice.read', 'finance', '', false),
+    ('analytics.core.read', 'analytics', '', false),
+    ('analytics.performance.read', 'analytics', '', false),
+    ('analytics.public_transport.read', 'analytics', '', false),
+    ('analytics.pricing.read', 'analytics', '', false),
+    ('analytics.incentive.read', 'analytics', '', false),
+    ('analytics.pt_stats.read', 'analytics', '', false),
+    ('analytics.sla.read', 'analytics', '', false),
+    ('analytics.sla.write', 'analytics', '', false),
+    ('analytics.ai.execute', 'analytics', '', false),
+    ('analytics.revenue.read', 'analytics', '', false),
+    ('access.user.read', 'access', '', false),
+    ('access.user.write', 'access', '', false),
+    ('access.role.read', 'access', '', false),
+    ('access.role.write', 'access', '', false),
+    ('access.capability.read', 'access', '', false),
+    ('access.capability.grant', 'access', '', false),
+    ('access.admin.write', 'access', '', true),
+    ('access.entity.read', 'access', '', false),
+    ('access.entity.write', 'access', '', false),
+    ('access.audit.read', 'access', '', false),
+    ('access.merchant.write', 'access', '', false),
+    ('tickets.place.read', 'tickets', '', false),
+    ('tickets.place.write', 'tickets', '', false),
+    ('tickets.place.approve', 'tickets', '', false),
+    ('tickets.booking.read', 'tickets', '', false),
+    ('system.query.execute', 'system', '', true),
+    ('system.crypto.execute', 'system', '', true),
+    ('utility.shortener.execute', 'utility', '', false)
+ON CONFLICT (id) DO NOTHING;
+-- endpoint_id -> capability shim. Generated by generate_capability_seed.py;
+-- do not hand-edit (regenerate instead).
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES
+    ('config.geo.write', 'DASHBOARD', 'LEGACY/SPECIAL_ZONES/SPECIAL_ZONE_CREATE'),
+    ('config.geo.write', 'DASHBOARD', 'LEGACY/SPECIAL_ZONES/SPECIAL_ZONE_DELETE'),
+    ('config.geo.read', 'DASHBOARD', 'LEGACY/SPECIAL_ZONES/SPECIAL_ZONE_LOOKUP'),
+    ('config.geo.write', 'DASHBOARD', 'LEGACY/SPECIAL_ZONES/SPECIAL_ZONE_UPDATE'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER/GET_DRIVER_FLEET_LIST_RIDES'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_SUBSCRIPTION/POST_DRIVER_SUBSCRIPTION_SEND_SMS'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_SUBSCRIPTION/POST_DRIVER_SUBSCRIPTION_UPDATE_DRIVER_FEE_AND_INVOICE_INFO'),
+    ('ops.wallet.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/GET_DRIVER_WALLET_WALLET_BALANCE'),
+    ('ops.wallet.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/GET_DRIVER_WALLET_WALLET_PAYOUT_HISTORY'),
+    ('ops.wallet.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/GET_DRIVER_WALLET_WALLET_TRANSACTIONS'),
+    ('ops.wallet.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/GET_DRIVER_WALLET_WALLET_TRANSACTION_HISTORY'),
+    ('ops.wallet.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/POST_DRIVER_WALLET_WALLET_AIRPORT_CASH_RECHARGE'),
+    ('ops.wallet.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/POST_DRIVER_WALLET_WALLET_PAYOUT'),
+    ('ops.wallet.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/DRIVER_WALLET/POST_DRIVER_WALLET_WALLET_TOPUP'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/OVERLAY/GET_OVERLAY_INFO'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/OVERLAY/GET_OVERLAY_LIST'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/OVERLAY/POST_OVERLAY_CREATE'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/OVERLAY/POST_OVERLAY_DELETE'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/OVERLAY/POST_OVERLAY_SCHEDULE'),
+    ('config.scheduler.execute', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/PENALTY/POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_CURRENT_PLAN'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_CURRENT_PLAN_V2'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_API_V2'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_ENTITY_DETAILS_V2'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_LIST_PLAN'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_LIST_PLAN_V2'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_ORDER_STATUS'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/GET_SUBSCRIPTION_PURCHASE_LIST'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_COLLECT_MANUAL_PAYMENTS'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_FEE_WAIVE_OFF'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_SUBSCRIBE_PLAN'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/POST_SUBSCRIPTION_SUBSCRIBE_PLAN_V2'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/PUT_SUBSCRIPTION_SELECT_PLAN'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/PUT_SUBSCRIPTION_SELECT_PLAN_V2'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/PUT_SUBSCRIPTION_SUSPEND_PLAN'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION/PUT_SUBSCRIPTION_SUSPEND_PLAN_V2'),
+    ('ops.subscription.read', 'DASHBOARD', 'PROVIDER_APP_MANAGEMENT/SUBSCRIPTION_TRANSACTION/GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_DASHBOARD_FLEET_TRIP_WAYPOINTS'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_ACCESS_LIST'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_ASSIGNMENTS'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_BOOKINGS'),
+    ('fleet.earnings.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DASHBOARD_ANALYTICS'),
+    ('fleet.earnings.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DASHBOARD_ANALYTICS_ALL_TIME'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_ASSOCIATION'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_DETAILS'),
+    ('fleet.earnings.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_EARNING'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_LIST_STATS'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_ONBOARDED_DRIVERS_AND_UNLINKED_VEHICLES'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_DRIVER_VEHICLE_ASSOCIATION'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_GET_ALL_BADGE'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_GET_ALL_DRIVER'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_GET_ALL_VEHICLE'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_GET_DRIVER_REQUESTS'),
+    ('fleet.profile.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_OPERATOR_INFO'),
+    ('fleet.profile.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_OWNER_INFO'),
+    ('fleet.driver.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_OWNER_LIST'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_POSSIBLE_ROUTES'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_ROUTES'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_SCHEDULED_BOOKING_LIST'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_STATUS'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_STATUS_SUMMARY'),
+    ('fleet.earnings.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_TOTAL_EARNING'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_TRIP_TRANSACTIONS'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_VEHICLE_ASSOCIATION'),
+    ('fleet.earnings.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_VEHICLE_EARNING'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_VEHICLE_LIST_STATS'),
+    ('fleet.trip.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_WMB_ROUTE_DETAILS'),
+    ('fleet.vehicle.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_VEHICLE_INFO'),
+    ('fleet.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_ADD_RIDE_PAYOUT_ACCOUNT_NUMBER'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_DASHBOARD_FLEET_ESTIMATE_ROUTE'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_DASHBOARD_FLEET_TRACK_DRIVER'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_DASHBOARD_FLEET_WMB_TRIP_END'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ACCESS_SELECT'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVER_BUS_ROUTE_MAPPING'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_RC_WITHOUT_DRIVER'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_VEHICLE'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_VEHICLES'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_APPROVE_DRIVER'),
+    ('fleet.earnings.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DASHBOARD_ANALYTICS_CACHE'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DRIVER_CHANGE_FLEET_OWNER'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_DRIVER_UPDATE'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_GET_DRIVER_DETAILS'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_GET_NEARBY_DRIVERS'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_GET_NEARBY_DRIVERS_V2'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_LINK_RC_WITH_DRIVER'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_LOCATION_LIST'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_REMOVE_DRIVER'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_REMOVE_VEHICLE'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_RESPOND_DRIVER_REQUEST'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_SCHEDULED_BOOKING_ASSIGN'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_SCHEDULED_BOOKING_CANCEL'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_SCHEDULED_BOOKING_REASSIGN'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_SEND_JOINING_OTP'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_TRIP_PLANNER'),
+    ('fleet.trip.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_TRIP_TRANSACTIONS_V2'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_UNLINK'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_V2_ACCESS_MULTI_OWNER_ID_SELECT'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_V2_ACCESS_SELECT'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_VEHICLE_DRIVER_RC_STATUS'),
+    ('fleet.vehicle.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_VEHICLE_EDIT'),
+    ('fleet.driver.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_VERIFY_JOINING_OTP'),
+    ('fleet.profile.write', 'DASHBOARD', 'PROVIDER_FLEET/DRIVER/POST_DRIVER_UPDATE_FLEET_OWNER_INFO'),
+    ('fleet.live.read', 'DASHBOARD', 'PROVIDER_FLEET/LIVE_MAP/GET_LIVE_MAP_DRIVERS'),
+    ('fleet.onboarding.read', 'DASHBOARD', 'PROVIDER_FLEET/ONBOARDING/GET_ONBOARDING_DOCUMENT_CONFIGS'),
+    ('fleet.onboarding.read', 'DASHBOARD', 'PROVIDER_FLEET/ONBOARDING/GET_ONBOARDING_GET_REFERRAL_DETAILS'),
+    ('fleet.onboarding.read', 'DASHBOARD', 'PROVIDER_FLEET/ONBOARDING/GET_ONBOARDING_REGISTER_STATUS'),
+    ('fleet.onboarding.read', 'DASHBOARD', 'PROVIDER_FLEET/ONBOARDING/GET_ONBOARDING_REGISTER_VEHICLE_STATUS'),
+    ('fleet.onboarding.read', 'DASHBOARD', 'PROVIDER_FLEET/ONBOARDING/GET_ONBOARDING_VEHICLE_DOCUMENTS'),
+    ('fleet.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/ONBOARDING/POST_ONBOARDING_VERIFY'),
+    ('fleet.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/PAYOUT_ACCOUNT/POST_PAYOUT_ACCOUNT'),
+    ('fleet.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/PAYOUT_ACCOUNT/POST_PAYOUT_ACCOUNT_STATUS'),
+    ('fleet.profile.read', 'DASHBOARD', 'PROVIDER_FLEET/REGISTRATION_V2/GET_REGISTRATION_V2_PROFILE_LANGUAGE'),
+    ('fleet.onboarding.read', 'DASHBOARD', 'PROVIDER_FLEET/REGISTRATION_V2/GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS'),
+    ('fleet.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER'),
+    ('fleet.onboarding.write', 'DASHBOARD', 'PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK'),
+    ('fleet.profile.write', 'DASHBOARD', 'PROVIDER_FLEET/REGISTRATION_V2/PUT_REGISTRATION_V2_PROFILE_LANGUAGE'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_CATEGORY'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_MESSAGE'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_OPTION'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CATEGORY_DETAIL'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CATEGORY_FLOW_PREVIEW'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CATEGORY_LIST'),
+    ('ops.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CHAT_MESSAGES'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CONFIG'),
+    ('ops.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_INFO'),
+    ('ops.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_INFO_V2'),
+    ('ops.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_LIST'),
+    ('ops.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_MEDIA'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_MESSAGE_DETAIL'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_MESSAGE_LIST'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_OPTION_DETAIL'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_OPTION_LIST'),
+    ('config.issue.read', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_TRANSLATIONS'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_BULK_UPSERT_TRANSLATIONS'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_ALL_COPY'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_COPY'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_CREATE'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_DEFAULT_COPY'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_REORDER'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_UPDATE'),
+    ('ops.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_MESSAGE'),
+    ('ops.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_READ'),
+    ('ops.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_UPLOAD'),
+    ('ops.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_COMMENT'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CONFIG_UPDATE'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_REORDER'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_UPSERT'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_CREATE'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_REORDER'),
+    ('config.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_UPDATE'),
+    ('ops.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_TICKET_STATUS_CALL_BACK'),
+    ('ops.issue.write', 'DASHBOARD', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/PUT_ISSUE_UPDATE'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/ACCOUNT/GET_ACCOUNT_FETCH_UNVERIFIED_ACCOUNTS'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/ACCOUNT/POST_ACCOUNT_VERIFY_ACCOUNT'),
+    ('access.user.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/ACCOUNT/PUT_ACCOUNT_UPDATE_ROLE'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_SYNC_MULTIPLE'),
+    ('config.coins.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COINS_CONFIG/GET_COINS_CONFIG_LIST'),
+    ('config.coins.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COINS_CONFIG/POST_COINS_CONFIG_CREATE'),
+    ('config.coins.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COINS_CONFIG/PUT_COINS_CONFIG_UPDATE'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/DELETE_COMMUNICATION_DELETE'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/GET_COMMUNICATION_DELIVERY_STATUS'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/GET_COMMUNICATION_INFO'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/GET_COMMUNICATION_LIST'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/GET_COMMUNICATION_RECIPIENTS'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/GET_COMMUNICATION_TEMPLATE'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/POST_COMMUNICATION_CREATE'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/POST_COMMUNICATION_SEND'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/COMMUNICATION/PUT_COMMUNICATION_EDIT'),
+    ('config.offer.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DOMAIN_DISCOUNT_CONFIG/DELETE_DOMAIN_DISCOUNT_CONFIG_DELETE'),
+    ('config.offer.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DOMAIN_DISCOUNT_CONFIG/GET_DOMAIN_DISCOUNT_CONFIG_LIST'),
+    ('config.offer.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DOMAIN_DISCOUNT_CONFIG/POST_DOMAIN_DISCOUNT_CONFIG_CREATE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/DELETE_DRIVER_PERMANENTLY_DELETE'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_AADHAAR_INFO'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_AADHAAR_INFOBY_MOBILE_NUMBER'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_ACTIVITY'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_AIRPORT_PREFERENCE'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_BLOCK_REASON_LIST'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_CLEAR_STUCK_ON_RIDE'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_DOCUMENTS_INFO'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_EARNINGS'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_GET_OPERATING_CITY'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_IDENTITY_INFO'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_LIST'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_LOCATION'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_PAN_AADHAR_SELFIE_DETAILS'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_PAN_AADHAR_SELFIE_DETAILS_LIST'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_SEARCH_REQUEST_STATS'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_SECURITY_DEPOSIT_STATUS'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_STATS'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AC_RESTRICTION_UPDATE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AIRPORT_PREFERENCE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_ASSOCIATION_CHANGE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK_WITH_REASON'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BULK_REVIEW_RC_VARIANT'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BULK_SUBSCRIPTION_SERVICE_UPDATE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CHANGE_OPERATING_CITY'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CLEAR_FEE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DELETE_RC'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DISABLE'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DRIVER_DATA_DECRYPTION'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_IDENTITY_INFO_UPDATE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PAUSE_OR_RESUME_SERVICE_CHARGES'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PERSON_ID'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PERSON_NUMBERS'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_REFUND_BY_PAYOUT'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SEND_DUMMY_NOTIFICATION'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SYNC_DOC_AADHAR_PAN'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_TDS_RATE_UPDATE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNBLOCK'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNLINK_AADHAAR'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNLINK_DL'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_BY_PHONE_NUMBER'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_DRIVER_TAG'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_MERCHANT'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_NAME'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_PHONE_NUMBER'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_RC_INVALID_STATUS'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_RC_INVALID_STATUS_BY_RC_NUMBER'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_SPECIAL_LOC_WARRIOR'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_TAG_BULK'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_VEHICLE_MANUFACTURING'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_VEHICLE_VARIANT'),
+    ('ops.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_VEHICLE_APPEND_SELECTED_SERVICE_TIERS'),
+    ('ops.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_VEHICLE_UPSERT_SELECTED_SERVICE_TIERS'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_COINS/GET_DRIVER_COINS_COIN_HISTORY'),
+    ('config.coins.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_COINS/POST_DRIVER_COINS_BLACKLISTED_EVENTS_UPDATE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_COINS/POST_DRIVER_COINS_BULK_UPLOAD_COINS'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_COINS/POST_DRIVER_COINS_BULK_UPLOAD_COINS_V2'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_GO_HOME/GET_DRIVER_GO_HOME_GET_GO_HOME_INFO'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_GO_HOME/GET_DRIVER_GO_HOME_GET_HOME_LOCATION'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_GO_HOME/POST_DRIVER_GO_HOME_INCREMENT_GO_TO_COUNT'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_GO_HOME/POST_DRIVER_GO_HOME_UPDATE_HOME_LOCATION'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REFERRAL/POST_DRIVER_REFERRAL_LINK_REFERRAL'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REFERRAL/POST_DRIVER_REFERRAL_REFERRAL_OPS_PASSWORD'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_DOCUMENTS_COMMON_LIST'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_DOCUMENTS_INFO'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_DOCUMENTS_LIST'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_GET_DOCUMENT'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_INFO_BANK_ACCOUNT'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_PAYOUT_ORDER_STATUS'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_PAYOUT_REGISTRATION'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_UNDER_REVIEW_DRIVERS'),
+    ('ops.onboarding.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/GET_DRIVER_REGISTRATION_VERIFICATION_STATUS'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DELETE_BANK_ACCOUNT'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENTS_COMMON'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENT_REGISTER'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_AADHAAR'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_DL'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_GENERATE_AADHAAR_OTP'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_RC'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_VERIFY_AADHAAR_OTP'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_TRIGGER_REMINDER'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_UNLINK_DOCUMENT'),
+    ('ops.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_VERIFY_BANK_ACCOUNT'),
+    ('ops.vehicle.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_VEHICLE_QUALITY/GET_DRIVER_VEHICLE_QUALITY_LIST'),
+    ('ops.vehicle.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_VEHICLE_QUALITY/GET_DRIVER_VEHICLE_QUALITY_SEARCH'),
+    ('ops.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_VEHICLE_QUALITY/POST_DRIVER_VEHICLE_QUALITY_UPDATE_VEHICLE_RATING'),
+    ('ops.vehicle.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/ENTITY_INFO/GET_ENTITY_INFO_LIST'),
+    ('ops.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/ENTITY_INFO/POST_ENTITY_INFO_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FEEDBACK_FORM/DELETE_FEEDBACK_FORM_DELETE'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FEEDBACK_FORM/GET_FEEDBACK_FORM'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FEEDBACK_FORM/GET_FEEDBACK_FORM_LIST'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FEEDBACK_FORM/POST_FEEDBACK_FORM_CREATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FEEDBACK_FORM/PUT_FEEDBACK_FORM_UPDATE'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_AUDIT_LIST'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_INVOICE_LIST'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_INVOICE_PDF'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_PAYMENT_GATEWAY_TRANSACTION_LIST'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_PAYMENT_SETTLEMENT_LIST'),
+    ('finance.reconciliation.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_RECONCILIATION'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_SAP_JOURNALS'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_SAP_JOURNALS_TRANSACTIONS'),
+    ('finance.ledger.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_WALLET_LEDGER'),
+    ('finance.report.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_SUBSCRIPTION_PURCHASE_LIST'),
+    ('finance.reconciliation.execute', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_RECONCILIATION_TRIGGER'),
+    ('config.knowledge.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/DELETE_KNOWLEDGE_CENTER_SOP_DOCUMENT'),
+    ('config.knowledge.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/DELETE_KNOWLEDGE_CENTER_SOP_TYPE'),
+    ('config.knowledge.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/GET_KNOWLEDGE_CENTER_GET_DOCUMENT'),
+    ('config.knowledge.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/GET_KNOWLEDGE_CENTER_SOP_LIST'),
+    ('config.knowledge.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/POST_KNOWLEDGE_CENTER_SOP_UPLOAD'),
+    ('config.knowledge.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/PUT_KNOWLEDGE_CENTER_SOP_TYPE_RENAME'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MEDIA/GET_MEDIA_MEDIA_IMAGE'),
+    ('ops.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/GET_MEDIA_FILE_DOCUMENT_DOWNLOAD_LINK'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/POST_MEDIA_FILE_DOCUMENT_CONFIRM'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/POST_MEDIA_FILE_DOCUMENT_DELETE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/POST_MEDIA_FILE_DOCUMENT_UPLOAD_LINK'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_MERCHANT_MESSAGE'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_DELETE'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_TOLL_DELETE'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_COMMON'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_DRIVER_POOL'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_DRIVER_POOL_LIST'),
+    ('config.fare_policy.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_FARE_POLICY_DETAILS'),
+    ('config.fare_policy.export', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_FARE_POLICY_EXPORT'),
+    ('config.fare_policy.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_FARE_PRODUCT_LIST'),
+    ('config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_GEOMETRY_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_ONBOARDING_DOCUMENT'),
+    ('config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_SPECIAL_LOCATION_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_SUBSCRIPTION_CONFIG_LIST'),
+    ('config.geo.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_TOLL_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_VEHICLE_SERVICE_TIER'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_VEHICLE_SERVICE_TIER_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_VENDOR_SPLIT_DETAILS_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_MERCHANT_DOCUMENT_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_MERCHANT_MESSAGE_CATALOG'),
+    ('config.merchant.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_SERVICE_USAGE_CONFIG'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_CLEAR_CACHE_SUBSCRIPTION'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_COMMON_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DEBUG_LOG_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_POOL_CREATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_POOL_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_POOL_UPSERT'),
+    ('config.failover.execute', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER'),
+    ('config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_CREATE'),
+    ('config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_UPDATE'),
+    ('config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_PER_EXTRA_KM_RATE_UPDATE'),
+    ('config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_UPDATE'),
+    ('config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_UPSERT'),
+    ('config.fare_policy.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_PRODUCT_SET_ENABLED'),
+    ('city.launch.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_MERCHANT_CREATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_CREATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_UPDATE'),
+    ('city.launch.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE'),
+    ('city.launch.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_SPECIAL_LOCATION_UPSERT'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_TOLL_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_UPSERT_PLAN_AND_CONFIG_SUBSCRIPTION'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_VEHICLE_SERVICE_TIER_CREATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_VEHICLE_SERVICE_TIER_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_CREATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_DELETE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_MESSAGE_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_PAYOUT_CONFIG_UPDATE'),
+    ('config.scheduler.execute', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SCHEDULER_TRIGGER'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_VERIFICATION_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_UPSERT'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TOLL_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE'),
+    ('city.launch.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING'),
+    ('config.geo.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/PUT_MERCHANT_CONFIG_GEOMETRY_UPDATE'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/GET_MESSAGE_DELIVERY_INFO'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/GET_MESSAGE_INFO'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/GET_MESSAGE_LIST'),
+    ('ops.communication.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/GET_MESSAGE_RECEIVER_LIST'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/POST_MESSAGE_ADD'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/POST_MESSAGE_ADD_LINK'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/POST_MESSAGE_EDIT'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/POST_MESSAGE_SEND'),
+    ('ops.communication.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MESSAGE/POST_MESSAGE_UPLOAD_FILE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_QUERY_DELETE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_TAG_DELETE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_TIME_BOUNDS_DELETE'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS_AND_EVENTS'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_DOMAIN_SCHEMA'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_LOGIC_ROLLOUT'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERSIONS'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_BEHAVIOR_VISIBILITY'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_UI_CONFIGS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALWAYS_ON_LIST'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_DIMENSION_SCHEMA'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_UI_TABLE_DATA'),
+    ('config.config_pilot.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_UI_CONFIG_DETAILS'),
+    ('config.namma_tag.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_QUERY_ALL'),
+    ('config.namma_tag.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_QUERY_DETAILS'),
+    ('config.namma_tag.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_ALL'),
+    ('config.namma_tag.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_DETAILS'),
+    ('config.namma_tag.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TIME_BOUNDS'),
+    ('config.dynamic_logic.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT'),
+    ('config.dynamic_logic.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERIFY'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_ROW'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_UI_CONFIG'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG_WITH_DIMENSIONS'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_PATCHED_ELEMENT'),
+    ('config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_VERSION'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_QUERY_CREATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_QUERY_UPDATE'),
+    ('config.dynamic_logic.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_RUN_JOB'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_CREATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_UPDATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_VERIFY'),
+    ('config.namma_tag.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TIME_BOUNDS_CREATE'),
+    ('finance.payout.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT'),
+    ('finance.payout.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_HISTORY'),
+    ('finance.payout.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER'),
+    ('finance.payout.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_REFERRAL_HISTORY'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_CANCEL'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_CASH'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRY'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_SCHEDULED_PAYOUT_CONFIG_UPSERT'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VPA_DELETE'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VPA_REFUND_REGISTRATION'),
+    ('finance.payout.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VPA_UPDATE'),
+    ('config.plan.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PLAN_MANAGEMENT/GET_PLAN_MANAGEMENT_LIST_PLANS'),
+    ('config.plan.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PLAN_MANAGEMENT/GET_PLAN_MANAGEMENT_PLAN_TRANSLATIONS'),
+    ('config.plan.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PLAN_MANAGEMENT/POST_PLAN_MANAGEMENT_ACTIVATE_PLAN'),
+    ('config.plan.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PLAN_MANAGEMENT/POST_PLAN_MANAGEMENT_CREATE'),
+    ('config.plan.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/PLAN_MANAGEMENT/POST_PLAN_MANAGEMENT_DELETE_PLAN'),
+    ('finance.ledger.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/REVENUE/GET_REVENUE_ALL_FEE_HISTORY'),
+    ('finance.ledger.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/REVENUE/GET_REVENUE_COLLECTION_HISTORY'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_AGENT_LIST'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_CALL_COUNT'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FARE_BREAK_UP'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FLOW_DEBUG'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_INFO'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_KAPTURE_LIST'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_LIST'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_LIST_V2'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/GET_RIDE_NEARBY'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_CANCEL_MULTIPLE'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_END_MULTIPLE'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_ROUTE'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC'),
+    ('ops.ride.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC_MULTIPLE'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RIDE/POST_RIDE_WAIVER_RIDE_CANCELLATION_PENALTY'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SEARCH_TRY/POST_SEARCH_TRY_RECENT'),
+    ('ops.sos.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SOS_MEDIA/GET_SOS_MEDIA_SOS_MEDIA'),
+    ('ops.airport_queue.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_HISTORY'),
+    ('ops.airport_queue.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_POSITION'),
+    ('ops.airport_queue.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/GET_SPECIAL_ZONE_QUEUE_QUEUE_STATS'),
+    ('ops.airport_queue.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/GET_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY_STATUS'),
+    ('ops.airport_queue.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_ADD'),
+    ('ops.airport_queue.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_REMOVE'),
+    ('ops.airport_queue.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY'),
+    ('system.query.execute', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SYSTEM/POST_SYSTEM_RUN_QUERY'),
+    ('ops.vehicle.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VEHICLE/GET_VEHICLE_LIST'),
+    ('ops.vehicle.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VEHICLE_DETAILS/GET_VEHICLE_DETAILS_VEHICLE_MODELS'),
+    ('ops.vehicle.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VEHICLE_INFO/GET_VEHICLE_INFO_LIST'),
+    ('ops.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VEHICLE_INFO/POST_VEHICLE_INFO_UPDATE'),
+    ('ops.volunteer.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VOLUNTEER/GET_VOLUNTEER_LIST'),
+    ('ops.volunteer.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VOLUNTEER/POST_VOLUNTEER_CREATE'),
+    ('ops.volunteer.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/VOLUNTEER/POST_VOLUNTEER_UPDATE'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATION_GET_ALL_HUBS'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS_ALL_TIME'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATOR_FETCH_HUB_REQUESTS'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_OPERATOR_LIST'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_REQUEST_REVIEW_HISTORY'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/GET_DRIVER_REVIEW_QUEUE_REQUEST'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_CREATE_REQUEST'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_SEND_JOINING_OTP'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_VERIFY_JOINING_OTP'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_SUBMIT_REVIEW_REQUEST'),
+    ('fleet.operator.read', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/GET_FLEET_MANAGEMENT_FLEETS'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_CREATE'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_LINK_SEND_OTP'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_LINK_VERIFY_OTP'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_MEMBER_ASSOCIATION_CREATE'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_REGISTER'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/FLEET_MANAGEMENT/POST_FLEET_MANAGEMENT_FLEET_UNLINK'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/REGISTRATION/POST_OPERATOR_REGISTER'),
+    ('fleet.operator.write', 'DASHBOARD', 'PROVIDER_OPERATOR/REGISTRATION/POST_REGISTRATION_DASHBOARD_REGISTER'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/GET_DRIVER_FEEDBACK_LIST'),
+    ('ops.driver.read', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/GET_DRIVER_INFO'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/GET_DRIVER_PAYMENT_DUE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_ADD_VEHICLE'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_COLLECT_CASH'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_DELETE_AADHAAR'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_DELETE_PAN_CARD'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_ENABLE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_END_RC_ASSOCIATION'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_EXEMPT_CASH'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_EXEMPT_DRIVER_FEE'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_SET_RC_STATUS'),
+    ('ops.driver.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_UNLINK_VEHICLE'),
+    ('ops.subscription.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_V2_COLLECT_CASH'),
+    ('finance.adjustment.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_V2_EXEMPT_CASH'),
+    ('agent.customer.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_AUTH'),
+    ('agent.customer.write', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_VERIFY'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/MAPS/POST_MAPS_AUTO_COMPLETE'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/MAPS/POST_MAPS_GET_PLACE_NAME'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/RIDE/GET_RIDE_CURRENT_ACTIVE_RIDE'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_CANCEL'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_END'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_START'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/SEARCH_REQUEST/GET_SEARCH_REQUEST_INFO'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/SEARCH_REQUEST/GET_SEARCH_REQUEST_LIST'),
+    ('ops.ride.read', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/SEARCH_REQUEST/POST_SEARCH_REQUEST_SEARCHREQUESTS'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/VOLUNTEER/GET_VOLUNTEER_BOOKING'),
+    ('agent.booking.execute', 'DASHBOARD', 'PROVIDER_RIDE_BOOKING/VOLUNTEER/POST_VOLUNTEER_ASSIGN_START_OTP_RIDE'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/CUSTOMER/DELETE_CUSTOMER_SAVED_LOCATIONS'),
+    ('ops.customer.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/CUSTOMER/GET_CUSTOMER_SAVED_LOCATIONS'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/CUSTOMER/POST_CUSTOMER_DELETED_PERSON'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/CUSTOMER/POST_CUSTOMER_SAVED_LOCATIONS'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/CUSTOMER/POST_CUSTOMER_SOS_CREATE'),
+    ('agent.edc.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EDC_MACHINE/ASSIGN_EDC_MACHINE'),
+    ('agent.edc.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EDC_MACHINE/DELETE_EDC_MACHINE'),
+    ('agent.edc.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EDC_MACHINE/LIST_EDC_MACHINE'),
+    ('agent.edc.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EDC_MACHINE/UPDATE_EDC_MACHINE'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEF'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/GET_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DRAFTS'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CANCEL_SUBMIT_DRAFT'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CLEARDRAFT'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CREATE'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEL_SERVICE'),
+    ('tickets.place.approve', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_RECOMMEND'),
+    ('tickets.place.approve', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_REVIEW_DRAFT'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_DEL_CATEGORY'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_UPDATE_CATEGORY'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SUBMIT_DRAFT'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_BASIC_INFO'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_SERVICE'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_DEL_PEOPLE'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_UPDATE_PEOPLE'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_AUTOCOMPLETE'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_PAYMENT_ATTEMPTS'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_BOOKING_STATUS'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_CONFIG'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_PAYMENT_ATTEMPTS'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTES'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SEAT_LAYOUT'),
+    ('agent.frfs.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_SEARCH_QUOTE'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_STATIONS'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/GET_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_TRIP_ROUTE_SEATS'),
+    ('agent.frfs.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_FLEET_OPERATOR_CURRENT_OPERATION'),
+    ('agent.frfs.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_FLEET_OPERATOR_TRIP_ACTION'),
+    ('agent.frfs.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_QUOTE_V2_CONFIRM'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_ROUTE_SERVICEABILITY'),
+    ('agent.frfs.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_SEARCH'),
+    ('agent.frfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/FRFS_TICKET_SERVICE/POST_FRFS_TICKET_SERVICE_CUSTOMER_FRFS_STATIONS_POSSIBLE_STOPS'),
+    ('city.merchant_onboarding.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOADING_LIST_ALL'),
+    ('city.merchant_onboarding.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_CANCEL'),
+    ('city.merchant_onboarding.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_GET_FILE'),
+    ('city.merchant_onboarding.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_INFO'),
+    ('city.merchant_onboarding.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_LIST'),
+    ('city.merchant_onboarding.approve', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_REJECT'),
+    ('city.merchant_onboarding.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_START'),
+    ('city.merchant_onboarding.approve', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_STEP_APPROVE'),
+    ('city.merchant_onboarding.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_STEP_LIST'),
+    ('city.merchant_onboarding.approve', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_STEP_REJECT'),
+    ('city.merchant_onboarding.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_STEP_SUBMIT'),
+    ('city.merchant_onboarding.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_STEP_UPDATE_PAYLOAD'),
+    ('city.merchant_onboarding.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/MERCHANT_ONBOARDING/MERCHANT_ONBOARDING_STEP_UPLOAD_FILE'),
+    ('agent.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PASS_CUSTOMER_AVAILABLE_PASSES'),
+    ('agent.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PASS_CUSTOMER_PASS_PHOTO'),
+    ('agent.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PASS_CUSTOMER_PAYMENT_STATUS'),
+    ('agent.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PASS_CUSTOMER_PURCHASED_PASSES'),
+    ('agent.pass.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/GET_PASS_CUSTOMER_TRANSACTIONS'),
+    ('agent.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/POST_PASS_CUSTOMER_ACTIVATE_TODAY'),
+    ('agent.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/POST_PASS_CUSTOMER_PASS_RESET_DEVICE_SWITCH_COUNT'),
+    ('agent.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/POST_PASS_CUSTOMER_PASS_RESTORE'),
+    ('agent.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/POST_PASS_CUSTOMER_PASS_SELECT'),
+    ('agent.pass.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS/POST_PASS_CUSTOMER_PASS_UPDATE_PROFILE_PICTURE'),
+    ('system.crypto.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASSETTO/POST_PASSETTO_DECRYPT'),
+    ('system.crypto.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASSETTO/POST_PASSETTO_ENCRYPT'),
+    ('agent.pass_org.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/GET_PASS_ORGANIZATION_GET_ORGANIZATIONS'),
+    ('agent.pass_org.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/GET_PASS_ORGANIZATION_GET_PASS_ORGANIZATION'),
+    ('agent.pass_org.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/GET_PASS_ORGANIZATION_PASS_DETAILS'),
+    ('agent.pass_org.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/GET_PASS_ORGANIZATION_PASS_DETAILS_DEPOT'),
+    ('agent.pass_org.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/GET_PASS_ORGANIZATION_PASS_DETAILS_DOCUMENT'),
+    ('agent.pass_org.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/POST_PASS_ORGANIZATION_ASSIGN_DEPOT'),
+    ('agent.pass_org.approve', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/POST_PASS_ORGANIZATION_PASS_DETAILS_VERIFY'),
+    ('agent.pass_org.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PASS_ORGANIZATION/POST_PASS_ORGANIZATION_UPDATE'),
+    ('ops.ride.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PAYMENT/GET_PAYMENT_FARE_BREAKUP'),
+    ('ops.payment.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PAYMENT/GET_PAYMENT_REFUND_REQUEST_INFO'),
+    ('ops.payment.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PAYMENT/GET_PAYMENT_REFUND_REQUEST_LIST'),
+    ('ops.payment.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PAYMENT/POST_PAYMENT_REFUND_REQUEST_INITIATE'),
+    ('ops.payment.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/PAYMENT/POST_PAYMENT_REFUND_REQUEST_RESPOND'),
+    ('transit.seat_layout.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/SEAT_LAYOUT/DELETE_SEAT_LAYOUT'),
+    ('transit.seat_layout.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/SEAT_LAYOUT/GET_SEAT_LAYOUT'),
+    ('transit.seat_layout.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/SEAT_LAYOUT/LIST_SEAT_LAYOUT'),
+    ('transit.seat_layout.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/SEAT_LAYOUT/UPSERT_SEAT_LAYOUT'),
+    ('transit.stops.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/STOP_ROUTE_DETAILS/STOP_ROUTE_DETAILS_GET_ROUTE_STOP_MAPPING_BY_ROUTE'),
+    ('transit.stops.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/STOP_ROUTE_DETAILS/STOP_ROUTE_DETAILS_GET_ROUTE_STOP_MAPPING_BY_STOP'),
+    ('transit.stops.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/STOP_ROUTE_DETAILS/STOP_ROUTE_DETAILS_GET_STOP'),
+    ('transit.stops.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/STOP_ROUTE_DETAILS/STOP_ROUTE_DETAILS_GET_STOPS'),
+    ('tickets.booking.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_ALL_TICKET_BOOKINGS'),
+    ('tickets.booking.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_BOOKING_DETAILS'),
+    ('tickets.booking.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_DASHBOARD_BOOKING_STATUS'),
+    ('agent.ticket.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_PLACES'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_AGREEMENT'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_FILE'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_TICKETPLACES'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_TICKETPLACE_INFO'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_TICKETPLACE_SUB_PLACES'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKETS_TICKETDASHBOARD_USER_INFO'),
+    ('tickets.booking.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_BOOKING_DETAILS'),
+    ('agent.ticket.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_FLEET_VEHICLES'),
+    ('agent.ticket.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_FLEET_VEHICLES_V2'),
+    ('agent.ticket.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_PLACES'),
+    ('tickets.booking.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_PLACE_BOOKINGS'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/GET_TICKET_PLACE_SERVICES'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_BOOKINGS_CANCEL'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_SERVICES'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_SERVICE_CANCEL'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_TICKETDASHBOARD_TICKETPLACE_UPDATE'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_TICKETDASHBOARD_TICKETPLACE_UPDATE_SUB_PLACES'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_UPDATE'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKETS_VERIFY'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKET_BOOKINGS_VERIFY_V2'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKET_BOOKING_CASH_COLLECT'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKET_PLACES_BOOK'),
+    ('agent.ticket.execute', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKETS/POST_TICKET_PLACES_DIRECT_BOOK'),
+    ('tickets.place.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_CURRENT_SEAT_STATUS'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_DELETE_ASSET'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_SEAT_MANAGEMENT'),
+    ('tickets.place.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_UPLOAD_ASSET'),
+    ('transit.stops.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_BULK_REPLACE_STOPS'),
+    ('transit.master.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_DELETE_ROW'),
+    ('transit.gtfs.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_EXPORT_ROUTE_STOP_MAPPING'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_ALL_ROWS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_BREAK_TYPES'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_CONDUCTOR'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DAY_TYPES'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEPOTS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEVICE_IDS'),
+    ('transit.device.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DEVICE_VEHICLE_MAPPING_LIST'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_DRIVER'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_FLEETS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_OPERATORS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_ROUTES'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_ROW'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_SCHEDULE_NUMBERS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_SERVICE_TYPES'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_SHIFT_TYPES'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_TABLET_IDS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_TRIP_DETAILS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_TRIP_TYPES'),
+    ('transit.waybill.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_GET_WAYBILLS'),
+    ('transit.stops.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_INSERT_ROUTE_STOP'),
+    ('transit.stops.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_NEARBY_STOPS'),
+    ('transit.master.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_QUERY_ROWS'),
+    ('transit.stops.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_REPROCESS_ROUTES'),
+    ('transit.stops.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_ROUTE_STOPS'),
+    ('transit.stops.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_SEARCH_STOPS'),
+    ('transit.stops.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UNBLOCK_BUS'),
+    ('transit.waybill.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPDATE_WAYBILL_DETAILS'),
+    ('transit.waybill.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPDATE_WAYBILL_FLEET'),
+    ('transit.waybill.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPDATE_WAYBILL_STATUS'),
+    ('transit.waybill.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPDATE_WAYBILL_TABLET'),
+    ('transit.device.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPSERT_DEVICE_VEHICLE_MAPPING'),
+    ('transit.master.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPSERT_ROW'),
+    ('transit.master.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/TRANSIT_OPERATOR/TRANSIT_OPERATOR_UPSERT_ROWS'),
+    ('transit.seat_layout.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/VEHICLE_SEAT_LAYOUT_MAPPING/DELETE_VEHICLE_SEAT_LAYOUT_MAPPING'),
+    ('transit.seat_layout.read', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/VEHICLE_SEAT_LAYOUT_MAPPING/LIST_VEHICLE_SEAT_LAYOUT_MAPPING'),
+    ('transit.seat_layout.write', 'DASHBOARD', 'RIDER_APP_MANAGEMENT/VEHICLE_SEAT_LAYOUT_MAPPING/UPSERT_VEHICLE_SEAT_LAYOUT_MAPPING'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_CATEGORY'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_MESSAGE'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/DELETE_ISSUE_OPTION'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CATEGORY_DETAIL'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CATEGORY_FLOW_PREVIEW'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CATEGORY_LIST'),
+    ('ops.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CHAT_MESSAGES'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_CONFIG'),
+    ('ops.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_INFO'),
+    ('ops.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_INFO_V2'),
+    ('ops.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_LIST'),
+    ('ops.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_MEDIA'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_MESSAGE_DETAIL'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_MESSAGE_LIST'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_OPTION_DETAIL'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_OPTION_LIST'),
+    ('config.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_TRANSLATIONS'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_BULK_UPSERT_TRANSLATIONS'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_ALL_COPY'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_COPY'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_CREATE'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_DEFAULT_COPY'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_REORDER'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CATEGORY_UPDATE'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_MESSAGE'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_READ'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CHAT_UPLOAD'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_COMMENT'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_CONFIG_UPDATE'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_KAPTURE_CREATE'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_REORDER'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_UPSERT'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_CREATE'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_REORDER'),
+    ('config.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_OPTION_UPDATE'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_TICKET_STATUS_CALL_BACK'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/PUT_ISSUE_UPDATE'),
+    ('ops.issue.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE_LIST/GET_ISSUE_LIST_V1'),
+    ('ops.issue.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE_LIST/POST_ISSUE_LIST_TICKET_STATUS_CALL_BACK'),
+    ('ops.sos.read', 'DASHBOARD', 'RIDER_MANAGEMENT/ALERT_INCIDENT/GET_ALERT_INCIDENT_ALERTS_INCIDENTS'),
+    ('ops.ride.write', 'DASHBOARD', 'RIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK'),
+    ('ops.ride.write', 'DASHBOARD', 'RIDER_MANAGEMENT/BOOKING/POST_BOOKING_SYNC_MULTIPLE'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/DELETE_CUSTOMER_DELETE'),
+    ('ops.customer.read', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/GET_CUSTOMER_CANCELLATION_DUES_DETAILS'),
+    ('ops.customer.read', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/GET_CUSTOMER_INFO'),
+    ('ops.customer.read', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/GET_CUSTOMER_LIST'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_APPLY_OFFER'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_BLOCK'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_BULK_APPLY_OFFER'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_ENSURE_EXISTS'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_OFFERS_LIST'),
+    ('ops.pii.read', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_PERSON_ID'),
+    ('ops.pii.read', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_PERSON_NUMBERS'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_UNBLOCK'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_UPDATE_PAYMENT_MODE'),
+    ('ops.customer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_UPDATE_SAFETY_CENTER_BLOCKING'),
+    ('transit.device.read', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_ALERTS/GET_FRFS_ALERTS_FRFS_LIVE_METRICS'),
+    ('transit.gtfs.read', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_TICKET/GET_FRFS_TICKET_FRFS_GTFS'),
+    ('transit.gtfs.read', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_TICKET/GET_FRFS_TICKET_FRFS_ROUTES'),
+    ('transit.fare.read', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_TICKET/GET_FRFS_TICKET_FRFS_ROUTE_FARE_LIST'),
+    ('transit.gtfs.read', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_TICKET/GET_FRFS_TICKET_FRFS_ROUTE_STATIONS'),
+    ('transit.fare.write', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_TICKET/POST_FRFS_TICKET_FRFS_STATUS_UPDATE'),
+    ('transit.fare.write', 'DASHBOARD', 'RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_ROUTE_FARE_UPSERT'),
+    ('finance.invoice.read', 'DASHBOARD', 'RIDER_MANAGEMENT/INVOICE/GET_INVOICE_INVOICE'),
+    ('ops.pii.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MEDIA/GET_MEDIA_FILE'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_MERCHANT_MESSAGE'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_DELETE'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_TOLL_DELETE'),
+    ('config.geo.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_GEOMETRY_LIST'),
+    ('config.geo.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_SPECIAL_LOCATION_LIST'),
+    ('config.geo.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_TOLL_LIST'),
+    ('config.merchant.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_MERCHANT_MESSAGE_CATALOG'),
+    ('config.merchant.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_RIDER_CONFIG_ESTIMATES_ORDER'),
+    ('config.merchant.read', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_SERVICE_USAGE_CONFIG'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DEBUG_LOG_UPDATE'),
+    ('config.failover.execute', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER'),
+    ('city.launch.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_MERCHANT_CREATE'),
+    ('city.launch.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE'),
+    ('city.launch.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_SPECIAL_LOCATION_UPSERT'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_TOLL_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_MESSAGE_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_RIDER_CONFIG_ESTIMATES_ORDER_UPDATE'),
+    ('config.scheduler.execute', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SCHEDULER_TRIGGER'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TICKET_CONFIG_UPSERT'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TOLL_UPSERT'),
+    ('config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE'),
+    ('config.geo.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/PUT_MERCHANT_CONFIG_GEOMETRY_UPDATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_QUERY_DELETE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_TAG_DELETE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_TIME_BOUNDS_DELETE'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS_AND_EVENTS'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_DOMAIN_SCHEMA'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_LOGIC_ROLLOUT'),
+    ('config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERSIONS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_UI_CONFIGS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALWAYS_ON_LIST'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_DIMENSION_SCHEMA'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_UI_TABLE_DATA'),
+    ('config.config_pilot.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_UI_CONFIG_DETAILS'),
+    ('config.namma_tag.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_QUERY_ALL'),
+    ('config.namma_tag.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_QUERY_DETAILS'),
+    ('config.namma_tag.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_ALL'),
+    ('config.namma_tag.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_DETAILS'),
+    ('config.namma_tag.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TIME_BOUNDS'),
+    ('config.dynamic_logic.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT'),
+    ('config.dynamic_logic.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERIFY'),
+    ('config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE'),
+    ('config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_ROW'),
+    ('config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_UI_CONFIG'),
+    ('config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG'),
+    ('config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG_WITH_DIMENSIONS'),
+    ('config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_VERSION'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_QUERY_CREATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_QUERY_UPDATE'),
+    ('config.dynamic_logic.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_RUN_JOB'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_CREATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_UPDATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_VERIFY'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TIME_BOUNDS_CREATE'),
+    ('config.namma_tag.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_UPDATE_CUSTOMER_TAG'),
+    ('config.offer.read', 'DASHBOARD', 'RIDER_MANAGEMENT/OFFER/GET_OFFER_ELIGIBILITY_SCHEMA'),
+    ('config.offer.read', 'DASHBOARD', 'RIDER_MANAGEMENT/OFFER/GET_OFFER_LIST'),
+    ('config.offer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/OFFER/POST_OFFER_CREATE'),
+    ('config.offer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/OFFER/POST_OFFER_TOGGLE'),
+    ('config.offer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/OFFER/POST_OFFER_UPDATE'),
+    ('config.offer.write', 'DASHBOARD', 'RIDER_MANAGEMENT/OFFER/POST_OFFER_VALIDATE_ELIGIBILITY'),
+    ('finance.payout.read', 'DASHBOARD', 'RIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER'),
+    ('config.rewards.read', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/GET_REWARDS_CAMPAIGN'),
+    ('config.rewards.read', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/GET_REWARDS_CAMPAIGNS'),
+    ('config.rewards.read', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/GET_REWARDS_CAMPAIGN_STATS'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN_COHORT'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN_COHORT_CODES'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN_STATUS'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/POST_REWARDS_COHORT_VALIDATE_ELIGIBILITY'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/POST_REWARDS_TRIGGER_EVAL'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/PUT_REWARDS_CAMPAIGN'),
+    ('config.rewards.write', 'DASHBOARD', 'RIDER_MANAGEMENT/REWARDS/PUT_REWARDS_CAMPAIGN_COHORT'),
+    ('finance.adjustment.write', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/CANCELLATION_CHARGES_WAIVE_OFF'),
+    ('ops.ride.read', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/GET_RIDE_FLOW_DEBUG_BAP'),
+    ('ops.ride.read', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/GET_RIDE_INFO'),
+    ('ops.ride.read', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/GET_RIDE_KAPTURE_LIST'),
+    ('ops.ride.read', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/GET_RIDE_LIST'),
+    ('ops.ride.write', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/POST_RIDE_CANCEL_MULTIPLE'),
+    ('ops.ride.write', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/POST_RIDE_PAYOUT_OFFER_SYNC'),
+    ('ops.ride.write', 'DASHBOARD', 'RIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC_MULTIPLE'),
+    ('ops.ride.read', 'DASHBOARD', 'RIDER_MANAGEMENT/SEARCH_TRY/POST_SEARCH_TRY_RECENT_SEARCH_TRIES'),
+    ('ops.sos.write', 'DASHBOARD', 'RIDER_MANAGEMENT/SOS/POST_SOS_CALL_EXTERNAL_SOS'),
+    ('ops.sos.write', 'DASHBOARD', 'RIDER_MANAGEMENT/SOS/POST_SOS_ERSS_STATUS_UPDATE'),
+    ('ops.sos.read', 'DASHBOARD', 'RIDER_MANAGEMENT/SOS_MEDIA/GET_SOS_MEDIA_SOS_MEDIA'),
+    ('system.query.execute', 'DASHBOARD', 'RIDER_MANAGEMENT/SYSTEM/POST_SYSTEM_RUN_QUERY'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/ADD_BAGGAGE/POST_ADD_BAGGAGE_CONFIRM'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/BOOKING/GET_BOOKING_AGENT_L1_LIST'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/BOOKING/GET_BOOKING_AGENT_L2_LIST'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/BOOKING/GET_BOOKING_LIST'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/BOOKING/POST_BOOKING_STATUS'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/CANCEL/POST_CANCEL_BOOKING'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/CHANGE_SERVICE_TIER/GET_CHANGE_SERVICE_TIER_QUOTES'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/CHANGE_SERVICE_TIER/POST_CHANGE_SERVICE_TIER_CONFIRM'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/CONFIRM/POST_CONFIRM_RIDE_SEARCH_QUOTES'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/FRONTEND/GET_FRONTEND_FLOW_STATUS'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/FRONTEND/POST_FRONTEND_NOTIFY_EVENT'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MAPS/POST_MAPS_AUTO_COMPLETE'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MAPS/POST_MAPS_GET_PLACE_DETAILS'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MAPS/POST_MAPS_GET_PLACE_NAME'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MULTI_MODAL/GET_MULTI_MODAL_GET_COMMENTS'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MULTI_MODAL/GET_MULTI_MODAL_LIST'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MULTI_MODAL/POST_MULTI_MODAL_ADD_COMMENT'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MULTI_MODAL/POST_MULTI_MODAL_SEND_DIRECT_MESSAGE'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/MULTI_MODAL/POST_MULTI_MODAL_SEND_MESSAGE'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/NOTIFY_RIDE_INFO/POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO'),
+    ('agent.customer.write', 'DASHBOARD', 'RIDER_RIDE_BOOKING/PROFILE/GET_PROFILE_DETAIL'),
+    ('agent.customer.write', 'DASHBOARD', 'RIDER_RIDE_BOOKING/PROFILE/POST_PROFILE_UPDATE'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/QUOTE/GET_QUOTE_RESULT'),
+    ('agent.customer.write', 'DASHBOARD', 'RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_AUTH'),
+    ('agent.customer.write', 'DASHBOARD', 'RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_LOGOUT'),
+    ('agent.customer.write', 'DASHBOARD', 'RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_OTP_RESEND'),
+    ('agent.customer.write', 'DASHBOARD', 'RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_VERIFY'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SEARCH/POST_SEARCH_RIDE'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/GET_SELECT_QUOTES'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/GET_SELECT_RESULT'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_CANCEL_SEARCH'),
+    ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_ESTIMATE')
+ON CONFLICT (server_name, endpoint_id) DO NOTHING;
+-- Curated role bundles (capability-seed.md §4).
+-- Applied per role NAME. For roles that already hold access_matrix
+-- grants, the bundle is SKIPPED (except ALWAYS_CURATED admin roles):
+-- prod grants + threshold derivation define those, so the migration
+-- preserves today's access instead of widening it.
+
+-- JUSPAY_ADMIN (150 capabilities)  [always applied]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('access.audit.read'), ('access.capability.grant'), ('access.capability.read'), ('access.entity.read'), ('access.entity.write'), ('access.merchant.write'), ('access.role.read'), ('access.role.write'), ('access.user.read'), ('access.user.write'), ('agent.booking.execute'), ('agent.customer.write'), ('agent.edc.read'), ('agent.edc.write'), ('agent.frfs.execute'), ('agent.frfs.read'), ('agent.pass.execute'), ('agent.pass.read'), ('agent.pass_org.approve'), ('agent.pass_org.read'), ('agent.pass_org.write'), ('agent.ticket.execute'), ('agent.ticket.read'), ('analytics.ai.execute'), ('analytics.core.read'), ('analytics.incentive.read'), ('analytics.performance.read'), ('analytics.pricing.read'), ('analytics.pt_stats.read'), ('analytics.public_transport.read'), ('analytics.revenue.read'), ('analytics.sla.read'), ('analytics.sla.write'), ('city.launch.read'), ('city.launch.write'), ('city.merchant_onboarding.approve'), ('city.merchant_onboarding.read'), ('city.merchant_onboarding.write'), ('config.coins.read'), ('config.coins.write'), ('config.config_pilot.read'), ('config.config_pilot.write'), ('config.dynamic_logic.read'), ('config.dynamic_logic.write'), ('config.failover.execute'), ('config.fare_policy.export'), ('config.fare_policy.read'), ('config.fare_policy.write'), ('config.firebase.read'), ('config.firebase.write'), ('config.geo.read'), ('config.geo.write'), ('config.issue.read'), ('config.issue.write'), ('config.knowledge.read'), ('config.knowledge.write'), ('config.merchant.read'), ('config.merchant.write'), ('config.namma_tag.read'), ('config.namma_tag.write'), ('config.offer.read'), ('config.offer.write'), ('config.plan.read'), ('config.plan.write'), ('config.registry.read'), ('config.registry.write'), ('config.release.read'), ('config.release.write'), ('config.rewards.read'), ('config.rewards.write'), ('config.scheduler.execute'), ('finance.adjustment.write'), ('finance.fleet.read'), ('finance.insurance.read'), ('finance.invoice.read'), ('finance.ledger.read'), ('finance.payout.read'), ('finance.payout.write'), ('finance.reconciliation.execute'), ('finance.reconciliation.read'), ('finance.report.read'), ('finance.settlement.export'), ('finance.settlement.read'), ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.earnings.read'), ('fleet.live.read'), ('fleet.onboarding.read'), ('fleet.onboarding.write'), ('fleet.operator.read'), ('fleet.operator.write'), ('fleet.profile.read'), ('fleet.profile.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('ops.airport_queue.read'), ('ops.airport_queue.write'), ('ops.communication.read'), ('ops.communication.write'), ('ops.customer.read'), ('ops.customer.write'), ('ops.driver.read'), ('ops.driver.write'), ('ops.fleet_owner.read'), ('ops.fleet_owner.write'), ('ops.grievance.read'), ('ops.grievance.write'), ('ops.issue.read'), ('ops.issue.write'), ('ops.membership.read'), ('ops.onboarding.read'), ('ops.onboarding.write'), ('ops.payment.read'), ('ops.payment.write'), ('ops.pii.read'), ('ops.ride.read'), ('ops.ride.write'), ('ops.sos.read'), ('ops.sos.write'), ('ops.subscription.read'), ('ops.subscription.write'), ('ops.training.read'), ('ops.vehicle.read'), ('ops.vehicle.write'), ('ops.volunteer.read'), ('ops.volunteer.write'), ('ops.wallet.read'), ('ops.wallet.write'), ('system.crypto.execute'), ('system.query.execute'), ('tickets.booking.read'), ('tickets.place.approve'), ('tickets.place.read'), ('tickets.place.write'), ('transit.device.read'), ('transit.device.write'), ('transit.fare.read'), ('transit.fare.write'), ('transit.gtfs.read'), ('transit.gtfs.write'), ('transit.master.read'), ('transit.master.write'), ('transit.seat_layout.read'), ('transit.seat_layout.write'), ('transit.stops.read'), ('transit.stops.write'), ('transit.waybill.write'), ('utility.shortener.execute')) AS c(cap)
+WHERE r.name = 'JUSPAY_ADMIN' ON CONFLICT DO NOTHING;
+
+-- JUSPAY_OPS (68 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('agent.edc.read'), ('agent.edc.write'), ('agent.frfs.execute'), ('agent.frfs.read'), ('agent.pass.execute'), ('agent.pass.read'), ('agent.pass_org.approve'), ('agent.pass_org.read'), ('agent.pass_org.write'), ('agent.ticket.execute'), ('agent.ticket.read'), ('analytics.ai.execute'), ('analytics.core.read'), ('analytics.incentive.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.sla.read'), ('config.fare_policy.read'), ('config.fare_policy.write'), ('config.firebase.read'), ('config.firebase.write'), ('config.issue.read'), ('config.issue.write'), ('config.knowledge.read'), ('config.registry.read'), ('config.registry.write'), ('config.release.read'), ('config.rewards.read'), ('config.rewards.write'), ('finance.reconciliation.read'), ('finance.report.read'), ('finance.settlement.read'), ('ops.airport_queue.read'), ('ops.airport_queue.write'), ('ops.communication.read'), ('ops.communication.write'), ('ops.customer.read'), ('ops.customer.write'), ('ops.driver.read'), ('ops.driver.write'), ('ops.fleet_owner.read'), ('ops.fleet_owner.write'), ('ops.grievance.read'), ('ops.grievance.write'), ('ops.issue.read'), ('ops.issue.write'), ('ops.membership.read'), ('ops.onboarding.read'), ('ops.onboarding.write'), ('ops.payment.read'), ('ops.payment.write'), ('ops.pii.read'), ('ops.ride.read'), ('ops.ride.write'), ('ops.sos.read'), ('ops.sos.write'), ('ops.subscription.read'), ('ops.subscription.write'), ('ops.training.read'), ('ops.vehicle.read'), ('ops.vehicle.write'), ('ops.volunteer.read'), ('ops.volunteer.write'), ('ops.wallet.read'), ('ops.wallet.write'), ('utility.shortener.execute')) AS c(cap)
+WHERE r.name = 'JUSPAY_OPS'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- CUSTOMER_SERVICE (6 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('ops.customer.read'), ('ops.ride.read'), ('ops.issue.read'), ('ops.issue.write'), ('ops.payment.read'), ('ops.payment.write')) AS c(cap)
+WHERE r.name = 'CUSTOMER_SERVICE'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- NY_DATA_TEAM (5 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read')) AS c(cap)
+WHERE r.name = 'NY_DATA_TEAM'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- NY_MANAGER (9 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read'), ('config.rewards.read'), ('config.rewards.write'), ('ops.membership.read'), ('access.audit.read')) AS c(cap)
+WHERE r.name = 'NY_MANAGER'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- MSIL_ADMIN (4 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute')) AS c(cap)
+WHERE r.name = 'MSIL_ADMIN'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- ASSOCIATE (5 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.membership.read')) AS c(cap)
+WHERE r.name = 'ASSOCIATE'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- EXECUTIVE (6 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read'), ('ops.membership.read')) AS c(cap)
+WHERE r.name = 'EXECUTIVE'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- CITY_HEAD (9 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read'), ('finance.adjustment.write'), ('analytics.incentive.read'), ('config.fare_policy.read'), ('ops.membership.read')) AS c(cap)
+WHERE r.name = 'CITY_HEAD'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- YATRI_SATHI_ADMIN (1 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('finance.adjustment.write')) AS c(cap)
+WHERE r.name = 'YATRI_SATHI_ADMIN'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- ANALYTICS (1 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.core.read')) AS c(cap)
+WHERE r.name = 'ANALYTICS'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- FLEET (15 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.earnings.read'), ('fleet.live.read'), ('fleet.onboarding.read'), ('fleet.onboarding.write'), ('fleet.profile.read'), ('fleet.profile.write'), ('analytics.core.read'), ('analytics.performance.read'), ('finance.fleet.read')) AS c(cap)
+WHERE r.name = 'FLEET'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- RENTAL_FLEET (16 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.earnings.read'), ('fleet.live.read'), ('fleet.onboarding.read'), ('fleet.onboarding.write'), ('fleet.profile.read'), ('fleet.profile.write'), ('analytics.core.read'), ('analytics.performance.read'), ('finance.fleet.read'), ('finance.adjustment.write')) AS c(cap)
+WHERE r.name = 'RENTAL_FLEET'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- RENTAL_FLEET_OWNER (1 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('finance.adjustment.write')) AS c(cap)
+WHERE r.name = 'RENTAL_FLEET_OWNER'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- DASHBOARD_OPERATOR (8 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.live.read'), ('ops.training.read')) AS c(cap)
+WHERE r.name = 'DASHBOARD_OPERATOR'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- OPERATOR (4 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('fleet.operator.read'), ('fleet.operator.write'), ('fleet.driver.read'), ('fleet.vehicle.read')) AS c(cap)
+WHERE r.name = 'OPERATOR'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- BOT (2 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('ops.onboarding.read'), ('ops.onboarding.write')) AS c(cap)
+WHERE r.name = 'BOT'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- BTFinance (4 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('finance.reconciliation.read'), ('finance.reconciliation.execute'), ('finance.settlement.export'), ('finance.report.read')) AS c(cap)
+WHERE r.name = 'BTFinance'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- FINANCE_ADMIN (5 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('finance.report.read'), ('finance.settlement.read'), ('finance.settlement.export'), ('finance.ledger.read'), ('finance.invoice.read')) AS c(cap)
+WHERE r.name = 'FINANCE_ADMIN'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- CUMTA (4 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.sla.read'), ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
+WHERE r.name = 'CUMTA'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- MTC (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
+WHERE r.name = 'MTC'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- CMRL (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
+WHERE r.name = 'CMRL'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- SUBURBAN (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
+WHERE r.name = 'SUBURBAN'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- MtcFleetOps (14 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('transit.master.read'), ('transit.master.write'), ('transit.waybill.write'), ('transit.stops.read'), ('transit.stops.write'), ('transit.gtfs.read'), ('transit.gtfs.write'), ('transit.fare.read'), ('transit.fare.write'), ('transit.seat_layout.read'), ('transit.seat_layout.write'), ('transit.device.read'), ('transit.device.write'), ('access.audit.read')) AS c(cap)
+WHERE r.name = 'MtcFleetOps'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- MTC OPS (14 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('transit.master.read'), ('transit.master.write'), ('transit.waybill.write'), ('transit.stops.read'), ('transit.stops.write'), ('transit.gtfs.read'), ('transit.gtfs.write'), ('transit.fare.read'), ('transit.fare.write'), ('transit.seat_layout.read'), ('transit.seat_layout.write'), ('transit.device.read'), ('transit.device.write'), ('access.audit.read')) AS c(cap)
+WHERE r.name = 'MTC OPS'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- MTC_ADMIN (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.pass_org.read'), ('agent.pass_org.write'), ('agent.pass_org.approve')) AS c(cap)
+WHERE r.name = 'MTC_ADMIN'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- CLG_ADMIN (2 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.pass_org.read'), ('agent.pass_org.write')) AS c(cap)
+WHERE r.name = 'CLG_ADMIN'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- STUDENT_PASS_DEPOT (2 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.pass_org.read'), ('agent.pass_org.approve')) AS c(cap)
+WHERE r.name = 'STUDENT_PASS_DEPOT'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- PT_CONDUCTOR (1 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.pt_stats.read')) AS c(cap)
+WHERE r.name = 'PT_CONDUCTOR'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- PT_DEPOT_MANAGER (1 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.pt_stats.read')) AS c(cap)
+WHERE r.name = 'PT_DEPOT_MANAGER'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- SlaMonitoring (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('analytics.sla.read'), ('ops.grievance.read'), ('ops.grievance.write')) AS c(cap)
+WHERE r.name = 'SlaMonitoring'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- FIREBASE_CONTROL_CENTER (4 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('config.firebase.read'), ('config.firebase.write'), ('city.launch.read'), ('city.launch.write')) AS c(cap)
+WHERE r.name = 'FIREBASE_CONTROL_CENTER'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- IffcoOPS (1 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('finance.insurance.read')) AS c(cap)
+WHERE r.name = 'IffcoOPS'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- AIRPORT_OPS (9 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('ops.airport_queue.read'), ('ops.airport_queue.write'), ('ops.wallet.write'), ('ops.vehicle.read'), ('ops.vehicle.write'), ('ops.driver.write'), ('config.fare_policy.write'), ('utility.shortener.execute'), ('config.knowledge.read')) AS c(cap)
+WHERE r.name = 'AIRPORT_OPS'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- AirportAgent (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('ops.wallet.write')) AS c(cap)
+WHERE r.name = 'AirportAgent'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- AirportKPAgent (3 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('ops.wallet.write')) AS c(cap)
+WHERE r.name = 'AirportKPAgent'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- AirportKPSupervisor (5 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('ops.wallet.write'), ('ops.airport_queue.read'), ('ops.airport_queue.write')) AS c(cap)
+WHERE r.name = 'AirportKPSupervisor'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+
+-- TICKET_VALIDATOR (2 capabilities)  [only if role has no legacy grants]
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT r.id, c.cap FROM atlas_dashboard.role r,
+     (VALUES ('agent.ticket.read'), ('agent.ticket.execute')) AS c(cap)
+WHERE r.name = 'TICKET_VALIDATOR'
+  AND NOT EXISTS (SELECT 1 FROM atlas_dashboard.access_matrix am
+                  WHERE am.role_id = r.id
+                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+-- Threshold derivation for long-tail roles: a role inherits capability C only
+-- if it already holds >= 50%% of C's endpoints. Nothing is withheld by
+-- sensitivity — sub-threshold holdings stay reachable via the transitional
+-- `capability OR legacy matrix` check at enforcement time (PLAN.md). Run AFTER
+-- the curated seed.
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id)
+SELECT held.role_id, held.capability_id
+FROM (
+  SELECT m.role_id, ce.capability_id, count(DISTINCT ce.endpoint_id) AS held_endpoints
+  FROM atlas_dashboard.access_matrix m
+  JOIN atlas_dashboard.capability_endpoint ce
+    ON ce.endpoint_id = CASE WHEN m.api_entity = 'SPECIAL_ZONES'
+       THEN 'LEGACY/SPECIAL_ZONES/' || m.user_action_type
+       ELSE m.user_action_type END
+  WHERE m.user_access_type = 'USER_FULL_ACCESS'
+  GROUP BY m.role_id, ce.capability_id
+) held
+JOIN (
+  SELECT capability_id, count(*) AS total_endpoints
+  FROM atlas_dashboard.capability_endpoint GROUP BY capability_id
+) sized ON sized.capability_id = held.capability_id
+WHERE held.held_endpoints::numeric / sized.total_endpoints >= 0.5
+ON CONFLICT DO NOTHING;
+
+-- Coverage report: what each role holds vs the capability size. Rows below the
+-- threshold did NOT derive and rely on the legacy fallback — they are the
+-- worklist for manual curation (highest member counts first).
+-- SELECT r.name, held.capability_id, held.held_endpoints, sized.total_endpoints,
+--        round(100.0 * held.held_endpoints / sized.total_endpoints) AS pct
+-- FROM ( ...held... ) held JOIN ( ...sized... ) sized USING (capability_id)
+-- JOIN atlas_dashboard.role r ON r.id = held.role_id
+-- WHERE held.held_endpoints::numeric / sized.total_endpoints < 0.5
+-- ORDER BY pct DESC;

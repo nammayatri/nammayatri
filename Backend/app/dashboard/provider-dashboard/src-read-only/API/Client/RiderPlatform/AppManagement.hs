@@ -1,0 +1,73 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module API.Client.RiderPlatform.AppManagement where
+
+import qualified "rider-app" API.Dashboard
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Customer
+import qualified "rider-app" API.Types.Dashboard.AppManagement.EDCMachine
+import qualified "rider-app" API.Types.Dashboard.AppManagement.EventManagement
+import qualified "rider-app" API.Types.Dashboard.AppManagement.FRFSTicketService
+import qualified "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboarding
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Pass
+import qualified "rider-app" API.Types.Dashboard.AppManagement.PassOrganization
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Passetto
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Payment
+import qualified "rider-app" API.Types.Dashboard.AppManagement.SeatLayout
+import qualified "rider-app" API.Types.Dashboard.AppManagement.StopRouteDetails
+import qualified "rider-app" API.Types.Dashboard.AppManagement.TicketDashboard
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
+import qualified "rider-app" API.Types.Dashboard.AppManagement.TransitOperator
+import qualified "rider-app" API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
+import qualified "lib-dashboard" Domain.Types.Merchant
+import qualified "lib-dashboard" Domain.Types.ServerName
+import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City
+import Servant
+import qualified "lib-dashboard" Tools.Auth.Merchant
+import qualified "lib-dashboard" Tools.Client
+
+data AppManagementAPIs = AppManagementAPIs
+  { customerDSL :: API.Types.Dashboard.AppManagement.Customer.CustomerAPIs,
+    eDCMachineDSL :: API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineAPIs,
+    eventManagementDSL :: API.Types.Dashboard.AppManagement.EventManagement.EventManagementAPIs,
+    fRFSTicketServiceDSL :: API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceAPIs,
+    merchantOnboardingDSL :: API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingAPIs,
+    passDSL :: API.Types.Dashboard.AppManagement.Pass.PassAPIs,
+    passOrganizationDSL :: API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationAPIs,
+    passettoDSL :: API.Types.Dashboard.AppManagement.Passetto.PassettoAPIs,
+    paymentDSL :: API.Types.Dashboard.AppManagement.Payment.PaymentAPIs,
+    seatLayoutDSL :: API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutAPIs,
+    stopRouteDetailsDSL :: API.Types.Dashboard.AppManagement.StopRouteDetails.StopRouteDetailsAPIs,
+    ticketDashboardDSL :: API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardAPIs,
+    ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs,
+    transitOperatorDSL :: API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorAPIs,
+    vehicleSeatLayoutMappingDSL :: API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingAPIs
+  }
+
+mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> AppManagementAPIs)
+mkAppManagementAPIs merchantId city token = do
+  let customerDSL = API.Types.Dashboard.AppManagement.Customer.mkCustomerAPIs customerClientDSL
+  let eDCMachineDSL = API.Types.Dashboard.AppManagement.EDCMachine.mkEDCMachineAPIs eDCMachineClientDSL
+  let eventManagementDSL = API.Types.Dashboard.AppManagement.EventManagement.mkEventManagementAPIs eventManagementClientDSL
+  let fRFSTicketServiceDSL = API.Types.Dashboard.AppManagement.FRFSTicketService.mkFRFSTicketServiceAPIs fRFSTicketServiceClientDSL
+  let merchantOnboardingDSL = API.Types.Dashboard.AppManagement.MerchantOnboarding.mkMerchantOnboardingAPIs merchantOnboardingClientDSL
+  let passDSL = API.Types.Dashboard.AppManagement.Pass.mkPassAPIs passClientDSL
+  let passOrganizationDSL = API.Types.Dashboard.AppManagement.PassOrganization.mkPassOrganizationAPIs passOrganizationClientDSL
+  let passettoDSL = API.Types.Dashboard.AppManagement.Passetto.mkPassettoAPIs passettoClientDSL
+  let paymentDSL = API.Types.Dashboard.AppManagement.Payment.mkPaymentAPIs paymentClientDSL
+  let seatLayoutDSL = API.Types.Dashboard.AppManagement.SeatLayout.mkSeatLayoutAPIs seatLayoutClientDSL
+  let stopRouteDetailsDSL = API.Types.Dashboard.AppManagement.StopRouteDetails.mkStopRouteDetailsAPIs stopRouteDetailsClientDSL
+  let ticketDashboardDSL = API.Types.Dashboard.AppManagement.TicketDashboard.mkTicketDashboardAPIs ticketDashboardClientDSL
+  let ticketsDSL = API.Types.Dashboard.AppManagement.Tickets.mkTicketsAPIs ticketsClientDSL
+  let transitOperatorDSL = API.Types.Dashboard.AppManagement.TransitOperator.mkTransitOperatorAPIs transitOperatorClientDSL
+  let vehicleSeatLayoutMappingDSL = API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.mkVehicleSeatLayoutMappingAPIs vehicleSeatLayoutMappingClientDSL
+  (AppManagementAPIs {..})
+  where
+    customerClientDSL :<|> eDCMachineClientDSL :<|> eventManagementClientDSL :<|> fRFSTicketServiceClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> passOrganizationClientDSL :<|> passettoClientDSL :<|> paymentClientDSL :<|> seatLayoutClientDSL :<|> stopRouteDetailsClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL :<|> transitOperatorClientDSL :<|> vehicleSeatLayoutMappingClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+
+callAppManagementAPI ::
+  forall m r b c.
+  Tools.Client.DashboardClient AppManagementAPIs m r b c =>
+  (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> (AppManagementAPIs -> b) -> c)
+callAppManagementAPI merchantId city = Tools.Client.callServerAPI @_ @m @r Domain.Types.ServerName.APP_BACKEND_MANAGEMENT (mkAppManagementAPIs merchantId city) "callAppManagementAPI"
