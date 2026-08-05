@@ -33,6 +33,12 @@
 
 name: "algeria: build backend"
 
+# One build at a time. Pushing again supersedes the run in flight rather
+# than racing it — two five-hour builds competing helps nobody.
+concurrency:
+  group: algeria-backend-build
+  cancel-in-progress: true
+
 on:
   # The trigger that actually gets used. See above.
   push:
@@ -97,12 +103,18 @@ jobs:
 
     # On a push event there is no `inputs` context, so every one of these falls
     # back to the same value the workflow_dispatch form would have defaulted to.
-    # `inputs.x != false` reads as "true unless explicitly turned off".
+    #
+    # DO NOT write `inputs.x != false` for a default-true flag. On a push,
+    # inputs.x is null, and GitHub casts null and false both to 0 when the
+    # types differ — so the guard is FALSE and the step silently skips. That
+    # shipped once and produced a run with no patches and no gateway. Use
+    # `github.event_name != 'workflow_dispatch' || inputs.x`, or `||` with an
+    # explicit default for strings (null is falsy, so the default wins).
     env:
       SOURCE_REPO: ${{ inputs.source_repo || 'https://github.com/nammayatri/nammayatri.git' }}
       SOURCE_REF: ${{ inputs.source_ref || '03a753113af1fdcddf3378d9dc2fc31170e385e4' }}
       GHC_JOBS: ${{ inputs.jobs || '4' }}
-      APPLY_PATCHES: ${{ inputs.apply_patches != false }}
+      APPLY_PATCHES: ${{ github.event_name != 'workflow_dispatch' || inputs.apply_patches }}
       BUILD_ALLOCATOR: ${{ inputs.build_allocator || false }}
 
     steps:
@@ -149,11 +161,11 @@ jobs:
           echo "checked out $(git rev-parse HEAD)"
 
       - name: Apply the Algeria +213 patches
-        if: ${{ inputs.apply_patches != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.apply_patches }}
         run: python3 .github/scripts/algeria/apply-patches.py "$SRC"
 
       - name: Make beckn-gateway and mock-registry project packages
-        if: ${{ inputs.build_gateway != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_gateway }}
         # stack builds dependency packages library-only; only project packages
         # get their executables built. As a plain extra-dep we would get the
         # gateway library and no beckn-gateway-exe.
@@ -195,7 +207,7 @@ jobs:
       # Restored AFTER the source fetch, because the source fetch wipes $SRC and
       # part of what we cache lives inside it (.stack-work).
       - name: Restore stack cache
-        if: ${{ inputs.use_cache != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
         uses: actions/cache/restore@v4
         with:
           # Literal "src" — must stay in step with $SRC above.
@@ -242,21 +254,48 @@ jobs:
           }
           docker exec "$CONTAINER" bash -c 'ghc --version; stack --version'
 
-      - name: Install the C libraries the Haskell packages link against
+      - name: Check the C libraries the Haskell packages link against
+        # This image exists to build Stackage, so it almost certainly already
+        # has these. Check before reaching for apt at all — the first run died
+        # here, and every apt failure in this image is avoidable noise:
+        #
+        #   * `apt-get update` exits non-zero because the image carries
+        #     third-party repos (Confluent, NVIDIA CUDA) whose signing keys have
+        #     since expired. The Ubuntu archive itself is fine.
+        #   * Do NOT repoint bionic at old-releases.ubuntu.com. Bionic is not
+        #     there — it is still on archive.ubuntu.com under ESM — and the
+        #     rewrite turns a working archive into "does not have a Release
+        #     file". A previous version of this step did exactly that.
         run: |
           set -euo pipefail
-          docker exec "$CONTAINER" bash -eo pipefail -c '
-            # Ubuntu 18.04 is past EOL; if the normal archive has stopped
-            # serving bionic, fall back to old-releases before giving up.
-            apt-get update -qq || {
-              sed -i "s|archive.ubuntu.com|old-releases.ubuntu.com|g; s|security.ubuntu.com|old-releases.ubuntu.com|g" /etc/apt/sources.list
-              apt-get update -qq
-            }
-            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-              libtinfo5 librdkafka-dev libmysqlclient-dev libpq-dev libssl-dev zlib1g-dev rsync
-            for l in rdkafka pq ssl mysqlclient; do
-              ls /usr/lib/x86_64-linux-gnu/lib$l.so >/dev/null || { echo "MISSING lib$l"; exit 1; }
+          docker exec "$CONTAINER" bash -c '
+            set -u
+            need=""
+            for l in rdkafka pq ssl mysqlclient z; do
+              ls /usr/lib/x86_64-linux-gnu/lib$l.so >/dev/null 2>&1 || need="$need $l"
             done
+            if [ -z "$need" ]; then
+              echo "all C libraries already present in the image"; exit 0
+            fi
+            echo "missing:$need — installing"
+            ls /etc/apt/sources.list.d/ 2>/dev/null || true
+            # Keep Confluent: it is what supplies a librdkafka new enough for
+            # hw-kafka-client. Just stop apt refusing it over the rotated key.
+            for f in /etc/apt/sources.list.d/*confluent*.list; do
+              [ -e "$f" ] && sed -i "s|^deb |deb [trusted=yes] |" "$f"
+            done
+            rm -f /etc/apt/sources.list.d/*cuda*.list /etc/apt/sources.list.d/*nvidia*.list
+            # Tolerate a non-zero exit: what matters is whether the install
+            # works and the libraries end up present, which we verify below.
+            apt-get update -qq || true
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+              libtinfo5 librdkafka-dev libmysqlclient-dev libpq-dev libssl-dev zlib1g-dev || true
+            fail=0
+            for l in rdkafka pq ssl mysqlclient z; do
+              ls /usr/lib/x86_64-linux-gnu/lib$l.so >/dev/null 2>&1 \
+                || { echo "STILL MISSING lib$l"; fail=1; }
+            done
+            [ "$fail" = 0 ] || exit 1
             echo "C libraries ok"
           '
 
@@ -280,7 +319,7 @@ jobs:
           echo "casa.fpcomplete.com reachable"
 
       - name: Merge the cache into the image's stack root
-        if: ${{ inputs.use_cache != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.use_cache }}
         # Merged in, not mounted over. Package directories under snapshots/ are
         # content-addressed, so adding ours alongside the image's is safe and
         # nothing prepopulated is lost.
@@ -288,7 +327,7 @@ jobs:
           set -euo pipefail
           docker exec "$CONTAINER" bash -eo pipefail -c '
             mkdir -p /stackcache/snapshots "$STACK_ROOT/snapshots"
-            rsync -a /stackcache/snapshots/ "$STACK_ROOT/snapshots/"
+            cp -a /stackcache/snapshots/. "$STACK_ROOT/snapshots/" 2>/dev/null || true
             du -sh "$STACK_ROOT" /stackcache 2>/dev/null || true
           '
 
@@ -330,7 +369,7 @@ jobs:
 
       - name: Build beckn-gateway and mock-registry
         id: build_gateway
-        if: ${{ inputs.build_gateway != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_gateway }}
         timeout-minutes: 45
         # Separate invocation, after the apps are already built and about to be
         # uploaded, so a gateway failure does not cost us the app binaries.
@@ -434,19 +473,19 @@ jobs:
       # ------------------------------------------------------------------- cache
       # Always — a run that ran out of time still leaves the next one less to do.
       - name: Copy the built dependency tree back out
-        if: ${{ always() && inputs.use_cache != false }}
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.use_cache) }}
         run: |
           set -euo pipefail
           docker exec "$CONTAINER" bash -eo pipefail -c '
             mkdir -p /stackcache/snapshots
-            rsync -a "$STACK_ROOT/snapshots/" /stackcache/snapshots/
+            cp -a "$STACK_ROOT/snapshots/." /stackcache/snapshots/
           ' || echo "could not copy the stack root out — continuing"
           # actions/cache runs as the runner user; the build made these root-owned.
           sudo chown -R "$(id -u):$(id -g)" .stackcache "$SRC" || true
           du -sh .stackcache || true
 
       - name: Save stack cache
-        if: ${{ always() && inputs.use_cache != false }}
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.use_cache) }}
         uses: actions/cache/save@v4
         with:
           path: |
