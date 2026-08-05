@@ -277,6 +277,17 @@ mapCategoryCodeToRiderPreferred = \case
   "ON_DEMAND_EASY_BOOKING" -> DRPO.EasyBooking
   _ -> DRPO.OneWay
 
+-- | True when the incoming search's own category explicitly declared itself scheduled
+-- (ONDC v2.1.0 SCHEDULED_TRIP/SCHEDULED_RENTAL), independent of whatever the pickup
+-- timestamp vs. now/buffer comparison would separately conclude. Combined with that
+-- timestamp check in getPossibleTripOption so an explicit category signal is honoured
+-- even at the edge where the timestamp alone wouldn't yet cross scheduleRideBufferTime.
+isScheduledCategoryCode :: Maybe Text -> Bool
+isScheduledCategoryCode = \case
+  Just "SCHEDULED_TRIP" -> True
+  Just "SCHEDULED_RENTAL" -> True
+  _ -> False
+
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
 firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
 

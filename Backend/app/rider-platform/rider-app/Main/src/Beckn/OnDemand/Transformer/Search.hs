@@ -37,13 +37,11 @@ tfCustomer taggings riderGender = do
     then Nothing
     else Just returnData
 
-tfFulfillment :: SLS.SearchRes -> Maybe BecknV2.OnDemand.Types.Fulfillment
-tfFulfillment SLS.SearchRes {..} = do
+tfFulfillment :: Bool -> SLS.SearchRes -> Maybe BecknV2.OnDemand.Types.Fulfillment
+tfFulfillment isScheduled SLS.SearchRes {..} = do
   let fulfillmentAgent_ = Nothing
       fulfillmentId_ = Nothing
       fulfillmentState_ = Nothing
-      -- ONDC v2.1.0: For scheduled rides (startTime > now), include pickup time window duration
-      isScheduled = startTime > now
       mbScheduledPickupDuration = Beckn.OnDemand.Utils.Common.mkScheduledPickupDuration isScheduled
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime mbScheduledPickupDuration
       mbDropAddress = (.address) <$> Kernel.Prelude.listToMaybe (Kernel.Prelude.reverse stops)
@@ -58,12 +56,22 @@ tfFulfillment SLS.SearchRes {..} = do
     then Nothing
     else Just returnData
 
+-- | A search is "scheduled" when its pickup is far enough in the future that driver
+-- allocation gets deferred (SharedLogic.SearchTry.initiateDriverSearchBatch) rather than
+-- run immediately. Mirrors the gate used at booking-confirm time (SharedLogic.Confirm.hs);
+-- keep both in sync rather than letting each site derive its own notion of "scheduled".
+isScheduledSearch :: SLS.SearchRes -> Bool
+isScheduledSearch SLS.SearchRes {..} =
+  maybe False not searchRequest.isMultimodalSearch
+    && merchant.scheduleRideBufferTime `Kernel.Prelude.addUTCTime` now < startTime
+
 tfIntent :: SLS.SearchRes -> BecknConfig -> Maybe BecknV2.OnDemand.Types.Intent
 tfIntent res bapConfig = do
-  let intentTags_ = Nothing
-      intentFulfillment_ = tfFulfillment res
+  let isScheduled = isScheduledSearch res
+      intentTags_ = Nothing
+      intentFulfillment_ = tfFulfillment isScheduled res
       intentPayment_ = tfPayment res bapConfig
-      intentCategory_ = riderPreferredOptionToCategory res.riderPreferredOption
+      intentCategory_ = riderPreferredOptionToCategory isScheduled res.riderPreferredOption
       returnData = BecknV2.OnDemand.Types.Intent {intentCategory = intentCategory_, intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -109,11 +117,11 @@ tfPerson taggings riderGender = do
     then Nothing
     else Just returnData
 
-riderPreferredOptionToCategory :: DRPO.RiderPreferredOption -> Maybe BecknV2.OnDemand.Types.Category
-riderPreferredOptionToCategory rpo = do
+riderPreferredOptionToCategory :: Bool -> DRPO.RiderPreferredOption -> Maybe BecknV2.OnDemand.Types.Category
+riderPreferredOptionToCategory isScheduled rpo = do
   let code = case rpo of
-        DRPO.OneWay -> "ON_DEMAND_TRIP"
-        DRPO.Rental -> "ON_DEMAND_RENTAL"
+        DRPO.OneWay -> if isScheduled then "SCHEDULED_TRIP" else "ON_DEMAND_TRIP"
+        DRPO.Rental -> if isScheduled then "SCHEDULED_RENTAL" else "ON_DEMAND_RENTAL"
         DRPO.InterCity -> "INTERCITY_TRIP"
         DRPO.Ambulance -> "ON_DEMAND_TRIP"
         DRPO.Delivery -> "ON_DEMAND_TRIP"

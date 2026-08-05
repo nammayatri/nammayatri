@@ -111,7 +111,12 @@ data Pricing = Pricing
     personalDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double,
     area :: Maybe Text,
-    navigationInstruction :: Maybe Text
+    navigationInstruction :: Maybe Text,
+    -- | The already-decided scheduling status for this specific estimate/quote/booking
+    -- (set once, at Domain.Action.Beckn.Search.getPossibleTripOption time) -- the single
+    -- source of truth for "is this scheduled", not to be independently re-derived from
+    -- timestamps downstream when building the on_search/on_confirm response.
+    isScheduled :: Bool
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
