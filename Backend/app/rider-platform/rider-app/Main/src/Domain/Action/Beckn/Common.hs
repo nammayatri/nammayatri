@@ -676,6 +676,24 @@ rideAssignedReqHandler req = do
         fork "Sending Dashboard Ride Flow Booking Details" $ do
           sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
 
+      let otpSmsAlreadyHandled = case booking.bookingDetails of
+            DRB.OneWaySpecialZoneDetails _ -> True
+            DRB.DeliveryDetails _ -> True
+            _ -> False
+      when (booking.isDashboardRequest == Just True && not otpSmsAlreadyHandled) $
+        fork "sending Booking assigned dashboard otp sms" $ do
+          let merchantOperatingCityId = booking.merchantOperatingCityId
+          merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+          if merchantConfig.enableDashboardSms
+            then do
+              customer <- QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+              mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+              let countryCode = fromMaybe "+91" customer.mobileCountryCode
+              let phoneNumber = countryCode <> mobileNumber
+              buildSmsReq <- MessageBuilder.buildBookingOtpSmsForCategory merchantOperatingCityId booking ride.otp
+              Sms.sendSMS booking.merchantId merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
+            else logInfo "Merchant not configured to send dashboard sms"
+
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         fork "Sending Delivery Details SMS to Sender And Receiver" $ do
