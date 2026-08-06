@@ -1,19 +1,25 @@
 module Domain.Action.UI.VasBanner (getVasBannerList) where
 
-import qualified API.Types.UI.VasBanner
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
+import qualified API.Types.UI.VasBanner as API
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.VasBannerConfig as DVC
 import qualified Environment
-import EulerHS.Prelude hiding (id)
-import qualified Kernel.Prelude
-import qualified Kernel.Types.Id
+import Kernel.Prelude
+import Kernel.Types.Id
+import qualified Storage.Queries.VasBannerConfig as QVBC
 
 getVasBannerList ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ( ( Maybe (Id DP.Person),
+      Id DM.Merchant,
+      Id DMOC.MerchantOperatingCity
     ) ->
-    Environment.Flow API.Types.UI.VasBanner.VasBannerListRes
+    Environment.Flow API.VasBannerListRes
   )
-getVasBannerList = do error "Logic yet to be decided"
+getVasBannerList (_mbPersonId, _merchantId, merchantOperatingCityId) = do
+  banners <- QVBC.findAllEnabledByCity Nothing Nothing merchantOperatingCityId True
+  pure $ API.VasBannerListRes {banners = map toVasBannerAPIEntity banners}
+
+toVasBannerAPIEntity :: DVC.VasBannerConfig -> API.VasBannerAPIEntity
+toVasBannerAPIEntity DVC.VasBannerConfig {..} = API.VasBannerAPIEntity {..}
