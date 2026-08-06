@@ -190,6 +190,9 @@ drainerExecutionDelayEnvKey = "DRAINER_EXECUTION_DELAY"
 threadPerPodCount :: String
 threadPerPodCount = "THREAD_PER_POD_COUNT"
 
+criticalThreadPerPodCount :: String
+criticalThreadPerPodCount = "CRITICAL_THREAD_PER_POD_COUNT"
+
 pushToKafkaEnvKey :: String
 pushToKafkaEnvKey = "PUSH_TO_KAFKA"
 

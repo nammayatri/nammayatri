@@ -46,7 +46,10 @@ getDrainerExecutionDelay :: IO Int
 getDrainerExecutionDelay = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv drainerExecutionDelayEnvKey
 
 getThreadPerPodCount :: IO Int
-getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
+getThreadPerPodCount = fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
+
+getCriticalThreadPerPodCount :: IO Int
+getCriticalThreadPerPodCount = fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv criticalThreadPerPodCount
 
 isPushToKafka :: IO Bool
 isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
