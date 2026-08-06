@@ -2090,6 +2090,9 @@ notifyShuttleBookingConfirmed personId bookingId = do
           person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           mbJourneyId <- CQJourneyLeg.findJourneyIdByLegSearchId booking.searchId.getId
           let routeName = fromMaybe "" booking.routeName
+              origin = fromMaybe "" booking.fromStationName
+              destination = fromMaybe "" booking.toStationName
+              departure = maybe "" showTimeIst booking.startTime
               entityData =
                 BusNotificationEntityData
                   { tripId = Nothing,
@@ -2108,12 +2111,13 @@ notifyShuttleBookingConfirmed personId bookingId = do
             EmptyDynamicParam
             entity
             Nothing
-            [("routeName", routeName)]
+            [("source", origin), ("destination", destination), ("pickupTime", departure)]
             Nothing
             Nothing
-          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation`.
-          let origin = fromMaybe "" booking.fromStationName
-              destination = fromMaybe "" booking.toStationName
-              departure = maybe "" showTimeIst booking.startTime
-          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just routeName, Just origin, Just destination, Just departure]
+          -- WhatsApp (secondary, opt-in): template `shuttle_booking_confirmation` expects 5 vars,
+          -- in order: name, source, destination, departure, vehicle. Non-empty fallbacks because
+          -- Meta rejects empty template variables (drops the whole message).
+          let riderName = fromMaybe "Rider" person.firstName
+              vehicle = fromMaybe "your shuttle" booking.vehicleNumber
+          sendWhatsAppTemplateIfOptedIn person DMM.WHATSAPP_SHUTTLE_BOOKING_CONFIRMED [Just riderName, Just origin, Just destination, Just departure, Just vehicle]
           pure True
