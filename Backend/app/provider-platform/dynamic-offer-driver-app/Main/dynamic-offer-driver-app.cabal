@@ -93,6 +93,7 @@ library
       API.Internal.Ride
       API.Internal.RideFeedback
       API.Internal.RiderConsent
+      API.Internal.RSFRecon
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
@@ -108,6 +109,8 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.OnixBppWebhook
+      API.RSF
+      API.RSF.ReceiverRecon
       API.Types.Dashboard.AppManagement.OrphanInstances.DepotManager
       API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
       API.Types.UI.TicketKapture
@@ -159,6 +162,7 @@ library
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
+      Beckn.ACL.OnReceiverRecon
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
       Beckn.ACL.OnStatus
@@ -166,6 +170,7 @@ library
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.ReceiverRecon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -207,12 +212,14 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Management.RSFReconciliation
       Dashboard.ProviderPlatform.Operator.Driver
       Dashboard.ProviderPlatform.Operator.Registration
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
+      Domain.Action.Beckn.ReceiverRecon
       Domain.Action.Beckn.Search
       Domain.Action.Beckn.Select
       Domain.Action.Beckn.Status
@@ -278,6 +285,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.RideFeedback
+      Domain.Action.Dashboard.Management.RSFReconciliation
       Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
@@ -666,6 +674,7 @@ library
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
+      SharedLogic.CallRSF
       SharedLogic.Cancel
       SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
@@ -746,6 +755,7 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSubscription
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
+      SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionConsumption
       SharedLogic.Finance.SubscriptionPurchase
@@ -807,6 +817,7 @@ library
       SharedLogic.RideFeedback.Validation
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
+      SharedLogic.RSFLedger
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
@@ -1234,6 +1245,80 @@ library
       Tools.Utils
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.Driver
+      API.Action.Dashboard.AppManagement.DriverSubscription
+      API.Action.Dashboard.AppManagement.DriverWallet
+      API.Action.Dashboard.AppManagement.FrfsFleetOperator
+      API.Action.Dashboard.AppManagement.Overlay
+      API.Action.Dashboard.AppManagement.Penalty
+      API.Action.Dashboard.AppManagement.Subscription
+      API.Action.Dashboard.AppManagement.SubscriptionTransaction
+      API.Action.Dashboard.Fleet
+      API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Fleet.LiveMap
+      API.Action.Dashboard.Fleet.Onboarding
+      API.Action.Dashboard.Fleet.PayoutAccount
+      API.Action.Dashboard.Fleet.RegistrationV2
+      API.Action.Dashboard.IncentiveJourney
+      API.Action.Dashboard.IncentiveJourney.IncentiveJourney
+      API.Action.Dashboard.IssueManagement
+      API.Action.Dashboard.IssueManagement.Issue
+      API.Action.Dashboard.Management
+      API.Action.Dashboard.Management.Account
+      API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.CancellationConsequence
+      API.Action.Dashboard.Management.CoinsConfig
+      API.Action.Dashboard.Management.Communication
+      API.Action.Dashboard.Management.DomainDiscountConfig
+      API.Action.Dashboard.Management.Driver
+      API.Action.Dashboard.Management.DriverCoins
+      API.Action.Dashboard.Management.DriverGoHome
+      API.Action.Dashboard.Management.DriverReferral
+      API.Action.Dashboard.Management.DriverRegistration
+      API.Action.Dashboard.Management.DriverVehicleQuality
+      API.Action.Dashboard.Management.EntityInfo
+      API.Action.Dashboard.Management.FarePolicyV2
+      API.Action.Dashboard.Management.FeedbackForm
+      API.Action.Dashboard.Management.FinanceManagement
+      API.Action.Dashboard.Management.GeohashArea
+      API.Action.Dashboard.Management.KnowledgeCenter
+      API.Action.Dashboard.Management.Media
+      API.Action.Dashboard.Management.MediaFileDocument
+      API.Action.Dashboard.Management.Merchant
+      API.Action.Dashboard.Management.Message
+      API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.Notification
+      API.Action.Dashboard.Management.Payout
+      API.Action.Dashboard.Management.PlanManagement
+      API.Action.Dashboard.Management.PolicyDocument
+      API.Action.Dashboard.Management.Pricing
+      API.Action.Dashboard.Management.PricingAdjustment
+      API.Action.Dashboard.Management.RadarTickets
+      API.Action.Dashboard.Management.Revenue
+      API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.RSFReconciliation
+      API.Action.Dashboard.Management.ScheduledBooking
+      API.Action.Dashboard.Management.SearchTry
+      API.Action.Dashboard.Management.SosMedia
+      API.Action.Dashboard.Management.SpecialZoneQueue
+      API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.Vehicle
+      API.Action.Dashboard.Management.VehicleDetails
+      API.Action.Dashboard.Management.VehicleInfo
+      API.Action.Dashboard.Management.Volunteer
+      API.Action.Dashboard.Operator
+      API.Action.Dashboard.Operator.Driver
+      API.Action.Dashboard.Operator.FleetManagement
+      API.Action.Dashboard.Operator.Registration
+      API.Action.Dashboard.RideBooking
+      API.Action.Dashboard.RideBooking.Driver
+      API.Action.Dashboard.RideBooking.DriverRegistration
+      API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.MeterRide
+      API.Action.Dashboard.RideBooking.Ride
+      API.Action.Dashboard.RideBooking.SearchRequest
+      API.Action.Dashboard.RideBooking.Volunteer
       API.Action.DashboardAuth.AppManagement
       API.Action.DashboardAuth.AppManagement.DepotManager
       API.Action.DashboardAuth.AppManagement.Driver
@@ -1288,6 +1373,7 @@ library
       API.Action.DashboardAuth.Management.Revenue
       API.Action.DashboardAuth.Management.Ride
       API.Action.DashboardAuth.Management.RideFeedback
+      API.Action.DashboardAuth.Management.RSFReconciliation
       API.Action.DashboardAuth.Management.ScheduledBooking
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.SosMedia
@@ -1467,6 +1553,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.RideFeedback
+      API.Types.ProviderPlatform.Management.Endpoints.RSFReconciliation
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
       API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
@@ -1498,6 +1585,7 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.RideFeedback
+      API.Types.ProviderPlatform.Management.RSFReconciliation
       API.Types.ProviderPlatform.Management.ScheduledBooking
       API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
