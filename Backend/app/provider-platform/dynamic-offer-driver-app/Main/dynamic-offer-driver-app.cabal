@@ -34,6 +34,7 @@ library
       API.Beckn.IGM.Issue
       API.Beckn.Init
       API.Beckn.Rating
+      API.Beckn.ReceiverRecon
       API.Beckn.Search
       API.Beckn.Select
       API.Beckn.Status
@@ -144,6 +145,7 @@ library
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
+      Beckn.ACL.ReceiverRecon
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Status
@@ -163,6 +165,7 @@ library
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
+      Domain.Action.Beckn.ReceiverRecon
       Domain.Action.Beckn.Search
       Domain.Action.Beckn.Select
       Domain.Action.Beckn.Status

@@ -1,0 +1,39 @@
+CREATE TABLE atlas_driver_offer_bpp.recon_utr_settlement ();
+
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN approved_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN approved_by text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN bank_verified_amount numeric(30,2) ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN bap_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN bap_uri text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN claimed_total_amount numeric(30,2) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN deadline timestamp with time zone NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN merchant_id text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN merchant_operating_city_id text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN resolution_status character varying(50) NOT NULL default 'PENDING';
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN send_attempts integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN send_status character varying(50) NOT NULL default 'PENDING';
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN sent_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN total_orders integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN utr text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ALTER COLUMN send_status SET DEFAULT 'SEND_PENDING';
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ALTER COLUMN resolution_status SET DEFAULT 'RES_PENDING';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN resolved_by text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN resolved_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN deadline_breached_notified_at timestamp with time zone ;
+
+
+------- SQL updates -------
+

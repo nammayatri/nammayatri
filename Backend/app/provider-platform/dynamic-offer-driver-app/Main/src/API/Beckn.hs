@@ -18,6 +18,7 @@ import qualified API.Beckn.Cancel as Cancel
 import qualified API.Beckn.Confirm as Confirm
 import qualified API.Beckn.Init as Init
 import qualified API.Beckn.Rating as Rating
+import qualified API.Beckn.ReceiverRecon as ReceiverRecon
 import qualified API.Beckn.Search as Search
 import qualified API.Beckn.Select as Select
 import qualified API.Beckn.Status as Status
@@ -37,6 +38,7 @@ type API =
            :<|> Rating.API
            :<|> Update.API
            :<|> Status.API
+           :<|> ReceiverRecon.API
        )
 
 handler :: FlowServer API
@@ -50,3 +52,4 @@ handler =
     :<|> Rating.handler
     :<|> Update.handler
     :<|> Status.handler
+    :<|> ReceiverRecon.handler

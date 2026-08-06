@@ -1,0 +1,117 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  ReconUtrSettlement: Lib.Finance.Domain.Types.ReconUtrSettlement
+
+ReconSettlementOrder:
+  tableName: recon_settlement_order
+
+  types:
+    RefundObligationStatus:
+      enum: "OWED,REFUNDED"
+      derive: "ToParamSchema"
+    ReconSourceType:
+      enum: "BAP_CLAIMED,UNSOLICITED,ADMIN_SETTLED"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id ReconSettlementOrder
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    utrSettlementId: Maybe (Id ReconUtrSettlement)
+    sourceType: Maybe ReconSourceType
+    orderId: Text
+    messageId: Text
+    reconTransactionId: Text
+    orderTransactionId: Text
+    invoiceNo: Maybe Text
+    orderState: Text
+    settlementId: Text
+    settlementReferenceNo: Text
+    reasonCode: Text
+    claimedGrossAmount: HighPrecMoney
+    claimedSettlementAmount: HighPrecMoney
+    paymentStatus: Text
+    settlementType: Text
+    settlementDate: UTCTime
+    bffType: Maybe Text
+    bffAmount: Maybe HighPrecMoney
+    withholdingTaxGst: Maybe HighPrecMoney
+    withholdingTaxTds: Maybe HighPrecMoney
+    deductionByCollector: Maybe HighPrecMoney
+    receivedAt: UTCTime
+    rideId: Maybe Text
+    driverId: Maybe Text
+    platformGrossFare: Maybe HighPrecMoney
+    platformNetReceivable: Maybe HighPrecMoney
+    allocatedBankCash: Maybe HighPrecMoney
+    reconciliationStatus: Maybe Text
+    wireReconStatus: Text
+    wireOrderReconStatus: Text
+    orderSequence: Int
+    settlementDetailIndex: Int
+    settlementClearedAt: Maybe UTCTime
+    correctionForOrderRowId: Maybe (Id ReconSettlementOrder)
+    refundStatus: Maybe RefundObligationStatus
+    manuallyConfirmedAt: Maybe UTCTime
+    manuallyConfirmedBy: Maybe Text
+    manualConfirmationReason: Maybe Text
+    rawJson: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    orderId: "!SecondaryKey"
+    utrSettlementId: "!SecondaryKey"
+    messageId: "!SecondaryKey"
+    rideId: "!SecondaryKey"
+
+  sqlType:
+    claimedGrossAmount: numeric(30,2)
+    claimedSettlementAmount: numeric(30,2)
+    bffAmount: numeric(30,2)
+    withholdingTaxGst: numeric(30,2)
+    withholdingTaxTds: numeric(30,2)
+    deductionByCollector: numeric(30,2)
+    platformGrossFare: numeric(30,2)
+    platformNetReceivable: numeric(30,2)
+    allocatedBankCash: numeric(30,2)
+    reconciliationStatus: text
+    wireReconStatus: character varying(50)
+    wireOrderReconStatus: character varying(50)
+    paymentStatus: character varying(50)
+    settlementType: character varying(50)
+    reasonCode: character varying(10)
+    sourceType: character varying(50)
+    refundStatus: character varying(50)
+    rawJson: text
+
+  default:
+    orderSequence: "0"
+    settlementDetailIndex: "0"
+    sourceType: "'BAP_CLAIMED'"
+    utrSettlementId: "NULL"
+
+  queries:
+    findByUtrSettlementId:
+      kvFunction: findAllWithKV
+      where: utrSettlementId
+
+    findByOrderId:
+      kvFunction: findAllWithKV
+      where: orderId
+
+    findByMessageId:
+      kvFunction: findAllWithKV
+      where: messageId
+
+    findByRideId:
+      kvFunction: findAllWithKV
+      where: rideId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

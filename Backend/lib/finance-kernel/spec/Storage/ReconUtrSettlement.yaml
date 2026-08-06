@@ -1,0 +1,65 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+ReconUtrSettlement:
+  tableName: recon_utr_settlement
+
+  types:
+    UtrResolutionStatus:
+      enum: "RES_PENDING,APPROVED,REVISED"
+      derive: "ToParamSchema"
+    UtrSendStatus:
+      enum: "SEND_PENDING,SENT,SEND_FAILED"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id ReconUtrSettlement
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    utr: Text
+    bapId: Text
+    bapUri: Text
+    claimedTotalAmount: HighPrecMoney
+    totalOrders: Int
+    bankVerifiedAmount: Maybe HighPrecMoney
+    resolutionStatus: UtrResolutionStatus
+    sendStatus: UtrSendStatus
+    deadline: UTCTime
+    resolvedAt: Maybe UTCTime
+    resolvedBy: Maybe Text
+    sentAt: Maybe UTCTime
+    sendAttempts: Int
+    deadlineBreachedNotifiedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    utr: "!SecondaryKey"
+
+  sqlType:
+    claimedTotalAmount: numeric(30,2)
+    bankVerifiedAmount: numeric(30,2)
+    resolutionStatus: character varying(50)
+    sendStatus: character varying(50)
+
+  default:
+    resolutionStatus: "'RES_PENDING'"
+    sendStatus: "'SEND_PENDING'"
+    sendAttempts: "0"
+
+  queries:
+    findByUtr:
+      kvFunction: findOneWithKV
+      where: utr
+
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
