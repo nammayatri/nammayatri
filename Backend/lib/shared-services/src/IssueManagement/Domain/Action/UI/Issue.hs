@@ -402,6 +402,13 @@ validateContentType fileType reqContentType =
     S3.Image | reqContentType == "image/webp" -> pure "webp"
     S3.Image | reqContentType == "image/heic" -> pure "heic"
     S3.Image | reqContentType == "image/heif" -> pure "heif"
+    -- PDF: rider chat document attachments.
+    S3.PDF | reqContentType == "application/pdf" -> pure "pdf"
+    -- Video: rider chat attachments — phone camera/gallery outputs. Kept small
+    -- by the merchant media size cap; large clips are rejected at upload.
+    S3.Video | reqContentType == "video/mp4" -> pure "mp4"
+    S3.Video | reqContentType == "video/quicktime" -> pure "mov"
+    S3.Video | reqContentType == "video/webm" -> pure "webm"
     _ -> throwError $ FileFormatNotSupported reqContentType
 
 issueMediaUpload' ::
@@ -1800,6 +1807,8 @@ mkMediaFiles =
           then case mediaFile._type of
             S3.Audio -> Common.MediaFile_ S3.Audio mediaFile.url : mediaFileList
             S3.Image -> Common.MediaFile_ S3.Image mediaFile.url : mediaFileList
+            S3.PDF -> Common.MediaFile_ S3.PDF mediaFile.url : mediaFileList
+            S3.Video -> Common.MediaFile_ S3.Video mediaFile.url : mediaFileList
             _ -> mediaFileList
           else mediaFileList
     )
