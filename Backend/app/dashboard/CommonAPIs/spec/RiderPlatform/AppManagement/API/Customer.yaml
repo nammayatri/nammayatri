@@ -8,6 +8,7 @@ imports:
   SavedReqLocationAPIEntity: Domain.Types.SavedReqLocation
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   API.Types.UI.Sos: "rider-app"
   Domain.Types.Person: "rider-app"
   API.Types.UI.DeletedPerson: "rider-app"

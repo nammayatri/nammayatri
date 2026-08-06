@@ -13,6 +13,7 @@ imports:
   Gender: Domain.Types.Person
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.PassDetails: "rider-app"
   Domain.Types.PassOrganization: "rider-app"

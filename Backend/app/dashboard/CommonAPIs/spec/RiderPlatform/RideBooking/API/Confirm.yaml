@@ -6,6 +6,7 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.Quote: "rider-app"
   API.UI.Confirm: "rider-app"

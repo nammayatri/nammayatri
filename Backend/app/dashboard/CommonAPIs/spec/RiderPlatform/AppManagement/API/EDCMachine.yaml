@@ -6,6 +6,7 @@ imports:
   EDCMachineMapping: Domain.Types.EDCMachineMapping
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.EDCMachineMapping: "rider-app"
 

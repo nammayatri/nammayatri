@@ -29,6 +29,7 @@ imports:
   Summary: Dashboard.Common
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   API.Types.UI.TicketService: "rider-app"
   Domain.Types.TicketService: "rider-app"
   Domain.Types.TicketBookingService: "rider-app"

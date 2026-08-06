@@ -6,6 +6,17 @@
   hooks = {
     trailing-ws.files = "Backend/.*$";
 
+    dashboard-module-sync = {
+      enable = true;
+      name = "dashboard-module-sync";
+      description = "provider-dashboard must mirror rider-dashboard's RiderPlatform modules";
+      types = [ "file" ];
+      # One run per commit; the script walks both trees itself.
+      pass_filenames = false;
+      files = "Backend/app/dashboard/(rider|provider)-dashboard/.*\\.hs$";
+      entry = "Backend/dev/sync-rider-dashboard-modules.sh --check";
+    };
+
     overlapping-migrations = {
       enable = true;
       name = "overlapping-migrations";

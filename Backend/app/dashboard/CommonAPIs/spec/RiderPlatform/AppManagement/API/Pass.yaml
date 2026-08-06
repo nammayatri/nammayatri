@@ -18,6 +18,7 @@ imports:
   IssueMediaUploadRes: IssueManagement.Common.UI.Issue
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.PurchasedPass: "rider-app"
   Domain.Types.PurchasedPassPayment: "rider-app"

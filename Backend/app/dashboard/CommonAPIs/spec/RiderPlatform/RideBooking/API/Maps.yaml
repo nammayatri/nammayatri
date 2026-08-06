@@ -8,6 +8,7 @@ imports:
   GetPlaceNameResp: Domain.Action.UI.Maps
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Action.UI.Maps: "rider-app"
 

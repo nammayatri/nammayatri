@@ -73,6 +73,7 @@ library
       Storage.Beam.RegistrationToken
       Storage.Beam.Role
       Storage.Beam.RoleCapability
+      Storage.Beam.SchemaName
       Storage.Beam.Transaction
       Storage.Queries.AccessAudit
       Storage.Queries.AccessMatrix

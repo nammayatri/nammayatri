@@ -4,6 +4,7 @@ imports:
   GetQuotesRes: Domain.Action.UI.Quote
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.SearchRequest: "rider-app"
   Domain.Action.UI.Quote: "rider-app"

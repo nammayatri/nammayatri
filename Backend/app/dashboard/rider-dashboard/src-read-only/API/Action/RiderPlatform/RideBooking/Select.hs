@@ -20,7 +20,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import qualified SharedLogic.Cancel
+import qualified "rider-app" SharedLogic.Cancel
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
@@ -31,33 +31,33 @@ handler merchantId city = postSelectEstimate merchantId city :<|> getSelectQuote
 
 type PostSelectEstimate =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.POST_SELECT_ESTIMATE))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.POST_SELECT_ESTIMATE)
       :> API.Types.Dashboard.RideBooking.Select.PostSelectEstimate
   )
 
 type GetSelectQuotes =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.GET_SELECT_QUOTES))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.GET_SELECT_QUOTES)
       :> API.Types.Dashboard.RideBooking.Select.GetSelectQuotes
   )
 
 type GetSelectResult =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.GET_SELECT_RESULT))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.GET_SELECT_RESULT)
       :> API.Types.Dashboard.RideBooking.Select.GetSelectResult
   )
 
 type PostSelectCancelSearch =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.POST_SELECT_CANCEL_SEARCH))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.POST_SELECT_CANCEL_SEARCH)
       :> API.Types.Dashboard.RideBooking.Select.PostSelectCancelSearch
   )
 

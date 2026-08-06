@@ -7,6 +7,7 @@ imports:
   Integer: EulerHS.Prelude
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Booking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.Booking.API: "rider-app"

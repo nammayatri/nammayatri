@@ -1,3 +1,6 @@
+importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
+
 module: Passetto
 
 types:

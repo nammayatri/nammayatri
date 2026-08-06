@@ -9,6 +9,7 @@ imports:
   IdentifierType: Domain.Types.Person
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Action.UI.Registration: "rider-app"
   Domain.Types.RegistrationToken: "rider-app"
   Domain.Types.Person: "rider-app"

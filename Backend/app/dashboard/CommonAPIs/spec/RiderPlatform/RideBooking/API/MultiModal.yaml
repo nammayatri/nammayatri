@@ -8,6 +8,7 @@ imports:
   BookingRequestType: Domain.Types.Booking.API
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.Booking.API: "rider-app"
   Domain.Action.UI.Booking: "rider-app"

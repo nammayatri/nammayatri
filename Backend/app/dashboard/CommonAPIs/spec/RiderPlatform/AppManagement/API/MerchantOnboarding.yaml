@@ -14,6 +14,7 @@ imports:
   DashboardSideHandler: Domain.Types.MerchantOnboarding.Handler
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.MerchantOnboarding: "rider-app"
   Domain.Types.MerchantOnboardingStep: "rider-app"
   Domain.Types.MerchantOnboarding.Handler: "rider-app"

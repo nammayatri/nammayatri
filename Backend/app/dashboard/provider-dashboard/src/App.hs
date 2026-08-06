@@ -42,12 +42,16 @@ import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification
 import Network.HTTP.Types (status408)
 import qualified Network.Wai as Wai
 import Servant (Context (..))
+import "lib-dashboard" Storage.Beam.SchemaName (setDashboardSchemaName)
 import System.Timeout (timeout)
 import qualified "lib-dashboard" Tools.Auth as Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "provider-dashboard" <&> configModifier
+  -- Publish the dhall-configured schema to the Beam instances before any
+  -- DB connection is opened (Storage.Beam.SchemaName).
+  setDashboardSchemaName appCfg.esqDBCfg.connectSchemaName
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   Metrics.serve (appCfg.metricsPort)
   runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler (dashboardTimeoutMiddleware appEnv appCfg.incomingAPIResponseTimeout . logIncomingRequest appEnv) identity context releaseAppEnv \flowRt -> do

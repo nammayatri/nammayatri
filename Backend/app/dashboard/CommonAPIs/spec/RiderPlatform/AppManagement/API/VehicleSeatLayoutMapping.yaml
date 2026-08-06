@@ -6,6 +6,7 @@ imports:
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.SeatLayout: "rider-app"
   Domain.Types.VehicleSeatLayoutMapping: "rider-app"
 

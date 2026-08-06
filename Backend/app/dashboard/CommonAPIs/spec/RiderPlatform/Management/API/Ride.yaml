@@ -24,6 +24,9 @@ imports:
   BookingStatus: Dashboard.RiderPlatform.Ride
   Classification: Kernel.External.Ticket.Interface.Types
 
+importPackageOverrides:
+  Domain.Action.Dashboard.Ride: "rider-app"
+
 module: Ride
 
 apis:

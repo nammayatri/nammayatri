@@ -42,12 +42,16 @@ import Network.HTTP.Types (status408)
 import qualified Network.Wai as Wai
 import qualified Prometheus as P
 import Servant (Context (..))
+import "lib-dashboard" Storage.Beam.SchemaName (setDashboardSchemaName)
 import System.Timeout (timeout)
 import qualified "lib-dashboard" Tools.Auth as Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "rider-dashboard" <&> configModifier
+  -- Publish the dhall-configured schema to the Beam instances before any
+  -- DB connection is opened (Storage.Beam.SchemaName).
+  setDashboardSchemaName appCfg.esqDBCfg.connectSchemaName
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   activeRequestsGauge <- P.register $ P.gauge (P.Info "http_requests_active" "Number of currently active/inflight HTTP requests")
   Metrics.serve (appCfg.metricsPort)

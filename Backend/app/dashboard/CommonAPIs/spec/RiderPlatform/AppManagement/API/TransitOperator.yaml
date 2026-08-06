@@ -36,6 +36,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   BecknV2.OnDemand.Enums: "beckn-spec"
   SharedLogic.External.Nandi.Types: "rider-app"
 

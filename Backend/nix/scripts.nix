@@ -312,6 +312,13 @@ _:
             cd "''${FLAKE_ROOT}/Backend"
             cabal run alchemist-generator-exe -- "$@"
             cd ..
+            # Dashboard unification: NammaDSL writes BAP modules into
+            # rider-dashboard (which still serves prod BAP traffic), but
+            # provider-dashboard serves both trees and needs the same modules.
+            # The generated code is already provider-compatible thanks to
+            # importPackageOverrides in the RiderPlatform specs, so this is a
+            # plain mirror. Retire with rider-dashboard in Phase 7.
+            "''${FLAKE_ROOT}/Backend/dev/sync-rider-dashboard-modules.sh"
             treefmt --verbose
             hpack
 

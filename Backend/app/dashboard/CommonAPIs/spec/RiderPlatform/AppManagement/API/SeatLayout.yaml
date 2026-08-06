@@ -7,6 +7,7 @@ imports:
   SeatType: Domain.Types.Seat
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   Domain.Types.SeatLayout: "rider-app"
   Domain.Types.Seat: "rider-app"
 

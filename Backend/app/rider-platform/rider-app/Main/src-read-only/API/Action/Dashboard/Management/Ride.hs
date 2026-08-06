@@ -11,7 +11,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.Ride
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
-import qualified Domain.Action.Dashboard.Ride
+import qualified "this" Domain.Action.Dashboard.Ride
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

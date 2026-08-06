@@ -4,6 +4,7 @@ imports:
   CancelReq: Domain.Action.UI.Cancel
 
 importPackageOverrides:
+  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Booking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Action.UI.Cancel: "rider-app"

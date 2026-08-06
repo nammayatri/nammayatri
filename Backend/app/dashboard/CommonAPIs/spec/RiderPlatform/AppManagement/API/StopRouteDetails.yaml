@@ -4,6 +4,7 @@ imports:
   RouteStopMapping: Domain.Types.RouteStopMapping
 
 importPackageOverrides:
+  API.Types.Dashboard.AppManagement: "rider-app"
   BecknV2.OnDemand.Enums: "beckn-spec"
   Domain.Types.Station: "rider-app"
   Domain.Types.RouteStopMapping: "rider-app"
