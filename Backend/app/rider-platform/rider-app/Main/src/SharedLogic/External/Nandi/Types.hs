@@ -538,6 +538,7 @@ data NandiVehicleRow = NandiVehicleRow
     created_at :: Maybe UTCTime,
     deleted :: Bool,
     fleet_no :: Maybe Text,
+    tag_number :: Maybe Text,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime,
     vehicle_no :: Maybe Text,
