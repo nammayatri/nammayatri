@@ -61,8 +61,9 @@ main = do
           let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool (appCfg.esqDBCfg)
           threadPerPodCount <- Env.getThreadPerPodCount
           R.runFlow flowRt (runReaderT DBSync.fetchAndSetKvConfigs environment)
+          -- min two threads; on odd totals the normal stream gets the extra thread
           let totalThreads = max 2 (threadPerPodCount + 1)
-              criticalThreads = (totalThreads + 1) `div` 2
+              criticalThreads = totalThreads `div` 2
               normalThreads = totalThreads - criticalThreads
           spawnDrainerThread criticalThreads True flowRt environment
           spawnDrainerThread (normalThreads - 1) False flowRt environment
