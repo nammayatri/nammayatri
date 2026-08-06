@@ -1,0 +1,108 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+# RSF receiver side: the append-only ledger, the only source of truth.
+# Phase 2 writes MESSAGE_RECEIVED / BAP_CLAIM / MESSAGE_PROCESSED, Phase 3
+# writes BANK_RECEIPT / BANK_ALLOCATION / MANUAL_ADJUSTMENT, Phase 4 writes
+# ORDER_VARIANCE / UTR_VARIANCE. Only claimStatus + rejectionDiff are ever updated.
+RsfReconLedgerEntry:
+  tableName: rsf_recon_ledger_entry
+
+  types:
+    RsfLedgerEntryType:
+      enum: "MESSAGE_RECEIVED,BAP_CLAIM,MESSAGE_PROCESSED,BANK_RECEIPT,BANK_ALLOCATION,MANUAL_ADJUSTMENT,ORDER_VARIANCE,UTR_VARIANCE,ORDER_MISSING_IN_BOOK"
+      derive: "ToParamSchema"
+    RsfClaimStatus:
+      enum: "PENDING,ACCEPTED,REJECTED_NOT_PAID,REJECTED_DETAIL_SUM,REJECTED_FARE_MISMATCH,REJECTED_BFF_MISMATCH,REJECTED_UTR_IMBALANCE"
+      derive: "ToParamSchema"
+    RsfLedgerSource:
+      enum: "BAP_CLAIMED,BANK_CONFIRMED,FINANCE_MANUAL,SYSTEM_JOB"
+      derive: "ToParamSchema"
+    RsfActorType:
+      enum: "SYSTEM,FINANCE,ADMIN"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id RsfReconLedgerEntry
+    merchantId: Text
+    merchantOperatingCityId: Maybe Text
+    messageId: Maybe Text
+    orderId: Maybe Text
+    utr: Maybe Text
+    entryType: RsfLedgerEntryType
+    amount: HighPrecMoney
+    currency: Text
+    # MESSAGE_RECEIVED only
+    contextTransactionId: Maybe Text
+    bapId: Maybe Text
+    bapUri: Maybe Text
+    ttl: Maybe Text
+    rawJson: Maybe Text
+    # BAP_CLAIM only
+    orderPaymentAmount: Maybe HighPrecMoney
+    bffType: Maybe Text
+    bffAmount: Maybe HighPrecMoney
+    withholdingTaxGst: Maybe HighPrecMoney
+    withholdingTaxTds: Maybe HighPrecMoney
+    deductionByCollector: Maybe HighPrecMoney
+    settlementId: Maybe Text
+    orderTransactionId: Maybe Text
+    invoiceNo: Maybe Text
+    collectorAppId: Maybe Text
+    orderState: Maybe Text
+    settlementReasonCode: Maybe Text
+    rideId: Maybe Text
+    driverId: Maybe Text
+    claimStatus: Maybe RsfClaimStatus
+    rejectionDiff: Maybe HighPrecMoney
+    # provenance (all rows)
+    source: RsfLedgerSource
+    actorType: RsfActorType
+    actorId: Maybe Text
+    reason: Maybe Text
+    # ORDER_VARIANCE / UTR_VARIANCE only
+    counterpartyReconStatus: Maybe Text
+    diffMessageCode: Maybe Text
+    diffMessageName: Maybe Text
+    reportedAt: Maybe UTCTime
+    reportedInMessageId: Maybe Text
+    effectiveAt: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    orderId: "!SecondaryKey"
+    utr: "!SecondaryKey"
+    messageId: "!SecondaryKey"
+
+  extraIndexes:
+    - columns: [merchantId, orderId]
+    - columns: [merchantId, utr]
+    - columns: [merchantId, messageId, entryType]
+
+  sqlType:
+    amount: numeric(30,2)
+    orderPaymentAmount: numeric(30,2)
+    bffAmount: numeric(30,2)
+    withholdingTaxGst: numeric(30,2)
+    withholdingTaxTds: numeric(30,2)
+    deductionByCollector: numeric(30,2)
+    rejectionDiff: numeric(30,2)
+    entryType: text
+    claimStatus: text
+    source: text
+    actorType: text
+    rawJson: text
+
+  default:
+    currency: "'INR'"
+    actorType: "'SYSTEM'"
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

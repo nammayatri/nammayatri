@@ -26,6 +26,9 @@ import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPay
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
+import qualified Lib.Finance.Storage.Beam.RsfOrderState as BeamRsfOrderState
+import qualified Lib.Finance.Storage.Beam.RsfReconLedgerEntry as BeamRsfReconLedgerEntry
+import qualified Lib.Finance.Storage.Beam.RsfUtrState as BeamRsfUtrState
 import qualified Lib.Finance.Storage.Beam.SapJournalEntry as BeamSapJournal
 import qualified Lib.Finance.Storage.Beam.SettlementFileInfo as BeamSettlementFileInfo
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
@@ -54,5 +57,8 @@ type BeamFlow m r =
     HasSchemaName BeamSettlementFileInfo.SettlementFileInfoT,
     HasSchemaName BeamJournalEntryTransaction.JournalEntryTransactionT,
     HasSchemaName BeamTdsReq.FinanceTdsReimbursementRequestT,
-    HasSchemaName BeamTdsMap.FinanceTdsReimbursementInvoiceMappingT
+    HasSchemaName BeamTdsMap.FinanceTdsReimbursementInvoiceMappingT,
+    HasSchemaName BeamRsfReconLedgerEntry.RsfReconLedgerEntryT,
+    HasSchemaName BeamRsfUtrState.RsfUtrStateT,
+    HasSchemaName BeamRsfOrderState.RsfOrderStateT
   )

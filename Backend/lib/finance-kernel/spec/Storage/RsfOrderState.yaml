@@ -1,0 +1,32 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+# RSF receiver side: what we last told the collector about an order.
+# Written only in Phase 4, after the collector ACKs on_receiver_recon.
+RsfOrderState:
+  tableName: rsf_order_state
+
+  fields:
+    merchantId: Text
+    orderId: Text
+    reportedStatus: Maybe Text
+    reportedDiff: Maybe HighPrecMoney
+    reportedCode: Maybe Text
+    lastReportedMessageId: Maybe Text
+    lastReportedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    merchantId: PrimaryKey
+    orderId: PrimaryKey
+
+  sqlType:
+    reportedDiff: numeric(30,2)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
