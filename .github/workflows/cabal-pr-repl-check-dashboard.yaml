@@ -142,6 +142,7 @@ jobs:
               ln -sfn $ORIGINAL_DIST_DASHBOARD dist-newrepl-dashboard-check
               grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print \$1}' | while read -r pkg; do
                 [ -d \"\$pkg\" ] || continue
+                mkdir -p \"$PR_CACHE_ROOT/hie/\$pkg\"
                 rm -rf \"\$pkg/.hie\"
                 ln -sfn \"$PR_CACHE_ROOT/hie/\$pkg\" \"\$pkg/.hie\"
               done
