@@ -212,6 +212,10 @@ library
       BecknV2.OnDemand.Utils.Context
       BecknV2.OnDemand.Utils.Payment
       BecknV2.OnDemand.Utils.Version
+      BecknV2.RSF.APIs
+      BecknV2.RSF.Enums
+      BecknV2.RSF.Types
+      BecknV2.RSF.Utils
       BecknV2.Utils
       Domain.SharedLogic.Cancel
       Domain.SharedLogic.RideDiscount

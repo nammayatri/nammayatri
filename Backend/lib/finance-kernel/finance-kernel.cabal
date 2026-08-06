@@ -70,6 +70,8 @@ library
       Lib.Finance.Storage.Queries.PgPayoutSettlementReportExtra
       Lib.Finance.Storage.Queries.ReconciliationEntryExtra
       Lib.Finance.Storage.Queries.ReconciliationSummaryExtra
+      Lib.Finance.Storage.Queries.ReconSettlementOrderExtra
+      Lib.Finance.Storage.Queries.ReconUtrSettlementExtra
       Lib.Finance.Storage.Queries.SapJournalEntryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
@@ -88,6 +90,8 @@ library
       Lib.Finance.Domain.Types.PgPayoutSettlementReport
       Lib.Finance.Domain.Types.ReconciliationEntry
       Lib.Finance.Domain.Types.ReconciliationSummary
+      Lib.Finance.Domain.Types.ReconSettlementOrder
+      Lib.Finance.Domain.Types.ReconUtrSettlement
       Lib.Finance.Domain.Types.SapJournalEntry
       Lib.Finance.Domain.Types.SettlementFileInfo
       Lib.Finance.Domain.Types.StateTransition
@@ -105,6 +109,8 @@ library
       Lib.Finance.Storage.Beam.PgPayoutSettlementReport
       Lib.Finance.Storage.Beam.ReconciliationEntry
       Lib.Finance.Storage.Beam.ReconciliationSummary
+      Lib.Finance.Storage.Beam.ReconSettlementOrder
+      Lib.Finance.Storage.Beam.ReconUtrSettlement
       Lib.Finance.Storage.Beam.SapJournalEntry
       Lib.Finance.Storage.Beam.SettlementFileInfo
       Lib.Finance.Storage.Beam.StateTransition
@@ -122,11 +128,15 @@ library
       Lib.Finance.Storage.Queries.OrphanInstances.InvoiceTemplate
       Lib.Finance.Storage.Queries.OrphanInstances.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.OrphanInstances.PgPayoutSettlementReport
+      Lib.Finance.Storage.Queries.OrphanInstances.ReconSettlementOrder
+      Lib.Finance.Storage.Queries.OrphanInstances.ReconUtrSettlement
       Lib.Finance.Storage.Queries.OrphanInstances.SapJournalEntry
       Lib.Finance.Storage.Queries.PgPaymentSettlementReport
       Lib.Finance.Storage.Queries.PgPayoutSettlementReport
       Lib.Finance.Storage.Queries.ReconciliationEntry
       Lib.Finance.Storage.Queries.ReconciliationSummary
+      Lib.Finance.Storage.Queries.ReconSettlementOrder
+      Lib.Finance.Storage.Queries.ReconUtrSettlement
       Lib.Finance.Storage.Queries.SapJournalEntry
       Lib.Finance.Storage.Queries.SettlementFileInfo
       Lib.Finance.Storage.Queries.StateTransition
