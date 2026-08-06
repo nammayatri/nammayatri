@@ -22,8 +22,9 @@ import Control.Applicative ((<|>))
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Data.Time (timeOfDayToTime)
-import Data.Time.Calendar (addDays)
+import Data.Time.Calendar (addDays, toGregorian)
 import Data.Time.Clock (UTCTime (..), secondsToDiffTime)
+import Data.Time.LocalTime (TimeOfDay (..), timeToTimeOfDay)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig as DMSC
@@ -285,6 +286,7 @@ dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTi
   let label = show entryType
   logInfo $ "Dispatching aggregated " <> label <> " entry to SAP, amount=" <> show amount <> " txnCount=" <> show txnCount
   req <- buildJournalRequest sapCfg entryType amount fromTime
+  logInfo $ "SAP journal entry request body = " <> show req
   result <- callSAPWithRetry sapCfg token req label maxRetries
   handleSAPResponse label req result (toTransactionType entryType) txnCount mId mocid fromTime toTime
 
@@ -412,9 +414,9 @@ buildJournalRequest ::
   m SAPJournalRequest
 buildJournalRequest sapCfg entryType amount fromTime = do
   now <- getCurrentTime
-  let reqDate = show (utctDay now)
-      reqTime = show (utctDayTime now)
-      postingDate = show (utctDay fromTime)
+  let reqDate = formatSAPDate now
+      reqTime = formatSAPTime now
+      postingDate = formatSAPDate fromTime
       acctMap = sapCfg.accountMapping
       currency = "INR"
   bId <- getNextBatchId
@@ -574,9 +576,9 @@ buildSubscriptionJournalRequest ::
   m SAPJournalRequest
 buildSubscriptionJournalRequest sapCfg fromTime totals entryType = do
   now <- getCurrentTime
-  let reqDate = show (utctDay now)
-      reqTime = show (utctDayTime now)
-      postingDate = show (utctDay fromTime)
+  let reqDate = formatSAPDate now
+      reqTime = formatSAPTime now
+      postingDate = formatSAPDate fromTime
       acctMap = sapCfg.accountMapping
       currency = "INR"
   bId <- getNextBatchId
@@ -620,6 +622,21 @@ buildSubscriptionJournalRequest sapCfg fromTime totals entryType = do
   when (roundTo2 debit /= roundTo2 credit) $
     throwError (InternalError $ "SAP SubscriptionPurchase debit/credit mismatch: debit=" <> show debit <> " credit=" <> show credit <> " batchId=" <> bId)
   pure SAPJournalRequest {headers = [header]}
+
+formatSAPDate :: UTCTime -> Text
+formatSAPDate utcTime =
+  let (y, m, d) = toGregorian (utctDay utcTime)
+   in T.pack $ show y <> padTwo m <> padTwo d
+
+formatSAPTime :: UTCTime -> Text
+formatSAPTime utcTime =
+  let tod = timeToTimeOfDay (utctDayTime utcTime)
+   in T.pack $ padTwo (todHour tod) <> padTwo (todMin tod) <> padTwo (floor (todSec tod) :: Int)
+
+padTwo :: Int -> String
+padTwo n
+  | n < 10 = "0" <> show n
+  | otherwise = show n
 
 roundTo2 :: HighPrecMoney -> HighPrecMoney
 roundTo2 x = fromIntegral (round (x * 100) :: Integer) / 100
