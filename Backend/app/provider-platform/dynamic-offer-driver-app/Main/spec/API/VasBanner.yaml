@@ -1,0 +1,25 @@
+imports:
+  VasBannerConfig: Domain.Types.VasBannerConfig
+  VasBannerLinkType: Domain.Types.VasBannerConfig
+
+module: VasBanner
+
+types:
+  VasBannerAPIEntity:
+    id: Id VasBannerConfig
+    title: Text
+    subtitle: Maybe Text
+    imageUrl: Text
+    deepLink: Maybe Text
+    whatsappTemplateId: Maybe Text
+    linkType: VasBannerLinkType
+    priority: Int
+  VasBannerListRes:
+    banners: "[API.Types.UI.VasBanner.VasBannerAPIEntity]"
+
+apis:
+  - GET:
+      endpoint: /vasBanner/list
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.VasBanner.VasBannerListRes

@@ -6,7 +6,7 @@ todos:
     content: Extend SosType/RiderConfig; remove hardcoded 112; wire Ambulance/Fire + safety-team notify
     status: pending
   - id: vas-banners
-    content: Add vas_banner_config storage + driver GET (optional dashboard CRUD)
+    content: Add vas_banner_config storage + driver GET + dashboard CRUD
     status: pending
   - id: gmc-gpa-capture
     content: Add driver_group_insurance table + APIs; reuse identity nominee defaults where useful
@@ -30,7 +30,7 @@ Scope is **backend only** (nammayatri driver/rider apps + dashboard CommonAPIs).
 ## Decisions locked in
 
 - **SOS**: extend `SosType` + city config for numbers/labels; remove hardcoded `"112 called"`.
-- **VAS**: new `vas_banner_config` table + driver GET API; banner click = **Option A (client deep-link)** until product explicitly asks for Option B (server-side WhatsApp via `Tools/Whatsapp.hs`).
+- **VAS**: new `vas_banner_config` table + driver GET API + **dashboard CRUD in MVP**; banner click = **Option A (client deep-link)** until product explicitly asks for Option B (server-side WhatsApp via `Tools/Whatsapp.hs`).
 - **GMC/GPA**: new table `driver_group_insurance` (not stuffing all fields into `driver_identity_info`); export job mirrors **TDS** (batch + `Email.sendEmailWithAttachment` + self-reschedule), optionally with SAP-style day lock/idempotency.
 - **Command centre**: no new Haskell service — extend provider dashboard Ride APIs; MVP uses Postgres ride flags + existing `rideInfo`/`rideRoute`; ops `timeline` is **backend-computed** from ride timestamps on `RideInfoRes` (not `/flowDebug`); live LTS/CH anomaly stream is a follow-up.
 
@@ -41,7 +41,7 @@ Scope is **backend only** (nammayatri driver/rider apps + dashboard CommonAPIs).
 | Email.sendEmailWithAttachment | Daily insurer export job (fed by GMC/GPA rows) |
 | Rider on_search insurance | *(unchanged)* |
 | | `driver_group_insurance` table + CRUD |
-| | VAS banner table + API |
+| | VAS banner table + driver GET + dashboard CRUD |
 
 ## 1. SOS — Ambulance / Fire + config-driven labels
 
@@ -105,7 +105,7 @@ Scope is **backend only** (nammayatri driver/rider apps + dashboard CommonAPIs).
 
 **Steps**
 
-1. New storage YAML (e.g. `VasBannerConfig.yaml`) → table `vas_banner_config` (fields only):
+1. New storage YAML [`driver-app spec/Storage/VasBannerConfig.yaml`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/spec/Storage/VasBannerConfig.yaml) → table `vas_banner_config`:
 
 ```yaml
 VasBannerConfig:
@@ -142,7 +142,7 @@ VasBannerConfig:
       orderBy: priority
 ```
 
-3. Driver UI API (e.g. `spec/API/VasBanner.yaml`):
+3. Driver UI API [`driver-app spec/API/VasBanner.yaml`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/spec/API/VasBanner.yaml):
 
 ```yaml
 module: VasBanner
@@ -158,7 +158,7 @@ apis:
         type: VasBannerListRes
 ```
 
-4. Optional dashboard CRUD for ops (e.g. CommonAPIs ProviderPlatform Management `VasBanner.yaml`) — only if product wants ops UI in MVP:
+4. Dashboard CRUD [`dashboard CommonAPIs Management/API/VasBanner.yaml`](Backend/app/dashboard/CommonAPIs/spec/ProviderPlatform/Management/API/VasBanner.yaml) — **in MVP**:
 
 ```yaml
 module: VasBanner
@@ -383,7 +383,7 @@ Source columns already on ride storage ([`driver-app spec/Storage/ride.yaml`](Ba
 ## Delivery order
 
 1. SOS enums/config + wiring
-2. VAS table + GET API
+2. VAS table + driver GET + dashboard CRUD (specs → generate → thin handlers)
 3. GMC/GPA table + CRUD
 4. Insurance export job (stub file OK; align columns + TransporterConfig from/to when MSIL answers)
 5. Command-centre `RideInfoRes` + search filters (MVP)
@@ -397,7 +397,7 @@ Source columns already on ride storage ([`driver-app spec/Storage/ride.yaml`](Ba
 
 ## Open questions
 
-1. **VAS dashboard CRUD** — include in MVP, or GET-only for drivers first and manage rows via SQL/ops later.
+1. ~~**VAS dashboard CRUD**~~ — **resolved: include in MVP** (specs 1–4 above).
 2. **GMC/GPA write APIs** — driver app, dashboard/ops, or both.
 3. **MSIL safety-team notify channel** on SOS — Kapture ticket, SMS, email, or webhook (needs MSIL/product input).
 4. **SOS → IGM link** — keep IGM untouched, or create/link an issue ticket when SOS fires.

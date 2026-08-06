@@ -92,6 +92,8 @@ data TripTransaction
 
 data CoinsConfig
 
+data VasBannerConfig
+
 data Person
 
 data Merchant

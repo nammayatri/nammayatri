@@ -1,0 +1,82 @@
+imports:
+  VasBannerConfig: Dashboard.Common
+  UTCTime: Kernel.Prelude
+
+module: VasBanner
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        enabled: Bool
+      response:
+        type: VasBannerListRes
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: VasBannerCreateReq
+      response:
+        type: VasBannerRes
+  - POST:
+      endpoint: /{bannerId}/update
+      auth: ApiAuthV2
+      params:
+        bannerId: Id VasBannerConfig
+      request:
+        type: VasBannerUpdateReq
+      response:
+        type: VasBannerRes
+  - POST:
+      endpoint: /{bannerId}/delete
+      auth: ApiAuthV2
+      params:
+        bannerId: Id VasBannerConfig
+      response:
+        type: APISuccess
+
+types:
+  VasBannerLinkType:
+    - enum: "Service,SmartFinance,WhatsApp,ExternalUrl,Other"
+    - derive: "HttpInstance, 'HideSecrets"
+  VasBannerCreateReq:
+    - title: Text
+    - subtitle: Maybe Text
+    - imageUrl: Text
+    - deepLink: Maybe Text
+    - whatsappTemplateId: Maybe Text
+    - linkType: VasBannerLinkType
+    - priority: Int
+    - enabled: Bool
+    - validFrom: Maybe UTCTime
+    - validTo: Maybe UTCTime
+    - derive: "'HideSecrets"
+  VasBannerUpdateReq:
+    - title: Text
+    - subtitle: Maybe Text
+    - imageUrl: Text
+    - deepLink: Maybe Text
+    - whatsappTemplateId: Maybe Text
+    - linkType: VasBannerLinkType
+    - priority: Int
+    - enabled: Bool
+    - validFrom: Maybe UTCTime
+    - validTo: Maybe UTCTime
+    - derive: "'HideSecrets"
+  VasBannerRes:
+    - id: Id VasBannerConfig
+    - title: Text
+    - subtitle: Maybe Text
+    - imageUrl: Text
+    - deepLink: Maybe Text
+    - whatsappTemplateId: Maybe Text
+    - linkType: VasBannerLinkType
+    - priority: Int
+    - enabled: Bool
+    - validFrom: Maybe UTCTime
+    - validTo: Maybe UTCTime
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  VasBannerListRes:
+    - banners: [VasBannerRes]
