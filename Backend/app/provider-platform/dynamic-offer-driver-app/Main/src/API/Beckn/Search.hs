@@ -15,6 +15,8 @@
 module API.Beckn.Search (API, handler) where
 
 import qualified Beckn.ACL.Search as ACL
+import qualified Beckn.OnDemand.Transformer.MSIL.OnSearch as MSILOnSearch
+import qualified Beckn.OnDemand.Transformer.MSIL.Search as MSILSearch
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
@@ -103,16 +105,34 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
         moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
         void $ Utils.validateSearchContext context transporterId moc.id
-        dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
+        dSearchReq' <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
         msgId <- Utils.getMessageId context
         country <- Utils.getContextCountry context
+
+        -- Pilot: merchants in scheduledCategorySignalMerchantIds (e.g. MSIL) get
+        -- isExplicitlyScheduled decided from the incoming category descriptor code
+        -- (Beckn.OnDemand.Transformer.MSIL.Search.msilParser); everyone else's dSearchReq
+        -- is passed on exactly as Layer 1 (ACL.buildSearchReqV2) built it, unchanged.
+        scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+        let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+            dSearchReq =
+              if isMsilPilotMerchant
+                then MSILSearch.msilParser reqV2.searchReqMessage dSearchReq'
+                else dSearchReq'
 
         isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
         when isFirst $
           Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
             fork "search request processing" $
               Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-                (dSearchRes, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                (dSearchRes, onSearchReq') <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                -- Same pilot check, applied to the already-built on_search reply
+                -- (Beckn.OnDemand.Transformer.MSIL.OnSearch.msilOnSearchConverter) instead
+                -- of touching anything inside SRP.processSearchRequest's own builder chain.
+                let onSearchReq =
+                      if isMsilPilotMerchant
+                        then MSILOnSearch.msilOnSearchConverter dSearchRes onSearchReq'
+                        else onSearchReq'
                 internalEndPointHashMap <- asks (.internalEndPointHashMap)
                 let context' = onSearchReq.onSearchReqContext
                 logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
