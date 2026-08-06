@@ -1,0 +1,243 @@
+imports:
+  RsfClaimStatus: Lib.Finance.Domain.Types.RsfReconLedgerEntry
+
+module: RSFReconciliation
+
+apis:
+  # ----- Inbound receiver_recon messages (landing page) -----
+  # One batch = one inbound message_id. A batch stays on the list until its
+  # on_receiver_recon has been sent and ACKed (Phase 4).
+  - GET: # MessageBatchListAPI
+      endpoint: /rsf/messages
+      migrate:
+        capability: financeManagement.rsfSettlements.list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        bapId: Text
+      response:
+        type: MessageBatchListRes
+
+  - GET: # MessageBatchUtrListAPI
+      endpoint: /rsf/messages/{messageId}/utrs
+      migrate:
+        capability: financeManagement.rsfSettlements.utrs
+      auth: ApiAuthV2
+      params:
+        messageId: Text
+      response:
+        type: MessageBatchUtrListRes
+
+  - GET: # MessageBatchOrderListAPI
+      endpoint: /rsf/messages/{messageId}/orders
+      migrate:
+        capability: financeManagement.rsfSettlements.orders
+      auth: ApiAuthV2
+      params:
+        messageId: Text
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: MessageBatchOrderListRes
+
+  # Phase 4: sends the one on_receiver_recon for this inbound message.
+  - POST: # MessageBatchSendAPI
+      endpoint: /rsf/messages/{messageId}/send
+      migrate:
+        capability: financeManagement.rsfSettlements.send
+      auth: ApiAuthV2
+      params:
+        messageId: Text
+      response:
+        type: APISuccess
+
+  # ----- UTRs -----
+  - GET: # UtrListAPI
+      endpoint: /rsf/utrs
+      migrate:
+        capability: financeManagement.rsfUtrs.list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        bapId: Text
+        isVerified: Bool
+      response:
+        type: UtrListRes
+
+  - GET: # UtrDetailAPI
+      endpoint: /rsf/utrs/{utr}
+      name: getRSFReconciliationRsfUtr
+      migrate:
+        capability: financeManagement.rsfUtrs.detail
+      auth: ApiAuthV2
+      params:
+        utr: Text
+      response:
+        type: UtrDetailRes
+
+  # Phase 3 (step 10): finance enters the bank figure for a UTR -- once, then frozen.
+  # Allocation across the UTR's ACCEPTED claims runs right after.
+  - POST: # UtrBankVerifyAPI
+      endpoint: /rsf/utrs/{utr}/verify
+      name: postRSFReconciliationRsfUtrBankVerify
+      migrate:
+        capability: financeManagement.rsfUtrs.bankVerify
+      auth: ApiAuthV2
+      params:
+        utr: Text
+      request:
+        type: BankVerifyReq
+      response:
+        type: APISuccess
+
+  # Phase 3 (step 11a): ops re-splits an order's allocation on one UTR by hand.
+  - POST: # OrderManualConfirmAPI
+      endpoint: /rsf/orders/{orderId}/confirm
+      migrate:
+        capability: financeManagement.rsfOrders.confirm
+      auth: ApiAuthV2
+      params:
+        orderId: Text
+      request:
+        type: ManualConfirmReq
+      response:
+        type: APISuccess
+
+  # ----- BAP Reconciliation report -----
+  # Matched / Mismatch / Pending tabs plus the Manually Confirmed filter,
+  # one row per order, live-folded from the ledger.
+  - GET: # ReconGridAPI
+      endpoint: /rsf/recon/grid
+      migrate:
+        capability: financeManagement.rsfRecon.grid
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        bapId: Text
+        status: ReconTabStatus
+        manuallyConfirmedOnly: Bool
+      response:
+        type: ReconGridListRes
+
+  # Rides completed on the platform that no receiver_recon ever claimed.
+  - GET: # ReconUnmatchedAPI
+      endpoint: /rsf/recon/unmatched
+      migrate:
+        capability: financeManagement.rsfRecon.unmatched
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: ReconGridListRes
+
+types:
+  ReconTabStatus:
+    - enum: "Matched, Unmatched, Mismatch, Pending"
+    - derive: "HttpInstance"
+
+  # Live order-level verdict. REJECTED = the order's claim failed a Phase 2 check
+  # (see claimStatus for which one); AWAITING = not judged yet or its UTR is not bank-verified.
+  OrderReconVerdict:
+    - enum: "AWAITING, PAID, UNDERPAID, OVERPAID, REJECTED"
+
+  ReconGridListRes:
+    - totalItems: Int
+    - rows: [ReconGridRow]
+
+  ReconGridRow:
+    - rideId: Maybe Text
+    - orderId: Text
+    - buyerAppName: Text
+    - rideDateTime: Maybe UTCTime
+    - driverId: Maybe Text
+    - grossFarePlatform: Maybe HighPrecMoney
+    - netReceivablePlatform: Maybe HighPrecMoney
+    - bapSettlementAmount: HighPrecMoney
+    - amountDifference: HighPrecMoney
+    - settlementDateBap: Maybe UTCTime
+    - settlementUtrs: [Text]
+    - reconciliationStatus: ReconTabStatus
+    - payoutEligible: Bool
+    - anyManuallyConfirmed: Bool
+    - communicationStatus: Text
+
+  BankVerifyReq:
+    - bankVerifiedAmount: HighPrecMoney
+    - verifiedBy: Maybe Text
+    - reason: Maybe Text
+
+  # confirmedAmount is what this order should hold from this UTR after the re-split.
+  ManualConfirmReq:
+    - utr: Text
+    - confirmedBy: Text
+    - reason: Text
+    - confirmedAmount: HighPrecMoney
+
+  MessageBatchListRes:
+    - totalItems: Int
+    - batches: [MessageBatchSummary]
+
+  MessageBatchSummary:
+    - messageId: Text
+    - bapId: Text
+    - receivedAt: UTCTime
+    - utrCount: Int
+    - orderCount: Int
+    - processed: Bool                             # MESSAGE_PROCESSED written (Phase 4 gate 1)
+
+  MessageBatchUtrListRes:
+    - utrs: [UtrSummary]
+
+  MessageBatchOrderListRes:
+    - totalItems: Int
+    - orders: [OrderRow]
+
+  UtrListRes:
+    - totalItems: Int
+    - utrs: [UtrSummary]
+
+  UtrSummary:
+    - utr: Text
+    - bapId: Text
+    - claimedTotalAmount: HighPrecMoney
+    - bankVerifiedAmount: Maybe HighPrecMoney     # Nothing until finance verifies
+    - unallocatedAmount: HighPrecMoney            # suspense: received − Σ allocated to orders
+    - totalOrders: Int
+    - reportedStatus: Maybe Text                  # rsf_utr_state: 01..04 once reported
+    - createdAt: UTCTime
+
+  UtrDetailRes:
+    - utr: UtrSummary
+    - orders: [OrderRow]
+
+  OrderRow:
+    - orderId: Text
+    - rideId: Maybe Text
+    - driverId: Maybe Text
+    - platformGrossFare: Maybe HighPrecMoney
+    - claimedTotalAmount: HighPrecMoney           # Σ standing claim legs
+    - receivedTotal: HighPrecMoney                # Σ BANK_ALLOCATION to this order
+    - orderVerdict: OrderReconVerdict
+    - orderDiff: HighPrecMoney
+    - claimStatus: Maybe RsfClaimStatus
+    - settlementUtrs: [Text]
+    - anyManuallyConfirmed: Bool
+    - allSent: Bool                               # rsf_order_state has a reported row
+    - receivedAt: UTCTime
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
