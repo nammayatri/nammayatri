@@ -14,6 +14,7 @@ import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
+import qualified Kernel.External.Meta.Config as Meta
 import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
@@ -40,6 +41,10 @@ data FleetEngineProvider = GoogleFleetEngine
   deriving anyclass (FromJSON, ToJSON)
 
 data PartnerSdkProvider = Aarokya
+
+-- | Meta WhatsApp Cloud API provider. Local to rider-app (no kernel change);
+-- single provider today. @Show@ => "Meta_CloudApi", the DB-persisted service name.
+data MetaProvider = CloudApi
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -47,6 +52,7 @@ data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
   | WhatsappService Whatsapp.WhatsappService
+  | MetaService MetaProvider
   | AadhaarVerificationService AadhaarVerification.AadhaarVerificationService
   | CallService Call.CallService
   | NotificationService Notification.NotificationService
@@ -81,6 +87,7 @@ instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s
   show (SmsService s) = "Sms_" <> show s
   show (WhatsappService s) = "Whatsapp_" <> show s
+  show (MetaService s) = "Meta_" <> show s
   show (AadhaarVerificationService s) = "AadhaarVerification_" <> show s
   show (CallService s) = "Call_" <> show s
   show (NotificationService s) = "Notification_" <> show s
@@ -122,6 +129,10 @@ instance Read ServiceName where
                ]
             ++ [ (WhatsappService v1, r2)
                  | r1 <- stripPrefix "Whatsapp_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (MetaService v1, r2)
+                 | r1 <- stripPrefix "Meta_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (AadhaarVerificationService v1, r2)
@@ -233,6 +244,7 @@ data ServiceConfigD (s :: UsageSafety)
   = MapsServiceConfig !MapsServiceConfig
   | SmsServiceConfig !SmsServiceConfig
   | WhatsappServiceConfig !WhatsappServiceConfig
+  | MetaServiceConfig !Meta.MetaCfg
   | AadhaarVerificationServiceConfig !AadhaarVerificationServiceConfig
   | CallServiceConfig !CallServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
@@ -274,6 +286,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
   show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
   show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
+  show (MetaServiceConfig cfg) = "MetaServiceConfig " <> show cfg
   show (AadhaarVerificationServiceConfig cfg) = "AadhaarVerificationServiceConfig " <> show cfg
   show (CallServiceConfig cfg) = "CallServiceConfig " <> show cfg
   show (NotificationServiceConfig cfg) = "NotificationServiceConfig " <> show cfg
@@ -305,6 +318,7 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
   show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
   show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
+  show (MetaServiceConfig cfg) = "MetaServiceConfig " <> show cfg
   show (AadhaarVerificationServiceConfig cfg) = "AadhaarVerificationServiceConfig " <> show cfg
   show (CallServiceConfig cfg) = "CallServiceConfig " <> show cfg
   show (NotificationServiceConfig cfg) = "NotificationServiceConfig " <> show cfg
