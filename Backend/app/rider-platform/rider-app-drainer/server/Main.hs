@@ -2,7 +2,7 @@ module Main where
 
 import Config.Env as Env
 import qualified Constants as C
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import qualified DBSync.DBSync as DBSync
 import qualified Data.HashSet as HS
@@ -59,15 +59,13 @@ main = do
 
           dbSyncMetric <- Event.mkDBSyncMetric
           let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool (appCfg.esqDBCfg)
-          threadPerPodCount <- Env.getThreadPerPodCount
+          normalThreadCount <- Env.getThreadPerPodCount
+          criticalThreadCount <- Env.getCriticalThreadPerPodCount
           R.runFlow flowRt (runReaderT DBSync.fetchAndSetKvConfigs environment)
-          -- min two threads; on odd totals the normal stream gets the extra thread
-          let totalThreads = max 2 (threadPerPodCount + 1)
-              criticalThreads = totalThreads `div` 2
-              normalThreads = totalThreads - criticalThreads
-          spawnDrainerThread criticalThreads True flowRt environment
-          spawnDrainerThread (normalThreads - 1) False flowRt environment
-          R.runFlow flowRt (runReaderT (DBSync.startDBSync False) environment)
+          -- one thread per stream by default; set either env count to 0 to stop draining that stream
+          spawnDrainerThread criticalThreadCount True flowRt environment
+          spawnDrainerThread normalThreadCount False flowRt environment
+          forever $ threadDelay 60000000
       )
 
 spawnDrainerThread :: Int -> Bool -> R.FlowRuntime -> TDB.Env -> IO ()
