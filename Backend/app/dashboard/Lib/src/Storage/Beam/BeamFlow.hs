@@ -17,20 +17,13 @@ module Storage.Beam.BeamFlow where
 import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
-import qualified Storage.Beam.AccessAudit as BeamAA
 import qualified Storage.Beam.AccessMatrix as BeamAM
-import qualified Storage.Beam.Capability as BeamC
-import qualified Storage.Beam.CapabilityEndpoint as BeamCE
 import qualified Storage.Beam.Entity as BeamE
 import qualified Storage.Beam.Merchant as BeamM
 import qualified Storage.Beam.MerchantAccess as BeamMA
-import qualified Storage.Beam.MerchantPair as BeamMPair
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.Beam.PersonCapability as BeamPC
-import qualified Storage.Beam.PersonTier as BeamPT
 import qualified Storage.Beam.RegistrationToken as BeamRT
 import qualified Storage.Beam.Role as BeamR
-import qualified Storage.Beam.RoleCapability as BeamRC
 import qualified Storage.Beam.Transaction as BeamT
 
 type BeamFlow m r =
@@ -41,19 +34,12 @@ type BeamFlow m r =
   )
 
 type BeamFlow' =
-  ( HasSchemaName BeamAA.AccessAuditT,
-    HasSchemaName BeamAM.AccessMatrixT,
-    HasSchemaName BeamC.CapabilityT,
-    HasSchemaName BeamCE.CapabilityEndpointT,
+  ( HasSchemaName BeamAM.AccessMatrixT,
     HasSchemaName BeamE.EntityT,
     HasSchemaName BeamM.MerchantT,
     HasSchemaName BeamMA.MerchantAccessT,
-    HasSchemaName BeamMPair.MerchantPairT,
     HasSchemaName BeamP.PersonT,
-    HasSchemaName BeamPC.PersonCapabilityT,
-    HasSchemaName BeamPT.PersonTierT,
     HasSchemaName BeamRT.RegistrationTokenT,
     HasSchemaName BeamR.RoleT,
-    HasSchemaName BeamRC.RoleCapabilityT,
     HasSchemaName BeamT.TransactionT
   )

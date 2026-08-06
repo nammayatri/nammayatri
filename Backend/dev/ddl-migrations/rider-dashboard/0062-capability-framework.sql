@@ -50,8 +50,8 @@ actor_id character(36),
 action character varying(255) NOT NULL,
 target_type character varying(64) NOT NULL,
 target_id character varying(255),
-before_value text,
-after_value text,
+before_value json,
+after_value json,
 reason character varying(1024),
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT access_audit_pkey PRIMARY KEY (id)

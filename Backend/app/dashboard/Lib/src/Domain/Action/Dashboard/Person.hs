@@ -18,7 +18,6 @@ import Dashboard.Common
 import Data.Char (isDigit, isLower, isUpper)
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
-import qualified Domain.Action.Dashboard.Capability as DCap
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
@@ -220,27 +219,6 @@ createPerson _ personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
-  -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
-  DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
-  personId <-
-    if DRole.isBppSyncRole role
-      then do
-        merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
-        roleName <- driverRoleName role.dashboardAccessType
-        let createReq =
-              BPPPerson.CreatePersonReq
-                { email = Just personEntity.email,
-                  firstName = personEntity.firstName,
-                  lastName = personEntity.lastName,
-                  mobileCountryCode = personEntity.mobileCountryCode,
-                  mobileNumber = personEntity.mobileNumber,
-                  password = Nothing,
-                  roleName = roleName
-                }
-        res <- InternalClient.callBPPInternalCreatePerson (getShortId merchant.shortId) tokenInfo.city createReq
-        pure $ cast res.personId
-      else generateGUID
   person <- buildPerson personEntity (role.dashboardAccessType)
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
@@ -282,20 +260,10 @@ assignRole ::
   Id DP.Person ->
   Id DRole.Role ->
   m APISuccess
-assignRole tokenInfo personId roleId = do
-  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
-  newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
-    throwError RoleConversionNotAllowed
-  -- Admin tiering (existence-guarded): promoting into (or demoting out of) an
-  -- admin-tier role requires SUPER_ADMIN once one is seeded; also nobody
-  -- reassigns their own role.
-  when (tokenInfo.personId == personId) $
-    throwError $ InvalidRequest "Cannot change your own role"
-  DCap.guardAdminMutation tokenInfo.personId newRole.dashboardAccessType
-  DCap.guardAdminMutation tokenInfo.personId oldRole.dashboardAccessType
-  QP.updatePersonRole personId newRole
+assignRole _ personId roleId = do
+  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  QP.updatePersonRole personId role
   pure Success
 
 assignMerchantCityAccess ::

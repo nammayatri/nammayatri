@@ -1011,380 +1011,254 @@ INSERT INTO atlas_bpp_dashboard.capability_endpoint (capability_id, server_name,
     ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_CANCEL_SEARCH'),
     ('agent.booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_ESTIMATE')
 ON CONFLICT (server_name, endpoint_id) DO NOTHING;
--- Curated role bundles (capability-seed.md §4).
--- Applied per role NAME. For roles that already hold access_matrix
--- grants, the bundle is SKIPPED (except ALWAYS_CURATED admin roles):
--- prod grants + threshold derivation define those, so the migration
--- preserves today's access instead of widening it.
+-- Curated role bundles (capability-seed.md §4, incl. usage-mined sensitive grants).
+-- Applied per role NAME; roles absent on a side are skipped harmlessly.
 
--- JUSPAY_ADMIN (150 capabilities)  [always applied]
+-- JUSPAY_ADMIN (150 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('access.audit.read'), ('access.capability.grant'), ('access.capability.read'), ('access.entity.read'), ('access.entity.write'), ('access.merchant.write'), ('access.role.read'), ('access.role.write'), ('access.user.read'), ('access.user.write'), ('agent.booking.execute'), ('agent.customer.write'), ('agent.edc.read'), ('agent.edc.write'), ('agent.frfs.execute'), ('agent.frfs.read'), ('agent.pass.execute'), ('agent.pass.read'), ('agent.pass_org.approve'), ('agent.pass_org.read'), ('agent.pass_org.write'), ('agent.ticket.execute'), ('agent.ticket.read'), ('analytics.ai.execute'), ('analytics.core.read'), ('analytics.incentive.read'), ('analytics.performance.read'), ('analytics.pricing.read'), ('analytics.pt_stats.read'), ('analytics.public_transport.read'), ('analytics.revenue.read'), ('analytics.sla.read'), ('analytics.sla.write'), ('city.launch.read'), ('city.launch.write'), ('city.merchant_onboarding.approve'), ('city.merchant_onboarding.read'), ('city.merchant_onboarding.write'), ('config.coins.read'), ('config.coins.write'), ('config.config_pilot.read'), ('config.config_pilot.write'), ('config.dynamic_logic.read'), ('config.dynamic_logic.write'), ('config.failover.execute'), ('config.fare_policy.export'), ('config.fare_policy.read'), ('config.fare_policy.write'), ('config.firebase.read'), ('config.firebase.write'), ('config.geo.read'), ('config.geo.write'), ('config.issue.read'), ('config.issue.write'), ('config.knowledge.read'), ('config.knowledge.write'), ('config.merchant.read'), ('config.merchant.write'), ('config.namma_tag.read'), ('config.namma_tag.write'), ('config.offer.read'), ('config.offer.write'), ('config.plan.read'), ('config.plan.write'), ('config.registry.read'), ('config.registry.write'), ('config.release.read'), ('config.release.write'), ('config.rewards.read'), ('config.rewards.write'), ('config.scheduler.execute'), ('finance.adjustment.write'), ('finance.fleet.read'), ('finance.insurance.read'), ('finance.invoice.read'), ('finance.ledger.read'), ('finance.payout.read'), ('finance.payout.write'), ('finance.reconciliation.execute'), ('finance.reconciliation.read'), ('finance.report.read'), ('finance.settlement.export'), ('finance.settlement.read'), ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.earnings.read'), ('fleet.live.read'), ('fleet.onboarding.read'), ('fleet.onboarding.write'), ('fleet.operator.read'), ('fleet.operator.write'), ('fleet.profile.read'), ('fleet.profile.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('ops.airport_queue.read'), ('ops.airport_queue.write'), ('ops.communication.read'), ('ops.communication.write'), ('ops.customer.read'), ('ops.customer.write'), ('ops.driver.read'), ('ops.driver.write'), ('ops.fleet_owner.read'), ('ops.fleet_owner.write'), ('ops.grievance.read'), ('ops.grievance.write'), ('ops.issue.read'), ('ops.issue.write'), ('ops.membership.read'), ('ops.onboarding.read'), ('ops.onboarding.write'), ('ops.payment.read'), ('ops.payment.write'), ('ops.pii.read'), ('ops.ride.read'), ('ops.ride.write'), ('ops.sos.read'), ('ops.sos.write'), ('ops.subscription.read'), ('ops.subscription.write'), ('ops.training.read'), ('ops.vehicle.read'), ('ops.vehicle.write'), ('ops.volunteer.read'), ('ops.volunteer.write'), ('ops.wallet.read'), ('ops.wallet.write'), ('system.crypto.execute'), ('system.query.execute'), ('tickets.booking.read'), ('tickets.place.approve'), ('tickets.place.read'), ('tickets.place.write'), ('transit.device.read'), ('transit.device.write'), ('transit.fare.read'), ('transit.fare.write'), ('transit.gtfs.read'), ('transit.gtfs.write'), ('transit.master.read'), ('transit.master.write'), ('transit.seat_layout.read'), ('transit.seat_layout.write'), ('transit.stops.read'), ('transit.stops.write'), ('transit.waybill.write'), ('utility.shortener.execute')) AS c(cap)
 WHERE r.name = 'JUSPAY_ADMIN' ON CONFLICT DO NOTHING;
 
--- JUSPAY_OPS (68 capabilities)  [only if role has no legacy grants]
+-- JUSPAY_OPS (68 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('agent.edc.read'), ('agent.edc.write'), ('agent.frfs.execute'), ('agent.frfs.read'), ('agent.pass.execute'), ('agent.pass.read'), ('agent.pass_org.approve'), ('agent.pass_org.read'), ('agent.pass_org.write'), ('agent.ticket.execute'), ('agent.ticket.read'), ('analytics.ai.execute'), ('analytics.core.read'), ('analytics.incentive.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.sla.read'), ('config.fare_policy.read'), ('config.fare_policy.write'), ('config.firebase.read'), ('config.firebase.write'), ('config.issue.read'), ('config.issue.write'), ('config.knowledge.read'), ('config.registry.read'), ('config.registry.write'), ('config.release.read'), ('config.rewards.read'), ('config.rewards.write'), ('finance.reconciliation.read'), ('finance.report.read'), ('finance.settlement.read'), ('ops.airport_queue.read'), ('ops.airport_queue.write'), ('ops.communication.read'), ('ops.communication.write'), ('ops.customer.read'), ('ops.customer.write'), ('ops.driver.read'), ('ops.driver.write'), ('ops.fleet_owner.read'), ('ops.fleet_owner.write'), ('ops.grievance.read'), ('ops.grievance.write'), ('ops.issue.read'), ('ops.issue.write'), ('ops.membership.read'), ('ops.onboarding.read'), ('ops.onboarding.write'), ('ops.payment.read'), ('ops.payment.write'), ('ops.pii.read'), ('ops.ride.read'), ('ops.ride.write'), ('ops.sos.read'), ('ops.sos.write'), ('ops.subscription.read'), ('ops.subscription.write'), ('ops.training.read'), ('ops.vehicle.read'), ('ops.vehicle.write'), ('ops.volunteer.read'), ('ops.volunteer.write'), ('ops.wallet.read'), ('ops.wallet.write'), ('utility.shortener.execute')) AS c(cap)
-WHERE r.name = 'JUSPAY_OPS'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'JUSPAY_OPS' ON CONFLICT DO NOTHING;
 
--- CUSTOMER_SERVICE (6 capabilities)  [only if role has no legacy grants]
+-- CUSTOMER_SERVICE (6 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('ops.customer.read'), ('ops.ride.read'), ('ops.issue.read'), ('ops.issue.write'), ('ops.payment.read'), ('ops.payment.write')) AS c(cap)
-WHERE r.name = 'CUSTOMER_SERVICE'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'CUSTOMER_SERVICE' ON CONFLICT DO NOTHING;
 
--- NY_DATA_TEAM (5 capabilities)  [only if role has no legacy grants]
+-- NY_DATA_TEAM (5 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read')) AS c(cap)
-WHERE r.name = 'NY_DATA_TEAM'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'NY_DATA_TEAM' ON CONFLICT DO NOTHING;
 
--- NY_MANAGER (9 capabilities)  [only if role has no legacy grants]
+-- NY_MANAGER (9 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read'), ('config.rewards.read'), ('config.rewards.write'), ('ops.membership.read'), ('access.audit.read')) AS c(cap)
-WHERE r.name = 'NY_MANAGER'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'NY_MANAGER' ON CONFLICT DO NOTHING;
 
--- MSIL_ADMIN (4 capabilities)  [only if role has no legacy grants]
+-- MSIL_ADMIN (4 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute')) AS c(cap)
-WHERE r.name = 'MSIL_ADMIN'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'MSIL_ADMIN' ON CONFLICT DO NOTHING;
 
--- ASSOCIATE (5 capabilities)  [only if role has no legacy grants]
+-- ASSOCIATE (5 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.membership.read')) AS c(cap)
-WHERE r.name = 'ASSOCIATE'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'ASSOCIATE' ON CONFLICT DO NOTHING;
 
--- EXECUTIVE (6 capabilities)  [only if role has no legacy grants]
+-- EXECUTIVE (6 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read'), ('ops.membership.read')) AS c(cap)
-WHERE r.name = 'EXECUTIVE'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'EXECUTIVE' ON CONFLICT DO NOTHING;
 
--- CITY_HEAD (9 capabilities)  [only if role has no legacy grants]
+-- CITY_HEAD (9 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read'), ('analytics.performance.read'), ('analytics.public_transport.read'), ('analytics.ai.execute'), ('ops.pii.read'), ('finance.adjustment.write'), ('analytics.incentive.read'), ('config.fare_policy.read'), ('ops.membership.read')) AS c(cap)
-WHERE r.name = 'CITY_HEAD'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'CITY_HEAD' ON CONFLICT DO NOTHING;
 
--- YATRI_SATHI_ADMIN (1 capabilities)  [only if role has no legacy grants]
+-- YATRI_SATHI_ADMIN (1 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('finance.adjustment.write')) AS c(cap)
-WHERE r.name = 'YATRI_SATHI_ADMIN'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'YATRI_SATHI_ADMIN' ON CONFLICT DO NOTHING;
 
--- ANALYTICS (1 capabilities)  [only if role has no legacy grants]
+-- ANALYTICS (1 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.core.read')) AS c(cap)
-WHERE r.name = 'ANALYTICS'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'ANALYTICS' ON CONFLICT DO NOTHING;
 
--- FLEET (15 capabilities)  [only if role has no legacy grants]
+-- FLEET (15 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.earnings.read'), ('fleet.live.read'), ('fleet.onboarding.read'), ('fleet.onboarding.write'), ('fleet.profile.read'), ('fleet.profile.write'), ('analytics.core.read'), ('analytics.performance.read'), ('finance.fleet.read')) AS c(cap)
-WHERE r.name = 'FLEET'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'FLEET' ON CONFLICT DO NOTHING;
 
--- RENTAL_FLEET (16 capabilities)  [only if role has no legacy grants]
+-- RENTAL_FLEET (16 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.earnings.read'), ('fleet.live.read'), ('fleet.onboarding.read'), ('fleet.onboarding.write'), ('fleet.profile.read'), ('fleet.profile.write'), ('analytics.core.read'), ('analytics.performance.read'), ('finance.fleet.read'), ('finance.adjustment.write')) AS c(cap)
-WHERE r.name = 'RENTAL_FLEET'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'RENTAL_FLEET' ON CONFLICT DO NOTHING;
 
--- RENTAL_FLEET_OWNER (1 capabilities)  [only if role has no legacy grants]
+-- RENTAL_FLEET_OWNER (1 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('finance.adjustment.write')) AS c(cap)
-WHERE r.name = 'RENTAL_FLEET_OWNER'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'RENTAL_FLEET_OWNER' ON CONFLICT DO NOTHING;
 
--- DASHBOARD_OPERATOR (8 capabilities)  [only if role has no legacy grants]
+-- DASHBOARD_OPERATOR (8 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('fleet.driver.read'), ('fleet.driver.write'), ('fleet.vehicle.read'), ('fleet.vehicle.write'), ('fleet.trip.read'), ('fleet.trip.write'), ('fleet.live.read'), ('ops.training.read')) AS c(cap)
-WHERE r.name = 'DASHBOARD_OPERATOR'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'DASHBOARD_OPERATOR' ON CONFLICT DO NOTHING;
 
--- OPERATOR (4 capabilities)  [only if role has no legacy grants]
+-- OPERATOR (4 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('fleet.operator.read'), ('fleet.operator.write'), ('fleet.driver.read'), ('fleet.vehicle.read')) AS c(cap)
-WHERE r.name = 'OPERATOR'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'OPERATOR' ON CONFLICT DO NOTHING;
 
--- BOT (2 capabilities)  [only if role has no legacy grants]
+-- BOT (2 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('ops.onboarding.read'), ('ops.onboarding.write')) AS c(cap)
-WHERE r.name = 'BOT'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'BOT' ON CONFLICT DO NOTHING;
 
--- BTFinance (4 capabilities)  [only if role has no legacy grants]
+-- BTFinance (4 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('finance.reconciliation.read'), ('finance.reconciliation.execute'), ('finance.settlement.export'), ('finance.report.read')) AS c(cap)
-WHERE r.name = 'BTFinance'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'BTFinance' ON CONFLICT DO NOTHING;
 
--- FINANCE_ADMIN (5 capabilities)  [only if role has no legacy grants]
+-- FINANCE_ADMIN (5 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('finance.report.read'), ('finance.settlement.read'), ('finance.settlement.export'), ('finance.ledger.read'), ('finance.invoice.read')) AS c(cap)
-WHERE r.name = 'FINANCE_ADMIN'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'FINANCE_ADMIN' ON CONFLICT DO NOTHING;
 
--- CUMTA (4 capabilities)  [only if role has no legacy grants]
+-- CUMTA (4 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.sla.read'), ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
-WHERE r.name = 'CUMTA'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'CUMTA' ON CONFLICT DO NOTHING;
 
--- MTC (3 capabilities)  [only if role has no legacy grants]
+-- MTC (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
-WHERE r.name = 'MTC'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'MTC' ON CONFLICT DO NOTHING;
 
--- CMRL (3 capabilities)  [only if role has no legacy grants]
+-- CMRL (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
-WHERE r.name = 'CMRL'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'CMRL' ON CONFLICT DO NOTHING;
 
--- SUBURBAN (3 capabilities)  [only if role has no legacy grants]
+-- SUBURBAN (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.public_transport.read'), ('finance.settlement.read'), ('transit.device.read')) AS c(cap)
-WHERE r.name = 'SUBURBAN'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'SUBURBAN' ON CONFLICT DO NOTHING;
 
--- MtcFleetOps (14 capabilities)  [only if role has no legacy grants]
+-- MtcFleetOps (14 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('transit.master.read'), ('transit.master.write'), ('transit.waybill.write'), ('transit.stops.read'), ('transit.stops.write'), ('transit.gtfs.read'), ('transit.gtfs.write'), ('transit.fare.read'), ('transit.fare.write'), ('transit.seat_layout.read'), ('transit.seat_layout.write'), ('transit.device.read'), ('transit.device.write'), ('access.audit.read')) AS c(cap)
-WHERE r.name = 'MtcFleetOps'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'MtcFleetOps' ON CONFLICT DO NOTHING;
 
--- MTC OPS (14 capabilities)  [only if role has no legacy grants]
+-- MTC OPS (14 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('transit.master.read'), ('transit.master.write'), ('transit.waybill.write'), ('transit.stops.read'), ('transit.stops.write'), ('transit.gtfs.read'), ('transit.gtfs.write'), ('transit.fare.read'), ('transit.fare.write'), ('transit.seat_layout.read'), ('transit.seat_layout.write'), ('transit.device.read'), ('transit.device.write'), ('access.audit.read')) AS c(cap)
-WHERE r.name = 'MTC OPS'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'MTC OPS' ON CONFLICT DO NOTHING;
 
--- MTC_ADMIN (3 capabilities)  [only if role has no legacy grants]
+-- MTC_ADMIN (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.pass_org.read'), ('agent.pass_org.write'), ('agent.pass_org.approve')) AS c(cap)
-WHERE r.name = 'MTC_ADMIN'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'MTC_ADMIN' ON CONFLICT DO NOTHING;
 
--- CLG_ADMIN (2 capabilities)  [only if role has no legacy grants]
+-- CLG_ADMIN (2 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.pass_org.read'), ('agent.pass_org.write')) AS c(cap)
-WHERE r.name = 'CLG_ADMIN'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'CLG_ADMIN' ON CONFLICT DO NOTHING;
 
--- STUDENT_PASS_DEPOT (2 capabilities)  [only if role has no legacy grants]
+-- STUDENT_PASS_DEPOT (2 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.pass_org.read'), ('agent.pass_org.approve')) AS c(cap)
-WHERE r.name = 'STUDENT_PASS_DEPOT'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'STUDENT_PASS_DEPOT' ON CONFLICT DO NOTHING;
 
--- PT_CONDUCTOR (1 capabilities)  [only if role has no legacy grants]
+-- PT_CONDUCTOR (1 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.pt_stats.read')) AS c(cap)
-WHERE r.name = 'PT_CONDUCTOR'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'PT_CONDUCTOR' ON CONFLICT DO NOTHING;
 
--- PT_DEPOT_MANAGER (1 capabilities)  [only if role has no legacy grants]
+-- PT_DEPOT_MANAGER (1 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.pt_stats.read')) AS c(cap)
-WHERE r.name = 'PT_DEPOT_MANAGER'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'PT_DEPOT_MANAGER' ON CONFLICT DO NOTHING;
 
--- SlaMonitoring (3 capabilities)  [only if role has no legacy grants]
+-- SlaMonitoring (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('analytics.sla.read'), ('ops.grievance.read'), ('ops.grievance.write')) AS c(cap)
-WHERE r.name = 'SlaMonitoring'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'SlaMonitoring' ON CONFLICT DO NOTHING;
 
--- FIREBASE_CONTROL_CENTER (4 capabilities)  [only if role has no legacy grants]
+-- FIREBASE_CONTROL_CENTER (4 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('config.firebase.read'), ('config.firebase.write'), ('city.launch.read'), ('city.launch.write')) AS c(cap)
-WHERE r.name = 'FIREBASE_CONTROL_CENTER'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'FIREBASE_CONTROL_CENTER' ON CONFLICT DO NOTHING;
 
--- IffcoOPS (1 capabilities)  [only if role has no legacy grants]
+-- IffcoOPS (1 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('finance.insurance.read')) AS c(cap)
-WHERE r.name = 'IffcoOPS'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'IffcoOPS' ON CONFLICT DO NOTHING;
 
--- AIRPORT_OPS (9 capabilities)  [only if role has no legacy grants]
+-- AIRPORT_OPS (9 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('ops.airport_queue.read'), ('ops.airport_queue.write'), ('ops.wallet.write'), ('ops.vehicle.read'), ('ops.vehicle.write'), ('ops.driver.write'), ('config.fare_policy.write'), ('utility.shortener.execute'), ('config.knowledge.read')) AS c(cap)
-WHERE r.name = 'AIRPORT_OPS'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'AIRPORT_OPS' ON CONFLICT DO NOTHING;
 
--- AirportAgent (3 capabilities)  [only if role has no legacy grants]
+-- AirportAgent (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('ops.wallet.write')) AS c(cap)
-WHERE r.name = 'AirportAgent'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'AirportAgent' ON CONFLICT DO NOTHING;
 
--- AirportKPAgent (3 capabilities)  [only if role has no legacy grants]
+-- AirportKPAgent (3 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('ops.wallet.write')) AS c(cap)
-WHERE r.name = 'AirportKPAgent'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'AirportKPAgent' ON CONFLICT DO NOTHING;
 
--- AirportKPSupervisor (5 capabilities)  [only if role has no legacy grants]
+-- AirportKPSupervisor (5 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.booking.execute'), ('agent.customer.write'), ('ops.wallet.write'), ('ops.airport_queue.read'), ('ops.airport_queue.write')) AS c(cap)
-WHERE r.name = 'AirportKPSupervisor'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
+WHERE r.name = 'AirportKPSupervisor' ON CONFLICT DO NOTHING;
 
--- TICKET_VALIDATOR (2 capabilities)  [only if role has no legacy grants]
+-- TICKET_VALIDATOR (2 capabilities)
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
 SELECT r.id, c.cap FROM atlas_bpp_dashboard.role r,
      (VALUES ('agent.ticket.read'), ('agent.ticket.execute')) AS c(cap)
-WHERE r.name = 'TICKET_VALIDATOR'
-  AND NOT EXISTS (SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
-                  WHERE am.role_id = r.id
-                    AND am.user_access_type = 'USER_FULL_ACCESS') ON CONFLICT DO NOTHING;
--- Threshold derivation for long-tail roles: a role inherits capability C only
--- if it already holds >= 50%% of C's endpoints. Nothing is withheld by
--- sensitivity — sub-threshold holdings stay reachable via the transitional
--- `capability OR legacy matrix` check at enforcement time (PLAN.md). Run AFTER
--- the curated seed.
+WHERE r.name = 'TICKET_VALIDATOR' ON CONFLICT DO NOTHING;
+-- Mechanical derivation for long-tail roles: a role gets capability C if it
+-- holds >=1 access_matrix row mapping to C. Sensitive capabilities are
+-- excluded (curated-only; see capability-seed.md §4). Run AFTER the curated
+-- seed. The SELECT below it is the widening report for review.
 INSERT INTO atlas_bpp_dashboard.role_capability (role_id, capability_id)
-SELECT held.role_id, held.capability_id
-FROM (
-  SELECT m.role_id, ce.capability_id, count(DISTINCT ce.endpoint_id) AS held_endpoints
-  FROM atlas_bpp_dashboard.access_matrix m
-  JOIN atlas_bpp_dashboard.capability_endpoint ce
-    ON ce.endpoint_id = CASE WHEN m.api_entity = 'SPECIAL_ZONES'
-       THEN 'LEGACY/SPECIAL_ZONES/' || m.user_action_type
-       ELSE m.user_action_type END
-  WHERE m.user_access_type = 'USER_FULL_ACCESS'
-  GROUP BY m.role_id, ce.capability_id
-) held
-JOIN (
-  SELECT capability_id, count(*) AS total_endpoints
-  FROM atlas_bpp_dashboard.capability_endpoint GROUP BY capability_id
-) sized ON sized.capability_id = held.capability_id
-WHERE held.held_endpoints::numeric / sized.total_endpoints >= 0.5
+SELECT DISTINCT m.role_id, ce.capability_id
+FROM atlas_bpp_dashboard.access_matrix m
+JOIN atlas_bpp_dashboard.capability_endpoint ce ON ce.endpoint_id = m.user_action_type
+WHERE m.user_access_type = 'USER_FULL_ACCESS'
+  AND ce.capability_id NOT IN ('access.admin.write', 'access.capability.grant', 'access.merchant.write', 'access.role.write', 'access.user.write', 'config.failover.execute', 'config.fare_policy.export', 'config.scheduler.execute', 'finance.adjustment.write', 'ops.pii.read', 'system.crypto.execute', 'system.query.execute')
 ON CONFLICT DO NOTHING;
 
--- Coverage report: what each role holds vs the capability size. Rows below the
--- threshold did NOT derive and rely on the legacy fallback — they are the
--- worklist for manual curation (highest member counts first).
--- SELECT r.name, held.capability_id, held.held_endpoints, sized.total_endpoints,
---        round(100.0 * held.held_endpoints / sized.total_endpoints) AS pct
--- FROM ( ...held... ) held JOIN ( ...sized... ) sized USING (capability_id)
--- JOIN atlas_bpp_dashboard.role r ON r.id = held.role_id
--- WHERE held.held_endpoints::numeric / sized.total_endpoints < 0.5
--- ORDER BY pct DESC;
+-- Widening report: endpoints a role GAINS via capability granularity
+-- (has the capability, never had the matrix row). Review before Phase 4 flip.
+-- SELECT r.name, ce2.endpoint_id, rc.capability_id
+-- FROM atlas_bpp_dashboard.role_capability rc
+-- JOIN atlas_bpp_dashboard.role r ON r.id = rc.role_id
+-- JOIN atlas_bpp_dashboard.capability_endpoint ce2 ON ce2.capability_id = rc.capability_id
+-- LEFT JOIN atlas_bpp_dashboard.access_matrix m ON m.role_id = rc.role_id
+--        AND m.user_action_type = ce2.endpoint_id AND m.user_access_type = 'USER_FULL_ACCESS'
+-- WHERE m.id IS NULL ORDER BY r.name, rc.capability_id, ce2.endpoint_id;
