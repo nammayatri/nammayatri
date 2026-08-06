@@ -54,6 +54,7 @@ library
       Dashboard.Common.Rewards.SponsorType
       Dashboard.Common.Ride
       Dashboard.Common.RideDebug
+      Dashboard.Common.RSFReconciliation
       Dashboard.Common.SpecialZone
       Domain.Action.Dashboard.AccessMatrix
       Domain.Action.Dashboard.Capability

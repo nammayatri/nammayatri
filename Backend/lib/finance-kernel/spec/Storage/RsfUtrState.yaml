@@ -1,0 +1,32 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+# RSF receiver side: what we last told the collector about a UTR.
+# Written only in Phase 4, after the collector ACKs on_receiver_recon.
+# A row with reportedStatus set means the UTR is closed for stage C (check 5).
+RsfUtrState:
+  tableName: rsf_utr_state
+
+  fields:
+    merchantId: Text
+    utr: Text
+    reportedStatus: Maybe Text
+    reportedDiff: Maybe HighPrecMoney
+    lastReportedMessageId: Maybe Text
+    lastReportedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    merchantId: PrimaryKey
+    utr: PrimaryKey
+
+  sqlType:
+    reportedDiff: numeric(30,2)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
