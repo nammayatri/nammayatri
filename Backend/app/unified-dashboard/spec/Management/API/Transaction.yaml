@@ -1,0 +1,60 @@
+imports:
+  Transaction: Domain.Types.Transaction
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  UserActionType: Domain.Types.AccessMatrix
+  Id: Kernel.Types.Id
+  Text: Data.Text
+  Integer: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  UTCTime: Kernel.Prelude
+  Summary: Kernel.External.Verification.SafetyPortal.Types
+
+module: Transaction
+apiPrefix: "/transaction"
+
+types:
+  TransactionAPIEntity:
+    recordType: Data
+    id: Id Transaction
+    requestor: RequestorAPIEntity
+    merchantId: "Maybe (Id Merchant)"
+    endpoint: UserActionType
+    commonDriverId: "Maybe Text"
+    commonRideId: "Maybe Text"
+    request: "Maybe Text"
+    response: "Maybe Text"
+    responseError: "Maybe Text"
+    createdAt: UTCTime
+
+  RequestorAPIEntity:
+    recordType: Data
+    id: Id Person
+    firstName: Text
+    lastName: Text
+    email: "Maybe Text"
+    mobileNumber: Text
+    mobileCountryCode: Text
+    registeredAt: UTCTime
+    verified: "Maybe Bool"
+
+  ListTransactionResp:
+    recordType: Data
+    list: "[TransactionAPIEntity]"
+    summary: Summary
+
+apis:
+  - GET:
+      endpoint: /list
+      name: GetTransactionList
+      auth: ApiAuthV3
+      query:
+        - searchString: Text
+        - limit: Integer
+        - offset: Integer
+        - requestorId: "Id Person"
+        - driverId: Text
+        - rideId: Text
+        - endpoint: UserActionType
+      response:
+        type: ListTransactionResp

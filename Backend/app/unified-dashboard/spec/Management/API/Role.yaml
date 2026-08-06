@@ -1,0 +1,63 @@
+imports:
+  Role: Domain.Types.Role
+  AccessMatrix: Domain.Types.AccessMatrix
+  ServerName: Domain.Types.AccessMatrix
+  UserActionType: Domain.Types.AccessMatrix
+  Id: Kernel.Types.Id
+  Text: Data.Text
+  Integer: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  Bool: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  Summary: Kernel.External.Verification.SafetyPortal.Types
+  RoleAPIEntity: Domain.Types.Role
+
+module: Role
+apiPrefix: "/role"
+
+types:
+  CreateRoleReq:
+    recordType: Data
+    name: Text
+    description: Text
+    needsBppAccountCreation: Bool
+
+  AssignAccessLevelReq:
+    recordType: Data
+    serverName: ServerName
+    userActionType: UserActionType
+
+  ListRoleResp:
+    recordType: Data
+    list: "[RoleAPIEntity]"
+    summary: Summary
+
+apis:
+  - POST:
+      endpoint: /create
+      name: PostRoleCreate
+      auth: ApiAuthV3
+      request:
+        type: CreateRoleReq
+      response:
+        type: RoleAPIEntity
+  - POST:
+      endpoint: /{roleId}/assignAccessLevel
+      name: PostRoleAssignAccessLevel
+      auth: ApiAuthV3
+      params:
+        roleId: Id Role
+      request:
+        type: AssignAccessLevelReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /list
+      name: GetRoleList
+      auth: ApiAuthV3
+      query:
+        - searchString: Text
+        - limit: Integer
+        - offset: Integer
+      response:
+        type: ListRoleResp

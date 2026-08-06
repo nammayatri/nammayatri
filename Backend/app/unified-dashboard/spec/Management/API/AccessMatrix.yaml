@@ -1,0 +1,51 @@
+imports:
+  Role: Domain.Types.Role
+  AccessMatrix: Domain.Types.AccessMatrix
+  Merchant: Domain.Types.Merchant
+  City: Kernel.Types.Beckn.Context
+  Id: Kernel.Types.Id
+  ShortId: Kernel.Types.Id
+  Text: Data.Text
+  Integer: Kernel.Prelude
+  Maybe: Kernel.Prelude
+  ServerName: Domain.Types.AccessMatrix
+  UserActionType: Domain.Types.AccessMatrix
+  RoleAPIEntity: Domain.Types.Role
+
+module: AccessMatrix
+apiPrefix: ""
+
+types:
+  AccessMatrixAPIEntity:
+    recordType: Data
+    accessMatrix: "[AccessMatrixRowAPIEntity]"
+  AccessMatrixRowAPIEntity:
+    recordType: Data
+    role: RoleAPIEntity
+    accessMatrixRow: "[AccessMatrixItemAPIEntity]"
+  AccessMatrixItemAPIEntity:
+    recordType: Data
+    serverName: Maybe ServerName
+    userActionType: UserActionType
+  MerchantCityList:
+    recordType: Data
+    merchantId: ShortId Merchant
+    cityList: "[City]"
+
+apis:
+  - GET: # Get access matrix (with optional roleId filter)
+      endpoint: /accessMatrix
+      name: GetAccessMatrix
+      auth: ApiAuthV3
+      query:
+        - limit: Integer
+        - offset: Integer
+        - roleId: Id Role
+      response:
+        type: AccessMatrixAPIEntity
+  - GET: # Get merchant with city list
+      endpoint: /accessMatrix/merchantWithCityList
+      name: GetMerchantWithCityList
+      auth: ApiAuthV3
+      response:
+        type: "[MerchantCityList]"

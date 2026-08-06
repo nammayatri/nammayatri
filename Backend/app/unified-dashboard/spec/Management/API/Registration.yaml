@@ -1,0 +1,47 @@
+imports:
+  RegistrationToken: Domain.Types.RegistrationToken
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  City: Kernel.Types.Beckn.Context
+  Id: Kernel.Types.Id
+  ShortId: Kernel.Types.Id
+  Text: Data.Text
+  Maybe: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+
+module: Registration
+apiPrefix: ""
+
+types:
+  LoginReq:
+    - email: Maybe Text
+    - mobileNumber: Maybe Text
+    - mobileCountryCode: Maybe Text
+    - password: Text
+  LoginRes:
+    - token: Text
+    - city: City
+    - merchantId: ShortId Merchant
+  VerifyOtpReq:
+    - mobileNumber: Text
+    - mobileCountryCode: Text
+    - otp: Text
+
+apis:
+  - POST: # Login API (supports both email and phone)
+      endpoint: /user/login
+      name: PostUserLogin
+      auth: NoAuth
+      request:
+        type: LoginReq
+      response:
+        type: LoginRes
+  - POST: # Verify OTP and login
+      endpoint: /user/login/verifyOtp
+      name: PostUserLoginVerifyOtp
+      auth: NoAuth
+      request:
+        type: VerifyOtpReq
+      response:
+        type: LoginRes
+

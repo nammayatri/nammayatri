@@ -1,0 +1,49 @@
+# Role entity - without dashboardAccessType (access controlled via AccessMatrix)
+
+imports:
+  UTCTime: Kernel.Prelude
+  Id: Kernel.Types.Id
+  Text: Data.Text
+  Bool: Kernel.Prelude
+
+Role:
+  tableName: role
+  fields:
+    id: Id Role
+    name: Text
+    description: Text
+    needsBppAccountCreation: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+
+  constraints:
+    id: PrimaryKey
+
+  types:
+    RoleAPIEntity:
+      recordType: Data
+      id: Id Role
+      name: Text
+      description: Text
+      needsBppAccountCreation: Bool
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByName:
+      kvFunction: findOneWithKV
+      where: name
+    findAllByLimitOffset:
+      kvFunction: findAllWithOptionsKV
+      where: id
+      orderBy: name
+      limit: limit
+      offset: offset
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

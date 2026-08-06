@@ -183,6 +183,7 @@ in
           DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
           DRIVER_APP_INTERNAL_PORT = toString ports.dynamic-offer-driver-app-internal;
           BECKN_GATEWAY_PORT = toString ports.beckn-gateway;
+          UNIFIED_DASHBOARD_PORT = toString ports.unified-dashboard;
           PROVIDER_DASHBOARD_PORT = toString ports.provider-dashboard;
           RIDER_DASHBOARD_PORT = toString ports.rider-dashboard;
         } // lib.optionalAttrs pkgs.stdenv.isLinux {
@@ -1639,6 +1640,7 @@ in
                     ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
                     ../../dev/sql-seed/rider-dashboard-seed.sql
                     ../../dev/sql-seed/provider-dashboard-seed.sql
+                    ../../dev/sql-seed/unified-dashboard-seed.sql
                     ../../dev/sql-seed/safety-dashboard-seed.sql
                     ../../dev/sql-seed/special-zone-seed.sql
                     ../../dev/sql-seed/kaal-chakra-seed.sql
