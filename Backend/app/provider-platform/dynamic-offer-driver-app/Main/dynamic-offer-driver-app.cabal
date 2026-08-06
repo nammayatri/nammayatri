@@ -152,6 +152,8 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.MSIL.OnSearch
+      Beckn.OnDemand.Transformer.MSIL.Search
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.OnUpdate
       Beckn.OnDemand.Transformer.Search
