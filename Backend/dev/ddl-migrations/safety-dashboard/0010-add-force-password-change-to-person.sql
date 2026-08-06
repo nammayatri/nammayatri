@@ -1,0 +1,2 @@
+ALTER TABLE atlas_safety_dashboard.person
+ADD COLUMN force_password_change boolean;

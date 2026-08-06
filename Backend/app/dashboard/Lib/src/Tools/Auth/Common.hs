@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry, checkForcedPasswordChange) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -272,3 +272,14 @@ checkPasswordExpiry person = do
           expiryLimit = fromIntegral days * 86400
       when (secondsSinceUpdate > expiryLimit) $
         throwError $ InvalidRequest "Your password has expired. Please reset or contact admin."
+
+-- | An admin-assigned password is a one-shot credential: it may be exchanged for a new password
+-- via changePasswordAfterExpiry, but never for a session. Enforced independently of
+-- passwordExpiryDays so it holds even when password expiry is switched off.
+checkForcedPasswordChange ::
+  (BeamFlow m r) =>
+  DP.Person ->
+  m ()
+checkForcedPasswordChange person =
+  when (person.forcePasswordChange == Just True) $
+    throwError $ InvalidRequest "Your password was reset by an administrator. Please set a new password before logging in."
