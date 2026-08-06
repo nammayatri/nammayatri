@@ -58,10 +58,8 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName res.specialLocationSupportNumber res.fareSettlementType) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName res.specialLocationSupportNumber res.fareSettlementType) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-      -- Each pricing carries its own already-decided isScheduled (from the Estimate/Quote
-      -- row itself, set once at search time) rather than re-deriving it here from res.
-      allCategoryCodes = Data.List.nub $ map (\p -> BecknV2.OnDemand.Utils.Common.scheduledTripCategoryToCategoryCode p.isScheduled p.tripCategory) pricings
-      providerCategories_ = Just $ map BecknV2.OnDemand.Utils.Common.mkCategoryFromCode allCategoryCodes
+      allTripCategories = Data.List.nubBy (\a b -> BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode a == BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode b) $ map (.tripCategory) pricings
+      providerCategories_ = Just $ map BecknV2.OnDemand.Utils.Common.mkCategory allTripCategories
   BecknV2.OnDemand.Types.Provider {providerCategories = providerCategories_, providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
@@ -84,10 +82,10 @@ tfProviderFulfillments res pricing = do
       fulfillmentCustomer_ = Nothing
       fulfillmentId_ = Just pricing.pricingId
       fulfillmentState_ = Nothing
-      -- ONDC v2.1.0: include a pickup time window duration when this fulfillment is for
-      -- a deferred (scheduled) search, so the BAP knows to expect a pickup window rather
-      -- than an immediate assignment.
-      mbScheduledPickupDuration = if pricing.isScheduled then Just (BUtils.formatTimeDifference res.transporterConfig.scheduleRideBufferTime) else Nothing
+      -- ONDC v2.1.0: For scheduled rides (startTime > now), include pickup time window
+      -- duration so the BAP knows this is a scheduled fulfillment with a pickup window.
+      isScheduled = res.startTime > res.now
+      mbScheduledPickupDuration = if isScheduled then Just (BUtils.formatTimeDifference res.transporterConfig.scheduleRideBufferTime) else Nothing
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops res.fromLocation res.toLocation res.stops res.startTime mbScheduledPickupDuration
       fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned pricing.isAirConditioned (pricing.fareParams >>= (.driverCancellationNotAllowed))
       fulfillmentType_ = Just pricing.fulfillmentType
@@ -103,7 +101,7 @@ tfProviderItems res isValueAddNP pricing = do
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
-      itemCategoryIds_ = Just [BecknV2.OnDemand.Utils.Common.scheduledTripCategoryToCategoryCode pricing.isScheduled pricing.tripCategory]
+      itemCategoryIds_ = Just [BecknV2.OnDemand.Utils.Common.tripCategoryToCategoryCode pricing.tripCategory]
   let itemAddOns_ = Beckn.OnDemand.Utils.OnSearch.mkRentalAddOns pricing
   BecknV2.OnDemand.Types.Item {itemAddOns = itemAddOns_, itemCategoryIds = itemCategoryIds_, itemCancellationTerms = Just Beckn.OnDemand.Utils.Common.mkItemCancellationTerms, itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 

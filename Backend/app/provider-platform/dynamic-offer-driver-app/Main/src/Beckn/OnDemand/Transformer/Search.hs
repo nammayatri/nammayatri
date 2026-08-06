@@ -89,7 +89,6 @@ buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualB
       userBackendAppVersion = Beckn.OnDemand.Utils.Search.buildUserBackendAppVersion req
       emailDomain_ = Beckn.OnDemand.Utils.Search.buildEmailDomain req
       businessEmailDomain_ = Beckn.OnDemand.Utils.Search.buildBusinessEmailDomain req
-      isExplicitlyScheduled_ = Beckn.OnDemand.Utils.Search.isScheduledCategoryCode (Beckn.OnDemand.Utils.Search.getCategoryCode req)
   userBundleVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserBundleVersion req)
   userSdkVersion <- mapM Kernel.Utils.Version.readVersion (Beckn.OnDemand.Utils.Search.buildUserSdkVersion req)
   riderPreferredOption <- case Beckn.OnDemand.Utils.Search.buildRiderPreferredOption req of
@@ -134,7 +133,6 @@ buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualB
         dropLocation = dropLocation_,
         isReallocationEnabled = isReallocationEnabled_,
         fareParametersInRateCard = fareParametersInRateCard_,
-        isExplicitlyScheduled = isExplicitlyScheduled_,
         messageId = messageId_,
         pickupAddress = pickupAddress_,
         pickupLocation = pickupLocation_,

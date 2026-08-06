@@ -173,10 +173,6 @@ data DSearchReq = DSearchReq
     userSdkVersion :: Maybe Version,
     userBackendAppVersion :: Maybe Text,
     riderPreferredOption :: DRPO.RiderPreferredOption,
-    -- | True when the incoming search's own category explicitly said SCHEDULED_TRIP/
-    -- SCHEDULED_RENTAL (ONDC v2.1.0), independent of the pickupTime-vs-now/buffer check.
-    -- See Beckn.OnDemand.Utils.Search.isScheduledCategoryCode.
-    isExplicitlyScheduled :: Bool,
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
     -- | Set only by the internal sync_search endpoint when the BAP is pricing a
@@ -1036,8 +1032,7 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
-        if maybe True not dsReq.isMultimodalSearch
-          && (dsReq.isExplicitlyScheduled || tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime)
+        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
           else (now, False)
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
