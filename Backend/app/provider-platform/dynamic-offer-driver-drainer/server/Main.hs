@@ -63,15 +63,20 @@ main = do
           threadPerPodCount <- Env.getThreadPerPodCount
           let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool appCfg.esqDBCfg
           R.runFlow flowRt (runReaderT DBSync.fetchAndSetKvConfigs environment)
-          spawnDrainerThread threadPerPodCount flowRt environment
-          R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
+          let totalThreads = max 2 (threadPerPodCount + 1)
+              criticalThreads = (totalThreads + 1) `div` 2
+              normalThreads = totalThreads - criticalThreads
+          spawnDrainerThread criticalThreads True flowRt environment
+          spawnDrainerThread (normalThreads - 1) False flowRt environment
+          R.runFlow flowRt (runReaderT (DBSync.startDBSync False) environment)
       )
 
-spawnDrainerThread :: Int -> R.FlowRuntime -> TDB.Env -> IO ()
-spawnDrainerThread 0 _ _ = pure ()
-spawnDrainerThread count flowRt env = do
-  void . forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)
-  spawnDrainerThread (count -1) flowRt env
+spawnDrainerThread :: Int -> Bool -> R.FlowRuntime -> TDB.Env -> IO ()
+spawnDrainerThread count isCritical flowRt env
+  | count <= 0 = pure ()
+  | otherwise = do
+    void . forkIO $ R.runFlow flowRt (runReaderT (DBSync.startDBSync isCritical) env)
+    spawnDrainerThread (count -1) isCritical flowRt env
 
 getConnectionString :: EsqDBConfig -> ByteString
 getConnectionString dbConfig =
