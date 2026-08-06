@@ -56,16 +56,26 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
   let (activeRequests, acceptedRequests) = partition (\request -> request.status == Domain.Types.SpecialZoneQueueRequest.Active) allReqs
   -- Lazy-expire Active requests past validTill
   validActiveRequests <- collectValidActive now activeRequests
+  -- Fetch driver location once; reused for pickup-zone check and skip-count below.
+  mbDriverLoc <- LTSFlow.driversLocation [personId]
+  let mbDriverLatLon = case mbDriverLoc of
+        (loc : _) -> Just (LatLong loc.lat loc.lon)
+        [] -> Nothing
   -- Accepted requests carry an arrivalDeadlineTime (stamped at Accept time).
-  -- If it's in the past, fire the (lock-guarded, idempotent) arrival check in
-  -- the background and drop the row from the response — matches what the
-  -- scheduled CheckPickupZoneArrival job would do, but eagerly so the driver
-  -- UI stays in sync without waiting for the job to fire.
+  -- If the deadline has passed, check whether the driver is still inside the
+  -- pickup-zone polygon (in-memory cache, free) before deciding what to do:
+  --   • Still in zone → keep in response; do not expire.
+  --   • Left the zone → fire arrival check in background to expire; drop from response.
   let isStaleAccepted r = case r.arrivalDeadlineTime of
         Just deadline -> deadline < now
         Nothing -> False
       (staleAccepted, freshAccepted) = partition isStaleAccepted acceptedRequests
-  forM_ staleAccepted $ \req ->
+  staleZoneChecked <- forM staleAccepted $ \req -> do
+    inZone <- isDriverInGatePickupZone mbDriverLatLon req.gateId
+    pure (req, inZone)
+  let staleInZone = map fst $ filter snd staleZoneChecked
+      staleLeftZone = map fst $ filter (not . snd) staleZoneChecked
+  forM_ staleLeftZone $ \req ->
     fork ("specialZoneArrivalCheck-" <> req.id.getId) $
       ArrivalCheck.runArrivalCheckForRequest
         req.id
@@ -75,10 +85,8 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
         req.vehicleType
         req.merchantId
         req.merchantOperatingCityId
-  acceptedRes <- mapM enrichRes freshAccepted
+  acceptedRes <- mapM enrichRes (freshAccepted ++ staleInZone)
   let responseRequests = validActiveRequests ++ acceptedRes
-  -- Get skip count from driver's current location's special location
-  mbDriverLoc <- LTSFlow.driversLocation [personId]
   mbSpecialLoc <- case mbDriverLoc of
     (loc : _) -> LQSL.findSpecialLocationByLatLongFull (LatLong loc.lat loc.lon)
     [] -> pure Nothing
@@ -95,6 +103,16 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
         maxSkipsBeforeQueueRemoval = maxSkips
       }
   where
+    -- Returns True if the driver is inside the pickup-zone polygon for the given gate.
+    -- Uses an in-memory cached polygon list — no DB or Redis hit.
+    -- Defaults to True when location is unavailable so we never wrongly expire.
+    isDriverInGatePickupZone Nothing _ = pure True
+    isDriverInGatePickupZone (Just driverLatLon) reqGateId = do
+      mbGateCheck <- QGI.findGateInfoIfDriverInsideGatePickupZone driverLatLon
+      pure $ case mbGateCheck of
+        Just g -> g.id == Kernel.Types.Id.Id reqGateId
+        Nothing -> False
+
     collectValidActive _ [] = pure []
     collectValidActive now (req : rest) =
       if req.validTill < now
