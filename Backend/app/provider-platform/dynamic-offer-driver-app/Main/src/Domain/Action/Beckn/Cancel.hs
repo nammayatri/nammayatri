@@ -26,6 +26,7 @@ where
 
 -- import Data.Aeson as A
 import Data.Maybe
+import qualified Data.Text as T
 import Domain.Action.UI.Ride.CancelRide.Internal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -101,7 +102,9 @@ data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
     userReallocationEnabled :: Maybe Bool,
-    cancellationReason :: Maybe Text
+    cancellationReason :: Maybe Text,
+    ondcCancellationReasonId :: Maybe Text,
+    cancellationReasonLongDesc :: Maybe Text
   }
   deriving (Show)
 
@@ -266,7 +269,20 @@ cancel req merchant booking mbActiveSearchTry = do
           Nothing -> pure Nothing
         return (isReallocated, cancelCharges, updatedRide)
   where
+    buildAdditionalInfo =
+      case catMaybes
+        [ ("ondcReasonId=" <>) <$> req.ondcCancellationReasonId,
+          ("shortDesc=" <>) <$> req.cancellationReason,
+          ("longDesc=" <>) <$> req.cancellationReasonLongDesc
+        ] of
+        [] -> Nothing
+        parts -> Just $ T.intercalate "; " parts
+
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
+      when (isNothing req.cancellationReason && isNothing req.ondcCancellationReasonId) $
+        logError $
+          "No cancellation reason received for bookingId-" <> req.bookingId.getId
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
@@ -275,11 +291,14 @@ cancel req merchant booking mbActiveSearchTry = do
             source = DBCR.ByUser,
             reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
             driverId = (.driverId) <$> mbRide,
-            additionalInfo = Nothing,
+            additionalInfo = buildAdditionalInfo,
+            ondcCancellationReasonId = req.ondcCancellationReasonId,
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
             merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now,
             ..
           }
 

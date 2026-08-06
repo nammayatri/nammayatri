@@ -280,6 +280,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
     buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
       let CancelRideReq {..} = req
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = ride.bookingId,
@@ -288,9 +289,12 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
             source = source,
             reasonCode = Just reasonCode,
             driverId = mbDriverId,
+            ondcCancellationReasonId = Nothing,
             driverCancellationLocation = currentDriverLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = ride.distanceUnit,
             merchantOperatingCityId = Just ride.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now,
             ..
           }

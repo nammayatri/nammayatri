@@ -314,6 +314,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           && (driverHasNotArrived || (scheduleReallocationAllowed && booking.startTime > now))
 
     buildBookingCancellationReason newBooking = do
+      cancelledAt <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
           { bookingId = newBooking.id,
@@ -323,10 +324,13 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             reasonCode = Nothing,
             driverId = Nothing,
             additionalInfo = Just "Reallocation Failed",
+            ondcCancellationReasonId = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
             distanceUnit = newBooking.distanceUnit,
             merchantOperatingCityId = Just newBooking.merchantOperatingCityId,
+            createdAt = Just cancelledAt,
+            updatedAt = Just cancelledAt,
             ..
           }
 
