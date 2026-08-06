@@ -5,6 +5,7 @@ module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Domain.Action.UI.TransitOperator.Validation (preprocessUpsertBody, preprocessUpsertBodyAtIdx)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
@@ -195,27 +196,32 @@ fanOutWaybillRefresh baseUrl gtfsId waybillNo = do
         -- Batch-load the riders up front so the per-booking notification below needs no query in the loop.
         persons <- QP.findAllByIds (map (.riderId) bookings)
         let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
-        forM_ bookings $ \booking -> do
-          let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
-          eRefresh <- withTryCatch ("fanOutWaybillRefresh:apply:" <> booking.id.getId) $ JMU.applyWaybillMetadataToTicket booking mbJourneyLeg meta
-          case eRefresh of
-            Left err -> logError $ "fanOutWaybillRefresh: apply failed for booking " <> booking.id.getId <> ": " <> show err
-            Right refreshInfo ->
-              -- Notify only when the driver and/or the assigned bus actually changed. The notification
-              -- (FCM push + external WhatsApp) is slow and best-effort, so it is forked out of the
-              -- critical, synchronous refresh path above.
-              when (refreshInfo.driverChanged || refreshInfo.busChanged) $
-                whenJust (Map.lookup booking.riderId personMap) $ \person -> do
-                  let vehicleNo = fromMaybe "" refreshInfo.finalBoardedBusNumber
-                      -- Label the trip as "<fromStop> - <toStop>" (stop names, falling back to codes) instead
-                      -- of the raw route name.
-                      routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
-                      mbJourneyId = (.journeyId) <$> mbJourneyLeg
-                  fork ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ do
-                    eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged
-                    case eNotify of
-                      Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
-                      Right _ -> pure ()
+        foldM_
+          ( \notified booking -> do
+              let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
+              eRefresh <- withTryCatch ("fanOutWaybillRefresh:apply:" <> booking.id.getId) $ JMU.applyWaybillMetadataToTicket booking mbJourneyLeg meta
+              case eRefresh of
+                Left err -> do
+                  logError $ "fanOutWaybillRefresh: apply failed for booking " <> booking.id.getId <> ": " <> show err
+                  pure notified
+                Right refreshInfo
+                  | (refreshInfo.driverChanged || refreshInfo.busChanged) && not (Set.member booking.riderId notified) -> do
+                    whenJust (Map.lookup booking.riderId personMap) $ \person -> do
+                      let vehicleNo = fromMaybe "" refreshInfo.finalBoardedBusNumber
+                          -- Label the trip as "<fromStop> - <toStop>" (stop names, falling back to codes) instead
+                          -- of the raw route name.
+                          routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
+                          mbJourneyId = (.journeyId) <$> mbJourneyLeg
+                      fork ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ do
+                        eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged
+                        case eNotify of
+                          Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
+                          Right _ -> pure ()
+                    pure (Set.insert booking.riderId notified)
+                  | otherwise -> pure notified
+          )
+          Set.empty
+          bookings
 
 transitOperatorUpdateWaybillTabletUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillTabletReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillTabletUtil merchantShortId city vehicleCategory req = do
