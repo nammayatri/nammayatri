@@ -523,7 +523,8 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
-          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles
+          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
+          adminEmailDomains = baseMerchant.adminEmailDomains
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes

@@ -287,7 +287,8 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           hasFleetMemberHierarchy = baseMerchant.hasFleetMemberHierarchy,
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
-          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles
+          trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
+          adminEmailDomains = baseMerchant.adminEmailDomains
         }
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)

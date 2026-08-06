@@ -146,7 +146,8 @@ buildMerchant req = do
         hasFleetMemberHierarchy = Just True,
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
-        trackLoginLogoutForRoles = []
+        trackLoginLogoutForRoles = [],
+        adminEmailDomains = []
       }
 
 changeMerchantEnableState ::
@@ -233,6 +234,7 @@ buildPersonCreateReq req role = do
         rejectedAt = Nothing,
         dashboardType = fromMaybe SP.DEFAULT_DASHBOARD req.dashboardType,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
