@@ -225,30 +225,6 @@ mkCategory tc =
       categoryId = Just (tripCategoryToCategoryCode tc)
     }
 
--- | Same as tripCategoryToCategoryCode, but upgrades ON_DEMAND_TRIP/ON_DEMAND_RENTAL to
--- their ONDC v2.1.0 SCHEDULED_TRIP/SCHEDULED_RENTAL counterparts when the search itself
--- was scheduled far enough ahead that driver allocation gets deferred rather than run now.
-scheduledTripCategoryToCategoryCode :: Bool -> TripCategory -> Text
-scheduledTripCategoryToCategoryCode isScheduled tc =
-  case (isScheduled, tripCategoryToCategoryCode tc) of
-    (True, "ON_DEMAND_TRIP") -> "SCHEDULED_TRIP" -- Added for Nammayatri due to backward compatibility
-    (True, "ON_DEMAND_RENTAL") -> "SCHEDULED_RENTAL" -- Added for Nammayatri due to backward compatibility
-    (_, code) -> code
-
-mkCategoryFromCode :: Text -> Spec.Category
-mkCategoryFromCode code =
-  Spec.Category
-    { categoryDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorLongDesc = Nothing,
-              descriptorCode = Just code,
-              descriptorName = Just code,
-              descriptorShortDesc = Nothing
-            },
-      categoryId = Just code
-    }
-
 -- TODO :: To be removed after released ---- ENDS HERE
 -- On-us Domain-tripCategory -- TODO :: TO BE UNCOMMENTED AFTER RELEASE
 -- tripCategory -> show tripCategory
