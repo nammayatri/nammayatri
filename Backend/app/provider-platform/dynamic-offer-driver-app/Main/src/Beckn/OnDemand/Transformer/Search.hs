@@ -148,6 +148,7 @@ buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualB
         toSpecialLocationId = Id <$> toSpecialLocationId_,
         emailDomain = emailDomain_,
         businessEmailDomain = businessEmailDomain_,
+        isExplicitlyScheduled = Nothing, -- only the MSIL layer (Beckn.OnDemand.Transformer.MSIL.Search.msilParser) sets this
         -- The Beckn path never carries a shadow search; only the internal sync_search
         -- endpoint sets this, after building the request.
         isShadowSearch = False,

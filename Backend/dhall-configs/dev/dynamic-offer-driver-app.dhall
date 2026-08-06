@@ -460,6 +460,11 @@ let driverFleetLocationListAPIRateLimitOptions =
 let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
 
+-- Merchant shortIds (Merchant.shortId) piloting the ONDC v2.1.0 scheduled-ride category
+-- signal (SCHEDULED_TRIP/SCHEDULED_RENTAL). Add the real MSIL merchant shortId here per
+-- environment; every other merchant keeps today's behaviour unchanged.
+let scheduledCategorySignalMerchantIds = [] : List Text
+
 let bapHostRedirectMap =
       [ { mapKey = "staging.localhost"
         , mapValue = Some "http://localhost:8010"
@@ -605,6 +610,7 @@ in  { esqDBCfg
     , inMemConfig
     , driverFleetLocationListAPIRateLimitOptions
     , noSignatureSubscribers
+    , scheduledCategorySignalMerchantIds
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
     , emailServiceConfig

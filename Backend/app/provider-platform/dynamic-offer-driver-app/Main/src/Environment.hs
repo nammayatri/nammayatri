@@ -192,6 +192,10 @@ data AppCfg = AppCfg
     inMemConfig :: KTC.InMemConfig,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
+    -- | Merchant shortIds (Merchant.shortId) piloting the ONDC v2.1.0 scheduled-ride
+    -- category signal (SCHEDULED_TRIP/SCHEDULED_RENTAL). Empty for everyone else, who
+    -- keep today's behaviour unchanged. See Beckn.OnDemand.Transformer.MSIL.*.
+    scheduledCategorySignalMerchantIds :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     ttenTokenCacheExpiry :: Seconds,
@@ -325,6 +329,7 @@ data AppEnv = AppEnv
     url :: Maybe Text,
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
+    scheduledCategorySignalMerchantIds :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
