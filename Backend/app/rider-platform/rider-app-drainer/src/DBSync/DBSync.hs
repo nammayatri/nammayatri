@@ -230,8 +230,8 @@ process dbStreamKey count = do
           pure cnt
         Right cnt -> pure cnt
 
-startDBSync :: Flow ()
-startDBSync = do
+startDBSync :: Bool -> Flow ()
+startDBSync isCritical = do
   sessionId <- EL.runIO genSessionId
   EL.setLoggerContext "session-id" (DTE.decodeUtf8 sessionId)
   readinessFlag <- EL.runIO newEmptyMVar
@@ -249,10 +249,11 @@ startDBSync = do
   EL.logInfo ("Stream read count: " :: Text) (show $ _streamReadCount syncConfig)
 
   dbSyncStreamEnv <- EL.runIO Env.getDBSyncStream
-  let dbSyncStream =
+  let dbSyncStream' =
         if dbSyncStreamEnv == ""
           then C.ecRedisDBStream
           else dbSyncStreamEnv
+      dbSyncStream = if isCritical then dbSyncStream' <> "-critical" else dbSyncStream'
   stateRef <-
     EL.runIO $
       newIORef $
