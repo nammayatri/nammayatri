@@ -58,6 +58,7 @@ updateByPrimaryKey (Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest
       Se.Set Beam.triggerSource triggerSource,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleName vehicleName,
       Se.Set Beam.vehicleType vehicleType
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

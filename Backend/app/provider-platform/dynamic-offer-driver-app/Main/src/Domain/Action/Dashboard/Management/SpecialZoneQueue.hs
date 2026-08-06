@@ -77,6 +77,7 @@ postSpecialZoneQueueTriggerNotify merchantShortId opCity req = do
       { triggerRequestId = triggerRequestId,
         gateId = req.gateId,
         vehicleType = req.vehicleType,
+        vehicleName = req.vehicleName,
         driversToNotify = req.driversToNotify,
         forceNotifyDriverIds = req.forceNotifyDriverIds,
         isDemandHigh = req.isDemandHigh,

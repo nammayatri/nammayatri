@@ -815,7 +815,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> " toNotify="
                 <> show (min needed (length eligibleNearGate))
             -- App-driven demand notify: no dashboard trigger batch id.
-            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant mbServiceTier cooldown mbTriggerSource Nothing Nothing (take needed eligibleNearGate)
+            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant Nothing mbServiceTier cooldown mbTriggerSource Nothing Nothing (take needed eligibleNearGate)
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -836,13 +836,14 @@ forceNotifyDriverDemand ::
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
   DGI.GateInfo ->
-  Text -> -- vehicleType
+  Text -> -- vehicleType (internal queue key)
+  Maybe Text -> -- vehicleName (display name sent to driver; falls back to vehicleType if absent)
   Int -> -- number of drivers to notify
   Maybe [Id DP.Person] -> -- optional priority driver IDs to notify first
   Maybe Bool -> -- isDemandHigh flag (dashboard-supplied, surfaced to driver app)
   Maybe Text -> -- triggerRequestId: dashboard trigger batch id stamped on every created row
   m Int -- returns count of drivers actually notified
-forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds mbIsDemandHigh mbTriggerRequestId = do
+forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType mbVehicleName needed mbPriorityDriverIds mbIsDemandHigh mbTriggerRequestId = do
   let specialLocationId = gate.specialLocationId.getId
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
@@ -863,7 +864,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       pure 0
     else do
       eligiblePriorityNearGate <- filterByGateProximity merchantId gate priorityVariantMap eligiblePriority
-      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId eligiblePriorityNearGate
+      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbVehicleName mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId eligiblePriorityNearGate
       let remaining = max 0 (needed - priorityCount)
       -- Fill remaining from LTS queue
       queueCount <-
@@ -875,7 +876,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
                 pure $ sortOn (.queuePosition) queueResp.drivers
             let queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
             eligibleNearGate <- filterInBatches 50 remaining specialLocationId vehicleType gateId gate.enableQueueFilter merchantId gate queueDriverIds
-            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId (take remaining eligibleNearGate)
+            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbVehicleName mbServiceTier cooldown triggerSource mbIsDemandHigh mbTriggerRequestId (take remaining eligibleNearGate)
           else pure 0
       pure (priorityCount + queueCount)
 
@@ -895,7 +896,8 @@ notifyDrivers ::
   Id DM.Merchant ->
   DGI.GateInfo ->
   Text -> -- specialLocationId
-  Text -> -- vehicleType
+  Text -> -- vehicleType (internal queue/Redis key)
+  Maybe Text -> -- vehicleName (display name sent to driver; falls back to vehicleType if absent)
   Maybe DVST.ServiceTierType -> -- service tier for airport per-km fare lookup; Nothing skips fare calc
   Int -> -- cooldown in seconds
   Maybe DSZQR.TriggerSource -> -- trigger source for audit (App | Dashboard)
@@ -903,8 +905,8 @@ notifyDrivers ::
   Maybe Text -> -- triggerRequestId: dashboard trigger batch id stamped on every row (Nothing for App-driven)
   [Id DP.Person] -> -- drivers to notify
   m Int
-notifyDrivers _ _ _ _ _ _ _ _ _ _ [] = pure 0
-notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh mbTriggerRequestId driverIds = do
+notifyDrivers _ _ _ _ _ _ _ _ _ _ _ [] = pure 0
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbVehicleName mbServiceTier cooldown mbTriggerSource mbIsDemandHigh mbTriggerRequestId driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
@@ -947,6 +949,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
               gateName = gate.name,
               specialLocationName = specialLocationName,
               vehicleType = vehicleType,
+              vehicleName = mbVehicleName,
               arrivalDeadlineTime = Nothing,
               triggerSource = mbTriggerSource,
               triggerRequestId = mbTriggerRequestId,
@@ -991,7 +994,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
               specialLocationName = specialLocationName,
               specialLocationId = specialLocationId,
               gateId = gateId,
-              vehicleType = vehicleType,
+              vehicleType = fromMaybe vehicleType mbVehicleName,
               validTill = validTill,
               notificationDuration = notificationDuration,
               notificationValidTill = notificationValidTill,

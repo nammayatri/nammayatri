@@ -28,6 +28,7 @@ data SpecialZoneQueueRequestT f = SpecialZoneQueueRequestT
     triggerSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.TriggerSource),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleType :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)
