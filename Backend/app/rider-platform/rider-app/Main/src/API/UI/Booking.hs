@@ -19,6 +19,7 @@ import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PassType
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -52,6 +53,7 @@ type API =
              :> QueryParam "fromDate" Integer
              :> QueryParam "toDate" Integer
              :> QueryParams "rideStatus" SRB.BookingStatus
+              :> QueryParam "merchantOperatingCityId" (Id DMOC.MerchantOperatingCity)
              :> QueryParam "dontNeedFareBreakup" Bool
              :> Get '[JSON] DBooking.BookingListRes
            :<|> "listV2"
@@ -147,8 +149,8 @@ editLocationForBooking bookingId (personId, merchantId) req = withFlowHandlerAPI
 getBookingFareBreakup :: (Id Person.Person, Id Merchant.Merchant) -> Text -> Maybe DFareBreakup.FareBreakupEntity -> FlowHandler DFareBreakup.BookingFareBreakupRes
 getBookingFareBreakup (personId, merchantId) entityId mbEntityType = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFareBreakup.getBookingFareBreakup (personId, merchantId) entityId mbEntityType
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe Bool -> FlowHandler DBooking.BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbDontNeedFareBreakup = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingList (Just personId, merchantId) Nothing False mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList Nothing mbDontNeedFareBreakup
+bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Bool -> FlowHandler DBooking.BookingListRes
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingList (Just personId, merchantId) Nothing False mbLimit mbOffset mbOnlyActive mbStatus mbClientId mbFromDate mbToDate mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe BookingRequestType -> Maybe Bool -> [Domain.Types.PassType.PassEnum] -> Maybe Bool -> FlowHandler DBooking.BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable passTypes mbDontNeedFareBreakup = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate mbToDate billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable (Just passTypes) mbDontNeedFareBreakup
