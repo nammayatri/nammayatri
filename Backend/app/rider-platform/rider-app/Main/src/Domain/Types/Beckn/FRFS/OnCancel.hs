@@ -14,5 +14,10 @@ data DOnCancel = DOnCancel
     orderStatus :: Spec.OrderStatus,
     refundAmount :: Maybe HighPrecMoney,
     baseFare :: HighPrecMoney,
-    cancellationCharges :: Maybe HighPrecMoney
+    cancellationCharges :: Maybe HighPrecMoney,
+    cancelledBy :: Maybe Text,
+    cancellationTime :: Maybe UTCTime
   }
+
+isCounterCancellation :: DOnCancel -> Bool
+isCounterCancellation dOnCancel = dOnCancel.cancelledBy == Just "PROVIDER"

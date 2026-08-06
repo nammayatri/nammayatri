@@ -585,6 +585,56 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
           createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
           logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
 
+markRefundPendingWithAmount ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasBAPMetrics m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text],
+    Finance.HasActorInfo m r
+  ) =>
+  Id Person.Person ->
+  Id DOrder.PaymentOrder ->
+  HighPrecMoney ->
+  m ()
+markRefundPendingWithAmount personId orderId amount = do
+  paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  mbExistingRefund <- HQRefunds.findLatestByOrderId paymentOrder.shortId
+  case mbExistingRefund of
+    Just existingRefund -> do
+      logError $
+        "Refund already exists for orderId: " <> orderId.getId
+          <> ", existingRefundId: "
+          <> existingRefund.id.getId
+          <> ", existingRefundAmount: "
+          <> show existingRefund.refundAmount
+          <> ", requestedAmount: "
+          <> show amount
+          <> " - no further refund will be issued for this order"
+      pure ()
+    Nothing -> do
+      bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId orderId
+      mapM_
+        ( \bookingPayment ->
+            QFRFSTicketBookingPayment.updateStatusById
+              DFRFSTicketBookingPayment.REFUND_PENDING
+              bookingPayment.id
+        )
+        bookingPayments
+      QPaymentOrder.updateEffectiveAmount orderId (Just amount)
+      void $ initiateRefundWithPaymentStatusRespSync personId orderId
+
 markRefundPendingAndSyncOrderStatus ::
   ( CacheFlow m r,
     EsqDBFlow m r,
