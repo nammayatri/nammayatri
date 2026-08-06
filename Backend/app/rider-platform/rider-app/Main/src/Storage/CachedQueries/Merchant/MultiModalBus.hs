@@ -167,6 +167,6 @@ hasLiveVehicles routeId integratedBppConfig = do
   let key = mkRouteKey redisPrefix routeId
   cloudType <- asks (.cloudType)
   res <- case cloudType of
-    Just GCP -> Hedis.runInMasterLTSRedisCell $ Hedis.ttl key
+    Just GCP -> Hedis.runInMultiCloudLTSRedisForList $ Hedis.ttl key
     _ -> withCrossAppRedisNew $ Hedis.ttl key
   return $ res >= -1
