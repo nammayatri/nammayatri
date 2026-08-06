@@ -305,6 +305,8 @@ fleetOwnerLogin req = do
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Redis.setExp key otp expTime
+  -- A freshly issued OTP gets a fresh attempt budget.
+  Redis.del $ makeMobileNumberOtpAttemptsKey mobileNumber
   pure Success
 
 buildFleetOwnerAuthReq ::
@@ -343,18 +345,42 @@ fleetOwnerVerifyHandler ::
   FleetOwnerLoginReq ->
   Flow APISuccess
 fleetOwnerVerifyHandler h req = do
-  case req.otp of
-    Just otp -> do
-      mobileNumberOtpKey <- Redis.safeGet $ h.mkMobileNumberOtpKey req.mobileNumber
-      case mobileNumberOtpKey of
-        Just otpHash -> do
-          unless (otpHash == otp) $ throwError InvalidAuthData
-          pure Success
-        Nothing -> throwError InvalidAuthData
-    _ -> throwError InvalidAuthData
+  otp <- req.otp & fromMaybeM InvalidAuthData
+  let otpKey = h.mkMobileNumberOtpKey req.mobileNumber
+      attemptsKey = makeMobileNumberOtpAttemptsKey req.mobileNumber
+  -- Serialize verification per mobile number: a replayed or parallel burst must not be able to
+  -- race past either the single-use check or the attempt counter.
+  Redis.withLockRedisAndReturnValue (makeMobileNumberOtpVerifyLockKey req.mobileNumber) 5 $ do
+    storedOtp :: Text <- Redis.safeGet otpKey >>= fromMaybeM InvalidAuthData
+    attempts <- fromMaybe (0 :: Int) <$> Redis.safeGet attemptsKey
+    when (attempts >= maxOtpVerifyAttempts) $ do
+      -- Budget exhausted: burn the OTP so it cannot be guessed by requesting a fresh window.
+      Redis.del otpKey
+      Redis.del attemptsKey
+      throwError $ AuthBlocked "Too many incorrect OTP attempts. Please request a new OTP."
+    if storedOtp == otp
+      then do
+        -- OTP is single use: drop it so the same verified request cannot be replayed for more tokens.
+        Redis.del otpKey
+        Redis.del attemptsKey
+        pure Success
+      else do
+        expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+        Redis.setExp attemptsKey (attempts + 1) expTime
+        throwError InvalidAuthData
+
+-- | Incorrect OTP submissions allowed per issued OTP before it is invalidated.
+maxOtpVerifyAttempts :: Int
+maxOtpVerifyAttempts = 5
 
 makeMobileNumberOtpKey :: Text -> Text
 makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber
+
+makeMobileNumberOtpAttemptsKey :: Text -> Text
+makeMobileNumberOtpAttemptsKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber <> ":verifyAttempts"
+
+makeMobileNumberOtpVerifyLockKey :: Text -> Text
+makeMobileNumberOtpVerifyLockKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber <> ":verifyLock"
 
 makeMobileNumberHitsCountKey :: Text -> Text
 makeMobileNumberHitsCountKey mobileNumber = "MobileNumberOtp:mobileNumberHits-" <> mobileNumber <> ":hitsCount"
