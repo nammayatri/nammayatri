@@ -268,6 +268,68 @@ The alternative was a paid Google key. This costs nothing and needs no card;
 the trade-off is a component we own. If a future backend implements OSRM
 routing natively, it can simply be deleted.
 
+## Map tiles — the picture under the route
+
+```bash
+./tiles-prepare.sh             # build the tiles (one-off, ~10 min)
+docker compose up -d tiles     # serve them on http://localhost:8035
+```
+
+OSRM gives us the route. It does not give us the *map* — the streets, water,
+parks and labels drawn underneath it. That comes from vector tiles, and the
+usual sources (MapTiler, Mapbox, Google) charge per map view and need an
+international payment card.
+
+**Decided 2026-08-06: host our own**, the same way we already host routing.
+
+| | |
+|---|---|
+| Built with | [Planetiler](https://github.com/onthegomap/planetiler), OpenMapTiles schema |
+| Input | the Algeria extract `osrm-prepare.sh` already downloaded — not fetched twice |
+| Output | `algeria.mbtiles`, **309 MB**, zoom 0–14 |
+| Features | 14.2 M, in 485 k tiles |
+| Build time | ~10 min, peak heap 1.7 GB |
+| Served by | `tileserver-gl` on `:8035` — tiles, style, and fonts from one origin |
+| Cost | **€0**, no key, no request limit |
+
+Verified by fetching tiles at computed coordinates — data inside the country,
+nothing outside it:
+
+| Place | z14 tile | Result |
+|---|---|---|
+| Algiers | 14/8331/6391 | 125 KB |
+| Oran | 14/8163/6450 | 59 KB |
+| Constantine | 14/8493/6413 | 51 KB |
+| Annaba | 14/8545/6382 | 56 KB |
+| Tamanrasset | 14/8443/7126 | 38 KB |
+| Béchar | 14/8091/6673 | 31 KB |
+| Tunis 🇹🇳 | 14/8655/6388 | **204, empty** |
+| Oujda 🇲🇦 | 14/8105/6507 | **204, empty** |
+| Bangalore 🇮🇳 | 14/11723/7596 | **204, empty** |
+
+Oujda matters: it is a few km from the Algerian border, so it shows the cut
+follows the border rather than a loose bounding box.
+
+A rendered check of the whole chain:
+
+```
+http://localhost:8035/styles/basic-preview/static/3.0588,36.7538,13/800x600.png
+```
+
+returns Algiers with Bab El Oued, Casbah, Belcourt, Hydra, Kouba, the port and
+the Barcelona ferry route, labelled in French.
+
+**Note the tile URL is `/data/v3/{z}/{x}/{y}.pbf`,** not `/data/algeria/...` —
+the id comes from the tileset metadata inside the MBTiles, not the filename.
+
+### What is still rough
+
+- The style is tileserver-gl's bundled *Basic preview*. It looks decent but it
+  is not ours; colours and typography are someone else's defaults.
+- **No sprite sheet**, so POI icons do not render — lines, areas and labels do.
+- Labels use OSM's `name`. OpenMapTiles also carries `name:fr` and `name:ar`, so
+  switching the map to one language is a style change, not a rebuild.
+
 ## Not connected yet: rider → driver
 
 **Fixed.** A search from an Algerian number now comes back with prices:

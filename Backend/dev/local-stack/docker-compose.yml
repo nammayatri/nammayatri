@@ -29,8 +29,8 @@
 # map on 8015 and the shim on 8020, and ride search failed because rider-app
 # dutifully sent its /search to the map's nginx.
 #
-# Ours live above the reserved range: 8025 map, 8030 maps-shim, and the
-# Windows-facing proxies on 8014 / 8017 / 5001.
+# Ours live above the reserved range: 8025 map, 8030 maps-shim, 8035 tiles, and
+# the Windows-facing proxies on 8014 / 8017 / 5001.
 
 # WHICH BACKEND IMAGE THIS USES
 #
@@ -322,6 +322,33 @@ services:
       - ./demo-map/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
+  # Self-hosted map tiles for Algeria -- the streets, water and labels drawn
+  # underneath the route. OSRM gives us the route; it does not give us the map.
+  #
+  # Decided 2026-08-06 to host our own rather than subscribe to MapTiler, Mapbox
+  # or Google: those charge per map view and need an international payment card.
+  # See tiles-prepare.sh, which builds the tiles into the ny-tiles-data volume;
+  # this service only serves them.
+  #
+  # public_url has to match how clients actually reach this, because it is baked
+  # into the absolute tile/glyph/sprite URLs inside the style JSON. A phone
+  # reaching it over `adb reverse tcp:8035 tcp:8035` sees it as localhost too.
+  # Keep --port 8080: the image's built-in healthcheck probes localhost:8080 and
+  # cannot be told otherwise, so serving on any other port reports "unhealthy"
+  # forever while working perfectly.
+  tiles:
+    image: maptiler/tileserver-gl:latest
+    container_name: ny-tiles
+    command: >-
+      --file /data/algeria.mbtiles
+      --port 8080
+      --public_url http://localhost:8035/
+    ports:
+      - "8035:8080"
+    volumes:
+      - ny-tiles-data:/data
+    restart: unless-stopped
+
   # Browser view of the database, for demos and screenshots. Nothing depends on
   # it and nothing breaks if it is stopped.
   #
@@ -347,4 +374,7 @@ volumes:
   # a one-off that takes far longer than a container start and should not be
   # repeated on every `up`.
   ny-osrm-data:
+    external: true
+  # Same reasoning for the map tiles: built once by ./tiles-prepare.sh.
+  ny-tiles-data:
     external: true
