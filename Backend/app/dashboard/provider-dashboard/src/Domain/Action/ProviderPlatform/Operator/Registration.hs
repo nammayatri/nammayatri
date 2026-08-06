@@ -91,6 +91,7 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         rejectedAt = Nothing,
         dashboardType = PT.DEFAULT_DASHBOARD,
         passwordUpdatedAt = Nothing,
+        forcePasswordChange = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

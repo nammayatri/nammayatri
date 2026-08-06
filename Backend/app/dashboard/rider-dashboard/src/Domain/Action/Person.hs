@@ -271,6 +271,7 @@ resolvePersonOp merchant rolesByName reqCity now idx p = do
                 rejectionReason = Nothing,
                 rejectedAt = Nothing,
                 passwordUpdatedAt = Nothing,
+                forcePasswordChange = Nothing,
                 approvedBy = Nothing,
                 rejectedBy = Nothing,
                 language = Nothing,

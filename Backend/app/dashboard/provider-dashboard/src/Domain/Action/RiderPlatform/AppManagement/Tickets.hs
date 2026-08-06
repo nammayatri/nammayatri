@@ -185,6 +185,7 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
         rejectedAt = Nothing,
         dashboardType = PT.TICKET_DASHBOARD,
         passwordUpdatedAt = Nothing,
+        forcePasswordChange = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

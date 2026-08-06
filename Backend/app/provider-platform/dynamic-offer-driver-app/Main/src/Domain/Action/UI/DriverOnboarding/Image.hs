@@ -116,25 +116,78 @@ data GetDocsResponse = GetDocsResponse
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
+-- | Formats the onboarding document pipeline is permitted to store. Anything else — executables,
+-- archives, and script-bearing formats such as HTML or SVG — is rejected before it reaches S3.
+data UploadedFileType
+  = JPEG
+  | PNG
+  | WEBP
+  | HEIC
+  | PDF
+  deriving (Show, Eq)
+
+-- | Identify the payload from its magic bytes. The client-declared extension is never trusted;
+-- the stored extension is derived from what the bytes actually are.
+detectUploadedFileType :: BS.ByteString -> Maybe UploadedFileType
+detectUploadedFileType bs
+  | "\xFF\xD8\xFF" `BS.isPrefixOf` bs = Just JPEG
+  | "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A" `BS.isPrefixOf` bs = Just PNG
+  | "%PDF-" `BS.isPrefixOf` bs = Just PDF
+  | "RIFF" `BS.isPrefixOf` bs && "WEBP" `BS.isPrefixOf` BS.drop 8 bs = Just WEBP
+  -- ISO-BMFF branded container: bytes 4..7 are "ftyp", the brand follows.
+  | "ftyp" `BS.isPrefixOf` BS.drop 4 bs,
+    any (`BS.isPrefixOf` BS.drop 8 bs) ["heic", "heix", "hevc", "heim", "heis", "mif1", "msf1"] =
+    Just HEIC
+  | otherwise = Nothing
+
+canonicalExtension :: UploadedFileType -> Text
+canonicalExtension = \case
+  JPEG -> "jpg"
+  PNG -> "png"
+  WEBP -> "webp"
+  HEIC -> "heic"
+  PDF -> "pdf"
+
+-- | Extensions a caller may legitimately declare for a given detected format. A declared
+-- extension that disagrees with the content is treated as an attempt to smuggle a payload past
+-- extension-based checks further down the chain.
+allowedExtensionsFor :: UploadedFileType -> [Text]
+allowedExtensionsFor = \case
+  JPEG -> ["jpg", "jpeg"]
+  PNG -> ["png"]
+  WEBP -> ["webp"]
+  HEIC -> ["heic", "heif"]
+  PDF -> ["pdf"]
+
+-- | Reject anything whose bytes are not a permitted document format, or whose declared
+-- extension contradicts those bytes.
+validateUploadedFileType :: MonadFlow m => BS.ByteString -> Maybe Text -> m UploadedFileType
+validateUploadedFileType content mbDeclaredExtension = do
+  fileType <-
+    detectUploadedFileType content
+      & fromMaybeM (InvalidRequest "Unsupported file type. Only JPEG, PNG, WEBP, HEIC and PDF documents are accepted.")
+  whenJust (normalizeExtension =<< mbDeclaredExtension) $ \declared ->
+    unless (declared `elem` allowedExtensionsFor fileType) $
+      throwError $ InvalidRequest $ "File extension ." <> declared <> " does not match the uploaded file content."
+  pure fileType
+
+normalizeExtension :: Text -> Maybe Text
+normalizeExtension ext = do
+  let normalized = ext & T.strip & T.dropWhile (== '.') & T.toLower
+  if T.null normalized then Nothing else Just normalized
+
 createPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
   Text ->
   Text ->
   DVC.DocumentType ->
-  Maybe Text ->
+  UploadedFileType ->
   m Text
-createPath driverId merchantId documentType mbExtension = do
+createPath driverId merchantId documentType fileType = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-      sanitizedExt =
-        case mbExtension of
-          Nothing -> "png"
-          Just ext ->
-            ext
-              & T.strip
-              & T.dropWhile (== '.')
-              & (\t -> if T.null t then "png" else T.toLower t)
+      sanitizedExt = canonicalExtension fileType
   return
     ( pathPrefix <> "/driver-onboarding/" <> "org-" <> merchantId <> "/"
         <> driverId
@@ -171,6 +224,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
   when (BS.length imageSizeInBytes > maxSizeInBytes) $
     throwError $ InvalidRequest $ "Image size " <> show (BS.length imageSizeInBytes) <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show (fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB) <> "MB)"
+  uploadedFileType <- validateUploadedFileType imageSizeInBytes fileExtension
   let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC, DVC.VehicleBack, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleFrontInterior, DVC.VehicleRight, DVC.VehicleLeft, DVC.Odometer, DVC.InspectionHub]
   mbRcId <-
     if imageType `elem` rcDependentDocuments
@@ -223,7 +277,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       when (imageType == DVC.ProfilePhoto && not isDashboard) $
         enforceSelfieReuploadPolicy person allImages
 
-      imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
+      imagePath <- createPath personId.getId merchantId.getId imageType uploadedFileType
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
           Redis.withLockRedis (imageS3Lock imagePath) 5 $

@@ -213,6 +213,7 @@ login rawReq = do
         loginRateLimitOptions <- asks (.loginRateLimitOptions)
         checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just em)) loginRateLimitOptions
         p <- QP.findByEmailAndPassword em pwd >>= fromMaybeM (PersonDoesNotExist em)
+        Auth.checkForcedPasswordChange p
         Auth.checkPasswordExpiry p
         pure p
       _ ->
@@ -802,6 +803,7 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         rejectedAt = Nothing,
         dashboardType = DEFAULT_DASHBOARD,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
