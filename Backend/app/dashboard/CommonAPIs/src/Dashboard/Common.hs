@@ -94,6 +94,8 @@ data CoinsConfig
 
 data VasBannerConfig
 
+data DriverGroupInsurance
+
 data Person
 
 data Merchant

@@ -84,6 +84,7 @@ library
       API.Types.ProviderPlatform.Management.Driver
       API.Types.ProviderPlatform.Management.DriverCoins
       API.Types.ProviderPlatform.Management.DriverGoHome
+      API.Types.ProviderPlatform.Management.DriverGroupInsurance
       API.Types.ProviderPlatform.Management.DriverReferral
       API.Types.ProviderPlatform.Management.DriverRegistration
       API.Types.ProviderPlatform.Management.DriverVehicleQuality
@@ -95,6 +96,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Driver
       API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
+      API.Types.ProviderPlatform.Management.Endpoints.DriverGroupInsurance
       API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.DriverVehicleQuality

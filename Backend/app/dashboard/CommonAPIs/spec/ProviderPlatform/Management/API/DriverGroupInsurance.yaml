@@ -1,0 +1,22 @@
+imports:
+  DriverGroupInsurance: Dashboard.Common
+
+module: DriverGroupInsurance
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /{insuranceId}/secondBotCheck
+      auth: ApiAuthV2
+      params:
+        insuranceId: Id DriverGroupInsurance
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /{insuranceId}/enable
+      auth: ApiAuthV2
+      params:
+        insuranceId: Id DriverGroupInsurance
+      response:
+        type: APISuccess

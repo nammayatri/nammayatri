@@ -63,6 +63,7 @@ library
       Domain.Action.ProviderPlatform.Management.Driver
       Domain.Action.ProviderPlatform.Management.DriverCoins
       Domain.Action.ProviderPlatform.Management.DriverGoHome
+      Domain.Action.ProviderPlatform.Management.DriverGroupInsurance
       Domain.Action.ProviderPlatform.Management.DriverReferral
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.DriverVehicleQuality
@@ -179,6 +180,7 @@ library
       API.Action.ProviderPlatform.Management.Driver
       API.Action.ProviderPlatform.Management.DriverCoins
       API.Action.ProviderPlatform.Management.DriverGoHome
+      API.Action.ProviderPlatform.Management.DriverGroupInsurance
       API.Action.ProviderPlatform.Management.DriverReferral
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.DriverVehicleQuality

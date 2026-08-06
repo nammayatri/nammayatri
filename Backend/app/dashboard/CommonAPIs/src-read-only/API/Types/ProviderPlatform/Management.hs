@@ -11,6 +11,7 @@ import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
 import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
+import qualified API.Types.ProviderPlatform.Management.DriverGroupInsurance
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.DriverVehicleQuality
@@ -52,6 +53,7 @@ data ManagementUserActionType
   | DRIVER API.Types.ProviderPlatform.Management.Driver.DriverUserActionType
   | DRIVER_COINS API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsUserActionType
   | DRIVER_GO_HOME API.Types.ProviderPlatform.Management.DriverGoHome.DriverGoHomeUserActionType
+  | DRIVER_GROUP_INSURANCE API.Types.ProviderPlatform.Management.DriverGroupInsurance.DriverGroupInsuranceUserActionType
   | DRIVER_REFERRAL API.Types.ProviderPlatform.Management.DriverReferral.DriverReferralUserActionType
   | DRIVER_REGISTRATION API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationUserActionType
   | DRIVER_VEHICLE_QUALITY API.Types.ProviderPlatform.Management.DriverVehicleQuality.DriverVehicleQualityUserActionType
@@ -90,6 +92,7 @@ instance Text.Show.Show ManagementUserActionType where
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_COINS e -> "DRIVER_COINS/" <> show e
     DRIVER_GO_HOME e -> "DRIVER_GO_HOME/" <> show e
+    DRIVER_GROUP_INSURANCE e -> "DRIVER_GROUP_INSURANCE/" <> show e
     DRIVER_REFERRAL e -> "DRIVER_REFERRAL/" <> show e
     DRIVER_REGISTRATION e -> "DRIVER_REGISTRATION/" <> show e
     DRIVER_VEHICLE_QUALITY e -> "DRIVER_VEHICLE_QUALITY/" <> show e
@@ -177,6 +180,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "DRIVER_GO_HOME/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( DRIVER_GROUP_INSURANCE v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DRIVER_GROUP_INSURANCE/" r,
                    ( v1,
                      r2
                      ) <-
