@@ -182,6 +182,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
@@ -4634,6 +4635,17 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
     FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) True req.reason (Just merchant.id) (Just moc.id)
   pure Success
 
+-- Server-side validation for the dashboard driver/fleet-owner profile update. Previously these
+-- free-text fields were persisted verbatim, so markup submitted here was stored and rendered back.
+validateUpdateDriverReq :: Validate Common.UpdateDriverReq
+validateUpdateDriverReq Common.UpdateDriverReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "nomineeName" nomineeName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "email" email $ InMaybe P.email
+    ]
+
 postDriverFleetDriverUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -4642,6 +4654,7 @@ postDriverFleetDriverUpdate ::
   Common.UpdateDriverReq ->
   Flow APISuccess
 postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
+  runRequestValidation validateUpdateDriverReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)

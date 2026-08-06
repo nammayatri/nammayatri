@@ -190,9 +190,37 @@ validateCreatePerson CreatePersonReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
       validateField "lastName" lastName $ NotEmpty `And` P.name,
+      validateField "email" email P.email,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+-- | Access tiers that carry administrative privilege and therefore must live on a
+-- managed organizational email domain.
+adminAccessTypes :: [DRole.DashboardAccessType]
+adminAccessTypes =
+  [ DRole.DASHBOARD_ADMIN,
+    DRole.DASHBOARD_RELEASE_ADMIN,
+    DRole.MERCHANT_ADMIN,
+    DRole.TICKET_DASHBOARD_ADMIN
+  ]
+
+-- | Reject administrator accounts on unapproved email domains. The allow-list is per-merchant
+-- (merchant.adminEmailDomains); an empty list leaves the restriction switched off.
+validateAdminEmailDomain ::
+  BeamFlow m r =>
+  Id DMerchant.Merchant ->
+  DRole.Role ->
+  Text ->
+  m ()
+validateAdminEmailDomain merchantId role email =
+  when (role.dashboardAccessType `elem` adminAccessTypes) $ do
+    merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+    let allowedDomains = merchant.adminEmailDomains
+    unless (null allowedDomains) $ do
+      let domain = T.toLower . T.drop 1 . T.dropWhile (/= '@') $ email
+      unless (any (\allowed -> domain == T.toLower allowed) allowedDomains) $
+        throwError $ InvalidRequest $ "Administrator accounts must use an approved email domain: " <> T.intercalate ", " allowedDomains
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -234,6 +262,7 @@ createPerson tokenInfo personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  validateAdminEmailDomain tokenInfo.merchantId role personEntity.email
   -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
   -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
   DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
@@ -525,7 +554,12 @@ getAccessMatrix tokenInfo = do
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 changePasswordByAdmin ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   TokenInfo ->
   Id DP.Person ->
   ChangePasswordByAdminReq ->
@@ -536,7 +570,11 @@ changePasswordByAdmin _ personId req = do
   when enforceStrongPasswordPolicy $
     validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
-  QP.updatePersonPassword personId newHash
+  QP.updatePersonPasswordByAdmin personId newHash
+  -- An admin reset is also the remedy for a compromised account, so any session established
+  -- with the old credential must die with it.
+  Auth.cleanCachedTokens personId
+  QReg.deleteAllByPersonId personId
   pure Success
 
 changeMobileNumberByAdmin ::
@@ -632,6 +670,7 @@ buildPerson pid req dashboardAccessType = do
         rejectionReason = Nothing,
         rejectedAt = Nothing,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
