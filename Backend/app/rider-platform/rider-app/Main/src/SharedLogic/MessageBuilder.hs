@@ -300,7 +300,7 @@ data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
 buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
   shortenedTrackingUrl <-
-    withTryCatch "shortenTrackingUrl" (shortenTrackingUrl req.rideLink) >>= \case
+    withTryCatch "shortenTrackingUrl" (shortenTrackingUrl (Just UrlShortner.RIDE_TRACKING) req.rideLink) >>= \case
       Right url -> return url
       Left err -> do
         logError $ "Failed to shorten tracking URL, using original URL. Error: " <> show err
@@ -394,7 +394,7 @@ buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId req = do
                 customShortCode = Nothing,
                 shortCodeLength = Nothing,
                 expiryInHours = smsPOCfg.shortUrlExpiryInHours,
-                urlCategory = UrlShortner.METRO_TICKET_BOOKING
+                urlCategory = Just UrlShortner.METRO_TICKET_BOOKING
               }
       res <- UrlShortner.generateShortUrl shortUrlReq
       let url = res.shortUrl
@@ -425,22 +425,22 @@ buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
                 customShortCode = Nothing,
                 shortCodeLength = Nothing,
                 expiryInHours = smsPOCfg.shortUrlExpiryInHours,
-                urlCategory = UrlShortner.METRO_TICKET_BOOKING
+                urlCategory = Just UrlShortner.METRO_TICKET_BOOKING
               }
       res <- UrlShortner.generateShortUrl shortUrlReq
       let url = res.shortUrl
       logDebug $ "Generated short url: " <> url
       buildSendSmsReq merchantMessage [("URL", url), ("TICKET_PLURAL", ticketPlural)]
 
-shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Text -> m Text
-shortenTrackingUrl url = do
+shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Maybe UrlShortner.UrlCategory -> Text -> m Text
+shortenTrackingUrl urlCategory url = do
   let shortUrlReq =
         UrlShortner.GenerateShortUrlReq
           { baseUrl = url,
             customShortCode = Nothing,
             shortCodeLength = Nothing,
             expiryInHours = Just 24,
-            urlCategory = UrlShortner.RIDE_TRACKING
+            urlCategory = urlCategory
           }
   res <- UrlShortner.generateShortUrl shortUrlReq
   return res.shortUrl
@@ -468,7 +468,7 @@ buildDeliveryDetailsMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
-  shortTrackingUrl <- maybe (pure mempty) shortenTrackingUrl req.trackingUrl
+  shortTrackingUrl <- maybe (pure mempty) (shortenTrackingUrl (Just UrlShortner.RIDE_TRACKING)) req.trackingUrl
   buildSendSmsReq
     merchantMessage
     [ ("driverName", req.driverName),
