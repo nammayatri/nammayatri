@@ -362,6 +362,7 @@ MerchantOperatingCity:
     stdCode: Maybe Text
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl
+    gstin: Maybe Text
   sqlType:
     city: character varying(255)
     currency: character varying(255)

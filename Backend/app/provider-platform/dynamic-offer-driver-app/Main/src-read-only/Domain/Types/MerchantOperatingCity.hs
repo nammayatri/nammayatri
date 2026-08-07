@@ -21,6 +21,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     country :: Kernel.Types.Beckn.Context.Country,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    gstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     language :: Kernel.External.Types.Language,
     location :: Kernel.External.Maps.Types.LatLong,
