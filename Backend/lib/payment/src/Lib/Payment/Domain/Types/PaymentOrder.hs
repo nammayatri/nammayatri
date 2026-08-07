@@ -72,7 +72,12 @@ data PaymentOrderE e = PaymentOrder
     groupId :: Maybe Text,
     vpa :: Maybe Text,
     pgBaseFee :: Maybe HighPrecMoney,
-    pgGst :: Maybe HighPrecMoney
+    pgGst :: Maybe HighPrecMoney,
+    -- | How the gateway charge was routed, as actually applied at creation time.
+    --   'Nothing' (every pre-existing row, and every non-Stripe order) means a destination charge.
+    --   Capture and refund read this back: a platform-only charge must not send
+    --   @application_fee_amount@, @reverse_transfer@ or @refund_application_fee@.
+    chargeRouting :: Maybe Payment.ChargeRouting
   }
   deriving (Generic)
 

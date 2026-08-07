@@ -596,7 +596,7 @@ rideAssignedReqHandler req = do
           mbPaymentResp <-
             handle (\e -> SPayment.paymentErrorHandler booking e >> throwError (InvalidRequest "Payment failed, booking cancelled")) $
               withShortRetry $
-                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo)
+                SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode booking.riderId (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo) False
           -- Check if PI is in a capturable state — only STARTED (requires_capture) and CHARGED (already captured) are valid
           whenJust mbPaymentResp $ \paymentResp -> do
             mbOrder <- QPaymentOrder.findById paymentResp.orderId
@@ -1072,7 +1072,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
       -- Lookup existing order for retry handling via Redis ledger entry IDs
       mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
-      eitherResp <- withTryCatch "makePaymentIntent:rideCompleted" $ withShortRetry (SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo))
+      eitherResp <- withTryCatch "makePaymentIntent:rideCompleted" $ withShortRetry (SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just ride.id) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just ledgerInfo) False)
       case eitherResp of
         Left err -> do
           logError $ "makePaymentIntent failed, scheduling job so that it can mark this as Dues: " <> show err
