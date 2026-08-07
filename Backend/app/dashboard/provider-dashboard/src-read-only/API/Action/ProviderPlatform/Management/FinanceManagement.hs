@@ -17,6 +17,7 @@ import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -29,10 +30,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions))
+type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> PostFinanceManagementFinanceAdjustmentSubmit :<|> GetFinanceManagementFinanceAdjustmentList :<|> PostFinanceManagementFinanceAdjustmentApprove :<|> PostFinanceManagementFinanceAdjustmentReject :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFinanceManagementSubscriptionPurchaseList merchantId city :<|> getFinanceManagementFinanceInvoicePdf merchantId city :<|> getFinanceManagementFinanceInvoiceList merchantId city :<|> getFinanceManagementFinanceAuditList merchantId city :<|> getFinanceManagementFinanceReconciliation merchantId city :<|> getFinanceManagementFinancePaymentSettlementList merchantId city :<|> getFinanceManagementFinancePaymentGatewayTransactionList merchantId city :<|> getFinanceManagementFinanceWalletLedger merchantId city :<|> postFinanceManagementReconciliationTrigger merchantId city :<|> getFinanceManagementFinanceSapJournals merchantId city :<|> getFinanceManagementFinanceSapJournalsTransactions merchantId city
+handler merchantId city = getFinanceManagementSubscriptionPurchaseList merchantId city :<|> getFinanceManagementFinanceInvoicePdf merchantId city :<|> getFinanceManagementFinanceInvoiceList merchantId city :<|> getFinanceManagementFinanceAuditList merchantId city :<|> getFinanceManagementFinanceReconciliation merchantId city :<|> getFinanceManagementFinancePaymentSettlementList merchantId city :<|> getFinanceManagementFinancePaymentGatewayTransactionList merchantId city :<|> getFinanceManagementFinanceWalletLedger merchantId city :<|> postFinanceManagementReconciliationTrigger merchantId city :<|> postFinanceManagementFinanceAdjustmentSubmit merchantId city :<|> getFinanceManagementFinanceAdjustmentList merchantId city :<|> postFinanceManagementFinanceAdjustmentApprove merchantId city :<|> postFinanceManagementFinanceAdjustmentReject merchantId city :<|> getFinanceManagementFinanceSapJournals merchantId city :<|> getFinanceManagementFinanceSapJournalsTransactions merchantId city
 
 type GetFinanceManagementSubscriptionPurchaseList =
   ( ApiAuth
@@ -106,6 +107,38 @@ type PostFinanceManagementReconciliationTrigger =
       :> API.Types.ProviderPlatform.Management.FinanceManagement.PostFinanceManagementReconciliationTrigger
   )
 
+type PostFinanceManagementFinanceAdjustmentSubmit =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FINANCE_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FinanceManagement.POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_SUBMIT)
+      :> API.Types.ProviderPlatform.Management.FinanceManagement.PostFinanceManagementFinanceAdjustmentSubmit
+  )
+
+type GetFinanceManagementFinanceAdjustmentList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FINANCE_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FinanceManagement.GET_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_LIST)
+      :> API.Types.ProviderPlatform.Management.FinanceManagement.GetFinanceManagementFinanceAdjustmentList
+  )
+
+type PostFinanceManagementFinanceAdjustmentApprove =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FINANCE_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FinanceManagement.POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_APPROVE)
+      :> API.Types.ProviderPlatform.Management.FinanceManagement.PostFinanceManagementFinanceAdjustmentApprove
+  )
+
+type PostFinanceManagementFinanceAdjustmentReject =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FINANCE_MANAGEMENT / 'API.Types.ProviderPlatform.Management.FinanceManagement.POST_FINANCE_MANAGEMENT_FINANCE_ADJUSTMENT_REJECT)
+      :> API.Types.ProviderPlatform.Management.FinanceManagement.PostFinanceManagementFinanceAdjustmentReject
+  )
+
 type GetFinanceManagementFinanceSapJournals =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -148,6 +181,18 @@ getFinanceManagementFinanceWalletLedger merchantShortId opCity apiTokenInfo limi
 
 postFinanceManagementReconciliationTrigger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationTriggerReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.ReconciliationTriggerRes)
 postFinanceManagementReconciliationTrigger merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FinanceManagement.postFinanceManagementReconciliationTrigger merchantShortId opCity apiTokenInfo req
+
+postFinanceManagementFinanceAdjustmentSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FinanceManagement.SubmitLedgerAdjustmentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentSubmit merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentSubmit merchantShortId opCity apiTokenInfo req
+
+getFinanceManagementFinanceAdjustmentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest) -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentRequestStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentCategory -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.AdjustmentDirection -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.LedgerAdjustmentListRes)
+getFinanceManagementFinanceAdjustmentList merchantShortId opCity apiTokenInfo limit offset adjustmentRequestId status personId excludeCurrentAdminMaker category direction referenceType referenceId adminMakerId adminCheckerId from to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FinanceManagement.getFinanceManagementFinanceAdjustmentList merchantShortId opCity apiTokenInfo limit offset adjustmentRequestId status personId excludeCurrentAdminMaker category direction referenceType referenceId adminMakerId adminCheckerId from to
+
+postFinanceManagementFinanceAdjustmentApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentApprove merchantShortId opCity apiTokenInfo adjustmentRequestId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentApprove merchantShortId opCity apiTokenInfo adjustmentRequestId
+
+postFinanceManagementFinanceAdjustmentReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.LedgerAdjustmentRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postFinanceManagementFinanceAdjustmentReject merchantShortId opCity apiTokenInfo adjustmentRequestId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FinanceManagement.postFinanceManagementFinanceAdjustmentReject merchantShortId opCity apiTokenInfo adjustmentRequestId
 
 getFinanceManagementFinanceSapJournals :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.FinanceManagement.SapJournalListRes)
 getFinanceManagementFinanceSapJournals merchantShortId opCity apiTokenInfo batchId belnr dateFrom dateTo limit offset status transactionType = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.FinanceManagement.getFinanceManagementFinanceSapJournals merchantShortId opCity apiTokenInfo batchId belnr dateFrom dateTo limit offset status transactionType
