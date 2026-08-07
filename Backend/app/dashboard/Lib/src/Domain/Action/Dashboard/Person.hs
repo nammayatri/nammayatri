@@ -369,6 +369,7 @@ assignRole ::
   Id DRole.Role ->
   m APISuccess
 assignRole tokenInfo personId roleId = do
+  assertPersonInCallerMerchant tokenInfo personId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
   newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
@@ -636,7 +637,8 @@ changeMobileNumberByAdmin ::
   Id DP.Person ->
   ChangeMobileNumberByAdminReq ->
   m APISuccess
-changeMobileNumberByAdmin _ personId req = do
+changeMobileNumberByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
   runRequestValidation validateChangeMobileNumberReq req
   mobileDbHash <- getDbHash req.newMobileNumber
   result <- QP.findByIdWithRoleAndCheckMobileHash personId (Just mobileDbHash)
@@ -657,6 +659,10 @@ changeEnabledStatus ::
   ChangeEnabledStatusReq ->
   m APISuccess
 changeEnabledStatus tokenInfo personId req = do
+  -- Writes here are already merchant+city scoped, so a cross-merchant call is inert rather than
+  -- harmful. Guarding anyway turns a silent no-op into an explicit error and keeps every
+  -- person-id-addressed admin endpoint consistent.
+  assertPersonInCallerMerchant tokenInfo personId
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
   QReg.updateEnabledStatusByPersonIdAndMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city req.enabled
@@ -694,6 +700,9 @@ deletePerson ::
   Id DP.Person ->
   m APISuccess
 deletePerson tokenInfo personId = do
+  -- Every write below is keyed on personId alone and none is merchant-scoped, so without this
+  -- guard any dashboard admin could hard-delete an arbitrary person in another merchant.
+  assertPersonInCallerMerchant tokenInfo personId
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
   transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
