@@ -223,6 +223,16 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           busScheduleDetails'
 
     getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' = do
+      -- Fetch bearing from bus_metadata_v2 Redis
+      let vehicleNos = map (.vehicleNumber) busesData
+      bearingResults <-
+        if null vehicleNos
+          then pure []
+          else
+            JMU.measureLatency
+              (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
+              ("getLiveVehicles: getVehicleMetadata vehicles=" <> show (length vehicleNos))
+      let bearingByVehicleNo = Map.fromList $ catMaybes $ zipWith (\vn -> \case Nothing -> Nothing; Just bdi -> (vn,) <$> bdi.bearing) vehicleNos bearingResults
       allVehicles <-
         catMaybes
           <$> mapConcurrently
@@ -251,7 +261,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                     let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                        { eta = Just enrichedEta,
+                        { bearing = round <$> Map.lookup bus.vehicleNumber bearingByVehicleNo,
+                          eta = Just enrichedEta,
                           number = bus.vehicleNumber,
                           position = LatLong bus.busData.latitude bus.busData.longitude,
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
