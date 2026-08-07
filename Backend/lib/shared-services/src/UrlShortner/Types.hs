@@ -70,7 +70,7 @@ data GenerateShortUrlReq = GenerateShortUrlReq
     customShortCode :: Maybe Text,
     shortCodeLength :: Maybe Int,
     expiryInHours :: Maybe Int,
-    urlCategory :: UrlCategory
+    urlCategory :: Maybe UrlCategory
   }
   deriving (Generic, Read, Show)
 
