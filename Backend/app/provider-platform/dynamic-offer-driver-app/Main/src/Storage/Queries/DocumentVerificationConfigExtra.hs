@@ -13,6 +13,21 @@ import Storage.Queries.OrphanInstances.DocumentVerificationConfig ()
 import Storage.Queries.Transformers.DocumentVerificationConfig
 
 -- Extra code goes here --
+
+findByDimensions ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe DocumentType ->
+  Maybe DTV.VehicleCategory ->
+  m [DocumentVerificationConfig]
+findByDimensions merchantOperatingCityId mbDocumentType mbVehicleCategory =
+  findAllWithKV
+    [ Se.And $
+        [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)]
+          <> [Se.Is BeamODC.documentType $ Se.Eq dt | Just dt <- [mbDocumentType]]
+          <> [Se.Is BeamODC.vehicleCategory $ Se.Eq vc | Just vc <- [mbVehicleCategory]]
+    ]
+
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DocumentVerificationConfig -> m ()
 update config = do
   now <- getCurrentTime

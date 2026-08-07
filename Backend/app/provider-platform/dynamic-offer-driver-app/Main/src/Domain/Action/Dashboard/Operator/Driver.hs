@@ -91,8 +91,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, cancelRemindersForRCByDocumentType, recordDocumentCompletion)
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -392,7 +390,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     -- On the driver side a dep counts only if it applies per dvc `applicableTo` (a fleet driver skips
     -- INDIVIDUAL-only deps like OperatorPartnerCode); pass Nothing/[] for vehicle docs (no applicableTo split).
     inspectionInvalidDependencyDocs merchantOpCityId inspectionHubDocType mbIsFleetDriver driverConfigs vehicleCategory docStatuses = do
-      mbInspectionCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just inspectionHubDocType, vehicleCategory = Just vehicleCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId inspectionHubDocType vehicleCategory Nothing))
+      mbInspectionCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just inspectionHubDocType, vehicleCategory = Just vehicleCategory}) Nothing
       pure $ case mbInspectionCfg of
         Nothing -> []
         Just inspectionCfg -> SStatus.invalidDependencyDocs mbIsFleetDriver driverConfigs inspectionCfg.dependencyDocumentType docStatuses
@@ -1138,11 +1136,11 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             Nothing -> pure Nothing
     validateDocs mocId entityType = do
       allFODVC <- case entityType of
-        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId.getId, documentType = Nothing, role = Nothing}) (Just (CQFODVC.findAllByMerchantOpCityId mocId Nothing))
+        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId.getId, documentType = Nothing, role = Nothing}) Nothing
         _ -> pure []
       allDVC <- case entityType of
         API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> pure []
-        _ -> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = mocId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId mocId Nothing))
+        _ -> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = mocId.getId, documentType = Nothing, vehicleCategory = Nothing}) Nothing
 
       -- Resolve the fleet owner's role once (entityId is the fleet owner's person id) so the per-doc FODVC
       -- lookup can match the right role's row instead of being role-blind.

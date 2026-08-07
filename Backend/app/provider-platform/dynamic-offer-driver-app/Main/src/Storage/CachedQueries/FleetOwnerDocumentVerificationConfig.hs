@@ -17,6 +17,7 @@ module Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
   ( findAllByMerchantOpCityId,
     findByMerchantOpCityIdAndDocumentType,
     findAllByMerchantOpCityIdAndRole,
+    findByDimensions,
     clearCache,
     create,
     findAllMandatoryByMerchantOpCityIdAndRole,
@@ -27,10 +28,13 @@ import Domain.Types.DocumentVerificationConfig
 import Domain.Types.FleetOwnerDocumentVerificationConfig as FODTO
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Sequelize as Se
+import qualified Storage.Beam.FleetOwnerDocumentVerificationConfig as Beam
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as Queries
 import qualified Tools.DynamicLogic as DynamicLogic
@@ -53,6 +57,20 @@ findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType mbConfigVers
 
 findAllByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> Maybe [LYT.ConfigVersionMap] -> m [FODTO.FleetOwnerDocumentVerificationConfig]
 findAllByMerchantOpCityIdAndRole merchantOpCityId role mbConfigVersionMap = filter (\config -> config.role == role) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
+
+findByDimensions ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe DocumentType ->
+  Maybe Role ->
+  m [FODTO.FleetOwnerDocumentVerificationConfig]
+findByDimensions merchantOpCityId mbDocumentType mbRole =
+  findAllWithKV
+    [ Se.And $
+        [Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOpCityId)]
+          <> [Se.Is Beam.documentType $ Se.Eq dt | Just dt <- [mbDocumentType]]
+          <> [Se.Is Beam.role $ Se.Eq r | Just r <- [mbRole]]
+    ]
 
 findAllMandatoryByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> Maybe [LYT.ConfigVersionMap] -> m [FODTO.FleetOwnerDocumentVerificationConfig]
 findAllMandatoryByMerchantOpCityIdAndRole merchantOpCityId role mbConfigVersionMap = filter (\config -> config.role == role && config.isMandatory) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap

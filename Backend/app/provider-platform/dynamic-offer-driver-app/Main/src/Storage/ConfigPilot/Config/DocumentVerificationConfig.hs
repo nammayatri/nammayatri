@@ -15,6 +15,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SQ
+import qualified Storage.Queries.DocumentVerificationConfig as QDVC
 
 data DocumentVerificationConfigDimensions = DocumentVerificationConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -42,3 +43,4 @@ instance ConfigDimensions DocumentVerificationConfigDimensions where
         LCP.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
       ]
       Nothing
+  configFallback a = Just (QDVC.findByDimensions (Id a.merchantOperatingCityId) a.documentType a.vehicleCategory)

@@ -994,8 +994,7 @@ getMerchantConfigOnboardingDocument :: ShortId DM.Merchant -> Context.City -> Ma
 getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = castDocumentType <$> mbReqDocumentType, vehicleCategory = mbCategory}) (Just (CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
-
+  configs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = castDocumentType <$> mbReqDocumentType, vehicleCategory = mbCategory}) Nothing
   pure $ mkDocumentVerificationConfigRes <$> configs
 
 mkDocumentVerificationConfigRes :: DVC.DocumentVerificationConfig -> Common.DocumentVerificationConfigItem
@@ -1118,7 +1117,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory Nothing)) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) Nothing >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -1237,7 +1236,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory Nothing))
+  mbConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) Nothing
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
   _ <- CQDVC.create newConfig
@@ -3666,7 +3665,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- onboarding document config
   mbDocumentVerificationConfigs <-
-    getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
+    getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) Nothing >>= \case
       [] -> do
         documentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId baseOperatingCityId Nothing))
         let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newMerchantId newMerchantOperatingCityId now) documentVerificationConfigs
@@ -3677,7 +3676,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   mbPayoutConfigs <-
     getConfig (PayoutConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing}) (Just (CQPC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing)) >>= \case
       [] -> do
-        payoutConfigs <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing}) (Just (CQPC.findAllByMerchantOpCityId baseOperatingCityId Nothing))
+        payoutConfigs <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing}) Nothing
         let newPayoutConfigs = map (buildPayoutConfig newMerchantId newMerchantOperatingCityId now) payoutConfigs
         return $ Just newPayoutConfigs
       _ -> return Nothing
@@ -4586,7 +4585,7 @@ postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.
 postMerchantPayoutConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just req.vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCity.id req.vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just req.vehicleCategory, isPayoutEnabled = Nothing}) Nothing >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
   QPC.updateConfigValues req payoutConfig merchantOpCity.id
   CPC.clearConfigCache merchantOpCity.id req.vehicleCategory
   pure Success

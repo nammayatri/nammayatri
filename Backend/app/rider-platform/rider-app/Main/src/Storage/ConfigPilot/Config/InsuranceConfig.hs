@@ -43,3 +43,4 @@ instance ConfigDimensions InsuranceConfigDimensions where
         (maybeToList <$> QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory (Id a.merchantId) (Id a.merchantOperatingCityId) a.tripCategory a.vehicleCategory)
         ([] :: [LCP.DimMatcher InsuranceConfigDimensions DIC.InsuranceConfig])
         Nothing
+  configFallback a = Just (QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory (Id a.merchantId) (Id a.merchantOperatingCityId) a.tripCategory a.vehicleCategory)

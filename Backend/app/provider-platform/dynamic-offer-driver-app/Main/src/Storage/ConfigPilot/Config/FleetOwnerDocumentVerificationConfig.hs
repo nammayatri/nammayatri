@@ -42,3 +42,4 @@ instance ConfigDimensions FleetOwnerDocumentVerificationConfigDimensions where
         LCP.DimMatcher (.role) (Just . (.role)) (==)
       ]
       Nothing
+  configFallback a = Just (SQ.findByDimensions (Id a.merchantOperatingCityId) a.documentType a.role)

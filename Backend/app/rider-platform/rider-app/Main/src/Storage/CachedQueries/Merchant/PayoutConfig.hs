@@ -5,11 +5,14 @@ module Storage.CachedQueries.Merchant.PayoutConfig where
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
 import Domain.Types.VehicleCategory (VehicleCategory)
+import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Sequelize as Se
+import qualified Storage.Beam.PayoutConfig as Beam
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.PayoutConfig as Queries
 
@@ -17,6 +20,22 @@ create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutConfig -> m ()
 create val = do
   Queries.create val
   clearCacheAll val.merchantOperatingCityId
+
+findByDimensions ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Maybe VehicleCategory ->
+  Maybe Bool ->
+  Maybe PayoutEntity ->
+  m [PayoutConfig]
+findByDimensions merchantOperatingCityId mbVehicleCategory mbIsPayoutEnabled mbPayoutEntity =
+  findAllWithKV
+    [ Se.And $
+        [Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)]
+          <> [Se.Is Beam.vehicleCategory $ Se.Eq (Just v) | Just v <- [mbVehicleCategory]]
+          <> [Se.Is Beam.isPayoutEnabled $ Se.Eq b | Just b <- [mbIsPayoutEnabled]]
+          <> [Se.Is Beam.payoutEntity $ Se.Eq pe | Just pe <- [mbPayoutEntity]]
+    ]
 
 findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Bool -> PayoutEntity -> Maybe [LYT.ConfigVersionMap] -> m (Maybe PayoutConfig)
 findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity id isPayoutEnabled payoutEntity _mbConfigVersionMap =

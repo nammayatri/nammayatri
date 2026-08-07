@@ -56,7 +56,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.ScheduledPayoutConfig as QSPC
 import qualified Tools.Payout as TPayout
 
 --------------------------------------------------------------------------------
@@ -84,7 +83,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
       category = jobData.payoutCategory
 
   -- Load config
-  mbConfig <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, isEnabled = Nothing, payoutCategory = Just category}) (Just (maybeToList <$> QSPC.findByMerchantOpCityIdAndCategory merchantOpCityId category))
+  mbConfig <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, isEnabled = Nothing, payoutCategory = Just category}) Nothing
   case mbConfig of
     Nothing -> do
       logWarning $ "No ScheduledPayoutConfig found for " <> show category <> " in city " <> merchantOpCityId.getId

@@ -45,3 +45,4 @@ instance ConfigDimensions PayoutConfigDimensions where
         LCP.DimMatcher (.payoutEntity) (Just . (.payoutEntity)) (==)
       ]
       Nothing
+  configFallback a = Just (SQ.findByDimensions (Id a.merchantOperatingCityId) a.vehicleCategory a.isPayoutEnabled a.payoutEntity)

@@ -50,7 +50,6 @@ import SharedLogic.JobScheduler (ExecuteCashRideCashbackPayoutJobData (..), Ride
 import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -371,7 +370,7 @@ scheduleCashbackPayoutJob ::
 scheduleCashbackPayoutJob booking ride personId ridePayoutAmount =
   when (ridePayoutAmount > 0) $ do
     let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
-    payoutCfg <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory booking.merchantOperatingCityId vehicleCategory (Just [])))
+    payoutCfg <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
     case payoutCfg of
       Just payoutConfig -> do
         let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = personId}

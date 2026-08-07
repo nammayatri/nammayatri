@@ -95,7 +95,6 @@ import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.InsuranceConfig as QIC
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Quote as QQuote
@@ -523,7 +522,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
           tripCategory = tripCategory,
           vehicleCategory = DV.castVehicleVariantToVehicleCategory vehicleVariant
         }
-      (Just (QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)))
+      Nothing
   let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
   pure
     DEstimate.Estimate
