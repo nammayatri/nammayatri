@@ -87,6 +87,8 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
+import qualified SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals as RideTotals
+import qualified SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch as RideRev
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
@@ -1857,6 +1859,7 @@ getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr 
 getFinanceManagementFinanceSapJournalsTransactions ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
@@ -1866,21 +1869,212 @@ getFinanceManagementFinanceSapJournalsTransactions ::
   UTCTime ->
   Text ->
   Flow API.SapJournalTransactionsRes
-getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbFromTime mbLimit mbOffset mbSubscriptionId mbToTime periodEndTime periodStartTime transactionType = do
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbDescription mbFromTime mbLimit mbOffset mbSubscriptionId mbToTime periodEndTime periodStartTime transactionType = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   (queryStartTime, queryEndTime) <- resolveTimeRange mbFromTime mbToTime periodStartTime periodEndTime
   case transactionType of
     "SubscriptionPurchase" -> do
+      rejectUnsupportedDescription mbDescription transactionType
       rows <- QSubscriptionPurchase.findSubscriptionPurchasesWithTaxByDateRange merchantOpCityId queryStartTime queryEndTime mbSubscriptionId mbLimit mbOffset
       let items = map subscriptionToTransactionItem rows
       pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+    "RevenueRecognition" -> fetchRideRevenueTransactions mbDescription merchantOpCityId queryStartTime queryEndTime
     _ -> do
+      rejectUnsupportedDescription mbDescription transactionType
       txnType <- parseTxnType transactionType
       reports <- QPgPaymentSettlementReport.findByTxnDateRangeAndTxnType merchant.id.getId merchantOpCityId.getId queryStartTime queryEndTime txnType mbSubscriptionId mbLimit mbOffset
       let items = map pgSettlementToTransactionItem reports
       pure API.SapJournalTransactionsRes {total = length items, transactions = items}
   where
+    rejectUnsupportedDescription :: Maybe Text -> Text -> Flow ()
+    rejectUnsupportedDescription mbDesc txnType =
+      when (isJust mbDesc) $
+        throwError $
+          InvalidRequest $
+            "description filter is only supported for RevenueRecognition, got transactionType=" <> txnType
+
+    emptyTransactions :: API.SapJournalTransactionsRes
+    emptyTransactions = API.SapJournalTransactionsRes {total = 0, transactions = []}
+
+    -- description = sap_journal_entry.description (JV label from SAPRideRevenueDispatch).
+    -- Nothing → all implemented sources (concat); Just label → one source.
+    fetchRideRevenueTransactions ::
+      Maybe Text ->
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchRideRevenueTransactions mbDesc mId qStart qEnd = case mbDesc of
+      Nothing -> do
+        payoutRows <- RideTotals.findWalletPayoutRows mId qStart qEnd mbLimit mbOffset -- avoid double fetch of the same
+        let mappingFunc desc
+              | desc == RideRev.payoutToClearingLabel = pure $ mkPayoutTransactions RideRev.payoutToClearingLabel payoutRows
+              | desc == RideRev.payoutClearingToBankLabel = pure $ mkPayoutTransactions RideRev.payoutClearingToBankLabel payoutRows
+              | otherwise = fetchRideRevenueByDescription desc mId qStart qEnd
+        parts <- mapM mappingFunc RideRev.rideRevenueJvLabels
+        let transactions = concatMap (.transactions) parts
+        pure API.SapJournalTransactionsRes {total = length transactions, transactions = transactions}
+      Just desc -> fetchRideRevenueByDescription desc mId qStart qEnd
+
+    fetchRideRevenueByDescription ::
+      Text ->
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchRideRevenueByDescription desc mId qStart qEnd
+      | desc == RideRev.onlineRideRevRecLabel = fetchOnlineRideRevRecTransactions mId qStart qEnd
+      | desc == RideRev.offlineCashRideLabel = fetchOfflineCashRideTransactions mId qStart qEnd
+      | desc == RideRev.buyerAppSettlementLabel = fetchBuyerAppSettlementTransactions -- WS2
+      | desc == RideRev.driverEarningAccrualLabel = fetchDriverEarningAccrualTransactions mId qStart qEnd
+      | desc == RideRev.payoutToClearingLabel = fetchPayoutTransactions RideRev.payoutToClearingLabel mId qStart qEnd
+      | desc == RideRev.payoutClearingToBankLabel = fetchPayoutTransactions RideRev.payoutClearingToBankLabel mId qStart qEnd
+      | desc == RideRev.tdsDeductionLabel = fetchTdsDeductionTransactions mId qStart qEnd
+      | desc == RideRev.tdsReimbursementLabel = fetchTdsReimbursementTransactions -- WS8
+      | otherwise = throwError $ InvalidRequest ("Invalid RevenueRecognition description: " <> desc)
+
+    -- Row-level twin of RideRevenueTotals.findRideFareITTTotalsByLedgerTaxRefs
+    -- (GSTOnline/VATOnline). Keep WHERE in sync with the aggregate used by SAP dispatch.
+    fetchOnlineRideRevRecTransactions ::
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchOnlineRideRevRecTransactions mId qStart qEnd = do
+      rows <-
+        RideTotals.findRideFareITTRowsByLedgerTaxRefs
+          mId
+          qStart
+          qEnd
+          WalletService.walletReferenceGSTOnline
+          WalletService.walletReferenceVATOnline
+          mbLimit
+          mbOffset
+      let items = map (rideFareRowToTransactionItem RideRev.onlineRideRevRecLabel) rows
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+
+    -- Row-level twin of RideRevenueTotals.findRideFareITTTotalsByLedgerTaxRefs
+    -- (GSTCash/VATCash). Keep WHERE in sync with the aggregate used by SAP dispatch.
+    fetchOfflineCashRideTransactions ::
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchOfflineCashRideTransactions mId qStart qEnd = do
+      rows <-
+        RideTotals.findRideFareITTRowsByLedgerTaxRefs
+          mId
+          qStart
+          qEnd
+          WalletService.walletReferenceGSTCash
+          WalletService.walletReferenceVATCash
+          mbLimit
+          mbOffset
+      let items = map (rideFareRowToTransactionItem RideRev.offlineCashRideLabel) rows
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+
+    rideFareRowToTransactionItem :: Text -> RideTotals.RideFareITTRow -> API.SapJournalTransactionItem
+    rideFareRowToTransactionItem label row =
+      let amount = row.taxableValue + row.cgstAmount + row.sgstAmount + row.igstAmount -- = RideFareRevRecTotals.grossAmount
+       in API.SapJournalTransactionItem
+            { debitAmount = amount,
+              creditAmount = amount,
+              currency = "INR",
+              description = label,
+              subscriptionId = Just row.referenceId,
+              creationDate = row.transactionDate,
+              createdBy = "System"
+            }
+
+    -- TODO: WS2 BAP settlement feed
+    fetchBuyerAppSettlementTransactions :: Flow API.SapJournalTransactionsRes
+    fetchBuyerAppSettlementTransactions = pure emptyTransactions
+
+    -- Row-level twin of RideRevenueTotals.findBaseRideOwnerLiabilityTotals.
+    -- Keep WHERE in sync with the aggregate used by SAP dispatch.
+    fetchDriverEarningAccrualTransactions ::
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchDriverEarningAccrualTransactions mId qStart qEnd = do
+      rows <- RideTotals.findBaseRideOwnerLiabilityRows mId qStart qEnd mbLimit mbOffset
+      let items = map driverEarningAccrualRowToTransactionItem rows
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+
+    driverEarningAccrualRowToTransactionItem ::
+      RideTotals.DriverEarningAccrualRow -> API.SapJournalTransactionItem
+    driverEarningAccrualRowToTransactionItem row =
+      API.SapJournalTransactionItem
+        { debitAmount = row.amount,
+          creditAmount = row.amount,
+          currency = "INR",
+          description = RideRev.driverEarningAccrualLabel,
+          subscriptionId = Just row.referenceId,
+          creationDate = row.timestamp,
+          createdBy = "System"
+        }
+
+    -- Row-level twin of RideRevenueTotals.findWalletPayoutTotals (KV).
+    -- Shared by PayoutToClearing / PayoutClearingToBank — same source legs.
+    fetchPayoutTransactions ::
+      Text ->
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchPayoutTransactions label mId qStart qEnd = do
+      rows <- RideTotals.findWalletPayoutRows mId qStart qEnd mbLimit mbOffset
+      pure $ mkPayoutTransactions label rows
+
+    mkPayoutTransactions ::
+      Text ->
+      [RideTotals.WalletPayoutRow] ->
+      API.SapJournalTransactionsRes
+    mkPayoutTransactions label rows = do
+      let items = map (walletPayoutRowToTransactionItem label) rows
+       in API.SapJournalTransactionsRes {total = length items, transactions = items}
+
+    walletPayoutRowToTransactionItem :: Text -> RideTotals.WalletPayoutRow -> API.SapJournalTransactionItem
+    walletPayoutRowToTransactionItem label row =
+      API.SapJournalTransactionItem
+        { debitAmount = row.amount,
+          creditAmount = row.amount,
+          currency = "INR",
+          description = label,
+          subscriptionId = Just row.referenceId,
+          creationDate = row.timestamp,
+          createdBy = "System"
+        }
+
+    -- Row-level twin of RideRevenueTotals.findTdsDeductionTotals (KV).
+    fetchTdsDeductionTransactions ::
+      Id DMOC.MerchantOperatingCity ->
+      UTCTime ->
+      UTCTime ->
+      Flow API.SapJournalTransactionsRes
+    fetchTdsDeductionTransactions mId qStart qEnd = do
+      rows <- RideTotals.findTdsDeductionRows mId qStart qEnd mbLimit mbOffset
+      let items = map tdsDeductionRowToTransactionItem rows
+      pure API.SapJournalTransactionsRes {total = length items, transactions = items}
+
+    tdsDeductionRowToTransactionItem :: RideTotals.TdsDeductionRow -> API.SapJournalTransactionItem
+    tdsDeductionRowToTransactionItem row =
+      API.SapJournalTransactionItem
+        { debitAmount = row.tdsAmount,
+          creditAmount = row.tdsAmount,
+          currency = "INR",
+          description = RideRev.tdsDeductionLabel,
+          subscriptionId = Just row.referenceId,
+          creationDate = row.transactionDate,
+          createdBy = "System"
+        }
+
+    -- TODO: WS8 FO TDS-cert reimbursement
+    fetchTdsReimbursementTransactions :: Flow API.SapJournalTransactionsRes
+    fetchTdsReimbursementTransactions = pure emptyTransactions
+
     resolveTimeRange :: Maybe UTCTime -> Maybe UTCTime -> UTCTime -> UTCTime -> Flow (UTCTime, UTCTime)
     resolveTimeRange mbFrom mbTo pStart pEnd = do
       let from = fromMaybe pStart mbFrom

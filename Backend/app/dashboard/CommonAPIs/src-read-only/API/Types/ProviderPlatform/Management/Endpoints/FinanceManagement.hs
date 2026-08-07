@@ -772,12 +772,17 @@ type GetFinanceManagementFinanceSapJournals =
   )
 
 type GetFinanceManagementFinanceSapJournalsTransactions =
-  ( "finance" :> "sapJournals" :> "transactions" :> QueryParam "fromTime" Kernel.Prelude.UTCTime
+  ( "finance" :> "sapJournals" :> "transactions" :> QueryParam "description" Kernel.Prelude.Text
       :> QueryParam
-           "limit"
+           "fromTime"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
            Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam "subscriptionId" Kernel.Prelude.Text
+      :> QueryParam
+           "subscriptionId"
+           Kernel.Prelude.Text
       :> QueryParam
            "toTime"
            Kernel.Prelude.UTCTime
@@ -806,7 +811,7 @@ data FinanceManagementAPIs = FinanceManagementAPIs
     getFinanceManagementFinanceWalletLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> EulerHS.Types.EulerClient WalletLedgerRes,
     postFinanceManagementReconciliationTrigger :: ReconciliationTriggerReq -> EulerHS.Types.EulerClient ReconciliationTriggerRes,
     getFinanceManagementFinanceSapJournals :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient SapJournalListRes,
-    getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient SapJournalTransactionsRes
+    getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient SapJournalTransactionsRes
   }
 
 mkFinanceManagementAPIs :: (Client EulerHS.Types.EulerClient API -> FinanceManagementAPIs)
