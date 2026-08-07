@@ -24,11 +24,14 @@ import qualified API.Action.RiderPlatform.AppManagement as AppManagementDSL
 import qualified API.Action.RiderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.RiderPlatform.Management as ManagementDSL
 import qualified API.Action.RiderPlatform.RideBooking as RideBookingDSL
+import qualified API.Entity as Entity
+import qualified API.Person as Person
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Servant
+import "lib-dashboard" Storage.Beam.BeamFlow
 
 -- TODO: Deprecated, Remove after successful deployment
 type API =
@@ -47,15 +50,19 @@ type API' =
     :<|> AppManagementDSL.API
     :<|> IssueManagementDSL.API
     :<|> ("rideBooking" :> RideBookingDSL.API)
+    :<|> Entity.API
+    :<|> Person.API
 
 -- TODO: Deprecated, Remove after successful deployment
-handler :: FlowServer API
+handler :: BeamFlow' => FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
   ManagementDSL.handler merchantId city
     :<|> AppManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
+    :<|> Entity.handler merchantId
+    :<|> Person.handler merchantId
   where
     getCity = \case
       "NAMMA_YATRI" -> City.City "Bangalore"
@@ -63,9 +70,11 @@ handler merchantId = do
       "JATRI_SAATHI" -> City.City "Kolkata"
       _ -> City.City "AnyCity"
 
-handlerV2 :: FlowServer APIV2
+handlerV2 :: BeamFlow' => FlowServer APIV2
 handlerV2 merchantId city =
   ManagementDSL.handler merchantId city
     :<|> AppManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
+    :<|> Entity.handler merchantId
+    :<|> Person.handler merchantId

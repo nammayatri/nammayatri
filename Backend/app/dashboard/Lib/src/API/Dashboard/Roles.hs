@@ -60,7 +60,7 @@ type API =
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] DRoles.ListRoleRes
-         )
+       )
 
 handler :: BeamFlow' => FlowServer API
 handler =

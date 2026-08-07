@@ -256,6 +256,22 @@ updatePersonVerifiedStatus personId verified = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+updatePersonUpsertableFields :: BeamFlow m r => Person -> m ()
+updatePersonUpsertableFields p =
+  updateWithKV
+    [ Se.Set BeamP.firstName p.firstName,
+      Se.Set BeamP.lastName p.lastName,
+      Se.Set BeamP.roleId (getId p.roleId),
+      Se.Set BeamP.emailEncrypted (p.email <&> (unEncrypted . (.encrypted))),
+      Se.Set BeamP.emailHash (p.email <&> (.hash)),
+      Se.Set BeamP.dashboardAccessType p.dashboardAccessType,
+      Se.Set BeamP.tokenNoHash p.tokenNoHash,
+      Se.Set BeamP.entityId (p.entityId <&> getId),
+      Se.Set BeamP.verified p.verified,
+      Se.Set BeamP.updatedAt p.updatedAt
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId p.id]
+
 findAllWithLimitOffset ::
   BeamFlow m r =>
   Maybe Text ->

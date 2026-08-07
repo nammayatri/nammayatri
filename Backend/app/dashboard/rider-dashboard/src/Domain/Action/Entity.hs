@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
-module Domain.Action.RiderDashboard.Entity
+module Domain.Action.Entity
   ( CreateEntityReq (..),
     CreateEntityResp (..),
     UpdateEntityReq (..),
@@ -21,6 +21,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "lib-dashboard" Storage.Beam.BeamFlow as BeamFlow
+import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Entity as QE
 import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
 
@@ -37,7 +38,8 @@ newtype CreateEntityResp = CreateEntityResp
 
 data UpdateEntityReq = UpdateEntityReq
   { entityName :: Maybe Text,
-    entityShortId :: Maybe Text
+    entityShortId :: Maybe Text,
+    deleted :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -76,6 +78,7 @@ listEntity merchantShortId mbIncludeDeleted = do
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   ListEntityResp <$> QE.findAllByFilters merchant.id mbIncludeDeleted
 
+-- No guard on existing.deleted: update is the only restore path (deleted=false toggles it back).
 updateEntity :: BeamFlow.BeamFlow m r => Id DP.Person -> ShortId DMerchant.Merchant -> Id DE.Entity -> UpdateEntityReq -> m APISuccess
 updateEntity actorPersonId merchantShortId entityId req = do
   merchant <-
@@ -84,8 +87,6 @@ updateEntity actorPersonId merchantShortId entityId req = do
   existing <- QE.findById entityId >>= fromMaybeM (InvalidRequest $ "Entity " <> entityId.getId <> " does not exist")
   unless (existing.merchantId == merchant.id) $
     throwError AccessDenied
-  when existing.deleted $
-    throwError (InvalidRequest $ "Entity " <> entityId.getId <> " is soft-deleted; restore it before editing")
   whenJust req.entityShortId $ \newShortId -> do
     let newShortIdTyped = ShortId newShortId
     when (newShortIdTyped /= existing.entityShortId) $ do
@@ -97,14 +98,14 @@ updateEntity actorPersonId merchantShortId entityId req = do
         existing
           { DE.entityName = fromMaybe existing.entityName req.entityName,
             DE.entityShortId = maybe existing.entityShortId ShortId req.entityShortId,
+            DE.deleted = fromMaybe existing.deleted req.deleted,
             DE.updatedAt = now
           }
   QE.updateByPrimaryKey updated
   logInfo $ "[Entity.update] actor=" <> actorPersonId.getId <> " entityId=" <> entityId.getId
   pure Success
 
--- Soft delete preserves person.entity_id references; `?includeDeleted=true`
--- on /entity/list is the only way to see these rows after the flip.
+-- Soft delete: keeps person.entity_id FKs intact; row visible only via ?includeDeleted=true.
 deleteEntity :: BeamFlow.BeamFlow m r => Id DP.Person -> ShortId DMerchant.Merchant -> Id DE.Entity -> m APISuccess
 deleteEntity actorPersonId merchantShortId entityId = do
   merchant <-
