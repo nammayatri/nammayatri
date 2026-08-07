@@ -1628,7 +1628,17 @@ def _register_dev_user(ssh_user: str, host: str, port: int, identity: str | None
 
 DEVBOX_PORTS_RELPATH = "data/ports.json"
 DEVBOX_PORTS_FILE = PROJECT_ROOT / "data" / "ports.json"
+CADDYFILE = PROJECT_ROOT / "data" / "Caddyfile"
 _DEVBOX_PORTS_TTL = 5.0
+
+
+def _caddy_port_from_caddyfile() -> int | None:
+    try:
+        text = CADDYFILE.read_text()
+    except OSError:
+        return None
+    m = re.search(r"http://:(\d+)\s*\{", text)
+    return int(m.group(1)) if m else None
 
 _devbox_ports_lock = threading.Lock()
 _devbox_ports_cache: dict = {"at": 0.0, "key": "", "value": None}
@@ -1695,6 +1705,10 @@ def get_devbox_ports(force: bool = False, host_override: str | None = None) -> d
         except (OSError, ValueError) as e:
             result = {"source": str(DEVBOX_PORTS_FILE), "host": "localhost",
                       "ports": {}, "error": f"cannot read {DEVBOX_PORTS_FILE}: {e}"}
+        if not result.get("caddyPort"):
+            cp = _caddy_port_from_caddyfile()
+            if cp:
+                result["caddyPort"] = cp
     else:
         user = (saved.get("sshUser") or "").strip()
         ssh_port = int(saved.get("sshPort") or 22)

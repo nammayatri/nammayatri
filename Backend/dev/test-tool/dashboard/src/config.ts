@@ -94,6 +94,7 @@ const DEFAULT_PORTS: Record<string, number> = {
   'beckn-gateway': 8015,
   'mock-registry': 8020,
   'test-context-api': 7082,
+  'config-sync-server': 8090,
   'metabase': 3001,
   'victoria-metrics': 8428,
   'db-manager-frontend': 5183,
@@ -201,8 +202,20 @@ export const MOCK_SERVER_URL = process.env.REACT_APP_MOCK_SERVER_URL || getServi
 export const RIDER_URL = process.env.REACT_APP_RIDER_URL || getServiceUrl('rider-app');
 export const DRIVER_URL = process.env.REACT_APP_DRIVER_URL || getServiceUrl('dynamic-offer-driver-app');
 export const PROVIDER_DASHBOARD_URL = process.env.REACT_APP_PROVIDER_DASHBOARD_URL || getServiceUrl('provider-dashboard');
-// Default URL when no per-env entry exists.
-export const CONFIG_SYNC_BASE = process.env.REACT_APP_CONFIG_SYNC_BASE ?? 'http://localhost:8090';
+const CONFIG_SYNC_BASE_OVERRIDE = process.env.REACT_APP_CONFIG_SYNC_BASE;
+
+function configSyncBaseDefault(): string {
+  const port = getServicePort('config-sync-server');
+  try {
+    const host = new URL(PROXY_BASE).hostname;
+    return `http://${host}:${port}`;
+  } catch {
+    return `http://localhost:${port}`;
+  }
+}
+
+// Default URL when no per-env entry / override exists (dev-box-aware).
+export const CONFIG_SYNC_BASE = CONFIG_SYNC_BASE_OVERRIDE ?? configSyncBaseDefault();
 
 // Per-source-env URL map. Each env's cluster runs its own config-sync pod
 // (needs direct DB access to that env). In a deployed dashboard the
@@ -229,5 +242,6 @@ export const CONFIG_SYNC_URLS: Record<string, string> = _parseUrlMap();
 
 export function configSyncBaseFor(env: string | null | undefined): string {
   if (env && CONFIG_SYNC_URLS[env]) return CONFIG_SYNC_URLS[env];
-  return CONFIG_SYNC_BASE;
+  if (CONFIG_SYNC_BASE_OVERRIDE) return CONFIG_SYNC_BASE_OVERRIDE;
+  return configSyncBaseDefault();
 }
