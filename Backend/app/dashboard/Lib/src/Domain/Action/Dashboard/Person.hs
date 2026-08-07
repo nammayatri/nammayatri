@@ -43,8 +43,10 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
@@ -190,9 +192,80 @@ validateCreatePerson CreatePersonReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
       validateField "lastName" lastName $ NotEmpty `And` P.name,
+      validateField "email" email P.email,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+-- | Access tiers that carry administrative privilege and therefore must live on a
+-- managed organizational email domain. Written as an exhaustive case rather than a
+-- membership list so that adding a constructor to DashboardAccessType is a compile error
+-- here instead of a silently uncovered tier.
+isAdminTier :: DRole.DashboardAccessType -> Bool
+isAdminTier = \case
+  DRole.DASHBOARD_ADMIN -> True
+  DRole.DASHBOARD_RELEASE_ADMIN -> True
+  DRole.MERCHANT_ADMIN -> True
+  DRole.TICKET_DASHBOARD_ADMIN -> True
+  DRole.DASHBOARD_USER -> False
+  DRole.DASHBOARD_OPERATOR -> False
+  DRole.FLEET_OWNER -> False
+  DRole.RENTAL_FLEET_OWNER -> False
+  DRole.MERCHANT_MAKER -> False
+  DRole.MERCHANT_SERVER -> False
+  DRole.TICKET_DASHBOARD_USER -> False
+  DRole.TICKET_DASHBOARD_MERCHANT -> False
+  DRole.TICKET_DASHBOARD_APPROVER -> False
+
+-- | Invariant: an account holding an admin-tier role must sit on one of its merchant's approved
+-- email domains. Enforced at every path that can produce that pairing — person creation, role
+-- assignment, and email change — not just at creation.
+--
+-- The allow-list is per-merchant (merchant.adminEmailDomains); an empty list leaves the
+-- restriction switched off. Matching is exact: an allow-list entry of "maruti.co.in" admits
+-- "user@maruti.co.in" but not "user@mail.maruti.co.in". Subdomains must be listed explicitly.
+assertAdminEmailDomain ::
+  BeamFlow m r =>
+  Id DMerchant.Merchant ->
+  DRole.Role ->
+  Maybe Text ->
+  m ()
+assertAdminEmailDomain merchantId role mbEmail =
+  when (isAdminTier role.dashboardAccessType) $ do
+    merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+    let allowedDomains = merchant.adminEmailDomains
+    unless (null allowedDomains) $ do
+      -- An admin-tier account with no email at all cannot satisfy the restriction.
+      email <- mbEmail & fromMaybeM (InvalidRequest adminEmailDomainError)
+      let domain = T.toLower . T.drop 1 . T.dropWhile (/= '@') $ email
+      unless (any (\allowed -> domain == T.toLower allowed) allowedDomains) $
+        throwError $ InvalidRequest adminEmailDomainError
+
+-- Deliberately does not echo the allow-list back to the caller.
+adminEmailDomainError :: Text
+adminEmailDomainError = "Administrator accounts must use an approved organizational email domain."
+
+-- | Admin mutations that address a person directly by id must not reach across merchants.
+-- Without this an admin of any merchant could act on an arbitrary person id.
+--
+-- The predicate is "belongs to somebody else", not "belongs to me". createPerson does not create
+-- a merchant_access row — access is granted separately by assignMerchantCityAccess — so between
+-- those two calls a person legitimately has no access rows at all. Treating that as a rejection
+-- would strand every half-provisioned account: an admin who typo'd an email at creation could
+-- neither fix it nor delete it, and the natural create -> assign role -> grant access order would
+-- break at the middle step. A person with no access rows anywhere is unprovisioned and owned by
+-- nobody, so the caller may act on them; a person with access rows none of which name the
+-- caller's merchant belongs to another merchant and is rejected.
+assertPersonInCallerMerchant ::
+  BeamFlow m r =>
+  TokenInfo ->
+  Id DP.Person ->
+  m ()
+assertPersonInCallerMerchant tokenInfo personId = do
+  allAccess <- QAccess.findAllMerchantAccessByPersonId personId
+  unless (null allAccess) $
+    unless (any (\access -> access.merchantId == tokenInfo.merchantId) allAccess) $
+      throwError (PersonDoesNotExist personId.getId)
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -234,6 +307,7 @@ createPerson tokenInfo personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  assertAdminEmailDomain tokenInfo.merchantId role (Just personEntity.email)
   -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
   -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
   DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
@@ -300,15 +374,22 @@ makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
       merchantAccesslistWithCity
 
 assignRole ::
-  BeamFlow m r =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
   m APISuccess
 assignRole tokenInfo personId roleId = do
+  assertPersonInCallerMerchant tokenInfo personId
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
   newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  -- Promotion into an admin tier must satisfy the same domain restriction as creating one.
+  -- Guarded on the tier so that ordinary role changes don't pay a passetto round trip to decrypt
+  -- an email whose value would then be discarded.
+  when (isAdminTier newRole.dashboardAccessType) $ do
+    decPerson <- decrypt person
+    assertAdminEmailDomain tokenInfo.merchantId newRole decPerson.email
   when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
     throwError RoleConversionNotAllowed
   -- Admin tiering (existence-guarded): promoting into (or demoting out of) an
@@ -423,11 +504,26 @@ changePassword tokenInfo req = do
   QReg.deleteAllByPersonIdAndMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
   pure Success
 
+-- | Rate-limit bucket keyed on email. Deliberately shared with login (Registration.login) so an
+-- attacker cannot get a fresh budget by switching between the two endpoints that both resolve
+-- credentials via findByEmailAndPassword.
+makeEmailHitsCountKey :: Maybe Text -> Text
+makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
+
 changePasswordAfterExpiry ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   ChangePasswordAfterExpiryReq ->
   m APISuccess
 changePasswordAfterExpiry req = do
+  -- Unauthenticated and resolves credentials, so it is a password oracle unless limited exactly
+  -- as login is. This is also the sole recovery path for an admin-reset account.
+  loginRateLimitOptions <- asks (.loginRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just req.email)) loginRateLimitOptions
   encPerson <- QP.findByEmailAndPassword req.email req.oldPassword >>= fromMaybeM (PersonDoesNotExist req.email)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -525,18 +621,28 @@ getAccessMatrix tokenInfo = do
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 changePasswordByAdmin ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   TokenInfo ->
   Id DP.Person ->
   ChangePasswordByAdminReq ->
   m APISuccess
-changePasswordByAdmin _ personId req = do
+changePasswordByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
     validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
-  QP.updatePersonPassword personId newHash
+  QP.updatePersonPasswordByAdmin personId newHash
+  -- An admin reset is also the remedy for a compromised account, so any session established
+  -- with the old credential must die with it.
+  Auth.cleanCachedTokens personId
+  QReg.deleteAllByPersonId personId
   pure Success
 
 changeMobileNumberByAdmin ::
@@ -545,7 +651,8 @@ changeMobileNumberByAdmin ::
   Id DP.Person ->
   ChangeMobileNumberByAdminReq ->
   m APISuccess
-changeMobileNumberByAdmin _ personId req = do
+changeMobileNumberByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
   runRequestValidation validateChangeMobileNumberReq req
   mobileDbHash <- getDbHash req.newMobileNumber
   result <- QP.findByIdWithRoleAndCheckMobileHash personId (Just mobileDbHash)
@@ -566,6 +673,10 @@ changeEnabledStatus ::
   ChangeEnabledStatusReq ->
   m APISuccess
 changeEnabledStatus tokenInfo personId req = do
+  -- Writes here are already merchant+city scoped, so a cross-merchant call is inert rather than
+  -- harmful. Guarding anyway turns a silent no-op into an explicit error and keeps every
+  -- person-id-addressed admin endpoint consistent.
+  assertPersonInCallerMerchant tokenInfo personId
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
   QReg.updateEnabledStatusByPersonIdAndMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city req.enabled
@@ -577,11 +688,22 @@ changeEmailByAdmin ::
   Id DP.Person ->
   ChangeEmailByAdminReq ->
   m APISuccess
-changeEmailByAdmin _ personId req = do
-  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  encEmail <- encrypt $ T.toLower req.newEmail
+changeEmailByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  runRequestValidation validateChangeEmailReq req
+  -- Changing an existing admin's email must not move them off an approved domain.
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  let newEmail = T.toLower req.newEmail
+  assertAdminEmailDomain tokenInfo.merchantId role (Just newEmail)
+  encEmail <- encrypt newEmail
   QP.updatePersonEmail personId encEmail
   pure Success
+
+validateChangeEmailReq :: Validate ChangeEmailByAdminReq
+validateChangeEmailReq ChangeEmailByAdminReq {..} =
+  sequenceA_
+    [validateField "newEmail" newEmail P.email]
 
 deletePerson ::
   ( BeamFlow m r,
@@ -592,6 +714,9 @@ deletePerson ::
   Id DP.Person ->
   m APISuccess
 deletePerson tokenInfo personId = do
+  -- Every write below is keyed on personId alone and none is merchant-scoped, so without this
+  -- guard any dashboard admin could hard-delete an arbitrary person in another merchant.
+  assertPersonInCallerMerchant tokenInfo personId
   void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
   transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
@@ -628,6 +753,7 @@ buildPerson pid req dashboardAccessType = do
         rejectionReason = Nothing,
         rejectedAt = Nothing,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

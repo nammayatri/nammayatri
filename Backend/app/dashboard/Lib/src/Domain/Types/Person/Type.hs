@@ -43,6 +43,9 @@ data PersonE e = Person
     rejectionReason :: Maybe Text,
     rejectedAt :: Maybe UTCTime,
     passwordUpdatedAt :: Maybe UTCTime,
+    -- | Set when an admin assigns a password. While True the credential may only be
+    -- used to set a new password, never to obtain a session.
+    forcePasswordChange :: Maybe Bool,
     approvedBy :: Maybe (Id Person),
     rejectedBy :: Maybe (Id Person),
     language :: Maybe KET.Language,
