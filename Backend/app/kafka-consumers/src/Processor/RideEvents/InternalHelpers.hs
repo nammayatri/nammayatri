@@ -422,6 +422,14 @@ creditReferralWallet amount driverId_ dailyStatsId earningKey currency merchantI
 -- Leaderboard zscore
 ------------------------------------------------------------
 
+-- | Same keyModifier as dynamic-offer-driver-app Environment.hs.
+driverAppRedisKeyPrefix :: Text
+driverAppRedisKeyPrefix = "dynamic-offer-driver-app:"
+
+mkDriverAppLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
+mkDriverAppLeaderBoardKey leaderBoardType isCached merchantOpCityId fromDate toDate =
+  driverAppRedisKeyPrefix <> EndRideInt.makeDriverLeaderBoardKey leaderBoardType isCached merchantOpCityId fromDate toDate
+
 updateLeaderboardZScore ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) =>
   SRB.Booking ->
@@ -443,7 +451,7 @@ updateLeaderboardZScore booking ride =
       when leaderBoardConfig.isEnabled $ do
         let rideDate = EndRideInt.getCurrentDate currentTime
             (fromDate, toDate) = calculateFromDateToDate leaderBoardType rideDate
-            leaderBoardKey = EndRideInt.makeDriverLeaderBoardKey leaderBoardType False booking.merchantOperatingCityId fromDate toDate
+            leaderBoardKey = mkDriverAppLeaderBoardKey leaderBoardType False booking.merchantOperatingCityId fromDate toDate
         driverZscore <- Hedis.zScore leaderBoardKey $ ride.driverId.getId
         updateDriverZscore ride rideDate fromDate toDate driverZscore ride.chargeableDistance booking.providerId booking.merchantOperatingCityId leaderBoardConfig
 
@@ -476,8 +484,8 @@ updateDriverZscore ::
 updateDriverZscore ride rideDate fromDate toDate driverZscore rideChargeableDistance _ merchantOpCityId leaderBoardConfig = do
   (LocalTime _ localTime) <- utcToLocalTime timeZoneIST <$> getCurrentTime
   let leaderBoardExpiry = calculateLeaderBoardExpiry - secondsFromTimeOfDay localTime
-      driverLeaderBoardKey = EndRideInt.makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType False merchantOpCityId fromDate toDate
-      cachedDriverLeaderBoardKey = EndRideInt.makeDriverLeaderBoardKey leaderBoardConfig.leaderBoardType True merchantOpCityId fromDate toDate
+      driverLeaderBoardKey = mkDriverAppLeaderBoardKey leaderBoardConfig.leaderBoardType False merchantOpCityId fromDate toDate
+      cachedDriverLeaderBoardKey = mkDriverAppLeaderBoardKey leaderBoardConfig.leaderBoardType True merchantOpCityId fromDate toDate
   Hedis.zAddExp driverLeaderBoardKey ride.driverId.getId calculateCurrentZscore leaderBoardExpiry.getSeconds
   let limit = integerFromInt leaderBoardConfig.leaderBoardLengthLimit
   driversListWithScores' <- Hedis.zrevrangeWithscores driverLeaderBoardKey 0 (limit - 1)
