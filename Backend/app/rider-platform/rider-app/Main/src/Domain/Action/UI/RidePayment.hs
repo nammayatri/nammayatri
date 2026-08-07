@@ -337,7 +337,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = ActorInfo.withMbP
                         }
                 -- Create tip PI with distinct domainEntityId so it doesn't conflict with ride PI in findByDomainEntityId
                 let tipDomainRideId = Kernel.Types.Id.Id @Domain.Types.Ride.Ride ("tip:" <> rideId.getId)
-                mbTipPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just tipDomainRideId) Nothing DOrder.RideHailing createPaymentIntentServiceReq Nothing
+                mbTipPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just tipDomainRideId) Nothing DOrder.RideHailing createPaymentIntentServiceReq Nothing False
                 whenJust mbTipPaymentIntentResp $ \tipPaymentIntentResp -> do
                   -- Capture tip — settlement happens automatically inside chargePaymentIntent
                   offerStatsInput <- SPayment.buildOfferStatsInput person
@@ -395,7 +395,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = ActorInfo.withMbP
                             financeCtx = tipLedgerCtx
                           }
                         mbTipLedgerInfo
-                mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo)
+                mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo) False
                 case mbPaymentIntentResp of
                   Nothing -> do
                     bookingFareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING)

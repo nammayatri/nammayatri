@@ -82,13 +82,38 @@ def _parse_form(body):
 register_body_decoder("stripe", _parse_form)
 
 
-def _stripe_error(error_type, code=None, message=None, http_status=400):
+def _stripe_error(error_type, code=None, message=None, http_status=400, param=None):
     body = {"type": error_type}
     if code:
         body["code"] = code
     if message:
         body["message"] = message
+    if param:
+        body["param"] = param
     return {"error": body}, http_status
+
+
+# Connected accounts that real Stripe would refuse to pay out to (fraud review, disabled transfers).
+# Use these in tests to exercise the platform-only collection path.
+BLOCKED_DESTINATION_ACCOUNTS = {"acct_blocked_test", "acct_rejected_test"}
+
+
+def _is_destination_charge(pi):
+    """True when the intent was created with a transfer leg, i.e. it can carry an application fee."""
+    return bool(pi.get("transfer_data")) or bool(pi.get("on_behalf_of"))
+
+
+def _reject_fee_without_transfer(pi, params, action):
+    """Stripe rejects application_fee_amount on an intent that has no transfer leg — even when 0.
+    This is the failure that makes a platform-only charge die at capture, so the mock must reproduce
+    it or the tests pass on a build that breaks in production."""
+    if params.get("application_fee_amount") is not None and not _is_destination_charge(pi):
+        return _stripe_error(
+            "invalid_request_error", None,
+            f"Can only apply an application_fee_amount when {action} a PaymentIntent that is "
+            "attempting a destination charge or has on_behalf_of set.",
+            400, param="application_fee_amount")
+    return None
 
 
 # ── Response shape builders (match shared-kernel Haskell types) ──
@@ -168,6 +193,22 @@ def _mk_payment_intent(params):
     if pm_id == "pm_card_insufficient":
         return _stripe_error("card_error", "insufficient_funds", "Your card has insufficient funds.", 402)
 
+    # A restricted connected account cannot receive a transfer, so the whole intent is refused —
+    # the rider's card is irrelevant. This is the prod failure that strands riders with unpayable dues.
+    destination = params.get("transfer_data[destination]")
+    if destination in BLOCKED_DESTINATION_ACCOUNTS:
+        return _stripe_error(
+            "invalid_request_error", "insufficient_capabilities_for_transfer",
+            "The destination account needs to have at least one of the following capabilities "
+            "enabled: transfers, crypto_transfers, legacy_payments.",
+            400, param="transfer_data[destination]")
+    if params.get("application_fee_amount") is not None and not destination and not params.get("on_behalf_of"):
+        return _stripe_error(
+            "invalid_request_error", None,
+            "Can only apply an application_fee_amount when the PaymentIntent is attempting a "
+            "destination charge or has on_behalf_of set.",
+            400, param="application_fee_amount")
+
     sfu = params.get("setup_future_usage", "")
     if pm_id == "pm_card_authRequired" and sfu != "off_session":
         status = "requires_action"
@@ -184,7 +225,9 @@ def _mk_payment_intent(params):
         "payment_method": pm_id,
         "client_secret": f"{pi_id}_secret_{uuid.uuid4().hex[:12]}",
         "customer": params.get("customer", ""),
-        "application_fee_amount": int(params.get("application_fee_amount", 0)) if params.get("application_fee_amount") else 0,
+        # Real Stripe reports null (not 0) when the intent carries no application fee, so callers
+        # that assume a fee is always present are caught here rather than in production.
+        "application_fee_amount": int(params["application_fee_amount"]) if params.get("application_fee_amount") else None,
         "on_behalf_of": params.get("on_behalf_of") or None,
         "receipt_email": params.get("receipt_email") or None,
         "description": params.get("description") or None,
@@ -208,6 +251,10 @@ def _mk_capture(pi_id, params):
     if pi["status"] != "requires_capture":
         return _stripe_error("invalid_request_error", None,
                              f"This PaymentIntent's status is {pi['status']}, which is not a capturable status.", 400)
+
+    fee_err = _reject_fee_without_transfer(pi, params, "capturing")
+    if fee_err:
+        return fee_err
 
     if pi.get("payment_method") == "pm_card_captureFail":
         pi["latest_charge"] = _gen_id("ch")
@@ -255,6 +302,10 @@ def _mk_increment_authorization(pi_id, params):
         return _stripe_error("invalid_request_error", "payment_intent_unexpected_state",
                              f"This PaymentIntent's status is {pi['status']}. "
                              "Incremental authorization requires status requires_capture.", 400)
+    fee_err = _reject_fee_without_transfer(pi, params, "incrementing the authorization on")
+    if fee_err:
+        return fee_err
+
     pm_id = pi.get("payment_method", "")
     if pm_id in ("pm_card_noIncremental", "pm_card_declined", "pm_card_insufficient"):
         return _stripe_error("card_error", "card_declined",
@@ -272,6 +323,22 @@ def _mk_increment_authorization(pi_id, params):
 def _mk_refund(params):
     pi_id = params.get("payment_intent", "")
     pi = payment_intents.get(pi_id)
+
+    # Refunding a platform-only charge must not mention a transfer or an application fee: there is
+    # neither. Real Stripe errors on both, which would flip the refund to REFUND_FAILURE and reverse
+    # the BAP/BPP ledgers, so the mock has to be just as strict.
+    if pi and not _is_destination_charge(pi):
+        if params.get("reverse_transfer") is not None:
+            return _stripe_error(
+                "invalid_request_error", None,
+                "No such transfer to reverse: this charge has no associated transfer.",
+                400, param="reverse_transfer")
+        if params.get("refund_application_fee") is not None:
+            return _stripe_error(
+                "invalid_request_error", None,
+                "No application fee to refund on this charge.",
+                400, param="refund_application_fee")
+
     amount = int(params.get("amount", 0))
     if amount == 0 and pi:
         amount = pi.get("amount", 0)

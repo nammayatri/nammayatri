@@ -99,7 +99,10 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
           }
   eitherMbIntent <-
     withTryCatch "[CancellationSettlement] makePaymentIntent" $
-      SPayment.makePaymentIntent personD.merchantId personD.merchantOperatingCityId booking.paymentMode personD.id (Just ride.id) Nothing DOrder.RideHailing createPaymentIntentServiceReq (Just cancellationLedgerInfo)
+      -- Platform-only: a cancellation fee must be collectable even when the fleet's connected account
+      -- is restricted. The fleet's share is already booked to its wallet on the BPP side and is
+      -- settled at payout, where the platform balance tops the connected account up.
+      SPayment.makePaymentIntent personD.merchantId personD.merchantOperatingCityId booking.paymentMode personD.id (Just ride.id) Nothing DOrder.RideHailing createPaymentIntentServiceReq (Just cancellationLedgerInfo) True
   let markDueOnFailure = do
         case ledgerResp of
           Right (_inv, entryIds) -> RidePaymentFinance.markEntriesAsDue entryIds

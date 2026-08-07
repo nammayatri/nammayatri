@@ -123,6 +123,21 @@ updateAmountAndPaymentIntentId orderId amount paymentServiceOrderId = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
+-- | As 'updateAmountAndPaymentIntentId', but also refreshes the charge routing. Use this when a
+--   genuinely new payment intent has been created against an existing order: the new intent may be
+--   routed differently from the one it replaces, and a stale routing here would make capture and
+--   refund send the wrong parameters.
+updateAmountAndPaymentIntentIdAndRouting :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> Text -> Maybe Payment.ChargeRouting -> m ()
+updateAmountAndPaymentIntentIdAndRouting orderId amount paymentServiceOrderId chargeRouting = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.amount amount,
+      Se.Set BeamPO.paymentServiceOrderId paymentServiceOrderId,
+      Se.Set BeamPO.chargeRouting chargeRouting,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
 updateAmount :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> m ()
 updateAmount orderId amount = do
   now <- getCurrentTime

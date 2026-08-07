@@ -276,7 +276,7 @@ chargePaymentIntentService ::
   Id MerchantOperatingCity ->
   DOrder.PaymentServiceType ->
   Payment.PaymentIntentId ->
-  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  (Payment.PaymentIntentId -> HighPrecMoney -> Maybe HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   OfferStatsInput ->
   Bool -> -- useDomainOffers
@@ -287,7 +287,19 @@ chargePaymentIntentService merchantOpCityId _paymentServiceType paymentIntentId 
   transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while charge payment intent: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED]
     then do
-      resp <- withTryCatch "capturePaymentIntentCall:chargePaymentIntentService" $ withShortRetry $ capturePaymentIntentCall paymentIntentId transaction.amount transaction.applicationFeeAmount
+      -- A platform-only intent has no transfer_data, and Stripe rejects application_fee_amount on
+      -- such an intent — sending 0 is still an error. Omit the parameter entirely for those.
+      mbOrder <- QOrder.findById transaction.orderId
+      -- The order is always written before the transaction that points at it, so a miss here should
+      -- be impossible. Defaulting to a destination charge is right for every pre-existing flow, but
+      -- it is wrong for a platform-only intent and would fail the capture, so make it loud rather
+      -- than let the routing be guessed silently.
+      when (isNothing mbOrder) $
+        logError $ "Order not found while charging payment intent, assuming destination charge: orderId=" <> transaction.orderId.getId <> " paymentIntentId=" <> paymentIntentId
+      let mbApplicationFee = case mbOrder >>= (.chargeRouting) of
+            Just Payment.PlatformOnlyCharge -> Nothing
+            _ -> Just transaction.applicationFeeAmount
+      resp <- withTryCatch "capturePaymentIntentCall:chargePaymentIntentService" $ withShortRetry $ capturePaymentIntentCall paymentIntentId transaction.amount mbApplicationFee
       case resp of
         Left exec -> do
           let err = fromException @Payment.StripeError exec
@@ -325,6 +337,11 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     driverAccountId :: Maybe Payment.AccountId,
     applicationFeeAmount :: Maybe HighPrecMoney,
+    -- | Ask for a platform-only charge, i.e. collect the whole amount to the platform account with
+    --   no @transfer_data@ and no application fee. 'Nothing' keeps today's destination charge.
+    --   Use this when collection must not depend on the connected account being able to receive
+    --   funds; the counterparty is then paid via the payout pipeline instead.
+    chargeRouting :: Maybe Payment.ChargeRouting,
     receiptEmail :: Maybe Text,
     -- Juspay-specific (optional)
     splitSettlementDetails :: Maybe Payment.SplitSettlementDetails,
@@ -394,7 +411,7 @@ createPaymentService ::
   CreatePaymentServiceReq ->
   (PInterface.CreatePaymentReq -> m PInterface.CreatePaymentResp) ->
   (Payment.PaymentIntentId -> m PInterface.CreatePaymentResp) -> -- cancel callback for retry
-  Maybe (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) -> -- incremental auth callback (optional)
+  Maybe (Payment.PaymentIntentId -> HighPrecMoney -> Maybe HighPrecMoney -> m ()) -> -- incremental auth callback (optional); Nothing fee = platform-only intent
   m (Maybe CreatePaymentServiceResp)
 createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mbValidity paymentServiceType req createPaymentCall cancelPaymentCall mbIncrementAuthCall = do
   mbExistingOrder <- case mbExistingOrderId of
@@ -428,7 +445,12 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
               -- Amount increased: try incremental authorization first, fall back to cancel+create
               case mbIncrementAuthCall of
                 Just incrementAuthCall -> do
-                  let newAppFee = fromMaybe 0 req.applicationFeeAmount
+                  -- Follow the existing intent's routing, not the new request's: re-authorising a
+                  -- platform-only intent must stay platform-only, or the retry hits the same
+                  -- "application_fee_amount without transfer_data" rejection it was created to avoid.
+                  let newAppFee = case existingOrder.chargeRouting of
+                        Just Payment.PlatformOnlyCharge -> Nothing
+                        _ -> Just $ fromMaybe 0 req.applicationFeeAmount
                   incrementResult <- withTryCatch "incrementAuth:handleExistingOrder" $ withShortRetry $ incrementAuthCall paymentIntentId req.amount newAppFee
                   case incrementResult of
                     Right _ -> do
@@ -503,6 +525,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 paymentMethodId = req.paymentMethodId,
                 driverAccountId = req.driverAccountId,
                 applicationFeeAmount = req.applicationFeeAmount,
+                chargeRouting = req.chargeRouting,
                 receiptEmail = req.receiptEmail,
                 splitSettlementDetails = req.splitSettlementDetails,
                 createMandate = req.createMandate,
@@ -572,12 +595,17 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 groupId = Nothing,
                 vpa = Nothing,
                 paytmTid = Nothing,
+                -- Store what the gateway actually applied, not what we asked for: the service config
+                -- can force platform-only on its own, and capture/refund must follow the real shape.
+                chargeRouting = resp.chargeRouting,
                 createdAt = now,
                 updatedAt = now
               }
       case mbExistingOrder of
         Just _ -> do
-          QOrder.updateAmountAndPaymentIntentId newOrderId req.amount resp.paymentServiceOrderId
+          -- A fresh intent was created for this order, so its routing must be refreshed too:
+          -- leaving the old value would make capture and refund send the wrong parameters.
+          QOrder.updateAmountAndPaymentIntentIdAndRouting newOrderId req.amount resp.paymentServiceOrderId resp.chargeRouting
           logInfo $ "Updated existing order with new payment intent: " <> newOrderId.getId <> "; paymentServiceOrderId: " <> resp.paymentServiceOrderId
         Nothing -> do
           QOrder.create paymentOrder
@@ -666,6 +694,9 @@ refundPaymentService req refundCall = do
                 refundsId = refundId,
                 amount = req.amount,
                 paymentIntentId = Just order.paymentServiceOrderId,
+                -- Derived from the order, so callers never have to know the charge topology:
+                -- a platform-only charge has no transfer to reverse and no fee to refund.
+                chargeRouting = order.chargeRouting,
                 driverAccountId = req.driverAccountId,
                 email = req.email,
                 splitSettlementDetails = Nothing -- TODO: build from PaymentOrderSplit if needed
@@ -939,7 +970,9 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbPaymentOrderValidity 
             groupId = mbGroupId,
             vpa = Nothing,
             pgBaseFee = (.pgBaseFee) <$> mbFeeResult,
-            pgGst = (.pgGst) <$> mbFeeResult
+            pgGst = (.pgGst) <$> mbFeeResult,
+            -- Juspay order: destination-charge semantics do not apply.
+            chargeRouting = Nothing
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -1758,7 +1791,12 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         respCode = resp.respCode,
                         gatewayReferenceId = resp.gatewayReferenceId,
                         amount = resp.amount,
-                        applicationFeeAmount = fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount,
+                        -- Stripe reports no application fee for a platform-only intent, and the
+                        -- fromMaybe below would then preserve the stale locally-written value and
+                        -- over-report platform revenue. Pin it to 0 for those.
+                        applicationFeeAmount = case order.chargeRouting of
+                          Just Payment.PlatformOnlyCharge -> 0
+                          _ -> fromMaybe transaction.applicationFeeAmount resp.applicationFeeAmount,
                         currency = resp.currency,
                         mandateStatus = resp.mandateStatus,
                         mandateStartDate = resp.mandateStartDate,
@@ -2246,7 +2284,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             groupId = Nothing,
             vpa = Nothing,
             pgBaseFee = Nothing,
-            pgGst = Nothing
+            pgGst = Nothing,
+            chargeRouting = Nothing
           }
 
 --- refunds api ----
