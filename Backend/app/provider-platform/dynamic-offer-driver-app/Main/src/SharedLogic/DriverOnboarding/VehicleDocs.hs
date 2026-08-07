@@ -246,7 +246,7 @@ validateMandatoryVehicleDocsForRC transporterConfig rc =
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
-    allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) (Just (CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing))
+    allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) Nothing
     vehicleDocuments <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just registrationNo) onlyMandatoryDocs skipMessages
     let status =
           case find (\vehicleDoc -> vehicleDoc.registrationNo == registrationNo) vehicleDocuments of

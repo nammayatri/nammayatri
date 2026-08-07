@@ -53,7 +53,6 @@ import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoi
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
@@ -402,7 +401,7 @@ redeemCoins ::
 redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory driver calculatedAmount = do
   unless (fromMaybe False transporterConfig.enableCoinsToDirectPayout) $
     throwError $ InvalidRequest "Coins to direct payout is not enabled"
-  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCityId vehCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehCategory, isPayoutEnabled = Nothing}) Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehCategory) merchantOpCityId.getId)
   case payoutConfig.coinRedemptionMinimumLimit of
     Just coinRedemptionMinimumLimit -> when (calculatedAmount < coinRedemptionMinimumLimit) $ throwError $ InvalidRequest "Calculated amount is less than the coin redemption minimum limit"
     Nothing -> throwError $ InvalidRequest "Coin redemption minimum limit is not set"

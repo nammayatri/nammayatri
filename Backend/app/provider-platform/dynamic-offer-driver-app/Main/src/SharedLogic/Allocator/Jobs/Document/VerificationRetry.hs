@@ -42,7 +42,6 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -76,7 +75,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
   case parseDocType verificationReq.docType of
     Nothing -> logWarning $ "Skipping retry for non-document idfy_verification row, requestId: " <> jobData.requestId <> ", docType: " <> verificationReq.docType
     Just parsedDocType -> do
-      documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just parsedDocType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId parsedDocType (fromMaybe DVC.CAR verificationReq.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show parsedDocType))
+      documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just parsedDocType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show parsedDocType))
       let maxRetryCount = documentVerificationConfig.maxRetryCount
       if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
         then do

@@ -14,7 +14,6 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Insurance as QInsurance
@@ -43,7 +42,7 @@ createInsurance ride = do
                     tripCategory = tp,
                     vehicleCategory = vehicleCategory
                   }
-                (Just (CQInsuranceConfig.getInsuranceConfig booking.merchantId booking.merchantOperatingCityId tp vehicleCategory))
+                Nothing
           )
           $ pure booking.tripCategory
         )

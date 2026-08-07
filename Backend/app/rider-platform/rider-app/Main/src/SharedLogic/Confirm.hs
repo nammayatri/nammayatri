@@ -64,7 +64,6 @@ import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
-import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -570,7 +569,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
                     tripCategory = tp,
                     vehicleCategory = DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType
                   }
-                (Just (CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tp (DV.castServiceTierToVehicleCategory quote.vehicleServiceTierType)))
+                Nothing
           )
           (pure quote.tripCategory)
       pure $

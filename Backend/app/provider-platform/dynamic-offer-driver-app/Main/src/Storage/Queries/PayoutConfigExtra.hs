@@ -6,6 +6,7 @@ module Storage.Queries.PayoutConfigExtra where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PayoutConfig as DPC
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -17,6 +18,20 @@ import Storage.Beam.PayoutConfig as Beam
 import Storage.Queries.OrphanInstances.PayoutConfig
 
 -- Extra code goes here --
+
+findByDimensions ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe DVC.VehicleCategory ->
+  Maybe Bool ->
+  m [DPC.PayoutConfig]
+findByDimensions (Id merchantOperatingCityId) mbVehicleCategory mbIsPayoutEnabled =
+  findAllWithKV
+    [ Se.And $
+        [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+          <> [Se.Is Beam.vehicleCategory $ Se.Eq v | Just v <- [mbVehicleCategory]]
+          <> [Se.Is Beam.isPayoutEnabled $ Se.Eq b | Just b <- [mbIsPayoutEnabled]]
+    ]
 
 updateConfigValues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Common.PayoutConfigReq -> DPC.PayoutConfig -> Id DMOC.MerchantOperatingCity -> m ()
 updateConfigValues req existingConfig (Id merchantOperatingCityId) = do

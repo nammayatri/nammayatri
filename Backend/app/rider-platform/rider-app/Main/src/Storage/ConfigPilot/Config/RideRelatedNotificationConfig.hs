@@ -39,3 +39,6 @@ instance ConfigDimensions RideRelatedNotificationConfigDimensions where
       [ LCP.DimMatcher (.timeDiffEvent) (Just . (.timeDiffEvent)) (==)
       ]
       Nothing
+  configFallback a = Just $ case a.timeDiffEvent of
+    Just e -> SQ.findAllByMerchantOperatingCityIdAndTimeDiffEvent (Id a.merchantOperatingCityId) e (Just [])
+    Nothing -> SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just [])

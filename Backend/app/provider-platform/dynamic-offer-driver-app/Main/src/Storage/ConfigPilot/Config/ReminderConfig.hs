@@ -39,3 +39,6 @@ instance ConfigDimensions ReminderConfigDimensions where
       [ LCP.DimMatcher (.documentType) (Just . (.documentType)) (==)
       ]
       Nothing
+  configFallback a = Just $ case a.documentType of
+    Just dt -> maybeToList <$> SQ.findByMerchantOpCityIdAndDocumentType (Id a.merchantOperatingCityId) dt
+    Nothing -> SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId)

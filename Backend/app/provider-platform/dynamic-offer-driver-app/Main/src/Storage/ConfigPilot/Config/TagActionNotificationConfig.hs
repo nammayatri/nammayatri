@@ -38,3 +38,6 @@ instance ConfigDimensions TagActionNotificationConfigDimensions where
       [ LCP.DimMatcher (.notificationKey) (Just . (.notificationKey)) (==)
       ]
       Nothing
+  configFallback a = Just $ case a.notificationKey of
+    Just k -> SQ.findAllByMerchantOperatingCityIdAndNotificationKey (Id a.merchantOperatingCityId) k
+    Nothing -> SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)

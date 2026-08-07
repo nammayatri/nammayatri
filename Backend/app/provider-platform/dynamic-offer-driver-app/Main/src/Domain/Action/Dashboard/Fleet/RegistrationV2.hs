@@ -65,7 +65,6 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -248,7 +247,7 @@ enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOpe
             Just FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
             _ -> DP.FLEET_OWNER
 
-      mandatoryConfigs <- filter (.isMandatory) <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing, role = Just role}) (Just (FODVC.findAllMandatoryByMerchantOpCityIdAndRole merchantOperatingCityId role (Just [])))
+      mandatoryConfigs <- filter (.isMandatory) <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing, role = Just role}) Nothing
 
       let isAadhaarMandatory = any (\cfg -> cfg.documentType == DVC.AadhaarCard) mandatoryConfigs
       let isPanMandatory = any (\cfg -> cfg.documentType == DVC.PanCard) mandatoryConfigs
