@@ -43,7 +43,7 @@ getThreadPerPodCount :: IO Int
 getThreadPerPodCount = fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
 
 getCriticalThreadPerPodCount :: IO Int
-getCriticalThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv criticalThreadPerPodCount
+getCriticalThreadPerPodCount = fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv criticalThreadPerPodCount
 
 isPushToKafka :: IO Bool
 isPushToKafka = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv pushToKafkaEnvKey
