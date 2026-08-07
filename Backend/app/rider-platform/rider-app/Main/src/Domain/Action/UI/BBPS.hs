@@ -46,6 +46,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant hiding (throwError)
 import SharedLogic.External.BbpsService.Flow
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.Queries.BBPS as QBBPS
@@ -90,6 +91,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActor
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False False
   staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person person.merchantOperatingCityId
   nwAddress <- asks (.nwAddress)
   offerBasket <- Payment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing Payment.BBPS bbpsAmount 1
   let createOrderReq =
@@ -116,7 +118,8 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = ActorInfo.withMbPersonIdActor
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId

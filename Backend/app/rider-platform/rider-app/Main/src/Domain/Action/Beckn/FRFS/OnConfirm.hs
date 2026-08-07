@@ -40,6 +40,7 @@ import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonUsageStats as DPUS
 import EulerHS.Prelude ((+||), (<|>), (||+))
 import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
@@ -64,6 +65,7 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PersonUsageStats as SPUS
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -217,6 +219,18 @@ onConfirm merchant booking' quoteCategories dOrder = do
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
   void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
   void $ CQP.clearPSCache booking.riderId
+  fork "record person usage stats" $ do
+    purchaseEvent <-
+      SPUS.mkPurchaseEvent
+        person
+        (Just booking.vehicleType)
+        booking.serviceTierType
+        DPUS.TICKET
+        Nothing
+        (Just fareParameters.totalQuantity)
+        booking.merchantId
+        booking.merchantOperatingCityId
+    SPUS.recordPurchase purchaseEvent
   whenJust booking.partnerOrgId $ \pOrgId -> do
     walletPOCfg <- do
       pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)

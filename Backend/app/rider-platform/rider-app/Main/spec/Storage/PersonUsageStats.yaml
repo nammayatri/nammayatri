@@ -1,0 +1,73 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PassType: Domain.Types.PassType
+  VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
+
+PersonUsageStats:
+  tableName: person_usage_stats
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
+
+  types:
+    FRFSProductType:
+      enum: "TICKET,PASS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id PersonUsageStats
+    personId: Id Person
+    staticPersonId: Maybe Text
+    vehicleType: Maybe VehicleCategory
+    vehicleServiceTierType: Maybe ServiceTierType
+    productType: FRFSProductType
+    passTypeId: Maybe (Id PassType)
+    ticketCount: Maybe Int
+    purchaseCount: Int
+    lastPurchasedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <FRFSProductType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FRFSProductType>
+
+  sqlType:
+    productType: text
+    vehicleServiceTierType: text
+
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey"
+    staticPersonId: "!SecondaryKey"
+
+  extraIndexes:
+    - columns: [personId, vehicleType, vehicleServiceTierType, productType, passTypeId]
+    - columns: [staticPersonId]
+
+  queries:
+    findAllByPersonId:
+      kvFunction: findAllWithKV
+      where: personId
+    findAllByStaticPersonId:
+      kvFunction: findAllWithKV
+      where: staticPersonId
+    findByDimensions:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, vehicleType, vehicleServiceTierType, productType, passTypeId]
+    updateCounts:
+      kvFunction: updateOneWithKV
+      params: [ticketCount, purchaseCount, lastPurchasedAt]
+      where: id
+    updatePersonIdById:
+      kvFunction: updateOneWithKV
+      params: [personId]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

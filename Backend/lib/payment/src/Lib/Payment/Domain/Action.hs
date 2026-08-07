@@ -340,6 +340,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     paymentRules :: Maybe Payment.PaymentRules,
     webhookUrl :: Maybe BaseUrl,
     udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
     -- Offer-specific
     offerId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
@@ -518,7 +519,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 autoRefundPostSuccess = Nothing,
                 webhookUrl = req.webhookUrl,
                 paymentFilter = Nothing,
-                udf1 = req.udf1
+                udf1 = req.udf1,
+                udf2 = req.udf2
               }
       resp <- createPaymentCall paymentReq
       now <- getCurrentTime

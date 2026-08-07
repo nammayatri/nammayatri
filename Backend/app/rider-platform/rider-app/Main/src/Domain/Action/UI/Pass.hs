@@ -44,6 +44,7 @@ import qualified Domain.Types.PassDetails as DPassDetails
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.PassVerifyTransaction as DPassVerifyTransaction
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonUsageStats as DPUS
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import qualified Domain.Types.RiderConfig
@@ -87,7 +88,9 @@ import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
+import qualified SharedLogic.PersonUsageStats as SPUS
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
@@ -355,6 +358,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
         nwAddress <- asks (.nwAddress)
         udf1 <- SLUtils.getPersonUdf1 person
+        udf2 <- SOfferSegment.getPersonOfferSegment person person.merchantOperatingCityId
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
@@ -379,7 +383,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,
-                  udf1 = udf1
+                  udf1 = udf1,
+                  udf2 = udf2
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
@@ -754,7 +759,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
 -- Webhook Handler for Pass Payment Status Updates
 passOrderStatusHandler ::
-  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  (HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools], MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
   Id.Id DOrder.PaymentOrder ->
   Id.Id DM.Merchant ->
   Payment.TransactionStatus ->
@@ -818,6 +823,20 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
                 void $ withTryCatch "sendPassPurchasedSuccessMessage" $ sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
+              when (passStatus `elem` activeLikeStatuses) $
+                fork "record person usage stats" $ do
+                  person <- QPerson.findById purchasedPass.personId >>= fromMaybeM (PersonNotFound purchasedPass.personId.getId)
+                  purchaseEvent <-
+                    SPUS.mkPurchaseEvent
+                      person
+                      Nothing
+                      Nothing
+                      DPUS.PASS
+                      (Just purchasedPass.passTypeId)
+                      Nothing
+                      purchasedPass.merchantId
+                      purchasedPass.merchantOperatingCityId
+                  SPUS.recordPurchase purchaseEvent
             when (passStatus `elem` activeLikeStatuses) $ do
               when (isJust purchasedPassPayment.profilePicture) $ QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,

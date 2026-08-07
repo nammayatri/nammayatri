@@ -539,6 +539,7 @@ library
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
       SharedLogic.Offer
+      SharedLogic.OfferSegment
       SharedLogic.OfferTypes
       SharedLogic.OTP
       SharedLogic.PassExpiryReminder
@@ -547,6 +548,7 @@ library
       SharedLogic.PaymentVendorSplits
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
+      SharedLogic.PersonUsageStats
       SharedLogic.PickupETA
       SharedLogic.PTCircuitBreaker
       SharedLogic.PublicTransport
@@ -745,6 +747,7 @@ library
       Storage.Queries.PassVerifyTransactionExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
+      Storage.Queries.PersonUsageStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
       Storage.Queries.PurchasedPassExtra
@@ -1170,6 +1173,7 @@ library
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonStats
+      Domain.Types.PersonUsageStats
       Domain.Types.PickupInstructions
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
@@ -1338,6 +1342,7 @@ library
       Storage.Beam.Person
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
+      Storage.Beam.PersonUsageStats
       Storage.Beam.PickupInstructions
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
@@ -1536,6 +1541,7 @@ library
       Storage.Queries.OrphanInstances.PassVerifyTransaction
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonStats
+      Storage.Queries.OrphanInstances.PersonUsageStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.PopularLocation
       Storage.Queries.OrphanInstances.PurchasedPass
@@ -1586,6 +1592,7 @@ library
       Storage.Queries.Person
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
+      Storage.Queries.PersonUsageStats
       Storage.Queries.PickupInstructions
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache

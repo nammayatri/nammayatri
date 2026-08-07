@@ -96,6 +96,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import Servant (BasicAuthData)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -140,6 +141,7 @@ createOrder (personId, merchantId) rideId = do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person person.merchantOperatingCityId
   offerBasket <- Payment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing Payment.Normal totalFare.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -165,7 +167,8 @@ createOrder (personId, merchantId) rideId = do
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -209,6 +212,7 @@ createRideBookingPaymentOrder booking = do
     Nothing -> pure Nothing
 
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person merchantOperatingCityId
   offerBasket <- Payment.mkOfferBasket booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -234,7 +238,8 @@ createRideBookingPaymentOrder booking = do
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -862,6 +867,7 @@ postWalletRecharge (personId, merchantId) req = do
                 }
           }
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person person.merchantOperatingCityId
   offerBasket <- Payment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing DOrder.Wallet (fromIntegral req.pointsAmount) 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -887,7 +893,8 @@ postWalletRecharge (personId, merchantId) req = do
             paymentRules = Just paymentRules,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

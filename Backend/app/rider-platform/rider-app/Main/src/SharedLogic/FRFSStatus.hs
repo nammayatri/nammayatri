@@ -53,6 +53,7 @@ import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer as SOffer
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -384,6 +385,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
       nwAddress <- asks (.nwAddress)
       udf1 <- SLUtils.getPersonUdf1 person
+      udf2 <- SOfferSegment.getPersonOfferSegment person merchantOperatingCityId
       offerBasket <- Payment.mkOfferBasket merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) paymentOrder.amount 1
       let createOrderReq =
             Payment.CreateOrderReq
@@ -409,7 +411,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 paymentRules = Nothing,
                 autoRefundPostSuccess = Nothing,
                 paymentFilter = Nothing,
-                udf1 = udf1
+                udf1 = udf1,
+                udf2 = udf2
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
