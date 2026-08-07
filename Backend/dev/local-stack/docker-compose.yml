@@ -45,6 +45,28 @@
 # `--no-build` matters: rider-app still declares a build section, and compose
 # would otherwise rebuild it locally and overwrite the tag you just pulled.
 
+# WHERE PUBLISHED PORTS BIND -- $BIND_ADDR
+#
+# Every `ports:` entry below is published on ${BIND_ADDR}, which defaults to
+# 0.0.0.0 so a laptop behaves exactly as it always has.
+#
+# On a machine with a public IP, set BIND_ADDR=127.0.0.1 (see .env on the
+# server). Docker publishes ports by DNAT in nat/PREROUTING and filters them in
+# FORWARD -> DOCKER-USER; ufw only governs filter/INPUT. So `ufw default deny
+# incoming` does NOT close a published port, and without this the internet gets
+# Postgres on 5434, Redis on 6379 and -- worst -- Adminer on 8026, a full
+# database browser whose credentials are written down in the README.
+#
+# Reach them through an SSH tunnel instead:
+#   ssh -N -L 8014:127.0.0.1:8014 -L 8025:127.0.0.1:8025 ny@<host>
+#
+# The host-networked services (rider-app 8013, driver-app 8016, beckn-gateway
+# 8015, mock-registry 8020, mock-google 8019, osrm 5000, maps-shim 8030) are NOT
+# covered by this: they bind host sockets directly, so their bind address comes
+# from the upstream dhall configs. Those do go through filter/INPUT, so ufw does
+# close them. They cannot simply be moved to 127.0.0.1 either -- the socat
+# proxies reach them over the docker bridge at 172.17.0.1.
+
 services:
   postgres:
     image: postgis/postgis:15-3.4
@@ -54,14 +76,14 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_DB: atlas_dev
     ports:
-      - "5434:5432"
+      - "${BIND_ADDR:-0.0.0.0}:5434:5432"
       # Both apps are configured with a read replica on 5435 (esqDBReplicaCfg)
       # and use it for `runInReplica` queries -- GET /v2/rideSearch/{id}/results
       # among them, which otherwise dies with
       #   libpq: failed (could not connect to server ... port 5435)
       # There is no actual replica here, so 5435 is pointed at the same
       # database. Reads simply go to the primary.
-      - "5435:5432"
+      - "${BIND_ADDR:-0.0.0.0}:5435:5432"
     volumes:
       - ny-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -78,7 +100,7 @@ services:
     image: redis:7-alpine
     container_name: ny-redis
     ports:
-      - "6379:6379"
+      - "${BIND_ADDR:-0.0.0.0}:6379:6379"
     restart: unless-stopped
 
   kafka:
@@ -88,7 +110,12 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:29093
+      # Bound to loopback, not 0.0.0.0. Kafka runs on host networking, so
+      # `ports:` and therefore BIND_ADDR do not apply to it -- on a public IP an
+      # unauthenticated broker would otherwise be listening on 29092. Its only
+      # clients (rider-app, driver-app) are host-networked too and already reach
+      # it at 127.0.0.1, which is what KAFKA_ADVERTISED_LISTENERS below says.
+      KAFKA_LISTENERS: PLAINTEXT://127.0.0.1:29092,CONTROLLER://127.0.0.1:29093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:29092
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:29093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -125,7 +152,7 @@ services:
     environment:
       PASSETTO_PG_BACKEND_CONN_STRING: postgresql://passetto:passetto@ny-passetto-db:5432/passetto
     ports:
-      - "8021:8012"
+      - "${BIND_ADDR:-0.0.0.0}:8021:8012"
     restart: unless-stopped
 
   rider-app:
@@ -267,7 +294,7 @@ services:
     container_name: ny-osrm-proxy
     command: tcp-listen:5000,fork,reuseaddr tcp-connect:172.17.0.1:5000
     ports:
-      - "5001:5000"
+      - "${BIND_ADDR:-0.0.0.0}:5001:5000"
     restart: unless-stopped
 
   # Google Directions -> OSRM translator. See maps-shim/server.js for why this
@@ -296,7 +323,7 @@ services:
     container_name: ny-proxy
     command: tcp-listen:8013,fork,reuseaddr tcp-connect:172.17.0.1:8013
     ports:
-      - "8014:8013"
+      - "${BIND_ADDR:-0.0.0.0}:8014:8013"
     restart: unless-stopped
 
   # Same trick for the driver app: 8016 inside the VM -> 8017 on Windows.
@@ -305,7 +332,7 @@ services:
     container_name: ny-driver-proxy
     command: tcp-listen:8016,fork,reuseaddr tcp-connect:172.17.0.1:8016
     ports:
-      - "8017:8016"
+      - "${BIND_ADDR:-0.0.0.0}:8017:8016"
     restart: unless-stopped
 
   # Visual demo: a map of the service areas that queries the live API.
@@ -316,7 +343,7 @@ services:
     image: nginx:alpine
     container_name: ny-map
     ports:
-      - "8025:80"
+      - "${BIND_ADDR:-0.0.0.0}:8025:80"
     volumes:
       - ./demo-map/site:/usr/share/nginx/html:ro
       - ./demo-map/nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -344,7 +371,7 @@ services:
       --port 8080
       --public_url http://localhost:8035/
     ports:
-      - "8035:8080"
+      - "${BIND_ADDR:-0.0.0.0}:8035:8080"
     volumes:
       - ny-tiles-data:/data
     restart: unless-stopped
@@ -359,7 +386,7 @@ services:
     image: adminer:4
     container_name: ny-adminer
     ports:
-      - "8026:8080"
+      - "${BIND_ADDR:-0.0.0.0}:8026:8080"
     environment:
       ADMINER_DEFAULT_SERVER: ny-postgres
       ADMINER_DESIGN: dracula
