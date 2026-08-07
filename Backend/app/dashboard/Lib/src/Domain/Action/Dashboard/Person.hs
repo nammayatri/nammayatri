@@ -247,14 +247,25 @@ adminEmailDomainError = "Administrator accounts must use an approved organizatio
 
 -- | Admin mutations that address a person directly by id must not reach across merchants.
 -- Without this an admin of any merchant could act on an arbitrary person id.
+--
+-- The predicate is "belongs to somebody else", not "belongs to me". createPerson does not create
+-- a merchant_access row — access is granted separately by assignMerchantCityAccess — so between
+-- those two calls a person legitimately has no access rows at all. Treating that as a rejection
+-- would strand every half-provisioned account: an admin who typo'd an email at creation could
+-- neither fix it nor delete it, and the natural create -> assign role -> grant access order would
+-- break at the middle step. A person with no access rows anywhere is unprovisioned and owned by
+-- nobody, so the caller may act on them; a person with access rows none of which name the
+-- caller's merchant belongs to another merchant and is rejected.
 assertPersonInCallerMerchant ::
   BeamFlow m r =>
   TokenInfo ->
   Id DP.Person ->
   m ()
 assertPersonInCallerMerchant tokenInfo personId = do
-  mbAccess <- QAccess.findByPersonIdAndMerchantId personId tokenInfo.merchantId
-  when (isNothing mbAccess) $ throwError (PersonDoesNotExist personId.getId)
+  allAccess <- QAccess.findAllMerchantAccessByPersonId personId
+  unless (null allAccess) $
+    unless (any (\access -> access.merchantId == tokenInfo.merchantId) allAccess) $
+      throwError (PersonDoesNotExist personId.getId)
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -374,8 +385,11 @@ assignRole tokenInfo personId roleId = do
   oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
   newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   -- Promotion into an admin tier must satisfy the same domain restriction as creating one.
-  decPerson <- decrypt person
-  assertAdminEmailDomain tokenInfo.merchantId newRole decPerson.email
+  -- Guarded on the tier so that ordinary role changes don't pay a passetto round trip to decrypt
+  -- an email whose value would then be discarded.
+  when (isAdminTier newRole.dashboardAccessType) $ do
+    decPerson <- decrypt person
+    assertAdminEmailDomain tokenInfo.merchantId newRole decPerson.email
   when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
     throwError RoleConversionNotAllowed
   -- Admin tiering (existence-guarded): promoting into (or demoting out of) an

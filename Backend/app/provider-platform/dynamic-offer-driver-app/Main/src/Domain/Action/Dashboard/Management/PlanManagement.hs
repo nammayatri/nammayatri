@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Management.PlanManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.PlanManagement as Common
+import Data.Char (isAlpha)
 import qualified Data.Text as T
 import qualified Domain.Types.Extra.Plan as DExtra
 import qualified Domain.Types.Merchant as DM
@@ -35,23 +36,39 @@ import qualified Storage.Queries.PlanExtra as QPlanExtra
 import qualified Storage.Queries.PlanTranslation as QPlanTranslation
 import Tools.Csv (hasCsvFormulaPrefix)
 
+-- | Sequences a browser or template engine would interpret, as opposed to the bare characters
+-- that appear legitimately in prose. "Save > 20%" and "Plans < ₹100" are valid plan copy and are
+-- accepted; "<h1>x</h1>", "<button>x</button>" and "{{7*7}}" — all three observed in the wild on
+-- this field — are not. Matches an opening tag ("<" immediately followed by a letter or "/") and
+-- a template interpolation ("{{").
+containsMarkupOrTemplate :: Text -> Bool
+containsMarkupOrTemplate value =
+  "{{" `T.isInfixOf` value || any opensTag (T.breakOnAll "<" value)
+  where
+    opensTag (_, fromAngle) = case T.uncons (T.drop 1 fromAngle) of
+      Just (c, _) -> isAlpha c || c == '/'
+      Nothing -> False
+
 -- | Plan name and description are operator-authored display text that ends up in the admin UI and
 -- in exported subscription CSVs. Reject the two shapes that turn a label into code:
 --
 --   * a leading =, +, - or @, which a spreadsheet evaluates as a formula on CSV export
---   * markup and template delimiters, which render as HTML or get interpolated by the dashboard
+--   * tag and template sequences, which render as HTML or get interpolated by the dashboard
 --
 -- Rejecting rather than escaping is right here: no legitimate plan is called "=(7+7)", and
 -- silently rewriting an operator's input would be more surprising than refusing it. Escaping is
 -- still applied independently on the export side, since rows can predate this validation.
+--
+-- The markup half is a stopgap, not the real control: the durable fix for rendered text is output
+-- encoding in the dashboard, which lives in the frontend repo. This only narrows the input.
 validatePlanDisplayText :: Text -> Text -> Flow ()
 validatePlanDisplayText fieldName value = do
   when (T.null $ T.strip value) $
     throwError $ InvalidRequest $ fieldName <> " cannot be blank."
   when (hasCsvFormulaPrefix value) $
     throwError $ InvalidRequest $ fieldName <> " cannot begin with '=', '+', '-' or '@'."
-  when (T.any (`elem` ("<>{}" :: String)) value) $
-    throwError $ InvalidRequest $ fieldName <> " cannot contain the characters < > { or }."
+  when (containsMarkupOrTemplate value) $
+    throwError $ InvalidRequest $ fieldName <> " cannot contain HTML tags or template expressions."
 
 postPlanManagementCreate ::
   ShortId DM.Merchant ->
