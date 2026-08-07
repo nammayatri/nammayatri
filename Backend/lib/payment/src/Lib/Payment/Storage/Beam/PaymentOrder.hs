@@ -74,7 +74,8 @@ data PaymentOrderT f = PaymentOrderT
     groupId :: B.C f (Maybe Text),
     vpa :: B.C f (Maybe Text),
     pgBaseFee :: B.C f (Maybe HighPrecMoney),
-    pgGst :: B.C f (Maybe HighPrecMoney)
+    pgGst :: B.C f (Maybe HighPrecMoney),
+    chargeRouting :: B.C f (Maybe Payment.ChargeRouting)
   }
   deriving (Generic, B.Beamable)
 

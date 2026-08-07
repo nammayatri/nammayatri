@@ -860,8 +860,12 @@ makePaymentIntent ::
   DOrder.PaymentServiceType ->
   DPayment.CreatePaymentIntentServiceReq ->
   Maybe RidePaymentLedgerInfo ->
+  -- | Collect the whole amount to the platform account instead of routing it to the ride's connected
+  --   account. Pass 'True' only where the collection must not depend on that account being able to
+  --   receive funds (dues settlement, cancellation fees); the counterparty is paid at payout instead.
+  Bool ->
   m (Maybe DPayment.CreatePaymentIntentServiceResp)
-makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId paymentServiceType req mbLedgerInfo = do
+makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbExistingOrderId paymentServiceType req mbLedgerInfo platformOnly = do
   logDebug $ "makePaymentIntent: rideId=" <> show ((.getId) <$> mbRideId) <> " existingOrderId=" <> show ((.getId) <$> mbExistingOrderId) <> " mbLedgerInfo=" <> show mbLedgerInfo
   let effectiveAmount = req.amount - req.discountAmount
   -- If offer fully covers the fare, skip payment service (treat as cash/free ride flow)
@@ -882,7 +886,10 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                   clientSecret = cancelResp.clientSecret,
                   status = Payment.castToTransactionStatus cancelResp.status,
                   sdkPayload = Nothing,
-                  paymentLinks = Nothing
+                  paymentLinks = Nothing,
+                  -- Synthetic response for the cancel path: the caller only reads the status, and
+                  -- cancelling never re-routes an intent, so there is no routing to report.
+                  chargeRouting = Nothing
                 }
           incrementAuthCall piId amount applicationFeeAmount =
             TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
@@ -902,6 +909,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 paymentMethodId = Just req.paymentMethod,
                 driverAccountId = Just req.driverAccountId,
                 applicationFeeAmount = Just req.applicationFeeAmount,
+                chargeRouting = if platformOnly then Just Payment.PlatformOnlyCharge else Nothing,
                 receiptEmail = req.receiptEmail,
                 splitSettlementDetails = Nothing,
                 createMandate = Nothing,
@@ -1273,101 +1281,127 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
             0
             0
             debtLedgerCtx
-    paymentIntentResp <-
-      makePaymentIntent
-        person.merchantId
-        booking.merchantOperatingCityId
-        booking.paymentMode
-        person.id
-        (Just rideId)
-        Nothing
-        DOrder.RideHailing
-        createPaymentIntentServiceReq
-        (Just debtLedgerInfo)
-        >>= fromMaybeM (InternalError "Payment order expired, please try again")
-    logInfo $
-      "AUDIT: Debt settlement for ride " <> rideId.getId
-        <> ", amount: "
-        <> show duesResp.totalDueAmount
-        <> ", pending_entries: "
-        <> show (length pendingEntries)
-    captureResult <-
-      withTryCatch "clearDuesForPerson:chargePaymentIntent" $ do
-        offerStatsInput <- buildOfferStatsInput person
-        chargePaymentIntent
+    -- Creating the intent can fail at the gateway (card, network, or a restricted counterparty
+    -- account). That must surface as a FAILED response the app can render, not an unhandled
+    -- exception: an uncaught throw here 500s the endpoint and leaves the rider with DUE entries and
+    -- no way to act on them, which is exactly how riders end up permanently blocked.
+    eitherIntent <-
+      withTryCatch "clearDuesForPerson:makePaymentIntent" $
+        makePaymentIntent
           person.merchantId
           booking.merchantOperatingCityId
           booking.paymentMode
+          person.id
+          (Just rideId)
+          Nothing
           DOrder.RideHailing
-          paymentIntentResp.paymentIntentId
-          rideId
-          RidePaymentFinance.settledReasonDebtSettlement
-          booking.riderId
-          offerStatsInput
-    case captureResult of
-      Right True -> do
-        QRide.markPaymentStatus Ride.Completed rideId
-        whenJust ride.cancellationChargesOnCancel $ \_ -> do
-          mbMerchant <- CQM.findById person.merchantId
-          mbMobileNumber <- mapM decrypt person.mobileNumber
-          case (mbMerchant, mbMobileNumber) of
-            (Just merchant, Just mobileNumber) ->
-              void $
-                withTryCatch "clearDuesForPerson:syncCancellationLedger" $
-                  CallBPPInternal.customerCancellationDuesSync
-                    merchant.driverOfferApiKey
-                    merchant.driverOfferBaseUrl
-                    merchant.driverOfferMerchantId
-                    mobileNumber
-                    (fromMaybe "+91" person.mobileCountryCode)
-                    person.currentCity
-                    CallBPPInternal.SettleCancellationLedger
-                    ride.bppRideId.getId
-            _ -> logError $ "clearDuesForPerson: skipping cancellation ledger sync, missing merchant or mobile number for rideId: " <> rideId.getId
-        logInfo $
-          "AUDIT: Debt settlement CAPTURED - order_id: " <> paymentIntentResp.orderId.getId
-            <> ", amount: "
-            <> show duesResp.totalDueAmount
-            <> ", settled_entries: "
-            <> show (length pendingEntries)
-        pure $
+          createPaymentIntentServiceReq
+          (Just debtLedgerInfo)
+          True -- platform-only: never route dues through the ride's connected account
+    let gatewayFailure msg =
           APIRidePayment.ClearDuesResp
-            { orderId = Just paymentIntentResp.orderId,
-              status = APIRidePayment.SUCCESS,
-              amountCleared = duesResp.totalDueAmount,
-              currency = currency,
-              ridesCleared = [rideId],
-              errorMessage = Nothing
-            }
-      Right False -> do
-        logError $ "AUDIT: Debt settlement FAILED - order_id: " <> paymentIntentResp.orderId.getId <> ", ride_id: " <> rideId.getId
-        pure $
-          APIRidePayment.ClearDuesResp
-            { orderId = Just paymentIntentResp.orderId,
+            { orderId = Nothing,
               status = APIRidePayment.FAILED,
               amountCleared = 0,
               currency = currency,
               ridesCleared = [],
-              errorMessage = Just "Payment failed. Please try again."
+              errorMessage = Just msg
             }
+    case eitherIntent of
       Left (err :: SomeException) -> do
-        let userFriendlyMessage = mapPaymentErrorToUserMessage (show err)
         logError $
-          "AUDIT: Debt settlement EXCEPTION - order_id: " <> paymentIntentResp.orderId.getId
-            <> ", ride_id: "
-            <> rideId.getId
+          "AUDIT: Debt settlement INTENT CREATE FAILED - ride_id: " <> rideId.getId
             <> ", error: "
             <> show err
-            <> " (parent invoices remain unsettled)"
-        pure $
-          APIRidePayment.ClearDuesResp
-            { orderId = Just paymentIntentResp.orderId,
-              status = APIRidePayment.FAILED,
-              amountCleared = 0,
-              currency = currency,
-              ridesCleared = [],
-              errorMessage = Just userFriendlyMessage
-            }
+            <> " (dues remain DUE)"
+        pure $ gatewayFailure (mapPaymentErrorToUserMessage (show err))
+      Right Nothing -> do
+        logError $ "AUDIT: Debt settlement INTENT MISSING - ride_id: " <> rideId.getId
+        pure $ gatewayFailure "Payment order expired, please try again."
+      Right (Just paymentIntentResp) -> do
+        logInfo $
+          "AUDIT: Debt settlement for ride " <> rideId.getId
+            <> ", amount: "
+            <> show duesResp.totalDueAmount
+            <> ", pending_entries: "
+            <> show (length pendingEntries)
+        captureResult <-
+          withTryCatch "clearDuesForPerson:chargePaymentIntent" $ do
+            offerStatsInput <- buildOfferStatsInput person
+            chargePaymentIntent
+              person.merchantId
+              booking.merchantOperatingCityId
+              booking.paymentMode
+              DOrder.RideHailing
+              paymentIntentResp.paymentIntentId
+              rideId
+              RidePaymentFinance.settledReasonDebtSettlement
+              booking.riderId
+              offerStatsInput
+        case captureResult of
+          Right True -> do
+            QRide.markPaymentStatus Ride.Completed rideId
+            whenJust ride.cancellationChargesOnCancel $ \_ -> do
+              mbMerchant <- CQM.findById person.merchantId
+              mbMobileNumber <- mapM decrypt person.mobileNumber
+              case (mbMerchant, mbMobileNumber) of
+                (Just merchant, Just mobileNumber) ->
+                  void $
+                    withTryCatch "clearDuesForPerson:syncCancellationLedger" $
+                      CallBPPInternal.customerCancellationDuesSync
+                        merchant.driverOfferApiKey
+                        merchant.driverOfferBaseUrl
+                        merchant.driverOfferMerchantId
+                        mobileNumber
+                        (fromMaybe "+91" person.mobileCountryCode)
+                        person.currentCity
+                        CallBPPInternal.SettleCancellationLedger
+                        ride.bppRideId.getId
+                _ -> logError $ "clearDuesForPerson: skipping cancellation ledger sync, missing merchant or mobile number for rideId: " <> rideId.getId
+            logInfo $
+              "AUDIT: Debt settlement CAPTURED - order_id: " <> paymentIntentResp.orderId.getId
+                <> ", amount: "
+                <> show duesResp.totalDueAmount
+                <> ", settled_entries: "
+                <> show (length pendingEntries)
+            pure $
+              APIRidePayment.ClearDuesResp
+                { orderId = Just paymentIntentResp.orderId,
+                  status = APIRidePayment.SUCCESS,
+                  amountCleared = duesResp.totalDueAmount,
+                  currency = currency,
+                  ridesCleared = [rideId],
+                  errorMessage = Nothing
+                }
+          Right False -> do
+            logError $ "AUDIT: Debt settlement FAILED - order_id: " <> paymentIntentResp.orderId.getId <> ", ride_id: " <> rideId.getId
+            pure $
+              APIRidePayment.ClearDuesResp
+                { orderId = Just paymentIntentResp.orderId,
+                  status = APIRidePayment.FAILED,
+                  amountCleared = 0,
+                  currency = currency,
+                  ridesCleared = [],
+                  errorMessage = Just "Payment failed. Please try again."
+                }
+          Left (err :: SomeException) -> do
+            let userFriendlyMessage = mapPaymentErrorToUserMessage (show err)
+            logError $
+              "AUDIT: Debt settlement EXCEPTION - order_id: " <> paymentIntentResp.orderId.getId
+                <> ", ride_id: "
+                <> rideId.getId
+                <> ", error: "
+                <> show err
+                <> " (parent invoices remain unsettled)"
+            pure $
+              APIRidePayment.ClearDuesResp
+                { orderId = Just paymentIntentResp.orderId,
+                  status = APIRidePayment.FAILED,
+                  amountCleared = 0,
+                  currency = currency,
+                  ridesCleared = [],
+                  errorMessage = Just userFriendlyMessage
+                }
   where
     mapPaymentErrorToUserMessage :: Text -> Text
     mapPaymentErrorToUserMessage errMsg

@@ -176,10 +176,12 @@ getPaymentIntent = runWithServiceConfig1 Payment.getPaymentIntent (.createPaymen
 updatePaymentMethodInIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> PaymentMethodId -> m ()
 updatePaymentMethodInIntent = runWithServiceConfig2 Payment.updatePaymentMethodInIntent (.updatePaymentMethodInIntent)
 
-capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+-- | The application-fee argument is 'Nothing' for an intent created platform-only (no transfer_data);
+--   Stripe rejects the parameter outright on such an intent, so it must be omitted rather than zeroed.
+capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> Maybe HighPrecMoney -> m ()
 capturePaymentIntent = runWithServiceConfig3 Payment.capturePaymentIntent (.capturePaymentIntent)
 
-updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> PaymentIntentId -> HighPrecMoney -> Maybe HighPrecMoney -> m ()
 updateAmountInPaymentIntent = runWithServiceConfig3 Payment.updateAmountInPaymentIntent (.updateAmountInPaymentIntent)
 
 createSetupIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DMPM.PaymentMode -> CustomerId -> m CreateSetupIntentResp
