@@ -117,6 +117,7 @@ driverIssueHandle =
       getTicketStatus = Nothing,
       findMerchantConfig = buildMerchantConfig,
       mbGetRideCardInfoByRideIds = Nothing,
+      mbCounterpartDashboardInfo = Nothing,
       mbReportACIssue = Nothing,
       mbReportIssue = Nothing,
       mbFindLatestBookingByPersonId = Nothing,
