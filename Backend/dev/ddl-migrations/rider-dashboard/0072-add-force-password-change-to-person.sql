@@ -1,2 +1,2 @@
 ALTER TABLE atlas_bap_dashboard.person
-ADD COLUMN force_password_change boolean;
+  ADD COLUMN IF NOT EXISTS force_password_change boolean;

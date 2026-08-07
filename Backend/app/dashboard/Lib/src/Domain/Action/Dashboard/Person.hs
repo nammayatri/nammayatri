@@ -43,8 +43,10 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
@@ -196,31 +198,63 @@ validateCreatePerson CreatePersonReq {..} =
     ]
 
 -- | Access tiers that carry administrative privilege and therefore must live on a
--- managed organizational email domain.
-adminAccessTypes :: [DRole.DashboardAccessType]
-adminAccessTypes =
-  [ DRole.DASHBOARD_ADMIN,
-    DRole.DASHBOARD_RELEASE_ADMIN,
-    DRole.MERCHANT_ADMIN,
-    DRole.TICKET_DASHBOARD_ADMIN
-  ]
+-- managed organizational email domain. Written as an exhaustive case rather than a
+-- membership list so that adding a constructor to DashboardAccessType is a compile error
+-- here instead of a silently uncovered tier.
+isAdminTier :: DRole.DashboardAccessType -> Bool
+isAdminTier = \case
+  DRole.DASHBOARD_ADMIN -> True
+  DRole.DASHBOARD_RELEASE_ADMIN -> True
+  DRole.MERCHANT_ADMIN -> True
+  DRole.TICKET_DASHBOARD_ADMIN -> True
+  DRole.DASHBOARD_USER -> False
+  DRole.DASHBOARD_OPERATOR -> False
+  DRole.FLEET_OWNER -> False
+  DRole.RENTAL_FLEET_OWNER -> False
+  DRole.MERCHANT_MAKER -> False
+  DRole.MERCHANT_SERVER -> False
+  DRole.TICKET_DASHBOARD_USER -> False
+  DRole.TICKET_DASHBOARD_MERCHANT -> False
+  DRole.TICKET_DASHBOARD_APPROVER -> False
 
--- | Reject administrator accounts on unapproved email domains. The allow-list is per-merchant
--- (merchant.adminEmailDomains); an empty list leaves the restriction switched off.
-validateAdminEmailDomain ::
+-- | Invariant: an account holding an admin-tier role must sit on one of its merchant's approved
+-- email domains. Enforced at every path that can produce that pairing — person creation, role
+-- assignment, and email change — not just at creation.
+--
+-- The allow-list is per-merchant (merchant.adminEmailDomains); an empty list leaves the
+-- restriction switched off. Matching is exact: an allow-list entry of "maruti.co.in" admits
+-- "user@maruti.co.in" but not "user@mail.maruti.co.in". Subdomains must be listed explicitly.
+assertAdminEmailDomain ::
   BeamFlow m r =>
   Id DMerchant.Merchant ->
   DRole.Role ->
-  Text ->
+  Maybe Text ->
   m ()
-validateAdminEmailDomain merchantId role email =
-  when (role.dashboardAccessType `elem` adminAccessTypes) $ do
+assertAdminEmailDomain merchantId role mbEmail =
+  when (isAdminTier role.dashboardAccessType) $ do
     merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
     let allowedDomains = merchant.adminEmailDomains
     unless (null allowedDomains) $ do
+      -- An admin-tier account with no email at all cannot satisfy the restriction.
+      email <- mbEmail & fromMaybeM (InvalidRequest adminEmailDomainError)
       let domain = T.toLower . T.drop 1 . T.dropWhile (/= '@') $ email
       unless (any (\allowed -> domain == T.toLower allowed) allowedDomains) $
-        throwError $ InvalidRequest $ "Administrator accounts must use an approved email domain: " <> T.intercalate ", " allowedDomains
+        throwError $ InvalidRequest adminEmailDomainError
+
+-- Deliberately does not echo the allow-list back to the caller.
+adminEmailDomainError :: Text
+adminEmailDomainError = "Administrator accounts must use an approved organizational email domain."
+
+-- | Admin mutations that address a person directly by id must not reach across merchants.
+-- Without this an admin of any merchant could act on an arbitrary person id.
+assertPersonInCallerMerchant ::
+  BeamFlow m r =>
+  TokenInfo ->
+  Id DP.Person ->
+  m ()
+assertPersonInCallerMerchant tokenInfo personId = do
+  mbAccess <- QAccess.findByPersonIdAndMerchantId personId tokenInfo.merchantId
+  when (isNothing mbAccess) $ throwError (PersonDoesNotExist personId.getId)
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -262,7 +296,7 @@ createPerson tokenInfo personEntity = do
     $ throwError (InvalidRequest "Phone already registered")
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  validateAdminEmailDomain tokenInfo.merchantId role personEntity.email
+  assertAdminEmailDomain tokenInfo.merchantId role (Just personEntity.email)
   -- Admin tiering (existence-guarded): once a SUPER_ADMIN is seeded, only a
   -- SUPER_ADMIN can create admin-tier persons. Legacy behavior until then.
   DCap.guardAdminMutation tokenInfo.personId role.dashboardAccessType
@@ -329,7 +363,7 @@ makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
       merchantAccesslistWithCity
 
 assignRole ::
-  BeamFlow m r =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
@@ -338,6 +372,9 @@ assignRole tokenInfo personId roleId = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   oldRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
   newRole <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  -- Promotion into an admin tier must satisfy the same domain restriction as creating one.
+  decPerson <- decrypt person
+  assertAdminEmailDomain tokenInfo.merchantId newRole decPerson.email
   when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
     throwError RoleConversionNotAllowed
   -- Admin tiering (existence-guarded): promoting into (or demoting out of) an
@@ -452,11 +489,26 @@ changePassword tokenInfo req = do
   QReg.deleteAllByPersonIdAndMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
   pure Success
 
+-- | Rate-limit bucket keyed on email. Deliberately shared with login (Registration.login) so an
+-- attacker cannot get a fresh budget by switching between the two endpoints that both resolve
+-- credentials via findByEmailAndPassword.
+makeEmailHitsCountKey :: Maybe Text -> Text
+makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
+
 changePasswordAfterExpiry ::
-  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["loginRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   ChangePasswordAfterExpiryReq ->
   m APISuccess
 changePasswordAfterExpiry req = do
+  -- Unauthenticated and resolves credentials, so it is a password oracle unless limited exactly
+  -- as login is. This is also the sole recovery path for an admin-reset account.
+  loginRateLimitOptions <- asks (.loginRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just req.email)) loginRateLimitOptions
   encPerson <- QP.findByEmailAndPassword req.email req.oldPassword >>= fromMaybeM (PersonDoesNotExist req.email)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -564,7 +616,8 @@ changePasswordByAdmin ::
   Id DP.Person ->
   ChangePasswordByAdminReq ->
   m APISuccess
-changePasswordByAdmin _ personId req = do
+changePasswordByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
   when enforceStrongPasswordPolicy $
@@ -615,11 +668,22 @@ changeEmailByAdmin ::
   Id DP.Person ->
   ChangeEmailByAdminReq ->
   m APISuccess
-changeEmailByAdmin _ personId req = do
-  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  encEmail <- encrypt $ T.toLower req.newEmail
+changeEmailByAdmin tokenInfo personId req = do
+  assertPersonInCallerMerchant tokenInfo personId
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  runRequestValidation validateChangeEmailReq req
+  -- Changing an existing admin's email must not move them off an approved domain.
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  let newEmail = T.toLower req.newEmail
+  assertAdminEmailDomain tokenInfo.merchantId role (Just newEmail)
+  encEmail <- encrypt newEmail
   QP.updatePersonEmail personId encEmail
   pure Success
+
+validateChangeEmailReq :: Validate ChangeEmailByAdminReq
+validateChangeEmailReq ChangeEmailByAdminReq {..} =
+  sequenceA_
+    [validateField "newEmail" newEmail P.email]
 
 deletePerson ::
   ( BeamFlow m r,

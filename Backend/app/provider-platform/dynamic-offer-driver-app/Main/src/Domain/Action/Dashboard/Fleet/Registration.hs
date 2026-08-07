@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Fleet.Registration
     FleetOwnerVerifyHandle (..),
     FleetOwnerVerifyRes (..),
     fleetOwnerVerifyHandler,
+    otpAttemptsKey,
     FleetOwnerUpdateLanguageReq (..),
     fleetOwnerUpdateLanguage,
   )
@@ -29,6 +30,7 @@ where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Internal.DriverMode as DriverMode
@@ -306,7 +308,7 @@ fleetOwnerLogin req = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Redis.setExp key otp expTime
   -- A freshly issued OTP gets a fresh attempt budget.
-  Redis.del $ makeMobileNumberOtpAttemptsKey mobileNumber
+  Redis.del $ otpAttemptsKey key
   pure Success
 
 buildFleetOwnerAuthReq ::
@@ -347,10 +349,10 @@ fleetOwnerVerifyHandler ::
 fleetOwnerVerifyHandler h req = do
   otp <- req.otp & fromMaybeM InvalidAuthData
   let otpKey = h.mkMobileNumberOtpKey req.mobileNumber
-      attemptsKey = makeMobileNumberOtpAttemptsKey req.mobileNumber
-  -- Serialize verification per mobile number: a replayed or parallel burst must not be able to
+      attemptsKey = otpAttemptsKey otpKey
+  -- Serialize verification per OTP key: a replayed or parallel burst must not be able to
   -- race past either the single-use check or the attempt counter.
-  Redis.withLockRedisAndReturnValue (makeMobileNumberOtpVerifyLockKey req.mobileNumber) 5 $ do
+  Redis.withLockRedisAndReturnValue (otpVerifyLockKey otpKey) 5 $ do
     storedOtp :: Text <- Redis.safeGet otpKey >>= fromMaybeM InvalidAuthData
     attempts <- fromMaybe (0 :: Int) <$> Redis.safeGet attemptsKey
     when (attempts >= maxOtpVerifyAttempts) $ do
@@ -358,7 +360,7 @@ fleetOwnerVerifyHandler h req = do
       Redis.del otpKey
       Redis.del attemptsKey
       throwError $ AuthBlocked "Too many incorrect OTP attempts. Please request a new OTP."
-    if storedOtp == otp
+    if constantTimeEqText storedOtp otp
       then do
         -- OTP is single use: drop it so the same verified request cannot be replayed for more tokens.
         Redis.del otpKey
@@ -373,14 +375,24 @@ fleetOwnerVerifyHandler h req = do
 maxOtpVerifyAttempts :: Int
 maxOtpVerifyAttempts = 5
 
+-- | Attempt-counter and lock keys are derived from the OTP key itself rather than rebuilt from
+-- the mobile number, so they always land in the same namespace as the OTP they guard. The V1 and
+-- V2 fleet flows use different OTP namespaces; deriving keeps their budgets independent.
+otpAttemptsKey :: Text -> Text
+otpAttemptsKey otpKey = otpKey <> ":verifyAttempts"
+
+otpVerifyLockKey :: Text -> Text
+otpVerifyLockKey otpKey = otpKey <> ":verifyLock"
+
+-- | Compare in time independent of how many leading characters match. Length is not secret for a
+-- fixed-width OTP, so an early length check is fine.
+constantTimeEqText :: Text -> Text -> Bool
+constantTimeEqText a b =
+  T.length a == T.length b
+    && foldl' (\acc (x, y) -> acc + fromEnum (x /= y)) (0 :: Int) (T.zip a b) == 0
+
 makeMobileNumberOtpKey :: Text -> Text
 makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber
-
-makeMobileNumberOtpAttemptsKey :: Text -> Text
-makeMobileNumberOtpAttemptsKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber <> ":verifyAttempts"
-
-makeMobileNumberOtpVerifyLockKey :: Text -> Text
-makeMobileNumberOtpVerifyLockKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber <> ":verifyLock"
 
 makeMobileNumberHitsCountKey :: Text -> Text
 makeMobileNumberHitsCountKey mobileNumber = "MobileNumberOtp:mobileNumberHits-" <> mobileNumber <> ":hitsCount"
