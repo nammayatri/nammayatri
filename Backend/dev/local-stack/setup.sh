@@ -163,13 +163,22 @@ seed_registry() {
     || die "registry schema was not created -- check sql-seed/mock-registry-seed.sql"
   [ "${n:-0}" -gt 0 ] || die "registry has no subscribers; the gateway will find no BPP"
 
+  # Informational only, so it must not be able to abort the run.
+  #
+  # This used to select the BPP row via
+  #     subscriber_id = (SELECT subscriber_id FROM atlas_driver_offer_bpp.merchant ...)
+  # which does not exist on a first deployment: the driver seed creates
+  # `organization`, and migration 0050 (rename-org-to-merchant) only renames it
+  # when driver-app first starts -- which happens *after* this function. psql
+  # exited 3, stderr was suppressed, grep then matched nothing and exited 1, and
+  # `set -o pipefail` killed the script with no FAILED line at all. It passed on
+  # a laptop only because an earlier run had already migrated that database.
+  #
+  # Listing every subscriber needs no cross-schema lookup and shows more anyway.
   $PG -t -c "SELECT '  ' || type || '  ' || subscriber_id || '  -> ' || subscriber_url
                FROM atlas_registry.subscriber
-              WHERE subscriber_id IN ('JUSPAY.BG.1','JUSPAY.MOBILITY.APP.UAT.1')
-                 OR subscriber_id = (SELECT subscriber_id
-                                       FROM atlas_driver_offer_bpp.merchant
-                                      WHERE short_id='NAMMA_YATRI_PARTNER')
-              ORDER BY type;" 2>/dev/null | grep -v '^ *$' | sed 's/^ *//'
+              ORDER BY type, subscriber_id;" 2>/dev/null \
+    | grep -v '^ *$' | sed 's/^ *//' || true
   ok "$n subscribers"
 }
 
@@ -200,12 +209,30 @@ seed_driver_db() {
   $PG -q -f /tmp/driver-seed.sql >/dev/null 2>&1 || true
   $PG -q -f /tmp/driver-data.sql >/dev/null 2>&1 || true
 
-  $PG -t -c "SELECT '  organizations=' || (SELECT count(*) FROM atlas_driver_offer_bpp.organization)
+  # Which table those organisations now live in depends on whether driver-app has
+  # already run its migrations: sql-seed creates `organization`, and migration
+  # 0050 (rename-org-to-merchant) renames it to `merchant` the first time
+  # driver-app starts. So a *re-run* of this script sees `merchant`, and
+  # hardcoding `organization` made every run after the first die with
+  # "driver seed did not load" against a completely healthy database.
+  local orgtbl n_drivers
+  orgtbl=$($PG -At -c "SELECT coalesce(to_regclass('atlas_driver_offer_bpp.organization')::text,
+                                       to_regclass('atlas_driver_offer_bpp.merchant')::text);" \
+           2>/dev/null | tr -d ' \r')
+  [ -n "$orgtbl" ] \
+    || die "driver seed did not load: neither organization nor merchant exists"
+
+  # The assertion that matters, and it holds in both states.
+  n_drivers=$($PG -At -c "SELECT count(*) FROM atlas_driver_offer_bpp.person WHERE role='DRIVER';" \
+              2>/dev/null | tr -d ' \r')
+  [ "${n_drivers:-0}" -gt 0 ] \
+    || die "driver seed did not load: no drivers in atlas_driver_offer_bpp.person"
+
+  $PG -t -c "SELECT '  $orgtbl=' || (SELECT count(*) FROM $orgtbl)
                  || '  drivers='       || (SELECT count(*) FROM atlas_driver_offer_bpp.person WHERE role='DRIVER')
                  || '  vehicles='      || (SELECT count(*) FROM atlas_driver_offer_bpp.vehicle)
                  || '  fare policies=' || (SELECT count(*) FROM atlas_driver_offer_bpp.fare_policy);" \
-    2>/dev/null | tr -s ' ' | grep -v '^ *$' | sed 's/^ */  /' \
-    || die "driver seed did not load"
+    2>/dev/null | tr -s ' ' | grep -v '^ *$' | sed 's/^ */  /' || true
 }
 
 seed_algeria() {
@@ -257,14 +284,88 @@ seed_algeria() {
 
   place_drivers_in_algiers
 
+  # Display only -- `|| true` because an empty result makes grep exit 1, and
+  # under `set -o pipefail` that would abort the deployment over a status line.
   $PG -t -c "SELECT '  serving: ' || array_to_string(origin_restriction, ', ')
-               FROM atlas_app.merchant;" | sed 's/^ */  /' | grep -v '^ *$'
+               FROM atlas_app.merchant;" | sed 's/^ */  /' | grep -v '^ *$' || true
   $PG -t -c "SELECT region || ' (' || ST_NPoints(geom) || ' pts)'
                FROM atlas_app.geometry
               WHERE region IN ('Algeria','Algiers','Oran','Annaba') ORDER BY region;" \
-    | sed 's/^ */    /' | grep -v '^ *$'
+    | sed 's/^ */    /' | grep -v '^ *$' || true
 
   export_geojson
+}
+
+# Maps. Ride search cannot work without these, and on a fresh machine none of
+# them were being started: the stack was only ever complete because a laptop had
+# already run `docker compose up -d osrm` etc. by hand. That made verify_connector
+# below fail on a clean deployment with "ride search returned no searchId", which
+# reads like a BECKN problem and is not one.
+#
+# Split of responsibilities (see osrm-config.sql for the long version):
+#   get_distances / snap_to_road   OSRM directly
+#   get_routes                     "Google" -> maps-shim -> OSRM
+#   place names / autocomplete     "Google" -> maps-shim -> mock-google
+start_maps() {
+  log "Starting the maps services"
+
+  # osrm-routed exits immediately if the graph is not there, and the container
+  # then restart-loops. Say so here rather than let it surface 60s later as a
+  # ride search with no searchId.
+  docker volume inspect ny-osrm-data >/dev/null 2>&1 \
+    || die "the ny-osrm-data volume does not exist -- run ./osrm-prepare.sh first"
+  docker run --rm -v ny-osrm-data:/data alpine:latest \
+    test -f /data/algeria-latest.osrm.mldgr >/dev/null 2>&1 \
+    || die "the OSRM routing graph is not built -- run ./osrm-prepare.sh first"
+
+  docker compose up -d mock-google osrm osrm-proxy maps-shim
+  ok "mock-google, osrm, osrm-proxy, maps-shim"
+
+  # Tiles are for the mobile app, not the API, so a missing tileset is a warning
+  # rather than a failure -- ride search works fine without them.
+  if docker volume inspect ny-tiles-data >/dev/null 2>&1 &&
+     docker run --rm -v ny-tiles-data:/data alpine:latest \
+       test -f /data/algeria.mbtiles >/dev/null 2>&1; then
+    docker compose up -d tiles
+    ok "tiles"
+  else
+    ok "tiles skipped (run ./tiles-prepare.sh to build them)"
+  fi
+
+  # OSRM loads the graph lazily; give it a moment before anything routes through it.
+  local i
+  for i in $(seq 1 30); do
+    curl -sf --max-time 3 "http://localhost:5001/route/v1/driving/3.0588,36.7538;3.1836,36.7169?overview=false" \
+      >/dev/null 2>&1 && { ok "OSRM answering on :5001"; return; }
+    sleep 2
+  done
+  echo "--- osrm logs ---"; docker logs --tail 15 ny-osrm 2>&1
+  die "OSRM did not answer a route request"
+}
+
+seed_maps() {
+  log "Pointing the backend at OSRM"
+  # Must run after both apps have migrated: merchant_service_usage_config and
+  # merchant_service_config are created by their migrations.
+  docker cp osrm-config.sql ny-postgres:/tmp/osrm-config.sql
+  $PG -q -v ON_ERROR_STOP=1 -f /tmp/osrm-config.sql >/dev/null \
+    || die "could not apply osrm-config.sql"
+
+  # Both apps cache merchant config in Redis, so without this they keep calling
+  # whatever the previous configuration said -- mock-google, which has no
+  # /directions/json and therefore no routes.
+  docker exec ny-redis redis-cli FLUSHALL >/dev/null
+  docker restart ny-rider ny-driver >/dev/null 2>&1 || true
+
+  $PG -t -c "SELECT '  rider  get_distances=' || get_distances
+                 || '  get_routes=' || get_routes
+                 || '  snap_to_road=' || snap_to_road
+               FROM atlas_app.merchant_service_usage_config;" \
+    | grep -v '^ *$' | sed 's/^ *//' || true
+  $PG -t -c "SELECT '  googleMapsUrl=' || (config_json ->> 'googleMapsUrl')
+               FROM atlas_app.merchant_service_config
+              WHERE service_name = 'Maps_Google';" \
+    | grep -v '^ *$' | sed 's/^ *//' || true
 }
 
 # The seeded test drivers sit in Kochi, India. A search from Algiers therefore
@@ -317,7 +418,7 @@ place_drivers_in_algiers() {
       JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = dl.driver_id
       JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = dl.driver_id
      WHERE di.active AND dl.lat BETWEEN 36.7 AND 36.8
-     ORDER BY 1;" | grep -v '^ *$' | sed 's/^ *//'
+     ORDER BY 1;" | grep -v '^ *$' | sed 's/^ *//' || true
 }
 
 # The end-to-end check that actually matters: an Algerian number asks for a
@@ -412,12 +513,12 @@ show_db_state() {
                                          WHERE table_schema='atlas_app')
                  || '  merchant='    || (SELECT count(*) FROM atlas_app.merchant)
                  || '  person='      || (SELECT count(*) FROM atlas_app.person);" \
-    | tr -d ' \r' | grep -v '^$' | sed 's/^/    /'
+    | tr -d ' \r' | grep -v '^$' | sed 's/^/    /' || true
   $PG -t -c "SELECT 'driver tables=' || (SELECT count(*) FROM information_schema.tables
                                          WHERE table_schema='atlas_driver_offer_bpp')
                  || '  merchant='    || (SELECT count(*) FROM atlas_driver_offer_bpp.merchant)
                  || '  drivers='     || (SELECT count(*) FROM atlas_driver_offer_bpp.person WHERE role='DRIVER');" \
-    | tr -d ' \r' | grep -v '^$' | sed 's/^/    /'
+    | tr -d ' \r' | grep -v '^$' | sed 's/^/    /' || true
 }
 
 wait_for_api() {
@@ -458,11 +559,16 @@ verify() {
   [ "$code" = "200" ] || die "/openapi not serving (HTTP ${code:-000})"
   ok "GET  /openapi                  200"
 
+  # +213, not the +91 seeded test rider. rider-app-exe is patched to accept only
+  # Algerian numbers, so +91 is now rejected at validation and this check failed
+  # against a perfectly healthy stack. The seeded rider is unreachable by design
+  # -- and unnecessary, because the OTP flow creates the person row on first
+  # sign-in, which is exactly what this exercises.
   local auth authid token svc
   auth=$(curl -s --max-time 20 -X POST "$base/v2/auth" \
       -H 'content-type: application/json' \
       -H 'x-bundle-version: 1.0.1' -H 'x-client-version: 1.0.0' \
-      -d '{"mobileCountryCode":"+91","mobileNumber":"9999900001","merchantId":"YATRI"}')
+      -d '{"mobileCountryCode":"+213","mobileNumber":"0550123456","merchantId":"YATRI"}')
   authid=$(printf '%s' "$auth" | sed -nE 's/.*"authId":"([^"]+)".*/\1/p')
   [ -n "$authid" ] || die "login failed: $auth"
   ok "POST /v2/auth                  200  authId=$authid"
@@ -536,8 +642,9 @@ verify_driver() {
 
   # An unknown number is fine: auth calls createDriverWithDetails, so this
   # exercises registration and login in one go.
+  # +213 here too: dynamic-offer-driver-app-exe carries the same patch.
   r=$(curl -s --max-time 20 -X POST "$base/ui/auth" -H 'content-type: application/json' \
-        -d "{\"mobileNumber\":\"9999901234\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"$mid\"}")
+        -d "{\"mobileNumber\":\"0551234567\",\"mobileCountryCode\":\"+213\",\"merchantId\":\"$mid\"}")
   authid=$(printf '%s' "$r" | sed -nE 's/.*"authId":"([^"]+)".*/\1/p')
   [ -n "$authid" ] || die "driver login failed: $r"
   ok "POST /ui/auth                  200  authId=$authid"
@@ -570,6 +677,9 @@ else
 fi
 log "Starting infrastructure"
 docker compose up -d postgres redis kafka passetto-db passetto
+# Early, so a missing routing graph fails here rather than 10 minutes later as a
+# ride search that returns no price.
+start_maps
 wait_for_pg
 seed_db
 # Both services must be seeded before either starts: each applies its own
@@ -584,7 +694,15 @@ log "Starting the BAP <-> BPP connector"
 docker compose up -d mock-registry beckn-gateway
 wait_for_api
 wait_for_driver_api
+# Repoints both apps at OSRM and restarts them, so wait for them again.
+seed_maps
+wait_for_api
+wait_for_driver_api
 seed_algeria
+# seed_algeria restarts driver-app to drop its cached merchant row; without this
+# verify_connector can fire its search before the BPP is listening again and
+# blame the gateway for it.
+wait_for_driver_api
 verify
 verify_connector
 show_db_state
