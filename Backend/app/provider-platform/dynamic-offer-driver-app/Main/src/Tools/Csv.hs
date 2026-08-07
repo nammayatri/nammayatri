@@ -36,6 +36,29 @@ cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 readMaybeCSVField :: forall a. Read a => Int -> Text -> Text -> Maybe a
 readMaybeCSVField _ fieldValue _ = cleanField fieldValue >>= readMaybe . T.unpack
 
+-- | Leading characters that make a spreadsheet treat a cell as a formula rather than as text.
+-- Tab and carriage return are included because Excel strips them before deciding, so "\t=cmd()"
+-- evaluates just as "=cmd()" does.
+csvFormulaTriggers :: [Char]
+csvFormulaTriggers = ['=', '+', '-', '@', '\t', '\r']
+
+-- | True when a spreadsheet would evaluate this value instead of displaying it. Use at input
+-- validation time to reject values that have no business reason to look like formulas.
+hasCsvFormulaPrefix :: Text -> Bool
+hasCsvFormulaPrefix value =
+  case T.uncons (T.stripStart value) of
+    Just (c, _) -> c `elem` csvFormulaTriggers
+    Nothing -> False
+
+-- | Neutralize a value for inclusion in a CSV export by prefixing a single quote, which makes
+-- spreadsheets treat the cell as literal text. Apply to every user-controlled field on the way
+-- out; validating on the way in is not sufficient on its own, because rows can predate the
+-- validation or arrive through other write paths.
+sanitizeCsvField :: Text -> Text
+sanitizeCsvField value
+  | hasCsvFormulaPrefix value = T.cons '\'' value
+  | otherwise = value
+
 cleanField :: Text -> Maybe Text
 cleanField = replaceEmpty . T.strip
 

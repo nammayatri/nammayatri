@@ -249,11 +249,19 @@ normalizeExtension ext = do
   let normalized = ext & T.strip & T.dropWhile (== '.') & T.toLower
   if T.null normalized then Nothing else Just normalized
 
--- | Extension the object is stored under. Detected content wins; when detection failed (only
--- reachable in shadow mode) fall back to the legacy declared-extension-or-png behaviour.
-resolveStoredExtension :: Maybe UploadedFileType -> Maybe Text -> Text
-resolveStoredExtension (Just fileType) _ = canonicalExtension fileType
-resolveStoredExtension Nothing mbDeclaredExtension = fromMaybe "png" (normalizeExtension =<< mbDeclaredExtension)
+-- | Extension the object is stored under.
+--
+-- Shadow mode must be observably inert: with @enforce@ False the object keeps the extension the
+-- caller declared, byte-for-byte the behaviour that predates this check, and the only effect of
+-- the check is a log line. Letting detected content win while the flag is off would silently
+-- change stored S3 paths (a JPEG declared .png would land as .jpg) on every merchant at deploy
+-- time, before anyone opted in.
+--
+-- Only when enforcing does detected content decide the extension.
+resolveStoredExtension :: Bool -> Maybe UploadedFileType -> Maybe Text -> Text
+resolveStoredExtension enforce mbFileType mbDeclaredExtension
+  | enforce, Just fileType <- mbFileType = canonicalExtension fileType
+  | otherwise = fromMaybe "png" (normalizeExtension =<< mbDeclaredExtension)
 
 createPath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
@@ -358,7 +366,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       when (imageType == DVC.ProfilePhoto && not isDashboard) $
         enforceSelfieReuploadPolicy person allImages
 
-      imagePath <- createPath personId.getId merchantId.getId imageType (resolveStoredExtension mbUploadedFileType fileExtension)
+      imagePath <- createPath personId.getId merchantId.getId imageType (resolveStoredExtension enforceFileTypeCheck mbUploadedFileType fileExtension)
       s3Result <-
         withTryCatch "S3:put:uploadImage" $
           Redis.withLockRedis (imageS3Lock imagePath) 5 $

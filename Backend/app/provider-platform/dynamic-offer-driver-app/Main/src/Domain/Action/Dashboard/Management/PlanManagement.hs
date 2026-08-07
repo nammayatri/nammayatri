@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Management.PlanManagement
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.PlanManagement as Common
+import qualified Data.Text as T
 import qualified Domain.Types.Extra.Plan as DExtra
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -32,6 +33,25 @@ import qualified Storage.CachedQueries.PlanExtra as CQPlan
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanExtra
 import qualified Storage.Queries.PlanTranslation as QPlanTranslation
+import Tools.Csv (hasCsvFormulaPrefix)
+
+-- | Plan name and description are operator-authored display text that ends up in the admin UI and
+-- in exported subscription CSVs. Reject the two shapes that turn a label into code:
+--
+--   * a leading =, +, - or @, which a spreadsheet evaluates as a formula on CSV export
+--   * markup and template delimiters, which render as HTML or get interpolated by the dashboard
+--
+-- Rejecting rather than escaping is right here: no legitimate plan is called "=(7+7)", and
+-- silently rewriting an operator's input would be more surprising than refusing it. Escaping is
+-- still applied independently on the export side, since rows can predate this validation.
+validatePlanDisplayText :: Text -> Text -> Flow ()
+validatePlanDisplayText fieldName value = do
+  when (T.null $ T.strip value) $
+    throwError $ InvalidRequest $ fieldName <> " cannot be blank."
+  when (hasCsvFormulaPrefix value) $
+    throwError $ InvalidRequest $ fieldName <> " cannot begin with '=', '+', '-' or '@'."
+  when (T.any (`elem` ("<>{}" :: String)) value) $
+    throwError $ InvalidRequest $ fieldName <> " cannot contain the characters < > { or }."
 
 postPlanManagementCreate ::
   ShortId DM.Merchant ->
@@ -39,6 +59,8 @@ postPlanManagementCreate ::
   Common.CreatePlanReq ->
   Flow Common.CreatePlanResp
 postPlanManagementCreate merchantShortId opCity req = do
+  validatePlanDisplayText "Plan name" req.name
+  validatePlanDisplayText "Plan description" req.description
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   planId <- generateGUID
