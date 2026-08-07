@@ -888,6 +888,9 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
           incrementAuthCall piId amount applicationFeeAmount =
             TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
       nwAddress <- asks (.nwAddress)
+      -- Build the offer basket so a Juspay-configured createPaymentIntent carries the real SKU basket.
+      -- On Stripe the basket has no wire representation and is dropped by createPayment.
+      offerBasket <- TPayment.mkOfferBasket merchantId merchantOpCityId Nothing paymentServiceType effectiveAmount 1
       let serviceReq =
             DPayment.CreatePaymentServiceReq
               { amount = effectiveAmount,
@@ -910,7 +913,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 metadataGatewayReferenceId = Nothing,
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
-                basket = Nothing,
+                basket = offerBasket,
                 paymentRules = Nothing,
                 webhookUrl = Just nwAddress,
                 udf1 = Nothing,

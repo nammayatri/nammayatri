@@ -337,6 +337,7 @@ postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req = do
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  offerBasket <- Payment.mkOfferBasket merchantId merchantOpCity.id (Just placeId) Payment.Normal amount.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
@@ -357,7 +358,7 @@ postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req = do
             metadataGatewayReferenceId = Nothing,
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,

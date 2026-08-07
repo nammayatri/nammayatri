@@ -373,7 +373,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   metadataGatewayReferenceId = Nothing,
                   webhookUrl = Just nwAddress,
                   splitSettlementDetails,
-                  basket = Just basket,
+                  basket = basket,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,

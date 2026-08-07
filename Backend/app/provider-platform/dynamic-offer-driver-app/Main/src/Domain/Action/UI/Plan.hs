@@ -1136,9 +1136,10 @@ resolvePrepaidPlanFee driverId merchantId merchantOpCityId plan subscriptionConf
   now <- getCurrentTime
   isMember <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName (Just subscriptionConfig)
   let baseAmount = plan.registrationAmount
-      offerListReq =
+  offerBasket <- Payment.mkOfferBasket merchantOpCityId (Just subscriptionConfig.paymentServiceName) baseAmount
+  let offerListReq =
         Payment.OfferListReq
-          { order = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = currency, basket = Nothing},
+          { order = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = currency, basket = offerBasket},
             customer = Just Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing},
             planId = plan.id.getId,
             registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
@@ -1207,7 +1208,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,
-            basket = Just offerBasket,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
@@ -1428,7 +1429,8 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
       isMemberEligibleForOffers <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName subscriptionConfig
-      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency, basket = Nothing}
+      offerBasket <- Payment.mkOfferBasket merchantOpCityId ((.paymentServiceName) <$> subscriptionConfig) baseAmount
+      let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency, basket = offerBasket}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
         Payment.OfferListReq

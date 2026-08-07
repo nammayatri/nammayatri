@@ -395,6 +395,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
@@ -415,7 +416,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
-            basket = Nothing,
+            basket = offerBasket,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
