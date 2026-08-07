@@ -39,9 +39,8 @@ defaultDBSyncConfig =
       _streamReadCount = 1000 -- 1000
     }
 
--- at least one normal-stream drainer thread always runs, regardless of env value
 getThreadPerPodCount :: IO Int
-getThreadPerPodCount = max 1 . fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
+getThreadPerPodCount = fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
 
 getCriticalThreadPerPodCount :: IO Int
 getCriticalThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv criticalThreadPerPodCount
