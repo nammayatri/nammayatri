@@ -60,6 +60,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.TicketRule.Apply as TicketRule
 import qualified SharedLogic.TicketRule.Core
 import SharedLogic.TicketUtils
@@ -336,6 +337,7 @@ postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req = do
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person merchantOpCity.id
   offerBasket <- Payment.mkOfferBasket merchantId merchantOpCity.id (Just placeId) Payment.Normal amount.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -361,7 +363,8 @@ postTicketPlacesBookWithActor (mbPersonId, merchantId) placeId req = do
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_

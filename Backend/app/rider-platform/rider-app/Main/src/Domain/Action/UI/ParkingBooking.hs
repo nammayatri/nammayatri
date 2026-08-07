@@ -20,6 +20,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -77,6 +78,7 @@ postMultimodalParkingBook mbApiKey req = ActorInfo.withRequestIdActorInfo $ do
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person merchantOpCityId
   offerBasket <- TPayment.mkOfferBasket person.merchantId merchantOpCityId Nothing TPayment.ParkingBooking req.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -102,7 +104,8 @@ postMultimodalParkingBook mbApiKey req = ActorInfo.withRequestIdActorInfo $ do
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId

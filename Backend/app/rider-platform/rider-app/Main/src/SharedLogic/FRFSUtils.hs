@@ -89,6 +89,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -882,6 +883,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person merchantOperatingCityId
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
@@ -906,7 +908,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId

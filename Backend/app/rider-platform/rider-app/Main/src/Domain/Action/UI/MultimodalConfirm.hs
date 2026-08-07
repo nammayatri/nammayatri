@@ -137,6 +137,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -394,6 +395,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- SOfferSegment.getPersonOfferSegment person merchantOperatingCityId
   offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -419,7 +421,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
