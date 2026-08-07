@@ -494,6 +494,8 @@ apis:
         type: "API.Types.UI.FRFSTicketService.AutocompleteRes"
 
   # GET metro/bus routes for the merchant city
+  # serviceTiers: filter routes to these tiers (any-of); omit/empty => all routes.
+  # getStations=true: populate each route's ordered stops via one bulk RSM call (cached 1h).
   - GET:
       endpoint: /frfs/routes
       auth: TokenAuth
@@ -504,6 +506,8 @@ apis:
         startStationCode: Text
         endStationCode: Text
         platformType: PlatformType
+        serviceTiers: "[ServiceTierType]"
+        getStations: Bool
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
 

@@ -135,15 +135,22 @@ import qualified Tools.Notifications as Notifications
 import qualified Tools.Payment as Payment
 import qualified UrlShortner.Common as UrlShortner
 
+-- NOTE on cost: getStations=True fetches the full route-stop-mapping for every route in
+-- `filteredRoutes` (one bulk GIMS call, cached 1h). RSM has one row per stop *per route*,
+-- so the payload scales with routeCount x stopsPerRoute. Scoping with `serviceTiers` keeps
+-- this cheap. Calling getStations=True WITHOUT `serviceTiers` returns stops for ALL routes
+-- and is heavy on large feeds (e.g. chennai ~ 25MB) -- prefer passing serviceTiers.
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Maybe Text ->
+  Maybe Bool ->
   Maybe DIBC.PlatformType ->
+  Maybe [Spec.ServiceTierType] ->
   Maybe Text ->
   Context.City ->
   Spec.VehicleCategory ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
-getFrfsRoutes (_personId, _mId) mbEndStationCode mbPlatformType mbStartStationCode _city _vehicleType = do
+getFrfsRoutes (_personId, _mId) mbEndStationCode mbGetStations mbPlatformType mbServiceTiers mbStartStationCode _city _vehicleType = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _city)
   let platformType = fromMaybe DIBC.APPLICATION mbPlatformType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
@@ -193,11 +200,48 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbPlatformType mbStartStationCo
             routesInfo
       _ -> do
         routes <- OTPRest.getRoutesByVehicleType integratedBPPConfig _vehicleType
-        return $
-          map
-            ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}
-            )
-            routes
+        let filteredRoutes = case mbServiceTiers of
+              Just serviceTiers | not (null serviceTiers) -> filter (\r -> maybe False (`elem` serviceTiers) r.serviceTierType) routes
+              _ -> routes
+        if fromMaybe False mbGetStations
+          then do
+            let routeCodes = map (.code) filteredRoutes
+            allStops <- OTPRest.getRouteStopMappingByRouteCodes integratedBPPConfig routeCodes
+            let stopsByRoute = HashMap.fromListWith (<>) $ map (\s -> (s.routeCode, [s])) allStops
+            return $
+              map
+                ( \route@Route.Route {..} ->
+                    let rsmForRoute = sortBy (compare `on` RouteStopMapping.sequenceNum) $ fromMaybe [] (HashMap.lookup route.code stopsByRoute)
+                        stopsForRoute =
+                          map
+                            ( \rs ->
+                                FRFSStationAPI
+                                  { name = Just rs.stopName,
+                                    code = rs.stopCode,
+                                    routeCodes = Just [route.code],
+                                    lat = Just rs.stopPoint.lat,
+                                    lon = Just rs.stopPoint.lon,
+                                    sequenceNum = Just rs.sequenceNum,
+                                    integratedBppConfigId = integratedBPPConfig.id,
+                                    stationType = Nothing,
+                                    address = Nothing,
+                                    distance = Nothing,
+                                    color = Nothing,
+                                    routeDetails = Nothing,
+                                    towards = Nothing,
+                                    timeTakenToTravelUpcomingStop = Nothing,
+                                    parentStopCode = Nothing
+                                  }
+                            )
+                            rsmForRoute
+                     in FRFSTicketService.FRFSRouteAPI {totalStops = Just (length stopsForRoute), stops = Just stopsForRoute, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}
+                )
+                filteredRoutes
+          else
+            return $
+              map
+                (\Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, stops = Nothing, waypoints = Nothing, timeBounds = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..})
+                filteredRoutes
   where
     mapWithIndex f xs = zipWith f [0 ..] xs
 

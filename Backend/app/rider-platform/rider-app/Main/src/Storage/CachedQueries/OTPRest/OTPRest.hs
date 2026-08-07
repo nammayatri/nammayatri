@@ -3,7 +3,7 @@ module Storage.CachedQueries.OTPRest.OTPRest (module OTPRestCommon, module Stora
 import BecknV2.FRFS.Enums
 import qualified BecknV2.FRFS.Utils as BecknFRFSUtils
 import qualified Data.HashMap.Strict as HM
-import Data.List (groupBy)
+import Data.List (groupBy, sort)
 import Data.Text (splitOn)
 import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
@@ -191,6 +191,16 @@ getRouteStopMappingByStopCodes integratedBPPConfig stopCodes = do
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
+
+getRouteStopMappingByRouteCodes ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  [Text] ->
+  m [RouteStopMapping]
+getRouteStopMappingByRouteCodes integratedBPPConfig routeCodes = IM.withInMemCache ["RSM_BULK", show (sort routeCodes), integratedBPPConfig.id.getId] 3600 $ do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routeStopMapping' <- Flow.postRouteStopMappingByRouteCodes baseUrl integratedBPPConfig.feedKey routeCodes
+  parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
 
 fromMaybe' :: Int -> Maybe Int -> Integer
 fromMaybe' a = maybe (integerFromInt a) integerFromInt
