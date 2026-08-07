@@ -137,6 +137,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Common as DrInfo
+import qualified Domain.Types.CommonDocumentData as DCDD
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDF
@@ -231,6 +232,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstinExtra as QDGExtra
 import qualified Storage.Queries.DriverIdentityInfo as QDII
@@ -2745,6 +2747,16 @@ getFleetOrOperatorInfo person = do
       panNumber' <- decryptWithDefault panNumber panNumberDec
       aadhaarNumber' <- decryptWithDefault aadhaarNumber aadhaarNumberDec
       businessLicenseNumber' <- decryptWithDefault businessLicenseNumber businessLicenseNumberDec
+      businessLicenseNumberFinal <- case businessLicenseNumber' of
+        Just n | not (T.null n) -> pure (Just n)
+        _ -> do
+          mbBusinessLicenseDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just fleetOwnerPersonId) DDoc.BusinessLicense
+          pure $ case mbBusinessLicenseDoc of
+            Just doc
+              | doc.verificationStatus /= Documents.INVALID,
+                DCDD.BusinessLicenseData d <- doc.documentData ->
+                Just d.identifierNumber
+            _ -> Nothing
       stripeIdNumber' <- forM stripeIdNumber decrypt
       let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
       mobileNo' <- mapM decrypt fleetOwner.mobileNumber
@@ -2786,7 +2798,7 @@ getFleetOrOperatorInfo person = do
             gstImageId = gstImageIdVal,
             panNumber = panNumber',
             aadhaarNumber = aadhaarNumber',
-            businessLicenseNumber = businessLicenseNumber',
+            businessLicenseNumber = businessLicenseNumberFinal,
             stripeIdNumber = stripeIdNumber',
             approvedBy = Nothing,
             id = fleetOwnerPersonId.getId,
