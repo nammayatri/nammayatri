@@ -214,6 +214,7 @@ library
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
@@ -898,6 +899,7 @@ library
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
+      Storage.Queries.ScheduledBookingOpsNoteExtra
       Storage.Queries.ScheduledPayoutExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
@@ -1040,6 +1042,7 @@ library
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.ScheduledBooking
       API.Action.Dashboard.Management.SearchTry
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
@@ -1344,6 +1347,7 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
       Domain.Types.RouteTripStopMapping
+      Domain.Types.ScheduledBookingOpsNote
       Domain.Types.ScheduledPayout
       Domain.Types.ScheduledPayoutConfig
       Domain.Types.SearchReqLocation
@@ -1530,6 +1534,7 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
       Storage.Beam.RouteTripStopMapping
+      Storage.Beam.ScheduledBookingOpsNote
       Storage.Beam.ScheduledPayout
       Storage.Beam.ScheduledPayoutConfig
       Storage.Beam.SearchReqLocation
@@ -1774,6 +1779,7 @@ library
       Storage.Queries.OrphanInstances.RiderDetails
       Storage.Queries.OrphanInstances.RiderDriverCorrelation
       Storage.Queries.OrphanInstances.Route
+      Storage.Queries.OrphanInstances.ScheduledBookingOpsNote
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
@@ -1822,6 +1828,7 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
       Storage.Queries.RouteTripStopMapping
+      Storage.Queries.ScheduledBookingOpsNote
       Storage.Queries.ScheduledPayout
       Storage.Queries.ScheduledPayoutConfig
       Storage.Queries.SearchReqLocation

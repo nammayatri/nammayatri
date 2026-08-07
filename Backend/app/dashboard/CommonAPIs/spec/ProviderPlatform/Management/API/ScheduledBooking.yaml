@@ -1,0 +1,175 @@
+imports:
+  TripCategory: Domain.Types
+  LatLong: Kernel.External.Maps.Types
+  RideStatus: Domain.Types.RideStatus
+  OpsNoteType: Domain.Types.OpsNote
+  OpsNoteStatus: Domain.Types.OpsNote
+
+module: ScheduledBooking
+
+apis:
+  - GET: # ScheduledBookingListAPI
+      endpoint: /list
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        assignmentStatus: AssignmentStatus
+      auth: ApiAuthV2
+      response:
+        type: ScheduledBookingListRes
+
+  - GET: # ScheduledBookingInfoAPI
+      endpoint: /{transactionId}/info
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      response:
+        type: ScheduledBookingInfoRes
+
+  - POST: # ScheduledBookingAddOpsNoteAPI
+      endpoint: /{transactionId}/opsNote
+      name: PostScheduledBookingOpsNoteAdd
+      auth: ApiAuthV2
+      params:
+        transactionId: Text
+      request:
+        type: AddOpsNoteReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{transactionId}/opsNote
+            name: PostScheduledBookingOpsNoteAdd
+            auth: ApiAuthV2
+            params:
+              transactionId: Text
+            query:
+              - requestorId: Text
+            request:
+              type: AddOpsNoteReq
+            response:
+              type: APISuccess
+
+  - PUT: # ScheduledBookingUpdateOpsNoteAPI
+      endpoint: /opsNote/{noteId}
+      name: PutScheduledBookingOpsNoteUpdate
+      auth: ApiAuthV2
+      params:
+        noteId: Text
+      request:
+        type: UpdateOpsNoteReq
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /opsNote/{noteId}
+            name: PutScheduledBookingOpsNoteUpdate
+            auth: ApiAuthV2
+            params:
+              noteId: Text
+            query:
+              - requestorId: Text
+            request:
+              type: UpdateOpsNoteReq
+            response:
+              type: APISuccess
+
+types:
+  ScheduledBookingListRes:
+    - totalItems: Int
+    - bookings: [ScheduledBookingListItem]
+
+  ScheduledBookingListItem:
+    - transactionId: Text
+    - bookingId: Text
+    - tripCategory: TripCategory
+    - scheduledAt: UTCTime
+    - fromLocation: LocationAPIEntity
+    - toLocation: Maybe LocationAPIEntity
+    - riderName: Maybe Text
+    - riderPhoneNo: Maybe Text
+    - driverName: Maybe Text
+    - driverPhoneNo: Maybe Text
+    - bookingStatus: BookingStatus
+    - rideStatus: Maybe RideStatus
+    - reallocationCount: Int
+    - hasPendingOpsFlags: Bool
+
+  ScheduledBookingInfoRes:
+    - transactionId: Text
+    - bookingId: Text
+    - tripCategory: TripCategory
+    - scheduledAt: UTCTime
+    - fromLocation: LocationAPIEntity
+    - toLocation: Maybe LocationAPIEntity
+    - riderName: Maybe Text
+    - riderPhoneNo: Maybe Text
+    - driverName: Maybe Text
+    - driverPhoneNo: Maybe Text
+    - bookingStatus: BookingStatus
+    - rideStatus: Maybe RideStatus
+    - driverCurrentLocation: Maybe LatLong
+    - driverDistanceToPickup: Maybe Meters
+    - driverEtaToPickupSeconds: Maybe Int
+    - estimatedDistance: Maybe Meters
+    - estimatedDurationSeconds: Maybe Int
+    - opsNotes: [OpsNoteItem]
+    - reallocationHistory: [ReallocationEventItem]
+
+  OpsNoteItem:
+    - id: Text
+    - noteType: OpsNoteType
+    - content: Maybe Text
+    - status: OpsNoteStatus
+    - bookingId: Maybe Text
+    - createdByDashboardUserId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  ReallocationEventItem:
+    - bookingId: Text
+    - driverName: Maybe Text
+    - driverPhoneNo: Maybe Text
+    - rideStatus: Maybe RideStatus
+    - bookingStatus: BookingStatus
+    - becameCurrentAt: UTCTime
+    - cancelledAt: Maybe UTCTime
+    - cancellationSource: Maybe CancellationSource
+    - driverDistToPickupAtCancel: Maybe Meters
+
+  AddOpsNoteReq:
+    - noteType: OpsNoteType
+    - content: Maybe Text
+    - status: Maybe OpsNoteStatus
+    - derive: "'HideSecrets"
+
+  UpdateOpsNoteReq:
+    - content: Maybe Text
+    - status: Maybe OpsNoteStatus
+    - derive: "'HideSecrets"
+
+  LocationAPIEntity:
+    - lat: Double
+    - lon: Double
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
+    - fullAddress: Maybe Text
+
+  AssignmentStatus:
+    - enum: "ASSIGNED, UNASSIGNED"
+    - derive: "HttpInstance"
+
+  BookingStatus:
+    - enum: "NEW, TRIP_ASSIGNED, COMPLETED, CANCELLED, REALLOCATED"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+
+  CancellationSource:
+    - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication, ByFleetOwner"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"

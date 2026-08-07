@@ -1,0 +1,744 @@
+{
+  "info": {
+    "name": "NY Scheduled Intercity Ride Flow (Bangalore -> Mysore, future pickup)",
+    "description": "End-to-end Intercity flow (one-way Bangalore -> Mysore):\n  Driver onboard -> Rider auth -> InterCity search -> Get quotes (onIntercityCab) -> Confirm quote -> Driver gets OTP from booking -> Driver OTP-starts ride -> End ride -> Verify completed.\n\nPrerequisites:\n- Bangalore intercity FarePolicy + fare_product seeded for the chosen vehicle variant (auto-synced from prod via config-sync/prod_to_local_sql).\n- Special-zone OTP path: Intercity_OneWayRideOtp trip category must resolve to a quote for the chosen origin/destination pair.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "scheduled-intercity-0002-0002-000000000002"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Intercity Driver\", \"colour\": \"White\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "{{plan_id}}",
+            "subscribe"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Intercity Switch (Driver Profile)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('canSwitchToInterCity set to true');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"canSwitchToInterCity\": true}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/profile",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "profile"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Set Driver Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ride Search (Intercity Bangalore -> Mysore)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Schedule the trip 30 minutes in the future, no return time (one-way)",
+              "var startTs = new Date(Date.now() + 45 * 60 * 1000).toISOString();",
+              "pm.environment.set('_intercity_start_time', startTs);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('searchId', d.searchId); console.log('Intercity Search ID:', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); const w=parseInt(pm.environment.get('search_wait_ms')||'8000',10); while(Date.now()-s<w){}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"INTER_CITY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Bangalore Origin\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"stops\": [{\"address\": {\"area\": \"{{intercity_dest_city}}\", \"areaCode\": \"570001\", \"city\": \"{{intercity_dest_city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}}], \"roundTrip\": false, \"isSourceManuallyMoved\": false, \"isDestinationManuallyMoved\": false, \"startTime\": \"{{_intercity_start_time}}\"}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Intercity Quotes",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const s=Date.now(); while(Date.now()-s<3000){}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var quotes = d.quotes || [];",
+              "var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+              "var pick = null;",
+              "for (var i=0; i<quotes.length; i++) {",
+              "  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",
+              "  if (!inner) continue;",
+              "  if (inner.vehicleVariant === want) { pick = inner; break; }",
+              "}",
+              "if (!pick && quotes.length > 0) pick = quotes[0].onIntercityCab || quotes[0].onDemandCab;",
+              "if (pick) {",
+              "  pm.environment.set('quoteId', pick.id);",
+              "  console.log('Intercity Quote:', pick.id, 'variant:', pick.vehicleVariant, 'fare:', pick.estimatedTotalFare);",
+              "  console.log('All quotes:', quotes.map(function(q){var i=q.onIntercityCab||q.onDemandCab; return i?i.vehicleVariant+'='+i.estimatedTotalFare:'?';}).join(', '));",
+              "}",
+              "pm.test('Has intercity quotes', function () { pm.expect(pm.environment.get('quoteId')).to.be.a('string').that.is.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Confirm Intercity Quote",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<5000){}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/quotes/{{quoteId}}/confirm",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "quotes",
+            "{{quoteId}}",
+            "confirm"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify in Scheduled Bookings (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var bookings = (d && d.bookings) || [];",
+              "var bid = pm.environment.get('customer_bookingId');",
+              "console.log('scheduledBooking/list totalItems=', d.totalItems, 'looking for bookingId=', bid);",
+              "var found = bookings.filter(function (b) { return b.bookingId === bid; });",
+              "pm.test('Scheduled booking present in dashboard list', function () { pm.expect(found.length, 'booking in list').to.be.above(0); });",
+              "if (found.length) { pm.test('Booking is a scheduled InterCity (NEW/unassigned)', function () { pm.expect(found[0].bookingStatus).to.equal('NEW'); pm.expect(JSON.stringify(found[0].tripCategory)).to.include('InterCity'); }); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/scheduledBooking/list?assignmentStatus=\"UNASSIGNED\"&limit=50&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "scheduledBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "assignmentStatus",
+              "value": "\"UNASSIGNED\""
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
