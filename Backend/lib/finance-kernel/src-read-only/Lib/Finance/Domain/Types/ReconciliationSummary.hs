@@ -35,4 +35,4 @@ data ReconciliationSummary = ReconciliationSummary
 
 data JobStatus = COMPLETED | FAILED | IN_PROGRESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JobStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JobStatus)

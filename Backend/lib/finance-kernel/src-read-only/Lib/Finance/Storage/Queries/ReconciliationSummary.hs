@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByChunk ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary])
 findByChunk domain source target reconciliationDate merchantId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -40,7 +40,7 @@ findByChunk domain source target reconciliationDate merchantId merchantOperating
 
 findByDomainSourceTarget ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+  (Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> m [Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary])
 findByDomainSourceTarget domain source target = do findAllWithKV [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.source $ Se.Eq source, Se.Is Beam.target $ Se.Eq target]]
 
 findById ::
@@ -48,7 +48,7 @@ findById ::
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m (Maybe Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByMerchantId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+findByMerchantId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary])
 findByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq merchantId]
 
 updateStatus ::

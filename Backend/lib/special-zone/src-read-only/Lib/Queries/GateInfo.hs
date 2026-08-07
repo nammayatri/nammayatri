@@ -24,7 +24,7 @@ create = createWithKV
 createMany :: (Lib.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Types.GateInfo.GateInfo] -> m ())
 createMany = traverse_ create
 
-findAllBySpecialLocationId :: (Lib.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> m ([Lib.Types.GateInfo.GateInfo]))
+findAllBySpecialLocationId :: (Lib.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> m [Lib.Types.GateInfo.GateInfo])
 findAllBySpecialLocationId specialLocationId = do findAllWithKV [Se.Is Beam.specialLocationId $ Se.Eq (Kernel.Types.Id.getId specialLocationId)]
 
 findById :: (Lib.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Types.GateInfo.GateInfo -> m (Maybe Lib.Types.GateInfo.GateInfo))

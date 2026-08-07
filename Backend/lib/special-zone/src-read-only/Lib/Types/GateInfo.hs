@@ -46,4 +46,4 @@ data GateInfo = GateInfo
 
 data GateType = Pickup | Drop | Parking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''GateType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''GateType)
