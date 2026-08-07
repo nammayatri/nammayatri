@@ -45,9 +45,6 @@ const DEFAULT_REMOTE_DIR = '/tmp/nammayatri';
 // resolves free ports at startup and fronts them with caddy.
 const CMD_FIXED_PORTS = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev';
 const CMD_AVAILABLE_PORTS = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev-on-available-ports';
-const commandForHost = (host: string): string =>
-  (!host || ['localhost', '127.0.0.1', '::1'].includes(host.trim()))
-    ? CMD_FIXED_PORTS : CMD_AVAILABLE_PORTS;
 const FORM_STORAGE_KEY = 'ny.remoteStack.target';
 const MODE_STORAGE_KEY = 'ny.remoteStack.mode';
 
@@ -201,6 +198,17 @@ export const RemoteStackPanel: React.FC = () => {
   // In Dev-Box mode nothing may run until an assignment is resolved —
   // otherwise a stale localStorage target could be deployed to.
   const devboxNotReady = mode === 'devbox' && (resolving || !devbox);
+
+  const handleModeChange = (next: RunMode) => {
+    if (next === mode) return;
+    setMode(next);
+    try {
+      window.localStorage.setItem(MODE_STORAGE_KEY, next);
+      window.localStorage.removeItem('ny.contextApiBase');
+      window.sessionStorage.clear();
+    } catch { /* ignore */ }
+    window.location.reload();
+  };
 
   // Re-run the pre-flight purely to refresh the readout (fingerprinting the
   // workspace takes a moment, hence the explicit ⟳ rather than a poller).
@@ -515,10 +523,8 @@ export const RemoteStackPanel: React.FC = () => {
       }
 
       patchStep('start', { state: 'running' });
-      // Always send the canonical Start command so the field displayed in
-      // the UI matches what local-api executes (even if an older value got
-      // persisted to localStorage from a previous build).
-      const res = await remoteStart({ ...target, command: commandForHost(target.host) });
+      const command = mode === 'devbox' ? CMD_AVAILABLE_PORTS : CMD_FIXED_PORTS;
+      const res = await remoteStart({ ...target, command });
       if (res.error || !res.session) { fail('start', res.error || 'start failed'); return; }
       await remoteMark(target, 'start');
       patchStep('start', { state: 'done', detail: `running on ${target.host}` });
@@ -570,7 +576,7 @@ export const RemoteStackPanel: React.FC = () => {
         <div className="rsp-run-row">
         <label>
           <span>Run on</span>
-          <select value={mode} onChange={e => setMode(e.target.value as RunMode)}>
+          <select value={mode} onChange={e => handleModeChange(e.target.value as RunMode)}>
             <option value="local">Local (this machine)</option>
             <option value="devbox">Dev-Box (auto-assigned)</option>
           </select>
