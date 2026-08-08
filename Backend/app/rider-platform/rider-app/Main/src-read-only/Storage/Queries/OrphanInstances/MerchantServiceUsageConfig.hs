@@ -42,7 +42,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             deleteCard = deleteCard,
             enableDashboardSms = enableDashboardSms,
             eventTrackingOverrides = Kernel.Utils.JSON.valueToMaybe =<< eventTrackingOverrides,
-            eventTrackingProviders = fromMaybe [Kernel.External.EventTracking.Types.Moengage] eventTrackingProviders,
+            eventTrackingProviders = fromMaybe [] eventTrackingProviders,
             getCardList = getCardList,
             getDistances = getDistances,
             getDistancesForCancelRide = getDistancesForCancelRide,

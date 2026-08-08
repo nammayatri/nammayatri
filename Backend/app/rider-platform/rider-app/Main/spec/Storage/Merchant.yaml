@@ -387,7 +387,7 @@ MerchantServiceUsageConfig:
     getRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
-    eventTrackingProviders: fromMaybe [Kernel.External.EventTracking.Types.Moengage]|I
+    eventTrackingProviders: fromMaybe [] eventTrackingProviders|E
     eventTrackingOverrides: Kernel.Utils.JSON.valueToMaybe =<< eventTrackingOverrides|E
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
