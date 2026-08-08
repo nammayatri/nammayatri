@@ -1301,6 +1301,44 @@ forwardShuttleDriverRating merchant booking ratingReq =
                 }
         void $ CallBPPInternal.sendFrfsDriverRating merchant.driverOfferApiKey merchant.driverOfferBaseUrl ratingBppReq
 
+getFrfsBookingDriverRating ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
+    Environment.Flow API.Types.UI.FRFSTicketService.FRFSDriverRatingAggRes
+  )
+getFrfsBookingDriverRating (_mbPersonId, merchantId) bookingId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  case booking.driverId of
+    Nothing -> pure emptyDriverRatingAgg
+    Just driverBadge -> do
+      mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
+      let fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber
+      withTryCatch "getFrfsDriverRatingAgg" (CallBPPInternal.getFrfsDriverRatingAgg merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId driverBadge fleetNumber mbGtfsId)
+        >>= \case
+          Right res ->
+            pure
+              API.Types.UI.FRFSTicketService.FRFSDriverRatingAggRes
+                { driverRating = res.driverRating,
+                  driverRatingCount = res.driverRatingCount,
+                  fleetRating = res.fleetRating,
+                  fleetRatingCount = res.fleetRatingCount
+                }
+          Left err -> do
+            logError $ "Error fetching FRFS driver/fleet rating aggregates: " <> show err
+            pure emptyDriverRatingAgg
+
+emptyDriverRatingAgg :: API.Types.UI.FRFSTicketService.FRFSDriverRatingAggRes
+emptyDriverRatingAgg =
+  API.Types.UI.FRFSTicketService.FRFSDriverRatingAggRes
+    { driverRating = Nothing,
+      driverRatingCount = Nothing,
+      fleetRating = Nothing,
+      fleetRatingCount = Nothing
+    }
+
 tryStationsAPIWithOSRMDistances :: Id Merchant.Merchant -> MerchantOperatingCity -> LatLong -> [FRFSStationAPI] -> DIBC.IntegratedBPPConfig -> Environment.Flow [FRFSStationAPI]
 tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integratedBPPConfig = do
   if null stops

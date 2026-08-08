@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.FRFSDriverRatingInternal (postInternalFrfsDriverRating) where
+module Domain.Action.UI.FRFSDriverRatingInternal (postInternalFrfsDriverRating, getInternalFrfsDriverRating) where
 
 import qualified API.Types.UI.FRFSDriverRatingInternal as API
 import qualified Domain.Action.Beckn.Rating as BecknRating
@@ -63,6 +63,33 @@ postInternalFrfsDriverRating mbApiKey req = do
       QFRFSDriverRating.create row
     Just old -> QFRFSDriverRating.updateRating (req.driverRating <|> old.driverRatingValue) (req.fleetRating <|> old.fleetRatingValue) req.feedbackDetails old.id
   pure Success
+
+getInternalFrfsDriverRating ::
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Environment.Flow API.FRFSDriverRatingAggRes
+getInternalFrfsDriverRating mbMerchantId mbDriverBadgeToken mbFleetNumber mbGtfsId mbApiKey = do
+  merchantIdText <- mbMerchantId & fromMaybeM (InvalidRequest "merchantId is required")
+  driverBadgeToken <- mbDriverBadgeToken & fromMaybeM (InvalidRequest "driverBadgeToken is required")
+  let merchantId = Id merchantIdText
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantIdText)
+  unless (Just merchant.internalApiKey == mbApiKey) $ throwError (InvalidRequest "Invalid internal api key for FRFS driver rating")
+  driver <- QPerson.findByOperatorBadgeTokenAndMerchantId (Just driverBadgeToken) merchantId >>= fromMaybeM (PersonNotFound driverBadgeToken)
+  mbDriverStats <- QDriverStats.findById driver.id
+  -- The bus aggregate needs both halves of its key; without them there is simply no bus to report on.
+  mbFleet <- case (,) <$> mbGtfsId <*> mbFleetNumber of
+    Just (gtfsId, fleetNumber) -> QFRFSFleetRating.findByGtfsIdAndFleetNumber gtfsId fleetNumber
+    Nothing -> pure Nothing
+  pure
+    API.FRFSDriverRatingAggRes
+      { driverRating = mbDriverStats >>= (.rating),
+        driverRatingCount = mbDriverStats >>= (.totalRatings),
+        fleetRating = mbFleet >>= (.rating),
+        fleetRatingCount = (.totalRatingCount) <$> mbFleet
+      }
 
 -- | Delta and count-increment for a running (sum, count) aggregate: a first rating adds its
 -- full value and bumps the count; a re-rating adds only (new - old) and leaves the count.

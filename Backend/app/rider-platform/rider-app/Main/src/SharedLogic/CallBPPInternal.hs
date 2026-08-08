@@ -176,6 +176,49 @@ sendFrfsDriverRating apiKey internalUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsDriverRatingClient (Just apiKey) req) "SendFrfsDriverRating" frfsDriverRatingApi
 
+data FRFSDriverRatingAggRes = FRFSDriverRatingAggRes
+  { driverRating :: Maybe Centesimal,
+    driverRatingCount :: Maybe Int,
+    fleetRating :: Maybe Centesimal,
+    fleetRatingCount :: Maybe Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type FrfsDriverRatingAggAPI =
+  "internal"
+    :> "frfs"
+    :> "driver"
+    :> "rating"
+    :> QueryParam "merchantId" Text
+    :> QueryParam "driverBadgeToken" Text
+    :> QueryParam "fleetNumber" Text
+    :> QueryParam "gtfsId" Text
+    :> Header "token" Text
+    :> Get '[JSON] FRFSDriverRatingAggRes
+
+frfsDriverRatingAggClient :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> EulerClient FRFSDriverRatingAggRes
+frfsDriverRatingAggClient = client frfsDriverRatingAggApi
+
+frfsDriverRatingAggApi :: Proxy FrfsDriverRatingAggAPI
+frfsDriverRatingAggApi = Proxy
+
+getFrfsDriverRatingAgg ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  m FRFSDriverRatingAggRes
+getFrfsDriverRatingAgg apiKey internalUrl merchantId driverBadgeToken mbFleetNumber mbGtfsId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsDriverRatingAggClient (Just merchantId) (Just driverBadgeToken) mbFleetNumber mbGtfsId (Just apiKey)) "GetFrfsDriverRatingAgg" frfsDriverRatingAggApi
+
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Text,
     rating :: Maybe Int,

@@ -152,6 +152,15 @@ data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSDriverRatingAggRes = FRFSDriverRatingAggRes
+  { driverRating :: Data.Maybe.Maybe Kernel.Types.Common.Centesimal,
+    driverRatingCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    fleetRating :: Data.Maybe.Maybe Kernel.Types.Common.Centesimal,
+    fleetRatingCount :: Data.Maybe.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSGtfsFareAPI = FRFSGtfsFareAPI {code :: Data.Text.Text, name :: Data.Maybe.Maybe Data.Text.Text, providerCode :: Data.Maybe.Maybe Data.Text.Text, validityDuration :: Data.Maybe.Maybe Data.Text.Text}
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

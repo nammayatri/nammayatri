@@ -1,6 +1,7 @@
 imports:
   Text: Data.Text
   Maybe: Data.Maybe
+  Centesimal: Kernel.Types.Common
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
@@ -338,6 +339,12 @@ types:
   FRFSBookingFeedbackReq:
     enum: "BookingFareAccepted BookingFareAcceptedReq, BookingFeedback BookingFeedbackReq, BookingDriverRating BookingDriverRatingReq"
 
+  FRFSDriverRatingAggRes:
+    driverRating: Maybe Centesimal
+    driverRatingCount: Maybe Int
+    fleetRating: Maybe Centesimal
+    fleetRatingCount: Maybe Int
+
   FRFSPossibleStopsReq:
     stationCodes: [Text]
 
@@ -659,6 +666,14 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /frfs/booking/{bookingId}/driverRating
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSDriverRatingAggRes
 
   - GET:
       endpoint: /frfs/trip/{tripId}/route/{routeId}/seats

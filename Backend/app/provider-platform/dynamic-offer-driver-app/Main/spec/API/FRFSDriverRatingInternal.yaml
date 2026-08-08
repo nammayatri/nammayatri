@@ -1,6 +1,7 @@
 imports:
   Text: Data.Text
   APISuccess: Kernel.Types.APISuccess
+  Centesimal: Kernel.Types.Common
 
 module: FRFSDriverRatingInternal
 
@@ -16,6 +17,13 @@ types:
     feedbackDetails: Maybe Text
     derive: "Show"
 
+  FRFSDriverRatingAggRes:
+    driverRating: Maybe Centesimal
+    driverRatingCount: Maybe Int
+    fleetRating: Maybe Centesimal
+    fleetRatingCount: Maybe Int
+    derive: "Show"
+
 apis:
   # Internal endpoint called by rider-app (BAP) to deliver a shuttle driver rating.
   # Resolves the driver Person via operatorBadgeToken and feeds DriverStats.
@@ -28,3 +36,16 @@ apis:
         type: API.Types.UI.FRFSDriverRatingInternal.FRFSDriverRatingReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /internal/frfs/driver/rating
+      auth: NoAuth
+      headers:
+        token: Text
+      query:
+        - merchantId: Text
+        - driverBadgeToken: Text
+        - fleetNumber: Text
+        - gtfsId: Text
+      response:
+        type: API.Types.UI.FRFSDriverRatingInternal.FRFSDriverRatingAggRes
