@@ -1566,7 +1566,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
       mbAvailableTier <-
         case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
           (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-            (_, tiers, _) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True False False False
+            (_, tiers, _) <- JLU.findPossibleRoutes Nothing [] fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True False False False
             return $ listToMaybe tiers
           _ -> return Nothing
       return $
@@ -2603,6 +2603,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
       (_, availableRoutesByTier, _) <-
         JMU.findPossibleRoutes
           availableServiceTiers
+          []
           req.startStopCode
           req.endStopCode
           currentTime
