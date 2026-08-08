@@ -159,6 +159,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
@@ -677,16 +678,30 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
   where
     frfsFeedback journeyLeg legFeedback = do
       mbBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
-      let feedbackDetails = if legFeedback.isExperienceGood == Just True then "Good Experience" else "Bad Experience"
       case mbBooking of
         Just booking -> do
-          withTryCatch "postFrfsBookingFeedback:postFeedbackJourney" (FRFSTicketService.postFrfsBookingFeedback (mbPersonId, merchantId) booking.id (FRFSTicketService.BookingFeedback FRFSTicketService.BookingFeedbackReq {feedbackDetails = feedbackDetails}))
+          withTryCatch "postFrfsBookingFeedback:postFeedbackJourney" (FRFSTicketService.postFrfsBookingFeedback (mbPersonId, merchantId) booking.id (mkFrfsFeedbackReq legFeedback))
             >>= \case
               Right _ -> pure ()
               Left err -> do
                 logError $ "Error in rating the frfs booking: " <> show err
                 pure ()
         _ -> pure ()
+
+mkFrfsFeedbackReq :: ApiTypes.RateMultiModelTravelModes -> FRFSTicketService.FRFSBookingFeedbackReq
+mkFrfsFeedbackReq legFeedback = do
+  let feedbackDetails = if legFeedback.isExperienceGood == Just True then "Good Experience" else "Bad Experience"
+  if isJust legFeedback.driverRating || isJust legFeedback.fleetRating
+    then
+      FRFSTicketService.BookingDriverRating
+        FRFSTicketService.BookingDriverRatingReq
+          { driverRating = legFeedback.driverRating,
+            fleetRating = legFeedback.fleetRating,
+            feedbackDetails = Just feedbackDetails
+          }
+    else
+      FRFSTicketService.BookingFeedback
+        FRFSTicketService.BookingFeedbackReq {feedbackDetails = feedbackDetails}
 
 getMultimodalFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow (Kernel.Prelude.Maybe ApiTypes.JourneyFeedBackForm)
 getMultimodalFeedback (mbPersonId, _) journeyId = do
@@ -696,7 +711,7 @@ getMultimodalFeedback (mbPersonId, _) journeyId = do
   case mbFeedBackForjourney of
     Just feedBackForjourney -> do
       legs <- QJourneyLeg.getJourneyLegs journeyId
-      let ratingForLegs = map mkRatingForLegs legs
+      ratingForLegs <- mapM mkRatingForLegs legs
       return $ Just (mkFeedbackFormData feedBackForjourney ratingForLegs)
     Nothing -> return Nothing
   where
@@ -708,14 +723,23 @@ getMultimodalFeedback (mbPersonId, _) journeyId = do
           rateTravelMode = ratingForLegs
         }
 
-    mkRatingForLegs :: DJourneyLeg.JourneyLeg -> ApiTypes.RateMultiModelTravelModes
-    mkRatingForLegs journeyLeg =
-      ApiTypes.RateMultiModelTravelModes
-        { isExperienceGood = Nothing, -- fix this
-          legOrder = journeyLeg.sequenceNumber,
-          travelMode = Just journeyLeg.mode,
-          rating = Nothing
-        }
+    mkRatingForLegs :: DJourneyLeg.JourneyLeg -> Environment.Flow ApiTypes.RateMultiModelTravelModes
+    mkRatingForLegs journeyLeg = do
+      mbFeedback <- case journeyLeg.mode of
+        DTrip.Taxi -> pure Nothing
+        DTrip.Walk -> pure Nothing
+        _ -> do
+          mbBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
+          maybe (pure Nothing) (QFRFSTicketBookingFeedback.findByBookingId . (.id)) mbBooking
+      pure $
+        ApiTypes.RateMultiModelTravelModes
+          { isExperienceGood = Nothing, -- fix this
+            legOrder = journeyLeg.sequenceNumber,
+            travelMode = Just journeyLeg.mode,
+            rating = Nothing,
+            driverRating = mbFeedback >>= (.driverRating),
+            fleetRating = mbFeedback >>= (.fleetRating)
+          }
 
 getMultimodalUserPreferences ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

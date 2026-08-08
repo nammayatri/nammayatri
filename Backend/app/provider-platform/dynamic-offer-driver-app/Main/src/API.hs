@@ -14,6 +14,7 @@
 
 module API where
 
+import qualified API.Action.UI.FRFSDriverRatingInternal as FRFSDriverRatingInternal
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.IGM as IGM
@@ -111,6 +112,7 @@ type MainAPI =
     :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
     :<|> Internal.API
+    :<|> FRFSDriverRatingInternal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -136,6 +138,7 @@ mainServer env =
     :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
     :<|> Internal.handler env
+    :<|> FRFSDriverRatingInternal.handler
 
 driverOfferServer :: AppEnv -> FlowServer DriverOfferAPI
 driverOfferServer env =

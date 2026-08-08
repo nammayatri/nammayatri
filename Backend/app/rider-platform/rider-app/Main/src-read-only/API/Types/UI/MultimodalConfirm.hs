@@ -319,7 +319,9 @@ data PublicTransportData = PublicTransportData
   deriving anyclass (ToSchema)
 
 data RateMultiModelTravelModes = RateMultiModelTravelModes
-  { isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { driverRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    fleetRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     legOrder :: Kernel.Prelude.Int,
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     travelMode :: Kernel.Prelude.Maybe Domain.Types.Trip.MultimodalTravelMode
