@@ -1530,6 +1530,24 @@ getRouteCodesFromTo fromCode toCode integratedBPPConfig = do
       Hedis.setExp key routeCodes 86400 -- 24 hours
       return routeCodes
 
+makeClusterRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
+makeClusterRoutesKey fromCode toCode integratedBPPConfig = "ClusterRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId
+
+getClusterRoutesFromTo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Text -> Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe [NandiTypes.ClusterRouteConnectionNandi])
+getClusterRoutesFromTo fromCode toCode integratedBPPConfig = do
+  let key = makeClusterRoutesKey fromCode toCode integratedBPPConfig.id
+  mbCached <- Hedis.safeGet key
+  case mbCached of
+    Just connections -> return (Just connections)
+    Nothing -> do
+      mbConnections <- OTPRest.getClusterRoutesBetweenStops fromCode toCode integratedBPPConfig
+      -- IMPORTANT: only cache non-empty successful results, so a transient empty
+      -- response doesn't pin "no cluster routes" for the whole TTL.
+      whenJust mbConnections $ \connections ->
+        unless (null connections) $
+          Hedis.setExp key connections 10800 -- 3 hours
+      return mbConnections
+
 -- | Find adjacent legs based on sequence number
 findAdjacentLegs :: Int -> [DJourneyLeg.JourneyLeg] -> (Maybe DJourneyLeg.JourneyLeg, Maybe DJourneyLeg.JourneyLeg)
 findAdjacentLegs sequenceNumber legs =

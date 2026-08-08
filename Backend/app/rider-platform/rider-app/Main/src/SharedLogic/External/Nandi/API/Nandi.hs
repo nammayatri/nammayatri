@@ -12,6 +12,8 @@ type RouteStopMappingByStopCodeAPI = "route-stop-mapping" :> Capture "gtfs_id" T
 
 type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] RouteInfoNandi
 
+type ClusterRoutesBetweenStopsAPI = "cluster" :> Capture "gtfs_id" Text :> "routes" :> Capture "from_stop_code" Text :> Capture "to_stop_code" Text :> Get '[JSON] [ClusterRouteConnectionNandi]
+
 type RoutesByRouteIdsAPI = "getRoutesByIds" :> Capture "gtfs_id" Text :> ReqBody '[JSON] [Text] :> Post '[JSON] [RouteInfoNandi]
 
 type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> QueryParam "vehicleNumber" Text :> Get '[JSON] BusScheduleDetails
@@ -74,6 +76,9 @@ nandiGetRouteStopMappingByStopCodeAPI = Proxy
 
 nandiRouteByRouteIdAPI :: Proxy RouteByRouteIdAPI
 nandiRouteByRouteIdAPI = Proxy
+
+nandiClusterRoutesBetweenStopsAPI :: Proxy ClusterRoutesBetweenStopsAPI
+nandiClusterRoutesBetweenStopsAPI = Proxy
 
 nandiRoutesByRouteIdsAPI :: Proxy RoutesByRouteIdsAPI
 nandiRoutesByRouteIdsAPI = Proxy
@@ -164,6 +169,9 @@ getNandiGetRouteStopMappingByStopCode = ET.client nandiGetRouteStopMappingByStop
 
 getNandiRouteByRouteId :: Text -> Text -> ET.EulerClient RouteInfoNandi
 getNandiRouteByRouteId = ET.client nandiRouteByRouteIdAPI
+
+getNandiClusterRoutesBetweenStops :: Text -> Text -> Text -> ET.EulerClient [ClusterRouteConnectionNandi]
+getNandiClusterRoutesBetweenStops = ET.client nandiClusterRoutesBetweenStopsAPI
 
 getNandiRoutesByRouteIds :: Text -> [Text] -> ET.EulerClient [RouteInfoNandi]
 getNandiRoutesByRouteIds = ET.client nandiRoutesByRouteIdsAPI

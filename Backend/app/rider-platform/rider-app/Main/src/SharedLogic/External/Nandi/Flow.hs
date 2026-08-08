@@ -20,6 +20,15 @@ getRouteStopMappingByStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, H
 getRouteStopMappingByStopCode baseUrl gtfsId stopCode = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiGetRouteStopMappingByStopCode gtfsId stopCode) "getRouteStopMappingByStopCode" NandiAPI.nandiGetRouteStopMappingByStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_STOP_CODE_API") baseUrl)
 
+getClusterRoutesBetweenStops :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Text -> m (Maybe [ClusterRouteConnectionNandi])
+getClusterRoutesBetweenStops baseUrl gtfsId fromStopCode toStopCode = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiClusterRoutesBetweenStops gtfsId fromStopCode toStopCode) "getClusterRoutesBetweenStops" NandiAPI.nandiClusterRoutesBetweenStopsAPI >>= \case
+      Right connections -> pure (Just connections)
+      Left err -> do
+        logError $ "Error getting cluster routes between stops (from=" <> fromStopCode <> ", to=" <> toStopCode <> "): " <> show err
+        pure Nothing
+
 getRouteByRouteId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe RouteInfoNandi)
 getRouteByRouteId baseUrl gtfsId routeId = do
   withShortRetry $

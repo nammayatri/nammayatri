@@ -165,6 +165,26 @@ getRouteStopMappingByStopCode stopCode integratedBPPConfig = do
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
 
+getClusterRoutesBetweenStops ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  Text ->
+  IntegratedBPPConfig ->
+  m (Maybe [ClusterRouteConnectionNandi])
+getClusterRoutesBetweenStops fromStopCode toStopCode integratedBPPConfig = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  mbConnections <- Flow.getClusterRoutesBetweenStops baseUrl integratedBPPConfig.feedKey fromStopCode toStopCode
+  pure $ map normalizeClusterRouteConnection <$> mbConnections
+  where
+    normalizeClusterRouteConnection c =
+      ClusterRouteConnectionNandi
+        { routeCode = last $ splitOn ":" c.routeCode,
+          sourceStopCode = last $ splitOn ":" c.sourceStopCode,
+          sourceSequenceNum = c.sourceSequenceNum,
+          destinationStopCode = last $ splitOn ":" c.destinationStopCode,
+          destinationSequenceNum = c.destinationSequenceNum
+        }
+
 getRouteStopMappingByStopCodeAndRouteCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->

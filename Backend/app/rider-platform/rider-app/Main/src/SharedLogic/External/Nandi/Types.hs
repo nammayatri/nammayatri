@@ -756,6 +756,15 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data ClusterRouteConnectionNandi = ClusterRouteConnectionNandi
+  { routeCode :: Kernel.Prelude.Text,
+    sourceStopCode :: Kernel.Prelude.Text,
+    sourceSequenceNum :: Kernel.Prelude.Int,
+    destinationStopCode :: Kernel.Prelude.Text,
+    destinationSequenceNum :: Kernel.Prelude.Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq)
+
 data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServerWithPublicData
   { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     providerCode :: Kernel.Prelude.Text,

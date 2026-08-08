@@ -1522,7 +1522,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
   routesWithLiveVehicles <-
     catMaybes
       <$> mapConcurrently
-        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 (fromMaybe False req.allowUpcomingTrips))
+        (\(r, s) -> JMRouteServiceability.buildRouteWithLiveVehicle r s integratedBPPConfig req.startStopCode req.endStopCode frfsTierMap Nothing 5 (fromMaybe False req.allowUpcomingTrips) Nothing Nothing)
         (zip busesForRoutes schedulesForRoutes)
 
   case routesWithLiveVehicles of
@@ -1533,7 +1533,9 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
           { liveVehicles = [],
             schedules = [],
             routeCode = routeId,
-            routeShortName = ""
+            routeShortName = "",
+            overrideSourceStopCode = Nothing,
+            overrideDestinationStopCode = Nothing
           }
 
 getFrfsActiveRoutes ::
