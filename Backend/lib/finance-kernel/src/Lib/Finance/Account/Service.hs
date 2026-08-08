@@ -68,33 +68,42 @@ getAccount = QAccount.findById
 
 -- | Get or create account (idempotent operation)
 -- Returns existing account if found, creates new one if not.
--- Uses a Redis lock to prevent duplicate account creation under concurrent requests.
+-- The common case (account exists) is a lock-free read; the Redis lock is
+-- taken only on the one-time creation path to prevent duplicate accounts
+-- under concurrent requests. Never lock on the read path: shared accounts
+-- (e.g. merchant-level) would serialize every posting on one key.
 getOrCreateAccount ::
   (BeamFlow.BeamFlow m r) =>
   AccountInput ->
   m (Either FinanceError Account)
 getOrCreateAccount input = do
-  let lockKey =
-        "finance:getOrCreateAccount:"
-          <> show input.counterpartyType
-          <> ":"
-          <> fromMaybe "" input.counterpartyId
-          <> ":"
-          <> show input.accountType
-          <> ":"
-          <> show input.currency
-          <> maybe "" (":" <>) input.subLedger
-  Redis.withWaitAndLockRedis lockKey 10 200 $ do
-    mbExisting <-
+  mbExisting <- findExisting
+  case mbExisting of
+    Just existing -> pure $ Right existing
+    Nothing ->
+      Redis.withWaitAndLockRedis lockKey 10 10000 $ do
+        -- re-check inside the lock: a concurrent caller may have created it
+        mbExisting' <- findExisting
+        case mbExisting' of
+          Just existing -> pure $ Right existing
+          Nothing -> createAccount input
+  where
+    findExisting =
       QAccount.findByCounterpartyAndTypeAndSubLedger
         input.counterpartyType
         input.counterpartyId
         input.accountType
         input.subLedger
-
-    case mbExisting of
-      Just existing -> pure $ Right existing
-      Nothing -> createAccount input
+    lockKey =
+      "finance:getOrCreateAccount:"
+        <> show input.counterpartyType
+        <> ":"
+        <> fromMaybe "" input.counterpartyId
+        <> ":"
+        <> show input.accountType
+        <> ":"
+        <> show input.currency
+        <> maybe "" (":" <>) input.subLedger
 
 -- | Get current balance for an account
 getBalance ::
