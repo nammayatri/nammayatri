@@ -1,0 +1,52 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+VasBannerConfig:
+  tableName: vas_banner_config
+
+  types:
+    VasBannerLinkType:
+      enum: "Service,SmartFinance,WhatsApp,ExternalUrl,Other"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id VasBannerConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    title: Text
+    subtitle: Maybe Text
+    imageUrl: Text
+    deepLink: Maybe Text
+    whatsappTemplateId: Maybe Text
+    linkType: VasBannerLinkType
+    priority: Int
+    enabled: Bool
+    validFrom: Maybe UTCTime
+    validTo: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy:
+        field: priority
+        order: asc
+    findAllEnabledByCity:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+      orderBy:
+        field: priority
+        order: asc
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id

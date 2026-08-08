@@ -198,6 +198,7 @@ library
       Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
+      Domain.Action.Dashboard.Management.DriverGroupInsurance
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.DriverVehicleQuality
@@ -218,6 +219,7 @@ library
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.VasBanner
       Domain.Action.Dashboard.Management.Vehicle
       Domain.Action.Dashboard.Management.VehicleDetails
       Domain.Action.Dashboard.Management.VehicleInfo
@@ -286,6 +288,7 @@ library
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverGoHomeRequest
+      Domain.Action.UI.DriverGroupInsurance
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverIncentiveCoins
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
@@ -379,6 +382,7 @@ library
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
+      Domain.Action.UI.VasBanner
       Domain.Action.UI.VehicleDetails
       Domain.Action.UI.VehicleInfo
       Domain.Action.UI.Whatsapp
@@ -801,6 +805,7 @@ library
       Storage.Queries.DriverBlockReasonExtra
       Storage.Queries.DriverFeeExtra
       Storage.Queries.DriverGoHomeRequestExtra
+      Storage.Queries.DriverGroupInsuranceExtra
       Storage.Queries.DriverGstinExtra
       Storage.Queries.DriverHomeLocationExtra
       Storage.Queries.DriverInformation.Internal
@@ -1025,6 +1030,7 @@ library
       API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.DriverCoins
       API.Action.Dashboard.Management.DriverGoHome
+      API.Action.Dashboard.Management.DriverGroupInsurance
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.DriverVehicleQuality
@@ -1045,6 +1051,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.VasBanner
       API.Action.Dashboard.Management.Vehicle
       API.Action.Dashboard.Management.VehicleDetails
       API.Action.Dashboard.Management.VehicleInfo
@@ -1066,6 +1073,7 @@ library
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverDocument
+      API.Action.UI.DriverGroupInsurance
       API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
@@ -1102,6 +1110,7 @@ library
       API.Action.UI.StclMembership
       API.Action.UI.SubscriptionTransaction
       API.Action.UI.Tokenization
+      API.Action.UI.VasBanner
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
       API.Action.UI.WMB
@@ -1147,6 +1156,7 @@ library
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
+      API.Types.UI.DriverGroupInsurance
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
@@ -1179,6 +1189,7 @@ library
       API.Types.UI.StclMembership
       API.Types.UI.SubscriptionTransaction
       API.Types.UI.Tokenization
+      API.Types.UI.VasBanner
       API.Types.UI.VehicleDetails
       API.Types.UI.VehicleInfo
       API.Types.UI.WMB
@@ -1233,6 +1244,7 @@ library
       Domain.Types.DriverBlockTransactions
       Domain.Types.DriverFee
       Domain.Types.DriverGoHomeRequest
+      Domain.Types.DriverGroupInsurance
       Domain.Types.DriverGstin
       Domain.Types.DriverGullakAssociation
       Domain.Types.DriverHomeLocation
@@ -1366,6 +1378,7 @@ library
       Domain.Types.TripTransaction
       Domain.Types.UiDriverConfig
       Domain.Types.ValueAddNP
+      Domain.Types.VasBannerConfig
       Domain.Types.Vehicle
       Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
@@ -1419,6 +1432,7 @@ library
       Storage.Beam.DriverBlockTransactions
       Storage.Beam.DriverFee
       Storage.Beam.DriverGoHomeRequest
+      Storage.Beam.DriverGroupInsurance
       Storage.Beam.DriverGstin
       Storage.Beam.DriverGullakAssociation
       Storage.Beam.DriverHomeLocation
@@ -1552,6 +1566,7 @@ library
       Storage.Beam.TripTransaction
       Storage.Beam.UiDriverConfig
       Storage.Beam.ValueAddNP
+      Storage.Beam.VasBannerConfig
       Storage.Beam.Vehicle
       Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
@@ -1610,6 +1625,7 @@ library
       Storage.Queries.DriverBlockTransactions
       Storage.Queries.DriverFee
       Storage.Queries.DriverGoHomeRequest
+      Storage.Queries.DriverGroupInsurance
       Storage.Queries.DriverGstin
       Storage.Queries.DriverGullakAssociation
       Storage.Queries.DriverHomeLocation
@@ -1714,6 +1730,7 @@ library
       Storage.Queries.OrphanInstances.DriverBlockReason
       Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverGoHomeRequest
+      Storage.Queries.OrphanInstances.DriverGroupInsurance
       Storage.Queries.OrphanInstances.DriverGstin
       Storage.Queries.OrphanInstances.DriverHomeLocation
       Storage.Queries.OrphanInstances.DriverInformation
@@ -1844,6 +1861,7 @@ library
       Storage.Queries.TripTransaction
       Storage.Queries.UiDriverConfig
       Storage.Queries.ValueAddNP
+      Storage.Queries.VasBannerConfig
       Storage.Queries.Vehicle
       Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
