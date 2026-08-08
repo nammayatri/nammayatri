@@ -78,6 +78,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfo as DGI
+import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
@@ -370,9 +371,14 @@ fareSum fareParams conditionalChargeCategories =
     - (if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0)
     - (if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0)
   where
+    edcCollectsParking :: Bool
+    edcCollectsParking = SL.edcCollectsParking fareParams.fareSettlementType
+
     pureFareSum :: HighPrecMoney
     pureFareSum = do
       let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+          parkingContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.parkingCharge
+          parkingTaxContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.parkingChargeTax
       fareParams.baseFare
         + fromMaybe 0.0 fareParams.serviceCharge
         + fromMaybe 0.0 fareParams.waitingCharge
@@ -388,7 +394,7 @@ fareSum fareParams conditionalChargeCategories =
         + partOfNightShiftCharge
         + notPartOfNightShiftCharge
         + platformFee
-        + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
+        + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + parkingContribution)
         + fromMaybe 0.0 fareParams.insuranceCharge
         + fromMaybe 0.0 fareParams.luggageCharge
         + fromMaybe 0.0 fareParams.returnFeeCharge
@@ -397,7 +403,7 @@ fareSum fareParams conditionalChargeCategories =
         + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
         + fromMaybe 0.0 fareParams.paymentProcessingFee
         + fromMaybe 0.0 fareParams.tollFareTax
-        + fromMaybe 0.0 fareParams.parkingChargeTax
+        + parkingTaxContribution
         -- Commission is intentionally excluded - stored for breakdown only
         + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
 
@@ -447,7 +453,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
     numberOfLuggages :: Maybe Int,
     govtChargesRate :: Maybe DTC.GstBreakup, -- from TaxConfig.rideGst; summed inside calculateFareParameters
-    pickupGateId :: Maybe Text -- Optional airport pickup gate id; used by V2 to apply airport entry fee
+    pickupGateId :: Maybe Text, -- Optional airport pickup gate id; used by V2 to apply airport entry fee
+    fareSettlementType :: Maybe SL.FareSettlementType
   }
 
 calculateFareParametersHandler :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
@@ -604,7 +611,8 @@ calculateFareParametersHandler params = do
             cancellationFeeTaxExclusive = Nothing,
             cancellationTax = Nothing,
             parkingChargeTaxExclusive = Nothing,
-            parkingChargeTax = Nothing
+            parkingChargeTax = Nothing,
+            fareSettlementType = params.fareSettlementType
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""

@@ -71,6 +71,7 @@ import Kernel.Types.Price
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
@@ -467,6 +468,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       rideCommission = fromMaybe 0 ride.commission
       rideTipsAmount = fromMaybe 0 ride.tipAmount
       computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission + rideTipsAmount)) <$> ride.fare
+      edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
+      displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
@@ -484,23 +487,50 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       pure (mbGate, mbSL)
     Nothing -> pure (Nothing, Nothing)
 
-  -- See `amount*` semantics matrix (Cash / Online):
-  --   amountToCollectInCash   : Cash   -> FinalFare - Offer (commission included)
-  --                             Online -> Nothing
-  --   amountToBeSettledOnline : Cash   -> Offer
-  --                             Online -> FinalFare - Commission (offer already applied)
+  -- See `amount*` semantics matrix (Cash / Online / booth EDC):
+  --   amountToCollectInCash   : Cash            -> FinalFare - Offer (commission included)
+  --                             Online          -> Nothing
+  --                             Booth EDC       -> FinalFare - Commission (residual the driver
+  --                                                still collects in cash; FullPayment settles
+  --                                                fully online)
+  --                             Booth ParkingOnly -> FinalFare - Offer (commission NOT collected
+  --                                                at the booth for this type, so it's still owed
+  --                                                in cash, same as the plain Cash case; it's
+  --                                                recovered separately via wallet debit, not
+  --                                                clawed back here — see
+  --                                                `commissionAlreadyCollectedAtBooth` in
+  --                                                EndRide/Internal.hs)
+  --   amountToBeSettledOnline : Cash        -> Offer
+  --                             Online      -> FinalFare - Commission (offer already applied)
+  --                             Booth EDC   -> Nothing, except FullPayment (FinalFare - Commission)
+  -- Gated on fareSettlementType (matches the existing CommissionOnly precedent elsewhere), not
+  -- paymentInstrument, since that's what actually distinguishes a booth/EDC booking here.
   let offer = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
       mbAmountToCollectInCash =
-        case (booking.paymentInstrument, ride.fare) of
-          (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
-          _ -> Nothing
+        case (booking.fareSettlementType, ride.fare) of
+          (Just SL.FullPayment, _) -> Nothing
+          (Just SL.ParkingOnly, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+          (Just SL.ParkingOnly, Nothing) -> Nothing
+          (Just _, Just fareAmt) -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+          (Just _, Nothing) -> Nothing
+          (Nothing, _) ->
+            case (booking.paymentInstrument, ride.fare) of
+              (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
+              _ -> Nothing
       mbAmountToBeSettledOnline =
-        case booking.paymentInstrument of
-          Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
-          _ -> case ride.fare of
-            Just fareAmt -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
-            Nothing -> Nothing
+        case booking.fareSettlementType of
+          Just SL.FullPayment ->
+            case ride.fare of
+              Just fareAmt -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+              Nothing -> Nothing
+          Just _ -> Nothing
+          Nothing ->
+            case booking.paymentInstrument of
+              Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
+              _ -> case ride.fare of
+                Just fareAmt -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+                Nothing -> Nothing
 
   mbRideEarningsVal <- case mbEarningsLabels of
     Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams
@@ -563,12 +593,12 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fromMaybe 0 estimatedFareParams.customerCancellationDues,
         estimatedTollCharges = estimatedFareParams.tollCharges,
-        parkingCharge = estimatedFareParams.parkingCharge,
+        parkingCharge = displayParkingCharge,
         tollCharges = ride.tollCharges,
         tollConfidence = ride.tollConfidence,
         customerCancellationDuesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency $ fromMaybe 0 estimatedFareParams.customerCancellationDues,
         estimatedTollChargesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.tollCharges,
-        parkingChargeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.parkingCharge,
+        parkingChargeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> displayParkingCharge,
         tollChargesWithCurrency = flip PriceAPIEntity ride.currency <$> ride.tollCharges,
         startOdometerReading = ride.startOdometerReading,
         endOdometerReading = ride.endOdometerReading,

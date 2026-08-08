@@ -56,9 +56,18 @@ defaultPaymentModes = [CASH]
 data FareSettlementType
   = CommissionOnly
   | FullPayment
+  | ParkingOnly
+  | CommissionAndParking
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (PrettyShow) via Showable FareSettlementType
 
 $(mkBeamInstancesForEnum ''FareSettlementType)
+
+edcCollectsParking :: Maybe FareSettlementType -> Bool
+edcCollectsParking = (`elem` [Just ParkingOnly, Just CommissionAndParking])
+
+commissionCollectedAtBooth :: Maybe FareSettlementType -> Bool
+commissionCollectedAtBooth = (`elem` [Just CommissionOnly, Just CommissionAndParking])
 
 parsePaymentModes :: Maybe Text -> Either Text (Maybe [PaymentMode])
 parsePaymentModes mbRaw =

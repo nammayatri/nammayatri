@@ -774,7 +774,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           mbAdditonalChargeCategories = Nothing,
           numberOfLuggages = searchRequest.numberOfLuggages,
           govtChargesRate = Just transporterConfig.taxConfig.rideGst,
-          pickupGateId = searchRequest.pickupGateId
+          pickupGateId = searchRequest.pickupGateId,
+          fareSettlementType = fullFarePolicy.fareSettlementType
         }
   let estimatedFare = fareSum fareParams (Just [])
   quoteId <- Id <$> generateGUID
@@ -867,7 +868,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
               mbAdditonalChargeCategories = Nothing,
               numberOfLuggages = mbSearchReq >>= (.numberOfLuggages),
               govtChargesRate = Just transporterConfig.taxConfig.rideGst,
-              pickupGateId = mbSearchReq >>= (.pickupGateId)
+              pickupGateId = mbSearchReq >>= (.pickupGateId),
+              fareSettlementType = fullFarePolicy.fareSettlementType
             }
     fareParamsMax <- FC.calculateFareParameters params
     fareParamsMin <-

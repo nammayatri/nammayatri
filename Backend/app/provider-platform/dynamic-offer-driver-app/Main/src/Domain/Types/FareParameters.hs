@@ -23,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow (..))
+import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FareParameters = FareParameters
@@ -85,7 +86,8 @@ data FareParameters = FareParameters
     cancellationFeeTaxExclusive :: Maybe HighPrecMoney,
     cancellationTax :: Maybe HighPrecMoney,
     parkingChargeTaxExclusive :: Maybe HighPrecMoney,
-    parkingChargeTax :: Maybe HighPrecMoney
+    parkingChargeTax :: Maybe HighPrecMoney,
+    fareSettlementType :: Maybe SL.FareSettlementType
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
