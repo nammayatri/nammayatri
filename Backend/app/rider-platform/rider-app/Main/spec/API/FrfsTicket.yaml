@@ -7,8 +7,11 @@ imports:
   FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  OverrideType: Domain.Types.FRFSTicketBooking
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSQuoteCategoryType: Domain.Types.FRFSQuoteCategoryType
+  Pass: Domain.Types.Pass
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   HighPrecMoney: Kernel.Types.Common
@@ -59,6 +62,7 @@ types:
     recentLocationId: Maybe (Id RecentLocation)
     busLocationData: Maybe [BusLocation]
     vehicleNumber: Maybe Text
+    tripTime: Maybe UTCTime
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -84,6 +88,7 @@ types:
     routeCode: Maybe Text
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
+    applicablePasses: "[FRFSPassOptionAPIEntity]"
 
     derive: "Show"
 
@@ -106,6 +111,18 @@ types:
     tnc: Maybe Text
     code: Maybe Text
     eligibility: Bool
+    derive: "Show"
+
+  FRFSPassOptionAPIEntity:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    passId: Id Pass
+    passName: Maybe Text
+    # Per ticket, to be read against the sibling `price`/`quantity` on the quote.
+    overriddenUnitPrice: PriceAPIEntity
+    overriddenTotalPrice: PriceAPIEntity
+    availableTripCount: Maybe Int
+    unlimitedTripCount: Bool
+    maxTicketQuantityPerOverride: Maybe Int
     derive: "Show"
 
   CategoryInfoResponse:
@@ -140,6 +157,7 @@ types:
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
     tripId: Maybe Text
     isSpotBooking: Maybe Bool
+    purchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
 
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
@@ -183,6 +201,10 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     bppOrderId: Maybe Text
     isSpotBooking: Maybe Bool
+    overrideType: Maybe OverrideType
+    # Whole booking: this is what the payment order was created for.
+    overriddenTotalPrice: Maybe PriceAPIEntity
+    appliedPurchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
     derive: "Show"
 
   FRFSRefundAttemptAPI:
@@ -563,6 +585,7 @@ apis:
       mandatoryQuery:
         vehicleType: VehicleCategory
       query:
+        hasPasses: Bool
         city: City
         integratedBppConfigId: Id IntegratedBPPConfig
         newServiceTiers: [ServiceTierType]
@@ -588,6 +611,9 @@ apis:
       params:
         searchId: Id FRFSSearch
       auth: TokenAuth
+      query:
+        hasPasses: Bool
+        tripTime: UTCTime
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]"
 

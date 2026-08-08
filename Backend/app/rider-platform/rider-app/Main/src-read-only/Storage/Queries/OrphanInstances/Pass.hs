@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Pass where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.Pass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -28,6 +29,7 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
             documentsRequired = documentsRequired,
             enable = enable,
             formVerificationConfig = formVerificationConfig,
+            frfsPriceOverrideApplicable = frfsPriceOverrideApplicable,
             id = Kernel.Types.Id.Id id,
             maxFare = maxFare,
             maxValidDays = maxValidDays,
@@ -37,11 +39,14 @@ instance FromTType' Beam.Pass Domain.Types.Pass.Pass where
             minFare = minFare,
             name = name,
             order = order,
-            passConfig = Domain.Types.Pass.PassConfig <$> maxSwitchCount,
+            overrideBenefitConfigJson = overrideBenefitConfigJson,
+            passConfig = (Domain.Types.Pass.PassConfig <$> maxSwitchCount),
             passTypeId = Kernel.Types.Id.Id passTypeId,
             pricingTiers = pricingTiers,
             purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,
             redeemEligibilityJsonLogic = redeemEligibilityJsonLogic,
+            skipUserPhotographCapture = skipUserPhotographCapture,
+            vehicleType = Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS vehicleType,
             verificationValidity = Kernel.Prelude.fromMaybe 9000 verificationValidity,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -60,6 +65,7 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.documentsRequired = documentsRequired,
         Beam.enable = enable,
         Beam.formVerificationConfig = formVerificationConfig,
+        Beam.frfsPriceOverrideApplicable = frfsPriceOverrideApplicable,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxFare = maxFare,
         Beam.maxValidDays = maxValidDays,
@@ -69,11 +75,14 @@ instance ToTType' Beam.Pass Domain.Types.Pass.Pass where
         Beam.minFare = minFare,
         Beam.name = name,
         Beam.order = order,
-        Beam.maxSwitchCount = (.maxSwitchCount) <$> passConfig,
+        Beam.overrideBenefitConfigJson = overrideBenefitConfigJson,
+        Beam.maxSwitchCount = ((.maxSwitchCount) <$> passConfig),
         Beam.passTypeId = Kernel.Types.Id.getId passTypeId,
         Beam.pricingTiers = pricingTiers,
         Beam.purchaseEligibilityJsonLogic = purchaseEligibilityJsonLogic,
         Beam.redeemEligibilityJsonLogic = redeemEligibilityJsonLogic,
+        Beam.skipUserPhotographCapture = skipUserPhotographCapture,
+        Beam.vehicleType = Kernel.Prelude.Just vehicleType,
         Beam.verificationValidity = Kernel.Prelude.Just verificationValidity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

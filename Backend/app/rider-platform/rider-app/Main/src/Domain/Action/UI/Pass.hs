@@ -84,6 +84,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.External.Nandi.Types
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
@@ -289,6 +290,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   benefitType = benefitType,
                   benefitValue = benefitValue,
                   applicableVehicleServiceTiers = pass.applicableVehicleServiceTiers,
+                  vehicleType = pass.vehicleType,
                   maxValidTrips = pass.maxValidTrips,
                   maxValidDays = pass.maxValidDays,
                   deviceSwitchCount = 0,
@@ -309,6 +311,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         QPurchasedPass.create purchasedPass
         return newPurchasedPassId
 
+  mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -318,6 +321,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             startDate,
             endDate,
             benefitDescription = pass.benefitDescription,
+            availableTripCount = mbMaxTripCount,
             isDashboard = Just isDashboard,
             benefitType = benefitType,
             benefitValue = benefitValue,
@@ -327,6 +331,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passName = pass.name,
             merchantId = pass.merchantId,
             passEnum = passType >>= (.passEnum),
+            passId = Just pass.id,
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
             passPhotoMediaId = mbPassPhotoMediaId,
@@ -391,6 +396,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         DPayment.createOrderService commonMerchantId (Just $ Id.cast person.merchantOperatingCityId) commonPersonId mbPaymentOrderValidity Nothing TPayment.FRFSPassPurchase isMetroTestTransaction createOrderReq createOrderCall (Just createWalletCall) False (Just purchasedPassId.getId)
       else return Nothing
   QPurchasedPassPayment.create purchasedPassPayment
+  when (initialStatus `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+    void $ withTryCatch "purchasePassWithPayment:registerHasPass" (FRFSPassOverride.registerHasPass personId endDate)
   return $
     PassAPI.PassSelectionAPIEntity
       { purchasedPassId = purchasedPassId,
@@ -604,9 +611,11 @@ buildPassAPIEntity mbLanguage person pass = do
         benefit = pass.benefit,
         benefitDescription = benefitDescription,
         vehicleServiceTierType = pass.applicableVehicleServiceTiers,
+        vehicleType = pass.vehicleType,
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
         documentsRequired = pass.documentsRequired,
+        skipUserPhotographCapture = pass.skipUserPhotographCapture,
         eligibility = eligibility,
         name = name,
         description = description,
@@ -660,10 +669,12 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         benefit = benefit,
         benefitDescription = benefitDescription,
         vehicleServiceTierType = purchasedPass.applicableVehicleServiceTiers,
+        vehicleType = purchasedPass.vehicleType,
         maxTrips = purchasedPass.maxValidTrips,
         maxDays = purchasedPass.maxValidDays,
         description = description,
         documentsRequired = [],
+        skipUserPhotographCapture = Nothing,
         eligibility = True,
         name = name,
         code = purchasedPass.passCode,
@@ -713,6 +724,21 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
+  mbLivePayment <-
+    listToMaybe
+      <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus
+        (Just 1)
+        Nothing
+        purchasedPass.id
+        [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+        today
+  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbLivePayment >>= (.passId))
+  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbOverridePass
+  availableTripCount <- case (mbLivePayment, mbBenefit) of
+    (Just livePayment, Just benefit) -> FRFSPassOverride.remainingTrips livePayment benefit
+    _ -> pure Nothing
+  let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
+
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
         PassAPI.PassDetailsAPIEntity
@@ -737,6 +763,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         passNumber = let s = show purchasedPass.passNumber in T.pack $ replicate (8 - length s) '0' ++ s,
         passEntity = passDetailsEntity,
         tripsLeft = tripsLeft,
+        availableTripCount = availableTripCount,
+        unlimitedTripCount = unlimitedTripCount,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,
@@ -770,7 +798,10 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
       let isDashboard = fromMaybe False purchasedPassPayment.isDashboard
-      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus (isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId) (purchasedPassPayment.startDate > DT.utctDay istTime) status
+      mbPass <- maybe (pure Nothing) CQPass.findById purchasedPassPayment.passId
+      let skipPhoto = fromMaybe False (mbPass >>= (.skipUserPhotographCapture))
+      let hasProfilePicture = skipPhoto || isJust purchasedPass.profilePicture || isJust purchasedPass.passPhotoMediaId
+      let mbPassStatus = convertPaymentStatusToPurchasedPassStatus hasProfilePicture (purchasedPassPayment.startDate > DT.utctDay istTime) status
       let activeLikeStatuses = [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.PhotoPending]
       let refundStatuses = [DPurchasedPass.RefundPending, DPurchasedPass.RefundInitiated, DPurchasedPass.RefundFailed, DPurchasedPass.Refunded]
       mbDuplicateActivePayment <-
@@ -820,6 +851,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
             when (passStatus `elem` activeLikeStatuses) $ do
               when (isJust purchasedPassPayment.profilePicture) $ QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
+              void $ withTryCatch "passOrderStatusHandler:registerHasPass" (FRFSPassOverride.registerHasPass purchasedPass.personId purchasedPassPayment.endDate)
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
               -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
               -- it onto the pass at each transition — so the webhook never races the upload for it.
@@ -1030,6 +1062,12 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   now <- getCurrentTime
 
   passEntities <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId mbStatus mbLimitParam mbOffsetParam
+
+  let liveEndDates = map (.endDate) $ filter (\p -> p.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) passEntities
+  unless (null liveEndDates) $
+    void $
+      withTryCatch "getMultimodalPassListUtil:registerHasPass" $
+        FRFSPassOverride.registerHasPass personId (maximum liveEndDates)
 
   -- Process each pass and apply updates in-memory to ensure we return the latest state
   -- without relying on read replica synchronization

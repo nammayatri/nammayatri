@@ -556,7 +556,7 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
   let orderStatus = case cancellationType of
         Spec.SOFT_CANCEL -> Spec.SOFT_CANCELLED
         Spec.CONFIRM_CANCEL -> Spec.CANCELLED
-  let baseFare = booking.totalPrice.amount
+  let baseFare = fromMaybe booking.totalPrice.amount booking.overriddenAmount
       departureTime = fromMaybe booking.validTill booking.startTime
   (charges, refund) <- calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
   return $

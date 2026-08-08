@@ -1,4 +1,5 @@
 imports:
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
   Int64: Data.Int
   Journey: Domain.Types.Journey
   SearchRequest: Domain.Types.SearchRequest
@@ -221,6 +222,7 @@ types:
     vehicleNumber: Maybe Text
     crisSdkResponse: Maybe CrisSdkResponse
     categorySelectionReq: Maybe [FRFSCategorySelectionReq]
+    purchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
 
   JourneyConfirmResp:
     result: Text
@@ -462,6 +464,7 @@ apis:
       query:
         filterServiceAndJrnyType: Bool
         newServiceTiers: [ServiceTierType]
+        hasPasses: Bool
       response:
         type: JourneyInfoResp
   - POST:

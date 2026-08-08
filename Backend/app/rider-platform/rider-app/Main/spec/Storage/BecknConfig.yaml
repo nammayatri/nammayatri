@@ -107,6 +107,7 @@ IntegratedBPPConfig:
     platformType: PlatformType
     providerName: Maybe Text
     isTicketValidOnMultipleRoutes: Maybe Bool
+    passOverrideApplicable: Maybe Bool
 
   beamFields:
     providerConfig:
@@ -114,6 +115,7 @@ IntegratedBPPConfig:
 
   default:
     isTicketValidOnMultipleRoutes: "true"
+    passOverrideApplicable: "false"
 
   types:
     PlatformType:

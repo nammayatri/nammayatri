@@ -178,6 +178,7 @@ type API =
       :> Header "departure-time" UTCTime
       :> QueryParam "filterServiceAndJrnyType" Bool
       :> QueryParam "newServiceTiers" [Spec.ServiceTierType]
+      :> QueryParam "hasPasses" Bool
       :> Post '[JSON] MultimodalSearchResp
 
 type SearchAPI =
@@ -194,6 +195,7 @@ type SearchAPI =
     :> QueryParam "filterServiceAndJrnyType" Bool
     :> QueryParam "newServiceTiers" [Spec.ServiceTierType]
     :> QueryParam "enableSyncSearch" Bool
+    :> QueryParam "hasPasses" Bool
     :> Post '[JSON] SearchResp
 
 handler :: FlowServer API
@@ -226,11 +228,11 @@ getDoMultimodalSearch = \case
   -- EasyBooking has no multimodal search concept (destination-less, single-tier only).
   DSearch.EasyBookingSearch DSearch.EasyBookingSearchReq {} -> Nothing
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> FlowHandler SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Maybe Bool -> FlowHandler SearchResp
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Flow SearchResp
-search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch = withPersonIdLogTag personId $ do
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Maybe Bool -> Flow SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbHasPasses = withPersonIdLogTag personId $ do
   let isDashboardRequest = fromMaybe False mbIsDashboardRequest
   unless isDashboardRequest $ checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -261,7 +263,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let mbDoMultimodalSearch = getDoMultimodalSearch req
     if riderConfig.makeMultiModalSearch && (isNothing mbDoMultimodalSearch || fromMaybe False mbDoMultimodalSearch)
-      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType mbNewServiceTiers)
+      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses)
       else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
   return $
     SearchResp
@@ -388,8 +390,8 @@ handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer s
         _ -> do
           return True
 
-multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> FlowHandler MultimodalSearchResp
-multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers = withFlowHandlerAPIPersonId personId $
+multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> FlowHandler MultimodalSearchResp
+multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses = withFlowHandlerAPIPersonId personId $
   withPersonIdLogTag personId $ do
     checkSearchRateLimit personId
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -399,10 +401,10 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing Nothing) "DSearch.search multimodalSearchHandler"
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
-    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers) "multiModalSearch"
+    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses) "multiModalSearch"
 
-multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime filterServiceAndJrnyType mbNewServiceTiers = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
+multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Flow MultimodalSearchResp
+multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime filterServiceAndJrnyType mbNewServiceTiers mbHasPasses = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -575,10 +577,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   if forkInitiateFirstJourney
                     then do
                       fork "Initiate first the route" $ do
-                        void $ DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney blacklistedServiceTiers blacklistedFareQuoteTypes
+                        void $ DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
                       return Nothing
                     else do
-                      res <- JMU.measureLatency (DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney blacklistedServiceTiers blacklistedFareQuoteTypes) "DMC.postMultimodalInitiateSimpl"
+                      res <- JMU.measureLatency (DMC.postMultimodalInitiateSimpl firstJourneyLegs firstJourney blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) "DMC.postMultimodalInitiateSimpl"
                       return $ Just res
                 fork "Rest of the routes Init" $ processRestOfRoutes mbPreferredTier [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded searchRequest.busLocationData isSingleMode
                 return resp

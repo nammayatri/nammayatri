@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -76,7 +77,9 @@ handleCancelledStatus ::
   m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
 handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  mbPaymentBooking <- QTBP.findTicketBookingPayment booking
+  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+    throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
@@ -94,7 +97,10 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
       void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
       void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+      whenJust mbPaymentBooking $ \paymentBooking ->
+        void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+      whenJust booking.overrideAppliedEntityId $ \entityId ->
+        void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId))
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId

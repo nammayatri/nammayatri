@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Pass
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
@@ -19,6 +20,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PurchasedPassPayment = PurchasedPassPayment
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    availableTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -30,6 +32,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
     passCode :: Kernel.Prelude.Text,
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
+    passId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passPhotoMediaId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,

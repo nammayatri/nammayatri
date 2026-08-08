@@ -26,6 +26,7 @@ data Pass = Pass
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     enable :: Kernel.Prelude.Bool,
     formVerificationConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    frfsPriceOverrideApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -35,11 +36,14 @@ data Pass = Pass
     minFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     order :: Kernel.Prelude.Int,
+    overrideBenefitConfigJson :: Kernel.Prelude.Maybe Data.Aeson.Value,
     passConfig :: Kernel.Prelude.Maybe Domain.Types.Pass.PassConfig,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
     purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: [Data.Aeson.Value],
+    skipUserPhotographCapture :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
@@ -50,16 +54,16 @@ data Benefit
   = FullSaving
   | FixedSaving Kernel.Types.Common.HighPrecMoney
   | PercentageSaving Kernel.Types.Common.HighPrecMoney
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-data PassConfig = PassConfig {maxSwitchCount :: Kernel.Prelude.Int} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PassConfig = PassConfig {maxSwitchCount :: Kernel.Prelude.Int} deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PassDocumentType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PassDocumentType))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PassDocumentType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PassDocumentType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Benefit)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Benefit))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Benefit)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''Benefit))

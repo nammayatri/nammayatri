@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PurchasedPass where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -44,6 +45,7 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
             startDate = startDate,
             status = status,
             usedTripCount = usedTripCount,
+            vehicleType = Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS vehicleType,
             verificationValidity = Kernel.Prelude.fromMaybe 9000 verificationValidity,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -78,6 +80,7 @@ instance ToTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass wh
         Beam.startDate = startDate,
         Beam.status = status,
         Beam.usedTripCount = usedTripCount,
+        Beam.vehicleType = Kernel.Prelude.Just vehicleType,
         Beam.verificationValidity = Just verificationValidity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
