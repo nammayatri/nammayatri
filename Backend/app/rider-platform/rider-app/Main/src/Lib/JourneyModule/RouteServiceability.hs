@@ -57,8 +57,10 @@ buildRouteWithLiveVehicle ::
   Maybe LatLong ->
   Int ->
   Bool ->
+  Maybe Text ->
+  Maybe Text ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
-buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips = do
+buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles allowUpcomingTrips mbOverrideSourceStopCode mbOverrideDestinationStopCode = do
   upcomingBuses <-
     if allowUpcomingTrips
       then getFreshUpcomingBuses routeInfo.routeId integratedBPPConfig (map (.vehicleNumber) routeInfo.buses)
@@ -141,7 +143,9 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
             { liveVehicles,
               schedules,
               routeCode = routeInfo.routeId,
-              routeShortName = route.shortName
+              routeShortName = route.shortName,
+              overrideSourceStopCode = mbOverrideSourceStopCode,
+              overrideDestinationStopCode = mbOverrideDestinationStopCode
             }
   where
     getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' = do

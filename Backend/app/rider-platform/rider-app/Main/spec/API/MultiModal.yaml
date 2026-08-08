@@ -366,6 +366,8 @@ types:
   RouteWithLiveVehicle:
     routeCode: Text
     routeShortName: Text
+    overrideSourceStopCode: Maybe Text
+    overrideDestinationStopCode: Maybe Text
     liveVehicles: [LiveVehicleInfo]
     schedules: [ScheduledVehicleInfo]
 
@@ -397,6 +399,7 @@ types:
     destinationStopCode: Maybe Text
     vehicleNumber: Maybe Text
     allowUpcomingTrips: Maybe Bool
+    allowClusteredStops: Maybe Bool
     derive: "Show"
 
   AvailableRoute:

@@ -1978,7 +1978,8 @@ data ResolvedLeg = ResolvedLeg
   { rlOrder :: Int,
     rlRouteCodes :: [Text],
     rlFromStopCode :: Text,
-    rlToStopCode :: Text
+    rlToStopCode :: Text,
+    rlStopsByRoute :: [(Text, (Text, Text))]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -2013,9 +2014,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           Nothing -> do
             (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
             directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-            if null directRouteCodes
-              then JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
-              else JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+            if not (null directRouteCodes)
+              then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+              else do
+                mbClusterRoutes <-
+                  if fromMaybe False req.allowClusteredStops
+                    then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                    else pure Nothing
+                case mbClusterRoutes of
+                  Just clusterRoutes@(_ : _) ->
+                    JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
+                  _ ->
+                    JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
@@ -2196,7 +2206,9 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                       { routeCode = routeId,
                         routeShortName = route.shortName,
                         liveVehicles = maybeToList mbLiveVehicle,
-                        schedules = allSchedules
+                        schedules = allSchedules,
+                        overrideSourceStopCode = Nothing,
+                        overrideDestinationStopCode = Nothing
                       }
                   ]
               }
@@ -2308,6 +2320,42 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             resolveLegsForDirectRoute srcCode destCode directRouteCodes
       JMU.measureLatency (getRouteServiceability Nothing (Just directRouteCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
 
+    handleClusterRoute ::
+      RouteServiceabilityContext ->
+      [Text] ->
+      Text ->
+      Text ->
+      [NandiTypes.ClusterRouteConnectionNandi] ->
+      Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+    handleClusterRoute ctx userRequestedCodes srcCode destCode connections = do
+      let sortedConnections = sortOn (.routeCode) connections
+          routeCodes = nub $ map (.routeCode) sortedConnections
+          stopsByRoute = map (\c -> (c.routeCode, (c.sourceStopCode, c.destinationStopCode))) sortedConnections
+          movedRoutes = filter (\c -> c.sourceStopCode /= srcCode || c.destinationStopCode /= destCode) sortedConnections
+
+      unless (null movedRoutes) $
+        logInfo $
+          "handleClusterRoute: cluster resolved routes to nearby stops, requested src="
+            <> srcCode
+            <> " dest="
+            <> destCode
+            <> " moved="
+            <> show (map (\c -> (c.routeCode, c.sourceStopCode, c.destinationStopCode)) movedRoutes)
+
+      let resolvedLegs =
+            [ ResolvedLeg
+                { rlOrder = 0,
+                  rlRouteCodes = routeCodes,
+                  rlFromStopCode = srcCode,
+                  rlToStopCode = destCode,
+                  rlStopsByRoute = stopsByRoute
+                }
+            ]
+      -- effectiveStops stays Nothing: each route carries its own
+      -- overrideSourceStopCode/overrideDestinationStopCode, so there is no single
+      -- pair to move the whole screen to.
+      JMU.measureLatency (getRouteServiceability Nothing (Just routeCodes) userRequestedCodes ctx resolvedLegs) ("getRouteServiceability legsCount=" <> show (length resolvedLegs))
+
     handleOtpRoute ::
       RouteServiceabilityContext ->
       [Text] ->
@@ -2396,10 +2444,23 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           routesWithLiveVehicles <-
             catMaybes
               <$> mapConcurrently
-                ( \(r, s) ->
+                ( \(r, s) -> do
+                    let (routeFromStopCode, routeToStopCode) = fromMaybe (rlFromStopCode, rlToStopCode) (lookup r.routeId rlStopsByRoute)
+                        mbOverrideSource = if routeFromStopCode == rlFromStopCode then Nothing else Just routeFromStopCode
+                        mbOverrideDest = if routeToStopCode == rlToStopCode then Nothing else Just routeToStopCode
+                    routeSourceLatLong <-
+                      if routeFromStopCode == rlFromStopCode
+                        then pure mbSourceLatLong
+                        else do
+                          mbStation <- OTPRest.getStationByGtfsIdAndStopCode routeFromStopCode ctx.integratedBPPConfig
+                          pure $ do
+                            station <- mbStation
+                            lat' <- station.lat
+                            lon' <- station.lon
+                            pure $ LatLong lat' lon'
                     JMU.measureLatency
-                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig rlFromStopCode rlToStopCode frfsTierMap mbSourceLatLong ctx.maxLiveVehiclesPerRoute ctx.allowUpcomingTrips)
-                      ("enrichResolvedLegs: buildRouteWithLiveVehicle route=" <> r.routeId)
+                      (JMRouteServiceability.buildRouteWithLiveVehicle r s ctx.integratedBPPConfig routeFromStopCode routeToStopCode frfsTierMap routeSourceLatLong ctx.maxLiveVehiclesPerRoute ctx.allowUpcomingTrips mbOverrideSource mbOverrideDest)
+                      ("enrichResolvedLegs: buildRouteWithLiveVehicle route=" <> r.routeId <> " from=" <> routeFromStopCode <> " to=" <> routeToStopCode)
                 )
                 (zip busesForRoutes schedulesForRoutes)
 
@@ -2407,7 +2468,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           -- from alternate routes (capped to 7 total combined by ETA)
           let (requestedRoutes, alternateRoutes) =
                 partition (\r -> r.routeCode `elem` userRequestedCodes) routesWithLiveVehicles
-              cappedAlternates = capVehiclesAcrossRoutes rlFromStopCode ctx.maxAlternateRouteVehicles alternateRoutes
+              -- Clustered routes board at their own stop, not the leg's requested one,
+              -- so the ETA used for ranking has to be read at each route's own stop.
+              boardingStopFor rc = maybe rlFromStopCode fst (lookup rc rlStopsByRoute)
+              cappedAlternates = capVehiclesAcrossRoutes boardingStopFor ctx.maxAlternateRouteVehicles alternateRoutes
 
           pure $
             ApiTypes.LegRouteWithLiveVehicle
@@ -2444,7 +2508,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
                       { rlOrder = idx,
                         rlRouteCodes = codes,
                         rlFromStopCode = fromMaybe "" mLegSrc,
-                        rlToStopCode = fromMaybe "" mLegDest
+                        rlToStopCode = fromMaybe "" mLegDest,
+                        rlStopsByRoute = []
                       }
               )
               (zip [0 ..] legs)
@@ -2463,6 +2528,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     sameStationMaybe Nothing Nothing = False
     sameStationMaybe _ _ = False
 
+    stopChanged ::
+      Text ->
+      Text ->
+      DIBC.IntegratedBPPConfig ->
+      Environment.Flow Bool
+    stopChanged requestedCode effectiveCode integratedBPPConfig'
+      | requestedCode == effectiveCode = pure False
+      | otherwise = do
+        requestedStop <- OTPRest.getStationByGtfsIdAndStopCode requestedCode integratedBPPConfig'
+        effectiveStop <- OTPRest.getStationByGtfsIdAndStopCode effectiveCode integratedBPPConfig'
+        pure $ not (sameStationMaybe requestedStop effectiveStop)
+
     calculateEffectiveStops ::
       Text ->
       Text ->
@@ -2471,16 +2548,10 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       DIBC.IntegratedBPPConfig ->
       Environment.Flow ApiTypes.EffectiveStops
     calculateEffectiveStops srcCode destCode snappedSrcCode snappedDestCode integratedBPPConfig' = do
-      srcStop <-
-        OTPRest.getStationByGtfsIdAndStopCode srcCode integratedBPPConfig'
-      destStop <-
-        OTPRest.getStationByGtfsIdAndStopCode destCode integratedBPPConfig'
-      snappedSrcStop <-
-        OTPRest.getStationByGtfsIdAndStopCode snappedSrcCode integratedBPPConfig'
-      snappedDestStop <-
-        OTPRest.getStationByGtfsIdAndStopCode snappedDestCode integratedBPPConfig'
-      let sourceChanged = not (sameStationMaybe srcStop snappedSrcStop)
-      let destinationChanged = not (sameStationMaybe destStop snappedDestStop)
+      -- sameStationMaybe is False whenever either lookup misses, so an unresolvable
+      -- station would otherwise report the stop as changed even for identical codes.
+      sourceChanged <- stopChanged srcCode snappedSrcCode integratedBPPConfig'
+      destinationChanged <- stopChanged destCode snappedDestCode integratedBPPConfig'
       pure
         ApiTypes.EffectiveStops
           { requestedSourceStop = srcCode,
@@ -2501,30 +2572,33 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
           { rlOrder = 0,
             rlRouteCodes = directRouteCodes,
             rlFromStopCode = src,
-            rlToStopCode = dest
+            rlToStopCode = dest,
+            rlStopsByRoute = []
           }
       ]
     capVehiclesAcrossRoutes ::
-      Text ->
+      (Text -> Text) ->
       Int ->
       [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle] ->
       [API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle]
-    capVehiclesAcrossRoutes sourceStopCode maxCount routes =
-      let -- Tag each vehicle with its route code and source-stop arrival time
+    capVehiclesAcrossRoutes boardingStopFor maxCount routes =
+      let -- Tag each vehicle with its route code and boarding-stop arrival time
           taggedLive =
             concatMap
               ( \r ->
-                  map
-                    (\v -> (r.routeCode, Left v, getSourceStopETAFromLive sourceStopCode v))
-                    r.liveVehicles
+                  let boardingStop = boardingStopFor r.routeCode
+                   in map
+                        (\v -> (r.routeCode, Left v, getSourceStopETAFromLive boardingStop v))
+                        r.liveVehicles
               )
               routes
           taggedScheduled =
             concatMap
               ( \r ->
-                  map
-                    (\v -> (r.routeCode, Right v, getSourceStopETAFromScheduled sourceStopCode v))
-                    r.schedules
+                  let boardingStop = boardingStopFor r.routeCode
+                   in map
+                        (\v -> (r.routeCode, Right v, getSourceStopETAFromScheduled boardingStop v))
+                        r.schedules
               )
               routes
           allTagged = taggedLive <> taggedScheduled

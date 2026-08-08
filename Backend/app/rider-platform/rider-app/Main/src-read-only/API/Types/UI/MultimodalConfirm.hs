@@ -355,7 +355,8 @@ data RouteETAResp = RouteETAResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQue
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteServiceabilityReq = RouteServiceabilityReq
-  { allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { allowClusteredStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowUpcomingTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -372,7 +373,14 @@ data RouteStopMapping = RouteStopMapping {code :: Kernel.Prelude.Text, lat :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteWithLiveVehicle = RouteWithLiveVehicle {liveVehicles :: [LiveVehicleInfo], routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, schedules :: [ScheduledVehicleInfo]}
+data RouteWithLiveVehicle = RouteWithLiveVehicle
+  { liveVehicles :: [LiveVehicleInfo],
+    overrideDestinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    overrideSourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Text,
+    schedules :: [ScheduledVehicleInfo]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
