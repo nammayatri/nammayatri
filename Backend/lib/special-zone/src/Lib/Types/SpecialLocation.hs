@@ -252,3 +252,9 @@ pickupSpecialZoneIdFromArea (Pickup slId _) = Just slId.getId
 pickupSpecialZoneIdFromArea (Drop _) = Nothing
 pickupSpecialZoneIdFromArea (PickupDrop slId _ _) = Just slId.getId
 pickupSpecialZoneIdFromArea Default = Nothing
+
+dropSpecialZoneIdFromArea :: Area -> Maybe Text
+dropSpecialZoneIdFromArea (Pickup _ _) = Nothing
+dropSpecialZoneIdFromArea (Drop slId) = Just slId.getId
+dropSpecialZoneIdFromArea (PickupDrop _ slId _) = Just slId.getId
+dropSpecialZoneIdFromArea Default = Nothing

@@ -1,0 +1,65 @@
+imports:
+  Person: Domain.Types.Person
+  IncentiveJourney: Domain.Types.IncentiveJourney
+  IncentiveJourneyMilestone: Domain.Types.IncentiveJourneyMilestone
+  MilestoneConditionType: Domain.Types.IncentiveJourneyMilestone
+  MilestoneConditionOperator: Domain.Types.IncentiveJourneyMilestone
+  MilestoneRewardType: Domain.Types.IncentiveJourneyMilestone
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+IncentiveJourneyStats:
+  tableName: incentive_journey_stats
+
+  types:
+    JourneyMilestoneStatus:
+      enum: "NotStarted, InProgress, Completed, Rewarded"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <JourneyMilestoneStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <JourneyMilestoneStatus>
+
+  fields:
+    id: Id IncentiveJourneyStats
+    driverId: Id Person
+    journeyId: Id IncentiveJourney
+    milestoneId: Id IncentiveJourneyMilestone
+    periodKey: Text
+    conditionType: MilestoneConditionType
+    conditionOperator: Maybe MilestoneConditionOperator
+    conditionValue: Int
+    currentValue: Int
+    status: JourneyMilestoneStatus
+    rewardType: MilestoneRewardType
+    rewardValue: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    conditionOperator: "'GTE'"
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findAllWithOptionsKV
+      where: driverId
+      orderBy: createdAt
+    findByDriverIdAndJourneyId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [driverId, journeyId]
+      orderBy: createdAt
+    findByDriverIdAndJourneyIdAndMilestoneIdAndPeriodKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, journeyId, milestoneId, periodKey]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -1,0 +1,51 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  TimeBound: Kernel.Types.TimeBound
+  VehicleCategory: Domain.Types.VehicleCategory
+
+IncentiveJourney:
+  tableName: incentive_journey
+
+  types:
+    IncentiveJourneyType:
+      enum: "Daily, Weekly"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <IncentiveJourneyType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <IncentiveJourneyType>
+
+  fields:
+    id: Id IncentiveJourney
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    driverTag: Text
+    journeyType: Maybe IncentiveJourneyType
+    timeBounds: Maybe TimeBound
+    startDate: UTCTime
+    endDate: UTCTime
+    vehicleCategory: Maybe VehicleCategory
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    journeyType: "'Daily'"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+    findEnabledByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, enabled]
