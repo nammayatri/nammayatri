@@ -344,6 +344,18 @@ start_maps() {
 }
 
 seed_maps() {
+  # Must run before osrm-config.sql: that file does
+  # `UPDATE merchant_service_config ... WHERE service_name = 'Maps_Google'`,
+  # which silently rewrites two rows instead of one while the duplicates exist.
+  # It is also what makes booking possible at all -- see the file's own notes.
+  log "Removing duplicate seed rows (and constraining them out)"
+  docker cp dedupe-seed.sql ny-postgres:/tmp/dedupe-seed.sql
+  $PG -q -v ON_ERROR_STOP=1 -f /tmp/dedupe-seed.sql >/dev/null \
+    || die "could not apply dedupe-seed.sql"
+  $PG -t -c "SELECT '  fare policies: ' || count(*) || ' (expected 8: 2 merchants x 4 variants)'
+               FROM atlas_driver_offer_bpp.fare_policy;" \
+    | grep -v '^ *$' | sed 's/^ *//' || true
+
   log "Pointing the backend at OSRM"
   # Must run after both apps have migrated: merchant_service_usage_config and
   # merchant_service_config are created by their migrations.
@@ -371,6 +383,15 @@ seed_maps() {
 # The seeded test drivers sit in Kochi, India. A search from Algiers therefore
 # finds nobody, and "nobody nearby" is indistinguishable from "the connector is
 # broken" at the API: both give you a route and no price.
+#
+# THIS WEARS OFF. Nothing keeps these positions current -- a real driver app
+# would be sending them continuously, and there isn't one. Once the timestamps
+# fall outside the freshness window the pool is empty again and ride search goes
+# back to returning zero estimates, with no error anywhere to say why. It took
+# two days on the deployed stack and looked exactly like a regression.
+#
+# So run `./setup.sh drivers` before any demo or test session. It is idempotent
+# and takes a second.
 place_drivers_in_algiers() {
   log "Placing the test drivers in Algiers"
 
@@ -662,6 +683,18 @@ case "${1:-up}" in
   clean)  docker compose down -v; rm -rf "$TREE_DIR"; exit 0 ;;
   verify) verify; exit 0 ;;
   algeria) seed_algeria; verify; exit 0 ;;
+  # Refresh the test drivers' positions. Needed before any demo: their locations
+  # go stale on their own and the pool then finds nobody, which shows up as a
+  # ride search with no estimates and no error. See place_drivers_in_algiers.
+  drivers) place_drivers_in_algiers; exit 0 ;;
+  # Clean up duplicate seed rows and add the constraints that keep them out.
+  # Safe to re-run; needed on any stack seeded before this was added, where
+  # booking fails at select with "Multiple results of Entity FarePolicyT".
+  dedupe) docker cp dedupe-seed.sql ny-postgres:/tmp/dedupe-seed.sql
+          $PG -v ON_ERROR_STOP=1 -f /tmp/dedupe-seed.sql
+          docker exec ny-redis redis-cli FLUSHALL >/dev/null
+          docker restart ny-driver >/dev/null
+          exit 0 ;;
 esac
 
 preflight

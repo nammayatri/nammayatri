@@ -8,11 +8,24 @@
 --
 -- Split of responsibilities after this runs:
 --
---   get_distances  OSRM     road distances, not straight lines
---   snap_to_road   OSRM     GPS traces onto real roads
---   get_routes     Google   -> maps-shim -> OSRM   (see below)
---   get_place_name Google   -> maps-shim -> mock-google
---   auto_complete  Google   -> maps-shim -> mock-google
+--   get_distances                   OSRM     road distances, not straight lines
+--   snap_to_road                    OSRM     GPS traces onto real roads
+--   get_estimated_pickup_distances  OSRM     BPP only -- see below
+--   get_routes                      Google   -> maps-shim -> OSRM   (see below)
+--   get_place_name                  Google   -> maps-shim -> mock-google
+--   auto_complete                   Google   -> maps-shim -> mock-google
+--
+-- get_estimated_pickup_distances exists ONLY on the driver side, and missing it
+-- costs a day to find. It is the driver-to-pickup distance, and it is called
+-- from exactly one place: the BPP's /select handler. So leaving it on Google
+-- lets search, estimates and the whole BECKN handshake look perfectly healthy,
+-- and then every booking fails the moment a rider picks a car:
+--
+--     E500 GOOGLE_MAPS_API_ERROR: .../distancematrix/json
+--     origins=36.75,3.06  destinations=36.75,3.05      <- Algiers, asked of a
+--                                                         mock that only knows India
+--
+-- which surfaces to the rider app as a bare 500 BECKN_API_CALL_ERROR on select.
 --
 -- get_routes stays on "Google" deliberately. OSRM cannot serve it in this
 -- baseline -- Kernel.External.Maps.Interface.OSRM exports only callOsrmMatch,
@@ -65,9 +78,10 @@ SELECT m.id,
             AND c.service_name = 'Maps_OSRM');
 
 UPDATE atlas_driver_offer_bpp.merchant_service_usage_config
-   SET get_distances = 'OSRM',
-       get_routes    = 'Google',   -- served by maps-shim, backed by OSRM
-       snap_to_road  = 'OSRM';
+   SET get_distances                  = 'OSRM',
+       get_routes                     = 'Google',   -- served by maps-shim, backed by OSRM
+       snap_to_road                   = 'OSRM',
+       get_estimated_pickup_distances = 'OSRM';     -- BPP only; select dies without it
 
 UPDATE atlas_driver_offer_bpp.merchant_service_config
    SET config_json = json_build_object(
