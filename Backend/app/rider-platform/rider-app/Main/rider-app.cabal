@@ -37,6 +37,8 @@ library
       API.Beckn.FRFS.OnSelect
       API.Beckn.FRFS.OnStatus
       API.Beckn.FRFS.OnUpdate
+      API.Beckn.FRFSSeller
+      API.Beckn.FRFSSeller.Search
       API.Beckn.IGM.Issue
       API.Beckn.OnCancel
       API.Beckn.OnConfirm
