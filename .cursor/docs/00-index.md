@@ -30,7 +30,7 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 | `16-status-definitions.md` | All status enums with state transition diagrams | Understanding booking/ride/ticket state machines |
 | `17-testing-framework.md` | Test-stack index → `Backend/dev/test-tool/README.md` | Running / extending the integration test stack |
 | `18-finance-module-guide.md` | Double-entry ledger, account types, driver wallet flow | Working on earnings, payouts, invoices, cancellation/refund accounting |
-
+| `19-stcl-membership-topup.md` | STCL share top-up flow — adding shares to an existing membership without breaking global share continuity | Working on STCL membership purchases, top-ups, or share allocation |
 ## Cross-Reference Guide
 
 - **Adding a new API endpoint**: Read `07-namma-dsl.md` → `15-conventions.md`
