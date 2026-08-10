@@ -32,9 +32,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import qualified SharedLogic.Finance.Prepaid as SFPrepaid
+import qualified SharedLogic.Finance.Wallet as SFWallet
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -231,3 +234,67 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         logInfo $ "backfillSelectedServiceTiers: LTS selectedServiceTiers empty for driver " <> vehicle.driverId.getId <> ", pushing DB tiers"
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
+
+-- | Re-validates every wallet-gated tier a driver currently has selected against their live
+-- wallet balance, dropping any that now fall short. This is the toggle-state-invariant
+-- maintenance mechanism: "AUTO_ACCEPT in selectedServiceTiers" is supposed to always mean
+-- "opted in AND currently funded," and toggle-on time alone can't guarantee that stays true —
+-- the wallet is shared with other debits (cancellation penalties, airport fees, refunds, admin
+-- adjustments). Called directly from each known driver-app function that can decrease a
+-- driver's wallet balance, rather than via a generic finance-kernel hook — a deliberate,
+-- safer-for-the-first-attempt choice that touches no shared finance-kernel code, at the cost of
+-- being an enumerable (not structural) list: a future debit mechanism must remember to call
+-- this too. Naturally generic — works for any current or future wallet-gated tier, not just
+-- AUTO_ACCEPT, since it just reads whatever minWalletBalance each selected tier's own config
+-- carries.
+-- | Both this function and dropServiceTierFromSelection below do a read of
+-- vehicle.selectedServiceTiers followed by a full-column overwrite of a filtered copy of
+-- that same read. They can run concurrently for the same driver off the same event (e.g. a
+-- single cancellation forks both a wallet-gated-tier check and an Auto-Accept-drop), so
+-- without serializing them one can silently undo the other's removal (whichever writes last
+-- wins, from a stale read). Both share this one lock key for exactly that reason.
+selectedServiceTiersLockKey :: Id DP.Person -> Text
+selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId
+
+checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> m ()
+checkAndAutoDisableWalletGatedTiers driverId =
+  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+    mbVehicle <- QVehicle.findById driverId
+    whenJust mbVehicle $ \vehicle ->
+      whenJust vehicle.merchantOperatingCityId $ \merchantOpCityId ->
+        unless (null vehicle.selectedServiceTiers) $ do
+          failingTiers <-
+            filterM
+              ( \tierType -> do
+                  mbTier <- CQVST.findByServiceTierTypeAndCityId tierType merchantOpCityId Nothing
+                  case mbTier >>= (.availabilityCheckConfig) >>= (.minWalletBalance) of
+                    Nothing -> pure False
+                    Just minBalance -> do
+                      mbBalance <- SFWallet.getWalletBalanceByOwner SFPrepaid.counterpartyDriver driverId.getId
+                      pure $ maybe True (< minBalance) mbBalance
+              )
+              vehicle.selectedServiceTiers
+          unless (null failingTiers) $
+            QVehicle.updateSelectedServiceTiers (filter (`notElem` failingTiers) vehicle.selectedServiceTiers) driverId
+
+-- | Unconditionally drops one tier from a driver's currently selected set, if present.
+-- Distinct from checkAndAutoDisableWalletGatedTiers above — this isn't about wallet
+-- balance at all. It's Auto-Accept's cancellation consequence: a driver-initiated
+-- cancellation the city's rule engine already flags validCancellationPenaltyApplicable
+-- costs the tier itself, not just the wallet penalty, since Auto-Accept has no accept
+-- step to decline through. Two separate mechanisms cover two separate scopes here, and
+-- both fire on a flagged cancellation — don't confuse them: CancelRide.hs's
+-- attemptAutoAcceptReassignment separately blacklists the driver for that one specific
+-- booking (SharedLogic.DriverPool.addDriverToSearchCancelledList), preventing an immediate
+-- re-match to the ride they just cancelled; this function is the broader one, removing
+-- AUTO_ACCEPT from the driver's selection entirely so they're ineligible for ANY future
+-- Auto-Accept match, not just this one. Re-enabling is a plain manual re-toggle through the
+-- existing flow (still subject to the usual wallet-balance gate) — deliberately no cooldown,
+-- no extra state.
+dropServiceTierFromSelection :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => DTC.ServiceTierType -> Id DP.Person -> m ()
+dropServiceTierFromSelection tierType driverId =
+  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+    mbVehicle <- QVehicle.findById driverId
+    whenJust mbVehicle $ \vehicle ->
+      when (tierType `elem` vehicle.selectedServiceTiers) $
+        QVehicle.updateSelectedServiceTiers (filter (/= tierType) vehicle.selectedServiceTiers) driverId

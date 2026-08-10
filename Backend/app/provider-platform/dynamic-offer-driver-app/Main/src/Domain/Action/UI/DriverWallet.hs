@@ -34,6 +34,7 @@ module Domain.Action.UI.DriverWallet
 where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
+import qualified Control.Monad.Catch as C
 import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
 import qualified Data.Time
@@ -90,6 +91,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
@@ -842,6 +844,7 @@ recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r
   ) =>
@@ -893,3 +896,10 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
             _ <- transfer PlatformAsset OwnerLiability amount referenceType
             void $ invoice cashRechargeInvoiceConfig
     void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
+    -- §5b of the Auto-Accept design: only the reversal/withdrawal branch above debits the
+    -- driver's wallet — re-check and auto-disable any wallet-gated tier they can no longer
+    -- afford. Forked + exception-caught: must never roll back the ledger transfer above.
+    when isReversal $
+      fork "walletGatedTierCheck" $
+        SVST.checkAndAutoDisableWalletGatedTiers driverId
+          `C.catchAll` (\e -> logError ("walletGatedTierCheck failed for driverId=" <> driverId.getId <> ": " <> show e))

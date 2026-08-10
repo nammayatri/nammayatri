@@ -40,6 +40,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as M
@@ -117,6 +118,7 @@ import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -281,6 +283,7 @@ processEndRideFinance ::
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r
   ) =>
@@ -461,7 +464,9 @@ createDriverWalletTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Ride.Ride ->
   SRB.Booking ->
@@ -859,6 +864,14 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
+    -- §5b of the Auto-Accept design: re-check and auto-disable any wallet-gated tier this
+    -- driver can no longer afford now that every leg above (commission, tips, tax, etc.) has
+    -- posted — reads the net final balance, not an intermediate one. Relevant whenever the
+    -- driver completes ANY ride, not just Auto-Accept ones — the wallet is shared across all
+    -- their tiers. Forked + exception-caught: must never roll back anything posted above.
+    fork "walletGatedTierCheck" $
+      SVST.checkAndAutoDisableWalletGatedTiers ride.driverId
+        `C.catchAll` (\e -> logError ("walletGatedTierCheck failed for driverId=" <> ride.driverId.getId <> ": " <> show e))
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId

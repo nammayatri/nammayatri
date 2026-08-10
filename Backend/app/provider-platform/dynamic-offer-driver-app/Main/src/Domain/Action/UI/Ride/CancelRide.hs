@@ -38,6 +38,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
@@ -57,16 +59,21 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
+import qualified SharedLogic.DriverPool as DPool
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import SharedLogic.Ride (initializeRide, selectAndLockAutoAcceptDriver)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -75,7 +82,7 @@ import TransactionLogs.Types
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> Bool -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> Bool -> Maybe (Bool -> DM.Merchant -> SRB.Booking -> DP.Person -> DRide.Ride -> DVeh.Vehicle -> DTC.TransporterConfig -> m Bool) -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
@@ -164,7 +171,10 @@ dashboardCancelRideHandler ::
   Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req allowSnapshotVehicleFallback =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
-    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False allowSnapshotVehicleFallback
+    -- Ops/dashboard cancels never trigger AUTO_ACCEPT direct reassignment (ops may have
+    -- cancelled for a reason a reassignment shouldn't override) -- same rule every other tier
+    -- already follows for ByMerchant-sourced cancellations, confirmed unrelated to this fix.
+    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False allowSnapshotVehicleFallback Nothing
     return APISuccess.Success
 
 cancelRideHandler ::
@@ -174,7 +184,7 @@ cancelRideHandler ::
   CancelRideReq ->
   Flow CancelRideResp
 cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
-  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False False
+  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False False (Just attemptAutoAcceptReassignmentSync)
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
   where
     buildCancelRideResp cancelCnt isGoToDisabled =
@@ -183,6 +193,48 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
           goHomeCancellationCount = cancelCnt,
           isGoHomeDisabled = isGoToDisabled
         }
+
+-- Real Auto-Accept direct-reassignment attempt: concrete Flow, so it can freely use
+-- initializeRide/selectAndLockAutoAcceptDriver's full AppEnv requirements (selfUIUrl etc.)
+-- without those becoming ambient constraints on cancelRideImpl itself -- see the Maybe-callback
+-- comment on cancelRideImpl in Internal.hs for why that distinction matters. Only called for
+-- driver-initiated cancellations of AUTO_ACCEPT bookings, gated inside cancelRideImpl.
+-- Follows the same proven pattern every other tier already uses for reassignment
+-- (performStaticOfferReallocation/createNewBookingAndQuote in SharedLogic.Cancel): never
+-- resurrect the old booking's status -- clone it into a fresh Booking+Quote and target that
+-- instead. sendRideAssignedUpdateToBAP on the OLD booking id was rejected by the rider-app's
+-- isAssignable check (only accepts CONFIRMED/NEW/AWAITING_REASSIGNMENT for a non-scheduled
+-- booking, and the old one is still TRIP_ASSIGNED there); the new booking never has that
+-- problem since sendQuoteRepetitionUpdateToBAP's own rider-app handler always creates it
+-- as CONFIRMED. Reuses sendQuoteRepetitionUpdateToBAP/QUOTE_REPETITION exactly as-is --
+-- both already exist and are already live for Rental/InterCity's own reallocation, so this
+-- needs no new rider-app code at all, unlike an earlier draft of this fix.
+attemptAutoAcceptReassignmentSync :: Bool -> DM.Merchant -> SRB.Booking -> DP.Person -> DRide.Ride -> DVeh.Vehicle -> DTC.TransporterConfig -> Flow Bool
+attemptAutoAcceptReassignmentSync isValueAddNP merchant booking cancellingDriver oldRide oldVehicle transporterConfig = do
+  quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+  -- Same per-SearchRequest blacklist the normal broadcast reallocation path already populates
+  -- on a driver cancellation -- without this, the driver who just cancelled could be immediately
+  -- re-selected as the nearest eligible driver for their own cancelled booking.
+  let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
+  DPool.addDriverToSearchCancelledList searchBlacklistTtl quote.searchRequestId cancellingDriver.id
+  mbNewDriver <- selectAndLockAutoAcceptDriver isValueAddNP quote.searchRequestId merchant booking
+  case mbNewDriver of
+    Nothing -> return False
+    Just newDriver -> do
+      now <- getCurrentTime
+      newBookingId <- generateGUID
+      newQuoteId <- generateGUID
+      newFareParamsId <- generateGUID
+      let newFareParams = quote.fareParams{id = newFareParamsId, updatedAt = now}
+          newQuote = quote{id = Id newQuoteId, fareParams = newFareParams, createdAt = now, updatedAt = now}
+          newBooking = booking{id = newBookingId, quoteId = newQuoteId, createdAt = now, updatedAt = now}
+      QQuote.create newQuote
+      QRB.createBooking newBooking
+      mFleetOwnerId <- QFDA.findByDriverId newDriver.id True
+      (newRide, _, newVehicle) <- initializeRide merchant newDriver newBooking Nothing Nothing Nothing Nothing (mFleetOwnerId <&> Id . (.fleetOwnerId))
+      BP.sendQuoteRepetitionUpdateToBAP booking oldRide newBooking.id DBCR.ByDriver cancellingDriver oldVehicle
+      BP.sendRideAssignedUpdateToBAP newBooking newRide newDriver newVehicle False
+      return True
 
 cancelRideImpl ::
   ( EsqDBFlow m r,
@@ -203,8 +255,9 @@ cancelRideImpl ::
   CancelRideReq ->
   Bool ->
   Bool ->
+  Maybe (Bool -> DM.Merchant -> SRB.Booking -> DP.Person -> DRide.Ride -> DVeh.Vehicle -> DTC.TransporterConfig -> m Bool) ->
   m (Maybe Int, Maybe Bool)
-cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation allowSnapshotVehicleFallback = do
+cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation allowSnapshotVehicleFallback mbAttemptAutoAcceptReassignment = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
@@ -274,7 +327,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
               CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS driverGoHomeReqInfo (Just False)
         )
         ((,,,) <$> cancellationCnt <*> driverGoHomeRequestId <*> goHomeConfig <*> dghInfo)
-    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking allowSnapshotVehicleFallback
+    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking allowSnapshotVehicleFallback mbAttemptAutoAcceptReassignment
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]

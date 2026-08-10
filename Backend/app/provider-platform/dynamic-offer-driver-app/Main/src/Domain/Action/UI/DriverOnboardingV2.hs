@@ -84,6 +84,8 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Finance.Prepaid as SFPrepaid
+import qualified SharedLogic.Finance.Wallet as SFWallet
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
@@ -447,6 +449,9 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
               isUsageRestricted = Just usageRestricted,
               priority = Just priority,
               airConditioned = airConditionedThreshold,
+              -- Static passthrough of the tier's configured minimum wallet balance (wallet-gated
+              -- tiers like AUTO_ACCEPT only) — shown upfront to the driver, not balance-dependent.
+              minWalletBalanceRequired = availabilityCheckConfig >>= (.minWalletBalance),
               ..
             }
 
@@ -541,7 +546,11 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest
 
       if not isUsageRestricted && (isSelected || (isDefault && (vehicle.category /= Just DVC.AMBULANCE))) -- Suppressing isDefault check for Ambulance
-        then return $ Just driverServiceTier
+        then do
+          hasSufficientWalletBalance <- checkMinWalletBalance driverServiceTier personId
+          if hasSufficientWalletBalance
+            then return $ Just driverServiceTier
+            else return Nothing
         else return Nothing
   let selectedServiceTierTypes = map (.serviceTierType) $ catMaybes mbSelectedServiceTiers
   QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
@@ -575,6 +584,17 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   QDI.updateAirportSwitch enableForAirport Nothing Nothing personId
 
   return Success
+  where
+    -- Wallet-gated tiers (e.g. AUTO_ACCEPT) require the driver's current wallet balance to
+    -- meet a configured minimum before the toggle is allowed to persist. Tiers with no
+    -- minWalletBalance set (every tier today except wallet-gated ones) are unaffected.
+    checkMinWalletBalance :: VehicleServiceTier -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
+    checkMinWalletBalance serviceTier driverId =
+      case serviceTier.availabilityCheckConfig >>= (.minWalletBalance) of
+        Nothing -> pure True
+        Just minBalance -> do
+          mbBalance <- SFWallet.getWalletBalanceByOwner SFPrepaid.counterpartyDriver driverId.getId
+          pure $ maybe False (>= minBalance) mbBalance
 
 postDriverRegisterSsn ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

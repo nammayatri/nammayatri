@@ -65,6 +65,7 @@ data ServiceTierType
   | AUTO_LITE
   | PINK_AUTO
   | MAHILA_SHAKTI
+  | AUTO_ACCEPT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]

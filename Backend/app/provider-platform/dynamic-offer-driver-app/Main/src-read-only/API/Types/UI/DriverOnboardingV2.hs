@@ -164,6 +164,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minWalletBalanceRequired :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     name :: Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

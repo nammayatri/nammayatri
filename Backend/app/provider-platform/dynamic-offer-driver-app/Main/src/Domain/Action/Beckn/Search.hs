@@ -450,13 +450,23 @@ handler ValidatedDSearchReq {..} sReq = do
           unless isAllowed $
             logInfo $ "VST " <> show fp.vehicleServiceTier <> " skipped due to area restrictions for area: " <> show mbAreaForVST
           if isAllowed
-            then case tripCategoryToPricingPolicy fp'.tripCategory of
+            then case pricingPolicyForTier fp'.vehicleServiceTier fp'.tripCategory of
               EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \est -> pure (est : estimates, quotes)
               QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp' >>= \quote -> pure (estimates, quote : quotes)
             else pure (estimates, quotes)
         Nothing -> do
           logError $ "Vehicle service tier not found for " <> show fp'.vehicleServiceTier
           pure (estimates, quotes)
+
+    -- tripCategoryToPricingPolicy is keyed only on TripCategory, and AUTO_ACCEPT shares
+    -- OneWay OneWayOnDemandDynamicOffer (-> EstimateBased) with every normal point-to-point
+    -- tier -- can't repoint that mapping without also turning off broadcast for AUTO_RICKSHAW/
+    -- TAXI/etc. AUTO_ACCEPT's whole premise is no broadcast/no accept step, so it needs its
+    -- own Quote (not Estimate) the same way Rental/EasyBooking already get one, overriding the
+    -- tripCategory-based default for this one tier only.
+    pricingPolicyForTier :: STT.ServiceTierType -> TripCategory -> PricingPolicy
+    pricingPolicyForTier AUTO_ACCEPT _ = QuoteBased False
+    pricingPolicyForTier _ tripCategory = tripCategoryToPricingPolicy tripCategory
 
     buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName specialLocationSupportNumber fareSettlementType now startTime fareParametersInRateCard isMultimodalSearch = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId

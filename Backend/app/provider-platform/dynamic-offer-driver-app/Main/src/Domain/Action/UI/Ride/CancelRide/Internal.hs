@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   )
 where
 
+import qualified Control.Monad.Catch as C
 import Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
@@ -48,7 +49,9 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
+import Domain.Types.ServiceTierType (ServiceTierType (..))
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as Veh
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude hiding (whenJust)
@@ -91,6 +94,7 @@ import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
+import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -171,8 +175,16 @@ cancelRideImpl ::
   Bool ->
   Maybe Bool ->
   Bool ->
+  -- Value-level capability, not an ambient constraint: cancelRideImpl (via ServiceHandle.cancelRide)
+  -- is also called from SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate's
+  -- cancelOrReallocate, whose own declared context is smaller than the Main app's AppEnv (no
+  -- selfUIUrl etc.) -- adding initializeRide/selectAndLockAutoAcceptDriver's requirements as
+  -- constraints on cancelRideImpl itself broke that caller. Passing an already-built Flow action
+  -- in means cancelRideImpl's own type doesn't need to know what it took to construct it; only
+  -- cancelRideHandler (concrete Flow, full AppEnv) ever passes Just, everyone else passes Nothing.
+  Maybe (Bool -> DMerc.Merchant -> SRB.Booking -> SP.Person -> DRide.Ride -> DVeh.Vehicle -> DTC.TransporterConfig -> m Bool) ->
   m ()
-cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking allowSnapshotVehicleFallback = do
+cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking allowSnapshotVehicleFallback mbAttemptAutoAcceptReassignment = do
   isLocked <- Redis.tryLockRedis (buildCancelRideTransactionKey rideId) 15
   if isLocked
     then do
@@ -244,7 +256,15 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId ride.id booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
-              isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
+              isReallocated <-
+                if booking.vehicleServiceTier == AUTO_ACCEPT && bookingCReason.source == SBCR.ByDriver
+                  then case mbAttemptAutoAcceptReassignment of
+                    Just attemptFn ->
+                      attemptFn isValueAddNP merchant booking driver ride vehicle transporterConfig `C.catchAll` \e -> do
+                        logError $ "AutoAccept reassignment failed: " <> show e
+                        return False
+                    Nothing -> return False
+                  else reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
               unless isReallocated $ do
                 -- Reload ride to get persisted cancellationFee/cancellationFeeTax
                 updatedRide <- QRide.findById ride.id
@@ -258,7 +278,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
     else throwError (InternalError "Ride is already cancelled")
   where
     buildCancelRideTransactionKey rideId' = "CancelRideTransaction:RID:-" <> rideId'.getId
-    isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
+    isValidRide r = r.status `elem` [DRide.NEW, DRide.UPCOMING]
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
@@ -777,7 +797,9 @@ applyCancellationLedgerAction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -904,7 +926,13 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
               }
         case commissionResult of
           Left err -> logError $ "Failed to book cancellation commission for bookingId: " <> refId <> " - " <> show err
-          Right _ -> logInfo $ "Booked cancellation commission for bookingId: " <> refId <> " gross=" <> show cancellationCommissionGross
+          Right _ -> do
+            logInfo $ "Booked cancellation commission for bookingId: " <> refId <> " gross=" <> show cancellationCommissionGross
+            -- §5b of the Auto-Accept design: re-check and auto-disable any wallet-gated tier
+            -- this driver can no longer afford now that the commission has been deducted.
+            fork "walletGatedTierCheck" $
+              SVST.checkAndAutoDisableWalletGatedTiers ride.driverId
+                `C.catchAll` (\e -> logError ("walletGatedTierCheck failed for driverId=" <> ride.driverId.getId <> ": " <> show e))
     UserCancellationDues.OverdueCancellationLedger ->
       unless alreadyOverdue $ do
         entries <- concat <$> mapM (`getEntriesByReference` refId) cancellationLedgerRefs

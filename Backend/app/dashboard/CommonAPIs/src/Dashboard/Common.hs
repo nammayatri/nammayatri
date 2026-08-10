@@ -43,7 +43,7 @@ import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Types.Common (Centesimal, Meters)
+import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters)
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import qualified Kernel.Types.Id as Id
@@ -410,6 +410,7 @@ data CancellationRateConfig = CancellationRateConfig
 -- longer needed once the two are the same string).
 data AvailabilityCheckConfig = AvailabilityCheckConfig
   { radiusMeters :: Meters,
-    minDriverCount :: Int
+    minDriverCount :: Int,
+    minWalletBalance :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

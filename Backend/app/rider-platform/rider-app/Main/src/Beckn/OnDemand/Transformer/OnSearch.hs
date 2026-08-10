@@ -114,7 +114,7 @@ tfQuotesInfo provider fulfillments validTill item = do
           -- deliberately deferred to a follow-up PR.
             EasyBooking OnDemandStaticOffer
           else fulfillmentTripCategory
-  case tripCategoryToPricingPolicy tripCategory of
+  case pricingPolicyForTier mbServiceTierType tripCategory of
     EstimateBased _ -> do
       let bppEstimateId_ = Id itemId_
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
@@ -180,6 +180,11 @@ tfQuotesInfo provider fulfillments validTill item = do
             pure $ Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
           OneWay OneWayRideOtp -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
           OneWay OneWayOnDemandStaticOffer -> pure $ Domain.Action.Beckn.OnSearch.OneWayDetails (Domain.Action.Beckn.OnSearch.OneWayQuoteDetails {distanceToNearestDriver = HighPrecMeters 0, quoteId = quoteOrEstId_}) -- TODO: Calculate actual distance from driver pool instead of using default
+          -- AUTO_ACCEPT reuses OneWayOnDemandDynamicOffer (pricingPolicyForTier above is what
+          -- routes it into this QuoteBased branch at all -- every other tier on this tripCategory
+          -- stays EstimateBased) but has no per-driver distance preview any more than a static
+          -- quote does, so it gets the same shape as OneWayOnDemandStaticOffer.
+          OneWay OneWayOnDemandDynamicOffer -> pure $ Domain.Action.Beckn.OnSearch.OneWayDetails (Domain.Action.Beckn.OnSearch.OneWayQuoteDetails {distanceToNearestDriver = HighPrecMeters 0, quoteId = quoteOrEstId_})
           CrossCity OneWayRideOtp _ -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
           InterCity _ _ -> do
             interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing intercity quote details")
@@ -223,6 +228,15 @@ tfQuotesInfo provider fulfillments validTill item = do
               area = area_,
               navigationInstruction = navigationInstruction_
             }
+
+-- Mirrors driver-app Search.hs's pricingPolicyForTier: tripCategoryToPricingPolicy is keyed
+-- only on TripCategory, and AUTO_ACCEPT shares OneWayOnDemandDynamicOffer (-> EstimateBased)
+-- with every normal point-to-point tier, so this app's own on_search classification needs the
+-- same tier-aware override the sending side uses -- otherwise a correctly-sent AUTO_ACCEPT
+-- quote gets filed back into this app's `estimate` table instead of `quote`.
+pricingPolicyForTier :: Maybe ServiceTierType -> TripCategory -> PricingPolicy
+pricingPolicyForTier (Just AUTO_ACCEPT) _ = QuoteBased False
+pricingPolicyForTier _ tripCategory = tripCategoryToPricingPolicy tripCategory
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency
 getCurrency item =

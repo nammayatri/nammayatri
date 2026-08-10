@@ -18,6 +18,7 @@ module SharedLogic.DriverCancellationPenalty
   )
 where
 
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Types.Booking as SRB
@@ -29,6 +30,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import EulerHS.Prelude
@@ -45,6 +47,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -150,6 +153,7 @@ accumulateCancellationPenalty ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasShortDurationRetryCfg r c,
@@ -164,6 +168,16 @@ accumulateCancellationPenalty ::
   m ()
 accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
   when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
+    -- Auto-Accept's cancellation consequence: this cancellation was already flagged
+    -- valid-for-penalty by the rule engine above, so also drop AUTO_ACCEPT from this
+    -- driver's selection — prevents the same driver being immediately re-matched to
+    -- the same or a similar pickup right after cancelling it. Not wallet-related (see
+    -- dropServiceTierFromSelection); fires regardless of isWalletEnabled below. Forked
+    -- + exception-caught: must never block the financial penalty that follows.
+    when (booking.vehicleServiceTier == DST.AUTO_ACCEPT) $
+      fork "dropAutoAcceptOnCancellation" $
+        SVST.dropServiceTierFromSelection DST.AUTO_ACCEPT ride.driverId
+          `C.catchAll` (\e -> logError ("dropAutoAcceptOnCancellation failed for driverId=" <> ride.driverId.getId <> ": " <> show e))
     case booking.fareParams.driverCancellationPenaltyAmount of
       Just penaltyAmount ->
         if isWalletEnabled
@@ -201,6 +215,14 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                 <> " bookingId: "
                 <> booking.id.getId
             QRide.updateDriverCancellationPenalty Nothing (Just penaltyAmount) ride.id
+            -- This is the primary trigger for Auto-Accept's wallet-gated tier invariant
+            -- (§5b of the design) — re-check and auto-disable any wallet-gated tier this
+            -- driver has selected but can no longer afford, now that the penalty has landed.
+            -- Forked + exception-caught: a failure here must never roll back the ledger
+            -- transfer or invoice that already committed above.
+            fork "walletGatedTierCheck" $
+              SVST.checkAndAutoDisableWalletGatedTiers ride.driverId
+                `C.catchAll` (\e -> logError ("walletGatedTierCheck failed for driverId=" <> ride.driverId.getId <> ": " <> show e))
           else do
             -- Legacy path: create/update DriverFee
             now <- getCurrentTime

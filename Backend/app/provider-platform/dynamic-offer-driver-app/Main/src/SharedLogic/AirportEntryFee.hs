@@ -21,6 +21,7 @@ module SharedLogic.AirportEntryFee
   )
 where
 
+import qualified Control.Monad.Catch as C
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
@@ -31,6 +32,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, throwError)
+import Kernel.Utils.Logging (logError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
@@ -45,6 +47,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
@@ -106,7 +109,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
-  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r) =>
+  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
   DRide.Ride ->
   SRB.Booking ->
@@ -161,3 +164,9 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()
+    -- §5b of the Auto-Accept design: re-check and auto-disable any wallet-gated tier this
+    -- driver can no longer afford now that the entry fee has been deducted. Forked +
+    -- exception-caught — must never affect the ledger transfer that already committed above.
+    fork "walletGatedTierCheck" $
+      SVST.checkAndAutoDisableWalletGatedTiers ride.driverId
+        `C.catchAll` (\e -> logError ("walletGatedTierCheck failed for driverId=" <> ride.driverId.getId <> ": " <> show e))

@@ -122,6 +122,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.AUTO_LITE = Common.AUTO_RICKSHAW
     convertVehicleVariant DVST.PINK_AUTO = Common.AUTO_RICKSHAW
     convertVehicleVariant DVST.MAHILA_SHAKTI = Common.AUTO_RICKSHAW
+    convertVehicleVariant DVST.AUTO_ACCEPT = Common.AUTO_RICKSHAW
 
     buildBookingLocation Domain.Location {..} =
       Common.Location

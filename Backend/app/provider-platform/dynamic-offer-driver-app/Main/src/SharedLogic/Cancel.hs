@@ -118,14 +118,26 @@ reAllocateBookingIfPossible ::
   Bool ->
   m Bool
 reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant booking ride driver vehicle bookingCReason isForceReallocation = do
-  case booking.tripCategory of
-    DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
-    DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
-    DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer
-    DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
-    DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
-    DTC.OneWay DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer
-    _ -> cancelRideTransactionForNonReallocation Nothing Nothing
+  -- Auto-Accept never reallocates through this shared mechanism — it only knows how to
+  -- broadcast-and-wait-for-accept, which would contradict the tier's no-accept-step design,
+  -- and (separately) running a second, direct-assignment attempt concurrently with a broadcast
+  -- here would risk double-assigning two different drivers to the same rider. Real direct
+  -- reassignment is handled as a deliberately separate, sequential step in
+  -- driverCancelRideHandler (Domain.Action.UI.Ride.CancelRide) — a concrete-Flow, Main-process-
+  -- only entry point never reached by the Allocator's scheduled-ride cancellation path that
+  -- also calls into this function, so it's the one safe place to call initializeRide from.
+  -- This guard adds no new constraints (DTC.AUTO_ACCEPT and cancelRideTransactionForNonReallocation
+  -- are already in scope), so it's free for that shared Allocator path too.
+  if booking.vehicleServiceTier == DTC.AUTO_ACCEPT
+    then cancelRideTransactionForNonReallocation Nothing Nothing
+    else case booking.tripCategory of
+      DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
+      DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
+      DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer
+      DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
+      DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
+      DTC.OneWay DTC.OneWayOnDemandStaticOffer -> reallocateStaticOffer
+      _ -> cancelRideTransactionForNonReallocation Nothing Nothing
   where
     reallocateDynamicOffer = do
       now <- getCurrentTime

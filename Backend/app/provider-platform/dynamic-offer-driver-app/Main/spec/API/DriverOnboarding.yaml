@@ -107,6 +107,7 @@ types:
     isDefault: Bool
     isSelected: Bool
     priority: Maybe Int
+    minWalletBalanceRequired: Maybe HighPrecMoney
   RateCardItem:
     title: Text
     price: Money

@@ -14,6 +14,7 @@
 
 module Domain.Action.Internal.RefundLedger where
 
+import qualified Control.Monad.Catch as C
 import qualified Domain.Types.Booking as DBooking
 import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -36,6 +37,7 @@ import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified Storage.CachedQueries.Merchant as QM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -123,6 +125,14 @@ refundLedger rideId req apiKey = do
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
         forM_ (filter (\e -> e.status == LE.PENDING) existing) $ \e ->
           LedgerSvc.voidEntry e.id "RefundFailed"
+    -- §5b of the Auto-Accept design: only relevant when this refund actually claws back from
+    -- the driver's wallet — re-check and auto-disable any wallet-gated tier they can no longer
+    -- afford. Forked + exception-caught: must never roll back the legs posted above. Safe to
+    -- call even on a dedup-skipped no-op branch above — it just re-validates unchanged state.
+    when deductFromDriver $
+      fork "walletGatedTierCheck" $
+        SVST.checkAndAutoDisableWalletGatedTiers ride.driverId
+          `C.catchAll` (\e -> logError ("walletGatedTierCheck failed for driverId=" <> ride.driverId.getId <> ": " <> show e))
   pure Success
 
 data PostMode = Pending | Settled

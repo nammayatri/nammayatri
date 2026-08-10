@@ -317,7 +317,10 @@ cancelOrReallocate ride cReason isForceReallocation req = do
             additionalInfo = Nothing,
             doCancellationRateBasedBlocking = Nothing
           }
-  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation False
+  -- Scheduled-job cancellations never source ByDriver, so AUTO_ACCEPT reassignment would never
+  -- fire here regardless -- Nothing keeps this call site free of the extra capability (selfUIUrl
+  -- etc.) that only cancelRideHandler's own Flow-concrete closure needs to provide.
+  (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation False Nothing
   pure ()
 
 data Result a b = APIFailed | DistanceResp (GetDistanceResp a b)

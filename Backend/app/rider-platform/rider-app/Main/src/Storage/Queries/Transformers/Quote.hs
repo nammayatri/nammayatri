@@ -54,6 +54,13 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         OneWay OneWayOnDemandStaticOffer -> do
           distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
           getOneWayStaticQuoteDetails distanceToNearestDriver' staticQuoteId & fromMaybeM (InternalError "No static bpp quote details")
+        -- AUTO_ACCEPT reuses OneWayOnDemandDynamicOffer (see pricingPolicyForTier in
+        -- Beckn.OnDemand.Transformer.OnSearch -- that's what routes it into a Quote row at
+        -- all; every other tier on this tripCategory stays EstimateBased and never reaches
+        -- toQuoteDetails). Built the same as OneWayOnDemandStaticOffer, no driver-offer ID.
+        OneWay OneWayOnDemandDynamicOffer -> do
+          distanceToNearestDriver' <- (mkDistanceWithDefault distanceUnit distanceToNearestDriverValue <$> distanceToNearestDriver) & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
+          getOneWayStaticQuoteDetails distanceToNearestDriver' staticQuoteId & fromMaybeM (InternalError "No static bpp quote details")
         _ -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
     -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     Nothing ->

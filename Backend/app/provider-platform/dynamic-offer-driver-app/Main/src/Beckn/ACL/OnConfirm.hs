@@ -116,6 +116,7 @@ mkBPPInvoiceInfoTagGroup info =
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
 bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED -- ONDC v2.1.0: phased confirmation, driver details sent via on_update RIDE_ASSIGNED
+bookingStatusCode (DConfirm.AutoAcceptQuote _ _) = Just Enum.RIDE_ASSIGNED -- Auto-Accept: driver already assigned by confirm time, same as DriverQuote
 bookingStatusCode _ = Just Enum.NEW
 
 buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> BPPInvoiceInfo -> Spec.ConfirmReqMessage

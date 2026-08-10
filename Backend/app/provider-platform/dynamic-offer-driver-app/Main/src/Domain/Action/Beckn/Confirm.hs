@@ -36,6 +36,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -67,6 +68,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
+import Tools.Error
 import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
@@ -87,7 +89,7 @@ data DConfirmReq = DConfirmReq
     customerLanguage :: Maybe Maps.Language
   }
 
-data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote
+data ValidatedQuote = DriverQuote DPerson.Person DDQ.DriverQuote | StaticQuote DQ.Quote | RideOtpQuote DQ.Quote | MeterRideQuote DPerson.Person DQ.Quote | AutoAcceptQuote DPerson.Person DQ.Quote
 
 data DConfirmResp = DConfirmResp
   { booking :: DRB.Booking,
@@ -127,6 +129,7 @@ handler merchant req validatedQuote = do
     StaticQuote quote -> handleStaticOfferFlow isNewRider quote booking riderDetails
     RideOtpQuote quote -> handleRideOtpFlow isNewRider quote booking riderDetails
     MeterRideQuote driver quote -> handleMeterRideFlow isNewRider driver quote booking riderDetails
+    AutoAcceptQuote driver quote -> handleAutoAcceptFlow isNewRider driver quote booking riderDetails
   where
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
@@ -168,6 +171,17 @@ handler merchant req validatedQuote = do
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       fork "specialZoneCompletePickupZoneOnMeterConfirm" $
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show $ DV.castServiceTierToVariant uBooking2.vehicleServiceTier)
+      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
+
+    -- Auto-Accept: driver was already selected and locked in getAutoAcceptQuoteDetails
+    -- (validateRequest, below) — this just assigns the ride directly, no broadcast
+    -- (contrast handleStaticOfferFlow, the only sendSearchRequestToDrivers' call in this file).
+    handleAutoAcceptFlow isNewRider driver _quote booking riderDetails = do
+      updateBookingDetails isNewRider booking riderDetails
+      uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      mFleetOwnerId <- QFDA.findByDriverId driver.id True
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
+      uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 
     generateUniqueOTPCode merchantOperatingCityId cnt = do
@@ -284,7 +298,10 @@ validateRequest ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    CoreMetrics m,
+    HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "quoteRespondCoolDown" r Int
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
@@ -305,33 +322,35 @@ validateRequest subscriber transporterId req now = do
         _ -> False
   when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
-  case booking.tripCategory of
-    OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
-    OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
-    Rental RideOtp -> getRideOtpQuoteDetails booking transporter
-    RideShare RideOtp -> getRideOtpQuoteDetails booking transporter
-    OneWay OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    Rental OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    RideShare OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    InterCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
-    InterCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
-    InterCity OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
-    CrossCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
-    CrossCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
-    CrossCity OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
-    Ambulance OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
-    Ambulance OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    Ambulance OneWayRideOtp -> getRideOtpQuoteDetails booking transporter -- should create new mode?
-    Delivery OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
-    Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
-    OneWay MeterRide -> getMeterRideQuoteDetails booking transporter
-    -- FIX: this case previously had no EasyBooking branch (only a catch-all), so it silently
-    -- fell through to "UNSUPPORTED TYPE CATEGORY" at confirm time — same generic, static-quote
-    -- handling as Rental's static-offer branch above (EasyBooking is QuoteBased just like it).
-    -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
-    EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
-    _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
+  if booking.vehicleServiceTier == AUTO_ACCEPT
+    then getAutoAcceptQuoteDetails isValueAddNP booking transporter
+    else case booking.tripCategory of
+      OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+      OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
+      Rental RideOtp -> getRideOtpQuoteDetails booking transporter
+      RideShare RideOtp -> getRideOtpQuoteDetails booking transporter
+      OneWay OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+      Rental OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+      RideShare OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+      InterCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
+      InterCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
+      InterCity OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
+      CrossCity OneWayOnDemandDynamicOffer _ -> getDriverQuoteDetails booking transporter
+      CrossCity OneWayRideOtp _ -> getRideOtpQuoteDetails booking transporter
+      CrossCity OneWayOnDemandStaticOffer _ -> getStaticQuoteDetails booking transporter
+      Ambulance OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+      Ambulance OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+      Ambulance OneWayRideOtp -> getRideOtpQuoteDetails booking transporter -- should create new mode?
+      Delivery OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+      Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+      Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
+      OneWay MeterRide -> getMeterRideQuoteDetails booking transporter
+      -- FIX: this case previously had no EasyBooking branch (only a catch-all), so it silently
+      -- fell through to "UNSUPPORTED TYPE CATEGORY" at confirm time — same generic, static-quote
+      -- handling as Rental's static-offer branch above (EasyBooking is QuoteBased just like it).
+      -- RideOtp mode deliberately not handled yet (never produced at dispatch, see Search.hs).
+      EasyBooking OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+      _ -> throwError . InvalidRequest $ "UNSUPPORTED TYPE CATEGORY" <> show booking.tripCategory
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
@@ -355,6 +374,20 @@ validateRequest subscriber transporterId req now = do
       driverIdForSearch <- searchReq.driverIdForSearch & fromMaybeM (InvalidRequest $ "Driver Id for search not found for meter ride searchId: " <> quote.searchRequestId.getId)
       driver <- QPerson.findById driverIdForSearch >>= fromMaybeM (PersonNotFound driverIdForSearch.getId)
       return (transporter, MeterRideQuote driver quote)
+
+    -- Auto-Accept: no accept step exists, so there's no soft "nobody took it" failure mode
+    -- the way the broadcast allocator has — either a driver is found right now or the booking
+    -- is cancelled synchronously, mirroring how getQuote already handles an expired quote
+    -- inline rather than via an exception this function would need to catch.
+    getAutoAcceptQuoteDetails isValueAddNP booking transporter = do
+      quote <- getQuote booking transporter
+      mbDriver <- selectAndLockAutoAcceptDriver isValueAddNP quote.searchRequestId transporter booking
+      driver <- case mbDriver of
+        Nothing -> do
+          SBooking.cancelBooking booking Nothing transporter
+          throwError NoEligibleAutoAcceptDriverFound
+        Just d -> pure d
+      return (transporter, AutoAcceptQuote driver quote)
 
     getQuote booking transporter = do
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
