@@ -35,6 +35,7 @@ data Vehicle = Vehicle
     registrationCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory,
     registrationNo :: Kernel.Prelude.Text,
     ruleBasedUpgradeTiers :: Kernel.Prelude.Maybe [Domain.Types.UpgradedTier.UpgradedTier],
+    selectedAutoAcceptTiers :: Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType],
     selectedServiceTiers :: [Domain.Types.Common.ServiceTierType],
     size :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     variant :: Domain.Types.VehicleVariant.VehicleVariant,

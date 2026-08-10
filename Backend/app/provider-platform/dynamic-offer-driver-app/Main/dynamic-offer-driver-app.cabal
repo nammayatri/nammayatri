@@ -590,6 +590,7 @@ library
       SharedLogic.FareProduct
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.InvoiceRegeneration
+      SharedLogic.Finance.PostActions
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation.EntitySync
       SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
@@ -602,6 +603,7 @@ library
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
+      SharedLogic.Finance.WalletAccount
       SharedLogic.Fleet
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats

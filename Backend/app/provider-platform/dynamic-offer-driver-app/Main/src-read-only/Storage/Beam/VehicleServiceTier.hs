@@ -21,6 +21,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     allowNullVehicleRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     allowedAreas :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     allowedVehicleVariant :: (B.C f [Domain.Types.VehicleVariant.VehicleVariant]),
+    autoAcceptanceConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     autoSelectedVehicleVariant :: (B.C f [Domain.Types.VehicleVariant.VehicleVariant]),
     availabilityCheckConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     baseVehicleServiceTier :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),

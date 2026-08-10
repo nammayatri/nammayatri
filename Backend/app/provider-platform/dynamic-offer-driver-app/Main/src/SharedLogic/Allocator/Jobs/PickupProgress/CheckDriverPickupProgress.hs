@@ -23,6 +23,7 @@
 module SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress where
 
 import qualified AWS.S3 as S3
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -36,11 +37,13 @@ import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -84,6 +87,7 @@ checkDriverPickupProgress ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
     Metrics.HasBPPMetrics m r,
     HasLongDurationRetryCfg r c,
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
@@ -102,7 +106,16 @@ checkDriverPickupProgress ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
   ) =>
   Job 'CheckDriverPickupProgress ->
   m ExecutionResult

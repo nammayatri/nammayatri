@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   )
 where
 
+import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -46,6 +47,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleVariant as Veh
 import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (any, elem, map, mapM_, notElem)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -54,12 +56,14 @@ import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
+import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
@@ -71,6 +75,7 @@ import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -117,6 +122,7 @@ cancelRideImpl ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasDriverSearchRequestResponseMetrics m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -146,7 +152,16 @@ cancelRideImpl ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    BeamFlow m r,
+    CoreMetrics m,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    HasPrettyLogger m r,
+    ServiceFlow m r,
+    HasField "quoteRespondCoolDown" r Int,
+    HasField "driverUnlockDelay" r Seconds,
+    C.MonadCatch m
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -210,6 +225,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               Notify.notifyOnCancel ride.merchantOperatingCityId ride.id booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
+              -- INSTANT_AUTO bookings reassign through the same broadcast path as every other tier.
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
               unless isReallocated $ do
                 -- Reload ride to get persisted cancellationFee/cancellationFeeTax
@@ -271,7 +287,9 @@ createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -430,7 +448,9 @@ applyCancellationLedgerAction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   SRB.Booking ->
   DRide.Ride ->

@@ -369,6 +369,7 @@ data EarningsKey = D2CReferralEarnings | D2DReferralEarnings
 creditReferralWallet ::
   ( CacheFlow m r,
     Esq.EsqDBFlow m r,
+    Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r
   ) =>
   HighPrecMoney ->

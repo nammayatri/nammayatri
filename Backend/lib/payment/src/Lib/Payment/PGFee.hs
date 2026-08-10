@@ -96,7 +96,8 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             tdsRateReason = Nothing,
             emitLedgerEntries = True,
             fromLocationAddress = Nothing,
-            issuedToName = Nothing
+            issuedToName = Nothing,
+            enableWalletGatedTierCheck = False -- shared lib, no app-specific wallet-tier context here
           }
   result <- runFinance ctx $ do
     -- 1. Base fee: Liability → Expense (DR Expense, CR Liability)

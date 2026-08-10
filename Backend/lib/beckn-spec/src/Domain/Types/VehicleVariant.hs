@@ -136,6 +136,7 @@ castServiceTierToVariant = \case
   DVST.EV_HATCHBACK -> EV_HATCHBACK
   DVST.EV_SEDAN -> EV_SEDAN
   DVST.EV_SUV -> EV_SUV
+  DVST.INSTANT_AUTO -> AUTO_RICKSHAW
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -266,6 +267,7 @@ castServiceTierToVehicleCategory = \case
   DVST.EV_HATCHBACK -> DVC.CAR
   DVST.EV_SEDAN -> DVC.CAR
   DVST.EV_SUV -> DVC.CAR
+  DVST.INSTANT_AUTO -> DVC.AUTO_CATEGORY
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)

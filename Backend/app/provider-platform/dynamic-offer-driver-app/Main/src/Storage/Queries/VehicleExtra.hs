@@ -35,6 +35,7 @@ create vehicle = do
     LTSSync.emptyUpdate
       { LTSSync.variant = LTSSync.Set vehicle.variant,
         LTSSync.selectedServiceTiers = LTSSync.Set vehicle.selectedServiceTiers,
+        LTSSync.selectedAutoAcceptTiers = LTSSync.Set vehicle.selectedAutoAcceptTiers,
         LTSSync.vehicleTags = LTSSync.Set vehicle.vehicleTags,
         LTSSync.mYManufacturing = LTSSync.Set vehicle.mYManufacturing,
         LTSSync.airConditioned = LTSSync.Set vehicle.airConditioned,
@@ -66,6 +67,7 @@ upsert a@Vehicle {..} = do
           Se.Set BeamV.airConditioned airConditioned,
           Se.Set BeamV.vehicleRating vehicleRating,
           Se.Set BeamV.selectedServiceTiers selectedServiceTiers,
+          Se.Set BeamV.selectedAutoAcceptTiers selectedAutoAcceptTiers,
           Se.Set BeamV.mYManufacturing mYManufacturing,
           Se.Set BeamV.updatedAt updatedAt
         ]
@@ -77,6 +79,7 @@ upsert a@Vehicle {..} = do
     LTSSync.emptyUpdate
       { LTSSync.variant = LTSSync.Set variant,
         LTSSync.selectedServiceTiers = LTSSync.Set selectedServiceTiers,
+        LTSSync.selectedAutoAcceptTiers = LTSSync.Set selectedAutoAcceptTiers,
         LTSSync.mYManufacturing = LTSSync.Set mYManufacturing,
         LTSSync.vehicleTags = LTSSync.Set vehicleTags,
         LTSSync.airConditioned = LTSSync.Set airConditioned,
@@ -231,6 +234,29 @@ updateSelectedServiceTiers tiers driverId = do
   updateOneWithKV [Se.Set BeamV.selectedServiceTiers tiers, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set tiers}
+
+updateSelectedAutoAcceptTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => [ServiceTierType] -> Id Person -> m ()
+updateSelectedAutoAcceptTiers tiers driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamV.selectedAutoAcceptTiers (Just tiers), Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.selectedAutoAcceptTiers = LTSSync.Set (Just tiers)}
+
+-- | Single-query variant for callers that always update both columns together.
+updateSelectedServiceTiersAndAutoAcceptTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => [ServiceTierType] -> [ServiceTierType] -> Id Person -> m ()
+updateSelectedServiceTiersAndAutoAcceptTiers serviceTiers autoAcceptTiers driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamV.selectedServiceTiers serviceTiers,
+      Se.Set BeamV.selectedAutoAcceptTiers (Just autoAcceptTiers),
+      Se.Set BeamV.updatedAt _now
+    ]
+    [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.selectedServiceTiers = LTSSync.Set serviceTiers,
+        LTSSync.selectedAutoAcceptTiers = LTSSync.Set (Just autoAcceptTiers)
+      }
 
 updateManufacturing :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe Days.Day -> Id Person -> m ()
 updateManufacturing mYManufacturing driverId = do

@@ -468,3 +468,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN driver_cancel
 
 ------- SQL updates -------
 
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN auto_acceptance_config json ;

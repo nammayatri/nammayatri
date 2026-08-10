@@ -84,7 +84,6 @@ import Lib.Finance
     LineItemDescription (..),
     getEntriesByReference,
     invoice,
-    runFinance,
     transfer,
   )
 import qualified Lib.Finance.Core.Types as Finance
@@ -106,6 +105,7 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
@@ -551,7 +551,8 @@ processWalletTopupWebhook driver order transactionStatus = do
     Redis.withLockRedis lockKey 60 $ do
       existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
       when (null existing) $ do
-        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
         let topupInvoiceConfig =
               InvoiceConfig
                 { invoiceType = BecknInvoice.SubscriptionPurchase,

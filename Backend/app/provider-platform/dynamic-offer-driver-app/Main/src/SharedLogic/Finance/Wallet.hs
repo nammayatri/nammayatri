@@ -179,19 +179,24 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Finance
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.Finance hiding (runFinance)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.Finance.PostActions (runFinance, runPostActionsForAccount)
+import SharedLogic.Finance.WalletAccount (computeTdsRateReason, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletBalanceByOwner, hasMinWalletBalance)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.FleetOwnerInformation as QFOI
-import Tools.Error (MerchantPaymentMethodError (..))
+import Tools.Error (MerchantPaymentMethodError (..), TransporterError (TransporterConfigNotFound))
 
 -- Reference type constants (PascalCase, abbreviations in all caps)
 
@@ -470,71 +475,6 @@ getNonRedeemableBalance accountId timeDiff cutOffDays now = do
   credits <- findCreditsByAccountAfterTime accountId cutoff now
   pure $ sum $ map (.amount) credits
 
--- Account helpers (these are still needed for non-FinanceM callers like balance queries)
-
-getWalletAccountByOwner ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text -> -- Owner ID
-  m (Maybe Account)
-getWalletAccountByOwner counterpartyType ownerId =
-  findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Liability
-
--- | Returns the driver's Control (cash-earnings memo) account, if any. Distinct
---   from the Liability wallet account — Control tracks cumulative cash ride
---   earnings (direct rider → driver), while Liability tracks what the platform
---   actually owes the driver.
-getControlAccountByOwner ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text -> -- Owner ID
-  m (Maybe Account)
-getControlAccountByOwner counterpartyType ownerId =
-  findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Control
-
--- | Fetch both Liability (real wallet) and Control (cash-earnings memo)
---   accounts for an owner. Used by the driver wallet transactions feed which
---   merges entries across both so cash rides surface alongside online earnings.
-getWalletAndControlAccountsByOwner ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text ->
-  m (Maybe Account, Maybe Account)
-getWalletAndControlAccountsByOwner counterpartyType ownerId = do
-  mbLiability <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Liability
-  mbControl <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Control
-  pure (mbLiability, mbControl)
-
-getWalletBalanceByOwner ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text ->
-  m (Maybe HighPrecMoney)
-getWalletBalanceByOwner counterpartyType ownerId = do
-  mbAcc <- getWalletAccountByOwner counterpartyType ownerId
-  pure $ mbAcc <&> (.balance)
-
-hasMinWalletBalance ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Maybe HighPrecMoney ->
-  Text ->
-  m Bool
-hasMinWalletBalance counterpartyType mbMinBalance ownerId =
-  case mbMinBalance of
-    Nothing -> pure True
-    Just minBalance -> maybe False (>= minBalance) <$> getWalletBalanceByOwner counterpartyType ownerId
-
--- | Balance of the Control (cash-earnings memo) account.
-getControlBalanceByOwner ::
-  (BeamFlow m r) =>
-  CounterpartyType ->
-  Text ->
-  m (Maybe HighPrecMoney)
-getControlBalanceByOwner counterpartyType ownerId = do
-  mbAcc <- getControlAccountByOwner counterpartyType ownerId
-  pure $ mbAcc <&> (.balance)
-
 -- | Build a FinanceCtx from booking + ride data.
 --   Resolves merchant name, shortId, address, supplier info, and TDS rate reason from DB.
 --   This is the standard way to create a context for wallet operations.
@@ -622,24 +562,9 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         tdsRateReason = rateReason,
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
       }
-
--- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
-computeTdsRateReason :: Maybe DPanCard.DriverPanCard -> Bool -> Maybe TdsRateReason
-computeTdsRateReason mbPanCard hasCustomRate =
-  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-      panAadhaarLinked = maybe False (\pan -> pan.panAadhaarLinkage == Just DPanCard.PAN_AADHAAR_LINKED) mbPanCard
-   in Just $
-        if not hasValidPan
-          then NO_PAN
-          else
-            if hasCustomRate
-              then LDC_CERTIFICATE
-              else
-                if panAadhaarLinked
-                  then PAN_AADHAR_LINKAGE
-                  else PAN
 
 -- | Format a Stripe Address into a single text string for supplier_address on invoices.
 formatStripeAddress :: Stripe.Address -> Text
@@ -704,13 +629,14 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         tdsRateReason = rateReason,
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        enableWalletGatedTierCheck = False -- no transporterConfig in scope here; this function has no real callers today
       }
 
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
@@ -781,6 +707,10 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
           case entryRes of
             Left err -> pure $ Left err
             Right _ -> do
+              -- This function never goes through runFinance, so it can't ride the automatic
+              -- PostActions dispatch. Call it explicitly here, once, for both callers.
+              transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId)
+              runPostActionsForAccount (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) (toAffectedAccount ownerAccount)
               mbBal <- getBalance ownerAccount.id
               pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
         (Left err, _) -> pure $ Left err
@@ -803,7 +733,7 @@ data StripeChargeFunder = FundByPlatform | FundByCustomer | FundByDriver
 --   The ctx MUST carry a DRIVER/FLEET_OWNER counterparty so the driver funding leg
 --   hits the driver's OwnerLiability account (Seller*/Buyer* roles are hardwired).
 recordStripeChargeLedger ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
+  (MonadFlow m, BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   FinanceCtx ->
   StripeChargeFunder ->
   HighPrecMoney ->
@@ -832,8 +762,9 @@ buildDriverChargeCtx ::
   Text -> -- merchant operating city id
   Currency ->
   Text -> -- reference id (e.g. payout order id / period key)
+  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
   FinanceCtx
-buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId =
+buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId walletGateEnabled =
   FinanceCtx
     { merchantId = merchantId,
       merchantOpCityId = merchantOperatingCityId,
@@ -860,7 +791,8 @@ buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
       fromLocationAddress = Nothing,
-      issuedToName = Nothing
+      issuedToName = Nothing,
+      enableWalletGatedTierCheck = walletGateEnabled
     }
 
 -- | Stripe payout charge Q = fixedFee + percentageRate% * amount (new model),
@@ -1030,15 +962,6 @@ applyThresholdBenefit taxConfig mbCumulative mbPanCard currentBase rawAmount =
         if cumulative + currentBase <= thresh
           then 0
           else rawAmount
-
-estimateWalletDeductions ::
-  Maybe Double -> -- effective TDS rate
-  HighPrecMoney -> -- baseFare (rideFare at allocation time, which is already baseFare)
-  HighPrecMoney -- estimated TDS deduction
-estimateWalletDeductions mbTdsRate baseFare =
-  case mbTdsRate of
-    Just rate | rate > 0 -> max 0 baseFare * realToFrac rate
-    _ -> 0
 
 computeGstBreakdownByPlace ::
   DTC.GstBreakup ->

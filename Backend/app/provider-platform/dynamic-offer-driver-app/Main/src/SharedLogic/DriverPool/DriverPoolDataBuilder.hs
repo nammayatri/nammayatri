@@ -128,6 +128,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             totalRides = Just 0, -- make nothing after first iteration
             variant = v.variant,
             selectedServiceTiers = v.selectedServiceTiers,
+            selectedAutoAcceptTiers = v.selectedAutoAcceptTiers,
             enabled = di.enabled,
             blocked = di.blocked,
             subscribed = di.subscribed,

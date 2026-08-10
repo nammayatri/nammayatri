@@ -5,6 +5,7 @@ module Storage.Queries.Person.GetNearestDrivers
     buildDriverResult,
     isTierEligibleForDriver,
     scheduledTierEligibleForDriver,
+    isDriverModeEligibleHelper,
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
@@ -43,7 +44,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Prepaid
-import SharedLogic.Finance.Wallet
+import SharedLogic.Finance.WalletAccount
 import Storage.Beam.Finance ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverLocation.Internal as Int
@@ -70,6 +71,7 @@ data NearestDriversResult = NearestDriversResult
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe Maps.LatLong,
     driverTags :: A.Value,
+    selectedAutoAcceptTiers :: [ServiceTierType],
     score :: Maybe A.Value,
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
@@ -322,6 +324,7 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         vehicleAge = getVehicleAge dpd.mYManufacturing now,
         latestScheduledBooking = dpd.latestScheduledBooking,
         latestScheduledPickup = dpd.latestScheduledPickup,
+        selectedAutoAcceptTiers = fromMaybe [] dpd.selectedAutoAcceptTiers,
         driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry driverTagPrefix : (map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags) ++ fromMaybe [] dpd.driverTag),
         score = Nothing,
         tripDistanceMinThreshold = dpd.tripDistanceMinThreshold,

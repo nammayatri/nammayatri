@@ -54,6 +54,7 @@ sendConnectAccountCharge ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r
   ) =>
   Job 'ConnectAccountChargeDeduction ->
@@ -75,7 +76,7 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
                 mbPerson <- QPerson.findById acc.driverId
                 whenJust mbPerson $ \person -> do
                   let counterparty = counterpartyFromRole person.role
-                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId)
+                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId) (fromMaybe False dwc.enableWalletGatedTierCheck)
                   recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
                     >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
               -- Page through active accounts in bounded batches so a large fleet is not loaded at once.

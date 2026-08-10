@@ -10,6 +10,7 @@ imports:
   FieldType: Domain.Types.DocumentVerificationConfig
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
+  AutoAcceptanceMode: Dashboard.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   AirportRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
@@ -124,6 +125,11 @@ types:
     isDefault: Bool
     isSelected: Bool
     priority: Maybe Int
+    autoAcceptance: Maybe AutoAcceptanceInfo
+  AutoAcceptanceInfo:
+    minWalletBalanceRequired: Maybe HighPrecMoney
+    mode: Maybe AutoAcceptanceMode
+    isSelected: Maybe Bool
   RateCardItem:
     title: Text
     price: Money

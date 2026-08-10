@@ -45,7 +45,9 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -636,7 +638,24 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig
   return driverSearchReqs
 
-pullExistingRideRequests :: Id DTMM.MerchantOperatingCity -> [SearchRequestForDriver] -> Id Merchant -> Id Person -> Price -> DTC.TransporterConfig -> Flow ()
+pullExistingRideRequests ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisLTSFlowEnv r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Id DTMM.MerchantOperatingCity ->
+  [SearchRequestForDriver] ->
+  Id Merchant ->
+  Id Person ->
+  Price ->
+  DTC.TransporterConfig ->
+  m ()
 pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
@@ -752,3 +771,4 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.AUTO_LITE -> buffer.autorickshaw
     DST.PINK_AUTO -> buffer.autorickshaw
     DST.MAHILA_SHAKTI -> buffer.autorickshaw
+    DST.INSTANT_AUTO -> buffer.autorickshaw

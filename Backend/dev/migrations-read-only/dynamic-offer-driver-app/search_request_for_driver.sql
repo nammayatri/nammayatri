@@ -235,3 +235,7 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN preference_match_score double precision ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN is_auto_accepted boolean ;
