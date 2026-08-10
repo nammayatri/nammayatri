@@ -54,7 +54,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
-import SharedLogic.Finance.Wallet (computeTdsRateReason)
+import SharedLogic.Finance.WalletAccount (computeTdsRateReason)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE

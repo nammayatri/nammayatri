@@ -278,3 +278,7 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_charge double prec
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN preference_match_score double precision ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_auto_accepted boolean ;

@@ -39,10 +39,11 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Finance
+import Lib.Finance hiding (runFinance)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.SchedulerJob ()
@@ -150,6 +151,7 @@ accumulateCancellationPenalty ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasShortDurationRetryCfg r c,

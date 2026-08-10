@@ -36,7 +36,11 @@ module Lib.Finance.FinanceM
 
     -- * The Monad
     FinanceM,
+    FinanceState (..),
+    AffectedAccount (..),
+    toAffectedAccount,
     runFinance,
+    runFinanceWithState,
 
     -- * Combinators
     account,
@@ -127,7 +131,10 @@ data FinanceCtx = FinanceCtx
     tdsRateReason :: Maybe TdsRateReason,
     emitLedgerEntries :: Bool,
     fromLocationAddress :: Maybe Text,
-    issuedToName :: Maybe Text
+    issuedToName :: Maybe Text,
+    -- | Driver-app only: caller-resolved driverWalletConfig.enableWalletGatedTierCheck, read by
+    --   SharedLogic.Finance.PostActions to gate the wallet-tier recheck. Always False for rider-app.
+    enableWalletGatedTierCheck :: Bool
   }
   deriving (Eq, Show, Generic)
 
@@ -153,15 +160,37 @@ data InvoiceConfig = InvoiceConfig
   }
   deriving (Eq, Show, Generic)
 
--- | Accumulated state within a FinanceM computation.
---   Entry IDs from all transfers are collected automatically.
+-- | Identity fields of an Account for a caller to dispatch on -- no balance, deliberately, so it
+--   can't be mistaken for a fresh read. See Backend/dev/docs/post-actions-finance-plan.md.
+data AffectedAccount = AffectedAccount
+  { id :: Id Account,
+    accountType :: AccountType,
+    counterpartyType :: Maybe CounterpartyType,
+    counterpartyId :: Maybe Text,
+    merchantOperatingCityId :: Text
+  }
+  deriving (Eq, Show, Generic)
+
+toAffectedAccount :: Account -> AffectedAccount
+toAffectedAccount acc =
+  AffectedAccount
+    { id = acc.id,
+      accountType = acc.accountType,
+      counterpartyType = acc.counterpartyType,
+      counterpartyId = acc.counterpartyId,
+      merchantOperatingCityId = acc.merchantOperatingCityId
+    }
+
+-- | Accumulated state within a FinanceM computation: entry IDs and touched accounts, both
+--   collected automatically by 'transfer' and friends. See Backend/dev/docs/post-actions-finance-plan.md.
 data FinanceState = FinanceState
-  { collectedEntryIds :: [Id LE.LedgerEntry]
+  { collectedEntryIds :: [Id LE.LedgerEntry],
+    affectedAccounts :: [AffectedAccount]
   }
   deriving (Eq, Show, Generic)
 
 emptyState :: FinanceState
-emptyState = FinanceState {collectedEntryIds = []}
+emptyState = FinanceState {collectedEntryIds = [], affectedAccounts = []}
 
 -- | Declarative account roles.
 --   Instead of calling 10+ separate getOrCreate*Account functions,
@@ -214,6 +243,17 @@ newtype FinanceM m a = FinanceM
 instance MonadTrans FinanceM where
   lift = FinanceM . lift . lift . lift
 
+-- | Run a FinanceM computation, exposing the full final FinanceState instead of just the
+--   collected entry IDs. Driver-app's PostActions wrapper is the intended consumer.
+--   'runFinance' below stays the stable entry point for every other caller.
+runFinanceWithState ::
+  (MonadFlow m) =>
+  FinanceCtx ->
+  FinanceM m a ->
+  m (Either FinanceError (a, FinanceState))
+runFinanceWithState ctx action =
+  runExceptT (runStateT (runReaderT (unFinanceM action) ctx) emptyState)
+
 -- | Run a FinanceM computation.
 --   Returns (Either FinanceError (a, [Id LedgerEntry])).
 --   The entry IDs are all entries created by 'transfer'/'transferAllowZero'
@@ -223,11 +263,10 @@ runFinance ::
   FinanceCtx ->
   FinanceM m a ->
   m (Either FinanceError (a, [Id LE.LedgerEntry]))
-runFinance ctx action = do
-  result <- runExceptT (runStateT (runReaderT (unFinanceM action) ctx) emptyState)
-  case result of
-    Left err -> pure $ Left err
-    Right (a, st) -> pure $ Right (a, st.collectedEntryIds)
+runFinance ctx action =
+  runFinanceWithState ctx action <&> \case
+    Left err -> Left err
+    Right (a, st) -> Right (a, st.collectedEntryIds)
 
 -- | Get the current financial context.
 getCtx :: (Monad m) => FinanceM m FinanceCtx
@@ -515,6 +554,11 @@ collectEntryId :: (Monad m) => Id LE.LedgerEntry -> FinanceM m ()
 collectEntryId entryId =
   modify' (\st -> st {collectedEntryIds = st.collectedEntryIds <> [entryId]})
 
+-- | Internal helper: append an account whose balance was actually moved.
+collectAffectedAccount :: (Monad m) => Account -> FinanceM m ()
+collectAffectedAccount acc =
+  modify' (\st -> st {affectedAccounts = st.affectedAccounts <> [toAffectedAccount acc]})
+
 -- | Transfer money between two account roles.
 --   Skips if amount <= 0.  Automatically collects the entry ID.
 --   Returns the entry ID if created (Nothing if skipped due to amount <= 0).
@@ -552,6 +596,8 @@ transfer fromRole toRole amount refType mbMetadata = do
                 settlementStatus = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
+      collectAffectedAccount fromAcc
+      collectAffectedAccount toAcc
       collectEntryId result.id
       pure (Just result.id)
 
@@ -588,6 +634,8 @@ transferWithoutAttribution fromRole toRole amount refType = do
                 settlementStatus = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
+      collectAffectedAccount fromAcc
+      collectAffectedAccount toAcc
       collectEntryId result.id
       pure (Just result.id)
 
@@ -624,8 +672,9 @@ transfer_ fromRole toRole amount refType = do
               merchantOperatingCityId = ctx.merchantOpCityId,
               settlementStatus = Nothing
             }
-    _ <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
-    pure ()
+    _result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
+    collectAffectedAccount fromAcc
+    collectAffectedAccount toAcc
 
 -- | Like 'transfer' but creates entries with PENDING status and does NOT update
 --   account balances.  Use this for entries that will be settled later
@@ -702,6 +751,8 @@ transferAllowZero fromRole toRole amount refType = do
                 settlementStatus = Nothing
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
+      collectAffectedAccount fromAcc
+      collectAffectedAccount toAcc
       collectEntryId result.id
       pure (Just result.id)
 

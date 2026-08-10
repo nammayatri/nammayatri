@@ -21,6 +21,7 @@ import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (DbHash, unDbHash)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -119,7 +120,9 @@ customerCancellationDuesSync ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Merchant ->
   Context.City ->

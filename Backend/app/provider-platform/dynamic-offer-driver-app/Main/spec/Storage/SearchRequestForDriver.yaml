@@ -113,6 +113,7 @@ SearchRequestForDriver:
     coinsRewardedOnGoldTierRide: Maybe Int
     commissionCharges: Maybe HighPrecMoney
     driverCancellationNotAllowed: Maybe Bool
+    isAutoAccepted: Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text

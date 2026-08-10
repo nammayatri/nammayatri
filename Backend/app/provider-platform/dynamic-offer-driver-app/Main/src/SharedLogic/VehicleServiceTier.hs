@@ -14,8 +14,9 @@
 
 module SharedLogic.VehicleServiceTier where
 
+import qualified Dashboard.Common as DC
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
 import Data.Ord (Down (..))
 import Data.Time (diffDays, utctDay)
 import qualified Domain.Types.Common as DTC
@@ -32,9 +33,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance (CounterpartyType (..))
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import SharedLogic.Finance.WalletAccount (getWalletBalanceByOwner)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -231,3 +235,43 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         logInfo $ "backfillSelectedServiceTiers: LTS selectedServiceTiers empty for driver " <> vehicle.driverId.getId <> ", pushing DB tiers"
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
+
+-- | Serializes checkAndAutoDisableWalletGatedTiers's own concurrent invocations for one driver, since two can otherwise race and undo each other's write.
+selectedServiceTiersLockKey :: Id DP.Person -> Text
+selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId
+
+-- | Re-checks every wallet-gated tier a driver holds and drops any they can no longer afford.
+--   Called automatically after every wallet debit via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.
+checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
+checkAndAutoDisableWalletGatedTiers driverId merchantOpCityId =
+  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+    mbVehicle <- QVehicle.findById driverId
+    whenJust mbVehicle $ \vehicle -> do
+      let selectedAutoAcceptTiers = fromMaybe [] vehicle.selectedAutoAcceptTiers
+          tiersToCheck = nub (vehicle.selectedServiceTiers <> selectedAutoAcceptTiers)
+      unless (null tiersToCheck) $ do
+        -- One fetch for the whole city's tier configs, not one per selected tier.
+        -- The wallet read happens at most once, only if something is gated.
+        allTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+        let tierByType = HashMap.fromList [(tier.serviceTierType, tier) | tier <- allTiers]
+            gatedTiers =
+              catMaybes
+                [ do
+                    tier <- HashMap.lookup tierType tierByType
+                    cfg <- tier.autoAcceptanceConfig
+                    guard cfg.enabled
+                    minBalance <- cfg.minWalletBalance
+                    pure (tierType, cfg.mode, minBalance)
+                  | tierType <- tiersToCheck
+                ]
+        unless (null gatedTiers) $ do
+          mbBalance <- getWalletBalanceByOwner DRIVER driverId.getId
+          -- Missing wallet row is not treated as below-minimum -- a transient read miss must never strip a persistent tier selection.
+          let walletIneligibleTiers = [(tierType, mode) | (tierType, mode, minBalance) <- gatedTiers, maybe False (< minBalance) mbBalance]
+          unless (null walletIneligibleTiers) $ do
+            let instantOnlyWalletIneligibleTiers = [t | (t, DC.AutoAcceptOnly) <- walletIneligibleTiers]
+                allWalletIneligibleTiers = map fst walletIneligibleTiers
+            QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers
+              (filter (`notElem` instantOnlyWalletIneligibleTiers) vehicle.selectedServiceTiers)
+              (filter (`notElem` allWalletIneligibleTiers) selectedAutoAcceptTiers)
+              driverId

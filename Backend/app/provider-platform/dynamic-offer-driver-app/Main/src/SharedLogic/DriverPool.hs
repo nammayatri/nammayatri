@@ -800,6 +800,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           previousRideDropLat = Nothing,
           previousRideDropLon = Nothing,
           distanceFromDriverToDestination = Nothing,
+          selectedAutoAcceptTiers = [],
           ..
         }
 
@@ -858,6 +859,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         { distanceToPickup = distanceToDriver,
           serviceTier = serviceTier',
           customerTags = Nothing,
+          selectedAutoAcceptTiers = [],
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
@@ -1310,11 +1312,12 @@ calculateDriverCurrentlyOnRideWithActualDist CalculateDriverPoolReq {..} onRideD
           previousRideDropLat = Just previousRideDropLat,
           previousRideDropLon = Just previousRideDropLon,
           distanceFromDriverToDestination = Just distanceFromDriverToDestination,
+          selectedAutoAcceptTiers = [],
           ..
         }
 
     calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {customerTags = Nothing, onRide = Just True, previousRideDropLat = Just previousRideDropLat, previousRideDropLon = Just previousRideDropLon, distanceFromDriverToDestination = Just distanceFromDriverToDestination, ..}
+      let temp = DriverPoolResult {customerTags = Nothing, onRide = Just True, previousRideDropLat = Just previousRideDropLat, previousRideDropLon = Just previousRideDropLon, distanceFromDriverToDestination = Just distanceFromDriverToDestination, selectedAutoAcceptTiers = [], ..}
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp currentSearchInfo
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold
@@ -1329,7 +1332,7 @@ calculateDriverCurrentlyOnRideWithActualDist CalculateDriverPoolReq {..} onRideD
               }
         else Nothing
     calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
-      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, onRide = Just True, previousRideDropLat = Just previousRideDropLat, previousRideDropLon = Just previousRideDropLon, distanceFromDriverToDestination = Just distanceFromDriverToDestination, ..}) driverPoolCurrentlyOnRide
+      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, onRide = Just True, previousRideDropLat = Just previousRideDropLat, previousRideDropLon = Just previousRideDropLon, distanceFromDriverToDestination = Just distanceFromDriverToDestination, selectedAutoAcceptTiers = [], ..}) driverPoolCurrentlyOnRide
       let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {previousRideDropLat = lat, previousRideDropLon = lon} -> Just $ LatLong lat lon) driverPoolCurrentlyOnRide
       let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
       computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation currentSearchInfo
