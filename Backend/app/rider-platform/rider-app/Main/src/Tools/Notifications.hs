@@ -1486,7 +1486,7 @@ notifyRideStartToEmergencyContacts booking ride = do
       Person.updateFollowsRide True emPersonId
 
     sendSMS emergencyContact name trackLink = do
-      shortenedTrackingUrl <- MessageBuilder.shortenTrackingUrl trackLink
+      shortenedTrackingUrl <- MessageBuilder.shortenTrackingUrl (Just UrlShortner.RIDE_TRACKING) trackLink
       buildSmsReq <-
         MessageBuilder.buildFollowRideStartedMessage booking.merchantOperatingCityId $
           MessageBuilder.BuildFollowRideMessageReq

@@ -316,7 +316,7 @@ buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlS
 buildSendReceiptMessage merchantOperatingCityId req = do
   meterRideReferralLink <- asks (.meterRideReferralLink)
   let referralLink = T.replace "{referralCode}" req.referralCode meterRideReferralLink
-  shortReferralLink <- UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq referralLink Nothing Nothing Nothing UrlShortner.METER_RIDE_REFERRAL_LINK)
+  shortReferralLink <- UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq referralLink Nothing Nothing Nothing (Just UrlShortner.METER_RIDE_REFERRAL_LINK))
   merchantMessage <-
     QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.SEND_FARE_RECEIPT_MESSAGE Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_FARE_RECEIPT_MESSAGE))
