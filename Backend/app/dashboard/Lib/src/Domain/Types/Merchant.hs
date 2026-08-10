@@ -39,7 +39,10 @@ data MerchantE e = Merchant
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
     singleActiveSessionOnly :: Maybe Bool,
-    trackLoginLogoutForRoles :: [DRole.DashboardAccessType]
+    trackLoginLogoutForRoles :: [DRole.DashboardAccessType],
+    -- | Email domains an administrator account under this merchant may belong to,
+    -- e.g. ["maruti.co.in"]. Empty list leaves the restriction switched off.
+    adminEmailDomains :: [Text]
   }
   deriving (Generic)
 

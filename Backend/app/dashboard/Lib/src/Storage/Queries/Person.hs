@@ -370,7 +370,22 @@ updatePersonPassword personId newPasswordHash = do
   updateWithKV
     [ Se.Set BeamP.passwordHash $ Just newPasswordHash,
       Se.Set BeamP.updatedAt now,
-      Se.Set BeamP.passwordUpdatedAt $ Just now
+      Se.Set BeamP.passwordUpdatedAt $ Just now,
+      -- The person has now chosen their own secret, so the forced-change gate is satisfied.
+      Se.Set BeamP.forcePasswordChange $ Just False
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+-- | Admin-assigned password. Deliberately does NOT refresh passwordUpdatedAt and marks the
+-- credential as requiring replacement, so a temporary password cannot become a lasting one.
+updatePersonPasswordByAdmin :: BeamFlow m r => Id Person -> DbHash -> m ()
+updatePersonPasswordByAdmin personId newPasswordHash = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.passwordHash $ Just newPasswordHash,
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.forcePasswordChange $ Just True
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
@@ -465,6 +480,7 @@ instance FromTType' BeamP.Person Person.Person where
             dashboardType = dashboardType,
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
+            merchantId = merchantId <&> Id,
             language = language,
             entityId = entityId <&> Id,
             ..
@@ -482,6 +498,7 @@ instance ToTType' BeamP.Person Person.Person where
         dashboardType = dashboardType,
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,
+        merchantId = merchantId <&> getId,
         language = language,
         entityId = entityId <&> getId,
         ..

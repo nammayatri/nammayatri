@@ -211,8 +211,9 @@ login rawReq = do
           _ -> throwError (InvalidRequest "Invalid mobile number or token")
       (_, _, _, Just em, Just pwd) -> do
         loginRateLimitOptions <- asks (.loginRateLimitOptions)
-        checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just em)) loginRateLimitOptions
+        checkSlidingWindowLimitWithOptions (DP.makeEmailHitsCountKey (Just em)) loginRateLimitOptions
         p <- QP.findByEmailAndPassword em pwd >>= fromMaybeM (PersonDoesNotExist em)
+        Auth.checkForcedPasswordChange p
         Auth.checkPasswordExpiry p
         pure p
       _ ->
@@ -239,9 +240,6 @@ login rawReq = do
   when (not $ T.null loginRes.authToken) $ do
     buildAndCreateAuthTransaction DTransaction.DashboardUserLogin person merchant'
   pure loginRes
-
-makeEmailHitsCountKey :: Maybe Text -> Text
-makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
 
 makeMobileHitsCountKey :: Text -> Text -> Text
 makeMobileHitsCountKey cc mobile = "MobileTokenLogin:" <> cc <> ":" <> mobile <> ":hitsCount"
@@ -555,7 +553,7 @@ initiate2FASetup Initiate2FASetupReq {..} = do
       email_ <- email & fromMaybeM (InvalidRequest "Email is required when token is not provided")
       password_ <- password & fromMaybeM (InvalidRequest "Password is required when token is not provided")
       loginRateLimitOptions <- asks (.loginRateLimitOptions)
-      checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey (Just email_)) loginRateLimitOptions
+      checkSlidingWindowLimitWithOptions (DP.makeEmailHitsCountKey (Just email_)) loginRateLimitOptions
       p <- QP.findByEmailAndPassword email_ password_ >>= fromMaybeM (PersonDoesNotExist email_)
       pure (p, Nothing, Nothing)
   personEmail <- case email of
@@ -778,8 +776,8 @@ registerFleetOwner req personId = do
       Just BOAT_FLEET -> FLEET_OWNER
       Nothing -> FLEET_OWNER
 
-buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DP.Person -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
-buildFleetOwner req pid roleId dashboardAccessType = do
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DP.Person -> Id DRole.Role -> DRole.DashboardAccessType -> Id DMerchant.Merchant -> m PT.Person
+buildFleetOwner req pid roleId dashboardAccessType merchantId = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   email <- forM req.email encrypt
@@ -802,6 +800,8 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         rejectedAt = Nothing,
         dashboardType = DEFAULT_DASHBOARD,
         passwordUpdatedAt = Just now,
+        forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
@@ -839,7 +839,7 @@ createFleetOwnerDashboardOnly ::
   Id DP.Person ->
   m ()
 createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
-  fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
+  fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType merchant.id
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))

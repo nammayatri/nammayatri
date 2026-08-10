@@ -159,8 +159,9 @@ buildTicketDashboardUser ::
   Maybe Text ->
   Kernel.Types.Id.Id DRole.Role ->
   DRole.DashboardAccessType ->
+  Kernel.Types.Id.Id Domain.Types.Merchant.Merchant ->
   m PT.Person
-buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
+buildTicketDashboardUser req mbPersonId roleId dashboardAccessType merchantId = do
   pid <- case mbPersonId of
     Just personId -> return $ Kernel.Types.Id.Id personId
     Nothing -> generateGUID
@@ -185,6 +186,8 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
         rejectedAt = Nothing,
         dashboardType = PT.TICKET_DASHBOARD,
         passwordUpdatedAt = Nothing,
+        forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
@@ -200,11 +203,12 @@ registerTicketDashboard req mbPersonId = do
   ticketDashboardRole <-
     QRole.findByDashboardAccessType DRole.TICKET_DASHBOARD_USER
       >>= fromMaybeM (RoleDoesNotExist "TICKET_DASHBOARD_USER")
-  ticketUser <- buildTicketDashboardUser req mbPersonId ticketDashboardRole.id ticketDashboardRole.dashboardAccessType
+  -- Merchant first: the user being created belongs to it, so buildTicketDashboardUser needs its id.
   merchant <-
     QMerchant.findByShortId (Kernel.Types.Id.ShortId req.merchantId)
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId)
   merchantServerAccessCheck merchant
+  ticketUser <- buildTicketDashboardUser req mbPersonId ticketDashboardRole.id ticketDashboardRole.dashboardAccessType merchant.id
   let city' = merchant.defaultOperatingCity
   merchantAccess <- DP.buildMerchantAccess ticketUser.id merchant.id merchant.shortId city'
   QP.create ticketUser

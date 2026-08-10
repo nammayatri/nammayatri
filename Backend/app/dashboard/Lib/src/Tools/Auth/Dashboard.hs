@@ -102,6 +102,8 @@ verifyDashboardAccess ::
   m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- Unconditional: an admin-assigned password must not authorize anything at any tier.
+  Common.checkForcedPasswordChange person
   when (requiredAccessType `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ do
     Common.checkPasswordExpiry person
   case requiredAccessType of
