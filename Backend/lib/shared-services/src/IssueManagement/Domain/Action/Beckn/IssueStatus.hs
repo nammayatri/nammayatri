@@ -52,11 +52,23 @@ data IssueStatusRes = IssueStatusRes
     groName :: Text,
     groPhone :: Text,
     groEmail :: Text,
+    respondentName :: Text,
+    respondentPhone :: Text,
+    respondentEmail :: Text,
+    resolutionProviderName :: Text,
+    resolutionProviderPhone :: Text,
+    resolutionProviderEmail :: Text,
     merchant :: Merchant,
     merchantOperatingCity :: MerchantOperatingCity,
     createdAt :: UTCTimeRFC3339,
     updatedAt :: UTCTimeRFC3339,
-    bapId :: Text
+    bapId :: Text,
+    domain :: Spec.Domain,
+    resolutionShortDesc :: Maybe Text,
+    resolutionLongDesc :: Maybe Text,
+    resolutionActionTriggered :: Maybe Text,
+    resolutionRefundAmount :: Maybe Text,
+    isValueAddNP :: Bool
   }
   deriving (Show, Generic)
 
@@ -70,6 +82,8 @@ validateRequest ::
   m ValidatedDIssueStatus
 validateRequest DIssueStatus {..} iHandle = do
   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
+  when (issue.issueRaisedByMerchant /= Just bapId) $
+    throwError $ InvalidRequest "BAP is not authorized to query this issue"
   booking <- iHandle.findByBookingId (Id issue.bookingId) >>= fromMaybeM (BookingDoesNotExist issue.bookingId)
   let merchantId = fromMaybe booking.providerId issue.merchantId
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -83,15 +97,26 @@ handler ::
     CoreMetrics m
   ) =>
   ValidatedDIssueStatus ->
+  Bool ->
   m IssueStatusRes
-handler ValidatedDIssueStatus {..} = do
-  now <- getCurrentTime
+handler ValidatedDIssueStatus {..} isValueAddNP = do
   let issueStatus = issue.issueStatus
       issueId = issue.id
       respondentAction = fromMaybe (show Spec.PROCESSING) issue.respondentAction
       groName = igmConfig.groName
       groPhone = igmConfig.groPhone
       groEmail = igmConfig.groEmail
+      respondentName = fromMaybe igmConfig.groName igmConfig.respondentName
+      respondentPhone = fromMaybe igmConfig.groPhone igmConfig.respondentPhone
+      respondentEmail = fromMaybe igmConfig.groEmail igmConfig.respondentEmail
+      resolutionProviderName = fromMaybe igmConfig.groName igmConfig.resolutionProviderName
+      resolutionProviderPhone = fromMaybe igmConfig.groPhone igmConfig.resolutionProviderPhone
+      resolutionProviderEmail = fromMaybe igmConfig.groEmail igmConfig.resolutionProviderEmail
       createdAt = UTCTimeRFC3339 issue.createdAt
-      updatedAt = UTCTimeRFC3339 now
+      updatedAt = UTCTimeRFC3339 issue.updatedAt
+      domain = issue.domain
+      resolutionShortDesc = issue.resolutionShortDesc
+      resolutionLongDesc = issue.resolutionLongDesc
+      resolutionActionTriggered = issue.resolutionActionTriggered
+      resolutionRefundAmount = issue.resolutionRefundAmount
   pure IssueStatusRes {..}

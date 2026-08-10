@@ -65,6 +65,7 @@ library
       IssueManagement.Domain.Types.Issue.IGMConfig
       IssueManagement.Domain.Types.Issue.IGMIssue
       IssueManagement.Domain.Types.Issue.IssueApiIntegration
+      IssueManagement.Domain.Types.Issue.IGMIssueAction
       IssueManagement.Domain.Types.Issue.IssueCategory
       IssueManagement.Domain.Types.Issue.IssueChat
       IssueManagement.Domain.Types.Issue.IssueConfig
@@ -79,6 +80,7 @@ library
       IssueManagement.Storage.Beam.Issue.IGMConfig
       IssueManagement.Storage.Beam.Issue.IGMIssue
       IssueManagement.Storage.Beam.Issue.IssueApiIntegration
+      IssueManagement.Storage.Beam.Issue.IGMIssueAction
       IssueManagement.Storage.Beam.Issue.IssueCategory
       IssueManagement.Storage.Beam.Issue.IssueChat
       IssueManagement.Storage.Beam.Issue.IssueConfig
@@ -98,6 +100,7 @@ library
       IssueManagement.Storage.Queries.Issue.IGMConfig
       IssueManagement.Storage.Queries.Issue.IGMIssue
       IssueManagement.Storage.Queries.Issue.IssueApiIntegration
+      IssueManagement.Storage.Queries.Issue.IGMIssueAction
       IssueManagement.Storage.Queries.Issue.IssueCategory
       IssueManagement.Storage.Queries.Issue.IssueChat
       IssueManagement.Storage.Queries.Issue.IssueConfig
