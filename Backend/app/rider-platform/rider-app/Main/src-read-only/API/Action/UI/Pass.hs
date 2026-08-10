@@ -170,6 +170,16 @@ type API =
       :<|> TokenAuth
       :> "multimodal"
       :> "pass"
+      :> "uploadProfilePicture"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Pass.PassUploadProfilePictureReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "multimodal"
+      :> "pass"
       :> "photo"
       :> Capture
            "mediaId"
@@ -194,7 +204,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> getMultimodalPassPhoto :<|> postMultimodalPassSetPrefSrcAndDest
+handler = getMultimodalPassAvailablePasses :<|> postMultimodalPassSelect :<|> postMultimodalPassV2Select :<|> getMultimodalPassList :<|> postMultimodalPassVerify :<|> postMultimodalPassSwitchDeviceId :<|> getMultimodalPassTransactions :<|> postMultimodalPassActivateToday :<|> postMultimodalPassUploadProfilePicture :<|> postMultimodalPassUploadProfilePictureV1 :<|> getMultimodalPassPhoto :<|> postMultimodalPassSetPrefSrcAndDest
 
 getMultimodalPassAvailablePasses ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -293,6 +303,15 @@ postMultimodalPassUploadProfilePicture ::
     Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes
   )
 postMultimodalPassUploadProfilePicture a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postMultimodalPassUploadProfilePictureV1 ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.Pass.PassUploadProfilePictureReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalPassUploadProfilePictureV1 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePictureV1 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalPassPhoto ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

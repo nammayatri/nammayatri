@@ -16,7 +16,9 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.PurchasedPassPayment as Beam
@@ -145,6 +147,13 @@ updateProfilePictureByPurchasedPassIdAndStatus profilePicture purchasedPassId st
         ]
     ]
 
+updateSdkVersionByOrderId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Version.Version -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m ())
+updateSdkVersionByOrderId clientSdkVersion orderId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.clientSdkVersion (Kernel.Utils.Version.versionToText <$> clientSdkVersion), Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
+
 updateStatusAndDatesById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Domain.Types.PurchasedPass.StatusType -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
@@ -182,6 +191,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.benefitDescription (Kernel.Prelude.Just benefitDescription),
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
+      Se.Set Beam.clientSdkVersion (Kernel.Utils.Version.versionToText <$> clientSdkVersion),
       Se.Set Beam.endDate endDate,
       Se.Set Beam.isDashboard isDashboard,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
