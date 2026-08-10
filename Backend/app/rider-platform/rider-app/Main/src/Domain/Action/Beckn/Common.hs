@@ -1898,7 +1898,7 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
   let phoneNumber = countryCode <> mobileNumber
       trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
       messageKey = bool DMM.WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE DMM.WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE (length bookings > 1)
-  trackingUrl <- MessageBuilder.shortenTrackingUrl trackLink
+  trackingUrl <- MessageBuilder.shortenTrackingUrl Nothing trackLink
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
       fare = show booking.estimatedTotalFare.amount
