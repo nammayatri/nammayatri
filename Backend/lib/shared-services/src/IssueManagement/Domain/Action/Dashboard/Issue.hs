@@ -388,7 +388,13 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
         Just catId -> do
           fetchedCategory <- CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
           pure $ Just fetchedCategory.category
-      option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
+      -- Resolves to the real subcategory pick rather than whichever option
+      -- was tapped last (see 'UIR.resolveSubCategoryOptionId') — kept
+      -- consistent with the customer-facing view and the ticket sent to
+      -- Kapture/Xyne, so admins, customers, and the ticket never disagree
+      -- on what the subcategory was.
+      mbSubCategoryOptionId <- maybe (pure Nothing) (\catName -> UIR.resolveSubCategoryOptionId issueReport.chats issueReport.optionId catName identifier) category
+      option <- mapM (\optId -> CQIO.findById optId identifier >>= fromMaybeM (IssueOptionNotFound optId.getId)) mbSubCategoryOptionId
       issueConfig <-
         issueHandle.findIssueConfig merchantOpCityId identifier
           >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
