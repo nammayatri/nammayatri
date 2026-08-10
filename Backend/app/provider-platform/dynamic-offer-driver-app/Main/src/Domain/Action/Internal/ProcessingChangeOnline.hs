@@ -14,6 +14,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (Seconds (..), generateGUIDText, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Kernel.Utils.Logging (logDebug, logError, logInfo)
+import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.FleetOperatorStats as FOS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDS
@@ -35,8 +36,12 @@ processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
     when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $ do
       updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
+      -- Pause idle tracking: bank elapsed idle time and clear the running clock while offline.
+      DriverIdleTime.bankIdleOnOffline driverId
     when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $ do
       QDI.updateOnlineDurationRefreshedAt driverId now
+      -- Resume idle tracking when the driver comes back online.
+      DriverIdleTime.resumeIdleOnOnline driverId
 
 updateOnlineDurationDuringFetchingDailyStats ::
   (CacheFlow m r, EsqDBFlow m r) =>

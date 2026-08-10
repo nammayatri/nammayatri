@@ -65,6 +65,7 @@ import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallInternalMLPricing as ML
+import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -172,8 +173,11 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   _ <- QSRD.createMany searchRequestsForDrivers
 
   -- Count one "request sent" per driver in this batch for the SRDStats sliding-window counters
-  -- surfaced in the POOLING dynamic-logic data.
-  forM_ driverPool $ \dPoolRes -> SDP.incrementSrdSentCount (cast dPoolRes.driverPoolResult.driverId)
+  -- and reset each driver's idle clock, both surfaced in the POOLING dynamic-logic data.
+  forM_ driverPool $ \dPoolRes -> do
+    let personId = cast dPoolRes.driverPoolResult.driverId
+    SDP.incrementSrdSentCount personId
+    DriverIdleTime.resetIdleOnRequestSent personId
 
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do

@@ -284,7 +284,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest),
     specialLocWarriorPreferredSpecialLocId :: Maybe (Id SL.SpecialLocation),
     score :: Maybe A.Value,
-    searchReqDriverStatsCounters :: Maybe SearchReqDriverStatsCounters
+    searchReqDriverStatsCounters :: Maybe SearchReqDriverStatsCounters,
+    idleTimeSeconds :: Maybe Double
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -307,7 +308,8 @@ instance Default DriverPoolWithActualDistResult where
         goHomeReqId = Nothing,
         specialLocWarriorPreferredSpecialLocId = Nothing,
         score = Nothing,
-        searchReqDriverStatsCounters = Nothing
+        searchReqDriverStatsCounters = Nothing,
+        idleTimeSeconds = Nothing
       }
 
 instance HasCoordinates DriverPoolWithActualDistResult where

@@ -426,17 +426,19 @@ getSrdStatsCounters ::
   Id DP.Person ->
   m SearchReqDriverStatsCounters
 getSrdStatsCounters driverId = do
-  acceptanceCountToday <- windowSum 1 (mkQuotesAcceptedKey driverId.getId)
-  acceptanceCountWeekly <- windowSum 7 (mkQuotesAcceptedKey driverId.getId)
-  rejectionCountToday <- windowSum 1 (mkSrdRejectedCountKey driverId.getId)
-  rejectionCountWeekly <- windowSum 7 (mkSrdRejectedCountKey driverId.getId)
-  totalRequestsSentToday <- windowSum 1 (mkSrdSentCountKey driverId.getId)
-  totalRequestsSentWeekly <- windowSum 7 (mkSrdSentCountKey driverId.getId)
-  cancelledRidesToday <- windowSum 1 (mkRideCancelledKey driverId.getId)
-  cancelledRidesWeekly <- windowSum 7 (mkRideCancelledKey driverId.getId)
+  -- One window fetch per key (4 reads/driver); today = head (index 0 = current day-bucket),
+  -- weekly = sum over all 7 day-buckets.
+  (acceptanceCountToday, acceptanceCountWeekly) <- fetchTodayWeekly (mkQuotesAcceptedKey driverId.getId)
+  (rejectionCountToday, rejectionCountWeekly) <- fetchTodayWeekly (mkSrdRejectedCountKey driverId.getId)
+  (totalRequestsSentToday, totalRequestsSentWeekly) <- fetchTodayWeekly (mkSrdSentCountKey driverId.getId)
+  (cancelledRidesToday, cancelledRidesWeekly) <- fetchTodayWeekly (mkRideCancelledKey driverId.getId)
   pure SearchReqDriverStatsCounters {..}
   where
-    windowSum n key = fmap (sum . map (fromMaybe (0 :: Int))) . Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast n key srdStatsWindow
+    fetchTodayWeekly key = do
+      vals <- Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast 7 key srdStatsWindow
+      let today = case vals of (x : _) -> fromMaybe 0 x; _ -> 0
+          weekly = sum (map (fromMaybe 0) vals)
+      pure (today, weekly :: Int)
 
 mkQuotesCountKey :: Text -> Text
 mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId
@@ -738,7 +740,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           previousDropGeoHash = Nothing,
           specialLocWarriorPreferredSpecialLocId = mbPreferredSpecialLocId,
           score = driverGoHomePoolWithActualDistance.score,
-          searchReqDriverStatsCounters = Nothing
+          searchReqDriverStatsCounters = Nothing,
+          idleTimeSeconds = Nothing
         }
 
     makeDriverPoolResultFromGoHome NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
@@ -1020,7 +1023,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           isForwardRequest = False,
           previousDropGeoHash = Nothing,
           score = dpr.score,
-          searchReqDriverStatsCounters = Nothing
+          searchReqDriverStatsCounters = Nothing,
+          idleTimeSeconds = Nothing
         }
 
     filterFunc threshold estDist distanceToPickup =
@@ -1254,7 +1258,8 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score,
-          searchReqDriverStatsCounters = Nothing
+          searchReqDriverStatsCounters = Nothing,
+          idleTimeSeconds = Nothing
         }
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
@@ -1314,7 +1319,8 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score,
-          searchReqDriverStatsCounters = Nothing
+          searchReqDriverStatsCounters = Nothing,
+          idleTimeSeconds = Nothing
         }
 
 refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult)
