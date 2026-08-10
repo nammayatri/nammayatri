@@ -142,6 +142,7 @@ library
       Beckn.ACL.FRFS.Select
       Beckn.ACL.FRFS.Status
       Beckn.ACL.FRFS.Utils
+      Beckn.ACL.FRFSSeller.OnSearch
       Beckn.ACL.IGM.Issue
       Beckn.ACL.IGM.IssueStatus
       Beckn.ACL.IGM.Utils
@@ -178,6 +179,7 @@ library
       Domain.Action.Beckn.FRFS.OnSelect
       Domain.Action.Beckn.FRFS.OnStatus
       Domain.Action.Beckn.FRFS.OnUpdate
+      Domain.Action.Beckn.FRFSSeller.Search
       Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
@@ -524,6 +526,8 @@ library
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
+      SharedLogic.FRFSSeller.CallBAP
+      SharedLogic.FRFSSeller.Common
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate

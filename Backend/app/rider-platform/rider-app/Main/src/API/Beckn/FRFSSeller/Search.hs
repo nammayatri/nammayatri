@@ -14,21 +14,24 @@
 
 -- | Inbound @search@ from a buyer app, answered as an ONDC:TRV11 SELLER.
 --
--- This is the mirror image of "API.Beckn.FRFS.OnSearch": that module receives an
--- @on_search@ callback from a seller we bought from; this one receives the
--- @search@ request a buyer sends us. Phase 1 acknowledges and does nothing else —
--- the catalog and the outbound @on_search@ callback arrive in later tasks.
+-- The mirror image of "API.Beckn.FRFS.OnSearch": that module receives an @on_search@
+-- callback from a seller we bought from; this one receives the @search@ a buyer sends
+-- us. Acknowledge synchronously, then do the work — including the outbound
+-- @on_search@ — on a fork.
 module API.Beckn.FRFSSeller.Search
   ( API,
     handler,
+    searchDedupeKey,
   )
 where
 
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified Domain.Action.Beckn.FRFSSeller.Search as DSearch
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -38,6 +41,17 @@ type API = Spec.SearchAPI
 handler :: SignatureAuthResult -> FlowServer API
 handler = search
 
+-- | One claim per (transaction, message).
+--
+-- The gateway may fan a single search to several of our registered subscriber URIs;
+-- without this, each delivery emits its own @on_search@ and buyers NACK the duplicate
+-- as out-of-sequence.
+searchDedupeKey :: Text -> Text -> Text
+searchDedupeKey txnId msgId = "frfsSeller:search:" <> txnId <> ":" <> msgId
+
+searchDedupeTtlSeconds :: Redis.ExpirationTime
+searchDedupeTtlSeconds = 60
+
 search :: SignatureAuthResult -> Spec.SearchReq -> FlowHandler Spec.AckResponse
 search _authResult req = withFlowHandlerAPI $ do
   transactionId <-
@@ -46,6 +60,22 @@ search _authResult req = withFlowHandlerAPI $ do
   messageId <-
     req.searchReqContext.contextMessageId
       & fromMaybeM (InvalidRequest "MessageId not found")
-  withTransactionIdLogTag' transactionId $
-    logInfo $ "FRFS seller search received: msg=" <> messageId
+  withTransactionIdLogTag' transactionId $ do
+    -- Fail open: with Redis unavailable we would rather emit a duplicate on_search
+    -- than answer nothing at all.
+    isFirst <-
+      try @_ @SomeException
+        ( Redis.withCrossAppRedis $
+            Redis.setNxExpire (searchDedupeKey transactionId messageId) searchDedupeTtlSeconds True
+        )
+        >>= \case
+          Right claimed -> pure claimed
+          Left err -> do
+            logWarning $ "FRFS seller search dedupe unavailable, processing anyway: " <> show err
+            pure True
+    if isFirst
+      then do
+        logInfo $ "FRFS seller search accepted: msg=" <> messageId
+        fork "FRFS seller on_search processing" $ DSearch.handleSearch req
+      else logInfo $ "FRFS seller search duplicate ignored: msg=" <> messageId
   pure Utils.ack
