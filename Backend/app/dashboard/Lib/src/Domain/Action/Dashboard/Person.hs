@@ -55,6 +55,7 @@ import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonTier as QPT
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
@@ -248,30 +249,55 @@ adminEmailDomainError = "Administrator accounts must use an approved organizatio
 -- | Admin mutations that address a person directly by id must not reach across merchants.
 -- Without this an admin of any merchant could act on an arbitrary person id.
 --
--- The predicate is "belongs to somebody else", not "belongs to me". createPerson does not create
--- a merchant_access row — access is granted separately by assignMerchantCityAccess — so between
--- those two calls a person legitimately has no access rows at all. Treating that as a rejection
--- would strand every half-provisioned account: an admin who typo'd an email at creation could
--- neither fix it nor delete it, and the natural create -> assign role -> grant access order would
--- break at the middle step. A person with no access rows anywhere is unprovisioned and owned by
--- nobody, so the caller may act on them; a person with access rows none of which name the
--- caller's merchant belongs to another merchant and is rejected.
+-- Authority comes from two sources, unioned:
 --
--- "Zero access rows" therefore means unprovisioned. It would also describe a deprovisioned
--- person, but no path leaves that state today: every access-row deletion
--- (QAccess.deleteAllByPersonId) is immediately followed by QP.deletePerson, so the person row
--- does not outlive its access rows. A future deprovision-without-delete path would need to
--- revisit this predicate, since it would then be indistinguishable from unprovisioned.
+--   * person.merchantId — the merchant the person was provisioned under. Written once at
+--     creation, never updated, and not reachable from any admin endpoint. This is the anchor.
+--   * merchant_access rows — merchants the person has since been granted access to. Included
+--     so that a person shared across merchants stays manageable by each of them.
+--
+-- The access rows alone are not a safe basis, and an earlier version of this function that used
+-- only them was bypassable: resetMerchantAccess and resetMerchantCityAccess delete access rows
+-- and leave the person row alive, so an attacker could empty a victim's rows and then claim them
+-- as "unowned". That is also reachable without any attack — a merchant revoking its own user's
+-- last access produces exactly that state. person.merchantId survives both, which is the point:
+-- authorization must not derive from state the unauthorized party can modify.
+--
+-- No claimants at all is still permitted, and now means only two things. Either the person was
+-- created moments ago and has not been granted access yet (createPerson does not write an access
+-- row; createUserForMerchant grants it on the next line) — rejecting that would strand an admin
+-- who typo'd an email at creation, unable to fix or delete the account. Or the row predates the
+-- merchantId column and was never backfilled. Neither is forgeable by a caller.
 assertPersonInCallerMerchant ::
   BeamFlow m r =>
   TokenInfo ->
   Id DP.Person ->
   m ()
 assertPersonInCallerMerchant tokenInfo personId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   allAccess <- QAccess.findAllMerchantAccessByPersonId personId
-  unless (null allAccess) $
-    unless (any (\access -> access.merchantId == tokenInfo.merchantId) allAccess) $
+  let claimants = maybe [] (: []) person.merchantId <> map (.merchantId) allAccess
+  unless (null claimants) $
+    unless (tokenInfo.merchantId `elem` claimants) $
       throwError (PersonDoesNotExist personId.getId)
+
+-- | Granting a person access to a merchant is how somebody becomes a user of that merchant, so
+-- leaving this open undoes every other cross-merchant guard: an admin of B could grant their own
+-- user access to merchant A. Callers are held to their own merchant, with an escape hatch for a
+-- seeded SUPER_ADMIN, who legitimately provisions across merchants.
+--
+-- Existence-guarded like the rest of the admin tiering (see DCap.guardAdminMutation): until a
+-- SUPER_ADMIN row exists, the previous unrestricted behavior stands, so no deployment breaks on
+-- rollout. Returns True when this is a cross-merchant grant that was permitted.
+assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m Bool
+assertMayGrantAccessToMerchant tokenInfo targetMerchantId
+  | targetMerchantId == tokenInfo.merchantId = pure False
+  | otherwise = do
+    superAdminSeeded <- QPT.superAdminExists
+    when superAdminSeeded $
+      unlessM (DCap.isSuperAdmin tokenInfo.personId) $
+        throwError AccessDenied
+    pure True
 
 -- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
 -- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
@@ -348,7 +374,7 @@ createPerson tokenInfo personEntity = do
         res <- InternalClient.callBPPInternalCreatePerson (getShortId merchant.shortId) tokenInfo.city createReq
         pure $ cast res.personId
       else generateGUID
-  person <- buildPerson personId personEntity (role.dashboardAccessType)
+  person <- buildPerson personId personEntity (role.dashboardAccessType) tokenInfo.merchantId
   decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing Nothing Nothing
   QP.create person
@@ -430,11 +456,17 @@ assignMerchantCityAccess ::
   Id DP.Person ->
   MerchantCityAccessReq ->
   m APISuccess
-assignMerchantCityAccess _ personId req = do
+assignMerchantCityAccess tokenInfo personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
+  isCrossMerchantGrant <- assertMayGrantAccessToMerchant tokenInfo merchant.id
+  -- A same-merchant grant must not adopt another merchant's user. One person row means one
+  -- password across every merchant they can reach, so adopting merchant A's user and then
+  -- resetting their password would hand the caller a working session on A. Cross-merchant grants
+  -- skip this because they are already SUPER_ADMIN-gated above.
+  unless isCrossMerchantGrant $ assertPersonInCallerMerchant tokenInfo personId
   let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
   unless isSupportedCity $
     throwError $ InvalidRequest "Server does not support this city"
@@ -456,11 +488,14 @@ resetMerchantAccess ::
   Id DP.Person ->
   MerchantAccessReq ->
   m APISuccess
-resetMerchantAccess _ personId req = do
+resetMerchantAccess tokenInfo personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
+  -- Revoking access is a mutation on somebody else's user like any other, and it used to be the
+  -- one that let a caller manufacture an "unowned" person for assertPersonInCallerMerchant.
+  assertPersonInCallerMerchant tokenInfo personId
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
   case merchantAccesses of
@@ -482,11 +517,12 @@ resetMerchantCityAccess ::
   Id DP.Person ->
   MerchantCityAccessReq ->
   m APISuccess
-resetMerchantCityAccess _ personId req = do
+resetMerchantCityAccess tokenInfo personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
+  assertPersonInCallerMerchant tokenInfo personId
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
@@ -750,8 +786,8 @@ deletePerson tokenInfo personId = do
   QP.deletePerson personId
   pure Success
 
-buildPerson :: (EncFlow m r) => Id SP.Person -> CreatePersonReq -> DRole.DashboardAccessType -> m SP.Person
-buildPerson pid req dashboardAccessType = do
+buildPerson :: (EncFlow m r) => Id SP.Person -> CreatePersonReq -> DRole.DashboardAccessType -> Id DMerchant.Merchant -> m SP.Person
+buildPerson pid req dashboardAccessType merchantId = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   --TODO write query to make existing email in person table to lower case
@@ -777,6 +813,7 @@ buildPerson pid req dashboardAccessType = do
         rejectedAt = Nothing,
         passwordUpdatedAt = Just now,
         forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

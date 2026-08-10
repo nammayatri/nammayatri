@@ -776,8 +776,8 @@ registerFleetOwner req personId = do
       Just BOAT_FLEET -> FLEET_OWNER
       Nothing -> FLEET_OWNER
 
-buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DP.Person -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
-buildFleetOwner req pid roleId dashboardAccessType = do
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DP.Person -> Id DRole.Role -> DRole.DashboardAccessType -> Id DMerchant.Merchant -> m PT.Person
+buildFleetOwner req pid roleId dashboardAccessType merchantId = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   email <- forM req.email encrypt
@@ -801,6 +801,7 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         dashboardType = DEFAULT_DASHBOARD,
         passwordUpdatedAt = Just now,
         forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,
@@ -838,7 +839,7 @@ createFleetOwnerDashboardOnly ::
   Id DP.Person ->
   m ()
 createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
-  fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
+  fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType merchant.id
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
   let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))
