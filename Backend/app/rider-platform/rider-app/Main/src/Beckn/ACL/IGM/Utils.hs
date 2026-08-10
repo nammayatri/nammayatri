@@ -46,14 +46,15 @@ buildContext action domain merchant txnId msgId city bppData mTTL = do
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
-      { contextVersion = Just "1.0.0",
+      { contextCoreVersion = Just "1.0.0",
         contextDomain = encodeToText' domain,
         contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just $ showBaseUrl bapUrl,
         contextBppId,
         contextBppUri,
-        contextLocation = Just $ tfLocation cityCode,
+        contextCity = Just cityCode,
+        contextCountry = Just "IND",
         contextKey = Nothing,
         contextMessageId = Just msgId,
         contextTimestamp = Just now,
@@ -66,23 +67,6 @@ buildContext action domain merchant txnId msgId city bppData mTTL = do
       case cityCode of
         String code -> pure code
         _ -> throwError $ InvalidRequest "Incorrect city"
-
-tfLocation :: Text -> Spec.Location
-tfLocation location_code =
-  Spec.Location
-    { locationCity =
-        Just $
-          Spec.City
-            { cityCode = Just location_code,
-              cityName = Nothing
-            },
-      locationCountry =
-        Just $
-          Spec.Country
-            { countryCode = Just "IND",
-              countryName = Nothing
-            }
-    }
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
@@ -129,6 +113,28 @@ buildIGMIssue now issueId booking rider transactionId domain = do
       respondentPhone = Nothing,
       respondingMerchantId = Just booking.providerId,
       respondentEntityType = Nothing,
+      resolutionShortDesc = Nothing,
+      resolutionLongDesc = Nothing,
+      resolutionActionTriggered = Nothing,
+      resolutionRefundAmount = Nothing,
+      descriptionShort = Nothing,
+      descriptionLong = Nothing,
+      orderState = Nothing,
+      orderProviderId = Nothing,
+      orderMerchantOrderId = Nothing,
+      orderItemId = Nothing,
+      orderItemQuantity = Nothing,
+      orderFulfillmentId = Nothing,
+      orderFulfillmentState = Nothing,
+      igmCategory = Nothing,
+      igmSubCategory = Nothing,
+      sourceType = Nothing,
+      sourceNpId = Nothing,
+      contextTransactionId = Nothing,
+      contextDomain = Nothing,
+      expectedResponseTime = Nothing,
+      expectedResolutionTime = Nothing,
+      issueRating = Nothing,
       transactionId = transactionId,
       domain = domain,
       merchantOperatingCityId = cast <$> (Just booking.merchantOperatingCityId),
