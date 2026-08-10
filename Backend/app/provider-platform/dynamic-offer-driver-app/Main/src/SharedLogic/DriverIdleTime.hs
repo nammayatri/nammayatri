@@ -16,10 +16,11 @@ module SharedLogic.DriverIdleTime
   ( resetIdleOnRequestSent,
     bankIdleOnOffline,
     resumeIdleOnOnline,
-    getIdleTimeSeconds,
+    getIdleTimeSecondsBulk,
   )
 where
 
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -63,11 +64,33 @@ resumeIdleOnOnline driverId = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   Redis.setExp (mkIdleLastRequestAtKey driverId.getId) now idleKeyExpiry
 
--- Current idle time in seconds = banked + running (running is 0 while paused/offline).
-getIdleTimeSeconds :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m Double
-getIdleTimeSeconds driverId = Redis.withCrossAppRedis $ do
-  now <- getCurrentTime
-  banked <- fromMaybe 0 <$> Redis.get (mkIdleBankedKey driverId.getId)
-  mbLast <- Redis.get (mkIdleLastRequestAtKey driverId.getId)
-  let running = maybe 0 (\lastAt -> max 0 (realToFrac (diffUTCTime now lastAt))) mbLast
-  pure (banked + running)
+-- Cap on drivers per pipelined MGET so a big pool never issues one unboundedly large multi-key
+-- Redis read in a single I/O.
+idleBulkDriverChunkSize :: Int
+idleBulkDriverChunkSize = 50
+
+chunksOfList :: Int -> [a] -> [[a]]
+chunksOfList _ [] = []
+chunksOfList n xs
+  | n <= 0 = [xs]
+  | otherwise = let (a, rest) = splitAt n xs in a : chunksOfList n rest
+
+-- Current idle time in seconds for a whole batch of drivers = banked + running (running is 0 while
+-- paused/offline), in pipelined cross-slot MGETs of at most 'idleBulkDriverChunkSize' drivers each
+-- (banked keys + last-request keys), instead of two Redis reads per driver.
+getIdleTimeSecondsBulk :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> m (Map.Map (Id DP.Person) Double)
+getIdleTimeSecondsBulk driverIds =
+  Map.unions <$> mapM readChunk (chunksOfList idleBulkDriverChunkSize driverIds)
+  where
+    readChunk [] = pure Map.empty
+    readChunk chunk = do
+      now <- getCurrentTime
+      let bankedKeys = map (\d -> mkIdleBankedKey d.getId) chunk
+          lastKeys = map (\d -> mkIdleLastRequestAtKey d.getId) chunk
+      bankedM <- Map.fromList <$> Redis.withCrossAppRedis (Redis.mGetClusterWithKeys @Double bankedKeys)
+      lastM <- Map.fromList <$> Redis.withCrossAppRedis (Redis.mGetClusterWithKeys @UTCTime lastKeys)
+      let idleFor d =
+            let banked = Map.findWithDefault 0 (mkIdleBankedKey d.getId) bankedM
+                running = maybe 0 (\lastAt -> max 0 (realToFrac (diffUTCTime now lastAt))) (Map.lookup (mkIdleLastRequestAtKey d.getId) lastM)
+             in banked + running
+      pure $ Map.fromList [(d, idleFor d) | d <- chunk]

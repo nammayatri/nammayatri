@@ -28,7 +28,7 @@ module SharedLogic.DriverPool
     incrementCancellationCount,
     incrementSrdRejectedCount,
     incrementSrdSentCount,
-    getSrdStatsCounters,
+    getSrdStatsCountersBulk,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getQuotesCount,
@@ -65,6 +65,7 @@ import qualified Data.Geohash as DG
 import Data.List (length, partition)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -153,9 +154,7 @@ srdStatsWindow :: SWC.SlidingWindowOptions
 srdStatsWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
-windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> CDIP.findByMerchantOpCityId merchantOpCityId Nothing
-  where
-    defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
+windowFromIntelligentPoolConfig merchantOpCityId windowKey = pure $ SWC.SlidingWindowOptions 7 SWC.Days
 
 getBatchSize :: V.Vector Int -> Int -> Int -> Int
 getBatchSize dynamicBatchSize index driverBatchSize =
@@ -418,27 +417,59 @@ incrementSrdSentCount driverId = Redis.withCrossAppRedis $ SWC.incrementWindowCo
 -- day-buckets) for use in the POOLING dynamic-logic data. Acceptance reuses the existing
 -- mkQuotesAcceptedKey counter and cancellation reuses mkRideCancelledKey (to avoid
 -- double-counting); rejection and sent use the dedicated SRDStats keys.
-getSrdStatsCounters ::
-  ( Redis.HedisFlow m r,
+-- Cap on how many drivers' keys go into a single pipelined MGET, so a large pool never issues one
+-- unboundedly large multi-key Redis read in a single I/O.
+bulkDriverChunkSize :: Int
+bulkDriverChunkSize = 50
+
+chunksOfList :: Int -> [a] -> [[a]]
+chunksOfList _ [] = []
+chunksOfList n xs
+  | n <= 0 = [xs]
+  | otherwise = let (a, rest) = splitAt n xs in a : chunksOfList n rest
+
+-- | Bulk per-driver SRD counters for the pool batch, in pipelined cross-slot MGETs of at most
+-- 'bulkDriverChunkSize' drivers each. Reads each counter's 7 per-day bucket keys directly (the
+-- authoritative integers written by incrementWindowCount, built via the SWC lib's own key builders
+-- so the format matches exactly), so it needs neither the per-key combined-cache read/lock nor N
+-- separate round-trips. today = current day-bucket (index 0), weekly = sum over the 7 day-buckets.
+getSrdStatsCountersBulk ::
+  ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id DP.Person ->
-  m SearchReqDriverStatsCounters
-getSrdStatsCounters driverId = do
-  -- One window fetch per key (4 reads/driver); today = head (index 0 = current day-bucket),
-  -- weekly = sum over all 7 day-buckets.
-  (acceptanceCountToday, acceptanceCountWeekly) <- fetchTodayWeekly (mkQuotesAcceptedKey driverId.getId)
-  (rejectionCountToday, rejectionCountWeekly) <- fetchTodayWeekly (mkSrdRejectedCountKey driverId.getId)
-  (totalRequestsSentToday, totalRequestsSentWeekly) <- fetchTodayWeekly (mkSrdSentCountKey driverId.getId)
-  (cancelledRidesToday, cancelledRidesWeekly) <- fetchTodayWeekly (mkRideCancelledKey driverId.getId)
-  pure SearchReqDriverStatsCounters {..}
+  [Id DP.Person] ->
+  m (Map.Map (Id DP.Person) SearchReqDriverStatsCounters)
+getSrdStatsCountersBulk driverIds =
+  Map.unions <$> mapM readChunk (chunksOfList bulkDriverChunkSize driverIds)
   where
-    fetchTodayWeekly key = do
-      vals <- Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast 7 key srdStatsWindow
-      let today = case vals of (x : _) -> fromMaybe 0 x; _ -> 0
-          weekly = sum (map (fromMaybe 0) vals)
-      pure (today, weekly :: Int)
+    baseKeysFor did = [mkQuotesAcceptedKey did, mkRideCancelledKey did, mkSrdRejectedCountKey did, mkSrdSentCountKey did]
+    readChunk [] = pure Map.empty
+    readChunk chunk = do
+      now <- getCurrentTime
+      let dayKeys bk = SWC.getkeysForLastPeriods srdStatsWindow now (SWC.makeSlidingWindowKey srdStatsWindow.periodType bk)
+          allKeys = concatMap (\d -> concatMap dayKeys (baseKeysFor d.getId)) chunk
+      pairs <- Redis.withCrossAppRedis $ Redis.mGetClusterWithKeys @Integer allKeys
+      let valMap = Map.fromList pairs
+          sumHead ks =
+            let vs = map (\k -> Map.findWithDefault 0 k valMap) ks
+             in (fromIntegral (case vs of (x : _) -> x; _ -> 0 :: Integer), fromIntegral (sum vs))
+          countersFor did =
+            let (accT, accW) = sumHead (dayKeys (mkQuotesAcceptedKey did))
+                (canT, canW) = sumHead (dayKeys (mkRideCancelledKey did))
+                (rejT, rejW) = sumHead (dayKeys (mkSrdRejectedCountKey did))
+                (sentT, sentW) = sumHead (dayKeys (mkSrdSentCountKey did))
+             in SearchReqDriverStatsCounters
+                  { acceptanceCountToday = accT,
+                    acceptanceCountWeekly = accW,
+                    cancelledRidesToday = canT,
+                    cancelledRidesWeekly = canW,
+                    rejectionCountToday = rejT,
+                    rejectionCountWeekly = rejW,
+                    totalRequestsSentToday = sentT,
+                    totalRequestsSentWeekly = sentW
+                  }
+      pure $ Map.fromList [(d, countersFor d.getId) | d <- chunk]
 
 mkQuotesCountKey :: Text -> Text
 mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId
