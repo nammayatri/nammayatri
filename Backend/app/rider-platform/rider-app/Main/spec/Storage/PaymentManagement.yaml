@@ -18,6 +18,11 @@ PaymentCustomer:
     customerId : CustomerId
     defaultPaymentMethodId : Maybe PaymentMethodId
     paymentMode : Maybe PaymentMode
+    cardBrand : Maybe Text
+    cardIsin : Maybe Text
+    cardLastFourDigits : Maybe Text
+    cardIssuer : Maybe Text
+    cardType : Maybe Text
 
   default:
     paymentMode : "'LIVE'"
@@ -47,7 +52,7 @@ PaymentCustomer:
 
     updateDefaultPaymentMethodId:
       kvFunction: updateWithKV
-      params: [defaultPaymentMethodId]
+      params: [defaultPaymentMethodId, cardBrand, cardIsin, cardLastFourDigits, cardIssuer, cardType]
       where:
         and: [personId, paymentMode]
 

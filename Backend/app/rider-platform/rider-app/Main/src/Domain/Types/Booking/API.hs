@@ -60,8 +60,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Types.SpecialLocation as SL
@@ -164,7 +166,17 @@ data BookingAPIEntity = BookingAPIEntity
     specialLocationSupportNumber :: Maybe Text,
     commissionCharge :: Maybe HighPrecMoney,
     refunds :: [RideRefundInfo],
-    fareSettlementType :: Maybe SL.FareSettlementType
+    fareSettlementType :: Maybe SL.FareSettlementType,
+    cardInfo :: Maybe RideCardInfo
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data RideCardInfo = RideCardInfo
+  { cardBrand :: Maybe Text,
+    cardIsin :: Maybe Text,
+    cardLastFourDigits :: Maybe Text,
+    cardIssuer :: Maybe Text,
+    cardType :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -333,8 +345,9 @@ makeBookingAPIEntity ::
   Bool ->
   Maybe BookingCancellationReasonAPIEntity ->
   [RideRefundInfo] ->
+  Maybe RideCardInfo ->
   m BookingAPIEntity
-makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason refunds = do
+makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason refunds cardInfo = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
   merchant <- CQM.findById booking.merchantId
   let isOnlinePayment = maybe False (.onlinePayment) merchant
@@ -418,7 +431,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         specialLocationSupportNumber = booking.specialLocationSupportNumber,
         commissionCharge = booking.commission,
         refunds = refunds,
-        fareSettlementType = booking.fareSettlementType
+        fareSettlementType = booking.fareSettlementType,
+        cardInfo = cardInfo
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -579,19 +593,39 @@ buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   -- return none. Same flag RidePayment guards refund initiation with (enablePaymentRefunds).
   mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   let refundsEnabled = fromMaybe False (mbRiderConfig >>= (.enablePaymentRefunds))
-  refunds <- if refundsEnabled then maybe (pure []) (getRideRefunds . (.id)) mbRide else pure []
-  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds
+  mbMerchant <- CQM.findById booking.merchantId
+  let isOnlinePaymentBooking = maybe False (.onlinePayment) mbMerchant && booking.paymentInstrument /= Just DMPM.Cash
+  (refunds, cardInfo) <-
+    if not isOnlinePaymentBooking
+      then pure ([], Nothing)
+      else do
+        mbOrder <- maybe (pure Nothing) (QPaymentOrder.findByDomainEntityId . (.getId) . (.id)) mbRide
+        refunds' <- if refundsEnabled then getOrderRefunds mbOrder else pure []
+        cardInfo' <- getOrderCardInfo mbOrder
+        pure (refunds', cardInfo')
+  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason) refunds cardInfo
 
 makeRideRefundInfo :: DRefunds.Refunds -> RideRefundInfo
 makeRideRefundInfo DRefunds.Refunds {..} = RideRefundInfo {amount = refundAmount, reference = arn, ..}
 
--- | The ride's order is keyed by domainEntityId (the tip order uses "tip:<rideId>", so an exact match
---   excludes it), and refunds hang off the order's shortId, not its id.
-getRideRefunds :: PaymentBeamFlow.BeamFlow m r => Id DRide.Ride -> m [RideRefundInfo]
-getRideRefunds rideId = do
-  mbOrder <- QPaymentOrder.findByDomainEntityId rideId.getId
+-- | Refunds hang off the order's shortId, not its id.
+getOrderRefunds :: PaymentBeamFlow.BeamFlow m r => Maybe DOrder.PaymentOrder -> m [RideRefundInfo]
+getOrderRefunds mbOrder = do
   refunds <- maybe (pure []) (HQRefunds.findAllByOrderId . (.shortId)) mbOrder
   pure $ sortOn (Down . (.createdAt)) $ map makeRideRefundInfo refunds
+
+getOrderCardInfo :: PaymentBeamFlow.BeamFlow m r => Maybe DOrder.PaymentOrder -> m (Maybe RideCardInfo)
+getOrderCardInfo mbOrder = runMaybeT $ do
+  order <- MaybeT $ pure mbOrder
+  txn <- MaybeT $ HQPaymentTransaction.findEarliestChargedTransactionByOrderId order.id
+  pure
+    RideCardInfo
+      { cardBrand = txn.cardBrand,
+        cardIsin = txn.cardIsin,
+        cardLastFourDigits = txn.cardLastFourDigits,
+        cardIssuer = txn.cardIssuer,
+        cardType = txn.cardType
+      }
 
 --Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
