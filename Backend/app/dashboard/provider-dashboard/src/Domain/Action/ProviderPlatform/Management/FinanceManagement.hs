@@ -12,6 +12,10 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
     getFinanceManagementFinanceAuditList,
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
+    postFinanceManagementTdsReimbursementRequestSubmit,
+    getFinanceManagementTdsReimbursementStatus,
+    getFinanceManagementTdsReimbursementList,
+    getFinanceManagementTdsReimbursement,
   )
 where
 
@@ -146,3 +150,26 @@ getFinanceManagementFinanceSapJournalsTransactions :: (Kernel.Types.Id.ShortId D
 getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity apiTokenInfo limit offset subscriptionId batchId transactionType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceSapJournalsTransactions) limit offset subscriptionId batchId transactionType
+
+postFinanceManagementTdsReimbursementRequestSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRequestSubmitReq -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementRequestSubmitRes)
+postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  let requestorId = apiTokenInfo.personId.getId
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementTdsReimbursementRequestSubmit) requestorId req)
+
+getFinanceManagementTdsReimbursementStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatusRes)
+getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiTokenInfo assessmentYear quarter = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = apiTokenInfo.personId.getId
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementTdsReimbursementStatus) quarter assessmentYear requestorId
+
+getFinanceManagementTdsReimbursementList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementQuarter -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementListRes)
+getFinanceManagementTdsReimbursementList merchantShortId opCity apiTokenInfo assessmentYear fleetOwnerId from limit offset quarter status tanNumber to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementTdsReimbursementList) assessmentYear fleetOwnerId from limit offset quarter status tanNumber to
+
+getFinanceManagementTdsReimbursement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.TdsReimbursementDetailRes)
+getFinanceManagementTdsReimbursement merchantShortId opCity apiTokenInfo requestId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementTdsReimbursement) requestId

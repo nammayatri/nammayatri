@@ -11,6 +11,7 @@ module Lib.Finance.Core.Types
 
     -- * Common Types
     TimeRange (..),
+    Image,
     -- Reexport (can be removed, and used directly from Kernel.Utils.Common)
     ActorType (..),
     ActorInfo (..),
@@ -50,3 +51,5 @@ data TimeRange = TimeRange
     rangeTo :: UTCTime
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+data Image

@@ -163,6 +163,8 @@ INSERT INTO atlas_dashboard.capability (id, domain, description, is_system) VALU
     ('finance.insurance.read', 'finance', '', false),
     ('finance.fleet.read', 'finance', '', false),
     ('finance.invoice.read', 'finance', '', false),
+    ('finance.tds_reimbursement.read', 'finance', '', false),
+    ('finance.tds_reimbursement.write', 'finance', '', false),
     ('analytics.core.read', 'analytics', '', false),
     ('analytics.performance.read', 'analytics', '', false),
     ('analytics.public_transport.read', 'analytics', '', false),

@@ -14,6 +14,8 @@ import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
 import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
 import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
 import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
+import qualified Lib.Finance.Storage.Beam.FinanceTdsReimbursementInvoiceMapping as BeamTdsMap
+import qualified Lib.Finance.Storage.Beam.FinanceTdsReimbursementRequest as BeamTdsReq
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
@@ -50,5 +52,7 @@ type BeamFlow m r =
     HasSchemaName BeamPgPayout.PgPayoutSettlementReportT,
     HasSchemaName BeamSapJournal.SapJournalEntryT,
     HasSchemaName BeamSettlementFileInfo.SettlementFileInfoT,
-    HasSchemaName BeamJournalEntryTransaction.JournalEntryTransactionT
+    HasSchemaName BeamJournalEntryTransaction.JournalEntryTransactionT,
+    HasSchemaName BeamTdsReq.FinanceTdsReimbursementRequestT,
+    HasSchemaName BeamTdsMap.FinanceTdsReimbursementInvoiceMappingT
   )

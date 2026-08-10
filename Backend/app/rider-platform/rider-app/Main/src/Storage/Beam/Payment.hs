@@ -22,6 +22,8 @@ import qualified Lib.Finance.Storage.Beam.Account as BeamAccount
 import qualified Lib.Finance.Storage.Beam.AuditEntry as BeamAudit
 import qualified Lib.Finance.Storage.Beam.CurrentState as BeamCurrentState
 import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
+import qualified Lib.Finance.Storage.Beam.FinanceTdsReimbursementInvoiceMapping as BeamTdsMap
+import qualified Lib.Finance.Storage.Beam.FinanceTdsReimbursementRequest as BeamTdsReq
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
@@ -143,6 +145,12 @@ instance HasSchemaName BeamSettlementFileInfo.SettlementFileInfoT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamStateTransition.StateTransitionT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamTdsReq.FinanceTdsReimbursementRequestT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamTdsMap.FinanceTdsReimbursementInvoiceMappingT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamOF.OfferT where

@@ -1,0 +1,50 @@
+# Finance Kernel - TDS Reimbursement Invoice Mapping Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  FinanceTdsReimbursementRequest: Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest
+  Invoice: Lib.Finance.Domain.Types.Invoice
+
+FinanceTdsReimbursementInvoiceMapping:
+  tableName: finance_tds_reimbursement_invoice_mapping
+  derives: "Generic"
+
+  excludedFields: [merchantId, merchantOperatingCityId, updatedAt]
+
+  fields:
+    id: Id FinanceTdsReimbursementInvoiceMapping
+    requestId: Id FinanceTdsReimbursementRequest
+    invoiceId: Id Invoice
+    revenueRecognisedSnapshot: HighPrecMoney #frozen at submit time
+    tdsAmount: HighPrecMoney
+    tdsCreditReceivable: HighPrecMoney
+    createdAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    requestId: SecondaryKey
+    invoiceId: SecondaryKey
+
+  queries:
+    findAllByRequestId:
+      kvFunction: findAllWithKV
+      where: requestId
+
+    findAllByInvoiceId:
+      kvFunction: findAllWithKV
+      where: invoiceId
+
+    findByRequestIdAndInvoiceId:
+      kvFunction: findOneWithKV
+      where:
+        and: [requestId, invoiceId]
+
+    updateTdsCreditReceivable:
+      kvFunction: updateOneWithKV
+      params: [tdsCreditReceivable]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
