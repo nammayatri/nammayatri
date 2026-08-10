@@ -192,6 +192,7 @@ FRFSQuote:
     multimodalSearchRequestId: Maybe Text
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
+    offerSegment: Maybe Text
   beamFields:
     fromStationCode:
       fromStationId: Text

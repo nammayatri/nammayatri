@@ -1,0 +1,68 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PassType: Domain.Types.PassType
+  VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
+
+PersonPTStats:
+  tableName: person_pt_stats
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
+
+  types:
+    FRFSProductType:
+      enum: "TICKET,PASS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id PersonPTStats
+    personId: Id Person
+    staticPersonId: Text
+    vehicleType: Maybe VehicleCategory
+    vehicleServiceTierType: Maybe ServiceTierType
+    productType: FRFSProductType
+    passTypeId: Maybe (Id PassType)
+    ticketCount: Maybe Int
+    purchaseCount: Int
+    lastPurchasedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <FRFSProductType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <FRFSProductType>
+
+  sqlType:
+    productType: text
+    vehicleServiceTierType: text
+
+  constraints:
+    id: PrimaryKey
+    staticPersonId: "!SecondaryKey"
+
+  extraIndexes:
+    - columns: [staticPersonId, vehicleType, vehicleServiceTierType, productType, passTypeId]
+    - columns: [staticPersonId]
+
+  queries:
+    findAllByStaticPersonId:
+      kvFunction: findAllWithKV
+      where: staticPersonId
+    findByDimensions:
+      kvFunction: findOneWithKV
+      where:
+        and: [staticPersonId, vehicleType, vehicleServiceTierType, productType, passTypeId]
+    updateCounts:
+      kvFunction: updateOneWithKV
+      params: [ticketCount, purchaseCount, lastPurchasedAt, personId]
+      where: id
+    updatePersonIdById:
+      kvFunction: updateOneWithKV
+      params: [personId]
+      where: id
+
+  extraOperations:
+    - GENERATE_INDEXES

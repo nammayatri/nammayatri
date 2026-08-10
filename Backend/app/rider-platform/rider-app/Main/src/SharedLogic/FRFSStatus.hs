@@ -384,6 +384,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
       nwAddress <- asks (.nwAddress)
       udf1 <- SLUtils.getPersonUdf1 person
+      udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode (Just booking.quoteId)
       offerBasket <- Payment.mkOfferBasket merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType) paymentOrder.amount 1
       let createOrderReq =
             Payment.CreateOrderReq
@@ -409,7 +410,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 paymentRules = Nothing,
                 autoRefundPostSuccess = Nothing,
                 paymentFilter = Nothing,
-                udf1 = udf1
+                udf1 = udf1,
+                udf2 = udf2
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)

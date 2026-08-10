@@ -102,7 +102,8 @@ postMultimodalParkingBook mbApiKey req = ActorInfo.withRequestIdActorInfo $ do
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = Nothing
           }
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId

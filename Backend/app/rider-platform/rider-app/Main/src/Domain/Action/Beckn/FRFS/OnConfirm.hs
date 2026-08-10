@@ -40,6 +40,7 @@ import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonPTStats as DPUS
 import EulerHS.Prelude ((+||), (<|>), (||+))
 import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
@@ -64,6 +65,7 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PersonPTStats as SPUS
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -208,11 +210,27 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- Update journey expiry time based on maximum ticket validity using the created tickets
   whenJust mbJourneyId $ \journeyId -> do
     QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
-  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+  recordStatsResult <-
+    withTryCatch "onConfirm:recordPersonPTStats" $ do
+      purchaseEvent <-
+        SPUS.mkPurchaseEvent
+          person
+          (Just booking.vehicleType)
+          booking.serviceTierType
+          DPUS.TICKET
+          Nothing
+          (Just fareParameters.totalQuantity)
+          booking.merchantId
+          booking.merchantOperatingCityId
+      SPUS.recordPurchase purchaseEvent
+  case recordStatsResult of
+    Right () -> pure ()
+    Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
+  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
   buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
   void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity

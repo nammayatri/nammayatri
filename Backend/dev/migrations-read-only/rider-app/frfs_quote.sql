@@ -154,3 +154,9 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN vehicle_number text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN offer_segment text ;

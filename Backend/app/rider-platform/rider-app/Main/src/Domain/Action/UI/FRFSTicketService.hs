@@ -755,7 +755,8 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
           withTryCatch
             "getFrfsSearchQuote:cumulativeOffer"
             ( SOffer.offerListCache merchantId_ personId search.merchantOperatingCityId (FRFSUtils.getPaymentType False search.vehicleType) reprPrice Nothing
-                >>= \offersResp -> SOffer.mkCumulativeOfferResp search.merchantOperatingCityId offersResp [standaloneLeg] Nothing
+                >>= \offersResp ->
+                  SOffer.mkCumulativeOfferResp search.merchantOperatingCityId offersResp [standaloneLeg] Nothing (mbReprQuoteWithCategories >>= \(quote, _) -> quote.offerSegment)
             )
             >>= \case
               Left _ -> pure Nothing
