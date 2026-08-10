@@ -1350,6 +1350,7 @@ TransporterConfig:
     generateReferralCodeForOperator: Maybe Bool
     maxAllowedDocSizeInMB: Maybe Int
     maxAllowedVideoDocSizeInMB: Maybe Int
+    enforceUploadFileTypeCheck: Maybe Bool
     maxNumberOfLuggages: Maybe Int
     bulkWaiveOffLimit: Int
     rcExpiryChecks: Maybe Bool

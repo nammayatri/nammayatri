@@ -93,6 +93,12 @@ data Endpoint
   | DashboardUserLogout
   | DashboardTwoFactorAdminReset
   | DashboardUserDelete
+  | -- Admin-initiated credential and privilege mutations. These change who can authenticate as
+    -- whom, so "which admin did this, to which person, when" has to be answerable after the fact.
+    DashboardUserPasswordResetByAdmin
+  | DashboardUserEmailChangeByAdmin
+  | DashboardUserMobileChangeByAdmin
+  | DashboardUserRoleAssign
   | RiderManagementAPI RiderManagement.ManagementUserActionType
   | RiderAppManagementAPI RiderAppManagement.AppManagementUserActionType
   | RiderIssueManagementAPI RiderIssueManagement.IssueManagementUserActionType
@@ -116,6 +122,10 @@ instance Show Endpoint where
     DashboardUserLogout -> "DASHBOARD_USER/LOGOUT"
     DashboardTwoFactorAdminReset -> "DASHBOARD_USER/TWO_FACTOR_ADMIN_RESET"
     DashboardUserDelete -> "DASHBOARD_USER/DELETE"
+    DashboardUserPasswordResetByAdmin -> "DASHBOARD_USER/PASSWORD_RESET_BY_ADMIN"
+    DashboardUserEmailChangeByAdmin -> "DASHBOARD_USER/EMAIL_CHANGE_BY_ADMIN"
+    DashboardUserMobileChangeByAdmin -> "DASHBOARD_USER/MOBILE_CHANGE_BY_ADMIN"
+    DashboardUserRoleAssign -> "DASHBOARD_USER/ROLE_ASSIGN"
     RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
     RiderAppManagementAPI e -> "RIDER_APP_MANAGEMENT/" <> show e
     RiderIssueManagementAPI e -> "RIDER_ISSUE_MANAGEMENT/" <> show e
@@ -175,6 +185,18 @@ instance Read Endpoint where
                ]
             ++ [ (DashboardUserDelete, r1)
                  | r1 <- stripPrefix "DASHBOARD_USER/DELETE" r
+               ]
+            ++ [ (DashboardUserPasswordResetByAdmin, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/PASSWORD_RESET_BY_ADMIN" r
+               ]
+            ++ [ (DashboardUserEmailChangeByAdmin, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/EMAIL_CHANGE_BY_ADMIN" r
+               ]
+            ++ [ (DashboardUserMobileChangeByAdmin, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/MOBILE_CHANGE_BY_ADMIN" r
+               ]
+            ++ [ (DashboardUserRoleAssign, r1)
+                 | r1 <- stripPrefix "DASHBOARD_USER/ROLE_ASSIGN" r
                ]
             ++ [ (RiderManagementAPI v1, r2)
                  | r1 <- stripPrefix "RIDER_MANAGEMENT/" r,

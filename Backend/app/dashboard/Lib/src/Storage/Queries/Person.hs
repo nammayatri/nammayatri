@@ -480,6 +480,7 @@ instance FromTType' BeamP.Person Person.Person where
             dashboardType = dashboardType,
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
+            merchantId = merchantId <&> Id,
             language = language,
             entityId = entityId <&> Id,
             ..
@@ -497,6 +498,7 @@ instance ToTType' BeamP.Person Person.Person where
         dashboardType = dashboardType,
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,
+        merchantId = merchantId <&> getId,
         language = language,
         entityId = entityId <&> getId,
         ..
