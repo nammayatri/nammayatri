@@ -255,7 +255,8 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                     let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                        { eta = Just enrichedEta,
+                        { bearing = round <$> bus.busData.bearing,
+                          eta = Just enrichedEta,
                           number = bus.vehicleNumber,
                           position = LatLong bus.busData.latitude bus.busData.longitude,
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,

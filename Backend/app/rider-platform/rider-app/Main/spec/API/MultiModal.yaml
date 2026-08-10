@@ -359,6 +359,7 @@ types:
     seatSelectionType: Maybe SeatSelectionType
     isUpcomingTrip: Maybe Bool
     previousRouteId: Maybe Text
+    bearing: Maybe Int
 
   AlternateRouteDetails:
     routeCode: Text

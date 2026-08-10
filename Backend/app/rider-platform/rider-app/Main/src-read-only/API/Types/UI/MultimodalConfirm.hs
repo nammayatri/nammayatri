@@ -231,7 +231,8 @@ data LegStatus = LegStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LiveVehicleInfo = LiveVehicleInfo
-  { currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { bearing :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    currentTripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA],
     isUpcomingTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     locationUTCTimestamp :: Kernel.Prelude.UTCTime,

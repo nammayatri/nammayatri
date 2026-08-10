@@ -2169,7 +2169,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               return $
                 Just $
                   API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                    { eta = Just [],
+                    { bearing = round <$> busLiveInfo.bearing,
+                      eta = Just [],
                       number = vno,
                       position = LatLong busLiveInfo.latitude busLiveInfo.longitude,
                       locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral busLiveInfo.timestamp,
@@ -2196,7 +2197,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               return $
                 Just $
                   API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                    { eta = Just enrichedEta,
+                    { bearing = round <$> singleBus.busData.bearing,
+                      eta = Just enrichedEta,
                       number = vno,
                       position = LatLong singleBus.busData.latitude singleBus.busData.longitude,
                       locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,
