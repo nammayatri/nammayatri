@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByPersonIdsAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Domain.Types.PurchasedPass.StatusType -> m ([Domain.Types.PurchasedPass.PurchasedPass]))
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Domain.Types.PurchasedPass.StatusType -> m [Domain.Types.PurchasedPass.PurchasedPass])
 findAllByPersonIdsAndStatus personId status = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.In (Kernel.Types.Id.getId <$> personId), Se.Is Beam.status $ Se.Eq status]]
 
 findByPassNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
@@ -67,6 +67,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
       Se.Set Beam.benefitDescription benefitDescription,
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
+      Se.Set Beam.currentPaymentOrderId (Kernel.Types.Id.getId <$> currentPaymentOrderId),
       Se.Set Beam.deviceId deviceId,
       Se.Set Beam.deviceSwitchCount (Just deviceSwitchCount),
       Se.Set Beam.endDate endDate,

@@ -16,6 +16,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
+import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPass = PurchasedPass
@@ -23,6 +24,7 @@ data PurchasedPass = PurchasedPass
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    currentPaymentOrderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     deviceId :: Kernel.Prelude.Text,
     deviceSwitchCount :: Kernel.Prelude.Int,
     endDate :: Data.Time.Calendar.Day,
@@ -51,7 +53,7 @@ data PurchasedPass = PurchasedPass
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data StatusType
   = Pending
@@ -64,14 +66,14 @@ data StatusType
   | Refunded
   | RefundFailed
   | PhotoPending
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''StatusType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''StatusType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''StatusType)
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''StatusType))
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''StatusType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''BenefitType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''BenefitType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''BenefitType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BenefitType)

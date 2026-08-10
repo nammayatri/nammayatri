@@ -148,6 +148,12 @@ types:
     prefDest: Text
     derive: "Show"
 
+  PassUploadProfilePictureReq:
+    purchasedPassId: Id PurchasedPass
+    profilePicture: Text
+    imeiNumber: Text
+    derive: "Show"
+
 
 apis:
   - GET:
@@ -244,6 +250,15 @@ apis:
         type: IssueMediaUploadReq
       response:
         type: IssueMediaUploadRes
+
+  - POST:
+      endpoint: /multimodal/pass/uploadProfilePicture
+      name: postMultimodalPassUploadProfilePictureV1
+      auth: TokenAuth
+      request:
+        type: PassUploadProfilePictureReq
+      response:
+        type: APISuccess
 
   - GET:
       endpoint: /multimodal/pass/photo/{mediaId}
