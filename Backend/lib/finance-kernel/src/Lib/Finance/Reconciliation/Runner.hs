@@ -19,6 +19,9 @@ module Lib.Finance.Reconciliation.Runner
     RunOutcome (..),
     runNextChunk,
 
+    -- * Inline (event-driven) execution
+    reconcileSources,
+
     -- * Chunk planning & safety window (exported for tests)
     planChunks,
     chunkIsSafe,
@@ -137,7 +140,7 @@ runNextChunk recipe input = do
           lockTtlSeconds = 1800 :: Int
       lockResult <-
         Hedis.whenWithLockRedisAndReturnValue lockKey lockTtlSeconds $
-          processChunk recipe input.scope chunk
+          processChunkByRange recipe input.scope chunk
       case lockResult of
         Left () -> do
           -- Lock held by another runner. The scheduler will drive the next
@@ -162,16 +165,65 @@ runNextChunk recipe input = do
         <> "|"
         <> show chunk.to
 
+-- ─── Source-scoped reconciliation (event-driven) ──────────────────────────
+
+reconcileSources ::
+  (BeamFlow.BeamFlow m r) =>
+  Recipe m ->
+  MerchantScope ->
+  [SourceId] ->
+  m ()
+reconcileSources recipe scope sourceIds = do
+  logInfo $
+    "reconcileSources: spec="
+      <> specKey recipe.spec
+      <> " merchant="
+      <> scope.merchantId
+      <> " sources="
+      <> show (length sourceIds)
+  processChunkByIds recipe scope (map (.getId) sourceIds)
+
 -- ─── Per-chunk processing ──────────────────────────────────────────────────
 
-processChunk ::
+processChunkByRange ::
   (BeamFlow.BeamFlow m r) =>
   Recipe m ->
   MerchantScope ->
   DateRange ->
   m ()
-processChunk recipe scope chunk = do
+processChunkByRange recipe scope chunk = do
   sources <- recipe.fetchSourceChunk scope chunk
+  let matchKeys = HS.fromList $ mapMaybe (.srcMatchKey) sources
+  orphanTargets <- case recipe.fetchOrphanTargets of
+    Nothing -> pure []
+    Just fetchOrphans -> fetchOrphans scope chunk matchKeys
+  processChunkCore recipe scope chunk sources orphanTargets
+
+processChunkByIds ::
+  (BeamFlow.BeamFlow m r) =>
+  Recipe m ->
+  MerchantScope ->
+  [Text] ->
+  m ()
+processChunkByIds recipe scope ids = do
+  sources <- recipe.fetchSourcesByIds scope ids
+  now <- getCurrentTime
+  let syntheticRange = case sources of
+        [] -> DateRange now now
+        _ ->
+          let ts = map (.srcTimestamp) sources
+           in DateRange (minimum ts) (addUTCTime 1 (maximum ts))
+  processChunkCore recipe scope syntheticRange sources []
+
+processChunkCore ::
+  (BeamFlow.BeamFlow m r) =>
+  Recipe m ->
+  MerchantScope ->
+  DateRange ->
+  [SourceRecord] ->
+  [TargetRecord] ->
+  m ()
+processChunkCore recipe scope chunk sources orphanTargets = do
   let matchKeys = HS.fromList $ mapMaybe (.srcMatchKey) sources
   targets <-
     if HS.null matchKeys
@@ -192,16 +244,7 @@ processChunk recipe scope chunk = do
         Individual -> buildIndividualEntries recipe sourceRecordCtx sources targetIx
         GroupByTargetKey -> buildGroupedEntries recipe sourceRecordCtx sources targetIx
       sourceRecordCtx = EntryCtx recipe.spec scope summaryId chunk now
-
-  -- Optional orphan-target sweep: recipes that opt in return targets in the
-  -- chunk whose tgtMatchKey is NOT in the already-seen source-side set.
-  -- Each such target becomes a MISSING_IN_SOURCE entry (or whatever the
-  -- recipe's classify decides for @[] [t]@).
-  orphanEntries <- case recipe.fetchOrphanTargets of
-    Nothing -> pure []
-    Just fetchOrphans -> do
-      orphans <- fetchOrphans scope chunk matchKeys
-      pure $ map (mkOrphanEntry recipe sourceRecordCtx) orphans
+      orphanEntries = map (mkOrphanEntry recipe sourceRecordCtx) orphanTargets
 
   let entries = sourceEntries <> orphanEntries
       summary = buildSummary recipe.spec scope summaryId chunk entries now
