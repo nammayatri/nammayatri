@@ -24,6 +24,7 @@ module Lib.Finance.Reconciliation.Types
     ReconResult (..),
 
     -- * Framework value types
+    SourceId (..),
     DateRange (..),
     MerchantScope (..),
     Lifecycle (..),
@@ -146,6 +147,9 @@ data ReconResult = ReconResult
   deriving (Eq, Show)
 
 -- ─── Framework value types ─────────────────────────────────────────────────
+
+newtype SourceId = SourceId {getId :: Text}
+  deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 -- | Half-open @[from, to)@ interval. All chunk math assumes this convention;
 --   a record whose timestamp equals @to@ belongs to the NEXT chunk.
