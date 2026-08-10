@@ -1,4 +1,4 @@
-module Domain.Action.UI.XyneWebhook (postXyneWebhook, postXyneBearerWebhook) where
+module Domain.Action.UI.XyneWebhook (postXyneWebhook, postXyneBearerWebhook, getXyneIssues) where
 
 import qualified Domain.Action.Dashboard.IssueManagement.Issue as DDIM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -33,6 +33,11 @@ postXyneBearerWebhook :: Maybe Text -> RawByteString -> Flow APISuccess
 postXyneBearerWebhook mbAuth rawBody = do
   bearerToken <- asks (.xyneWebhookBearerToken)
   XyneShared.processXyneBearerWebhook bearerToken DDIM.dashboardIssueHandle Common.CUSTOMER mbAuth rawBody
+
+getXyneIssues :: Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Flow [XyneShared.XyneIssueListItem]
+getXyneIssues mbSince mbLimit mbOffset mbAuth = do
+  bearerToken <- asks (.xyneWebhookBearerToken)
+  XyneShared.fetchXyneIssues bearerToken mbSince mbLimit mbOffset mbAuth
 
 lookupXyneCfg ::
   KId.Id Common.Merchant ->

@@ -592,6 +592,86 @@ mediaFileDownloadLink (personId, _merchantId) identifier issueReportId mediaFile
   where
     mediaFileLinkExpiry = Seconds 300
 
+-- | Picks the option that actually represents "the subcategory" out of every
+-- option the customer tapped in a report's chat flow, instead of whichever
+-- one they tapped LAST. Some categories ask a plain Yes/No confirmation
+-- right after the real subcategory pick (e.g. "Fare discrepancy" -> "Did
+-- you already raise this with support?" -> Yes/No) before the free-text
+-- description step; naively using the last-tapped option (as this used to)
+-- makes the subcategory show up as "Yes"/"No" for those categories.
+--
+-- The real subcategory is identified structurally, not by option text (a
+-- text blocklist like ["Yes","No"] can't generalize across languages or
+-- merchant-authored confirmatory wording): an option counts as a real
+-- subcategory when its parent 'IssueMessage' is a direct child of the
+-- category question, i.e. that message's own 'optionId' is 'Nothing'.
+-- Anything reached through another option's follow-up question is nested
+-- one level deeper and is excluded. Walks the chat history from most recent
+-- to oldest so the deepest qualifying pick wins (categories can have more
+-- than one meaningful subcategory-level question in sequence).
+--
+-- 'mbFallbackOptionId' should be the report's raw, single 'optionId' (the
+-- last-tap value this function is otherwise replacing). It's used as-is
+-- when no chat entry qualifies — e.g. an older client that didn't send full
+-- chat history, or 'updateIssueOption' (Storage.Queries.Issue.IssueReport's
+-- 'updateOption'), which sets a report's optionId directly without adding a
+-- matching chat entry. Without this fallback, those cases would regress
+-- from "shows the last-tapped option" to "shows nothing." The fallback is
+-- still run through the same category-name guard below.
+--
+-- Falls back to 'Nothing' — never to the category's own name — when
+-- neither the chat history nor the fallback yields a candidate, or when
+-- the only candidate's text happens to match the category name verbatim,
+-- so a ticket's subcategory can never silently duplicate its category.
+resolveSubCategoryOptionId :: BeamFlow m r => [Chat] -> Maybe (Id D.IssueOption) -> Text -> Identifier -> m (Maybe (Id D.IssueOption))
+resolveSubCategoryOptionId chats mbFallbackOptionId categoryName identifier
+  -- The chat history only reflects the truth when it's actually in sync
+  -- with the authoritative optionId — i.e. the report's normal creation
+  -- flow, where the last tapped option in the chat IS the stored optionId.
+  -- 'updateIssueOption' sets a new optionId directly without touching
+  -- chats, so after a manual recategorization the two fall out of sync;
+  -- walking a now-stale chat history in that case would surface whatever
+  -- was picked *before* the update instead of the fresh, authoritative
+  -- pick. When they disagree, trust optionId directly instead.
+  | listToMaybe (reverse optionChatIds) /= mbFallbackOptionId =
+    maybe (pure Nothing) withoutCategoryNameMatch mbFallbackOptionId
+  | otherwise = do
+    mbFromChats <- findFirstQualifying (reverse optionChatIds)
+    case mbFromChats of
+      Just found -> pure (Just found)
+      Nothing -> maybe (pure Nothing) withoutCategoryNameMatch mbFallbackOptionId
+  where
+    optionChatIds = [Id item.chatId | item <- chats, item.chatType == IssueOption]
+
+    findFirstQualifying [] = pure Nothing
+    findFirstQualifying (optId : rest) = do
+      isFirstLevel <- isFirstLevelOption optId
+      if not isFirstLevel
+        then findFirstQualifying rest
+        else do
+          matches <- matchesCategoryName optId
+          if matches
+            then findFirstQualifying rest
+            else pure (Just optId)
+
+    isFirstLevelOption optId = do
+      mbOption <- CQIO.findById optId identifier
+      case mbOption >>= (.issueMessageId) of
+        Nothing -> pure False
+        Just msgId -> do
+          mbParentMessage <- CQIM.findById (Id msgId) identifier
+          pure $ maybe False (isNothing . (.optionId)) mbParentMessage
+
+    matchesCategoryName optId = do
+      mbOption <- CQIO.findById optId identifier
+      pure $ maybe False ((== normalize categoryName) . normalize . (.option)) mbOption
+
+    withoutCategoryNameMatch optId = do
+      matches <- matchesCategoryName optId
+      pure $ if matches then Nothing else Just optId
+
+    normalize = T.strip . T.toLower
+
 createIssueReport ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
@@ -686,6 +766,8 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
   let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) language issueConfig mbRideInfoRes
       chats_ = fromMaybe [] chats
       updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
+  mbSubCategoryOptionId <- resolveSubCategoryOptionId chats_ optionId category.category identifier
+  mbSubCategoryOption <- maybe (pure Nothing) (`CQIO.findById` identifier) mbSubCategoryOptionId
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   let mbIssueReportType = mbOption >>= (.label) >>= A.decode . A.encode
   processIssueReportTypeActions (personId, merchantId) mbIssueReportType mbRide (Just config) True identifier issueHandle
@@ -718,7 +800,7 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
           [] -> (Nothing, Nothing, [])
           (Left botMessage : rest) -> (Just botMessage, Just "Auto Reply", rest)
           (Right userText : rest) -> (Just userText, Nothing, rest)
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName
+    ticket <- buildTicket issueReport category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -856,7 +938,7 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
               <> "\n"
 
     buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName = do
+    buildTicket issue category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -873,7 +955,7 @@ createIssueReportImpl (personId, merchantId) mbLanguage Common.IssueReportReq {.
       return $
         TIT.CreateTicketReq
           { category = category.category,
-            subCategory = (.option) <$> mbOption,
+            subCategory = (.option) <$> mbSubCategoryOption,
             disposition = merchantCfg.kaptureDisposition,
             queue = merchantCfg.kaptureQueue,
             issueId = Just issue.id.getId,
@@ -1080,14 +1162,19 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
   issueConfig <-
     issueHandle.findIssueConfig adjMerchantOpCityId identifier
       >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
-  (categoryLabel, categoryId) <- case issueReport.categoryId of
-    Nothing -> pure (Nothing, Nothing)
+  (categoryLabel, categoryId, mbCategoryName) <- case issueReport.categoryId of
+    Nothing -> pure (Nothing, Nothing, Nothing)
     Just catId -> do
       (issueCategory, _) <- CQIC.findByIdAndLanguage catId language identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
-      pure (Just (issueCategory.category & T.toUpper & T.replace " " "_"), Just catId)
+      pure (Just (issueCategory.category & T.toUpper & T.replace " " "_"), Just catId, Just issueCategory.category)
+  -- Same "real subcategory, not just whatever was tapped last" resolution
+  -- used at ticket-creation time (see 'resolveSubCategoryOptionId') — kept
+  -- consistent here so the customer's own view of their issue never shows a
+  -- different subcategory than what actually went into the ticket.
+  mbSubCategoryOptionId <- maybe (pure Nothing) (\catName -> resolveSubCategoryOptionId issueReport.chats issueReport.optionId catName identifier) mbCategoryName
   mbIssueOption <- (join <$>) $
-    forM issueReport.optionId $ \justIssueOption -> do
-      CQIO.findByIdAndLanguage justIssueOption language identifier
+    forM mbSubCategoryOptionId $ \subCategoryOptionId ->
+      CQIO.findByIdAndLanguage subCategoryOptionId language identifier
   issueChats <- recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier
   issueOptions <-
     if null issueReport.chats
@@ -1183,6 +1270,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
         (CLOSED, _) -> do
           QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
           whenJust customerResponse $ QIR.updateCustomerResponse issueReportId
+          updateTicketStatus issueReport TIT.Closed merchantId merchantOpCityId issueHandle identifier "Ticket closed"
           whenJust customerRating $ \rating -> updateTicketCsat issueReport rating merchantId merchantOpCityId issueHandle
           pure $
             Common.IssueStatusUpdateRes

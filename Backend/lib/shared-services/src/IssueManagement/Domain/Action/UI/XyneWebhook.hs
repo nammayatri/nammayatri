@@ -30,7 +30,9 @@
 module IssueManagement.Domain.Action.UI.XyneWebhook
   ( processXyneWebhook,
     processXyneBearerWebhook,
+    fetchXyneIssues,
     XyneWebhookAck (..),
+    XyneIssueListItem (..),
   )
 where
 
@@ -395,3 +397,47 @@ processXyneBearerWebhook bearerToken issueHandle identifier mbAuthHeader rawBody
     other ->
       logWarning $ "Xyne bearer webhook: ignoring unsupported eventType=" <> other
   pure Success
+
+-- | One issue, as surfaced to Xyne for reconciliation — just enough to tell
+-- Xyne which of its tickets are stale and worth re-syncing.
+data XyneIssueListItem = XyneIssueListItem
+  { issueReportId :: Text,
+    ticketId :: Maybe Text,
+    status :: Common.IssueStatus,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (A.ToJSON, A.FromJSON, ToSchema)
+
+maxXyneIssuesPageSize :: Int
+maxXyneIssuesPageSize = 100
+
+-- | Bearer-token authenticated read endpoint for Xyne to pull issues created
+-- after a cursor, delivered at @/internal/xyne/webhook/issues@. Exists
+-- because some Xyne messages/status syncs are getting dropped in transit;
+-- this lets Xyne page through and catch up on whatever it missed,
+-- independent of the webhook-push path.
+fetchXyneIssues ::
+  BeamFlow m r =>
+  Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  m [XyneIssueListItem]
+fetchXyneIssues bearerToken mbSince mbLimit mbOffset mbAuthHeader = do
+  unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
+    throwError $ AuthBlocked "Invalid Authorization header"
+  let cappedLimit = min maxXyneIssuesPageSize (fromMaybe maxXyneIssuesPageSize mbLimit)
+  issueReports <- QIR.findAllCreatedAfter mbSince (Just cappedLimit) mbOffset
+  pure $ map toXyneIssueListItem issueReports
+  where
+    toXyneIssueListItem issue =
+      XyneIssueListItem
+        { issueReportId = issue.id.getId,
+          ticketId = issue.ticketId,
+          status = issue.status,
+          createdAt = issue.createdAt,
+          updatedAt = issue.updatedAt
+        }

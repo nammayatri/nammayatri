@@ -3,6 +3,8 @@ module API.Internal.XyneWebhook
     handler,
     BearerAPI,
     bearerHandler,
+    IssuesAPI,
+    issuesHandler,
   )
 where
 
@@ -39,3 +41,20 @@ bearerHandler = postXyneBearerWebhook
   where
     postXyneBearerWebhook mbAuth rawBody =
       withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.postXyneBearerWebhook mbAuth rawBody
+
+-- | Bearer-token authenticated read endpoint for Xyne to page through issues
+-- that changed after a @since@ cursor, so it can catch up on syncs that were
+-- dropped in transit.
+type IssuesAPI =
+  "xyne" :> "webhook" :> "issues"
+    :> Header "Authorization" Kernel.Prelude.Text
+    :> QueryParam "since" Kernel.Prelude.UTCTime
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] [XyneShared.XyneIssueListItem]
+
+issuesHandler :: FlowServer IssuesAPI
+issuesHandler = getXyneIssues
+  where
+    getXyneIssues mbAuth mbSince mbLimit mbOffset =
+      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.getXyneIssues mbSince mbLimit mbOffset mbAuth
