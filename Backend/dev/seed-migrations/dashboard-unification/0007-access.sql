@@ -8,29 +8,62 @@
 INSERT INTO atlas_dashboard.merchant_access
   (id, person_id, merchant_id, merchant_short_id, operating_city, created_at)
 SELECT id, person_id, merchant_id, merchant_short_id, operating_city, created_at
-FROM atlas_bpp_dashboard.merchant_access;
+FROM atlas_dashboard.bpp_merchant_access;
 
--- 5.2 merchant_access: BAP rows, person_id remapped for matched persons.
--- BAP merchant ids exist verbatim in the merged merchant table, so no
--- merchant remap; (person, merchant, city) cannot collide with 5.1 because
--- the merchant sets are disjoint.
+-- 5.2 merchant_access: BAP rows, with BOTH ids remapped — person_id for
+-- matched persons, merchant_id for merchants re-ided in 0006 (the two sides
+-- reuse some merchant UUIDs). short_id is unchanged and disjoint across sides,
+-- so (person, merchant, city) still cannot collide with 5.1.
+-- merchant_access is UNIQUE (person_id, merchant_id, operating_city). Two BAP
+-- persons can now map to ONE merged person (0005's phone fallback), so their
+-- grants can collide with each other — and, for a matched person, with a row
+-- already inserted from the BPP side. Deduplicate on the constraint key,
+-- keeping the earliest grant, and skip anything already present.
 INSERT INTO atlas_dashboard.merchant_access
   (id, person_id, merchant_id, merchant_short_id, operating_city, created_at)
-SELECT ma.id,
-       coalesce(map.person_id, ma.person_id),
-       ma.merchant_id, ma.merchant_short_id, ma.operating_city, ma.created_at
-FROM atlas_bap_dashboard.merchant_access ma
-LEFT JOIN atlas_dashboard.legacy_bap_person map ON map.bap_person_id = ma.person_id
--- Drop rows whose person didn't survive (retired-role members; preflight 0.6 (0001)
--- says there are none, this is belt+braces):
-WHERE coalesce(map.person_id, ma.person_id) IN (SELECT id FROM atlas_dashboard.person);
+SELECT DISTINCT ON (r.person_id, r.merchant_id, r.operating_city)
+       r.id, r.person_id, r.merchant_id, r.merchant_short_id, r.operating_city, r.created_at
+FROM (
+  SELECT ma.id,
+         coalesce(map.person_id, ma.person_id)     AS person_id,
+         coalesce(mm.merchant_id, ma.merchant_id)  AS merchant_id,
+         ma.merchant_short_id, ma.operating_city, ma.created_at
+  FROM atlas_dashboard.bap_merchant_access ma
+  LEFT JOIN atlas_dashboard.legacy_bap_person map ON map.bap_person_id = ma.person_id
+  LEFT JOIN atlas_dashboard.legacy_bap_merchant mm ON mm.bap_merchant_id = ma.merchant_id
+) r
+-- Drop rows whose person didn't survive (retired-role members; preflight 0.6
+-- (0001) says there are none, this is belt+braces):
+WHERE r.person_id IN (SELECT id FROM atlas_dashboard.person)
+  AND NOT EXISTS (
+    SELECT 1 FROM atlas_dashboard.merchant_access x
+    WHERE x.person_id = r.person_id
+      AND x.merchant_id = r.merchant_id
+      AND x.operating_city = r.operating_city)
+ORDER BY r.person_id, r.merchant_id, r.operating_city, r.created_at;
+
+-- Report: BAP grants collapsed by the dedupe above (two BAP persons merged into
+-- one, or a grant the BPP side already had). Access is unchanged — the same
+-- person keeps the same merchant/city — but the row count will not add up.
+SELECT count(*) AS bap_grants_collapsed
+FROM (
+  SELECT coalesce(map.person_id, ma.person_id) AS person_id,
+         coalesce(mm.merchant_id, ma.merchant_id) AS merchant_id,
+         ma.operating_city
+  FROM atlas_dashboard.bap_merchant_access ma
+  LEFT JOIN atlas_dashboard.legacy_bap_person map ON map.bap_person_id = ma.person_id
+  LEFT JOIN atlas_dashboard.legacy_bap_merchant mm ON mm.bap_merchant_id = ma.merchant_id
+  WHERE coalesce(map.person_id, ma.person_id) IN (SELECT id FROM atlas_dashboard.person)
+) r
+GROUP BY r.person_id, r.merchant_id, r.operating_city
+HAVING count(*) > 1;
 
 -- 5.3 access_matrix: BPP rows unchanged where the role survived.
 INSERT INTO atlas_dashboard.access_matrix
   (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at)
 SELECT m.id, m.role_id, m.api_entity, m.user_access_type, m.user_action_type,
        m.created_at, m.updated_at
-FROM atlas_bpp_dashboard.access_matrix m
+FROM atlas_dashboard.bpp_access_matrix m
 WHERE m.role_id IN (SELECT id FROM atlas_dashboard.role);
 
 -- 5.4 access_matrix: BAP rows, role remapped by NAME; skip exact duplicates
@@ -41,8 +74,8 @@ INSERT INTO atlas_dashboard.access_matrix
   (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at)
 SELECT m.id, rd.id, m.api_entity, m.user_access_type, m.user_action_type,
        m.created_at, m.updated_at
-FROM atlas_bap_dashboard.access_matrix m
-JOIN atlas_bap_dashboard.role ra ON ra.id = m.role_id
+FROM atlas_dashboard.bap_access_matrix m
+JOIN atlas_dashboard.bap_role ra ON ra.id = m.role_id
 JOIN atlas_dashboard.role rd ON rd.name = ra.name
 WHERE NOT EXISTS (
   SELECT 1 FROM atlas_dashboard.access_matrix t

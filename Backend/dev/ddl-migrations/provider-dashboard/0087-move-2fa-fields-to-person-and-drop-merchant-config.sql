@@ -2,15 +2,15 @@
 -- lives on the person, not per-merchant. Drop the per-merchant flags, drop the
 -- per-access enrolment fields, add secret_key + is2fa_enabled to person.
 
-ALTER TABLE atlas_bpp_dashboard.person
+ALTER TABLE atlas_dashboard.person
   ADD COLUMN IF NOT EXISTS secret_key text,
   ADD COLUMN IF NOT EXISTS is2fa_enabled boolean NOT NULL DEFAULT false;
 
-ALTER TABLE atlas_bpp_dashboard.merchant_access
+ALTER TABLE atlas_dashboard.merchant_access
   DROP COLUMN IF EXISTS secret_key,
   DROP COLUMN IF EXISTS is2fa_enabled;
 
-ALTER TABLE atlas_bpp_dashboard.merchant
+ALTER TABLE atlas_dashboard.merchant
   DROP COLUMN IF EXISTS is2fa_mandatory,
   DROP COLUMN IF EXISTS enforcement_deadline,
   DROP COLUMN IF EXISTS two_fa_otp_ttl_in_secs,

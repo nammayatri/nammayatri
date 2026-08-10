@@ -194,7 +194,7 @@ runAction journeyId action = do
     then action
     else do
       JMU.measureLatency
-        ( Redis.withWaitAndLockRedis lockKey 10 100 $
+        ( Redis.withWaitAndLockRedis lockKey 10 5000 $
             action
         )
         ("runAction withWaitAndLockRedis journeyId: " <> journeyId.getId)

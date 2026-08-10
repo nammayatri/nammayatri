@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "helsinki-onboarding-01-fleet-owner",
     "name": "Helsinki Onboarding 01 - Fleet Owner Registration + Docs (V2 cross-writing flow)",
-    "description": "Registers a fleet owner under BRIDGE_FINLAND_PARTNER/Helsinki using the V2 OTP-driven flow which cross-writes the person into BOTH atlas_bpp_dashboard.person AND atlas_driver_offer_bpp.person (required for downstream Stripe onboarding). Uploads the 4 mandatory FLEET_BUSINESS docs (TaxiTransportLicense, FinnishIDResidencePermit, BusinessLicense, TAXDetails), admin-approves each, and asserts state via both API and direct SQL.",
+    "description": "Registers a fleet owner under BRIDGE_FINLAND_PARTNER/Helsinki using the V2 OTP-driven flow which cross-writes the person into BOTH atlas_dashboard.person AND atlas_driver_offer_bpp.person (required for downstream Stripe onboarding). Uploads the 4 mandatory FLEET_BUSINESS docs (TaxiTransportLicense, FinnishIDResidencePermit, BusinessLicense, TAXDetails), admin-approves each, and asserts state via both API and direct SQL.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [

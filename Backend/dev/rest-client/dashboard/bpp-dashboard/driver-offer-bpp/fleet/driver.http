@@ -21,15 +21,15 @@ GET {{bpp-dashboard-host}}
 
 @driverId1 = favorit-auto1-0000000000000000000000
 
-# INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+# INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
 #     (
 #     SELECT
-#         atlas_bpp_dashboard.uuid_generate_v4(),
+#         atlas_dashboard.uuid_generate_v4(),
 #         T1.role_id,
 #         'FLEET',
 #         'USER_FULL_ACCESS',
 #         unnest (ARRAY ['GET_ALL_VEHICLE_FOR_FLEET'])
-#     FROM atlas_bpp_dashboard.access_matrix AS T1
+#     FROM atlas_dashboard.access_matrix AS T1
 #     WHERE T1.api_entity = 'DRIVERS' AND (T1.user_access_type = 'USER_FULL_ACCESS' OR T1.user_access_type = 'USER_READ_ACCESS')
 # 	  GROUP BY role_id
 #     )
@@ -44,7 +44,7 @@ token: {{customer_service}}
 
 # @name postDriverFleetrSendJoiningOtp
 
-# INSERT INTO atlas_bpp_dashboard.fleet_member_association (fleet_member_id, fleet_owner_id, enabled, is_fleet_owner) VALUES
+# INSERT INTO atlas_dashboard.fleet_member_association (fleet_member_id, fleet_owner_id, enabled, is_fleet_owner) VALUES
 #   ('3680f4b5-dce4-4d03-aa8c-5405690e87bd', 'favorit-fleet-owner-0000000000000000', true, true);
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/fleet/sendJoiningOtp

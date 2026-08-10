@@ -1,1 +1,1 @@
-ALTER table atlas_bpp_dashboard.person ADD COLUMN rejected_by character varying(255);
+ALTER table atlas_dashboard.person ADD COLUMN rejected_by character varying(255);

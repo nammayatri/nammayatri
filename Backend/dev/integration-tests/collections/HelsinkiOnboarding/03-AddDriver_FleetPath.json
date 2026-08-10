@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "helsinki-onboarding-03f-add-driver-fleet-probe",
 		"name": "Helsinki Onboarding 03F - Add Driver (FLEET role probe)",
-		"description": "Probes the FLEET-role path: fleet owner calls /fleet/addDrivers (multipart CSV) directly. This is INFORMATIONAL — per the project notes, FLEET role may not yet have access to all driver-add APIs. The orchestrator runs this but does not gate on its success; results are captured for inspection. Compare against the master BPP dashboard DB (`atlas_bpp_dashboard.access_matrix WHERE role_id = FLEET_role_id`) to confirm permission gaps.",
+		"description": "Probes the FLEET-role path: fleet owner calls /fleet/addDrivers (multipart CSV) directly. This is INFORMATIONAL — per the project notes, FLEET role may not yet have access to all driver-add APIs. The orchestrator runs this but does not gate on its success; results are captured for inspection. Compare against the master BPP dashboard DB (`atlas_dashboard.access_matrix WHERE role_id = FLEET_role_id`) to confirm permission gaps.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [

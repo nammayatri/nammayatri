@@ -20,6 +20,7 @@ import qualified Domain.Types.Capability as DC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -29,10 +30,11 @@ import qualified Storage.Queries.Capability as QCap
 import qualified Storage.Queries.CapabilityEndpoint as QCE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonCapability as QPC
-import qualified Storage.Queries.PersonTier as QPT
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.RoleCapability as QRC
 import Tools.Auth
+import Tools.Auth.Capability (adminTierOf, computeEffective, isSuperAdmin)
+import qualified Tools.Auth.Capability as Capability
 import Tools.Error
 
 -- Access Control framework admin surface (dashboard unification Phase 4).
@@ -123,33 +125,17 @@ data UpsertPersonCapabilityReq = UpsertPersonCapabilityReq
 
 --------------------------------------------------------------- shared logic
 
--- | Effective set = (role capabilities ∪ live GRANTs) − live DENYs.
-computeEffective :: BeamFlow m r => Id DP.Person -> Id DRole.Role -> m [Text]
-computeEffective personId roleId = do
-  now <- getCurrentTime
-  roleCaps <- QRC.findAllByRoleId roleId
-  overrides <- QPC.findAllByPersonId personId
-  let live pc = maybe True (> now) pc.expiresAt
-      grants = [pc.capabilityId.getId | pc <- overrides, pc.mode == DC.GRANT, live pc]
-      denies = Set.fromList [pc.capabilityId.getId | pc <- overrides, pc.mode == DC.DENY, live pc]
-      base = map (.capabilityId.getId) roleCaps
-  pure $ Set.toList $ Set.fromList (base <> grants) `Set.difference` denies
+-- computeEffective / adminTierOf / isSuperAdmin live in Tools.Auth.Capability,
+-- which is where the auth path needs them; imported above.
 
-adminTierOf :: BeamFlow m r => Id DP.Person -> m Text
-adminTierOf personId = maybe DC.userTier (.adminTier) <$> QPT.findByPersonId personId
-
-isSuperAdmin :: BeamFlow m r => Id DP.Person -> m Bool
-isSuperAdmin personId = (== DC.superAdminTier) <$> adminTierOf personId
-
--- | Existence-guarded SUPER_ADMIN requirement: enforced only once a
--- SUPER_ADMIN has been seeded. Until then legacy admin behavior applies.
+-- | Only a SUPER_ADMIN may mint admin-tier users. This used to be guarded on
+-- `superAdminExists` so the rule stayed dormant until the tier was seeded;
+-- the tier is seeded now (0017), so the rule is unconditional.
 guardAdminMutation :: BeamFlow m r => Id DP.Person -> DRole.DashboardAccessType -> m ()
 guardAdminMutation actorId targetAccessType =
-  when (targetAccessType `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_RELEASE_ADMIN]) $ do
-    exists <- QPT.superAdminExists
-    when exists $
-      unlessM (isSuperAdmin actorId) $
-        throwError AccessDenied
+  when (targetAccessType `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_RELEASE_ADMIN]) $
+    unlessM (isSuperAdmin actorId) $
+      throwError AccessDenied
 
 -- | No-self-escalation: every capability being handed out must already be
 -- effectively held by the actor (SUPER_ADMIN exempt). is_system capabilities
@@ -217,7 +203,7 @@ getRoleCapabilities _ roleId = do
   roleCaps <- QRC.findAllByRoleId roleId
   pure RoleCapabilitiesRes {roleId, roleName = role.name, capabilities = map (.capabilityId.getId) roleCaps}
 
-updateRoleCapabilities :: BeamFlow m r => TokenInfo -> Id DRole.Role -> UpdateRoleCapabilitiesReq -> m APISuccess
+updateRoleCapabilities :: (BeamFlow m r, Redis.HedisFlow m r) => TokenInfo -> Id DRole.Role -> UpdateRoleCapabilitiesReq -> m APISuccess
 updateRoleCapabilities tokenInfo roleId req = do
   when (null req.add && null req.remove) $ throwError (InvalidRequest "Nothing to change")
   when (blank req.reason) $ throwError (InvalidRequest "reason is mandatory")
@@ -229,6 +215,8 @@ updateRoleCapabilities tokenInfo roleId req = do
     QRC.create DC.RoleCapability {roleId, capabilityId = Id cid, createdAt = now}
   forM_ req.remove $ \cid ->
     QRC.deleteByRoleIdAndCapabilityId roleId (Id cid)
+  -- Role change touches every member; retire all cached capability sets.
+  Capability.invalidateEveryone
   audit
     tokenInfo
     "ROLE_CAPABILITY_UPDATE"
@@ -261,7 +249,7 @@ getPersonCapabilities _ personId = do
         effective = effective
       }
 
-upsertPersonCapability :: BeamFlow m r => TokenInfo -> Id DP.Person -> UpsertPersonCapabilityReq -> m APISuccess
+upsertPersonCapability :: (BeamFlow m r, Redis.HedisFlow m r) => TokenInfo -> Id DP.Person -> UpsertPersonCapabilityReq -> m APISuccess
 upsertPersonCapability tokenInfo personId req = do
   when (tokenInfo.personId == personId) $
     throwError $ InvalidRequest "Cannot edit your own capability grants"
@@ -281,17 +269,19 @@ upsertPersonCapability tokenInfo personId req = do
         expiresAt = req.expiresAt,
         createdAt = now
       }
+  Capability.invalidatePerson personId
   audit tokenInfo "PERSON_CAPABILITY_UPSERT" "person" personId.getId
     Nothing
     (Just $ req.capabilityId <> " " <> show req.mode <> maybe "" ((" until " <>) . show) req.expiresAt)
     (Just req.reason)
   pure Success
 
-deletePersonCapability :: BeamFlow m r => TokenInfo -> Id DP.Person -> Text -> m APISuccess
+deletePersonCapability :: (BeamFlow m r, Redis.HedisFlow m r) => TokenInfo -> Id DP.Person -> Text -> m APISuccess
 deletePersonCapability tokenInfo personId capabilityId = do
   when (tokenInfo.personId == personId) $
     throwError $ InvalidRequest "Cannot edit your own capability grants"
   QPC.deleteByPersonIdAndCapabilityId personId (Id capabilityId)
+  Capability.invalidatePerson personId
   audit tokenInfo "PERSON_CAPABILITY_DELETE" "person" personId.getId
     (Just capabilityId)
     Nothing

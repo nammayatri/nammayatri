@@ -376,6 +376,8 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = None Text
       , _serverNameTypePrefix = None Text
+      , _capabilityBaseline = Some
+          (rootDir ++ "/Backend/dev/dsl-capability-baseline.txt")
       , _migrationParams =
         [ { _migrationName = "localAccessForRoleId"
           , _migrationParam = Some "37947162-3b5d-4ed6-bcac-08841be1534d"

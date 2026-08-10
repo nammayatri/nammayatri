@@ -5,5 +5,5 @@
 -- Seed (which roles get flagged) lives in
 -- dev/seed-migrations/provider-dashboard/0002-flag-bpp-sync-roles.sql (this file stays pure DDL).
 
-ALTER TABLE atlas_bpp_dashboard.role
+ALTER TABLE atlas_dashboard.role
   ADD COLUMN is_bpp_sync_needed boolean;

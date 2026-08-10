@@ -1987,11 +1987,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1784556783,
-        "narHash": "sha256-sXOHklnUoRUeVC1igOKKaGNacoQV7CqgfS1rOm9Jboo=",
+        "lastModified": 1786348158,
+        "narHash": "sha256-a8wLXBiDYR2aoi62x7zhxGow2kHKpPwrVo8JvkW2Swc=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "c61b5a25e8be42d9306ffa9ca58910e4e588512d",
+        "rev": "bc67d77c9bb239b78668ea571e4135f3a11f18d6",
         "type": "github"
       },
       "original": {

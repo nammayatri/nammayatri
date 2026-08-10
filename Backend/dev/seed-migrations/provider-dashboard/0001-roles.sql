@@ -1,7 +1,7 @@
--- Bootstrap roles for atlas_bpp_dashboard.
+-- Bootstrap roles for atlas_dashboard.
 -- Required by NammaDSL-generated dev/migrations-read-only/provider-dashboard/*.sql
 -- which INSERT access_matrix rows referencing these role IDs.
-INSERT INTO atlas_bpp_dashboard.role (id, name, dashboard_access_type, description, created_at, updated_at) VALUES
+INSERT INTO atlas_dashboard.role (id, name, dashboard_access_type, description, created_at, updated_at) VALUES
     ('e5a69a26-d165-455a-a711-33a41e0d47c6', 'CUSTOMER',           'DASHBOARD_USER',     'customer',                                       '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('508a0bac-258d-44a6-ac55-aef57ab87a76', 'DRIVER',             'DASHBOARD_USER',     'driver',                                         '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),
     ('d5644e83-ffa3-4e0d-ae81-c3155eedb8fd', 'JUSPAY_OPS',         'DASHBOARD_USER',     'Juspay OPS',                                     '2022-09-12 15:15:42.104639+00', '2022-09-12 15:15:42.104639+00'),

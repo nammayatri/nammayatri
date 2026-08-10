@@ -1,1 +1,1 @@
-ALTER table atlas_bpp_dashboard.person ADD COLUMN approved_by character varying(255);
+ALTER table atlas_dashboard.person ADD COLUMN approved_by character varying(255);

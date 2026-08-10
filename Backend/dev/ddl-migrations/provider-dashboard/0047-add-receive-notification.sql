@@ -1,1 +1,1 @@
-ALTER table atlas_bpp_dashboard.person ADD COLUMN receive_notification boolean;
+ALTER table atlas_dashboard.person ADD COLUMN receive_notification boolean;

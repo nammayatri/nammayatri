@@ -45,7 +45,7 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "API/Action/ProviderPlatform"
       , _servantApiClient =
           outputPrefixDashboardReadOnly ++ "API/Client/ProviderPlatform"
-      , _sql = [ { _1 = migrationPath, _2 = "atlas_bpp_dashboard" } ]
+      , _sql = [ { _1 = migrationPath, _2 = "atlas_dashboard" } ]
       , _purescriptFrontend = ""
       , _configPilot = outputPrefixDashboard ++ "Storage/ConfigPilot/Config"
       }
@@ -388,6 +388,8 @@ let defaultConfigs =
       , _folderName = None Text
       , _apiDashboardPrefix = None Text
       , _serverNameTypePrefix = None Text
+      , _capabilityBaseline = Some
+          (rootDir ++ "/Backend/dev/dsl-capability-baseline.txt")
       , _migrationParams =
         [ { _migrationName = "localAccessForRoleId"
           , _migrationParam = Some "37947162-3b5d-4ed6-bcac-08841be1534d"

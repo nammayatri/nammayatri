@@ -65,7 +65,7 @@ cd Backend/dev/test-tool/dashboard && npm run build
 
 **Root cause**: The dashboard enforces per-endpoint access via an `access_matrix` table.
 The `JUSPAY_ADMIN` role (id `37947162-3b5d-4ed6-bcac-08841be1534d`) had no rows in
-`atlas_bpp_dashboard.access_matrix` for any of the four MerchantDocument action types:
+`atlas_dashboard.access_matrix` for any of the four MerchantDocument action types:
 - `PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_MERCHANT_DOCUMENT_LIST`
 - `PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_CREATE`
 - `PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_UPDATE`
@@ -76,7 +76,7 @@ These endpoints were added to the API but the access grants were never seeded fo
 **Fix**: Feature migration `0024-merchant-document-access-matrix-juspay-admin.sql` — inserts
 `USER_FULL_ACCESS` rows for all four action types for the `JUSPAY_ADMIN` role.
 
-Run it once against your local `atlas_bpp_dashboard`:
+Run it once against your local `atlas_dashboard`:
 ```bash
 psql -d atlas_dev -f Backend/dev/feature-migrations/0024-merchant-document-access-matrix-juspay-admin.sql
 ```

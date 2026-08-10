@@ -1,4 +1,4 @@
-{ dbUserId = "atlas_bpp_dashboard_user"
+{ dbUserId = "atlas_dashboard_user"
 , dbPassword = "atlas"
 , encHashSalt =
     "How wonderful it is that nobody need wait a single moment before starting to improve the world"

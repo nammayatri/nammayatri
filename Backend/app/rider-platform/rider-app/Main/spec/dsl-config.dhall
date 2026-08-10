@@ -236,6 +236,7 @@ in  { _output = outputPath
     , _folderName = None Text
     , _apiDashboardPrefix = None Text
     , _serverNameTypePrefix = None Text
+    , _capabilityBaseline = None Text
     , _migrationParams =
         [] : List { _migrationName : Text, _migrationParam : Optional Text }
     , _endpointPrefix = None Text

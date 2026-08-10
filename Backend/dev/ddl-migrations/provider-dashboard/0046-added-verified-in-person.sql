@@ -1,1 +1,1 @@
-ALTER TABLE atlas_bpp_dashboard.person ADD COLUMN verified Boolean;
+ALTER TABLE atlas_dashboard.person ADD COLUMN verified Boolean;

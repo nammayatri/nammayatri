@@ -3,5 +3,5 @@
 -- rows inert until ops seeds them. DASHBOARD_ADMIN callers bypass this column
 -- entirely (they see all roles via listRoles), so no admin seed is needed.
 
-ALTER TABLE atlas_bpp_dashboard.role
+ALTER TABLE atlas_dashboard.role
   ADD COLUMN accessible_roles text[] NOT NULL DEFAULT '{}';

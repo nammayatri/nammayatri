@@ -1,6 +1,6 @@
 # run migration for dev testing:
 
-# UPDATE atlas_bpp_dashboard.access_matrix
+# UPDATE atlas_dashboard.access_matrix
 # 	SET user_access_type='USER_FULL_ACCESS'
 # 	WHERE (api_entity = 'VOLUNTEER'
 # 		AND (user_action_type = 'ALL_FEE_HISTORY' OR user_action_type = 'VOLUNTEER_COLLECTION_HISTORY')

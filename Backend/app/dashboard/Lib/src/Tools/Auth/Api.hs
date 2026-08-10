@@ -32,12 +32,11 @@ import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
 import Storage.Beam.BeamFlow
-import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.MerchantPair as QMerchantPair
 import qualified Storage.Queries.Person as QPerson
-import qualified Tools.Auth.CapabilityShadow as Shadow
+import qualified Tools.Auth.Capability as Capability
 import qualified Tools.Auth.Common as Common
 import Tools.Servant.HeaderAuth
 
@@ -150,8 +149,15 @@ instance
         userActionType = fromSing (sing @uat)
       }
 
+-- Authorization is capability-only. The access_matrix is not consulted here
+-- any more: `Tools.Auth.Capability.enforce` is the entire verdict, and an
+-- endpoint with no capability behind it is denied rather than waved through.
+-- `0017-capability-backfill.sql` is the data migration that makes the
+-- capability set a superset of the old matrix, and must have run before this
+-- code is deployed.
 verifyAccessLevel ::
   ( BeamFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
   ) =>
   DMatrix.ApiAccessLevel ->
@@ -160,19 +166,8 @@ verifyAccessLevel ::
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   maybe (pure ()) (\a -> when (a `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ Common.checkPasswordExpiry person) person.dashboardAccessType
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
-  let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
-  let legacyAllowed = checkUserAccess userAccessType
-  -- Shadow-only capability verdict; never affects the outcome (Phase 3,
-  -- see Tools.Auth.CapabilityShadow). Runs on allow AND deny paths.
-  Shadow.shadowCheck person.id person.roleId (Shadow.mkShadowEndpointId requiredApiAccessLevel) legacyAllowed
-  unless legacyAllowed $
-    throwError AccessDenied
+  Capability.enforce person (Capability.mkEndpointId requiredApiAccessLevel)
   pure person
-
-checkUserAccess :: DMatrix.UserAccessType -> Bool
-checkUserAccess DMatrix.USER_FULL_ACCESS = True
-checkUserAccess DMatrix.USER_NO_ACCESS = False
 
 verifyServer ::
   BeamFlow m r =>

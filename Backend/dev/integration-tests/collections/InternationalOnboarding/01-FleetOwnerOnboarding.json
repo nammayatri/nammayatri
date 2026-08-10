@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "international-onboarding-01-fleet-owner",
     "name": "International Onboarding 01 - Fleet Owner (V2 cross-writing flow + 4 FLEET_BUSINESS docs + JUSPAY_ADMIN approve)",
-    "description": "Registers a fleet owner under BRIDGE_FINLAND_PARTNER/Helsinki (representative international/BRIDGE_* deployment) using the V2 OTP-driven flow which cross-writes the person into BOTH atlas_bpp_dashboard.person AND atlas_driver_offer_bpp.person. Uploads the 4 mandatory FLEET_BUSINESS docs (TaxiTransportLicense, FinnishIDResidencePermit, BusinessLicense, TAXDetails), JUSPAY_ADMIN-approves each, and asserts the new refactor's flag model (fleet_owner_information.verified/approved/enabled + disabledReasonFlag) via `fleetOwnerInfo` and SQL backstops. Ported from HelsinkiOnboarding/01-FleetOwnerOnboarding.json; consolidated into the shared 3-flow layout with MSILOnboarding.",
+    "description": "Registers a fleet owner under BRIDGE_FINLAND_PARTNER/Helsinki (representative international/BRIDGE_* deployment) using the V2 OTP-driven flow which cross-writes the person into BOTH atlas_dashboard.person AND atlas_driver_offer_bpp.person. Uploads the 4 mandatory FLEET_BUSINESS docs (TaxiTransportLicense, FinnishIDResidencePermit, BusinessLicense, TAXDetails), JUSPAY_ADMIN-approves each, and asserts the new refactor's flag model (fleet_owner_information.verified/approved/enabled + disabledReasonFlag) via `fleetOwnerInfo` and SQL backstops. Ported from HelsinkiOnboarding/01-FleetOwnerOnboarding.json; consolidated into the shared 3-flow layout with MSILOnboarding.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [

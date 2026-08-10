@@ -20,11 +20,10 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Id
 
--- Capability framework (dashboard unification Phase 3). Capabilities are the
+-- Capability framework (dashboard unification). Capabilities are THE
 -- authorization unit; roles bundle capabilities; person_capability rows are
--- per-user overrides (DENY wins over role grants). Until the enforcement
--- flip, these tables are only consulted by the shadow check in
--- Tools.Auth.CapabilityShadow - access_matrix remains authoritative.
+-- per-user overrides (DENY wins over role grants). Tools.Auth.Capability
+-- enforces these tables on every request with no access_matrix fallback.
 
 data CapabilityMode = GRANT | DENY
   deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)

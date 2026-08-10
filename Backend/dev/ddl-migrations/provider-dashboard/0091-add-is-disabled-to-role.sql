@@ -4,5 +4,5 @@
 -- Domain.Action.Dashboard.Roles.
 -- Nullable: NULL / false = active; true = disabled.
 
-ALTER TABLE atlas_bpp_dashboard.role
+ALTER TABLE atlas_dashboard.role
   ADD COLUMN is_disabled boolean;

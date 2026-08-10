@@ -92,7 +92,7 @@ library
       Storage.Queries.Transaction
       Tools.Auth
       Tools.Auth.Api
-      Tools.Auth.CapabilityShadow
+      Tools.Auth.Capability
       Tools.Auth.Common
       Tools.Auth.Dashboard
       Tools.Auth.Merchant

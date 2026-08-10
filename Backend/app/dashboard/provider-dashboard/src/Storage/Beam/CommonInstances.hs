@@ -39,25 +39,25 @@ import "lib-dashboard" Storage.Beam.SchemaName (resolveSchema)
 import qualified "lib-dashboard" Storage.Beam.Transaction as BeamT
 
 instance HasSchemaName BeamAA.AccessAuditT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamAM.AccessMatrixT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamC.CapabilityT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamPT.PersonTierT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamCE.CapabilityEndpointT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamPC.PersonCapabilityT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamRC.RoleCapabilityT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 -- Needed by the RiderPlatform (bap) modules mounted on this server.
 instance HideSecrets A.Value where
@@ -66,28 +66,28 @@ instance HideSecrets A.Value where
 -- Instance exists to satisfy shared Beam constraints; `entity` table is not
 -- created here. Any future SELECT against it will 500. See PT-employee PR notes.
 instance HasSchemaName BeamE.EntityT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamM.MerchantT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamMA.MerchantAccessT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamMPair.MerchantPairT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamP.PersonT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamRT.RegistrationTokenT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamR.RoleT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamT.TransactionT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")
 
 instance HasSchemaName BeamMOC.MerchantOperatingCityT where
-  schemaName _ = resolveSchema (T.pack "atlas_bpp_dashboard")
+  schemaName _ = resolveSchema (T.pack "atlas_dashboard")

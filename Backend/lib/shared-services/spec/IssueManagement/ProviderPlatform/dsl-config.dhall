@@ -55,7 +55,7 @@ let outputPath =
                   outputPrefixDashboardReadOnly
               ++  "API/Client/ProviderPlatform/"
               ++  folderName
-          , _sql = [ { _1 = migrationPath, _2 = "atlas_bpp_dashboard" } ]
+          , _sql = [ { _1 = migrationPath, _2 = "atlas_dashboard" } ]
           }
 
 let defaultStorageConfig = common.defaultConfigs._storageConfig

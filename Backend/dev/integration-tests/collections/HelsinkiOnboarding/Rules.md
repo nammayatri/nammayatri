@@ -68,7 +68,7 @@ inline (as `01-StripeRideFlow.json` currently does).
 
 **Auth model:** uses the **V2 fleet flow** (`/fleet/v2/...`) — this is critical
 because the legacy `/fleet/register` only writes to
-`atlas_bpp_dashboard.person`, NOT to `atlas_driver_offer_bpp.person`. Without
+`atlas_dashboard.person`, NOT to `atlas_driver_offer_bpp.person`. Without
 the driver-app person row, downstream Stripe onboarding cannot resolve the
 fleet owner via `checkRequestorAccessToFleet` (which queries the driver-app
 schema). The V2 OTP login + register sequence cross-writes to both.
@@ -238,7 +238,7 @@ some are documented limitations the test will surface at first runtime.
   doesn't exist. Pivoted to filter by `first_name` (the collection generates
   a unique `Helsinki<9digitrand>` per run, so it's collision-free).
 - **A.02 V1 → V2 flow** — `/fleet/register` only writes to
-  `atlas_bpp_dashboard.person`; downstream Stripe needs the fleet owner in
+  `atlas_dashboard.person`; downstream Stripe needs the fleet owner in
   `atlas_driver_offer_bpp.person` too. Rewrote A.03 to use the V2 flow
   (`/fleet/v2/login/otp` → `/fleet/v2/verify/otp` → `/fleet/v2/register`)
   which cross-writes to both schemas.

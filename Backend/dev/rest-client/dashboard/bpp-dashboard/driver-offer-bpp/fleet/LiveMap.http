@@ -130,7 +130,7 @@ content-type: application/json
 @radius = 115
 
 # for local MSIL testing:
-# UPDATE atlas_bpp_dashboard.merchant SET has_fleet_member_hierarchy='false' WHERE short_id='NAMMA_YATRI_PARTNER';
+# UPDATE atlas_dashboard.merchant SET has_fleet_member_hierarchy='false' WHERE short_id='NAMMA_YATRI_PARTNER';
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/liveMap/drivers/{{radius}}
 # ?fleetOwnerId={{fleet}}

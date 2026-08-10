@@ -100,6 +100,7 @@ requireBulkPersonFields idx p = do
 bulkCreate ::
   ( BeamFlow.BeamFlow m r,
     EncFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
   ) =>
   TokenInfo ->

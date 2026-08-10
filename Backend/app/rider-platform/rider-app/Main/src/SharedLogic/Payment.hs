@@ -1235,7 +1235,7 @@ clearDuesForPerson ::
   m APIRidePayment.ClearDuesResp
 clearDuesForPerson person duesResp currency paymentMethodId = do
   rideId <- listToMaybe duesResp.rides <&> (.rideId) & fromMaybeM (InvalidRequest "No ride id found")
-  Redis.withWaitAndLockRedis (paymentJobExecLockKey rideId.getId) 10 20 $ do
+  Redis.withWaitAndLockRedis (paymentJobExecLockKey rideId.getId) 10 5000 $ do
     ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries rideId.getId
     booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

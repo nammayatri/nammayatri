@@ -1,5 +1,5 @@
 -- auxiliary settings
-CREATE USER atlas_bpp_dashboard_user WITH PASSWORD 'atlas';
+CREATE USER atlas_dashboard_user WITH PASSWORD 'atlas';
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -10,12 +10,12 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-CREATE SCHEMA atlas_bpp_dashboard;
-ALTER SCHEMA atlas_bpp_dashboard OWNER TO atlas_bpp_dashboard_user;
+CREATE SCHEMA atlas_dashboard;
+ALTER SCHEMA atlas_dashboard OWNER TO atlas_dashboard_user;
 
 -- tables
 
-CREATE TABLE atlas_bpp_dashboard.person (
+CREATE TABLE atlas_dashboard.person (
 id character(36) NOT NULL,
 first_name character varying(255) NOT NULL,
 last_name character varying(255) NOT NULL,
@@ -32,14 +32,14 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  unique_email UNIQUE (email_hash)
 ,CONSTRAINT  unique_mobile_number_country_code UNIQUE (mobile_country_code, mobile_number_hash)
 );
-ALTER TABLE atlas_bpp_dashboard.person OWNER TO atlas_bpp_dashboard_user;
+ALTER TABLE atlas_dashboard.person OWNER TO atlas_dashboard_user;
 
-CREATE TABLE atlas_bpp_dashboard.registration_token (
+CREATE TABLE atlas_dashboard.registration_token (
 id character(36) NOT NULL,
 token character varying(1024) NOT NULL,
-person_id character(36) REFERENCES atlas_bpp_dashboard.person (id) NOT NULL,
+person_id character(36) REFERENCES atlas_dashboard.person (id) NOT NULL,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  idx_16467_primary PRIMARY KEY (id)
 );
-ALTER TABLE atlas_bpp_dashboard.registration_token OWNER TO atlas_bpp_dashboard_user;
-CREATE INDEX idx_16467_person_id ON atlas_bpp_dashboard.registration_token USING btree (person_id);
+ALTER TABLE atlas_dashboard.registration_token OWNER TO atlas_dashboard_user;
+CREATE INDEX idx_16467_person_id ON atlas_dashboard.registration_token USING btree (person_id);

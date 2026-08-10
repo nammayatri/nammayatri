@@ -12,7 +12,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_bpp_dashboard"
+      , connectSchemaName = "atlas_dashboard"
       , connectionPoolCount = +25
       }
 

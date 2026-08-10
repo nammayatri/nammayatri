@@ -1,4 +1,4 @@
-CREATE TABLE atlas_bpp_dashboard.role (
+CREATE TABLE atlas_dashboard.role (
 id character(36) NOT NULL,
 name character varying(255) NOT NULL,
 dashboard_access_type character varying(255) NOT NULL,
@@ -8,11 +8,11 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  idx_16419_primary PRIMARY KEY (id)
 ,CONSTRAINT  unique_name UNIQUE (name)
 );
-ALTER TABLE atlas_bpp_dashboard.role OWNER TO atlas_bpp_dashboard_user;
+ALTER TABLE atlas_dashboard.role OWNER TO atlas_dashboard_user;
 
-CREATE TABLE atlas_bpp_dashboard.access_matrix (
+CREATE TABLE atlas_dashboard.access_matrix (
 id character(36) NOT NULL,
-role_id character(36) REFERENCES atlas_bpp_dashboard.role (id) NOT NULL,
+role_id character(36) REFERENCES atlas_dashboard.role (id) NOT NULL,
 api_entity character varying(255) NOT NULL,
 user_access_type character varying(255) NOT NULL,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -20,14 +20,14 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  idx_16402_primary PRIMARY KEY (id)
 ,CONSTRAINT  unique_role_id_api_entity UNIQUE (role_id, api_entity)
 );
-ALTER TABLE atlas_bpp_dashboard.access_matrix OWNER TO atlas_bpp_dashboard_user;
+ALTER TABLE atlas_dashboard.access_matrix OWNER TO atlas_dashboard_user;
 
-ALTER TABLE atlas_bpp_dashboard.person
+ALTER TABLE atlas_dashboard.person
     ADD COLUMN role_id character(36);
 
 ALTER TABLE
-   atlas_bpp_dashboard.person
+   atlas_dashboard.person
 ADD
-   CONSTRAINT person_role_id_fkey FOREIGN KEY (role_id) REFERENCES atlas_bpp_dashboard.role(id);
-ALTER TABLE atlas_bpp_dashboard.person
+   CONSTRAINT person_role_id_fkey FOREIGN KEY (role_id) REFERENCES atlas_dashboard.role(id);
+ALTER TABLE atlas_dashboard.person
   DROP COLUMN role;

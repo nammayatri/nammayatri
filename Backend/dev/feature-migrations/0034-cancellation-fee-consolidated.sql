@@ -196,18 +196,18 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- access_matrix grant: FLEET role -> FINANCE_INVOICE_PDF (invoice download).
 -- Preserved from 0011 (non-cancellation, dashboard access). Separate DO block:
--- atlas_bpp_dashboard.role uses a different schema/key.
+-- atlas_dashboard.role uses a different schema/key.
 -- ---------------------------------------------------------------------------
-INSERT INTO atlas_bpp_dashboard.access_matrix
+INSERT INTO atlas_dashboard.access_matrix
   (id, role_id, api_entity, user_access_type, user_action_type, created_at, updated_at)
 SELECT
   gen_random_uuid()::text, r.id, 'DSL', 'USER_FULL_ACCESS',
   'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_INVOICE_PDF',
   now(), now()
-FROM atlas_bpp_dashboard.role r
+FROM atlas_dashboard.role r
 WHERE r.dashboard_access_type IN ('FLEET_OWNER', 'FLEET_BUSINESS')
   AND NOT EXISTS (
-    SELECT 1 FROM atlas_bpp_dashboard.access_matrix am
+    SELECT 1 FROM atlas_dashboard.access_matrix am
     WHERE am.role_id = r.id
       AND am.user_action_type = 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/GET_FINANCE_MANAGEMENT_FINANCE_INVOICE_PDF'
   );
