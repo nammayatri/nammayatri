@@ -415,6 +415,7 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             nightShiftOverlapChecking = False, ---------considered only for one way
             estimatedDistance = mbDistance,
             estimatedRideDuration = mbDuration,
+            estimatedRideStaticDuration = Nothing,
             estimatedCongestionCharge = Nothing,
             timeDiffFromUtc = Nothing,
             petCharges = Nothing, ----------check

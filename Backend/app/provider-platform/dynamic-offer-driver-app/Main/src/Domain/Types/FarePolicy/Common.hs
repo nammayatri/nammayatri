@@ -20,7 +20,7 @@ module Domain.Types.FarePolicy.Common where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Data.Aeson
 import EulerHS.Prelude hiding (length, map)
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.Common
 
@@ -66,8 +66,17 @@ data WaitingCharge
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+-- | What duration 'perMinRateSections' is priced on:
+-- 'TotalDuration' — the full traffic-aware estimated ride duration (default);
+-- 'TrafficDelayDuration' — only the traffic delay (estimated minus static
+-- duration from the routing provider), so sections price delayed minutes.
+data PerMinRateDurationBasis = TotalDuration | TrafficDelayDuration
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
 $(mkBeamInstancesForJSON ''NightShiftCharge)
 $(mkBeamInstancesForJSON ''WaitingCharge)
+$(mkBeamInstancesForEnum ''PerMinRateDurationBasis)
 
 mkWaitingChargeInfo :: Common.WaitingChargeInfoAPIEntity -> WaitingChargeInfo
 mkWaitingChargeInfo Common.WaitingChargeInfoAPIEntity {..} =

@@ -36,7 +36,8 @@ data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
     currency :: B.C f (Maybe Currency),
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
-    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
+    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge),
+    perMinRateDurationBasis :: B.C f (Maybe Domain.PerMinRateDurationBasis)
   }
   deriving (Generic, B.Beamable)
 

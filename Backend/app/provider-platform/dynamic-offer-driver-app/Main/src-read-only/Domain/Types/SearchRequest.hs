@@ -45,6 +45,7 @@ data SearchRequest = SearchRequest
     dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Domain.Types.Location.Location,
     hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

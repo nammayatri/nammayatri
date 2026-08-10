@@ -96,6 +96,7 @@ fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..
         currency = fromMaybe INR currency,
         distanceUnit = fromMaybe Meter distanceUnit,
         perMinRateSections = fullMinFP,
+        perMinRateDurationBasis = perMinRateDurationBasis,
         waitingChargeInfo =
           ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
             Domain.WaitingChargeInfo
@@ -123,5 +124,6 @@ instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyPro
         pickupChargesMinAmount = Just pickupCharges.pickupChargesMin,
         pickupChargesMaxAmount = Just pickupCharges.pickupChargesMax,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
-        nightShiftCharge = nightShiftCharge
+        nightShiftCharge = nightShiftCharge,
+        perMinRateDurationBasis = perMinRateDurationBasis
       }

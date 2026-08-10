@@ -50,6 +50,7 @@ data RouteServiceability = RouteServiceability
     routePoints :: RoutePoints,
     routeDistance :: Meters,
     routeDuration :: Seconds,
+    routeStaticDuration :: Maybe Seconds,
     routeToken :: Maybe Text,
     routeTrafficSegments :: Maybe [Maps.RouteTrafficSegment]
   }
@@ -65,13 +66,14 @@ checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteId
   where
     getServiceableRoute _ _ [] = defaultCustomerPrefferedRouteServiceability False
     getServiceableRoute [] _ _ = defaultCustomerPrefferedRouteServiceability True
-    getServiceableRoute ((Maps.RouteInfo (Just duration) _ (Just distance) _ _ _ points routeToken' trafficSegments') : rs) idx blockedRoutes = do
+    getServiceableRoute ((Maps.RouteInfo (Just duration) staticDuration (Just distance) _ _ _ points routeToken' trafficSegments') : rs) idx blockedRoutes = do
       if isRouteServiceable points blockedRoutes
         then
           RouteServiceability
             { routePoints = points,
               routeDistance = distance,
               routeDuration = duration,
+              routeStaticDuration = staticDuration,
               multipleRoutes = updateEfficientRoutePosition routes idx,
               isCustomerPrefferedSearchRoute = idx == customerPrefferedSearchRouteIdx,
               isBlockedRoute = False,
@@ -90,6 +92,7 @@ checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteId
         { routePoints = customerPrefferedSearchRoutePoints,
           routeDistance = customerPrefferedSearchRouteDistance,
           routeDuration = customerPrefferedSearchRouteDuration,
+          routeStaticDuration = (.staticDuration) =<< listToMaybe (drop customerPrefferedSearchRouteIdx routes),
           multipleRoutes = routes,
           isCustomerPrefferedSearchRoute = True,
           isBlockedRoute,

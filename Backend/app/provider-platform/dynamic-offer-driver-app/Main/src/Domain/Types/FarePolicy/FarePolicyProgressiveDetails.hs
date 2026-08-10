@@ -20,6 +20,7 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
     WaitingCharge (..),
     PickupCharges (..),
     PickupChargesWithCurrency (..),
+    PerMinRateDurationBasis (..),
   )
 where
 
@@ -39,6 +40,7 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
     distanceUnit :: DistanceUnit,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     perMinRateSections :: Maybe (NonEmpty FPProgressiveDetailsPerMinRateSection),
+    perMinRateDurationBasis :: Maybe PerMinRateDurationBasis, -- Nothing = TotalDuration
     deadKmFare :: HighPrecMoney,
     pickupCharges :: PickupCharges,
     waitingChargeInfo :: Maybe WaitingChargeInfo,

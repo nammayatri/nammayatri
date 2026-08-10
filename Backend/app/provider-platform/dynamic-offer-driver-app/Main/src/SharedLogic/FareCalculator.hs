@@ -438,6 +438,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
+    estimatedRideStaticDuration :: Maybe Seconds, -- traffic-free duration from the routing provider; basis for TrafficDelayDuration pricing
     estimatedCongestionCharge :: Maybe HighPrecMoney,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
@@ -744,8 +745,20 @@ calculateFareParametersHandler params = do
             (fromMaybe 0 params.actualDistance) - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
           mbEstimatedRideDurationInMins = ceiling . (fromIntegral @_ @Double) . (`div` 60) . (.getSeconds) <$> params.estimatedRideDuration
+          -- what duration perMinRateSections is priced on, chosen per fare policy:
+          -- TotalDuration (default) - full traffic-aware estimated duration;
+          -- TrafficDelayDuration - only the delay over the traffic-free (static)
+          -- duration, so sections express a buffer (zero-rate first section) and
+          -- per-minute delay rates. Missing static duration => no delay fare.
+          mbPerMinRateChargeableMins = case fromMaybe DFP.TotalDuration perMinRateDurationBasis of
+            DFP.TotalDuration -> mbEstimatedRideDurationInMins
+            DFP.TrafficDelayDuration -> do
+              estimatedDuration <- params.estimatedRideDuration
+              staticDuration <- params.estimatedRideStaticDuration
+              let delaySecs = max 0 (estimatedDuration.getSeconds - staticDuration.getSeconds)
+              pure $ ceiling ((fromIntegral @_ @Double) (delaySecs `div` 60))
           (extraKmFare, baseFareDepreciation) = maybe (HighPrecMoney 0.0, HighPrecMoney 0.0) (processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections) mbExtraDistance
-          (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections) mbEstimatedRideDurationInMins
+          (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections) mbPerMinRateChargeableMins
       ( debugLogs,
         baseFare + baseFareDepreciation,
         nightShiftCharge,

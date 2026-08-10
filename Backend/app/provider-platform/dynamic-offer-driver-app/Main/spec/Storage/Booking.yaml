@@ -76,6 +76,7 @@ Booking:
     estimatedFare: HighPrecMoney
     currency: Currency
     estimatedDuration: Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
     fareParams: FareParameters
     riderName: Maybe Text
     paymentMethodId: Maybe (Id MerchantPaymentMethod)

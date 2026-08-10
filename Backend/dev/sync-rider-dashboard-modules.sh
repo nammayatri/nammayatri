@@ -110,5 +110,7 @@ if $CHECK_ONLY; then
 else
   echo
   echo "synced $copied file(s)."
-  (( copied > 0 )) && echo "NOTE: new modules must also be added to provider-dashboard.cabal (hpack regenerates it)."
+  if (( copied > 0 )); then
+    echo "NOTE: new modules must also be added to provider-dashboard.cabal (hpack regenerates it)."
+  fi
 fi

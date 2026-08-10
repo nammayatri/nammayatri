@@ -237,6 +237,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               shouldApplyPersonalDiscount = searchTry.billingCategory == SLT.PERSONAL,
               noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
+              estimatedRideStaticDuration = searchReq.estimatedStaticDuration,
               estimatedCongestionCharge = Nothing,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,

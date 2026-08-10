@@ -285,6 +285,7 @@ handler merchantId req validatedReq = do
             riderName = Nothing,
             billingCategory = billingCategory,
             estimatedDuration = searchRequest.estimatedDuration,
+            estimatedStaticDuration = searchRequest.estimatedStaticDuration,
             fareParams = driverQuote.fareParams,
             specialLocationTag = driverQuote.specialLocationTag,
             specialLocationName = searchRequest.specialLocationName,

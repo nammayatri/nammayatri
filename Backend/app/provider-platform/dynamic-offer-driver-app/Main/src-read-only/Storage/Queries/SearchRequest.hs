@@ -74,6 +74,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.dynamicPricingLogicVersion dynamicPricingLogicVersion,
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedDuration estimatedDuration,
+      Se.Set Beam.estimatedStaticDuration estimatedStaticDuration,
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.fromLocationId (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
       Se.Set Beam.hasStops hasStops,

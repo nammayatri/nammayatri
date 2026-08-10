@@ -2122,6 +2122,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
               estimatedRideDuration = searchReq.estimatedDuration,
+              estimatedRideStaticDuration = searchReq.estimatedStaticDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
               estimatedCongestionCharge = Nothing,
               estimatedDistance = searchReq.estimatedDistance,

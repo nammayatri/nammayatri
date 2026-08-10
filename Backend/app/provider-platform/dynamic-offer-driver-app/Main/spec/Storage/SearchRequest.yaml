@@ -64,6 +64,7 @@ SearchRequest:
     estimatedDistance: Maybe Meters
     distanceUnit: DistanceUnit
     estimatedDuration: Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
     validTill: UTCTime
     isScheduled: Bool
     driverDefaultExtraFee: Maybe HighPrecMoney

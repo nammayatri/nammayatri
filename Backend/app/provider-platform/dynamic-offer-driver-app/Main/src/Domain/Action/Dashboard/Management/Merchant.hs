@@ -1634,6 +1634,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     baseFareDepreciation :: Text,
     perMinRateStartDuration :: Text,
     perMinRate :: Text,
+    perMinRateDurationBasis :: Text,
     peakTimings :: Text,
     peakDays :: Text,
     cancellationFarePolicyDescription :: Text,
@@ -1739,6 +1740,7 @@ instance ToNamedRecord FarePolicyCSVRow where
         "base_fare_depreciation" .= baseFareDepreciation,
         "per_min_rate_start_duration" .= perMinRateStartDuration,
         "per_min_rate" .= perMinRate,
+        "per_min_rate_duration_basis" .= perMinRateDurationBasis,
         "peak_timings" .= peakTimings,
         "peak_days" .= peakDays,
         "cancellation_fare_policy_description" .= cancellationFarePolicyDescription,
@@ -1843,6 +1845,7 @@ farePolicyCSVHeader =
       "base_fare_depreciation",
       "per_min_rate_start_duration",
       "per_min_rate",
+      "per_min_rate_duration_basis",
       "peak_timings",
       "peak_days",
       "cancellation_fare_policy_description",
@@ -1947,6 +1950,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "base_fare_depreciation"
       <*> r .: "per_min_rate_start_duration"
       <*> r .: "per_min_rate"
+      <*> (r .: "per_min_rate_duration_basis" <|> pure "") -- optional so older CSV templates keep working
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
       <*> r .: "cancellation_fare_policy_description"
@@ -2599,6 +2603,9 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     baseFareDepreciation = baseFareDeprec,
                     perMinRateStartDuration = perMinRateStartDur,
                     perMinRate = perMinRateVal,
+                    perMinRateDurationBasis = case farePolicy.farePolicyDetails of
+                      FarePolicy.ProgressiveDetails details -> maybe "" showT details.perMinRateDurationBasis
+                      _ -> "",
                     peakTimings = peakTimingsVal,
                     peakDays = peakDaysVal,
                     cancellationFarePolicyDescription = rowCfpDesc,
@@ -3165,6 +3172,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
             let pickupCharges = FarePolicy.PickupCharges {pickupChargesMin = pickupChargesMin, pickupChargesMax = pickupChargesMax}
             let baseFareDepreciation :: HighPrecMoney = fromMaybe (HighPrecMoney 0.0) (readMaybeCSVField idx row.baseFareDepreciation "Base fare depreciation")
+            let perMinRateDurationBasis :: Maybe FarePolicy.PerMinRateDurationBasis = readMaybeCSVField idx row.perMinRateDurationBasis "Per Min Rate Duration Basis"
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate, baseFareDepreciation}]
             let perMinRateSections = do
                   rideDurationInMin :: Int <- readMaybeCSVField idx row.perMinRateStartDuration "Per Min Rate Start Duration"

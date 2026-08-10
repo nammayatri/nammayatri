@@ -18,8 +18,8 @@ import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.PassType
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.PassType
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -53,7 +53,7 @@ type API =
              :> QueryParam "fromDate" Integer
              :> QueryParam "toDate" Integer
              :> QueryParams "rideStatus" SRB.BookingStatus
-              :> QueryParam "merchantOperatingCityId" (Id DMOC.MerchantOperatingCity)
+             :> QueryParam "merchantOperatingCityId" (Id DMOC.MerchantOperatingCity)
              :> QueryParam "dontNeedFareBreakup" Bool
              :> Get '[JSON] DBooking.BookingListRes
            :<|> "listV2"

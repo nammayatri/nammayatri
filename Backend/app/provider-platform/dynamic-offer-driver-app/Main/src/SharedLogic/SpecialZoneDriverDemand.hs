@@ -280,6 +280,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               nightShiftOverlapChecking = False,
               estimatedDistance = Just representativeMeters,
               estimatedRideDuration = Just representativeDuration,
+              estimatedRideStaticDuration = Nothing,
               timeDiffFromUtc = Nothing,
               tollCharges = Nothing,
               currency,

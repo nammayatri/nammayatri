@@ -342,6 +342,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   returnTime = Nothing,
                   vehicleAge = Nothing,
                   estimatedCongestionCharge = Nothing,
+                  estimatedRideStaticDuration = Nothing,
                   roundTrip = False,
                   noOfStops = 0,
                   actualRideDuration = Nothing,
