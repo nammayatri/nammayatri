@@ -63,15 +63,27 @@ sanitizeCsvField value
   | hasCsvFormulaPrefix value = T.cons '\'' value
   | otherwise = value
 
--- | Inverse of 'sanitizeCsvField': drop a single leading apostrophe so a re-uploaded export
--- parses back to the value it started as.
+-- | Undo 'sanitizeCsvField' on the import side of a round-trip CSV: drop a leading apostrophe,
+-- but only where sanitize could have added one — that is, only when what follows would itself
+-- have been treated as a formula. Stripping unconditionally corrupts values that legitimately
+-- begin with an apostrophe: @'24x7' service@ is never quoted on export, yet would come back as
+-- @24x7' service@, losing a character on every round trip.
 --
 -- Safe against both shapes of round trip. A spreadsheet treats the apostrophe as a text-format
 -- marker and omits it when re-saving to CSV, in which case there is nothing to strip and this is
 -- the identity. A file re-uploaded verbatim still carries it, and this removes it. Without this,
 -- "'-5" reaches readMaybe, yields Nothing, and the field is silently dropped.
+--
+-- Not a true inverse, and cannot be: 'sanitizeCsvField' is not injective, since @"=x"@ and
+-- @"'=x"@ both encode to @"'=x"@. A value that literally starts with an apostrophe followed by
+-- @=@, @+@, @-@ or @\@@ therefore loses that apostrophe on round trip. Escaping the apostrophe
+-- by doubling it would restore injectivity but breaks the spreadsheet path, which silently eats
+-- one apostrophe of its own. The ambiguity is accepted; the realistic cases round-trip exactly.
 desanitizeCsvField :: Text -> Text
-desanitizeCsvField value = fromMaybe value (T.stripPrefix "'" value)
+desanitizeCsvField value =
+  case T.stripPrefix "'" value of
+    Just rest | hasCsvFormulaPrefix rest -> rest
+    _ -> value
 
 cleanField :: Text -> Maybe Text
 cleanField = replaceEmpty . T.strip

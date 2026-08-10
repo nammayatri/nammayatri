@@ -25,6 +25,14 @@ module Domain.Action.UI.DriverOnboarding.Image
     throwValidationError,
     convertHVStatusToValidationStatus,
     convertValidationStatusToVerificationStatus,
+    -- Exported for unit tests: pure classification helpers with no Flow dependency.
+    UploadedFileType (..),
+    detectUploadedFileType,
+    canonicalExtension,
+    allowedExtensionsFor,
+    normalizeExtension,
+    resolveStoredExtension,
+    isImageOnlyDocument,
   )
 where
 

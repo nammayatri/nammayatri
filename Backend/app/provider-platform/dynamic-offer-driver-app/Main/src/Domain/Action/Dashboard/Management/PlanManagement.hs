@@ -7,6 +7,8 @@ module Domain.Action.Dashboard.Management.PlanManagement
     postPlanManagementActivatePlan,
     getPlanManagementListPlans,
     getPlanManagementPlanTranslations,
+    -- Exported for unit tests.
+    containsMarkupOrTemplate,
   )
 where
 

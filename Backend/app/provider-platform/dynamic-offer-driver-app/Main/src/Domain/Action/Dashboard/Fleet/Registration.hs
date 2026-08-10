@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Fleet.Registration
     FleetOwnerVerifyRes (..),
     fleetOwnerVerifyHandler,
     otpAttemptsKey,
+    constantTimeEqText,
     FleetOwnerUpdateLanguageReq (..),
     fleetOwnerUpdateLanguage,
   )

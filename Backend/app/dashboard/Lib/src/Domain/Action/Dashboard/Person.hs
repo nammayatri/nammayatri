@@ -256,6 +256,12 @@ adminEmailDomainError = "Administrator accounts must use an approved organizatio
 -- break at the middle step. A person with no access rows anywhere is unprovisioned and owned by
 -- nobody, so the caller may act on them; a person with access rows none of which name the
 -- caller's merchant belongs to another merchant and is rejected.
+--
+-- "Zero access rows" therefore means unprovisioned. It would also describe a deprovisioned
+-- person, but no path leaves that state today: every access-row deletion
+-- (QAccess.deleteAllByPersonId) is immediately followed by QP.deletePerson, so the person row
+-- does not outlive its access rows. A future deprovision-without-delete path would need to
+-- revisit this predicate, since it would then be indistinguishable from unprovisioned.
 assertPersonInCallerMerchant ::
   BeamFlow m r =>
   TokenInfo ->
@@ -266,6 +272,19 @@ assertPersonInCallerMerchant tokenInfo personId = do
   unless (null allAccess) $
     unless (any (\access -> access.merchantId == tokenInfo.merchantId) allAccess) $
       throwError (PersonDoesNotExist personId.getId)
+
+-- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
+-- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
+-- only payload — request bodies here carry credentials and must never reach the audit log.
+recordAdminActionOnPerson ::
+  BeamFlow m r =>
+  DTransaction.Endpoint ->
+  TokenInfo ->
+  Id DP.Person ->
+  m ()
+recordAdminActionOnPerson endpoint tokenInfo personId = do
+  transaction <- STransaction.buildDashboardAuthTransaction endpoint tokenInfo.personId tokenInfo.merchantId
+  QT.create transaction {DTransaction.request = Just personId.getId}
 
 validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
 validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
@@ -400,6 +419,7 @@ assignRole tokenInfo personId roleId = do
   DCap.guardAdminMutation tokenInfo.personId newRole.dashboardAccessType
   DCap.guardAdminMutation tokenInfo.personId oldRole.dashboardAccessType
   QP.updatePersonRole personId newRole
+  recordAdminActionOnPerson DTransaction.DashboardUserRoleAssign tokenInfo personId
   pure Success
 
 assignMerchantCityAccess ::
@@ -639,6 +659,7 @@ changePasswordByAdmin tokenInfo personId req = do
     validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
   QP.updatePersonPasswordByAdmin personId newHash
+  recordAdminActionOnPerson DTransaction.DashboardUserPasswordResetByAdmin tokenInfo personId
   -- An admin reset is also the remedy for a compromised account, so any session established
   -- with the old credential must die with it.
   Auth.cleanCachedTokens personId
@@ -664,6 +685,7 @@ changeMobileNumberByAdmin tokenInfo personId req = do
     throwError $ InvalidRequest $ "Cannot update phone number for role: " <> role.name
   encMobileNum <- encrypt req.newMobileNumber
   QP.updatePersonMobile personId encMobileNum
+  recordAdminActionOnPerson DTransaction.DashboardUserMobileChangeByAdmin tokenInfo personId
   pure Success
 
 changeEnabledStatus ::
@@ -698,6 +720,7 @@ changeEmailByAdmin tokenInfo personId req = do
   assertAdminEmailDomain tokenInfo.merchantId role (Just newEmail)
   encEmail <- encrypt newEmail
   QP.updatePersonEmail personId encEmail
+  recordAdminActionOnPerson DTransaction.DashboardUserEmailChangeByAdmin tokenInfo personId
   pure Success
 
 validateChangeEmailReq :: Validate ChangeEmailByAdminReq
