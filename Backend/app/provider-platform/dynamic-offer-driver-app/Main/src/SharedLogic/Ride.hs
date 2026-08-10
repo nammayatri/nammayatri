@@ -700,6 +700,9 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.SUV_PLUS -> buffer.suvplus
     DST.HERITAGE_CAB -> buffer.heritagecab
     DST.EV_AUTO_RICKSHAW -> buffer.evautorickshaw
+    DST.EV_HATCHBACK -> buffer.hatchback
+    DST.EV_SEDAN -> buffer.sedan
+    DST.EV_SUV -> buffer.suv
     DST.DELIVERY_LIGHT_GOODS_VEHICLE -> buffer.deliveryLightGoodsVehicle
     DST.DELIVERY_TRUCK_MINI -> buffer.deliveryLightGoodsVehicle
     DST.DELIVERY_TRUCK_SMALL -> buffer.deliveryLightGoodsVehicle
