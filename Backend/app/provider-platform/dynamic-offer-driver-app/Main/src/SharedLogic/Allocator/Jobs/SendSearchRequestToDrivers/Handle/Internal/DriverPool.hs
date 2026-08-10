@@ -32,6 +32,7 @@ import qualified Control.Monad as CM
 import Data.Aeson as A
 import Data.Aeson.Types as A
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
@@ -129,18 +130,19 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion Nothing
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
-  -- Enrich each driver with its per-driver Redis sliding-window counters and idle time so the
-  -- POOLING dynamic-logic rules can reference them. One Redis read pass per driver (in line with
-  -- the existing per-driver Redis reads in this flow).
-  enrichedDrivers <-
-    mapM
-      ( \driver -> do
-          let personId = cast driver.driverPoolResult.driverId
-          counters <- getSrdStatsCounters personId
-          idleSecs <- DriverIdleTime.getIdleTimeSeconds personId
-          pure driver {searchReqDriverStatsCounters = Just counters, idleTimeSeconds = Just idleSecs}
-      )
-      onlyNewDriversWithCustomerInfo
+  -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
+  -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
+  -- (counters + idle) instead of a Redis read pass per driver.
+  let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
+  countersMap <- getSrdStatsCountersBulk personIds
+  idleMap <- DriverIdleTime.getIdleTimeSecondsBulk personIds
+  let enrichedDrivers =
+        map
+          ( \driver ->
+              let personId = cast driver.driverPoolResult.driverId
+               in driver {searchReqDriverStatsCounters = Map.lookup personId countersMap, idleTimeSeconds = Map.lookup personId idleMap}
+          )
+          onlyNewDriversWithCustomerInfo
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum}
   logInfo $
     "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
