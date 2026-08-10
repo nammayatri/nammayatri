@@ -61,13 +61,13 @@ registerOperator opCity email mobileNumber mobileCountryCode firstName lastName 
     case mbRoleId of
       Just roleId -> QRole.findById (Id roleId) >>= fromMaybeM (RoleNotFound roleId)
       Nothing -> QRole.findByDashboardAccessType DRole.DASHBOARD_OPERATOR >>= fromMaybeM (RoleNotFound "OPERATOR")
-  operator <- buildOperator email mobileNumber mobileCountryCode firstName lastName password operatorId operatorRole
+  operator <- buildOperator email mobileNumber mobileCountryCode firstName lastName password operatorId operatorRole merchant.id
   merchantAccess <- DP.buildMerchantAccess operator.id merchant.id merchant.shortId opCity
   QP.create operator
   QAccess.create merchantAccess
 
-buildOperator :: (EncFlow m r) => Maybe Text -> Text -> Text -> Text -> Text -> Maybe Text -> Id Common.Operator -> DRole.Role -> m DP.Person
-buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstName lastName password operatorId role = do
+buildOperator :: (EncFlow m r) => Maybe Text -> Text -> Text -> Text -> Text -> Maybe Text -> Id Common.Operator -> DRole.Role -> Id DM.Merchant -> m DP.Person
+buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstName lastName password operatorId role merchantId = do
   now <- getCurrentTime
   mobileNumber <- encrypt mobileNumberUnencrypted
   email <- forM emailUnencrypted encrypt
@@ -92,6 +92,7 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         dashboardType = PT.DEFAULT_DASHBOARD,
         passwordUpdatedAt = Nothing,
         forcePasswordChange = Nothing,
+        merchantId = Just merchantId,
         approvedBy = Nothing,
         rejectedBy = Nothing,
         language = Nothing,

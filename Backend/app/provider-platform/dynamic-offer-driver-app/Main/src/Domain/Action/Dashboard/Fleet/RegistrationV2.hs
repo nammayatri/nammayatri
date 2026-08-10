@@ -481,6 +481,8 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   void $ Redis.setExp key otp expTime
+  -- A freshly issued OTP gets a fresh attempt budget.
+  Redis.del $ DRegistration.otpAttemptsKey key
   pure $ Common.FleetOwnerLoginResV2 {personId = cast @DP.Person @Common.Person personId}
 
 buildFleetOwnerAuthReq ::

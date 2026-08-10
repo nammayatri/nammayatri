@@ -1,2 +1,0 @@
-ALTER TABLE atlas_bpp_dashboard.person
-ADD COLUMN force_password_change boolean;

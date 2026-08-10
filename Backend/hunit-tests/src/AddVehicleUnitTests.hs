@@ -97,7 +97,8 @@ createTestPerson =
       DP.rejectionReason = Nothing,
       DP.rejectedAt = Nothing,
       DP.passwordUpdatedAt = Nothing,
-      DP.forcePasswordChange = Nothing
+      DP.forcePasswordChange = Nothing,
+      DP.merchantId = Nothing
     }
 
 -- =============================================================================

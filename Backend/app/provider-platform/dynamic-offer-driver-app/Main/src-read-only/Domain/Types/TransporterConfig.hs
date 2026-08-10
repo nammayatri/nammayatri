@@ -188,6 +188,7 @@ data TransporterConfig = TransporterConfig
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     enableVendorCheckForCollectingDues :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enforceUploadFileTypeCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     fakeOtpEmails :: [Kernel.Prelude.Text],

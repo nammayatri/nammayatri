@@ -1054,3 +1054,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_downward
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stripe_status_refresh_count_window json ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stripe_status_refresh_count_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enforce_upload_file_type_check boolean ;
