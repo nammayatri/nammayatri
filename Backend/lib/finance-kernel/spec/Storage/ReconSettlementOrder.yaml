@@ -13,6 +13,9 @@ ReconSettlementOrder:
     ReconSourceType:
       enum: "BAP_CLAIMED,UNSOLICITED,ADMIN_SETTLED"
       derive: "ToParamSchema"
+    OrderReconVerdict:
+      enum: "PENDING,PAID,UNDERPAID,OVERPAID,NOT_PAID,UNMATCHED"
+      derive: "ToParamSchema"
 
   fields:
     id: Id ReconSettlementOrder
@@ -56,6 +59,12 @@ ReconSettlementOrder:
     manuallyConfirmedAt: Maybe UTCTime
     manuallyConfirmedBy: Maybe Text
     manualConfirmationReason: Maybe Text
+    ourReconStatus: OrderReconVerdict
+    diffAmount: Maybe HighPrecMoney
+    remarks: Maybe Text
+    payoutEligible: Maybe Bool
+    refundReference: Maybe Text
+    refundedAt: Maybe UTCTime
     rawJson: Text
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -85,6 +94,8 @@ ReconSettlementOrder:
     reasonCode: character varying(10)
     sourceType: character varying(50)
     refundStatus: character varying(50)
+    ourReconStatus: character varying(50)
+    diffAmount: numeric(30,2)
     rawJson: text
 
   default:
@@ -92,6 +103,7 @@ ReconSettlementOrder:
     settlementDetailIndex: "0"
     sourceType: "'BAP_CLAIMED'"
     utrSettlementId: "NULL"
+    ourReconStatus: "'PENDING'"
 
   queries:
     findByUtrSettlementId:

@@ -46,3 +46,15 @@ ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN wire_recon_
 ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN withholding_tax_gst numeric(30,2) ;
 ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN withholding_tax_tds numeric(30,2) ;
 ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ALTER COLUMN diff_amount DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ALTER COLUMN allocated_bank_cash DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN remarks text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN refunded_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN refund_reference text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN reconciliation_status text ;
+ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN payout_eligible boolean ;

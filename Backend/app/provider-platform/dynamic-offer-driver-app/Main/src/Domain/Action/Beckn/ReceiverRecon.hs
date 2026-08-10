@@ -10,18 +10,18 @@ import qualified Data.Map.Strict as Map
 import Data.Time.Clock (UTCTime (..))
 import qualified Domain.Types.Merchant as DM
 import Environment
-import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.ReconSettlementOrder as RSO
 import qualified Lib.Finance.Domain.Types.ReconUtrSettlement as RUS
+import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
+import qualified Lib.Finance.Reconciliation.Types as ReconT
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrder as QRSO
 import qualified Lib.Finance.Storage.Queries.ReconUtrSettlement as QRUS
 import qualified Lib.Finance.Storage.Queries.ReconUtrSettlementExtra as QRUSExtra
-import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.Ride as QRide
+import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide as RsfRecipe
 
 data ReceiverReconRequest = ReceiverReconRequest
   { bapId :: Text,
@@ -72,6 +72,7 @@ handleReceiverRecon merchantId req = do
   now <- getCurrentTime
   let merchantIdText = Just merchantId.getId
 
+  -- Step 1: Group by UTR and upsert ReconUtrSettlement
   let allDetailPairs = concatMap (\o -> map (o,) o.settlementDetails) req.orders
       utrGroups = groupDetailsByUtr allDetailPairs
 
@@ -106,11 +107,8 @@ handleReceiverRecon merchantId req = do
     let actualId = maybe utrId (.id) existingUtr
     pure (utrVal, actualId)
 
+  -- Step 2: Create RSO rows (raw claims only — no ride resolution)
   orderRows <- fmap concat . forM (zip [0 ..] req.orders) $ \(orderIdx, order) -> do
-    (mbRideId, mbDriverId, platformGrossFare) <- resolveOrderToRide order.orderId
-
-    let netReceivable = computePlatformNetReceivable platformGrossFare order.bffAmount order.withholdingTaxGst order.withholdingTaxTds order.deductionByCollector
-
     let details =
           if null order.settlementDetails
             then [fallbackDetail]
@@ -146,10 +144,10 @@ handleReceiverRecon merchantId req = do
             withholdingTaxTds = order.withholdingTaxTds,
             deductionByCollector = order.deductionByCollector,
             receivedAt = now,
-            rideId = mbRideId,
-            driverId = mbDriverId,
-            platformGrossFare = platformGrossFare,
-            platformNetReceivable = netReceivable,
+            rideId = Nothing,
+            driverId = Nothing,
+            platformGrossFare = Nothing,
+            platformNetReceivable = Nothing,
             allocatedBankCash = Nothing,
             reconciliationStatus = Nothing,
             wireReconStatus = order.wireReconStatus,
@@ -162,54 +160,32 @@ handleReceiverRecon merchantId req = do
             manuallyConfirmedAt = Nothing,
             manuallyConfirmedBy = Nothing,
             manualConfirmationReason = Nothing,
+            ourReconStatus = RSO.PENDING,
+            diffAmount = Nothing,
+            remarks = Nothing,
+            payoutEligible = Nothing,
+            refundReference = Nothing,
+            refundedAt = Nothing,
             rawJson = order.rawJson,
             createdAt = now,
             updatedAt = now
           }
 
   QRSO.createMany orderRows
+
+  -- Step 3: Inline reconciliation via Recipe framework
+  let scope = ReconT.MerchantScope merchantId.getId merchantId.getId
+      sourceIds = map (ReconT.SourceId . (.orderId)) req.orders
+  unless (null sourceIds) $
+    ReconRunner.reconcileSources RsfRecipe.recipe scope sourceIds
+
   logInfo $
-    "RSF ingest complete: messageId="
+    "RSF ingest + recon complete: messageId="
       <> req.messageId
       <> " rows="
       <> show (length orderRows)
       <> " orders="
       <> show (length req.orders)
-
-resolveOrderToRide ::
-  Text ->
-  Flow (Maybe Text, Maybe Text, Maybe HighPrecMoney)
-resolveOrderToRide orderId = do
-  mbBooking <- B.runInReplica $ QBooking.findById (Id orderId)
-  case mbBooking of
-    Nothing -> do
-      logWarning $ "RSF: Booking not found for orderId=" <> orderId
-      pure (Nothing, Nothing, Nothing)
-    Just booking -> do
-      mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
-      case mbRide of
-        Nothing -> do
-          logWarning $ "RSF: Ride not found for bookingId=" <> booking.id.getId
-          pure (Nothing, Nothing, Nothing)
-        Just ride ->
-          pure (Just ride.id.getId, Just ride.driverId.getId, ride.fare)
-
-computePlatformNetReceivable ::
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney
-computePlatformNetReceivable mbPlatformGross mbBff mbGst mbTds mbDeduction =
-  case mbPlatformGross of
-    Nothing -> Nothing
-    Just platformGross ->
-      let bff = fromMaybe 0 mbBff
-          gst = fromMaybe 0 mbGst
-          tds = fromMaybe 0 mbTds
-          deduction = fromMaybe 0 mbDeduction
-       in Just (platformGross - bff - gst - tds - deduction)
 
 groupDetailsByUtr :: [(ReceiverReconOrder, SettlementDetailParsed)] -> Map.Map Text [(ReceiverReconOrder, SettlementDetailParsed)]
 groupDetailsByUtr = foldl' (\acc pair -> Map.insertWith (<>) ((.utr) . snd $ pair) [pair] acc) Map.empty

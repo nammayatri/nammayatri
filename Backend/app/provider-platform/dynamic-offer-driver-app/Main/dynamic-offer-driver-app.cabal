@@ -34,7 +34,6 @@ library
       API.Beckn.IGM.Issue
       API.Beckn.Init
       API.Beckn.Rating
-      API.Beckn.ReceiverRecon
       API.Beckn.Search
       API.Beckn.Select
       API.Beckn.Status
@@ -92,6 +91,8 @@ library
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
+      API.RSF
+      API.RSF.ReceiverRecon
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -578,6 +579,7 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSubscription
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
+      SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
