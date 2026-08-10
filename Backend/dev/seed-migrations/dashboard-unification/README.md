@@ -58,6 +58,7 @@ and relative, because psql does not interpolate variables inside `\copy`.
 | `0016-capability-endpoint-gap.sql` | **runs first** — capability_endpoint rows for the 31 endpoints that shipped after the 2026-08-05 inventory | gate returns 0 |
 | `0017-capability-backfill.sql` | **required before the no-fallback binary** — grants every role the capability behind each endpoint the matrix already allowed it | §1 empty, §6 both 0 |
 | `0018-super-admin-seed.sql` | **required in the same window** — seeds the initial SUPER_ADMIN(s) by person id | §5 lists exactly who you intended |
+| `0019-pt-employee-persons.sql` | restores the two PT-employee logins: carries `token_no_hash`/`entity_id` onto a phone-matched person, or inserts them outright | §6 shows 2 rows, `can_pt_login` true |
 
 `0003` and `0009` are generated — source of truth is
 `docs/access-unification/generate_capability_seed.py` in the control-center repo.

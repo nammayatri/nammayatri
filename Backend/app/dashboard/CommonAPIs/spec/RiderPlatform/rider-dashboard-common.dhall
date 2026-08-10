@@ -20,6 +20,9 @@ let outputPrefixRiderApp =
 let migrationPath =
       rootDir ++ "/Backend/dev/migrations-read-only/rider-dashboard/"
 
+let unifiedMigrationPath =
+      rootDir ++ "/Backend/dev/migrations-read-only/provider-dashboard/"
+
 let outputPath =
       { _apiRelatedTypes =
           outputPrefixCommonApisReadOnly ++ "API/Types/RiderPlatform"
@@ -43,7 +46,10 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "API/Action/RiderPlatform"
       , _servantApiClient =
           outputPrefixDashboardReadOnly ++ "API/Client/RiderPlatform"
-      , _sql = [ { _1 = migrationPath, _2 = "atlas_bap_dashboard" } ]
+      , _sql =
+        [ { _1 = migrationPath, _2 = "atlas_bap_dashboard" }
+        , { _1 = unifiedMigrationPath, _2 = "atlas_dashboard" }
+        ]
       , _purescriptFrontend = ""
       , _configPilot = outputPrefixDashboard ++ "Storage/ConfigPilot/Config"
       }
