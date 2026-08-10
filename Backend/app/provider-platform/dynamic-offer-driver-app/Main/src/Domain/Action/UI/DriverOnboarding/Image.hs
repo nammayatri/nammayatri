@@ -33,6 +33,8 @@ module Domain.Action.UI.DriverOnboarding.Image
     normalizeExtension,
     resolveStoredExtension,
     isImageOnlyDocument,
+    pdfActiveContentFinding,
+    containsPdfName,
   )
 where
 
@@ -126,12 +128,13 @@ data GetDocsResponse = GetDocsResponse
 
 -- | Formats the onboarding document pipeline is permitted to store.
 --
--- Scope note: matching magic bytes is an integrity check on the declared type, NOT a defence
--- against active content. A polyglot can be a valid JPEG and valid HTML simultaneously, and PDF —
--- which is on this list because GST certificates need it — supports embedded JavaScript. What
--- actually stops stored active content executing is how the object is served: Content-Disposition
--- attachment, an explicit Content-Type, and X-Content-Type-Options nosniff on the bucket/CDN.
--- Treat this as defence in depth that keeps executables and obviously-wrong payloads out.
+-- Scope note: matching magic bytes is an integrity check on the declared type, not by itself a
+-- defence against active content — a polyglot can be a valid JPEG and valid HTML simultaneously.
+-- PDF is on this list because GST certificates need it, and PDF supports embedded JavaScript, so
+-- PDFs additionally go through 'pdfActiveContentFinding' below. These documents are served back
+-- to the dashboard as base64 in the response body rather than as a URL, so there is no S3
+-- Content-Disposition or CDN header in the path to fall back on: what is stored is what the
+-- viewer renders. Rejecting at upload is therefore the only server-side control available.
 data UploadedFileType
   = JPEG
   | PNG
@@ -209,8 +212,54 @@ isImageOnlyDocument docType =
              DVC.InspectionHub
            ]
 
+-- | PDF names that make a viewer do something other than display a page. A scanned certificate
+-- has no reason to carry any of these, and each is a documented execution or exfiltration vector.
+--
+-- Deliberately excludes @/OpenAction@ and @/AA@: both are routinely present in benign documents
+-- to set an initial zoom or page, and are only dangerous when they reference a @/JavaScript@
+-- action, which is itself on this list. Also excludes @/URI@, which is an ordinary hyperlink.
+pdfActiveContentNames :: [BS.ByteString]
+pdfActiveContentNames =
+  [ "/JavaScript",
+    "/JS",
+    "/Launch",
+    "/EmbeddedFile",
+    "/EmbeddedFiles",
+    "/XFA",
+    "/RichMedia",
+    "/SubmitForm",
+    "/ImportData"
+  ]
+
+-- | The first active-content name present in a PDF, if any.
+--
+-- Best effort by construction, and worth being explicit about the limits. PDF allows these names
+-- to live inside a compressed object stream (@/ObjStm@ with a @/FlateDecode@ filter), where a raw
+-- byte scan cannot see them, and allows them to be written with hex escapes such as
+-- @/J#61vaScript@. This catches the direct encodings, which is what commodity PDF-payload
+-- generators emit. It raises the cost of the attack; it does not make a stored PDF trustworthy,
+-- so the viewer rendering these must still treat them as untrusted.
+pdfActiveContentFinding :: BS.ByteString -> Maybe BS.ByteString
+pdfActiveContentFinding bs = find (`containsPdfName` bs) pdfActiveContentNames
+
+-- | Whether a PDF name token occurs, respecting token boundaries. The boundary check is what
+-- keeps @/JS@ from also matching the @/JSName@ of some unrelated dictionary key.
+containsPdfName :: BS.ByteString -> BS.ByteString -> Bool
+containsPdfName name = go
+  where
+    go haystack =
+      let (_, rest) = BS.breakSubstring name haystack
+       in not (BS.null rest)
+            && case BS.uncons (BS.drop (BS.length name) rest) of
+              -- Name runs to end of file: nothing can follow, so the token is complete.
+              Nothing -> True
+              Just (c, _) -> isPdfDelimiter c || go (BS.drop 1 rest)
+    -- PDF whitespace and delimiter characters (ISO 32000-1 tables 1 and 2).
+    isPdfDelimiter c = c `BS.elem` "\0\t\n\f\r ()<>[]{}/%"
+
 -- | Reject anything whose bytes are not a permitted document format, whose declared extension
--- contradicts those bytes, or which is a PDF under a photo-only document type.
+-- contradicts those bytes, which is a PDF under a photo-only document type, or which is a PDF
+-- carrying active content.
 --
 -- When @enforce@ is False this runs in shadow mode: every rejection is logged and allowed
 -- through, so the rejection rate can be measured against real onboarding traffic before the
@@ -242,7 +291,12 @@ validateUploadedFileType enforce docType content mbDeclaredExtension = do
             then
               reject (show fileType <> " uploaded for image-only document " <> show docType) (Just fileType) $
                 show docType <> " must be an image, not a " <> T.toLower (show fileType) <> "."
-            else pure (Just fileType)
+            else case (fileType, pdfActiveContentFinding content) of
+              -- Matched left-to-right, so the scan is only forced for a PDF.
+              (PDF, Just marker) ->
+                reject ("PDF carries active content name " <> show marker) (Just fileType) $
+                  "This PDF contains scripts, embedded files or interactive forms and cannot be accepted. Please upload a plain scanned document."
+              _ -> pure (Just fileType)
   where
     reject logDetail mbFileType userMessage
       | enforce = throwError $ InvalidRequest userMessage

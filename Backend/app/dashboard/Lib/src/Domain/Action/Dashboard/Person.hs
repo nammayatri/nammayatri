@@ -55,11 +55,13 @@ import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.PersonTier as QPT
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
+-- isSuperAdmin lives here rather than in Domain.Action.Dashboard.Capability: that module has no
+-- export list, so it re-exports only what it defines, not what it imports.
+import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Merchant
 import Tools.Error
@@ -284,19 +286,17 @@ assertPersonInCallerMerchant tokenInfo personId = do
 -- | Granting a person access to a merchant is how somebody becomes a user of that merchant, so
 -- leaving this open undoes every other cross-merchant guard: an admin of B could grant their own
 -- user access to merchant A. Callers are held to their own merchant, with an escape hatch for a
--- seeded SUPER_ADMIN, who legitimately provisions across merchants.
+-- SUPER_ADMIN, who legitimately provisions across merchants.
 --
--- Existence-guarded like the rest of the admin tiering (see DCap.guardAdminMutation): until a
--- SUPER_ADMIN row exists, the previous unrestricted behavior stands, so no deployment breaks on
--- rollout. Returns True when this is a cross-merchant grant that was permitted.
+-- Unconditional, matching DCap.guardAdminMutation: the SUPER_ADMIN tier is seeded (seed-migration
+-- 0018), so the existence guard that once kept these rules dormant no longer has anything to wait
+-- for. Returns True when this is a cross-merchant grant that was permitted.
 assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m Bool
 assertMayGrantAccessToMerchant tokenInfo targetMerchantId
   | targetMerchantId == tokenInfo.merchantId = pure False
   | otherwise = do
-    superAdminSeeded <- QPT.superAdminExists
-    when superAdminSeeded $
-      unlessM (DCap.isSuperAdmin tokenInfo.personId) $
-        throwError AccessDenied
+    unlessM (isSuperAdmin tokenInfo.personId) $
+      throwError AccessDenied
     pure True
 
 -- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
