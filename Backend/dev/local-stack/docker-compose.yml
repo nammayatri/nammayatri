@@ -297,13 +297,28 @@ services:
       - "${BIND_ADDR:-0.0.0.0}:5001:5000"
     restart: unless-stopped
 
-  # Google Directions -> OSRM translator. See maps-shim/server.js for why this
-  # is necessary: this baseline cannot get routes from OSRM, and mock-google
-  # has no /directions/json. The backend keeps talking "Google"; the answers
-  # come from the Algerian road graph. Non-route requests are forwarded to
-  # mock-google, so one googleMapsUrl still covers everything.
+  # The backend's entire "Google" is this container. See maps-shim/server.js.
+  #
+  #   /directions/json          -> OSRM, on the Algerian road graph
+  #   /place/autocomplete/json  -> geo.place, our own search index
+  #   /place/details/json       -> geo.place
+  #   /geocode/json             -> geo.place (reverse)
+  #   anything else             -> mock-google, untouched
+  #
+  # Three of those five were broken or wrong before: this baseline cannot get
+  # routes from OSRM at all, mock-google implements the *new* autocomplete API
+  # while the backend calls the legacy one, it has no place-details endpoint,
+  # and its reverse geocoder answers with an address in Karnataka wherever you
+  # ask about. One googleMapsUrl still covers everything.
+  #
+  # Built rather than pulled because it needs a Postgres driver; the source is
+  # still bind-mounted, so editing server.js and restarting is the whole loop.
+  # Run ./geocoder-prepare.sh once to fill the index.
   maps-shim:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.maps-shim
+    image: ny-maps-shim:local
     container_name: ny-maps-shim
     network_mode: host
     working_dir: /app
@@ -312,8 +327,14 @@ services:
       PORT: "8030"
       OSRM_URL: "http://localhost:5000"
       MOCK_GOOGLE_URL: "http://localhost:8019"
+      # Host networking, so 5434 is the published Postgres port. Unset this and
+      # the three search endpoints fall back to mock-google.
+      PG_URL: "postgres://postgres:root@localhost:5434/atlas_dev"
     volumes:
       - ./maps-shim:/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # rider-app uses host networking, so its port lives inside the Docker VM and

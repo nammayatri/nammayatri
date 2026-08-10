@@ -330,6 +330,100 @@ the id comes from the tileset metadata inside the MBTiles, not the filename.
 - Labels use OSM's `name`. OpenMapTiles also carries `name:fr` and `name:ar`, so
   switching the map to one language is a style change, not a rebuild.
 
+## Place search — finding somewhere to go
+
+The map draws Algeria and OSRM routes across it, but until now nothing could
+*name* a place in it. All three of the backend's geocoding calls were broken or
+wrong, and the app cannot offer a "Where to?" without them.
+
+```bash
+./geocoder-prepare.sh            # extract, load, check   (~5 min, once)
+./geocoder-prepare.sh functions  # reload the ranking only (instant)
+./geocoder-prepare.sh check      # a few searches, to see it works
+```
+
+### What was actually broken
+
+Confirmed by logging what the backend puts on the wire, not from documentation
+— the request shapes are in shared-kernel, which is not in this repo:
+
+| Rider endpoint | What the backend calls | Before |
+|---|---|---|
+| `autoComplete` | `GET /place/autocomplete/json` | **500** — mock-google implements the *new* Places API; the backend calls the legacy one |
+| `getPlaceName` | `GET /geocode/json?latlng=` | 200, and answered *"Davangere, Karnataka, India"* for Algiers |
+| `getPlaceDetails` | `GET /place/details/json` | **500** — mock-google has no such endpoint |
+
+### The index
+
+`geocoder-prepare.sh` reads the same `algeria-latest.osm.pbf` that already
+feeds OSRM and the tiles, and builds **113,341 named things** into `geo.place`
+in the Postgres the stack already runs — 75k POIs, 19k streets (collapsed from
+33k ways), 14k neighbourhoods and towns, 5.5k transport stops.
+
+**Not Nominatim, Photon or Pelias**, and the reason is the data rather than the
+software. All three are address-first, and addresses are the one thing this
+extract does not have: 42,108 road ways in Algiers carry 5,204
+`addr:housenumber` between them. *"12 Rue Didouche Mourad"* cannot resolve and
+never will. What the data does have is street and landmark names, 97% and 96%
+of them reachable by someone typing Latin characters — so the index is
+landmark- and street-first by construction. Each of those three would also want
+its own datastore (a dedicated PostgreSQL, or an Elasticsearch) on a box with
+11 GB and seventeen containers already on it.
+
+Names come out French-first: `name:fr`, then any Latin alternative, then the
+primary `name`. Every variant including the Arabic goes into the match text, so
+typing either script works even though the display is French.
+
+### Ranking
+
+`0.55 × text + 0.30 × proximity + 0.15 × importance`, with two matchers:
+`LIKE '%q%'` for what is being typed (trigram similarity is hopeless at
+prefixes — "did" against "rue didouche mourad" scores about 0.15) and pg_trgm
+`%` for what was misspelled. *Bab Ezouar* finds **Bab Ezzouar**; *aeroport*
+finds **Aéroport**.
+
+Typical 15–50 ms. Getting there needed four fixes worth knowing about, because
+none of them changed a single answer — only the time:
+
+- **`jit = off`** on the functions. A 148 ms response was 20 ms of work and
+  30 ms of JIT-compiling a query that runs in twenty.
+- **`max_parallel_workers_per_gather = 0`**. The workers took longer to start
+  than the extra cores saved.
+- **Sphere, not spheroid** distance (`st_distance(a, b, false)`) — accurate to
+  centimetres either way, for a number used to sort a list.
+- **A local variable, not a CTE**, for the point in `geo.reverse`. PostGIS's
+  KNN operator only uses the GiST index when one side is a constant or a
+  parameter; behind a `with here as (...)` it silently scans and sorts every
+  row. That one cost 200 ms a call and was invisible.
+
+### Where it plugs in
+
+`maps-shim` — the container that already speaks Google and answers from OSRM.
+It now also answers the three geocoding paths from `geo.place`; anything else
+still goes to mock-google untouched. No rider-app change, no config change: its
+`googleMapsUrl` already points here.
+
+The shim is built from `Dockerfile.maps-shim` rather than pulled, because it
+needs a Postgres driver. The source stays a bind mount, so editing `server.js`
+and restarting the container is still the whole loop. Unset `PG_URL` and the
+three endpoints fall back to mock-google exactly as before.
+
+### Limits worth knowing
+
+- **No house numbers.** Deliberate — see above.
+- **No distance in the results.** The shim sends `distance_meters`, but the
+  shared-kernel these binaries were built from (`28bae0f`) has a legacy
+  `Prediction` of `{description, place_id}` only. The app cannot show "1.4 km"
+  until that moves. Ordering already puts near things first.
+- **The backend asks for `country:in`** and there is no Algeria in its country
+  enum (India, France, USA, Netherlands, Finland). The shim ignores the filter.
+- **There is no FRENCH** in the backend's `Language` enum, so the app must send
+  `ENGLISH`. Harmless — the index answers in French regardless.
+- **Relations are skipped** by the extractor, so a few large named parks and
+  campuses are missing.
+- **A street's point is the average of its ways** within one locality. For a
+  long street that is the middle of it, not the nearest end.
+
 ## Not connected yet: rider → driver
 
 **Fixed.** A search from an Algerian number now comes back with prices:

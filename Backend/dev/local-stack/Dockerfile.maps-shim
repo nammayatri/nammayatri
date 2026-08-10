@@ -1,0 +1,19 @@
+# maps-shim speaks Google and answers from our own services: routes from OSRM
+# over HTTP, and search from Postgres. OSRM needs nothing but `fetch`; Postgres
+# needs a driver, and that one package is the entire reason this image exists
+# rather than plain node:20-alpine.
+#
+# node_modules lives outside /app on purpose. The source stays a read-only bind
+# mount, so editing server.js and restarting the container is still the whole
+# edit-test loop -- no rebuild, no npm install, nothing written into the repo.
+FROM node:20-alpine
+
+RUN mkdir -p /opt/shim \
+ && cd /opt/shim \
+ && npm install --omit=dev --no-fund --no-audit --loglevel=error pg@8.13.1
+
+# How `require('pg')` is found from /app, which has no node_modules of its own.
+ENV NODE_PATH=/opt/shim/node_modules
+
+WORKDIR /app
+CMD ["node", "server.js"]
