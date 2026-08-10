@@ -124,7 +124,9 @@ data InvoiceListItem = InvoiceListItem
     generatedAt :: Kernel.Prelude.UTCTime,
     taxRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     issuedToTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recognizedRevenue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    deferredRevenue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -453,6 +455,127 @@ data SubscriptionPurchaseStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
+data TdsReimbursementDetailRes = TdsReimbursementDetailRes
+  { requestId :: Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest,
+    fleetOwnerId :: Kernel.Prelude.Text,
+    fleetOwnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tanNumber :: Kernel.Prelude.Text,
+    certNumber :: Kernel.Prelude.Text,
+    quarter :: TdsReimbursementQuarter,
+    assessmentYear :: Kernel.Prelude.Text,
+    certAmount :: Kernel.Types.Common.HighPrecMoney,
+    tdsRate :: Kernel.Prelude.Double,
+    tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentUrl :: Kernel.Prelude.Text,
+    status :: TdsReimbursementStatus,
+    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    submittedAt :: Kernel.Prelude.UTCTime,
+    invoiceLines :: [TdsReimbursementStatusInvoiceLine],
+    totalTdsAmount :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementInvoiceLineReq = TdsReimbursementInvoiceLineReq {invoiceId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice, tdsAmount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementListItem = TdsReimbursementListItem
+  { requestId :: Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest,
+    fleetOwnerId :: Kernel.Prelude.Text,
+    fleetOwnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    tanNumber :: Kernel.Prelude.Text,
+    certNumber :: Kernel.Prelude.Text,
+    quarter :: TdsReimbursementQuarter,
+    assessmentYear :: Kernel.Prelude.Text,
+    tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    certAmount :: Kernel.Types.Common.HighPrecMoney,
+    status :: TdsReimbursementStatus,
+    invoiceCount :: Kernel.Prelude.Int,
+    submittedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementListRes = TdsReimbursementListRes {totalItems :: Kernel.Prelude.Int, summary :: Dashboard.Common.Summary, tdsReimbursementRequests :: [TdsReimbursementListItem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementQuarter
+  = Q1
+  | Q2
+  | Q3
+  | Q4
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data TdsReimbursementRequestSubmitReq = TdsReimbursementRequestSubmitReq
+  { tanNumber :: Kernel.Prelude.Text,
+    certNumber :: Kernel.Prelude.Text,
+    quarter :: TdsReimbursementQuarter,
+    assessmentYear :: Kernel.Prelude.Text,
+    tdsSection :: Kernel.Prelude.Text,
+    certAmount :: Kernel.Types.Common.HighPrecMoney,
+    tdsRate :: Kernel.Prelude.Double,
+    documentId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    invoiceLines :: [TdsReimbursementInvoiceLineReq]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementRequestSubmitRes = TdsReimbursementRequestSubmitRes {requestId :: Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest, status :: TdsReimbursementStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementRequestSubmitTReq = TdsReimbursementRequestSubmitTReq
+  { quarter :: TdsReimbursementQuarter,
+    assessmentYear :: Kernel.Prelude.Text,
+    tdsSection :: Kernel.Prelude.Text,
+    certAmount :: Kernel.Types.Common.HighPrecMoney,
+    tdsRate :: Kernel.Prelude.Double,
+    documentId :: Kernel.Types.Id.Id Dashboard.Common.Image,
+    invoiceLines :: [TdsReimbursementInvoiceLineReq]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementStatus
+  = TDS_PENDING
+  | TDS_APPROVED
+  | TDS_REJECTED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data TdsReimbursementStatusInvoiceLine = TdsReimbursementStatusInvoiceLine
+  { invoiceId :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice,
+    invoiceNumber :: Kernel.Prelude.Text,
+    invoiceDate :: Data.Time.Day,
+    baseValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    gst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    invoiceValue :: Kernel.Types.Common.HighPrecMoney,
+    tdsAmount :: Kernel.Types.Common.HighPrecMoney,
+    revenueRecognisedSnapshot :: Kernel.Types.Common.HighPrecMoney,
+    tdsCreditReceivable :: Kernel.Types.Common.HighPrecMoney,
+    deferment :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TdsReimbursementStatusRes = TdsReimbursementStatusRes
+  { status :: Kernel.Prelude.Maybe TdsReimbursementStatus,
+    requestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest),
+    certNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    certAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    tdsSection :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectionReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    submittedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    invoiceLines :: [TdsReimbursementStatusInvoiceLine],
+    totalTdsAmount :: Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TransactionTypeFilter
   = Order
   | Refund
@@ -488,7 +611,7 @@ data WalletLedgerRes = WalletLedgerRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions))
+type API = ("financeManagement" :> (GetFinanceManagementSubscriptionPurchaseList :<|> GetFinanceManagementFinanceInvoicePdf :<|> GetFinanceManagementFinanceInvoiceList :<|> GetFinanceManagementFinanceAuditList :<|> GetFinanceManagementFinanceReconciliation :<|> GetFinanceManagementFinancePaymentSettlementList :<|> GetFinanceManagementFinancePaymentGatewayTransactionList :<|> GetFinanceManagementFinanceWalletLedger :<|> PostFinanceManagementReconciliationTrigger :<|> GetFinanceManagementFinanceSapJournals :<|> GetFinanceManagementFinanceSapJournalsTransactions :<|> PostFinanceManagementTdsReimbursementRequestSubmitHelper :<|> GetFinanceManagementTdsReimbursementStatusHelper :<|> GetFinanceManagementTdsReimbursementList :<|> GetFinanceManagementTdsReimbursement))
 
 type GetFinanceManagementSubscriptionPurchaseList =
   ( "subscriptionPurchase" :> "list" :> QueryParam "amountMax" Kernel.Types.Common.HighPrecMoney
@@ -521,7 +644,7 @@ type GetFinanceManagementSubscriptionPurchaseList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            SubscriptionPurchaseListRes
   )
 
@@ -560,7 +683,7 @@ type GetFinanceManagementFinanceInvoicePdf =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            FinanceInvoicePdfResp
   )
 
@@ -593,7 +716,7 @@ type GetFinanceManagementFinanceInvoiceList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            InvoiceListRes
   )
 
@@ -619,7 +742,7 @@ type GetFinanceManagementFinanceAuditList =
            "entityId"
            Kernel.Prelude.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            AuditListRes
   )
 
@@ -639,7 +762,7 @@ type GetFinanceManagementFinanceReconciliation =
            "target"
            Lib.Finance.Reconciliation.Types.DataSource
       :> Get
-           '[JSON]
+           ('[JSON])
            ReconciliationRes
   )
 
@@ -683,7 +806,7 @@ type GetFinanceManagementFinancePaymentSettlementList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            PaymentSettlementListRes
   )
 
@@ -718,7 +841,7 @@ type GetFinanceManagementFinancePaymentGatewayTransactionList =
            "txnAmountMin"
            Kernel.Types.Common.HighPrecMoney
       :> Get
-           '[JSON]
+           ('[JSON])
            PaymentTransactionReportListRes
   )
 
@@ -744,11 +867,11 @@ type GetFinanceManagementFinanceWalletLedger =
            "subscriptionId"
            (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase)
       :> Get
-           '[JSON]
+           ('[JSON])
            WalletLedgerRes
   )
 
-type PostFinanceManagementReconciliationTrigger = ("reconciliation" :> "trigger" :> ReqBody '[JSON] ReconciliationTriggerReq :> Post '[JSON] ReconciliationTriggerRes)
+type PostFinanceManagementReconciliationTrigger = ("reconciliation" :> "trigger" :> ReqBody ('[JSON]) ReconciliationTriggerReq :> Post ('[JSON]) ReconciliationTriggerRes)
 
 type GetFinanceManagementFinanceSapJournals =
   ( "finance" :> "sapJournals" :> QueryParam "batchId" Kernel.Prelude.Text :> QueryParam "belnr" Kernel.Prelude.Text
@@ -772,7 +895,7 @@ type GetFinanceManagementFinanceSapJournals =
            "transactionType"
            Lib.Finance.Domain.Types.SapJournalEntry.TransactionType
       :> Get
-           '[JSON]
+           ('[JSON])
            SapJournalListRes
   )
 
@@ -789,28 +912,92 @@ type GetFinanceManagementFinanceSapJournalsTransactions =
            "transactionType"
            Lib.Finance.Domain.Types.SapJournalEntry.TransactionType
       :> Get
-           '[JSON]
+           ('[JSON])
            SapJournalTransactionsRes
   )
 
+type PostFinanceManagementTdsReimbursementRequestSubmit =
+  ( "tdsReimbursement" :> "request" :> "submit" :> ReqBody ('[JSON]) TdsReimbursementRequestSubmitReq
+      :> Post
+           ('[JSON])
+           TdsReimbursementRequestSubmitRes
+  )
+
+type PostFinanceManagementTdsReimbursementRequestSubmitHelper =
+  ( "tdsReimbursement" :> "request" :> "submit" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           ('[JSON])
+           TdsReimbursementRequestSubmitReq
+      :> Post ('[JSON]) TdsReimbursementRequestSubmitRes
+  )
+
+type GetFinanceManagementTdsReimbursementStatus =
+  ( "tdsReimbursement" :> "status" :> MandatoryQueryParam "assessmentYear" Kernel.Prelude.Text
+      :> MandatoryQueryParam
+           "quarter"
+           TdsReimbursementQuarter
+      :> Get ('[JSON]) TdsReimbursementStatusRes
+  )
+
+type GetFinanceManagementTdsReimbursementStatusHelper =
+  ( "tdsReimbursement" :> "status" :> MandatoryQueryParam "quarter" TdsReimbursementQuarter
+      :> MandatoryQueryParam
+           "assessmentYear"
+           Kernel.Prelude.Text
+      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+      :> Get ('[JSON]) TdsReimbursementStatusRes
+  )
+
+type GetFinanceManagementTdsReimbursementList =
+  ( "tdsReimbursement" :> "list" :> QueryParam "assessmentYear" Kernel.Prelude.Text :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "quarter"
+           TdsReimbursementQuarter
+      :> QueryParam
+           "status"
+           TdsReimbursementStatus
+      :> QueryParam
+           "tanNumber"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> Get
+           ('[JSON])
+           TdsReimbursementListRes
+  )
+
+type GetFinanceManagementTdsReimbursement = ("tdsReimbursement" :> Capture "requestId" (Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest) :> Get ('[JSON]) TdsReimbursementDetailRes)
+
 data FinanceManagementAPIs = FinanceManagementAPIs
-  { getFinanceManagementSubscriptionPurchaseList :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe SubscriptionPurchaseStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes,
-    getFinanceManagementFinanceInvoicePdf :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Domain.Types.Invoice.IssuedToType -> Kernel.Prelude.Maybe [Domain.Types.Invoice.IssuedToType] -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FinanceInvoicePdfResp,
-    getFinanceManagementFinanceInvoiceList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Domain.Types.Invoice.IssuedToType -> Kernel.Prelude.Maybe [Domain.Types.Invoice.IssuedToType] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient InvoiceListRes,
-    getFinanceManagementFinanceAuditList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.AuditEntry.AuditEntityType -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.AuditEntry.AuditAction -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AuditListRes,
-    getFinanceManagementFinanceReconciliation :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> EulerHS.Types.EulerClient ReconciliationRes,
-    getFinanceManagementFinancePaymentSettlementList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe PgGateway -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.PGPaymentSettlementReport) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PaymentSettlementListRes,
-    getFinanceManagementFinancePaymentGatewayTransactionList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe PaymentModeFilter -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe PaymentStatusFilter -> Kernel.Prelude.Maybe PgGateway -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> EulerHS.Types.EulerClient PaymentTransactionReportListRes,
-    getFinanceManagementFinanceWalletLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> EulerHS.Types.EulerClient WalletLedgerRes,
-    postFinanceManagementReconciliationTrigger :: ReconciliationTriggerReq -> EulerHS.Types.EulerClient ReconciliationTriggerRes,
-    getFinanceManagementFinanceSapJournals :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalListRes,
-    getFinanceManagementFinanceSapJournalsTransactions :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalTransactionsRes
+  { getFinanceManagementSubscriptionPurchaseList :: (Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (SubscriptionPurchaseStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient SubscriptionPurchaseListRes),
+    getFinanceManagementFinanceInvoicePdf :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> Kernel.Prelude.Maybe (Domain.Types.Invoice.IssuedToType) -> Kernel.Prelude.Maybe ([Domain.Types.Invoice.IssuedToType]) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient FinanceInvoicePdfResp),
+    getFinanceManagementFinanceInvoiceList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> Kernel.Prelude.Maybe (Domain.Types.Invoice.IssuedToType) -> Kernel.Prelude.Maybe ([Domain.Types.Invoice.IssuedToType]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient InvoiceListRes),
+    getFinanceManagementFinanceAuditList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.AuditEntry.AuditEntityType) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.AuditEntry.AuditAction) -> Kernel.Prelude.Maybe (Lib.Finance.Core.Types.ActorType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient AuditListRes),
+    getFinanceManagementFinanceReconciliation :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Lib.Finance.Reconciliation.Types.Domain -> Lib.Finance.Reconciliation.Types.DataSource -> Lib.Finance.Reconciliation.Types.DataSource -> EulerHS.Types.EulerClient ReconciliationRes),
+    getFinanceManagementFinancePaymentSettlementList :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (PgGateway) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.PGPaymentSettlementReport) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient PaymentSettlementListRes),
+    getFinanceManagementFinancePaymentGatewayTransactionList :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (PaymentModeFilter) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.PaymentOrder) -> Kernel.Prelude.Maybe (PaymentStatusFilter) -> Kernel.Prelude.Maybe (PgGateway) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> EulerHS.Types.EulerClient PaymentTransactionReportListRes),
+    getFinanceManagementFinanceWalletLedger :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.SubscriptionPurchase) -> EulerHS.Types.EulerClient WalletLedgerRes),
+    postFinanceManagementReconciliationTrigger :: (ReconciliationTriggerReq -> EulerHS.Types.EulerClient ReconciliationTriggerRes),
+    getFinanceManagementFinanceSapJournals :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.SapJournalEntry.JournalEntryStatus) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.SapJournalEntry.TransactionType) -> EulerHS.Types.EulerClient SapJournalListRes),
+    getFinanceManagementFinanceSapJournalsTransactions :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SapJournalEntry.TransactionType -> EulerHS.Types.EulerClient SapJournalTransactionsRes),
+    postFinanceManagementTdsReimbursementRequestSubmit :: (Kernel.Prelude.Text -> TdsReimbursementRequestSubmitReq -> EulerHS.Types.EulerClient TdsReimbursementRequestSubmitRes),
+    getFinanceManagementTdsReimbursementStatus :: (TdsReimbursementQuarter -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsReimbursementStatusRes),
+    getFinanceManagementTdsReimbursementList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (TdsReimbursementQuarter) -> Kernel.Prelude.Maybe (TdsReimbursementStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient TdsReimbursementListRes),
+    getFinanceManagementTdsReimbursement :: (Kernel.Types.Id.Id Dashboard.Common.FinanceTdsReimbursementRequest -> EulerHS.Types.EulerClient TdsReimbursementDetailRes)
   }
 
 mkFinanceManagementAPIs :: (Client EulerHS.Types.EulerClient API -> FinanceManagementAPIs)
 mkFinanceManagementAPIs financeManagementClient = (FinanceManagementAPIs {..})
   where
-    getFinanceManagementSubscriptionPurchaseList :<|> getFinanceManagementFinanceInvoicePdf :<|> getFinanceManagementFinanceInvoiceList :<|> getFinanceManagementFinanceAuditList :<|> getFinanceManagementFinanceReconciliation :<|> getFinanceManagementFinancePaymentSettlementList :<|> getFinanceManagementFinancePaymentGatewayTransactionList :<|> getFinanceManagementFinanceWalletLedger :<|> postFinanceManagementReconciliationTrigger :<|> getFinanceManagementFinanceSapJournals :<|> getFinanceManagementFinanceSapJournalsTransactions = financeManagementClient
+    getFinanceManagementSubscriptionPurchaseList :<|> getFinanceManagementFinanceInvoicePdf :<|> getFinanceManagementFinanceInvoiceList :<|> getFinanceManagementFinanceAuditList :<|> getFinanceManagementFinanceReconciliation :<|> getFinanceManagementFinancePaymentSettlementList :<|> getFinanceManagementFinancePaymentGatewayTransactionList :<|> getFinanceManagementFinanceWalletLedger :<|> postFinanceManagementReconciliationTrigger :<|> getFinanceManagementFinanceSapJournals :<|> getFinanceManagementFinanceSapJournalsTransactions :<|> postFinanceManagementTdsReimbursementRequestSubmit :<|> getFinanceManagementTdsReimbursementStatus :<|> getFinanceManagementTdsReimbursementList :<|> getFinanceManagementTdsReimbursement = financeManagementClient
 
 data FinanceManagementUserActionType
   = GET_FINANCE_MANAGEMENT_SUBSCRIPTION_PURCHASE_LIST
@@ -824,17 +1011,25 @@ data FinanceManagementUserActionType
   | POST_FINANCE_MANAGEMENT_RECONCILIATION_TRIGGER
   | GET_FINANCE_MANAGEMENT_FINANCE_SAP_JOURNALS
   | GET_FINANCE_MANAGEMENT_FINANCE_SAP_JOURNALS_TRANSACTIONS
+  | POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REQUEST_SUBMIT
+  | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_STATUS
+  | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_LIST
+  | GET_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''PaymentModeFilter)
+$(mkHttpInstancesForEnum (''PaymentModeFilter))
 
-$(mkHttpInstancesForEnum ''PaymentStatusFilter)
+$(mkHttpInstancesForEnum (''PaymentStatusFilter))
 
-$(mkHttpInstancesForEnum ''PgGateway)
+$(mkHttpInstancesForEnum (''PgGateway))
 
-$(mkHttpInstancesForEnum ''SubscriptionPurchaseStatus)
+$(mkHttpInstancesForEnum (''SubscriptionPurchaseStatus))
 
-$(mkHttpInstancesForEnum ''TransactionTypeFilter)
+$(mkHttpInstancesForEnum (''TdsReimbursementQuarter))
 
-$(Data.Singletons.TH.genSingletons [''FinanceManagementUserActionType])
+$(mkHttpInstancesForEnum (''TdsReimbursementStatus))
+
+$(mkHttpInstancesForEnum (''TransactionTypeFilter))
+
+$(Data.Singletons.TH.genSingletons [(''FinanceManagementUserActionType)])

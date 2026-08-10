@@ -33,6 +33,7 @@ library
       Lib.Finance.Audit.Service
       Lib.Finance.Core.Money
       Lib.Finance.Core.Types
+      Lib.Finance.Domain.Types.Extra.FinanceTdsReimbursementRequest
       Lib.Finance.Domain.Types.Extra.LedgerEntry
       Lib.Finance.Error.Types
       Lib.Finance.FinanceM
@@ -62,6 +63,7 @@ library
       Lib.Finance.StateMachine.Service
       Lib.Finance.Storage.Queries.AuditEntryExtra
       Lib.Finance.Storage.Queries.DirectTaxTransactionExtra
+      Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequestExtra
       Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra
       Lib.Finance.Storage.Queries.InvoiceExtra
       Lib.Finance.Storage.Queries.InvoiceTemplateExtra
@@ -80,6 +82,8 @@ library
       Lib.Finance.Domain.Types.AuditEntry
       Lib.Finance.Domain.Types.CurrentState
       Lib.Finance.Domain.Types.DirectTaxTransaction
+      Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping
+      Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest
       Lib.Finance.Domain.Types.IndirectTaxTransaction
       Lib.Finance.Domain.Types.Invoice
       Lib.Finance.Domain.Types.InvoiceLedgerLink
@@ -98,6 +102,8 @@ library
       Lib.Finance.Storage.Beam.BeamFlow
       Lib.Finance.Storage.Beam.CurrentState
       Lib.Finance.Storage.Beam.DirectTaxTransaction
+      Lib.Finance.Storage.Beam.FinanceTdsReimbursementInvoiceMapping
+      Lib.Finance.Storage.Beam.FinanceTdsReimbursementRequest
       Lib.Finance.Storage.Beam.IndirectTaxTransaction
       Lib.Finance.Storage.Beam.Invoice
       Lib.Finance.Storage.Beam.InvoiceLedgerLink
@@ -115,6 +121,8 @@ library
       Lib.Finance.Storage.Queries.AuditEntry
       Lib.Finance.Storage.Queries.CurrentState
       Lib.Finance.Storage.Queries.DirectTaxTransaction
+      Lib.Finance.Storage.Queries.FinanceTdsReimbursementInvoiceMapping
+      Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest
       Lib.Finance.Storage.Queries.IndirectTaxTransaction
       Lib.Finance.Storage.Queries.Invoice
       Lib.Finance.Storage.Queries.InvoiceLedgerLink
@@ -122,6 +130,7 @@ library
       Lib.Finance.Storage.Queries.JournalEntryTransaction
       Lib.Finance.Storage.Queries.LedgerEntry
       Lib.Finance.Storage.Queries.OrphanInstances.AuditEntry
+      Lib.Finance.Storage.Queries.OrphanInstances.FinanceTdsReimbursementRequest
       Lib.Finance.Storage.Queries.OrphanInstances.Invoice
       Lib.Finance.Storage.Queries.OrphanInstances.InvoiceTemplate
       Lib.Finance.Storage.Queries.OrphanInstances.JournalEntryTransaction

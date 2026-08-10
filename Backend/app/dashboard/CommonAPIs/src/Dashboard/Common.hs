@@ -112,6 +112,8 @@ data PaymentOrder
 
 data PGPaymentSettlementReport
 
+data FinanceTdsReimbursementRequest
+
 data Role = DRIVER | FLEET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

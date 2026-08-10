@@ -1,0 +1,76 @@
+# Finance Kernel - TDS Reimbursement Request Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Image: Lib.Finance.Core.Types
+
+FinanceTdsReimbursementRequest:
+  tableName: finance_tds_reimbursement_request
+  derives: "Generic"
+
+  types:
+    AssessmentYear:
+      recordType: NewType
+      enum: AssessmentYear Text
+
+    Quarter:
+      enum: "Q1, Q2, Q3, Q4"
+      derive: "ToParamSchema"
+
+    FinanceTdsReimbursementRequestStatus:
+      enum: "PENDING, APPROVED, REJECTED"
+      derive: "ToParamSchema"
+
+  fields:
+    id: Id FinanceTdsReimbursementRequest
+    merchantId: Text
+    merchantOperatingCityId: Text
+    fleetOwnerId: Text
+    tanNumber: Text
+    certNumber: Text
+    quarter: Quarter
+    assessmentYear: AssessmentYear
+    tdsSection: Maybe Text
+    certAmount: HighPrecMoney
+    tdsRate: Double
+    documentId: Id Image
+    status: FinanceTdsReimbursementRequestStatus
+    rejectionReason: Maybe Text
+    # Set once wired into WS3 (ledger adjustment integration)
+    # ledgerAdjustmentRequestId: Maybe (Id LedgerAdjustmentRequest)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    fleetOwnerId: "!SecondaryKey"
+
+  sqlType:
+    tanNumber: character varying(20)
+    certNumber: character varying(64)
+    quarter: character varying(10)
+    status: character varying(20)
+
+  queries:
+    findAllByFleetOwnerIdQuarterAndAssessmentYear:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetOwnerId, quarter, assessmentYear, merchantOperatingCityId]
+
+    updateStatusAndRejectionReason:
+      kvFunction: updateOneWithKV
+      params: [status, rejectionReason]
+      where: id
+
+    # updateLedgerAdjustmentRequestId:
+    #   kvFunction: updateOneWithKV
+    #   params: [ledgerAdjustmentRequestId]
+    #   where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

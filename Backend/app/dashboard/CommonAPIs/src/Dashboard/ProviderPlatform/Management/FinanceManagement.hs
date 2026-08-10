@@ -8,3 +8,7 @@ import qualified Kernel.Prelude
 
 instance HideSecrets ReconciliationTriggerReq where
   hideSecrets = Kernel.Prelude.identity
+
+instance HideSecrets TdsReimbursementRequestSubmitReq where
+  type ReqWithoutSecrets TdsReimbursementRequestSubmitReq = TdsReimbursementRequestSubmitTReq
+  hideSecrets TdsReimbursementRequestSubmitReq {..} = TdsReimbursementRequestSubmitTReq {..}
