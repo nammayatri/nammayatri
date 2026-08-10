@@ -356,9 +356,17 @@ Confirmed by logging what the backend puts on the wire, not from documentation
 ### The index
 
 `geocoder-prepare.sh` reads the same `algeria-latest.osm.pbf` that already
-feeds OSRM and the tiles, and builds **113,341 named things** into `geo.place`
-in the Postgres the stack already runs — 75k POIs, 19k streets (collapsed from
-33k ways), 14k neighbourhoods and towns, 5.5k transport stops.
+feeds OSRM and the tiles, and builds **111,555 named things** into `geo.place`
+in the Postgres the stack already runs — 132 MB including every index:
+
+| | |
+|---|---|
+| points of interest | 75,207 |
+| streets | 16,930 &nbsp;*(collapsed from 33,327 ways)* |
+| neighbourhoods and towns | 13,919 |
+| transport stops | 5,499 |
+
+97% of rows carry a locality, which is the second line of every suggestion.
 
 **Not Nominatim, Photon or Pelias**, and the reason is the data rather than the
 software. All three are address-first, and addresses are the one thing this
