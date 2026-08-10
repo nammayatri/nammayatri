@@ -194,22 +194,31 @@ data ResolutionAction
 data ResolutionActionTriggered
   = -- ..issues.resolution.action_triggered
     REFUND
+  | REPLACEMENT
   | CANCEL
   | NO_ACTION
+  | RECONCILED
+  | NOT_RECONCILED
   deriving (Eq, Generic)
 
 instance Show ResolutionActionTriggered where
   show REFUND = "REFUND"
+  show REPLACEMENT = "REPLACEMENT"
   show CANCEL = "CANCEL"
   show NO_ACTION = "NO-ACTION"
+  show RECONCILED = "RECONCILED"
+  show NOT_RECONCILED = "NOT-RECONCILED"
 
 instance ToJSON ResolutionActionTriggered where
   toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON ResolutionActionTriggered where
   parseJSON (String "REFUND") = return REFUND
+  parseJSON (String "REPLACEMENT") = return REPLACEMENT
   parseJSON (String "CANCEL") = return CANCEL
   parseJSON (String "NO-ACTION") = return NO_ACTION
+  parseJSON (String "RECONCILED") = return RECONCILED
+  parseJSON (String "NOT-RECONCILED") = return NOT_RECONCILED
   parseJSON wrongVal = typeMismatch "Invalid ResolutionActionTriggered" wrongVal
 
 data ErrorType
@@ -258,7 +267,28 @@ instance FromJSON RespondentInfo where
   parseJSON (String "INTERFACING-NP") = return RESPONDING_INTERFACING_NP
   parseJSON (String "TRANSACTION-COUNTERPARTY-NP") = return TRANSACTION_COUNTERPARTY_NP
   parseJSON (String "CASCADED-COUNTERPARTY-NP") = return CASCADED_COUNTERPARTY_NP
-  parseJSON wrongVal = typeMismatch "Invalid Respon```` ```````dentInfo" wrongVal
+  parseJSON wrongVal = typeMismatch "Invalid RespondentInfo" wrongVal
+
+data GROType
+  = -- ..issue.resolution_provider.respondent_info.resolution_support.gros.gro_type
+    INTERFACING_NP_GRO
+  | TRANSACTION_COUNTERPARTY_NP_GRO
+  | CASCADED_COUNTERPARTY_NP_GRO
+  deriving (Eq, Generic)
+
+instance Show GROType where
+  show INTERFACING_NP_GRO = "INTERFACING-NP-GRO"
+  show TRANSACTION_COUNTERPARTY_NP_GRO = "TRANSACTION-COUNTERPARTY-NP-GRO"
+  show CASCADED_COUNTERPARTY_NP_GRO = "CASCADED-COUNTERPARTY-NP-GRO"
+
+instance ToJSON GROType where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance FromJSON GROType where
+  parseJSON (String "INTERFACING-NP-GRO") = return INTERFACING_NP_GRO
+  parseJSON (String "TRANSACTION-COUNTERPARTY-NP-GRO") = return TRANSACTION_COUNTERPARTY_NP_GRO
+  parseJSON (String "CASCADED-COUNTERPARTY-NP-GRO") = return CASCADED_COUNTERPARTY_NP_GRO
+  parseJSON wrongVal = typeMismatch "Invalid GROType" wrongVal
 
 data IssueSubCategory
   = -- ..issue.sub_category
