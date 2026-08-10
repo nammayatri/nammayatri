@@ -39,7 +39,7 @@ import Kernel.Utils.IOLogging (prepareLoggerEnv)
 import Kernel.Utils.Servant.Server
 import Kernel.Utils.Shutdown
 import Lib.Scheduler.Environment
-import Lib.Scheduler.Handler (SchedulerHandle, handler)
+import Lib.Scheduler.Handler (SchedulerHandle, gracefulConsumerCleanup, handler)
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext), ServerError (..), err503)
@@ -83,6 +83,9 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvC
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO
+  -- Stable per-pod consumer name so the PEL is reclaimable across restarts. Falls back to the
+  -- random consumerId when POD_NAME is unset (e.g. local dev). Shared by all runner threads.
+  let consumerName = version.getDeploymentVersion <> "-" <> fromMaybe consumerId hostname
   let requestId = Nothing
       sessionId = Nothing
       shouldLogRequestId = False
@@ -106,7 +109,16 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvC
       identity
       EmptyContext
       (const identity)
-      (\_ -> cancel schedulerAction)
+      ( \_ -> do
+          cancel schedulerAction
+          -- Best-effort: drain this pod's pending entries back onto the stream and remove its
+          -- consumer before exiting (bounded so it never blocks past the grace period). Ungraceful
+          -- crashes are covered by the surviving pods' reclaimer + sweeper.
+          eCleanup <- timeout (5 * 1000000) (C.try (runSchedulerM s schedulerEnv (gracefulConsumerCleanup handle_)) :: IO (Either Kernel.Prelude.SomeException ()))
+          case eCleanup of
+            Just (Left e) -> hPutStrLn stderr ("GRACEFUL_CONSUMER_CLEANUP_FAILED: " <> show e :: Text)
+            _ -> pure ()
+      )
       (runSchedulerM s)
 
 -- | Health check for the scheduler/allocator service.

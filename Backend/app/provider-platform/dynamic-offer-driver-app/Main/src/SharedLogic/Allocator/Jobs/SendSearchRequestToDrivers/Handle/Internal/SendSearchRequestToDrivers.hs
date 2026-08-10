@@ -171,6 +171,10 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
+  -- Count one "request sent" per driver in this batch for the SRDStats sliding-window counters
+  -- surfaced in the POOLING dynamic-logic data.
+  forM_ driverPool $ \dPoolRes -> SDP.incrementSrdSentCount (cast dPoolRes.driverPoolResult.driverId)
+
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language

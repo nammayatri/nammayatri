@@ -25,8 +25,11 @@ import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry (SearchTry)
+import qualified Domain.Types.VehicleVariant as DVeh
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Clickhouse.Config as CH
@@ -61,12 +64,108 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import Tools.Utils
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+
+-- | Sentinel driverId used for the "drivers exhausted" marker row inserted into
+-- search_request_for_driver when a search runs out of drivers mid-search. This is a
+-- fake driver that never exists in the person table; analytics filter on it.
+driversNotFoundDriverId :: Id DPerson.Person
+driversNotFoundDriverId = Id "drivers-not-found"
+
+-- | Build the single dummy SearchRequestForDriver row that marks a mid-search driver
+-- pool exhaustion. Every real driver-specific column is a zero/empty default; only the
+-- fields needed for analytics correlation carry real values (searchTryId, requestId,
+-- merchantOperatingCityId) alongside the sentinel driverId.
+buildDriversExhaustedMarker :: MonadFlow m => DSR.SearchRequest -> SearchTry -> Int -> m DSRD.SearchRequestForDriver
+buildDriversExhaustedMarker searchReq searchTry batchNumber = do
+  now <- getCurrentTime
+  guid <- generateGUID
+  pure
+    DSRD.SearchRequestForDriver
+      { id = guid,
+        driverId = driversNotFoundDriverId,
+        searchTryId = searchTry.id,
+        requestId = searchReq.id,
+        merchantId = Nothing,
+        merchantOperatingCityId = searchReq.merchantOperatingCityId,
+        status = DSRD.Inactive,
+        response = Nothing,
+        createdAt = now,
+        updatedAt = Nothing,
+        currency = searchTry.currency,
+        distanceUnit = searchReq.distanceUnit,
+        vehicleServiceTier = searchTry.vehicleServiceTier,
+        vehicleServiceTierName = Nothing,
+        vehicleVariant = DVeh.SEDAN,
+        vehicleCategory = Nothing,
+        vehicleNumber = Nothing,
+        vehicleAge = Nothing,
+        startTime = now,
+        searchRequestValidTill = now,
+        renderedAt = Nothing,
+        respondedAt = Nothing,
+        batchNumber = batchNumber,
+        actualDistanceToPickup = 0,
+        straightLineDistanceToPickup = 0,
+        durationToPickup = 0,
+        keepHiddenForSeconds = 0,
+        rideRequestPopupDelayDuration = 0,
+        totalRides = 0,
+        customerCancellationDues = 0,
+        baseFare = Nothing,
+        commissionCharges = Nothing,
+        driverMinExtraFee = Nothing,
+        driverMaxExtraFee = Nothing,
+        driverStepFee = Nothing,
+        driverDefaultStepFee = Nothing,
+        acceptanceRatio = Nothing,
+        cancellationRatio = Nothing,
+        driverAvailableTime = Nothing,
+        driverSpeed = Nothing,
+        rideFrequencyScore = Nothing,
+        coinsRewardedOnGoldTierRide = Nothing,
+        conditionalCharges = [],
+        isPartOfIntelligentPool = False,
+        isForwardRequest = False,
+        pickupZone = False,
+        isFavourite = Nothing,
+        isSafetyPlus = Nothing,
+        airConditioned = Nothing,
+        upgradeCabRequest = Nothing,
+        lat = Nothing,
+        lon = Nothing,
+        fromLocGeohash = Nothing,
+        previousDropGeoHash = Nothing,
+        mode = Nothing,
+        notificationSource = Nothing,
+        goHomeRequestId = Nothing,
+        fleetOwnerId = Nothing,
+        estimateId = Nothing,
+        driverTags = Nothing,
+        driverTagScore = Nothing,
+        customerTags = Nothing,
+        middleStopCount = Nothing,
+        parcelType = Nothing,
+        parcelQuantity = Nothing,
+        parallelSearchRequestCount = Nothing,
+        poolingLogicVersion = Nothing,
+        poolingConfigVersion = Nothing,
+        tripEstimatedDistance = Nothing,
+        tripEstimatedDuration = Nothing,
+        backendAppVersion = Nothing,
+        backendConfigVersion = Nothing,
+        clientSdkVersion = Nothing,
+        clientBundleVersion = Nothing,
+        clientConfigVersion = Nothing,
+        clientDevice = Nothing,
+        reactBundleVersion = Nothing
+      }
 
 sendSearchRequestToDrivers ::
   ( EncFlow m r,
@@ -239,6 +338,11 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
+          logDriversExhausted = do
+            logInfo $ "Drivers exhausted mid-search for searchTry: " <> searchTry.id.getId <> "; inserting analytics marker row"
+            batchNumber <- I.getPoolBatchNum searchTry.id -- read post-increment, matching real rows' numbering
+            markerRow <- buildDriversExhaustedMarker driverSearchBatchInput.searchReq searchTry batchNumber
+            QSRD.createWithoutDriverLookup markerRow,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle

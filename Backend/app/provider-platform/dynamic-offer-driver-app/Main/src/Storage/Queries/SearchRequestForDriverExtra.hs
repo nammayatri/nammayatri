@@ -32,6 +32,12 @@ searchReqestForDriverkey prefix = "searchRequestForDriver_" <> prefix
 searchReqestForDriverkeyExpiry :: Integer
 searchReqestForDriverkeyExpiry = 5 * 60 -- 5 mins
 
+-- | Insert a SearchRequestForDriver row directly via KV, skipping the driver-existence
+-- lookup that 'createMany' performs. Used for the synthetic "drivers exhausted" marker row
+-- whose sentinel driverId intentionally has no corresponding Person entry.
+createWithoutDriverLookup :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestForDriver -> m ()
+createWithoutDriverLookup = createWithKV
+
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => [SearchRequestForDriver] -> m ()
 createMany = traverse_ createOne
   where

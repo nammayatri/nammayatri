@@ -128,7 +128,17 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion Nothing
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
-  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool, batchNum}
+  -- Enrich each driver with its per-driver Redis sliding-window counters so the POOLING
+  -- dynamic-logic rules can reference them. One Redis read pass per driver (in line with the
+  -- existing per-driver Redis reads in this flow).
+  enrichedDrivers <-
+    mapM
+      ( \driver -> do
+          counters <- getSrdStatsCounters (cast driver.driverPoolResult.driverId)
+          pure driver {searchReqDriverStatsCounters = Just counters}
+      )
+      onlyNewDriversWithCustomerInfo
+  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum}
   logInfo $
     "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
       <> " | drivers=["
@@ -151,7 +161,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       A.Success sortedPoolData -> pure sortedPoolData.drivers
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
-        pure onlyNewDriversWithCustomerInfo
+        pure enrichedDrivers
   sortedPool <-
     filterM
       ( \driverPoolResult -> do

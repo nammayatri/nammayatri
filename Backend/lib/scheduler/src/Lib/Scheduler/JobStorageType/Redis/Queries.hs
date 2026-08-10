@@ -17,7 +17,6 @@
 
 module Lib.Scheduler.JobStorageType.Redis.Queries where
 
-import Control.Concurrent (myThreadId)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as AKM
@@ -26,7 +25,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import Data.Text.Encoding as DT
-import qualified EulerHS.Language as L
+import qualified Database.Redis as R
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -138,8 +137,7 @@ getReadyTasks _ = do
 getReadyTask ::
   ( JobExecutor r m,
     JobProcessor t,
-    HasField "version" r DeploymentVersion,
-    HasField "consumerId" r Text,
+    HasField "consumerName" r Text,
     HasField "block" r Integer,
     HasField "readCount" r Integer
   ) =>
@@ -147,17 +145,12 @@ getReadyTask ::
 getReadyTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
-  consumerId <- asks (.consumerId)
-  -- let lastEntryId :: Text = "$"
-  version <- asks (.version)
-  threadId <- L.runIO myThreadId
-  let consumerName = version.getDeploymentVersion <> consumerId <> show threadId
+  -- Stable per-pod consumer name (version-podName), shared by all runner threads so the PEL is
+  -- reclaimable across restarts. Built once in Lib.Scheduler.App.runSchedulerService.
+  consumerName <- asks (.consumerName)
   let nextId :: Text = ">"
   block <- asks (.block)
   readCount <- asks (.readCount)
-  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key -- TODO: Enable after fixing these hedis stream operations for cluster redis.
-  -- unless isGroupExist $ do
-  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withMasterRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
@@ -203,3 +196,24 @@ updateFailureCount _ _ = pure ()
 
 reScheduleOnError :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> Int -> UTCTime -> m ()
 reScheduleOnError j _ = reSchedule j
+
+-- | XGROUP DELCONSUMER — remove a dead consumer from the stream consumer group. Not provided by the
+-- shared-kernel Hedis layer, so wrapped here over the raw hedis primitive. Its pending entries must
+-- be reclaimed BEFORE calling this (DELCONSUMER drops them from the PEL). Returns the number of
+-- messages the consumer still owned, or -1 on error. Uses the cluster connection (hedisMigrationStage
+-- is False for all scheduler deployments); callers wrap it in withNonCriticalCrossAppRedis.
+xGroupDelConsumer ::
+  (HedisFlow m env, TryException m) =>
+  Text -> -- stream key
+  Text -> -- group name
+  Text -> -- consumer name
+  m Integer
+xGroupDelConsumer key groupName consumerName = do
+  eRes <-
+    Hedis.runWithPrefixEither key $ \prefKey ->
+      R.xgroupDelConsumer prefKey (DT.encodeUtf8 groupName) (DT.encodeUtf8 consumerName)
+  case eRes of
+    Left err -> do
+      logError $ "FAILED_TO_xGroupDelConsumer group=" <> groupName <> " consumer=" <> consumerName <> " err=" <> show err
+      pure (-1)
+    Right n -> pure n
