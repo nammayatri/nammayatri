@@ -76,7 +76,17 @@ data SchedulerConfig = SchedulerConfig
     kafkaProducerCfg :: KafkaProducerCfg,
     secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     inMemConfig :: InMemConfig,
-    blackListedJobs :: [Text]
+    blackListedJobs :: [Text],
+    -- | How often (seconds) the per-pod reclaimer scans the PEL for idle entries to XCLAIM.
+    reclaimIntervalSec :: Seconds,
+    -- | Minimum idle time (ms) an entry must have been pending before it is eligible for reclaim.
+    reclaimMinIdleMs :: Integer,
+    -- | Max number of pending entries fetched per reclaim / sweep pass.
+    reclaimBatch :: Integer,
+    -- | How often (seconds) each pod heartbeats its consumer into the liveness registry.
+    heartbeatIntervalSec :: Seconds,
+    -- | A consumer whose last heartbeat is older than this (seconds) is considered dead and pruned.
+    deadConsumerThresholdSec :: Integer
   }
   deriving (Generic, FromDhall)
 
@@ -107,6 +117,14 @@ data SchedulerEnv = SchedulerEnv
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     consumerId :: Text,
+    -- | Stable per-pod Redis stream consumer name (@version-podName@). Shared by all
+    -- runner threads in this pod so the PEL is reclaimable across restarts.
+    consumerName :: Text,
+    reclaimIntervalSec :: Seconds,
+    reclaimMinIdleMs :: Integer,
+    reclaimBatch :: Integer,
+    heartbeatIntervalSec :: Seconds,
+    deadConsumerThresholdSec :: Integer,
     port :: Int,
     isShuttingDown :: Shutdown,
     version :: Metrics.DeploymentVersion,

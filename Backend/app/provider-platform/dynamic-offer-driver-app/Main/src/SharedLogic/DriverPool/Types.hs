@@ -241,6 +241,33 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
 data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver | SafetyPlusDriver
   deriving (Generic, Show, FromJSON, ToJSON)
 
+-- Per-driver sliding-window counters exposed to the POOLING dynamic-logic data.
+-- Values are computed from dedicated Redis sliding-window counters (see SharedLogic.DriverPool).
+data SearchReqDriverStatsCounters = SearchReqDriverStatsCounters
+  { acceptanceCountToday :: Int,
+    acceptanceCountWeekly :: Int,
+    rejectionCountToday :: Int,
+    rejectionCountWeekly :: Int,
+    totalRequestsSentToday :: Int,
+    totalRequestsSentWeekly :: Int,
+    cancelledRidesToday :: Int,
+    cancelledRidesWeekly :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance Default SearchReqDriverStatsCounters where
+  def =
+    SearchReqDriverStatsCounters
+      { acceptanceCountToday = 0,
+        acceptanceCountWeekly = 0,
+        rejectionCountToday = 0,
+        rejectionCountWeekly = 0,
+        totalRequestsSentToday = 0,
+        totalRequestsSentWeekly = 0,
+        cancelledRidesToday = 0,
+        cancelledRidesWeekly = 0
+      }
+
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   { driverPoolResult :: DriverPoolResult,
     actualDistanceToPickup :: Meters,
@@ -256,7 +283,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     previousDropGeoHash :: Maybe Text,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest),
     specialLocWarriorPreferredSpecialLocId :: Maybe (Id SL.SpecialLocation),
-    score :: Maybe A.Value
+    score :: Maybe A.Value,
+    searchReqDriverStatsCounters :: Maybe SearchReqDriverStatsCounters
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -278,7 +306,8 @@ instance Default DriverPoolWithActualDistResult where
         previousDropGeoHash = Nothing,
         goHomeReqId = Nothing,
         specialLocWarriorPreferredSpecialLocId = Nothing,
-        score = Nothing
+        score = Nothing,
+        searchReqDriverStatsCounters = Nothing
       }
 
 instance HasCoordinates DriverPoolWithActualDistResult where

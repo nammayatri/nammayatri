@@ -26,6 +26,9 @@ module SharedLogic.DriverPool
     incrementTotalRidesCount,
     isThresholdRidesCompleted,
     incrementCancellationCount,
+    incrementSrdRejectedCount,
+    incrementSrdSentCount,
+    getSrdStatsCounters,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getQuotesCount,
@@ -134,6 +137,20 @@ mkRideCancelledKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-"
 
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
+
+-- Dedicated per-driver sliding-window counters surfaced in the POOLING dynamic-logic data.
+-- Only REJECT and SENT get dedicated keys (no existing counter for those). ACCEPT and CANCEL
+-- reuse the existing mkQuotesAcceptedKey / mkRideCancelledKey counters to avoid double-counting.
+-- The fixed 7-day window lets both "today" (last 1 day-bucket) and "weekly" (last 7 day-buckets)
+-- be derived from the same series via getCurrentWindowValuesUptoLast.
+mkSrdRejectedCountKey :: Text -> Text
+mkSrdRejectedCountKey driverId = "driver-offer:SRDStats:rejected:DriverId-" <> driverId
+
+mkSrdSentCountKey :: Text -> Text
+mkSrdSentCountKey driverId = "driver-offer:SRDStats:sent:DriverId-" <> driverId
+
+srdStatsWindow :: SWC.SlidingWindowOptions
+srdStatsWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> CDIP.findByMerchantOpCityId merchantOpCityId Nothing
@@ -378,6 +395,48 @@ getCurrentWindowAvailability ::
   Id DP.Driver ->
   m [Maybe a]
 getCurrentWindowAvailability merchantOpCityId driverId = Redis.withCrossAppRedis . withAvailabilityTimeWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
+
+incrementSrdRejectedCount ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DP.Person ->
+  m ()
+incrementSrdRejectedCount driverId = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkSrdRejectedCountKey driverId.getId) srdStatsWindow
+
+incrementSrdSentCount ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DP.Person ->
+  m ()
+incrementSrdSentCount driverId = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkSrdSentCountKey driverId.getId) srdStatsWindow
+
+-- Fetch all 8 per-driver sliding-window counts (today = last 1 day-bucket, weekly = last 7
+-- day-buckets) for use in the POOLING dynamic-logic data. Acceptance reuses the existing
+-- mkQuotesAcceptedKey counter and cancellation reuses mkRideCancelledKey (to avoid
+-- double-counting); rejection and sent use the dedicated SRDStats keys.
+getSrdStatsCounters ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DP.Person ->
+  m SearchReqDriverStatsCounters
+getSrdStatsCounters driverId = do
+  acceptanceCountToday <- windowSum 1 (mkQuotesAcceptedKey driverId.getId)
+  acceptanceCountWeekly <- windowSum 7 (mkQuotesAcceptedKey driverId.getId)
+  rejectionCountToday <- windowSum 1 (mkSrdRejectedCountKey driverId.getId)
+  rejectionCountWeekly <- windowSum 7 (mkSrdRejectedCountKey driverId.getId)
+  totalRequestsSentToday <- windowSum 1 (mkSrdSentCountKey driverId.getId)
+  totalRequestsSentWeekly <- windowSum 7 (mkSrdSentCountKey driverId.getId)
+  cancelledRidesToday <- windowSum 1 (mkRideCancelledKey driverId.getId)
+  cancelledRidesWeekly <- windowSum 7 (mkRideCancelledKey driverId.getId)
+  pure SearchReqDriverStatsCounters {..}
+  where
+    windowSum n key = fmap (sum . map (fromMaybe (0 :: Int))) . Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast n key srdStatsWindow
 
 mkQuotesCountKey :: Text -> Text
 mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId
@@ -678,7 +737,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           isForwardRequest = False,
           previousDropGeoHash = Nothing,
           specialLocWarriorPreferredSpecialLocId = mbPreferredSpecialLocId,
-          score = driverGoHomePoolWithActualDistance.score
+          score = driverGoHomePoolWithActualDistance.score,
+          searchReqDriverStatsCounters = Nothing
         }
 
     makeDriverPoolResultFromGoHome NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
@@ -959,7 +1019,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           specialLocWarriorPreferredSpecialLocId = Nothing,
           isForwardRequest = False,
           previousDropGeoHash = Nothing,
-          score = dpr.score
+          score = dpr.score,
+          searchReqDriverStatsCounters = Nothing
         }
 
     filterFunc threshold estDist distanceToPickup =
@@ -1192,7 +1253,8 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           specialLocWarriorPreferredSpecialLocId = Nothing,
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
-          score = distDur.origin.score
+          score = distDur.origin.score,
+          searchReqDriverStatsCounters = Nothing
         }
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
@@ -1251,7 +1313,8 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           specialLocWarriorPreferredSpecialLocId = Nothing,
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
-          score = distDur.origin.score
+          score = distDur.origin.score,
+          searchReqDriverStatsCounters = Nothing
         }
 
 refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult)

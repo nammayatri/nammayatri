@@ -46,6 +46,7 @@ data Handle m r = Handle
     isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> [Id Driver] -> GoHomeConfig -> m (),
+    logDriversExhausted :: m (),
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
     isSearchTryValid :: m Bool,
@@ -95,6 +96,7 @@ processRequestSending Handle {..} goHomeCfg transactionId = do
           return (Complete, NormalPool, Nothing)
     else do
       driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
-      when (not $ null driverPoolWithFlags.driverPoolWithActualDistResult) $
-        sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+      if not $ null driverPoolWithFlags.driverPoolWithActualDistResult
+        then sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+        else logDriversExhausted -- ran out of drivers mid-search (empty pool before batch limit); mark for analytics
       ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)

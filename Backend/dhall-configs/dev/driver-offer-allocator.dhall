@@ -48,6 +48,11 @@ let schedulerConfig =
       , inMemConfig
       , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
       , blackListedJobs = [] : List Text
+      , reclaimIntervalSec = +30
+      , reclaimMinIdleMs = +600000
+      , reclaimBatch = +200
+      , heartbeatIntervalSec = +60
+      , deadConsumerThresholdSec = +1200
       }
 
 in  { appCfg =

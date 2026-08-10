@@ -84,7 +84,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = d
       forM_ restDriverIds $ \restDriverId -> do
         DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchReqId
         DP.removeSearchReqIdFromMap merchantId restDriverId searchReqId
-    SRD.Reject -> pure ()
+    SRD.Reject -> DP.incrementSrdRejectedCount driverId
     SRD.Pulled -> pure ()
 eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   windowSize <- SCR.getWindowSize merchantOpCityId
