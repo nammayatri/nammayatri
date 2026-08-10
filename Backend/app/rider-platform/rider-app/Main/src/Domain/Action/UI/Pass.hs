@@ -18,6 +18,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassUpdateProfilePictureUtil,
     buildPurchasedPassAPIEntity,
     postMultimodalPassSetPrefSrcAndDest,
+    postMultimodalPassUploadProfilePictureV1,
   )
 where
 
@@ -300,6 +301,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   merchantOperatingCityId = pass.merchantOperatingCityId,
                   preferredDestination = Nothing,
                   preferredSource = Nothing,
+                  currentPaymentOrderId = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }
@@ -328,6 +330,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             merchantOperatingCityId = pass.merchantOperatingCityId,
             profilePicture = mbProfilePicture <|> person.profilePicture,
             passPhotoMediaId = mbPassPhotoMediaId,
+            clientSdkVersion = person.clientSdkVersion,
             createdAt = now,
             updatedAt = now
           }
@@ -815,14 +818,14 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
               when (passStatus `elem` activeLikeStatuses && isDashboard) $ do
                 void $ withTryCatch "sendPassPurchasedSuccessMessage" $ sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
-              QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
+              QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount (Just purchasedPassPayment.orderId)
             when (passStatus `elem` activeLikeStatuses) $ do
               when (isJust purchasedPassPayment.profilePicture) $ QPurchasedPass.updateProfilePictureById purchasedPassPayment.profilePicture purchasedPass.id
               -- Don't touch passPhotoMediaId here: the async upload writes it to the payment row,
               -- and the pass-list reconcile (updatePurchasedPass) is the single owner that projects
               -- it onto the pass at each transition — so the webhook never races the upload for it.
               when (passStatus == DPurchasedPass.Active && purchasedPassPayment.startDate <= today && purchasedPassPayment.endDate >= today) $
-                QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount
+                QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount (Just purchasedPassPayment.orderId)
           case purchasedPassPayment.status of
             DPurchasedPass.RefundPending -> return (DPayment.FulfillmentRefundPending, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
             DPurchasedPass.RefundInitiated -> return (DPayment.FulfillmentRefundInitiated, Just purchasedPass.id.getId, Just purchasedPassPayment.id.getId)
@@ -897,19 +900,21 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
       today
 
   case listToMaybe latestPayments of
-    Just firstPayment
-      | firstPayment.status == DPurchasedPass.PhotoPending,
-        Nothing <- firstPayment.passPhotoMediaId ->
-        return (purchasedPass, Nothing, False)
     Just firstPayment ->
-      let newStatus
-            | firstPayment.endDate < today = DPurchasedPass.Expired
-            | firstPayment.startDate <= today = DPurchasedPass.Active
-            | otherwise = DPurchasedPass.PreBooked
-
-          newProfilePicture = firstPayment.profilePicture <|> mbRefilledPhoto <|> purchasedPass.profilePicture
+      let newProfilePicture = firstPayment.profilePicture <|> mbRefilledPhoto <|> purchasedPass.profilePicture
 
           isChangedProfilePicture = newProfilePicture /= purchasedPass.profilePicture
+
+          hasPhoto =
+            isJust firstPayment.passPhotoMediaId
+              || isJust purchasedPass.passPhotoMediaId
+              || isJust newProfilePicture
+
+          newStatus
+            | firstPayment.endDate < today = DPurchasedPass.Expired
+            | not hasPhoto = DPurchasedPass.PhotoPending
+            | firstPayment.startDate <= today = DPurchasedPass.Active
+            | otherwise = DPurchasedPass.PreBooked
 
           newPass =
             purchasedPass
@@ -1040,7 +1045,10 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
           QPurchasedPass.updateStatusById DPurchasedPass.Expired purchasedPass.id
         (_, Just firstPreBookedPayment) -> do
           QPurchasedPassPayment.updateStatusByOrderId updatedPass.status firstPreBookedPayment.orderId
-          QPurchasedPass.updatePurchaseData purchasedPass.id updatedPass.startDate updatedPass.endDate updatedPass.status updatedPass.benefitDescription updatedPass.benefitType updatedPass.benefitValue updatedPass.passAmount
+          QPurchasedPass.updatePurchaseData purchasedPass.id updatedPass.startDate updatedPass.endDate updatedPass.status updatedPass.benefitDescription updatedPass.benefitType updatedPass.benefitValue updatedPass.passAmount (Just firstPreBookedPayment.orderId)
+          -- Refresh the SDK version of the client that drove this transition. Inside shouldUpdateDB
+          -- so it fires only on real transitions, never on every pass-list read.
+          QPurchasedPassPayment.updateSdkVersionByOrderId person.clientSdkVersion firstPreBookedPayment.orderId
           when (updatedPass.profilePicture /= purchasedPass.profilePicture) $
             QPurchasedPass.updateProfilePictureById updatedPass.profilePicture purchasedPass.id
           -- Project the activating term's photo onto the pass. whenJust-guarded so a photo-less
@@ -1588,7 +1596,39 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
   -- (same startDate). Secondary renewal payments must not overwrite the parent row.
   let targetIsPrimary = maybe True (\p -> p.startDate == purchasedPass.startDate) mbTargetPayment
   when targetIsPrimary $
-    QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount
+    QPurchasedPass.updatePurchaseData purchasedPass.id newStartDate newEndDate newStatus purchasedPass.benefitDescription purchasedPass.benefitType purchasedPass.benefitValue purchasedPass.passAmount (paymentToUpdate <&> (.orderId))
+  return APISuccess.Success
+
+postMultimodalPassUploadProfilePictureV1 ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    PassAPI.PassUploadProfilePictureReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postMultimodalPassUploadProfilePictureV1 (mbCallerPersonId, _merchantId) req = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  purchasedPass <- QPurchasedPass.findById req.purchasedPassId >>= fromMaybeM (PurchasedPassNotFound req.purchasedPassId.getId)
+
+  unless (purchasedPass.personId == personId) $ throwError AccessDenied
+
+  unless (purchasedPass.status == DPurchasedPass.PhotoPending) $
+    throwError (InvalidRequest "Pass is not in PhotoPending status")
+
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId purchasedPass.merchantOperatingCityId))
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
+  let today = DT.utctDay istTime
+  let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
+  QPurchasedPass.updateStatusById newStatus purchasedPass.id
+  QPurchasedPass.updateProfilePictureById (Just req.profilePicture) purchasedPass.id
+  QPurchasedPass.updateDeviceIdById req.imeiNumber purchasedPass.deviceSwitchCount purchasedPass.id
+
+  -- Keep the payment rows in step, otherwise the reconcile reads them back and reverts the pass.
+  purchasedPassPayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatusStartDateGreaterThan Nothing Nothing purchasedPass.id DPurchasedPass.PhotoPending purchasedPass.startDate
+  forM_ purchasedPassPayments $ \payment ->
+    QPurchasedPassPayment.updateStatusAndProfilePictureByOrderId newStatus (Just req.profilePicture) payment.orderId
+
   return APISuccess.Success
 
 -- | Upload a pass photo to S3 and attach the media id to the pass. Attach-only: it can run

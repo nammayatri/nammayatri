@@ -100,8 +100,9 @@ updatePurchaseData ::
   Kernel.Prelude.Maybe DPurchasedPass.BenefitType ->
   Kernel.Prelude.Maybe HighPrecMoney ->
   HighPrecMoney ->
+  Kernel.Prelude.Maybe (Id DOrder.PaymentOrder) ->
   m ()
-updatePurchaseData purchasedPassId startDate endDate status benefitDescription mbBenefitType mbBenefitValue amount = do
+updatePurchaseData purchasedPassId startDate endDate status benefitDescription mbBenefitType mbBenefitValue amount mbCurrentPaymentOrderId = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set Beam.startDate startDate,
@@ -115,6 +116,7 @@ updatePurchaseData purchasedPassId startDate endDate status benefitDescription m
         Se.Set Beam.updatedAt now
       ]
         <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+        <> maybe [] (\orderId -> [Se.Set Beam.currentPaymentOrderId (Just $ getId orderId)]) mbCurrentPaymentOrderId
     )
     [Se.Is Beam.id $ Se.Eq (getId purchasedPassId)]
 
