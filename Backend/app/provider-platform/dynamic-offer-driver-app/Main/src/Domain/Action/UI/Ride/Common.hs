@@ -45,6 +45,7 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -205,6 +206,9 @@ data DriverRideRes = DriverRideRes
     fleetOwnerId :: Maybe Text,
     enableOtpLessRide :: Bool,
     cancellationSource :: Maybe DBCR.CancellationSource,
+    cancellationReasonCode :: Maybe Text,
+    cancellationAdditionalInfo :: Maybe Text,
+    cancellationCompensation :: Maybe PriceAPIEntity,
     tipAmount :: Maybe PriceAPIEntity,
     penalityCharge :: Maybe PriceAPIEntity,
     senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
@@ -616,6 +620,9 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         fleetOwnerId = rideDetails.fleetOwnerId,
         enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
         cancellationSource = fmap (\cr -> cr.source) cancellationReason,
+        cancellationReasonCode = cancellationReason >>= (.reasonCode) <&> (\(DTCR.CancellationReasonCode code) -> code),
+        cancellationAdditionalInfo = cancellationReason >>= (.additionalInfo),
+        cancellationCompensation = flip PriceAPIEntity ride.currency <$> ride.cancellationChargesOnCancel,
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
         senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
