@@ -53,6 +53,7 @@ Vehicle:
     vehicleRating: Maybe Double
     vehicleRatingRemark: Maybe Text
     selectedServiceTiers: "[ServiceTierType]"
+    selectedAutoAcceptTiers: Maybe [ServiceTierType]
     vehicleTags: Maybe [Text]
     ruleBasedUpgradeTiers: Maybe [UpgradedTier]
     vehicleImageId: Maybe (Id MediaFile)
@@ -70,6 +71,7 @@ Vehicle:
 
   sqlType:
     selectedServiceTiers: text[]
+    selectedAutoAcceptTiers: text[]
     ruleBasedUpgradeTiers: "json"
 
   constraints:

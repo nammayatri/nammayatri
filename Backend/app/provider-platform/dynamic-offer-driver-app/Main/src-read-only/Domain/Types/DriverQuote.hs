@@ -45,6 +45,7 @@ data DriverQuote = DriverQuote
     fareParams :: Domain.Types.FareParameters.FareParameters,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote,
+    isAutoAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

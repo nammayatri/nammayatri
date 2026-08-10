@@ -131,7 +131,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
   let merchantOpCityId = searchReq.merchantOperatingCityId
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
-  SDP.PrepareDriverPoolBatchEntity {..} <- withTimeAPI "driverPooling" "prepareDriverPoolBatch'" $ prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum merchantOpCityId searchReq.transactionId isValueAddNP
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  SDP.PrepareDriverPoolBatchEntity {..} <- withTimeAPI "driverPooling" "prepareDriverPoolBatch'" $ prepareDriverPoolBatch' previousBatchesDrivers startingbatchNum merchantOpCityId searchReq.transactionId isValueAddNP transporterConfig
   let finalPool = currentDriverPoolBatch <> currentDriverPoolBatchOnRide
   SDP.incrementDriverRequestCount finalPool searchTry.id
   pure $ buildDriverPoolWithActualDistResultWithFlags finalPool poolType nextScheduleTime (previousBatchesDrivers <> previousBatchesDriversOnRide)
@@ -158,8 +159,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       batches <- SDP.previouslyAttemptedDrivers searchTry.id mbOnRide
       return $ fst <$> batches
 
-    prepareDriverPoolBatch' previousBatchesDrivers batchNum merchantOpCityId txnId isValueAddNP = withLogTag ("BatchNum - " <> show batchNum <> " and txnId:- " <> show txnId) $ do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+    prepareDriverPoolBatch' previousBatchesDrivers batchNum merchantOpCityId txnId isValueAddNP batchTransporterConfig = withLogTag ("BatchNum - " <> show batchNum <> " and txnId:- " <> show txnId) $ do
+      -- Renamed to avoid shadowing: nested where-helpers below already have their own local transporterConfig.
+      let transporterConfig = batchTransporterConfig
       mbFareSettlementTypeForPool <- SFarePolicy.getFareSettlementTypeForSpecialZone (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
       airportEntryFee <-
         if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
@@ -527,6 +529,16 @@ insertInObject obj tags =
 hasAnyPriorityTag :: [Text] -> DriverPoolWithActualDistResult -> Bool
 hasAnyPriorityTag tagNames dp = case dp.driverPoolResult.driverTags of
   Object keymap -> any (\name -> AKM.member (AK.fromText name) keymap) tagNames
+  _ -> False
+
+-- | AUTO_ACCEPT / instant-assign priority check: driverTags is keyed by bare category,
+-- e.g. {"AutoAssign": "COMFY"}, not "AutoAssign<tier>" -- checks the category's value equals
+-- the given tier name, unlike hasAnyPriorityTag's bare key-membership check above.
+hasPriorityTag :: Text -> DriverPoolWithActualDistResult -> Bool
+hasPriorityTag tierName dp = case dp.driverPoolResult.driverTags of
+  Object keymap -> case AKM.lookup (AK.fromString "AutoAssign") keymap of
+    Just (String v) -> v == tierName
+    _ -> False
   _ -> False
 
 priorityDriverTagPrefix :: Text

@@ -4,6 +4,7 @@ module Storage.Queries.Person.GetNearestDrivers
     processCandidatesChunk,
     buildDriverResult,
     isTierEligibleForDriver,
+    isDriverModeEligibleHelper,
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
@@ -69,6 +70,7 @@ data NearestDriversResult = NearestDriversResult
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe Maps.LatLong,
     driverTags :: A.Value,
+    selectedAutoAcceptTiers :: [ServiceTierType],
     score :: Maybe A.Value,
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
@@ -301,7 +303,13 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         vehicleAge = getVehicleAge dpd.mYManufacturing now,
         latestScheduledBooking = dpd.latestScheduledBooking,
         latestScheduledPickup = dpd.latestScheduledPickup,
-        driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry driverTagPrefix : (map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags) ++ fromMaybe [] dpd.driverTag),
+        selectedAutoAcceptTiers = fromMaybe [] dpd.selectedAutoAcceptTiers,
+        driverTags =
+          Yudhishthira.convertTags $
+            LYT.TagNameValueExpiry driverTagPrefix :
+            ( map LYT.TagNameValueExpiry (fromMaybe [] dpd.vehicleTags)
+                ++ fromMaybe [] dpd.driverTag
+            ),
         score = Nothing,
         tripDistanceMinThreshold = dpd.tripDistanceMinThreshold,
         tripDistanceMaxThreshold = dpd.tripDistanceMaxThreshold,

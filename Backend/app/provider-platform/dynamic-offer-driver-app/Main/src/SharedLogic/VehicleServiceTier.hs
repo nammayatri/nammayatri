@@ -14,8 +14,9 @@
 
 module SharedLogic.VehicleServiceTier where
 
+import qualified Dashboard.Common as DC
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
 import Data.Ord (Down (..))
 import Data.Time (diffDays, utctDay)
 import qualified Domain.Types.Common as DTC
@@ -32,9 +33,14 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance
+import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Domain.Types.LedgerEntry
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import SharedLogic.Finance.Wallet (getWalletBalanceByOwner)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -231,3 +237,53 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         logInfo $ "backfillSelectedServiceTiers: LTS selectedServiceTiers empty for driver " <> vehicle.driverId.getId <> ", pushing DB tiers"
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
+
+-- | Serializes checkAndAutoDisableWalletGatedTiers's own concurrent invocations for one driver, since two can otherwise race and undo each other's write.
+selectedServiceTiersLockKey :: Id DP.Person -> Text
+selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId
+
+-- | Re-checks every wallet-gated tier a driver holds and drops any they can no longer afford. Called from each driver-app function that can debit the wallet.
+checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> m ()
+checkAndAutoDisableWalletGatedTiers driverId =
+  Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+    mbVehicle <- QVehicle.findById driverId
+    whenJust mbVehicle $ \vehicle ->
+      whenJust vehicle.merchantOperatingCityId $ \merchantOpCityId -> do
+        let selectedAutoAcceptTiers = fromMaybe [] vehicle.selectedAutoAcceptTiers
+            tiersToCheck = nub (vehicle.selectedServiceTiers <> selectedAutoAcceptTiers)
+        unless (null tiersToCheck) $ do
+          failing <-
+            fmap catMaybes $
+              forM tiersToCheck $ \tierType -> do
+                mbTier <- CQVST.findByServiceTierTypeAndCityId tierType merchantOpCityId Nothing
+                case mbTier >>= (.autoAcceptanceConfig) of
+                  Nothing -> pure Nothing
+                  Just cfg -> case cfg.minWalletBalance of
+                    Nothing -> pure Nothing
+                    Just minBalance -> do
+                      mbBalance <- getWalletBalanceByOwner DRIVER driverId.getId
+                      pure $ if maybe True (< minBalance) mbBalance then Just (tierType, cfg.mode) else Nothing
+          unless (null failing) $ do
+            let onlyModeFailing = [t | (t, DC.AutoAcceptOnly) <- failing]
+                allFailingTiers = map fst failing
+            QVehicle.updateSelectedServiceTiers (filter (`notElem` onlyModeFailing) vehicle.selectedServiceTiers) driverId
+            QVehicle.updateSelectedAutoAcceptTiers (filter (`notElem` allFailingTiers) selectedAutoAcceptTiers) driverId
+
+-- | Drop-in replacement for 'transfer OwnerLiability toRole ...': does the same debit,
+-- then, if the merchant/city has wallet-gated tiers enabled, synchronously re-checks
+-- the driver's tiers against the post-debit balance. Runs inline, not forked, since a
+-- stale tier check on real money is worse than the extra latency.
+deductOwnerLiability ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, Finance.HasActorInfo m r) =>
+  DTPC.TransporterConfig ->
+  Id DP.Person ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text ->
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
+  FinanceM m (Maybe (Id Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry))
+deductOwnerLiability transporterConfig driverId toRole amount refType mbMetadata = do
+  entryId <- transfer OwnerLiability toRole amount refType mbMetadata
+  when (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) $
+    lift (checkAndAutoDisableWalletGatedTiers driverId)
+  pure entryId

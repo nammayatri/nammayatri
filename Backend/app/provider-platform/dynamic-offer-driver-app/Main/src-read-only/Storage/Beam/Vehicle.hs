@@ -33,6 +33,7 @@ data VehicleT f = VehicleT
     registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
     registrationNo :: B.C f Kernel.Prelude.Text,
     ruleBasedUpgradeTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    selectedAutoAcceptTiers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType]),
     selectedServiceTiers :: B.C f [Domain.Types.Common.ServiceTierType],
     size :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     variant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,

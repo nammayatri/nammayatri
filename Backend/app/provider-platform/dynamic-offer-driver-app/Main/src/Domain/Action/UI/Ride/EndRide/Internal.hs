@@ -119,6 +119,7 @@ import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -282,6 +283,7 @@ processEndRideFinance ::
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r
   ) =>
@@ -465,7 +467,9 @@ createDriverWalletTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
   Ride.Ride ->
   SRB.Booking ->
@@ -864,6 +868,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
+    -- Re-check wallet-gated tiers now every leg above has posted, reading the net final balance.
+    when (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) $
+      SVST.checkAndAutoDisableWalletGatedTiers ride.driverId
 
     -- Stripe payment charge (card / online rides only; opt-in via paymentChargeBearer).
     -- P = paymentChargeRate% of the online cash-in total; posts SellerExpense → SellerLiability
@@ -874,7 +881,12 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         let paymentRate = fromMaybe 0 transporterConfig.driverWalletConfig.paymentChargeRate
             onlineCashInTotal = baseFare + taxAmount + tollWithVat + parkingWithVat + customerDiscountAmount + tipAmount
             paymentChargeAmount = onlineCashInTotal * realToFrac paymentRate / 100
-        recordStripeChargeLedger ctx (paymentBearerToFunder paymentBearer) paymentChargeAmount walletReferencePGPaymentCharges
+        recordStripeChargeLedger
+          ctx
+          (when (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) $ SVST.checkAndAutoDisableWalletGatedTiers ride.driverId)
+          (paymentBearerToFunder paymentBearer)
+          paymentChargeAmount
+          walletReferencePGPaymentCharges
           >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
 
 makeWalletRunningBalanceLockKey :: Text -> Text

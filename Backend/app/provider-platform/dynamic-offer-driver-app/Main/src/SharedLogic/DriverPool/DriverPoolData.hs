@@ -53,6 +53,7 @@ data DriverPoolData = DriverPoolData
     totalRides :: Maybe Int,
     variant :: VehicleVariant,
     selectedServiceTiers :: [ServiceTierType],
+    selectedAutoAcceptTiers :: Maybe [ServiceTierType],
     -- Class 1 (preferences)
     enabled :: Bool,
     blocked :: Bool,
@@ -192,6 +193,7 @@ defaultDriverPoolData dId =
       totalRides = Just 0,
       variant = AUTO_RICKSHAW,
       selectedServiceTiers = [],
+      selectedAutoAcceptTiers = Nothing,
       enabled = False,
       blocked = False,
       subscribed = False,

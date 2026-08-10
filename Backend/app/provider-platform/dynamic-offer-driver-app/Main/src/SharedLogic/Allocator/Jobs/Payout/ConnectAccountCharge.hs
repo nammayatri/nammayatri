@@ -35,6 +35,7 @@ import SharedLogic.Finance.Wallet
     recordStripeChargeLedger,
     walletReferenceConnectAccountCharges,
   )
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccountExtra as QDBA
@@ -54,6 +55,7 @@ sendConnectAccountCharge ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r
   ) =>
   Job 'ConnectAccountChargeDeduction ->
@@ -76,7 +78,12 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
                 whenJust mbPerson $ \person -> do
                   let counterparty = counterpartyFromRole person.role
                       chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId)
-                  recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
+                  recordStripeChargeLedger
+                    chargeCtx
+                    (when (fromMaybe False dwc.enableWalletGatedTierCheck) $ SVST.checkAndAutoDisableWalletGatedTiers acc.driverId)
+                    (connectBearerToFunder bearer)
+                    charge
+                    walletReferenceConnectAccountCharges
                     >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))
               -- Page through active accounts in bounded batches so a large fleet is not loaded at once.
               processBatches offset processed = do

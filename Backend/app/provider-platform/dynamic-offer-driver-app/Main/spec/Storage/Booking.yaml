@@ -105,6 +105,7 @@ Booking:
     isPetRide: Bool
     configInExperimentVersions: "[ConfigVersionMap]"
     coinsRewardedOnGoldTierRide: Maybe Int
+    isAutoAccepted: Maybe Bool
     isInsured: Bool
     insuredAmount: Maybe Text
     exotelDeclinedCallStatusReceivingTime: Maybe UTCTime

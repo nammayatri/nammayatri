@@ -462,6 +462,7 @@ data DriverWalletConfig = DriverWalletConfig
     connectAccountChargeTimeOfDay :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
     enableDriverWallet :: Kernel.Prelude.Bool,
+    enableWalletGatedTierCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
     fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

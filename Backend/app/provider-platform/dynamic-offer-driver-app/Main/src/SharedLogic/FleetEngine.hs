@@ -13,7 +13,8 @@
 --
 -- tripId = BPP rideId (1:1); vehicleId = driverId (1:1).
 module SharedLogic.FleetEngine
-  ( mkDriverToken,
+  ( FleetEngineFlow,
+    mkDriverToken,
     notifyDriverOnline,
     notifyTripCreated,
     notifyDriverArrived,

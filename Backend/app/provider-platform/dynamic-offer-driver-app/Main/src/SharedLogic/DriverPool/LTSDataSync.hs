@@ -51,6 +51,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     goHomeStatus :: SetField (Maybe DDGR.DriverGoHomeRequestStatus),
     variant :: SetField VehicleVariant,
     selectedServiceTiers :: SetField [ServiceTierType],
+    selectedAutoAcceptTiers :: SetField (Maybe [ServiceTierType]),
     -- Class 1 fields (sync, driver DB authoritative)
     enabled :: SetField Bool,
     blocked :: SetField Bool,
@@ -107,6 +108,7 @@ emptyUpdate =
       goHomeStatus = Unchanged,
       variant = Unchanged,
       selectedServiceTiers = Unchanged,
+      selectedAutoAcceptTiers = Unchanged,
       enabled = Unchanged,
       blocked = Unchanged,
       subscribed = Unchanged,
@@ -225,6 +227,7 @@ applyUpdate now u d =
       DPD.goHomeStatus = applyField u.goHomeStatus d.goHomeStatus,
       DPD.variant = applyField u.variant d.variant,
       DPD.selectedServiceTiers = applyField u.selectedServiceTiers d.selectedServiceTiers,
+      DPD.selectedAutoAcceptTiers = applyField u.selectedAutoAcceptTiers d.selectedAutoAcceptTiers,
       DPD.enabled = applyField u.enabled d.enabled,
       DPD.blocked = applyField u.blocked d.blocked,
       DPD.subscribed = applyField u.subscribed d.subscribed,
