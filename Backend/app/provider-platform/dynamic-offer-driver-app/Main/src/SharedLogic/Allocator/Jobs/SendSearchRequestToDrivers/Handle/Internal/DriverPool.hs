@@ -51,6 +51,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
+import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import SharedLogic.DriverPool
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -128,14 +129,16 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion Nothing
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
-  -- Enrich each driver with its per-driver Redis sliding-window counters so the POOLING
-  -- dynamic-logic rules can reference them. One Redis read pass per driver (in line with the
-  -- existing per-driver Redis reads in this flow).
+  -- Enrich each driver with its per-driver Redis sliding-window counters and idle time so the
+  -- POOLING dynamic-logic rules can reference them. One Redis read pass per driver (in line with
+  -- the existing per-driver Redis reads in this flow).
   enrichedDrivers <-
     mapM
       ( \driver -> do
-          counters <- getSrdStatsCounters (cast driver.driverPoolResult.driverId)
-          pure driver {searchReqDriverStatsCounters = Just counters}
+          let personId = cast driver.driverPoolResult.driverId
+          counters <- getSrdStatsCounters personId
+          idleSecs <- DriverIdleTime.getIdleTimeSeconds personId
+          pure driver {searchReqDriverStatsCounters = Just counters, idleTimeSeconds = Just idleSecs}
       )
       onlyNewDriversWithCustomerInfo
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum}
