@@ -274,7 +274,10 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
             Just paymentOrder -> do
               person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
               let isSingleMode = fromMaybe False journey.isSingleMode
-              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode
+              let mbQuoteId = case legs of
+                    [leg] -> Id <$> leg.legPricingId
+                    _ -> Nothing
+              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
             Nothing -> return Nothing
       Nothing -> return Nothing
   pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, result = "Success"}
@@ -326,7 +329,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
                       void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
-                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
+                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode (Just booking.quoteId)
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)
               Nothing -> return (Nothing, Nothing)
@@ -385,8 +388,8 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
         pure (paymentFulfillStatus, Nothing, Nothing)
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
-buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Environment.Flow (Maybe Payment.CreateOrderResp)
-buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode = do
+buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Maybe (Id DFRFSQuote.FRFSQuote) -> Environment.Flow (Maybe Payment.CreateOrderResp)
+buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
@@ -395,6 +398,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
   offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -420,7 +424,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)

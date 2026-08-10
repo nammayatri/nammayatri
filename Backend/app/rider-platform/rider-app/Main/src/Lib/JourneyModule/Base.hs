@@ -89,6 +89,7 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as QJourney
@@ -1395,7 +1396,13 @@ generateJourneyInfoResponse journey legs = do
     withTryCatch "generateJourneyInfoResponse:offerListCache" (SOffer.offerListCache journey.merchantId journey.riderId journey.merchantOperatingCityId DOrder.FRFSMultiModalBooking (mkPrice mbCurrency estimatedMinFareAmount) Nothing)
       >>= \case
         Left _ -> return Nothing
-        Right offersResp -> SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs Nothing
+        Right offersResp -> do
+          mbOfferSegment <- case (fromMaybe False journey.isSingleMode, legs) of
+            (True, [leg]) -> do
+              mbQuote <- maybe (pure Nothing) (QFRFSQuote.findById . Id) leg.pricingId
+              pure $ mbQuote >>= (.offerSegment)
+            _ -> pure Nothing
+          SOffer.mkCumulativeOfferResp journey.merchantOperatingCityId offersResp legs Nothing mbOfferSegment
   pure $
     APITypes.JourneyInfoResp
       { estimatedDuration = journey.estimatedDuration,

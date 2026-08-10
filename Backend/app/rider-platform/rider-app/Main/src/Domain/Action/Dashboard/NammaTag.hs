@@ -114,6 +114,7 @@ import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import SharedLogic.Offer
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.PickupETA as PickupETA
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
@@ -364,6 +365,10 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
       logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy CumulativeOfferRespI) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.FRFS_OFFER_SEGMENT_POLICY -> do
+      defaultVal <- fromMaybeM (InvalidRequest "OfferSegmentInput not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @SOfferSegment.OfferSegmentInput))
+      logicData :: SOfferSegment.OfferSegmentInput <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SOfferSegment.OfferSegmentResp) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.OFFERS_FRAUD_CHECKS -> do
       defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))
       logicData :: OffersFraudChecksReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
@@ -584,6 +589,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultVal,
             LYTU.schema = toInlinedSchemaValue (Proxy @CumulativeOfferReq)
+          }
+    LYTU.FRFS_OFFER_SEGMENT_POLICY -> do
+      defaultVal <- fromMaybeM (InvalidRequest "OfferSegmentInput not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @SOfferSegment.OfferSegmentInput))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON defaultVal,
+            LYTU.schema = toInlinedSchemaValue (Proxy @SOfferSegment.OfferSegmentInput)
           }
     LYTU.OFFERS_FRAUD_CHECKS -> do
       defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))

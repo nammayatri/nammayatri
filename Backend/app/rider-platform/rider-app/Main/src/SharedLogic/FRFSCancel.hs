@@ -13,6 +13,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
+import qualified Domain.Types.PersonPTStats as DPUS
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -31,6 +32,7 @@ import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PersonPTStats as SPUS
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
@@ -101,6 +103,23 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
+  -- Undo the segmentation counters recorded at on_confirm.
+  reverseStatsResult <-
+    withTryCatch "handleCancelledStatus:reversePersonPTStats" $ do
+      purchaseEvent <-
+        SPUS.mkPurchaseEvent
+          person
+          (Just booking.vehicleType)
+          booking.serviceTierType
+          DPUS.TICKET
+          Nothing
+          (Just fareParameters.totalQuantity)
+          booking.merchantId
+          booking.merchantOperatingCityId
+      SPUS.reversePurchase purchaseEvent
+  case reverseStatsResult of
+    Right () -> pure ()
+    Left err -> logError $ "Failed to reverse PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
   bapConfig <-
     getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
       >>= fromMaybeM (InternalError "Beckn Config not found")

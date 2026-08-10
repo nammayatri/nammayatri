@@ -77,7 +77,8 @@ data CumulativeOfferRespI = CumulativeOfferRespI
 
 data CumulativeOfferReq = CumulativeOfferReq
   { offerListResp :: Payment.OfferListResp,
-    extraParams :: [JL.LegInfo]
+    extraParams :: [JL.LegInfo],
+    offerSegment :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -385,8 +386,10 @@ mkCumulativeOfferResp ::
   Payment.OfferListResp ->
   [JL.LegInfo] ->
   OfferFareCtx ->
+  -- | Rider offer segment, resolved by the caller (same value sent as udf2).
+  Maybe Text ->
   m (Maybe CumulativeOfferResp)
-mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx = do
+mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx mbOfferSegment = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY now Nothing Nothing
   if null logics
@@ -395,7 +398,7 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx = 
       pure Nothing
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY Nothing logics (CumulativeOfferReq offerListRes legInfos)
+      result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY Nothing logics (CumulativeOfferReq offerListRes legInfos mbOfferSegment)
       case A.fromJSON result.result :: A.Result CumulativeOfferRespI of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult

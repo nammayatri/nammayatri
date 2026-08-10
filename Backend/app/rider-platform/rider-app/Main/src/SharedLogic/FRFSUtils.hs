@@ -89,6 +89,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSFareCalculator as Reexport
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -112,6 +113,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Storage.Queries.StopFare as QRouteStopFare
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
@@ -844,6 +846,34 @@ getAllJourneyFrfsBookings booking = do
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
 
+getQuoteOfferSegment ::
+  (EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Spec.VehicleCategory ->
+  Maybe Text ->
+  m (Maybe Text)
+getQuoteOfferSegment riderId merchantOperatingCityId vehicleType mbRouteStationsJson = do
+  result <- withTryCatch "getQuoteOfferSegment" $ do
+    person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+    SOfferSegment.getPersonOfferSegment person merchantOperatingCityId $
+      SOfferSegment.ticketContext (Just vehicleType) (getServiceTierTypeFromRouteStationsJson mbRouteStationsJson)
+  case result of
+    Right segment -> pure segment
+    Left err -> do
+      logError $ "getQuoteOfferSegment failed for rider " <> riderId.getId <> ", quote left unsegmented: " <> show err
+      pure Nothing
+
+getOfferSegmentUdf2 ::
+  (BeamFlow m r) =>
+  Bool ->
+  Maybe (Id Quote.FRFSQuote) ->
+  m (Maybe Text)
+getOfferSegmentUdf2 True (Just quoteId) = do
+  mbQuote <- QFRFSQuote.findById quoteId
+  pure $ mbQuote >>= (.offerSegment)
+getOfferSegmentUdf2 _ _ = pure Nothing
+
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -883,6 +913,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- getOfferSegmentUdf2 isSingleMode ((.quoteId) <$> listToMaybe bookings)
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
@@ -907,7 +938,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId

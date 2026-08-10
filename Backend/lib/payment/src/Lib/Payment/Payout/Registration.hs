@@ -124,7 +124,8 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
                           }
                       ]
                   },
-            udf1 = Nothing
+            udf1 = Nothing,
+            udf2 = Nothing
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount
