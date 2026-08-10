@@ -206,6 +206,8 @@ types:
     isExperienceGood: Maybe Bool
     rating: Maybe Int
     legOrder: Int
+    driverRating: Maybe Int
+    fleetRating: Maybe Int
 
   JourneyConfirmReq:
     journeyConfirmReqElements: "[JourneyConfirmReqElement]"

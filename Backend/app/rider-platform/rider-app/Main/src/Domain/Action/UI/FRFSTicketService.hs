@@ -89,6 +89,7 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as QPaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as QRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
 import SharedLogic.External.Nandi.Types (GimsCurrentTripDetailsReq (..), GimsOperationAnchor (..), GimsTripAction (..), GimsTripActionReq (..), GimsTripInfo (..), StopInfo (..), StopSchedule (..))
 import qualified SharedLogic.FRFSCancel as FRFSCancel
@@ -106,6 +107,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
+import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -1244,17 +1246,29 @@ postFrfsBookingFeedback ::
     API.Types.UI.FRFSTicketService.FRFSBookingFeedbackReq ->
     Environment.Flow APISuccess.APISuccess
   )
-postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
-  void $ CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+postFrfsBookingFeedback (mbPersonId, merchantId) bookingId req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  unless (booking.riderId == personId) $ throwError (InvalidRequest "Booking does not belong to this rider")
 
-  let (isFareAccepted, feedbackDetails) = case req of
-        API.Types.UI.FRFSTicketService.BookingFareAccepted fareAcceptedReq -> (Just fareAcceptedReq.isFareAccepted, Nothing)
-        API.Types.UI.FRFSTicketService.BookingFeedback feedbackReq -> (Nothing, Just feedbackReq.feedbackDetails)
+  let (isFareAccepted, feedbackDetails, mbDriverRating, mbFleetRating) = case req of
+        FRFSTicketService.BookingFareAccepted fareAcceptedReq -> (Just fareAcceptedReq.isFareAccepted, Nothing, Nothing, Nothing)
+        FRFSTicketService.BookingFeedback feedbackReq -> (Nothing, Just feedbackReq.feedbackDetails, Nothing, Nothing)
+        FRFSTicketService.BookingRating ratingReq -> (Nothing, ratingReq.feedbackDetails, ratingReq.driverRating, ratingReq.fleetRating)
+  whenJust mbDriverRating $ \v -> unless (v >= 1 && v <= 5) $ throwError (InvalidRequest "Driver rating value should be between 1 and 5")
+  whenJust mbFleetRating $ \v -> unless (v >= 1 && v <= 5) $ throwError (InvalidRequest "Fleet rating value should be between 1 and 5")
 
   existingFeedback <- QFRFSTicketBookingFeedback.findByBookingId bookingId
   case existingFeedback of
-    Just _ -> void $ QFRFSTicketBookingFeedback.updateByBookingId isFareAccepted feedbackDetails bookingId
+    Just old ->
+      void $
+        QFRFSTicketBookingFeedback.updateByBookingId
+          (isFareAccepted <|> old.isFareAccepted)
+          (feedbackDetails <|> old.feedbackDetails)
+          (mbDriverRating <|> old.driverRating)
+          (mbFleetRating <|> old.fleetRating)
+          bookingId
     Nothing -> do
       feedbackId <- generateGUID
       now <- getCurrentTime
@@ -1264,6 +1278,8 @@ postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
                 bookingId = bookingId,
                 isFareAccepted = isFareAccepted,
                 feedbackDetails = feedbackDetails,
+                driverRating = mbDriverRating,
+                fleetRating = mbFleetRating,
                 merchantId = merchantId,
                 merchantOperatingCityId = booking.merchantOperatingCityId,
                 createdAt = now,
@@ -1271,7 +1287,82 @@ postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
               }
       void $ QFRFSTicketBookingFeedback.create feedback
 
+  case req of
+    -- The rider's feedback row is already durably written above. A BPP outage must not turn
+    -- that success into an error response, so failures here are logged and swallowed.
+    FRFSTicketService.BookingRating ratingReq ->
+      withTryCatch "forwardShuttleRating" (forwardShuttleRating merchant booking ratingReq)
+        >>= \case
+          Right _ -> pure ()
+          Left err -> logError $ "Error forwarding shuttle driver rating to BPP: " <> show err
+    _ -> pure ()
+
   return APISuccess.Success
+
+-- | Forward a shuttle driver rating to dynamic-offer-driver-app (BPP) so it can update the
+-- driver's DriverStats and the bus/fleet aggregate. Skips (with a log) when the boarded
+-- driver is unknown, so the rider's own feedback still persists.
+forwardShuttleRating :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.BookingRatingReq -> Environment.Flow ()
+forwardShuttleRating merchant booking ratingReq =
+  when (isJust ratingReq.driverRating || isJust ratingReq.fleetRating) $
+    case booking.driverId of
+      Nothing -> logWarning $ "FRFS driver rating: booking " <> booking.id.getId <> " has no driverId; skipping BPP forward."
+      Just driverBadge -> do
+        mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
+        let ratingBppReq =
+              CallBPPInternal.FRFSBookingRatingReq
+                { bookingId = booking.id.getId,
+                  driverBadgeToken = driverBadge,
+                  driverRating = ratingReq.driverRating,
+                  fleetRating = ratingReq.fleetRating,
+                  feedbackDetails = ratingReq.feedbackDetails,
+                  fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber,
+                  gtfsId = mbGtfsId,
+                  merchantId = merchant.driverOfferMerchantId
+                }
+        void $ CallBPPInternal.sendFrfsBookingRating merchant.driverOfferApiKey merchant.driverOfferBaseUrl ratingBppReq
+
+getFrfsBookingRating ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking ->
+    Environment.Flow API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
+  )
+getFrfsBookingRating (mbPersonId, merchantId) bookingId = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  -- Ownership check: without this, any authenticated rider could pass someone else's
+  -- booking id and read the driver/fleet aggregates behind it.
+  unless (booking.riderId == personId) $ throwError (InvalidRequest "Booking does not belong to this rider")
+  case booking.driverId of
+    Nothing -> pure emptyBookingRatingAgg
+    Just driverBadge -> do
+      mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
+      let fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber
+      withTryCatch "getFrfsBookingRatingAgg" (CallBPPInternal.getFrfsBookingRatingAgg merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId driverBadge fleetNumber mbGtfsId)
+        >>= \case
+          Right res ->
+            pure
+              API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
+                { driverRating = res.driverRating,
+                  driverRatingCount = res.driverRatingCount,
+                  fleetRating = res.fleetRating,
+                  fleetRatingCount = res.fleetRatingCount
+                }
+          Left err -> do
+            logError $ "Error fetching FRFS driver/fleet rating aggregates: " <> show err
+            pure emptyBookingRatingAgg
+
+emptyBookingRatingAgg :: API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
+emptyBookingRatingAgg =
+  API.Types.UI.FRFSTicketService.FRFSBookingRatingAggRes
+    { driverRating = Nothing,
+      driverRatingCount = Nothing,
+      fleetRating = Nothing,
+      fleetRatingCount = Nothing
+    }
 
 tryStationsAPIWithOSRMDistances :: Id Merchant.Merchant -> MerchantOperatingCity -> LatLong -> [FRFSStationAPI] -> DIBC.IntegratedBPPConfig -> Environment.Flow [FRFSStationAPI]
 tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integratedBPPConfig = do

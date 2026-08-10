@@ -323,6 +323,7 @@ library
       Domain.Action.UI.FleetDriverAssociation
       Domain.Action.UI.FleetEngineToken
       Domain.Action.UI.FleetOwnerList
+      Domain.Action.UI.FRFSBookingRatingInternal
       Domain.Action.UI.FRFSFleetOperator
       Domain.Action.UI.IncentiveJourney
       Domain.Action.UI.Insurance
@@ -1094,6 +1095,7 @@ library
       API.Action.UI.File
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
+      API.Action.UI.FRFSBookingRatingInternal
       API.Action.UI.FRFSFleetOperator
       API.Action.UI.IncentiveJourney
       API.Action.UI.Insurance
@@ -1175,6 +1177,7 @@ library
       API.Types.UI.FareCalculator
       API.Types.UI.FinanceInvoice
       API.Types.UI.FleetOwnerList
+      API.Types.UI.FRFSBookingRatingInternal
       API.Types.UI.FRFSFleetOperator
       API.Types.UI.IncentiveJourney
       API.Types.UI.Insurance
@@ -1294,6 +1297,8 @@ library
       Domain.Types.FleetRCAssociation
       Domain.Types.FleetRcDailyStats
       Domain.Types.FleetRouteAssociation
+      Domain.Types.FRFSBookingRating
+      Domain.Types.FRFSFleetStats
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
       Domain.Types.HyperVergeSdkLogs
@@ -1483,6 +1488,8 @@ library
       Storage.Beam.FleetRCAssociation
       Storage.Beam.FleetRcDailyStats
       Storage.Beam.FleetRouteAssociation
+      Storage.Beam.FRFSBookingRating
+      Storage.Beam.FRFSFleetStats
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
       Storage.Beam.HyperVergeSdkLogs
@@ -1677,6 +1684,8 @@ library
       Storage.Queries.FleetRCAssociation
       Storage.Queries.FleetRcDailyStats
       Storage.Queries.FleetRouteAssociation
+      Storage.Queries.FRFSBookingRating
+      Storage.Queries.FRFSFleetStats
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
       Storage.Queries.HyperVergeSdkLogs
