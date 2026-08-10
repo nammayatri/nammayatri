@@ -95,6 +95,10 @@ data PassTypeAPIEntity = PassTypeAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassUploadProfilePictureReq = PassUploadProfilePictureReq {imeiNumber :: Data.Text.Text, profilePicture :: Data.Text.Text, purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassVerifyReq = PassVerifyReq
   { autoActivated :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     currentLat :: Data.Maybe.Maybe Kernel.Prelude.Double,

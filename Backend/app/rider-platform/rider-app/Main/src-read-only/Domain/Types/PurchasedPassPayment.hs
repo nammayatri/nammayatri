@@ -14,6 +14,7 @@ import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
@@ -22,6 +23,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     isDashboard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

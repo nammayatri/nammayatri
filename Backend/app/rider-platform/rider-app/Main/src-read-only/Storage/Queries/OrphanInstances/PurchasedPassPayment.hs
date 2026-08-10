@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PurchasedPassPayment where
 
+import qualified Data.Text
 import qualified Domain.Types.PurchasedPassPayment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -11,10 +12,12 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Storage.Beam.PurchasedPassPayment as Beam
 
 instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.PurchasedPassPayment where
   fromTType' (Beam.PurchasedPassPaymentT {..}) = do
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.PurchasedPassPayment.PurchasedPassPayment
@@ -22,6 +25,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             benefitDescription = Kernel.Prelude.fromMaybe "" benefitDescription,
             benefitType = benefitType,
             benefitValue = benefitValue,
+            clientSdkVersion = clientSdkVersion',
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             isDashboard = isDashboard,
@@ -48,6 +52,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.benefitDescription = Kernel.Prelude.Just benefitDescription,
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,
+        Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
         Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDashboard = isDashboard,
