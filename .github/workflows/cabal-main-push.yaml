@@ -184,7 +184,7 @@ jobs:
     needs: [check-conditions, cabal-build]
     if: needs.check-conditions.outputs.should-proceed == 'true'
     continue-on-error: true
-    runs-on: x86_64_main_push
+    runs-on: containerd-build
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
     steps:
