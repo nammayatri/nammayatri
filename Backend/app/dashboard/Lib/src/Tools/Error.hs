@@ -114,6 +114,31 @@ instance IsHTTPError MerchantError where
 
 instance IsAPIError MerchantError
 
+-- | Raised when a credential may only be exchanged for a new password, never for a session.
+-- Carries its own code so the client can route to the set-new-password screen rather than
+-- surfacing a generic 400.
+data PasswordPolicyError
+  = PasswordChangeRequired
+  | PasswordExpired
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PasswordPolicyError
+
+instance IsBaseError PasswordPolicyError where
+  toMessage = \case
+    PasswordChangeRequired -> Just "Your password was reset by an administrator. Please set a new password before logging in."
+    PasswordExpired -> Just "Your password has expired. Please set a new password."
+
+instance IsHTTPError PasswordPolicyError where
+  toErrorCode = \case
+    PasswordChangeRequired -> "PASSWORD_CHANGE_REQUIRED"
+    PasswordExpired -> "PASSWORD_EXPIRED"
+  toHttpCode = \case
+    PasswordChangeRequired -> E403
+    PasswordExpired -> E403
+
+instance IsAPIError PasswordPolicyError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken
