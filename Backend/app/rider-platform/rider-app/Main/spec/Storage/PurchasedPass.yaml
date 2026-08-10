@@ -10,6 +10,7 @@ imports:
   BenefitType: Domain.Types.PurchasedPass
   PassEnum: Domain.Types.PassType
   MediaFile: IssueManagement.Domain.Types.MediaFile
+  Version: Kernel.Types.Version
 
 PurchasedPass:
   tableName: purchased_pass
@@ -58,6 +59,7 @@ PurchasedPass:
     passPhotoMediaId: Maybe (Id MediaFile)
     preferredSource: Maybe Text
     preferredDestination: Maybe Text
+    currentPaymentOrderId: Maybe (Id PaymentOrder)
 
   beamType:
     deviceSwitchCount: Maybe Int
@@ -138,15 +140,19 @@ PurchasedPassPayment:
     profilePicture: Maybe Text
     passPhotoMediaId: Maybe (Id MediaFile)
     passEnum: Maybe PassEnum
+    clientSdkVersion: Maybe Version
 
   beamType:
     benefitDescription: Maybe Text
+    clientSdkVersion: Maybe Text
 
   fromTType:
     benefitDescription: Kernel.Prelude.fromMaybe ""|I
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
 
   toTType:
     benefitDescription: Kernel.Prelude.Just|I
+    clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
 
   constraints:
     id: PrimaryKey
@@ -171,6 +177,11 @@ PurchasedPassPayment:
     updateStatusByOrderId:
       kvFunction: updateOneWithKV
       params: [status]
+      where: orderId
+
+    updateSdkVersionByOrderId:
+      kvFunction: updateOneWithKV
+      params: [clientSdkVersion]
       where: orderId
 
     findAllByPurchasedPassIdAndStatus:
