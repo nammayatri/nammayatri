@@ -15,6 +15,7 @@ import qualified IssueManagement.Storage.Beam.Issue.ChatMessage as BeamCM
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
 import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
+import qualified IssueManagement.Storage.Beam.Issue.IGMIssueAction as BeamIGA
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueChat as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
@@ -41,6 +42,9 @@ instance HasSchemaName BeamIM.IssueMessageT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamIGI.IGMIssueT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamIGA.IGMIssueActionT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamIGMC.IGMConfigT where

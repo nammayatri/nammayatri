@@ -45,8 +45,9 @@ issue ::
   Spec.IssueReq ->
   ServiceHandle m ->
   Identifier ->
+  Bool ->
   m Spec.AckResponse
-issue merchantId req issueHandle identifier = do
+issue merchantId req issueHandle identifier isValueAddNP = do
   transaction_id <- req.context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   message_id <- req.context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bap_id <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
@@ -55,7 +56,7 @@ issue merchantId req issueHandle identifier = do
   bpp_uri <- req.context.contextBppUri & fromMaybeM (InvalidRequest "BppUri not found")
   logDebug $ "Received Issue request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
-    issueReq <- IACL.buildIssueReq req
+    issueReq <- IACL.buildIssueReq req isValueAddNP
     Redis.whenWithLockRedis (issueLockKey message_id) 60 $ do
       validatedIssueReq <- DIssue.validateRequest merchantId issueReq issueHandle
       fork "IGM issue processing" $ do
@@ -119,8 +120,9 @@ issueStatus ::
   Spec.IssueStatusReq ->
   ServiceHandle m ->
   Identifier ->
+  Bool ->
   m Spec.AckResponse
-issueStatus _merchantId req issueHandle identifier = do
+issueStatus _merchantId req issueHandle identifier isValueAddNP = do
   transaction_id <- req.issueStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   message_id <- req.issueStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bap_id <- req.issueStatusReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
@@ -134,7 +136,7 @@ issueStatus _merchantId req issueHandle identifier = do
       validatedIssueStatusReq <- DIssueStatus.validateRequest issueStatusReq issueHandle
       fork "IGM issueStatus processing" $ do
         Redis.whenWithLockRedis (issueStatusProcessingLockKey message_id) 60 $ do
-          dIssueStatusRes <- DIssueStatus.handler validatedIssueStatusReq
+          dIssueStatusRes <- DIssueStatus.handler validatedIssueStatusReq isValueAddNP
           let (domainId, domainUri) = if identifier == DRIVER then (bap_id, bap_uri) else (bpp_id, bpp_uri)
           becknOnIssueReq <- ISACL.buildOnIssueStatusReq transaction_id message_id domainId domainUri dIssueStatusRes
           domainBaseUrl <- parseBaseUrl domainUri
