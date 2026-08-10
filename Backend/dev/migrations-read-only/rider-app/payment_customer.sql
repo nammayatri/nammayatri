@@ -24,3 +24,12 @@ ALTER TABLE atlas_app.payment_customer ADD COLUMN person_id character varying(36
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payment_customer ADD COLUMN default_payment_method_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payment_customer ADD COLUMN card_type text ;
+ALTER TABLE atlas_app.payment_customer ADD COLUMN card_last_four_digits text ;
+ALTER TABLE atlas_app.payment_customer ADD COLUMN card_issuer text ;
+ALTER TABLE atlas_app.payment_customer ADD COLUMN card_isin text ;
+ALTER TABLE atlas_app.payment_customer ADD COLUMN card_brand text ;

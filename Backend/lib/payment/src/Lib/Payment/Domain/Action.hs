@@ -335,6 +335,14 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     customerLastName :: Maybe Text,
     -- Stripe-specific (optional)
     paymentMethodId :: Maybe Payment.PaymentMethodId,
+    -- | Non-sensitive card metadata for `paymentMethodId`, supplied by the caller so the
+    --   transaction records the card that paid at creation time instead of waiting on a webhook
+    --   (Stripe's charge events carry no card object here). Written once and then preserved.
+    cardBrand :: Maybe Text,
+    cardIsin :: Maybe Text,
+    cardLastFourDigits :: Maybe Text,
+    cardIssuer :: Maybe Text,
+    cardType :: Maybe Text,
     driverAccountId :: Maybe Payment.AccountId,
     applicationFeeAmount :: Maybe HighPrecMoney,
     -- | Ask for a platform-only charge, i.e. collect the whole amount to the platform account with
@@ -641,7 +649,16 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
        in baseTxn
             { transactionUUID = Just gatewayResp.paymentServiceOrderId,
               txnId = Just gatewayResp.paymentServiceOrderId,
-              applicationFeeAmount = req.applicationFeeAmount
+              applicationFeeAmount = req.applicationFeeAmount,
+              -- The method and the card describing it are known now; recording them here means the
+              -- row carries the card that paid from the moment it exists, rather than being NULL
+              -- until (and unless) a webhook arrives.
+              paymentMethodId = req.paymentMethodId,
+              cardBrand = req.cardBrand,
+              cardIsin = req.cardIsin,
+              cardLastFourDigits = req.cardLastFourDigits,
+              cardIssuer = req.cardIssuer,
+              cardType = req.cardType
             }
 
 -- | Unified refund service. Replaces both createRefundService and initiateStripeRefundService.
@@ -1615,6 +1632,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
                 cardIssuer = Nothing,
                 authorizationDateTime = Nothing,
                 captureDateTime = Nothing,
+                paymentMethodId = Nothing,
                 vpa = payerVpa,
                 ..
               }
@@ -1639,6 +1657,7 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
                 txnId = txnObj.txnId,
                 paymentMethodType = txnObj.paymentMethodType,
                 paymentMethod = txnObj.paymentMethod,
+                paymentMethodId = Nothing, -- Juspay exposes no payment method id
                 respMessage = txnObj.respMessage,
                 respCode = txnObj.respCode,
                 gatewayReferenceId = txnObj.gatewayReferenceId,
@@ -1721,6 +1740,7 @@ data OrderTxn = OrderTxn
     transactionStatus :: Payment.TransactionStatus,
     paymentMethodType :: Maybe Text,
     paymentMethod :: Maybe Text,
+    paymentMethodId :: Maybe Text,
     respMessage :: Maybe Text,
     respCode :: Maybe Text,
     gatewayReferenceId :: Maybe Text,
@@ -1787,6 +1807,7 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         status = resp.transactionStatus,
                         paymentMethodType = resp.paymentMethodType,
                         paymentMethod = resp.paymentMethod,
+                        paymentMethodId = resp.paymentMethodId <|> transaction.paymentMethodId,
                         respMessage = resp.respMessage,
                         respCode = resp.respCode,
                         gatewayReferenceId = resp.gatewayReferenceId,
@@ -1809,15 +1830,20 @@ updateOrderTransaction merchantOpCityId order resp respDump = do
                         splitSettlementResponse = resp.splitSettlementResponse,
                         customerName = resp.customerName,
                         gatewayName = resp.gatewayName,
-                        cardType = resp.cardType,
+                        -- Preserve, do not overwrite. The card is written at intent creation and
+                        -- Stripe's payment_intent/charge events carry no card object, so a plain
+                        -- assignment would null these out on the first webhook. Also hardens
+                        -- Juspay, where a status response lacking a card object previously erased
+                        -- values an earlier response had captured.
+                        cardType = resp.cardType <|> transaction.cardType,
                         surchargeAmount = resp.surchargeAmount,
                         taxAmount = resp.taxAmount,
                         netAmount = resp.netAmount,
                         epgTxnId = resp.epgTxnId,
-                        cardBrand = resp.cardBrand,
-                        cardIsin = resp.cardIsin,
-                        cardLastFourDigits = resp.cardLastFourDigits,
-                        cardIssuer = resp.cardIssuer,
+                        cardBrand = resp.cardBrand <|> transaction.cardBrand,
+                        cardIsin = resp.cardIsin <|> transaction.cardIsin,
+                        cardLastFourDigits = resp.cardLastFourDigits <|> transaction.cardLastFourDigits,
+                        cardIssuer = resp.cardIssuer <|> transaction.cardIssuer,
                         authorizationDateTime = resp.authorizationDateTime,
                         captureDateTime = resp.captureDateTime
                        }
@@ -1891,6 +1917,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 cardIssuer = Nothing,
                 authorizationDateTime = Nothing,
                 captureDateTime = Nothing,
+                paymentMethodId = Nothing,
                 vpa = payerVpa,
                 ..
               }
@@ -1908,6 +1935,7 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 txnId = txnObj.txnId,
                 paymentMethodType = txnObj.paymentMethodType,
                 paymentMethod = txnObj.paymentMethod,
+                paymentMethodId = Nothing, -- Juspay exposes no payment method id
                 respMessage = txnObj.respMessage,
                 respCode = txnObj.respCode,
                 gatewayReferenceId = txnObj.gatewayReferenceId,
@@ -2120,6 +2148,7 @@ mkDefaultStripeOrderTxn transactionStatus amount currency =
       txnId = Nothing,
       paymentMethodType = Nothing,
       paymentMethod = Nothing,
+      paymentMethodId = Nothing,
       respMessage = Nothing,
       respCode = Nothing,
       gatewayReferenceId = Nothing,
@@ -2162,6 +2191,7 @@ mkPaymentIntentOrderTxn PEInterface.PaymentIntent {..} = do
         defaultOrderTxn{txnId = Just paymentIntentId,
                         transactionUUID = Just paymentIntentId,
                         paymentMethod = paymentMethod,
+                        paymentMethodId = paymentMethod,
                         dateCreated = Just createdAt,
                         applicationFeeAmount = applicationFeeAmount
                        }
@@ -2175,6 +2205,7 @@ mkChargeOrderTxn PEInterface.Charge {..} = do
         defaultOrderTxn{txnId = paymentIntentId,
                         transactionUUID = paymentIntentId,
                         paymentMethod = paymentMethod,
+                        paymentMethodId = paymentMethod,
                         dateCreated = Just createdAt,
                         applicationFeeAmount = applicationFeeAmount,
                         bankErrorMessage = failureMessage,

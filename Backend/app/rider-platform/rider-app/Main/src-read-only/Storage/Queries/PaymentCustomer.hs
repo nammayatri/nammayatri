@@ -62,16 +62,19 @@ updateCATExpiryAndCustomerIdByPersonId clientAuthToken clientAuthTokenExpiry cus
 
 updateDefaultPaymentMethodId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> m ())
-updateDefaultPaymentMethodId defaultPaymentMethodId personId paymentMode = do
+  (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode -> m ())
+updateDefaultPaymentMethodId defaultPaymentMethodId cardBrand cardIsin cardLastFourDigits cardIssuer cardType personId paymentMode = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId <$> personId),
-          Se.Is Beam.paymentMode $ Se.Eq paymentMode
-        ]
+    [ Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
+      Se.Set Beam.cardBrand cardBrand,
+      Se.Set Beam.cardIsin cardIsin,
+      Se.Set Beam.cardLastFourDigits cardLastFourDigits,
+      Se.Set Beam.cardIssuer cardIssuer,
+      Se.Set Beam.cardType cardType,
+      Se.Set Beam.updatedAt _now
     ]
+    [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId <$> personId), Se.Is Beam.paymentMode $ Se.Eq paymentMode]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -82,7 +85,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PaymentCustomer.PaymentCustomer {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.clientAuthToken clientAuthToken,
+    [ Se.Set Beam.cardBrand cardBrand,
+      Se.Set Beam.cardIsin cardIsin,
+      Se.Set Beam.cardIssuer cardIssuer,
+      Se.Set Beam.cardLastFourDigits cardLastFourDigits,
+      Se.Set Beam.cardType cardType,
+      Se.Set Beam.clientAuthToken clientAuthToken,
       Se.Set Beam.clientAuthTokenExpiry clientAuthTokenExpiry,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,
       Se.Set Beam.personId (Kernel.Types.Id.getId <$> personId),
@@ -95,7 +103,12 @@ instance FromTType' Beam.PaymentCustomer Domain.Types.PaymentCustomer.PaymentCus
     pure $
       Just
         Domain.Types.PaymentCustomer.PaymentCustomer
-          { clientAuthToken = clientAuthToken,
+          { cardBrand = cardBrand,
+            cardIsin = cardIsin,
+            cardIssuer = cardIssuer,
+            cardLastFourDigits = cardLastFourDigits,
+            cardType = cardType,
+            clientAuthToken = clientAuthToken,
             clientAuthTokenExpiry = clientAuthTokenExpiry,
             customerId = customerId,
             defaultPaymentMethodId = defaultPaymentMethodId,
@@ -108,7 +121,12 @@ instance FromTType' Beam.PaymentCustomer Domain.Types.PaymentCustomer.PaymentCus
 instance ToTType' Beam.PaymentCustomer Domain.Types.PaymentCustomer.PaymentCustomer where
   toTType' (Domain.Types.PaymentCustomer.PaymentCustomer {..}) = do
     Beam.PaymentCustomerT
-      { Beam.clientAuthToken = clientAuthToken,
+      { Beam.cardBrand = cardBrand,
+        Beam.cardIsin = cardIsin,
+        Beam.cardIssuer = cardIssuer,
+        Beam.cardLastFourDigits = cardLastFourDigits,
+        Beam.cardType = cardType,
+        Beam.clientAuthToken = clientAuthToken,
         Beam.clientAuthTokenExpiry = clientAuthTokenExpiry,
         Beam.customerId = customerId,
         Beam.defaultPaymentMethodId = defaultPaymentMethodId,

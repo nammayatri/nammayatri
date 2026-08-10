@@ -44,6 +44,7 @@ updateMultiple transaction = do
       Se.Set BeamPT.status transaction.status,
       Se.Set BeamPT.paymentMethodType transaction.paymentMethodType,
       Se.Set BeamPT.paymentMethod transaction.paymentMethod,
+      Se.Set BeamPT.paymentMethodId transaction.paymentMethodId,
       Se.Set BeamPT.respMessage transaction.respMessage,
       Se.Set BeamPT.respCode transaction.respCode,
       Se.Set BeamPT.gatewayReferenceId transaction.gatewayReferenceId,

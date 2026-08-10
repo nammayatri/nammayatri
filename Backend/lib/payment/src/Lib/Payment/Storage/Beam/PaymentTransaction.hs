@@ -26,6 +26,7 @@ data PaymentTransactionT f = PaymentTransactionT
     txnId :: B.C f (Maybe Text),
     paymentMethodType :: B.C f (Maybe Text),
     paymentMethod :: B.C f (Maybe Text),
+    paymentMethodId :: B.C f (Maybe Text),
     respMessage :: B.C f (Maybe Text),
     respCode :: B.C f (Maybe Text),
     gatewayReferenceId :: B.C f (Maybe Text),

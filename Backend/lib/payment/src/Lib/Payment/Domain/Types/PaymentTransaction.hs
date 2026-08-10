@@ -29,6 +29,7 @@ data PaymentTransaction = PaymentTransaction
     txnId :: Maybe Text,
     paymentMethodType :: Maybe Text,
     paymentMethod :: Maybe Text,
+    paymentMethodId :: Maybe KPayment.PaymentMethodId,
     respMessage :: Maybe Text,
     respCode :: Maybe Text,
     gatewayReferenceId :: Maybe Text,

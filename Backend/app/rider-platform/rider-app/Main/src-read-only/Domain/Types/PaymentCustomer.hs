@@ -12,7 +12,12 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PaymentCustomer = PaymentCustomer
-  { clientAuthToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { cardBrand :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardIsin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardIssuer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardLastFourDigits :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    clientAuthToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientAuthTokenExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     customerId :: Kernel.External.Payment.Interface.Types.CustomerId,
     defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
@@ -21,4 +26,4 @@ data PaymentCustomer = PaymentCustomer
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (ToJSON), (FromJSON), (Show))
+  deriving (Generic, ToJSON, FromJSON, Show)

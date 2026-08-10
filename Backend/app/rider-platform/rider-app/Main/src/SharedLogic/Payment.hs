@@ -21,6 +21,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import qualified Domain.Types.ParkingTransaction as DPT
+import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as Ride
@@ -897,6 +898,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
       -- Build the offer basket so a Juspay-configured createPaymentIntent carries the real SKU basket.
       -- On Stripe the basket has no wire representation and is dropped by createPayment.
       offerBasket <- TPayment.mkOfferBasket merchantId merchantOpCityId Nothing paymentServiceType effectiveAmount 1
+      mbCardMetadata <- getCardMetadataForPaymentMethod personId paymentMode req.paymentMethod
       let serviceReq =
             DPayment.CreatePaymentServiceReq
               { amount = effectiveAmount,
@@ -907,6 +909,11 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 customerFirstName = Nothing,
                 customerLastName = Nothing,
                 paymentMethodId = Just req.paymentMethod,
+                cardBrand = mbCardMetadata >>= (.cardBrand),
+                cardIsin = mbCardMetadata >>= (.cardIsin),
+                cardLastFourDigits = mbCardMetadata >>= (.cardLastFourDigits),
+                cardIssuer = mbCardMetadata >>= (.cardIssuer),
+                cardType = mbCardMetadata >>= (.cardType),
                 driverAccountId = Just req.driverAccountId,
                 applicationFeeAmount = Just req.applicationFeeAmount,
                 chargeRouting = if platformOnly then Just Payment.PlatformOnlyCharge else Nothing,
@@ -1141,13 +1148,55 @@ getCustomerAndPaymentMethod booking person = do
   pure (paymentCustomer.customerId, paymentMethodId)
 
 updateDefaultPersonPaymentMethodId ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (ServiceFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Person.Person ->
   Payment.PaymentMethodId ->
   m ()
 updateDefaultPersonPaymentMethodId person paymentMethodId = do
+  mbCard <- findCustomerCardById person paymentMethodId
+  updateDefaultPersonPaymentMethodIdWithCard person paymentMethodId mbCard
+
+getCardMetadataForPaymentMethod ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Person.Person ->
+  Maybe DMPM.PaymentMode ->
+  Payment.PaymentMethodId ->
+  m (Maybe DPaymentCustomer.PaymentCustomer)
+getCardMetadataForPaymentMethod personId mbPaymentMode paymentMethodId = do
+  let paymentMode = fromMaybe DMPM.LIVE mbPaymentMode
+  mbPaymentCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just personId) (Just paymentMode)
+  pure $ mbPaymentCustomer >>= \pc -> if pc.defaultPaymentMethodId == Just paymentMethodId then Just pc else Nothing
+
+findCustomerCardById ::
+  (ServiceFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Person.Person ->
+  Payment.PaymentMethodId ->
+  m (Maybe PInterface.CustomerCard)
+findCustomerCardById person paymentMethodId = do
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
-  QPaymentCustomer.updateDefaultPaymentMethodId (Just paymentMethodId) (Just person.id) (Just paymentMode)
+  QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode) >>= \case
+    Nothing -> pure Nothing
+    Just paymentCustomer -> do
+      cardList <- TPayment.getCardList person.merchantId person.merchantOperatingCityId person.paymentMode paymentCustomer.customerId
+      pure $ find (\card -> card.cardId == paymentMethodId) cardList
+
+updateDefaultPersonPaymentMethodIdWithCard ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Person.Person ->
+  Payment.PaymentMethodId ->
+  Maybe PInterface.CustomerCard ->
+  m ()
+updateDefaultPersonPaymentMethodIdWithCard person paymentMethodId mbCard = do
+  let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
+  QPaymentCustomer.updateDefaultPaymentMethodId
+    (Just paymentMethodId)
+    (mbCard <&> (.brand))
+    Nothing
+    (mbCard <&> (.last4))
+    Nothing
+    (T.toUpper <$> (mbCard >>= (.funding)))
+    (Just person.id)
+    (Just paymentMode)
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Pending Payment Validation --------------------------------------
