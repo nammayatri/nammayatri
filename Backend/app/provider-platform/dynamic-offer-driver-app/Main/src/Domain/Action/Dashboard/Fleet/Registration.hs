@@ -351,39 +351,37 @@ fleetOwnerVerifyHandler h req = do
   otp <- req.otp & fromMaybeM InvalidAuthData
   let otpKey = h.mkMobileNumberOtpKey req.mobileNumber
       attemptsKey = otpAttemptsKey otpKey
-  -- Serialize verification per OTP key: a replayed or parallel burst must not be able to
-  -- race past either the single-use check or the attempt counter.
-  Redis.withLockRedisAndReturnValue (otpVerifyLockKey otpKey) 5 $ do
-    storedOtp :: Text <- Redis.safeGet otpKey >>= fromMaybeM InvalidAuthData
-    attempts <- fromMaybe (0 :: Int) <$> Redis.safeGet attemptsKey
-    when (attempts >= maxOtpVerifyAttempts) $ do
-      -- Budget exhausted: burn the OTP so it cannot be guessed by requesting a fresh window.
-      Redis.del otpKey
-      Redis.del attemptsKey
-      throwError $ AuthBlocked "Too many incorrect OTP attempts. Please request a new OTP."
-    if constantTimeEqText storedOtp otp
-      then do
-        -- OTP is single use: drop it so the same verified request cannot be replayed for more tokens.
-        Redis.del otpKey
-        Redis.del attemptsKey
-        pure Success
-      else do
-        expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-        Redis.setExp attemptsKey (attempts + 1) expTime
-        throwError InvalidAuthData
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  storedOtp :: Text <- Redis.safeGet otpKey >>= fromMaybeM InvalidAuthData
+  -- Count the attempt with INCR rather than read-modify-write. INCR is atomic and returns the
+  -- post-increment value, so a parallel burst of guesses observes distinct counts; a get-then-set
+  -- counter loses updates under exactly the concurrency a brute-force attempt produces, which is
+  -- what the budget exists to stop. Every attempt is counted, including a correct one, so no
+  -- branch below can return without having paid for itself.
+  attempts <- Redis.incr attemptsKey
+  -- INCR creates a key with no TTL. Refreshing on every attempt keeps the counter from outliving
+  -- its OTP and means a crash between the two commands cannot strand the key permanently.
+  Redis.expire attemptsKey expTime
+  when (attempts > maxOtpVerifyAttempts) $ do
+    -- Budget exhausted: burn the OTP so it cannot be guessed by requesting a fresh window.
+    Redis.del otpKey
+    Redis.del attemptsKey
+    throwError $ AuthBlocked "Too many incorrect OTP attempts. Please request a new OTP."
+  unless (constantTimeEqText storedOtp otp) $ throwError InvalidAuthData
+  -- OTP is single use: drop it so the same verified request cannot be replayed.
+  Redis.del otpKey
+  Redis.del attemptsKey
+  pure Success
 
 -- | Incorrect OTP submissions allowed per issued OTP before it is invalidated.
-maxOtpVerifyAttempts :: Int
+maxOtpVerifyAttempts :: Integer
 maxOtpVerifyAttempts = 5
 
--- | Attempt-counter and lock keys are derived from the OTP key itself rather than rebuilt from
--- the mobile number, so they always land in the same namespace as the OTP they guard. The V1 and
--- V2 fleet flows use different OTP namespaces; deriving keeps their budgets independent.
+-- | The attempt counter is derived from the OTP key itself rather than rebuilt from the mobile
+-- number, so it always lands in the same namespace as the OTP it guards. The V1 and V2 fleet
+-- flows use different OTP namespaces; deriving keeps their budgets independent.
 otpAttemptsKey :: Text -> Text
 otpAttemptsKey otpKey = otpKey <> ":verifyAttempts"
-
-otpVerifyLockKey :: Text -> Text
-otpVerifyLockKey otpKey = otpKey <> ":verifyLock"
 
 -- | Compare in time independent of how many leading characters match. Length is not secret for a
 -- fixed-width OTP, so an early length check is fine.
