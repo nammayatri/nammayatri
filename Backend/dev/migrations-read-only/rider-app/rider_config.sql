@@ -795,3 +795,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_share_number_with_driver bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN pass_extra_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];
+ALTER TABLE atlas_app.rider_config ADD COLUMN otp_plan_cache_ttl_seconds integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN otp_plan_cache_enabled boolean ;
