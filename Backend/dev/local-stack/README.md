@@ -414,12 +414,45 @@ challenge path was proved reachable from outside. Two things worth knowing:
   `*.169-58-139-65.sslip.io` to this box. Swapping to a real domain is one
   `server_name`, one certificate, and nothing else.
 
-### Still missing for a shareable APK
+### The map, published too
 
-The API is reachable; **the tile server is not**, so a release build would sign
-in and then show a broken map. Publishing tiles is one more `location` block —
-but it is bandwidth we would be giving away to anyone who finds the URL, so it
-is a decision rather than an oversight.
+```
+https://api.169-58-139-65.sslip.io/tiles/...
+```
+
+A release APK cannot reach a loopback tile server, and **Android refuses
+cleartext HTTP in release builds** — so "just open 8035" was never an option
+either. Both problems end at the same place: the tiles go through the same TLS
+edge, read-only.
+
+The exposure is bandwidth rather than data — it is one `.mbtiles` file we built
+ourselves. A map view costs 1–3 MB the first time and close to nothing
+afterwards, because the responses are marked `immutable` for a week: a tile at
+a given z/x/y cannot change until we rebuild the whole extract, which is a
+deliberate act. Rate-limited at 1200 r/min per address, which sounds enormous
+and is not — one screenful at z14 is thirty-odd requests and panning fires
+hundreds a minute, so a limit tight enough to *feel* like security would just
+make the map stutter for real riders. Deleting the `location` block revokes the
+whole thing in seconds.
+
+**`--public_url` had to change at the same time.** The style document's
+internal URLs — the vector source and the glyphs — are absolute and baked in by
+the tile server, so a style served from the public host that still pointed
+clients back at `localhost:8035` would load and then draw nothing.
+
+Three things that cost time here, all worth knowing:
+
+- **A single-file bind mount breaks if you replace the file.** Deploying
+  `nginx.conf` with `tar -x` unlinks and recreates it, so the container keeps
+  the old inode and serves stale config — while `nginx -t` passes and a reload
+  reports success, because both are validating the config it still has. Use
+  `scp` (which truncates in place), or recreate the container.
+- **`expires` generates a `Cache-Control` of its own**, and the tile server
+  sends one too, so the naive block emitted the header three times and left the
+  client to choose. One `add_header`, with `proxy_hide_header` for the
+  upstream's.
+- The only font in the tileset is **Noto Sans Regular**. Asking for Open Sans
+  returns a 400 that looks exactly like a proxy fault and is not one.
 
 ## Place search — finding somewhere to go
 

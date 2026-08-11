@@ -474,10 +474,18 @@ services:
   tiles:
     image: maptiler/tileserver-gl:latest
     container_name: ny-tiles
+    # public_url is baked into the style document tileserver serves: the URLs
+    # for the vector source and the glyphs are absolute, so whatever is set
+    # here is where every client will go for the actual tiles. Pointing it at
+    # loopback is why the map only ever worked behind a tunnel.
+    #
+    # Now the public HTTPS path, so one URL works from the phone, the browser
+    # demos and a release APK alike. Override TILES_PUBLIC_URL to point a local
+    # stack back at itself.
     command: >-
       --file /data/algeria.mbtiles
       --port 8080
-      --public_url http://localhost:8035/
+      --public_url ${TILES_PUBLIC_URL:-https://api.169-58-139-65.sslip.io/tiles/}
     ports:
       - "${BIND_ADDR:-0.0.0.0}:8035:8080"
     volumes:
