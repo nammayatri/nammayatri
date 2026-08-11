@@ -150,7 +150,7 @@ data FieldInfo = FieldInfo
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fields :: Kernel.Prelude.Maybe [FieldInfo],
-    imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    images :: Kernel.Prelude.Maybe [ImageInfo],
     isMandatory :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -168,10 +168,15 @@ data FieldType
   | FieldImage
   | FieldObject
   | FieldArray
+  | FieldDate
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data GSTDocumentMetadata = GSTDocumentMetadata {gstNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
