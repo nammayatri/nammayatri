@@ -472,8 +472,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       rideCommission = fromMaybe 0 ride.commission
       rideTipsAmount = fromMaybe 0 ride.tipAmount
       computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission + rideTipsAmount)) <$> ride.fare
-      edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
-      displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
+      displayParkingCharge = SL.excludeIfEdcCollectsParking booking.fareSettlementType estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of

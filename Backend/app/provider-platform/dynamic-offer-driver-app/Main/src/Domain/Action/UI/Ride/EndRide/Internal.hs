@@ -304,8 +304,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       -- totalFare (ride.fare) already excludes parking when EDC-collected (see fareSum's gate),
       -- so subtracting it again here would double-count; zero it out in that case.
-      edcParkingCollected = SL.edcCollectsParking newFareParams.fareSettlementType
-      parkingAmount = if edcParkingCollected then 0 else fromMaybe 0 newFareParams.parkingCharge
+      parkingAmount = fromMaybe 0 (SL.excludeIfEdcCollectsParking newFareParams.fareSettlementType newFareParams.parkingCharge)
       baseFare = totalFare - gstAmount - tollAmount - parkingAmount
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False thresholdConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
@@ -484,9 +483,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       rawTaxAmount = fromMaybe 0 fareParams.govtCharges -- GST or VAT (merged by FareCalculatorV2), pre-discount
       tollAmount = fromMaybe 0 fareParams.tollCharges
       tollVatAmount = fromMaybe 0 fareParams.tollFareTax -- discount does NOT apply to toll, so not scaled
-      edcParkingCollected = SL.edcCollectsParking fareParams.fareSettlementType
-      parkingAmount = if edcParkingCollected then 0 else fromMaybe 0 fareParams.parkingCharge
-      parkingVatAmount = if edcParkingCollected then 0 else fromMaybe 0 fareParams.parkingChargeTax
+      parkingAmount = fromMaybe 0 (SL.excludeIfEdcCollectsParking fareParams.fareSettlementType fareParams.parkingCharge)
+      parkingVatAmount = fromMaybe 0 (SL.excludeIfEdcCollectsParking fareParams.fareSettlementType fareParams.parkingChargeTax)
       commissionAmount = fromMaybe 0 (ride.commission <|> booking.commission)
       -- Commission is stored ALV-inclusive; split only at emission (pct unset ⇒ vat 0, behaviour unchanged).
       (commissionBaseAmount, commissionVatAmount) = splitGrossByVatPct transporterConfig.taxConfig.commissionVatPercentage commissionAmount
