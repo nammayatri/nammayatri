@@ -131,7 +131,7 @@ domainTableDocumentTypes =
       DVC.PanCard,
       DVC.VehiclePUC,
       DVC.VehiclePermit,
-      DVC.VehicleInsurance,
+      -- DVC.VehicleInsurance, -- Not required as critical domain table and rode flow so can be a Common Document too.
       DVC.VehicleFitnessCertificate,
       DVC.VehicleNOC,
       DVC.DriverVehicleNOC,
