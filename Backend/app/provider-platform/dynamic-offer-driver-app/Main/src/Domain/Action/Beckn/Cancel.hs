@@ -52,7 +52,8 @@ import Kernel.External.Maps
 -- import Tools.DynamicLogic
 
 import Kernel.External.Types (ServiceFlow)
-import Kernel.Prelude (roundToIntegral)
+import Kernel.Prelude (HasField, roundToIntegral)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
@@ -62,6 +63,7 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
 import SharedLogic.Cancel
@@ -326,12 +328,14 @@ cancelSearch ::
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Id DM.Merchant ->
   ST.SearchTry ->
   m ()
-cancelSearch _merchantId searchTry = do
+cancelSearch merchantId searchTry = do
   searchRequest <- QSRLite.findByIdLite searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   callWithErrorHandling searchRequest.transactionId $ do
     -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `CancelSearchLockNotAcquired`.
@@ -348,7 +352,14 @@ cancelSearch _merchantId searchTry = do
     QST.cancelActiveTriesByRequestId searchTry.requestId
     QSRD.setInactiveAndPulledByIds driverSearchReqs
     QDQ.setInactiveBySRId searchTry.requestId
+    mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchTry.merchantOperatingCityId.getId}) Nothing
     for_ driverSearchReqs $ \driverReq -> do
+      -- free the driver's parallel-request slot; it otherwise stays consumed
+      -- against maxParallelSearchRequests until the entry's validTill passes
+      DP.removeSearchReqIdFromMap merchantId driverReq.driverId driverReq.requestId
+      whenJust mbTransporterConfig $ \transporterConfig ->
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+          Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverReq.driverId transporterConfig False False False True
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
       Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
   where
