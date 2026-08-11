@@ -154,7 +154,7 @@ srdStatsWindow :: SWC.SlidingWindowOptions
 srdStatsWindow = SWC.SlidingWindowOptions 7 SWC.Days
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
-windowFromIntelligentPoolConfig merchantOpCityId windowKey = pure $ SWC.SlidingWindowOptions 7 SWC.Days
+windowFromIntelligentPoolConfig _merchantOpCityId _windowKey = pure $ SWC.SlidingWindowOptions 7 SWC.Days
 
 getBatchSize :: V.Vector Int -> Int -> Int -> Int
 getBatchSize dynamicBatchSize index driverBatchSize =
