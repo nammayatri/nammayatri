@@ -133,16 +133,17 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
-  let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
-  countersMap <- getSrdStatsCountersBulk personIds
-  idleMap <- DriverIdleTime.getIdleTimeSecondsBulk personIds
-  let enrichedDrivers =
-        map
-          ( \driver ->
-              let personId = cast driver.driverPoolResult.driverId
-               in driver {searchReqDriverStatsCounters = Map.lookup personId countersMap, idleTimeSeconds = Map.lookup personId idleMap}
-          )
-          onlyNewDriversWithCustomerInfo
+  enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
+    let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
+    countersMap <- getSrdStatsCountersBulk personIds
+    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk personIds
+    return $
+      map
+        ( \driver ->
+            let personId = cast driver.driverPoolResult.driverId
+             in driver {searchReqDriverStatsCounters = Map.lookup personId countersMap, idleTimeSeconds = Map.lookup personId idleMap}
+        )
+        onlyNewDriversWithCustomerInfo
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum}
   logInfo $
     "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
