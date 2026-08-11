@@ -713,7 +713,7 @@ findCreditsByAccountAfterTime accountId from to =
                       Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
                     ]
                 ],
-              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_UNSETTLED)
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
             ]
         ]
     ]
