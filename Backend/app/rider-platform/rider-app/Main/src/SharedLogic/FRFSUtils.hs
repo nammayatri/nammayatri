@@ -94,6 +94,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus (utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -986,6 +987,86 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
 
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId
+
+-- | A rider's cancellation allowance in one operating city.
+-- Design notes: scripts/testing/cancel/DESIGN.md
+data CancellationQuota = CancellationQuota
+  { quotaKey :: Text,
+    quotaMember :: Text,
+    maxCancellations :: Int,
+    windowSeconds :: Int
+  }
+
+-- | Cancellation quota for a booking, or Nothing when the rider is not capped. Never throws.
+getCancellationQuota :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe CancellationQuota)
+getCancellationQuota booking =
+  case getServiceTierTypeFromRouteStationsJson booking.routeStationsJson of
+    Nothing -> return Nothing
+    Just serviceTierType -> do
+      mbIntegratedBPPConfig <- SIBC.findByIdCP booking.integratedBppConfigId
+      case mbIntegratedBPPConfig of
+        Nothing -> return Nothing
+        Just integratedBPPConfig -> do
+          mbVst <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
+          let misconfigured reason = do
+                logWarning $ "FRFS cancellation quota misconfigured for serviceTier-" <> show serviceTierType <> " mocId-" <> booking.merchantOperatingCityId.getId <> ": " <> reason <> ", treating as uncapped"
+                return Nothing
+          case (mbVst >>= (.maxCancellationCount), mbVst >>= (.cancellationWindowSeconds)) of
+            (Nothing, Nothing) -> return Nothing
+            (Just n, _) | n < 0 -> return Nothing
+            (Just _, Nothing) -> misconfigured "maxCancellationCount is set but cancellationWindowSeconds is not"
+            (Nothing, Just _) -> misconfigured "cancellationWindowSeconds is set but maxCancellationCount is not"
+            (Just maxCancellations', Just windowSeconds')
+              | maxCancellations' == 0 -> misconfigured "maxCancellationCount is 0 (use isCancellable to block cancellation)"
+              | windowSeconds' <= 0 -> misconfigured ("cancellationWindowSeconds is " <> show windowSeconds')
+              | otherwise ->
+                return $
+                  Just
+                    CancellationQuota
+                      { quotaKey = "FRFS:Cancel:Quota:v1:mocId-" <> booking.merchantOperatingCityId.getId <> ":personId-" <> booking.riderId.getId,
+                        quotaMember = booking.id.getId,
+                        maxCancellations = maxCancellations',
+                        windowSeconds = windowSeconds'
+                      }
+
+-- | How many cancellations the rider has spent in the current window. Also repairs a key that lost
+-- its expiry, which would otherwise block the rider forever.
+getCancellationsUsed :: (Redis.HedisFlow m r, MonadFlow m) => CancellationQuota -> m Int
+getCancellationsUsed quota = do
+  members :: [Text] <- Redis.sMembers quota.quotaKey
+  unless (null members) $ do
+    remaining <- Redis.ttl quota.quotaKey
+    when (remaining < 0) $ do
+      logWarning $ "FRFS cancellation quota key has no expiry, repairing: " <> quota.quotaKey
+      Redis.expire quota.quotaKey quota.windowSeconds
+  return $ length members
+
+-- | Record a completed cancellation. The TTL is set on the first hit and deliberately never
+-- extended -- refreshing it would pin a frequent canceller at their ceiling forever.
+-- Design notes: scripts/testing/cancel/DESIGN.md
+markCancellationCounted :: (Redis.HedisFlow m r, MonadFlow m) => CancellationQuota -> m ()
+markCancellationCounted quota = do
+  Redis.sAdd quota.quotaKey [quota.quotaMember]
+  remaining <- Redis.ttl quota.quotaKey
+  when (remaining < 0) $ Redis.expire quota.quotaKey quota.windowSeconds
+
+-- | Seconds until the allowance resets: the key expires wholesale, so this is its remaining TTL.
+getRetryAfterSeconds :: (Redis.HedisFlow m r, MonadFlow m) => CancellationQuota -> m Int
+getRetryAfterSeconds quota = do
+  remaining <- Redis.ttl quota.quotaKey
+  return $ if remaining > 0 then fromIntegral remaining else quota.windowSeconds
+
+-- | Refuse the cancellation when the rider has spent their allowance.
+-- Design notes: scripts/testing/cancel/DESIGN.md
+checkCancellationQuota :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
+checkCancellationQuota booking = do
+  mbQuota <- getCancellationQuota booking
+  whenJust mbQuota $ \quota -> do
+    used <- getCancellationsUsed quota
+    when (used >= quota.maxCancellations) $ do
+      retryAfter <- getRetryAfterSeconds quota
+      logInfo $ "FRFS cancellation quota exhausted for riderId-" <> booking.riderId.getId <> " used: " <> show used <> " limit: " <> show quota.maxCancellations
+      throwError $ FRFSCancellationLimitReached retryAfter
 
 totalOrderValue :: MonadFlow m => DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> m Price
 totalOrderValue paymentBookingStatus booking =

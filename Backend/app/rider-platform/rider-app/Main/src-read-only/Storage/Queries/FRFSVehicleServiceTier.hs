@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -42,7 +42,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByProviderCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findByProviderCode providerCode merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -53,7 +53,7 @@ findByProviderCode providerCode merchantOperatingCityId = do
 
 findByProviderCodeAndTrainType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
 findByProviderCodeAndTrainType providerCode trainType merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -85,11 +85,13 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
+      Se.Set Beam.cancellationWindowSeconds cancellationWindowSeconds,
       Se.Set Beam.description description,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isCancellable isCancellable,
       Se.Set Beam.longName longName,
+      Se.Set Beam.maxCancellationCount maxCancellationCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.providerCode providerCode,
@@ -105,12 +107,14 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
       Just
         Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier
           { _type = _type,
+            cancellationWindowSeconds = cancellationWindowSeconds,
             description = description,
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isAirConditioned = isAirConditioned,
             isCancellable = isCancellable,
             longName = longName,
+            maxCancellationCount = maxCancellationCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             providerCode = providerCode,
@@ -124,12 +128,14 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
   toTType' (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {..}) = do
     Beam.FRFSVehicleServiceTierT
       { Beam._type = _type,
+        Beam.cancellationWindowSeconds = cancellationWindowSeconds,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isCancellable = isCancellable,
         Beam.longName = longName,
+        Beam.maxCancellationCount = maxCancellationCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.providerCode = providerCode,

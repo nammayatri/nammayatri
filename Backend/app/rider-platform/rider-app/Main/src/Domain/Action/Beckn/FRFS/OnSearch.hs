@@ -695,6 +695,8 @@ createEntriesInFareTables merchantId merchantOperatingCityId routeCode startStop
                   merchantOperatingCityId,
                   trainType = Nothing,
                   isCancellable = Nothing,
+                  maxCancellationCount = Nothing,
+                  cancellationWindowSeconds = Nothing,
                   createdAt = now,
                   updatedAt = now
                 }

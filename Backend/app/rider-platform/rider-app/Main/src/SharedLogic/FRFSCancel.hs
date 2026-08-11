@@ -81,20 +81,23 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
   val :: Maybe Text <- Redis.get (FRFSUtils.makecancelledTtlKey booking.id)
-  if val /= Just messageId && counterCancellationPossible
-    then do
-      void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
-      void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
-      void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
-    else do
-      void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
-      void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
-      void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
-      void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
-      void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
-      void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
-      void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-      void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+  fullyCancelled <-
+    if val /= Just messageId && counterCancellationPossible
+      then do
+        void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
+        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
+        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
+        return False
+      else do
+        void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
+        void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
+        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
+        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
+        void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
+        void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
+        void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
+        void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+        return True
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
@@ -102,6 +105,15 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
     getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
       >>= fromMaybeM (InternalError "Beckn Config not found")
   updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
+  -- Must stay LAST and swallowed, or a Redis error skips the seat release and settlement above.
+  -- Design notes: scripts/testing/cancel/DESIGN.md
+  when fullyCancelled $ do
+    quotaResult <- try @_ @SomeException $ do
+      mbQuota <- FRFSUtils.getCancellationQuota booking
+      whenJust mbQuota FRFSUtils.markCancellationCounted
+    case quotaResult of
+      Left err -> logError $ "FRFS cancellation quota not recorded for bookingId-" <> booking.id.getId <> ": " <> show err
+      Right () -> pure ()
   return (mRiderNumber, person.mobileCountryCode, fareParameters)
 
 -- | Side effects (SMS + Google Wallet) that require concrete Flow due to generic-lens constraints.

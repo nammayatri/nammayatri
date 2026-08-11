@@ -136,6 +136,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
@@ -589,6 +590,10 @@ postMultimodalJourneyLegSkip ::
   )
 postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  -- Skip runs the same CONFIRM_CANCEL as cancel, so it is capped too. Checked here because
+  -- cancelLeg reaches CallExternalBPP.cancel with enforceCap = False. Design notes: scripts/testing/cancel/DESIGN.md
+  mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
+  whenJust mbLegBooking FRFSUtils.checkCancellationQuota
   JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   pure Kernel.Types.APISuccess.Success
 
@@ -1507,6 +1512,10 @@ postMultimodalOrderCancel ::
   )
 postMultimodalOrderCancel (_, _) journeyId legOrder = do
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  -- Rider-facing, so the cap applies. Checked here because cancelLeg reaches
+  -- CallExternalBPP.cancel with enforceCap = False. Design notes: scripts/testing/cancel/DESIGN.md
+  mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
+  whenJust mbLegBooking FRFSUtils.checkCancellationQuota
   legs <- QJourneyLeg.getJourneyLegs journeyId
   cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
   JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing

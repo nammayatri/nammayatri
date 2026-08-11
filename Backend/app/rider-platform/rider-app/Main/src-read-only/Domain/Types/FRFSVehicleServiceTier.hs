@@ -14,12 +14,14 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   { _type :: BecknV2.FRFS.Enums.ServiceTierType,
+    cancellationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longName :: Kernel.Prelude.Text,
+    maxCancellationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     providerCode :: Kernel.Prelude.Text,

@@ -59,7 +59,7 @@ data CategoryInfoResponse = CategoryInfoResponse
     categoryOfferedPrice :: Kernel.Types.Common.PriceAPIEntity,
     categoryPrice :: Kernel.Types.Common.PriceAPIEntity,
     categorySelectedQuantity :: Kernel.Prelude.Int,
-    seatIds :: Data.Maybe.Maybe [(Kernel.Types.Id.Id Domain.Types.Seat.Seat)],
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
     seatLabels :: Data.Maybe.Maybe [Data.Text.Text]
   }
   deriving stock (Generic, Show)
@@ -101,7 +101,9 @@ data FRFSBookingPaymentStatusAPI
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
   { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationsUsed :: Data.Maybe.Maybe Kernel.Prelude.Int,
     isCancellable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    maxCancellationCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
@@ -114,7 +116,7 @@ data FRFSCancelStatus = FRFSCancelStatus {cancellationCharges :: Data.Maybe.Mayb
 data FRFSCategorySelectionReq = FRFSCategorySelectionReq
   { quantity :: Kernel.Prelude.Int,
     quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
-    seatIds :: Data.Maybe.Maybe [(Kernel.Types.Id.Id Domain.Types.Seat.Seat)]
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -240,7 +242,7 @@ data FRFSQuoteCategoryAPIEntity = FRFSQuoteCategoryAPIEntity
     finalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
     offeredPrice :: Kernel.Types.Common.PriceAPIEntity,
     price :: Kernel.Types.Common.PriceAPIEntity,
-    seatIds :: Data.Maybe.Maybe [(Kernel.Types.Id.Id Domain.Types.Seat.Seat)],
+    seatIds :: Data.Maybe.Maybe [Kernel.Types.Id.Id Domain.Types.Seat.Seat],
     seatLabels :: Data.Maybe.Maybe [Data.Text.Text],
     selectedQuantity :: Kernel.Prelude.Int
   }

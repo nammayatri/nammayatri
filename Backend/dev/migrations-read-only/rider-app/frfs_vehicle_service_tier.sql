@@ -28,3 +28,9 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN train_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_cancellable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_cancellation_count integer ;
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN cancellation_window_seconds integer ;
