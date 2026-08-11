@@ -877,6 +877,7 @@ instance IsAPIError PTCircuitBreakerError
 
 data CancellationError
   = CancellationNotSupported
+  | FRFSCancellationLimitReached Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''CancellationError
@@ -884,13 +885,16 @@ instanceExceptionWithParent 'HTTPException ''CancellationError
 instance IsBaseError CancellationError where
   toMessage = \case
     CancellationNotSupported -> Just $ "Cancellation Not Allowed"
+    FRFSCancellationLimitReached retryAfterSeconds -> Just $ "Cancellation limit reached. Try again in " <> show retryAfterSeconds <> " sec."
 
 instance IsHTTPError CancellationError where
   toErrorCode = \case
     CancellationNotSupported -> "CANCELLATION_NOT_SUPPORTED"
+    FRFSCancellationLimitReached _ -> "FRFS_CANCELLATION_LIMIT_REACHED"
 
   toHttpCode = \case
     CancellationNotSupported -> E400
+    FRFSCancellationLimitReached _ -> E400
 
 instance IsAPIError CancellationError
 

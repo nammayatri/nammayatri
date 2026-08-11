@@ -101,7 +101,9 @@ data FRFSBookingPaymentStatusAPI
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
   { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationsUsed :: Data.Maybe.Maybe Kernel.Prelude.Int,
     isCancellable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    maxCancellationCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)

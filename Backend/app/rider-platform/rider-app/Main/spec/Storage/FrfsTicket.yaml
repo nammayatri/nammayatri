@@ -1260,6 +1260,8 @@ FRFSVehicleServiceTier:
     description: Text
     isAirConditioned: Maybe Bool
     isCancellable: Maybe Bool
+    maxCancellationCount: Maybe Int
+    cancellationWindowSeconds: Maybe Int
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity

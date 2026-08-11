@@ -73,6 +73,17 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator booki
   whenJust mbServiceTierType $ \serviceTierType -> do
     mbVst <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType merchantOperatingCity.id integratedBPPConfig.id
     unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
+    -- Cap how often a rider can cancel. Only a rider driven confirm cancel is refused here, so a
+    -- soft cancel quote never trips the cap. The counter itself is incremented once the booking
+    -- reaches CANCELLED in FRFSCancel.handleCancelledStatus, which is also reached by technical
+    -- and operator cancellations, so those consume the rider's allowance too.
+    when (initiator == UserInitiated && cancellationType == Spec.CONFIRM_CANCEL) $
+      whenJust ((,) <$> (mbVst >>= (.maxCancellationCount)) <*> (mbVst >>= (.cancellationWindowSeconds))) $ \(cancellationLimit, windowSeconds) -> do
+        cancellationCount <- FRFSUtils.getCancellationCountInWindow booking windowSeconds
+        when (cancellationCount >= cancellationLimit) $ do
+          logInfo $ "FRFS cancellation quota exhausted for riderId-" <> booking.riderId.getId <> " count: " <> show cancellationCount <> " limit: " <> show cancellationLimit
+          retryAfterSeconds <- FRFSUtils.getCancellationRetryAfterSeconds booking windowSeconds (cancellationCount - cancellationLimit)
+          throwError $ FRFSCancellationLimitReached retryAfterSeconds
   when (cancellationType == Spec.SOFT_CANCEL) $
     unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
   case integratedBPPConfig.providerConfig of

@@ -1068,6 +1068,13 @@ postFrfsBookingCanCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Typ
 postFrfsBookingCanCancel (_, merchantId) bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
+  -- Fail here rather than let the rider soft cancel, see a quote and only hit the cap on confirm.
+  mbCancellationQuota <- FRFSUtils.getCancellationQuota ticketBooking
+  whenJust mbCancellationQuota $ \(cancellationLimit, windowSeconds) -> do
+    cancellationCount <- FRFSUtils.getCancellationCountInWindow ticketBooking windowSeconds
+    when (cancellationCount >= cancellationLimit) $ do
+      retryAfterSeconds <- FRFSUtils.getCancellationRetryAfterSeconds ticketBooking windowSeconds (cancellationCount - cancellationLimit)
+      throwError $ FRFSCancellationLimitReached retryAfterSeconds
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   mbSideEffectData <- CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL CallExternalBPP.UserInitiated ticketBooking
@@ -1078,11 +1085,15 @@ postFrfsBookingCanCancel (_, merchantId) bookingId = do
 getFrfsBookingCanCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
 getFrfsBookingCanCancelStatus _ bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid ticketBookingId")
+  mbCancellationQuota <- FRFSUtils.getCancellationQuota ticketBooking
+  mbCancellationsUsed <- forM mbCancellationQuota $ \(_, windowSeconds) -> FRFSUtils.getCancellationCountInWindow ticketBooking windowSeconds
   return $
     FRFSCanCancelStatus
       { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,
         refundAmount = getAbsoluteValue ticketBooking.refundAmount,
-        isCancellable = ticketBooking.isBookingCancellable
+        isCancellable = ticketBooking.isBookingCancellable,
+        cancellationsUsed = mbCancellationsUsed,
+        maxCancellationCount = fst <$> mbCancellationQuota
       }
 
 postFrfsBookingCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess

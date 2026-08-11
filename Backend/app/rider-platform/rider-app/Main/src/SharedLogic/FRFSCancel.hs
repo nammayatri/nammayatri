@@ -95,6 +95,11 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
       void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
       void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
       void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+      -- Counted only once the cancellation is complete, so a cancel that failed earlier costs the
+      -- rider nothing. Kept after the refund so quota bookkeeping can never strand the money.
+      mbCancellationQuota <- FRFSUtils.getCancellationQuota booking
+      whenJust mbCancellationQuota $ \(_, windowSeconds) ->
+        FRFSUtils.markCancellationCounted booking windowSeconds
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId

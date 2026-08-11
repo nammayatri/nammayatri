@@ -13,12 +13,14 @@ import Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
   { _type :: (B.C f BecknV2.FRFS.Enums.ServiceTierType),
+    cancellationWindowSeconds :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     description :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
     isAirConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isCancellable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     longName :: (B.C f Kernel.Prelude.Text),
+    maxCancellationCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     providerCode :: (B.C f Kernel.Prelude.Text),

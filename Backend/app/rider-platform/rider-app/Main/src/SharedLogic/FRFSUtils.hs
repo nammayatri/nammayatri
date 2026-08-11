@@ -26,9 +26,10 @@ import Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sort, sortBy)
 import qualified Data.Map.Strict as M
+import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Data.Time as Time
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
@@ -94,6 +95,7 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus (utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -986,6 +988,91 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
 
 makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId
+
+-- Rolling window of a rider's completed FRFS cancellations, used to cap how often they can cancel.
+-- The ceiling comes from FRFSVehicleServiceTier; absent config means no cap at all.
+-- Bucketed per merchant and vehicle type so that two vehicle types configured with different
+-- windows keep separate histories, instead of the shorter TTL wiping the longer one's.
+-- The v2 marker matters: v1 stored a JSON list under this key as a plain string, and running a
+-- sorted set command against a leftover string errors with WRONGTYPE. A new name lets any old
+-- key sit untouched until its TTL takes it.
+cancellationQuotaKey :: DFRFSTicketBooking.FRFSTicketBooking -> Text
+cancellationQuotaKey booking =
+  "FRFS:Cancel:Quota:v2:mId-" <> booking.merchantId.getId
+    <> ":vType-"
+    <> show booking.vehicleType
+    <> ":personId-"
+    <> booking.riderId.getId
+
+toPosixSeconds :: UTCTime -> Integer
+toPosixSeconds = floor . utcTimeToPOSIXSeconds
+
+-- Upper bound for the window scan. A finite value rather than infinity, since the score is a
+-- POSIX second and Redis will not parse a Haskell Infinity.
+cancellationScoreCeiling :: Double
+cancellationScoreCeiling = 1e12
+
+windowStartScore :: UTCTime -> Int -> Double
+windowStartScore now windowSeconds = fromIntegral (toPosixSeconds now - fromIntegral windowSeconds)
+
+-- | How many times this rider has cancelled within the trailing window.
+getCancellationCountInWindow :: Redis.HedisFlow m r => DFRFSTicketBooking.FRFSTicketBooking -> Int -> m Int
+getCancellationCountInWindow booking windowSeconds = do
+  now <- getCurrentTime
+  fromIntegral <$> Redis.zCount (cancellationQuotaKey booking) (windowStartScore now windowSeconds) cancellationScoreCeiling
+
+-- | Record a completed cancellation against the rider's window.
+--
+-- A sorted set of bookingId keyed by cancellation time, rather than a read-modify-write on a
+-- JSON list: the append is atomic, so two cancellations completing together cannot clobber each
+-- other, and the bookingId member makes it idempotent, so a repeated on_cancel for one booking
+-- cannot count twice. A repeat does refresh that member's score, which keeps the hit inside the
+-- window slightly longer -- stricter, never more lenient, so it is left alone.
+markCancellationCounted :: Redis.HedisFlow m r => DFRFSTicketBooking.FRFSTicketBooking -> Int -> m ()
+markCancellationCounted booking windowSeconds = do
+  now <- getCurrentTime
+  let key = cancellationQuotaKey booking
+  Redis.zAdd key [(fromIntegral (toPosixSeconds now), booking.id.getId)]
+  void $ Redis.zRemRangeByScore key 0 (windowStartScore now windowSeconds)
+  Redis.expire key windowSeconds
+
+-- | Seconds until the rider can cancel again. Cancelling frees up once the window count drops
+-- back below the ceiling, which is when the (count - limit)th-oldest hit (0-based) ages out --
+-- at count == limit that is simply the oldest hit in the window.
+-- zAdd stores members JSON-encoded, so the raw bytes from zRangeByScoreByCount are fed back to
+-- zScore unchanged; passing the bare bookingId text instead would never match the stored member.
+getCancellationRetryAfterSeconds :: Redis.HedisFlow m r => DFRFSTicketBooking.FRFSTicketBooking -> Int -> Int -> m Int
+getCancellationRetryAfterSeconds booking windowSeconds hitsToSkip = do
+  now <- getCurrentTime
+  let key = cancellationQuotaKey booking
+  blockingMembers <- Redis.zRangeByScoreByCount key (windowStartScore now windowSeconds) cancellationScoreCeiling (fromIntegral hitsToSkip) 1
+  mbBlockingScore <- case blockingMembers of
+    [] -> return Nothing
+    (member : _) -> Redis.zScore key (cs member)
+  return $ case mbBlockingScore of
+    -- Unreachable when the caller just counted over the ceiling; pessimistic on a Redis hiccup.
+    Nothing -> windowSeconds
+    Just blockingScore -> fromIntegral $ max 1 (ceiling (blockingScore + fromIntegral windowSeconds) - toPosixSeconds now)
+
+-- | Cancellation quota (ceiling, window) for a booking, from its vehicle service tier.
+-- Nothing when either column is unset, which means the rider is not capped. Deliberately total:
+-- this runs on the cancel completion path after the booking is already CANCELLED, so it must never
+-- throw and strand the refund, and it also runs on the polled canCancel status endpoint.
+getCancellationQuota :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe (Int, Int))
+getCancellationQuota booking =
+  case getServiceTierTypeFromRouteStationsJson booking.routeStationsJson of
+    Nothing -> return Nothing
+    Just serviceTierType -> do
+      mbIntegratedBPPConfig <- SIBC.findByIdCP booking.integratedBppConfigId
+      case mbIntegratedBPPConfig of
+        Nothing -> return Nothing
+        Just integratedBPPConfig -> do
+          mbVst <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType booking.merchantOperatingCityId integratedBPPConfig.id
+          let mbQuota = (,) <$> (mbVst >>= (.maxCancellationCount)) <*> (mbVst >>= (.cancellationWindowSeconds))
+          -- A non positive window would be rejected by Redis as an expiry, so treat it as unset.
+          return $ case mbQuota of
+            Just (_, windowSeconds) | windowSeconds <= 0 -> Nothing
+            quota -> quota
 
 totalOrderValue :: MonadFlow m => DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> m Price
 totalOrderValue paymentBookingStatus booking =

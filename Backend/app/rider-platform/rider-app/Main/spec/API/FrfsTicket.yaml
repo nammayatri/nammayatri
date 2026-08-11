@@ -331,6 +331,8 @@ types:
     cancellationCharges: Maybe HighPrecMoney
     refundAmount: Maybe HighPrecMoney
     isCancellable: Maybe Bool
+    cancellationsUsed: Maybe Int
+    maxCancellationCount: Maybe Int
 
   FRFSCancelStatus:
     cancellationCharges: Maybe HighPrecMoney
