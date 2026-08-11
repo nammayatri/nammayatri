@@ -535,8 +535,9 @@ buildFinanceCtx ::
   Maybe DDI.DriverInformation ->
   DTC.TransporterConfig ->
   Bool -> -- isOnline (True = online/card/platform-wallet, False = cash)
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.SettlementStatus ->
   m FinanceCtx
-buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline = do
+buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline initialSettlementStatus = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
       mid = merchantId.getId
       mocid = booking.merchantOperatingCityId.getId
@@ -610,7 +611,8 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         tdsRateReason = rateReason,
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        initialSettlementStatus = initialSettlementStatus
       }
 
 -- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
@@ -692,7 +694,8 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         tdsRateReason = rateReason,
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        initialSettlementStatus = Nothing
       }
 
 -- Wallet entry delta (for topup/payout)

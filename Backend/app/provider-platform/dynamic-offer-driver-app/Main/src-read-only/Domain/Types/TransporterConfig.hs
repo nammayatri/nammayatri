@@ -467,7 +467,8 @@ data DriverWalletConfig = DriverWalletConfig
     paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PaymentChargeBearer,
     paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutCutOffDays :: Kernel.Prelude.Int,
-    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
+    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
+    requireBapSettlementConfirmation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
