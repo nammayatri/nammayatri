@@ -57,9 +57,11 @@ cancel ::
   BecknConfig ->
   Spec.CancellationType ->
   CancellationInitiator ->
+  -- | Enforce the per-rider cancellation cap. False for journey-driven cancellations.
+  Bool ->
   DBooking.FRFSTicketBooking ->
   m (Maybe (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters, DBooking.FRFSTicketBooking))
-cancel merchant merchantOperatingCity bapConfig cancellationType initiator booking = do
+cancel merchant merchantOperatingCity bapConfig cancellationType initiator enforceCap booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   frfsConfig <-
     getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
@@ -75,6 +77,10 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator booki
     unless (fromMaybe True (mbVst >>= (.isCancellable))) $ throwError CancellationNotSupported
   when (cancellationType == Spec.SOFT_CANCEL) $
     unless (booking.status == DFRFSTicketBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
+  -- Must stay last of the gates, and enforceCap must stay False on the journey path or route edits
+  -- abort mid-teardown. Design notes: scripts/testing/cancel/DESIGN.md
+  when (enforceCap && initiator == UserInitiated) $
+    FRFSUtils.checkCancellationQuota booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Cancel Req" $ do
