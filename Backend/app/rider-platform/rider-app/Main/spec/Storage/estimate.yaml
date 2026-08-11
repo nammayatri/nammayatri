@@ -5,7 +5,6 @@ imports:
   Price: Kernel.Types.Common
   BaseUrl: Servant.Client.Core
   Centesimal: Kernel.Types.Common
-  LatLong: Kernel.External.Maps
   ServiceTierType: Domain.Types.ServiceTierType
   PrettyShow: Kernel.Utils.GenericPretty
   Money: Kernel.Types.Common
@@ -107,7 +106,6 @@ Estimate:
     personalDiscountInfo : Maybe PersonalDiscountInfo
     status : EstimateStatus|NoRelation
     waitingCharges : WaitingCharges
-    driversLocation : "[LatLong]"
     specialLocationTag : Maybe Text
     specialLocationName : Maybe Text
     fareSettlementType : Maybe FareSettlementType
@@ -274,7 +272,6 @@ Estimate:
     vehicleVariant: character varying(255)
     minTotalFare: numeric(30,2)
     maxTotalFare: numeric(30,2)
-    driversLocation: "text[]"
     waitingChargePerMin: double precision
     status: character varying(255)
     nightShiftCharge: integer
