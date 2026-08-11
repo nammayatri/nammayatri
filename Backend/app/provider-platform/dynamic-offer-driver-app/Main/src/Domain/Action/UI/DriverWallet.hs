@@ -759,7 +759,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId walletGa
         fromLocationAddress = Nothing,
         issuedToName = Nothing,
         enableWalletGatedTierCheck = walletGateEnabled,
-        buyerCounterpartyId = Nothing
+        buyerCounterpartyId = Nothing,
+        initialSettlementStatus = Nothing
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
