@@ -1134,7 +1134,7 @@ NY_RN_REVERSE_PORTS = [
     8016,   # dynamic-offer-driver-app HTTP (BPP)
     # Metro defaults: 8088 (customer) / 8089 (driver). Picked
     # specifically to dodge every reservation in
-    # Backend/nix/services/ports.nix — in particular 8081 (LTS),
+    # Backend/nix/services/ports.nix — in particular 8098 (LTS),
     # 8082 (kept as buffer), 8085 (nginx), 8091 (mock-payment).
     # find_free_port walks UP from these so spillover lands on
     # equally-unreserved ports.
@@ -1467,7 +1467,7 @@ def _cleanup_stale_ny_rn(app: str) -> None:
 
     # 3. Free the standard Metro port for this sub. Defaults are 8088
     #    (customer) / 8089 (driver) — chosen to dodge every reservation
-    #    in Backend/nix/services/ports.nix (LTS=8081, nginx=8085, etc.).
+    #    in Backend/nix/services/ports.nix (LTS=8098, nginx=8085, etc.).
     #    The build runner falls through to find_free_port if the
     #    canonical port is busy, but a stale Metro on the canonical
     #    port misleads users (they expect 8088/8089, see 8090, get confused).
@@ -3110,7 +3110,7 @@ class ContextHandler(BaseHTTPRequestHandler):
         path = parsed.path
 
         # Determine target — rider uses /v2 prefix, driver uses /ui prefix, lts direct, fleet direct
-        LTS_URL = os.environ.get("LTS_URL", "http://localhost:8081")
+        LTS_URL = os.environ.get("LTS_URL", "http://localhost:8098")
         PROVIDER_DASHBOARD_URL = os.environ.get(
             "PROVIDER_DASHBOARD_URL", "http://localhost:8018")
         MOCK_IDFY_URL = os.environ.get(

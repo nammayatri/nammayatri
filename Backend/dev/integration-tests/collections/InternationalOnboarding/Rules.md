@@ -36,7 +36,7 @@ Same as `HelsinkiOnboarding/`:
    `0003-enable-invoice-generation-for-helsinki-delhi`,
    `0005-enable-cancellation-fee-helsinki`, `0007-helsinki-vat-config`.
 4. Mock-servers on `:8080`, rider-app `:8013`, driver-app `:8016`, BPP
-   dashboard `:8018`, BAP dashboard `:8017`, LTS `:8081`.
+   dashboard `:8018`, BAP dashboard `:8017`, LTS `:8098`.
 
 `Local/Local_International.postman_environment.json` is a copy of the existing
 `InternationalRideBookingFlow/Local/Local_BF_Helsinki.postman_environment.json`

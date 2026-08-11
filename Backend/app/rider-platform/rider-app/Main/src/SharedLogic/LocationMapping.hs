@@ -14,6 +14,8 @@
 
 module SharedLogic.LocationMapping where
 
+import Data.Char (isAlphaNum, isDigit)
+import qualified Data.Text as T
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant (Merchant)
@@ -72,3 +74,25 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
       locationId = location.id
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
+
+mkLocationName :: DL.Location -> Text
+mkLocationName loc =
+  let a = loc.address
+      ne mb = mb >>= (\x -> if T.null x then Nothing else Just x)
+      isMostlyNumbers t = 2 * T.length (T.filter isDigit t) > T.length t
+      isLikelyCode b = T.all (\c -> isAlphaNum c || c == '+') b -- b is already non-empty
+      mbArea = ne a.area
+      mbBuilding = ne a.building >>= (\b -> if isLikelyCode b then Nothing else Just b)
+      mbStreet = ne a.street >>= (\s -> if Just s == mbArea then Nothing else Just s)
+      components = take 2 $ catMaybes [mbArea, ne a.door, mbBuilding, mbStreet]
+      addComma = maybe "" (<> ", ")
+      fullAddress = addComma (ne a.street) <> addComma mbArea <> addComma (ne a.city) <> addComma (ne a.state) <> fromMaybe "" (ne a.country)
+   in case ne a.title of
+        Just t | not (isMostlyNumbers t) -> t
+        _ -> if not (null components) then T.intercalate ", " components else fullAddress
+
+-- | Denormalized list of display names for a booking: [from, ...stops, to].
+-- Index 0 = origin, last = destination (when present), stops in the middle.
+mkLocationNames :: DL.Location -> [DL.Location] -> Maybe DL.Location -> [Text]
+mkLocationNames from stops mbTo =
+  mkLocationName from : map mkLocationName stops <> maybe [] (\to -> [mkLocationName to]) mbTo

@@ -77,6 +77,7 @@ data Booking = Booking
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    locationNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

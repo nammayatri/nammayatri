@@ -624,7 +624,7 @@ This command:
 | mock-registry | 8020 | Haskell |
 | unified-dashboard | 8021 | Haskell |
 | mock-server (unified) | 8080 | Python |
-| location-tracking-service | 8081 | External |
+| location-tracking-service | 8098 | External |
 | mock-sms | 4343 | Haskell |
 | mock-fcm | 4545 | Haskell |
 | mock-idfy | 6235 | Haskell |
