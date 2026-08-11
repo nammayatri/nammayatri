@@ -16,6 +16,7 @@ import Environment
 import Kernel.Beam.Functions (createWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Tools.Metrics.CoreMetrics (addSchedulerProducerStageCount)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Error
 -- import qualified EulerHS.Language as L
@@ -66,6 +67,7 @@ runProducer = do
           let myShardSetKey = getShardedKey setName myShardId
           currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScoreByCount myShardSetKey startTime endTime 0 10000 -- 10,000 limit is good enough for a poor pod
           logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
+          addSchedulerProducerStageCount "picked_from_set" (length currentJobs)
           result <- insertIntoStream currentJobs
           Hedis.set producerTimestampKey endTime
           logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
@@ -183,8 +185,16 @@ insertIntoStream jobs = do
     let eqIdByteString = TE.encodeUtf8 eqId
     let job_ = job
     let fieldValue = [(eqIdByteString, job_)]
-    _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
-    return ()
+    -- These XADDs are forked and the caller does not wait for them, yet it goes
+    -- on to advance the producer watermark and zRemRangeByScore the source
+    -- range. A failure here therefore drops the job permanently, so count it
+    -- rather than letting it disappear silently.
+    res <- try @_ @SomeException $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
+    case res of
+      Right _ -> addSchedulerProducerStageCount "inserted_to_stream" 1
+      Left err -> do
+        logError $ "failed to insert job into stream: " <> show err
+        addSchedulerProducerStageCount "stream_insert_failed" 1
 
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []

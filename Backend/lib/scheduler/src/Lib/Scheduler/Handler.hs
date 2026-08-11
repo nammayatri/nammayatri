@@ -119,6 +119,11 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
   logTagDebug "Available tasks - Count" . show $ length readyTasks
+  -- Counted before the blacklist filter and before any per-job lock, so this is
+  -- everything that came off the stream.
+  forM_ readyTasks $ \(AnyJob Job {jobInfo = jobInfo'}, _) ->
+    fork "jobLifecycleDequeued" $
+      incrementJobLifecycleCounter (show (fromSing $ jobType jobInfo')) JobDequeued
   blackListedJobs <- asks (.blackListedJobs)
   (nonBlacklistedTasks, recordIdsToDelete) <-
     if null blackListedJobs

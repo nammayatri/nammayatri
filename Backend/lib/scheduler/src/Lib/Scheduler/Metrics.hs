@@ -41,8 +41,15 @@ observeJobExecDuration duration = do
 -- 'JobRescheduled' and 'JobRetried' are not terminal -- the job will be picked
 -- again -- so @created - (completed + failed + retry_exhausted)@ is the number
 -- of jobs still in flight.
+--
+-- 'JobDequeued' counts jobs read off the redis stream, before the per-job lock
+-- is taken; 'JobPicked' counts the ones that went on to actually execute. The
+-- gap between them is jobs lost to lock contention or blacklisting. Together
+-- with @scheduler_producer_stage_counter@ these trace the full path:
+-- created -> picked_from_set -> inserted_to_stream -> dequeued -> picked.
 data JobLifecycleStatus
   = JobCreated
+  | JobDequeued
   | JobPicked
   | JobCompleted
   | JobFailed
@@ -55,6 +62,7 @@ data JobLifecycleStatus
 jobLifecycleStatusLabel :: JobLifecycleStatus -> Text
 jobLifecycleStatusLabel = \case
   JobCreated -> "created"
+  JobDequeued -> "dequeued"
   JobPicked -> "picked"
   JobCompleted -> "completed"
   JobFailed -> "failed"
