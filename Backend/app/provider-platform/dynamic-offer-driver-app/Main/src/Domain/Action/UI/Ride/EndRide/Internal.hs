@@ -95,6 +95,7 @@ import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, transfer, transferWithoutAttribution, transfer_)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Lib.Scheduler.Environment (JobCreatorEnv)
@@ -130,6 +131,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -576,6 +578,19 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         Nothing -> (counterpartyDriver, ride.driverId.getId)
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 $ do
     voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
+    mbPaymentMethodForBap <- forM booking.paymentMethodId $ \paymentMethodId ->
+      do
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+
+    isExternalBap <- not <$> CQVAN.isValueAddNP booking.bapId
+    let requireBapConfirm = fromMaybe False transporterConfig.driverWalletConfig.requireBapSettlementConfirmation
+        isCollectedByBap = case mbPaymentMethodForBap of
+          Just pm -> pm.collectedBy == BAP
+          Nothing -> False
+        shouldSetBapPending = requireBapConfirm && isCollectedByBap && isExternalBap
+        initialSettlementStatus = if shouldSetBapPending then Just LE.EXTERNAL_UNSETTLED else Nothing
+
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       resolvedIsOnline <-
@@ -667,7 +682,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         mbFleetInfo
         (Just driverInfo)
         (taxAmount + absorbedVat)
-    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
+    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline initialSettlementStatus
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
     let mbPaymentBearer =
