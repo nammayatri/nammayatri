@@ -242,7 +242,7 @@ into it, resize the window, and stop it from the dashboard.
 | 7082  | test-context-api                   | `test-context-api`   |
 | 7083  | test-local-api                     | `test-local-api`     |
 | 8013  | rider-app (BAP)                    | `rider-app-exe`      |
-| 8016  | driver-app proxy → 8116 / 8081     | `driver-proxy`       |
+| 8016  | driver-app proxy → 8116 / 8098     | `driver-proxy`       |
 | 8017  | rider-dashboard                    | `rider-dashboard-exe`|
 | 8018  | provider-dashboard                 | `provider-dashboard-exe` |
 | 8020  | mock-registry                      | `mock-registry`      |

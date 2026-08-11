@@ -13,9 +13,11 @@ import qualified Domain.Types.Quote
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
+import qualified SharedLogic.Type
 import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.Transformers.Booking
 
@@ -28,6 +30,35 @@ findByIdLite id = findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 
 findByBPPBookingIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking -> m (Maybe BookingLite)
 findByBPPBookingIdLite (Kernel.Types.Id.Id bppRbId) = findOneWithKV [Se.Is Beam.bppBookingId $ Se.Eq $ Just bppRbId]
+
+-- | My Rides list read: a rider's bookings, newest first, no location decode. All row filters
+-- (rider, date range, status, billing category, non-multimodal) live in the query so pagination
+-- offsets track exactly what's returned; ride type has no column and is filtered by the caller.
+findAllByRiderIdLite ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  [Domain.Types.BookingStatus.BookingStatus] ->
+  [SharedLogic.Type.BillingCategory] ->
+  m [BookingLite]
+findAllByRiderIdLite personId mbLimit mbOffset mbFrom mbTo statusList billingCategoryList =
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId personId)]
+            <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq f | Just f <- [mbFrom]]
+            <> [Se.Is Beam.createdAt $ Se.LessThanOrEq t | Just t <- [mbTo]]
+            <> [Se.Is Beam.status $ Se.In statusList | not (null statusList)]
+            <> [Se.Is Beam.billingCategory $ Se.In (Just <$> billingCategoryList) | not (null billingCategoryList)]
+            -- Exclude multimodal journey-leg bookings (they render only in the journey card).
+            <> [Se.Or [Se.Is Beam.isMultimodalSearch $ Se.Eq Nothing, Se.Is Beam.isMultimodalSearch $ Se.Eq (Just False)]]
+        )
+    ]
+    (Se.Desc Beam.startTime)
+    mbLimit
+    mbOffset
 
 data BookingLite = BookingLite
   { id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
@@ -44,7 +75,15 @@ data BookingLite = BookingLite
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
-    createdAt :: Kernel.Prelude.UTCTime
+    createdAt :: Kernel.Prelude.UTCTime,
+    -- Added for listV3: cheap scalar reads, still no location/bookingDetails hydration.
+    startTime :: Kernel.Prelude.UTCTime,
+    isScheduled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    billingCategory :: Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    locationNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -71,5 +110,12 @@ instance FromTType' BookingLiteTable BookingLite where
             tripCategory = tripCategory,
             isAirConditioned = isAirConditioned,
             paymentMode = paymentMode,
-            createdAt = createdAt
+            createdAt = createdAt,
+            startTime = startTime,
+            isScheduled = isScheduled,
+            serviceTierName = serviceTierName,
+            vehicleIconUrl = vehicleIconUrl,
+            billingCategory = billingCategory,
+            estimatedFare = estimatedFare,
+            locationNames = locationNames
           }

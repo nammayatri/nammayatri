@@ -1434,7 +1434,7 @@ in
 
             # Reverse proxy fronting the driver-app on its public port.
             # Caddyfile is inlined here (no separate file) — routing is:
-            #   localhost:8016/ui/driver/location* -> localhost:8081 (LTS)
+            #   localhost:8016/ui/driver/location* -> localhost:8098 (LTS)
             #   localhost:8016/<anything else>     -> localhost:8116 (driver-app)
             #   localhost:8016/__driver_proxy_health -> 200 inline (probe)
             # Starts BEFORE dynamic-offer-driver-app-exe so the public port is
