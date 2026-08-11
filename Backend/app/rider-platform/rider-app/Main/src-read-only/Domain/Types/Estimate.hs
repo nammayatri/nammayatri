@@ -11,7 +11,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.ServiceTierType
-import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -37,7 +36,6 @@ data Estimate = Estimate
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    driversLocation :: [Kernel.External.Maps.LatLong],
     estimateBreakupList :: [Domain.Types.Estimate.EstimateBreakup],
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

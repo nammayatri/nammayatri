@@ -23,7 +23,6 @@ import Domain.Types.EstimateStatus
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -56,7 +55,6 @@ data EstimateAPIEntity = EstimateAPIEntity
     personalDiscountInfo :: Maybe PersonalDiscountInfoAPIEntity,
     tollChargesInfo :: Maybe TollChargesInfoAPIEntity,
     waitingCharges :: WaitingChargesAPIEntity,
-    driversLatLong :: [LatLong],
     tipOptions :: Maybe [Int],
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
@@ -115,7 +113,6 @@ mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}
         agencyCompletedRidesCount = providerCompletedRidesCount,
         tripTerms = [],
         estimateFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)),
-        driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
         providerId = providerId,
         providerName = bppDetails.name,

@@ -30,7 +30,6 @@ import Domain.Types.SearchRequest
 import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
-import Kernel.External.Maps as Maps
 import Kernel.Prelude (parseBaseUrl, roundToIntegral)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -414,51 +413,6 @@ buildWaitingChargeInfo item currency = do
       OnSearch.WaitingChargesInfo
         { waitingChargePerMin = waitingChargePerMin'
         }
-
-getProviderLocation :: MonadFlow m => Spec.Provider -> VehicleVariant.VehicleVariant -> m [Maps.LatLong]
-getProviderLocation provider vehicleVariant = do
-  let locations = provider.providerLocations & fromMaybe []
-  latLongs <- mapM (makeLatLong provider vehicleVariant) locations
-  return $ catMaybes latLongs
-
-makeLatLong :: (MonadFlow m) => Spec.Provider -> VehicleVariant.VehicleVariant -> Spec.Location -> m (Maybe Maps.LatLong)
-makeLatLong provider vehicleVariant location = do
-  gps <- location.locationGps & fromMaybeM (InvalidRequest "Missing GPS")
-  maybe (return Nothing) (makeLatLongHelper gps) location.locationId
-  where
-    makeLatLongHelper gps locId = maybe (return Nothing) (parseLatLongHelper locId gps) provider.providerItems
-
-    parseLatLongHelper locId gps providerItems = do
-      let providerItem = filter (\item -> maybe False (\locIds -> locId `elem` locIds) item.itemLocationIds) providerItems
-          vehicleVariants = traverse extractVehicleVariants providerItem
-      if maybe False (\vehVars -> Just vehicleVariant `elem` vehVars) (listToMaybe vehicleVariants)
-        then Just <$> Common.parseLatLong gps
-        else return Nothing
-
-    extractVehicleVariants item = do
-      fromMaybe
-        []
-        ( item.itemFulfillmentIds
-            >>= ( \itemfullfillment ->
-                    provider.providerFulfillments
-                      >>= ( \provFul ->
-                              Just (filterFulfillmentsByFulfillmentId provFul itemfullfillment)
-                          )
-                )
-        )
-
-    filterFulfillmentsByFulfillmentId providerFulfillments arrFullFIllment = do
-      let result = find (\fulf -> maybe False (`elem` arrFullFIllment) fulf.fulfillmentId) providerFulfillments
-      [ result
-          >>= ( \fulf ->
-                  fulf.fulfillmentVehicle
-                    >>= ( \fVehicle ->
-                            Common.parseVehicleVariant
-                              fVehicle.vehicleCategory
-                              (map T.toUpper (fVehicle.vehicleVariant))
-                        )
-              )
-        ]
 
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =

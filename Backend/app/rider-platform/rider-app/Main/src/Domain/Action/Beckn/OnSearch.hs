@@ -71,7 +71,6 @@ import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
-import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -156,7 +155,6 @@ data EstimateInfo = EstimateInfo
     personalDiscountInfo :: Maybe PersonalDiscountInfo,
     tollChargesInfo :: Maybe TollChargesInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
-    driversLocation :: [LatLong],
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
@@ -556,7 +554,6 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         updatedAt = now,
         status = DEstimate.NEW,
         estimateBreakupList = estimateBreakupList',
-        driversLocation = driversLocation,
         businessDiscountInfo = businessDiscountInfo <&> \businessDiscountInfo' -> DEstimate.BusinessDiscountInfo {businessDiscount = businessDiscountInfo'.businessDiscount, businessDiscountPercentage = businessDiscountInfo'.businessDiscountPercentage},
         personalDiscountInfo = personalDiscountInfo <&> \personalDiscountInfo' -> DEstimate.PersonalDiscountInfo {personalDiscount = personalDiscountInfo'.personalDiscount, personalDiscountPercentage = personalDiscountInfo'.personalDiscountPercentage},
         nightShiftInfo =
