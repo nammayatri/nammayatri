@@ -15,6 +15,7 @@
 module Lib.Scheduler.Metrics where
 
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, incrementSchedulerJobLifecycleCounter)
 import qualified Prometheus as P
 
 newtype SchedulerMetrics = SchedulerMetrics
@@ -31,3 +32,42 @@ observeJobExecDuration :: (MonadIO m, MonadReader r m, HasField "metrics" r Sche
 observeJobExecDuration duration = do
   metrics <- asks (.metrics)
   liftIO $ P.observe metrics.durationHistogram duration
+
+-- | Points in a scheduler job's life that we count, emitted as the @status@
+-- label of @scheduler_job_lifecycle_counter@.
+--
+-- Every job contributes exactly one 'JobCreated', at most one 'JobPicked' per
+-- execution attempt, and exactly one of the remaining constructors per attempt.
+-- 'JobRescheduled' and 'JobRetried' are not terminal -- the job will be picked
+-- again -- so @created - (completed + failed + retry_exhausted)@ is the number
+-- of jobs still in flight.
+data JobLifecycleStatus
+  = JobCreated
+  | JobPicked
+  | JobCompleted
+  | JobFailed
+  | JobRescheduled
+  | JobRetried
+  | JobRetryExhausted
+  | JobDuplicate
+  deriving (Eq, Show)
+
+jobLifecycleStatusLabel :: JobLifecycleStatus -> Text
+jobLifecycleStatusLabel = \case
+  JobCreated -> "created"
+  JobPicked -> "picked"
+  JobCompleted -> "completed"
+  JobFailed -> "failed"
+  JobRescheduled -> "rescheduled"
+  JobRetried -> "retried"
+  JobRetryExhausted -> "retry_exhausted"
+  JobDuplicate -> "duplicate"
+
+-- | Record a job lifecycle transition.
+--
+-- @jobType@ must be the bare job type (e.g. @SendSearchRequestToDriver@). Do
+-- not pre-apply 'show' to it: the older @stream_jobs_counter@ call sites do,
+-- which is why their @job_type@ label values carry embedded quotes.
+incrementJobLifecycleCounter :: CoreMetrics m => Text -> JobLifecycleStatus -> m ()
+incrementJobLifecycleCounter jobType status =
+  incrementSchedulerJobLifecycleCounter jobType (jobLifecycleStatusLabel status)

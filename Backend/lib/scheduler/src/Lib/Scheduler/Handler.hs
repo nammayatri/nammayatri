@@ -45,6 +45,7 @@ import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
+import Lib.Scheduler.Metrics (JobLifecycleStatus (..), incrementJobLifecycleCounter)
 import Lib.Scheduler.Types
 
 data SchedulerHandle t = SchedulerHandle
@@ -203,6 +204,9 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
       diffInMill = Milliseconds (div (fromEnum diff) 1000000000)
   logDebug $ "diffTime in picking up the job : " <> show diffInMill
   fork "" $ addGenericLatency ("Job_pickup_" <> jobType') $ diffInMill
+  -- Reached only once the job's redis lock has been acquired, so this counts
+  -- jobs that actually started executing -- not everything read off the stream.
+  fork "jobLifecyclePicked" $ incrementJobLifecycleCounter jobType' JobPicked
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
@@ -234,35 +238,43 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
   case result of
     DuplicateExecution -> do
       logInfo $ "job id " <> show id <> " already executed "
+      fork "jobLifecycleDuplicate" $ incrementJobLifecycleCounter jobType' JobDuplicate
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
       markAsComplete jobType' job.id
       fork "" $ incrementStreamCounter ("Executor_" <> show jobType')
+      fork "jobLifecycleCompleted" $ incrementJobLifecycleCounter jobType' JobCompleted
     Terminate description -> do
       logError $ "job terminated on try " <> show (currErrors + 1) <> "; with jobId: " <> show job.id <> "; reason: " <> description
       markAsFailed jobType' job.id
       fork "" $ incrementStreamFailedCounter ("Executor_" <> show jobType')
+      fork "jobLifecycleFailed" $ incrementJobLifecycleCounter jobType' JobFailed
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime <> " jobType :" <> jobType'
       reSchedule jobType' j reScheduledTime
+      fork "jobLifecycleRescheduled" $ incrementJobLifecycleCounter jobType' JobRescheduled
     Retry -> do
       isLong <- isJobLongRunning jobType'
       if not isLong
-        then -- Non-longRunning retries are requeued onto the stream (Part B) by handleStreamRetry,
-        -- after the locks are released. Skip the DB/sorted-set reschedule here to avoid double-enqueue.
+        then do
+          -- Non-longRunning retries are requeued onto the stream (Part B) by handleStreamRetry,
+          -- after the locks are released. Skip the DB/sorted-set reschedule here to avoid double-enqueue.
           logDebug $ "retry deferred to stream requeue for non-longRunning jobId:" <> show job.id
+          fork "jobLifecycleRetried" $ incrementJobLifecycleCounter jobType' JobRetried
         else
           let newErrorsCount = job.currErrors + 1
            in if newErrorsCount >= job.maxErrors
                 then do
                   logError $ "retries amount exceeded for jobId:" <> show job.id <> ", job failed after try " <> show newErrorsCount
                   updateErrorCountAndFail jobType' job.id newErrorsCount
+                  fork "jobLifecycleRetryExhausted" $ incrementJobLifecycleCounter jobType' JobRetryExhausted
                 else do
                   logError $ "try " <> show newErrorsCount <> " was not successful for jobId:" <> show job.id <> ", trying again"
                   waitBeforeRetry <- asks (.waitBeforeRetry)
                   now <- getCurrentTime
                   reScheduleOnError jobType' j newErrorsCount $
                     fromIntegral waitBeforeRetry `addUTCTime` now
+                  fork "jobLifecycleRetried" $ incrementJobLifecycleCounter jobType' JobRetried
 
 defaultCatcher :: Text -> SomeException -> SchedulerM ExecutionResult
 defaultCatcher jobType' exep = do
