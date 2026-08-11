@@ -1054,4 +1054,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_downward
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stripe_status_refresh_count_window json ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stripe_status_refresh_count_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_upi_payout_enabled boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payout_enabled boolean  default true;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;

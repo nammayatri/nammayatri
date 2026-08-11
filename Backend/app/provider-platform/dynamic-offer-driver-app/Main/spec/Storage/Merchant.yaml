@@ -1317,6 +1317,8 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Integer
     dynamicReferralCodeValidForMinutes: Integer
     dynamicReferralCodeEnabled: Bool
+    fleetUpiPayoutEnabled: Bool
+    fleetBankPayoutEnabled: Bool
     generateReferralCodeForFleet: Maybe Bool
     generateReferralCodeForOperator: Maybe Bool
     maxAllowedDocSizeInMB: Maybe Int
@@ -1469,6 +1471,8 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Maybe Integer
     dynamicReferralCodeValidForMinutes: Maybe Integer
     dynamicReferralCodeEnabled: Maybe Bool
+    fleetUpiPayoutEnabled: Maybe Bool
+    fleetBankPayoutEnabled: Maybe Bool
     bulkWaiveOffLimit: Maybe Int
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
@@ -1558,6 +1562,8 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: Just meterRideBulkLocUpdateBatchSize|E
     dynamicReferralCodeValidForMinutes: Just dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: Just dynamicReferralCodeEnabled|E
+    fleetUpiPayoutEnabled: Just fleetUpiPayoutEnabled|E
+    fleetBankPayoutEnabled: Just fleetBankPayoutEnabled|E
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     enableGpsTollBehavior: Just enableGpsTollBehavior|E
@@ -1666,6 +1672,8 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
     dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
+    fleetUpiPayoutEnabled: fromMaybe True fleetUpiPayoutEnabled|E
+    fleetBankPayoutEnabled: fromMaybe True fleetBankPayoutEnabled|E
     aaEnabledClientSdkVersion: fromMaybe
       Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText
       aaEnabledClientSdkVersion|E
@@ -1942,6 +1950,8 @@ TransporterConfig:
       10,"minThresholdDistance": 1000}]'' :: json'
     minThreshildForPassThroughDestination: "1000"
     enableOverchargingBlocker: "false"
+    fleetUpiPayoutEnabled: "true"
+    fleetBankPayoutEnabled: "true"
     generateReferralCodeForFleet: "false"
     generateReferralCodeForOperator: "false"
     requireRouteMappingInVehicle: "true"

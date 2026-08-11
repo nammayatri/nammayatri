@@ -17,8 +17,10 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
@@ -36,8 +38,13 @@ postPayoutAccount merchantShortId opCity requestorId req = ActorInfo.withDashboa
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = fleetOwner.id
       driverId = cast @DP.Person @DC.Driver fleetOwner.id
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case req.accountType of
     Common.BANK -> do
+      unless transporterConfig.fleetBankPayoutEnabled $
+        throwError $ InvalidRequest "Bank payout registration is not enabled for this city"
       bankNo <- req.bankAccountNo & fromMaybeM (InvalidRequest "bankAccountNo required for Bank")
       ifsc <- req.bankIfscCode & fromMaybeM (InvalidRequest "bankIfscCode required for Bank")
       let verifyReq = BankAccountVerification.DriverBankAccountVerifyReq {bankAccountNo = bankNo, bankIfscCode = ifsc, nfVerification = False}
@@ -49,6 +56,8 @@ postPayoutAccount merchantShortId opCity requestorId req = ActorInfo.withDashboa
             upiRegistrationResp = Nothing
           }
     Common.UPI -> do
+      unless transporterConfig.fleetUpiPayoutEnabled $
+        throwError $ InvalidRequest "UPI payout registration is not enabled for this city"
       upiReg <- MDR.getDriverRegistrationPayoutRegistrationWithActor merchantShortId opCity driverId
       pure $
         Common.PayoutAccountResp
