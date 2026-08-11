@@ -37,6 +37,31 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
+-- | Issues created after a cursor, oldest-first — for external parties (Xyne)
+-- to page through and catch up on issues they may have missed. Ordered on
+-- 'createdAt' rather than 'updatedAt': 'updatedAt' shifts every time an issue
+-- is touched, which would reshuffle rows across pages while offset-paging.
+--
+-- Uses 'findAllWithOptionsDb' (bypasses the KV/mesh read path) rather than
+-- 'findAllWithOptionsKV': this condition list has no primary/secondary key
+-- (only 'deleted' + 'createdAt', neither declared in this table's
+-- 'enableKVPG' key set), and the dynamic mesh-config routing in
+-- 'findAllWithOptionsKV' was observed to silently drop rows never written
+-- to Redis under that shape — confirmed via direct inspection that Redis
+-- holds zero keys for this table, so it isn't stale-cache data being
+-- served, the KV routing itself misses them. A reconciliation read for an
+-- external party needs Postgres-correct results more than KV-cache speed.
+findAllCreatedAfter :: BeamFlow m r => Maybe UTCTime -> Maybe Int -> Maybe Int -> m [IssueReport]
+findAllCreatedAfter mbSince mbLimit mbOffset = do
+  let sinceCond = case mbSince of
+        Nothing -> []
+        Just ts -> [Is BeamIR.createdAt $ GreaterThan (T.utcToLocalTime T.utc ts)]
+  findAllWithOptionsDb
+    [And ([Is BeamIR.deleted $ Eq False] <> sinceCond)]
+    (Asc BeamIR.createdAt)
+    mbLimit
+    mbOffset
+
 findById :: BeamFlow m r => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.deleted $ Eq False]]
 

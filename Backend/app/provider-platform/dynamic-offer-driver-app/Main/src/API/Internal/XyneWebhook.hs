@@ -10,6 +10,7 @@ import qualified Domain.Action.UI.XyneWebhook
 import Environment
 import EulerHS.Prelude
 import qualified IssueManagement.Domain.Action.UI.XyneWebhook as XyneShared
+import qualified Kernel.External.Ticket.XyneSpaces.Types as XyneTypes
 import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString, RawJson)
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -39,3 +40,20 @@ bearerHandler = postXyneBearerWebhook
   where
     postXyneBearerWebhook mbAuth rawBody =
       withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.postXyneBearerWebhook mbAuth rawBody
+
+-- | Bearer-token authenticated read endpoint for Xyne to page through issues
+-- that changed after a @since@ cursor, so it can catch up on syncs that were
+-- dropped in transit.
+type IssuesAPI =
+  "xyne" :> "webhook" :> "issues"
+    :> Header "Authorization" Kernel.Prelude.Text
+    :> QueryParam "since" Kernel.Prelude.UTCTime
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] [XyneTypes.XyneInboundReq]
+
+issuesHandler :: FlowServer IssuesAPI
+issuesHandler = getXyneIssues
+  where
+    getXyneIssues mbAuth mbSince mbLimit mbOffset =
+      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.getXyneIssues mbSince mbLimit mbOffset mbAuth

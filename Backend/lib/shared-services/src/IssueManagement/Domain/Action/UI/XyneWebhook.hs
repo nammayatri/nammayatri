@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -36,15 +38,21 @@ where
 
 import qualified AWS.S3 as S3
 import qualified Data.Aeson as A
+import qualified Data.Map as Map
+import Data.OpenApi (NamedSchema (..), ToSchema (declareNamedSchema), toInlinedSchema)
 import qualified Data.Text as T
+import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Common.Dashboard.Issue as DCI
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DDI
 import qualified IssueManagement.Domain.Action.UI.Issue as DUI
+import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
+import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import IssueManagement.Tools.Error
@@ -395,3 +403,146 @@ processXyneBearerWebhook bearerToken issueHandle identifier mbAuthHeader rawBody
     other ->
       logWarning $ "Xyne bearer webhook: ignoring unsupported eventType=" <> other
   pure Success
+
+-- | 'Xyne.XyneInboundReq' is defined upstream (Kernel package) without a
+-- 'ToSchema' instance; it's exposed here as an API response type, so
+-- something needs to give the OpenAPI generator a schema for it. Treated as
+-- opaque JSON rather than derived field-by-field — its hand-written
+-- 'ToJSON' already drops 'Nothing' fields, and 'additionalFormFields' is an
+-- untyped @Map Text Text@, so a generic per-field schema would be
+-- misleading anyway.
+instance ToSchema Xyne.XyneInboundReq where
+  declareNamedSchema _ = pure $ NamedSchema (Just "XyneInboundReq") $ toInlinedSchema (Proxy :: Proxy A.Value)
+
+maxXyneIssuesPageSize :: Int
+maxXyneIssuesPageSize = 100
+
+-- | Bearer-token authenticated read endpoint for Xyne to pull issues created
+-- after a cursor, delivered at @/internal/xyne/webhook/issues@. Exists
+-- because some Xyne messages/status syncs are getting dropped in transit;
+-- this lets Xyne page through and catch up on whatever it missed,
+-- independent of the webhook-push path.
+--
+-- Returns the same 'Xyne.XyneInboundReq' shape used for the real outbound
+-- push (one entry per chat message, 'threadId' = 'IssueReport.id', reusing
+-- their existing single-message ingestion as-is) rather than a bespoke
+-- shape — a message only has room for one 'body', so recovering N missed
+-- messages for an issue means N entries here, same as N separate pushes.
+-- Everything 'ChatMessageItem' carries that 'XyneInboundReq' has no
+-- dedicated field for (message id, content type, media, delivered/read
+-- timestamps) is packed into 'externalId'/'additionalFormFields' rather
+-- than dropped, so this flat shape loses no detail relative to a
+-- per-issue/nested response. 'senderEmail' stays 'Nothing' — there's no
+-- reliable email data to attach per message.
+fetchXyneIssues ::
+  (Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
+  Text ->
+  DUI.ServiceHandle m ->
+  Common.Identifier ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  m [Xyne.XyneInboundReq]
+fetchXyneIssues bearerToken issueHandle identifier mbSince mbLimit mbOffset mbAuthHeader = do
+  unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
+    throwError $ AuthBlocked "Invalid Authorization header"
+  let cappedLimit = min maxXyneIssuesPageSize (fromMaybe maxXyneIssuesPageSize mbLimit)
+  issueReports <- QIR.findAllCreatedAfter mbSince (Just cappedLimit) mbOffset
+  concat <$> mapM toXyneInboundReqs issueReports
+  where
+    toXyneInboundReqs issue = do
+      mbCategory <- maybe (pure Nothing) (`CQIC.findById` identifier) issue.categoryId
+      let channelId = fromMaybe "" (mbCategory >>= (.xyneChannelId))
+          subject = maybe issue.description (.category) mbCategory
+      chatMessages <- QCM.findChatMessagesAfter issue.id Nothing Nothing
+      liveReqs <- forM chatMessages $ \chatMessage -> do
+        item <- DUI.toChatMessageItem identifier chatMessage
+        senderName <- resolveSenderName chatMessage
+        pure $ toXyneInboundReq channelId subject issue senderName item
+      historicalReqs <- resolveHistoricalReqs issue channelId subject
+      pure $ liveReqs <> historicalReqs
+    resolveSenderName chatMessage = case chatMessage.senderType of
+      DCM.SENDER_OPERATOR -> pure $ senderLabel DCM.SENDER_OPERATOR
+      senderType -> do
+        mbPerson <- issueHandle.findPersonById chatMessage.senderId
+        pure $ fromMaybe (senderLabel senderType) (mbPerson >>= personFullName)
+
+    personFullName p =
+      let full = T.strip $ fromMaybe "" p.firstName <> " " <> fromMaybe "" p.lastName
+       in if T.null full then Nothing else Just full
+    resolveHistoricalReqs issue channelId subject =
+      case (issue.merchantId, issue.merchantOperatingCityId) of
+        (Just merchantId, Just mocId) -> do
+          mbIssueConfig <- issueHandle.findIssueConfig mocId identifier
+          case mbIssueConfig of
+            Nothing -> pure []
+            Just issueConfig -> do
+              mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId mocId) issue.rideId
+              language <- DUI.getLanguage issue.personId Nothing issueHandle
+              customerName <- resolvePersonName issue.personId
+              let historicalChats = filter (\c -> c.chatType `elem` [Common.IssueMessage, Common.IssueOption]) issue.chats
+                  issueForHistory = issue {DIR.chats = historicalChats}
+              chatDetails <- DUI.recreateIssueChats issueForHistory issueConfig mbRideInfoRes language identifier
+              pure $ mapMaybe (toHistoricalReq channelId subject issue customerName) chatDetails
+        _ -> pure []
+    resolvePersonName personId = do
+      mbPerson <- issueHandle.findPersonById personId
+      pure $ fromMaybe "Customer" (mbPerson >>= personFullName)
+
+    toHistoricalReq channelId subject issue customerName chatDetail = do
+      text <- chatDetail.content
+      pure $
+        Xyne.XyneInboundReq
+          { channelId = channelId,
+            threadId = issue.id.getId,
+            subject = subject,
+            body = text,
+            externalId = Just chatDetail.id,
+            senderName =
+              Just $ case chatDetail.sender of
+                Common.BOT -> "Auto Reply"
+                Common.USER -> customerName,
+            senderEmail = Nothing,
+            additionalFormFields = Just (buildHistoricalFormFields chatDetail)
+          }
+
+    buildHistoricalFormFields chatDetail =
+      Map.fromList $
+        catMaybes
+          [ Just ("messageCreatedAt", tshow8601 chatDetail.timestamp),
+            ("title",) <$> chatDetail.title,
+            ("actionText",) <$> chatDetail.actionText,
+            ("label",) <$> chatDetail.label
+          ]
+
+    toXyneInboundReq channelId subject issue senderName item =
+      Xyne.XyneInboundReq
+        { channelId = channelId,
+          threadId = issue.id.getId,
+          subject = subject,
+          body = item.text,
+          externalId = Just item.messageId,
+          senderName = Just senderName,
+          senderEmail = Nothing,
+          additionalFormFields = Just (buildFormFields item)
+        }
+    buildFormFields item =
+      Map.fromList $
+        catMaybes
+          [ Just ("chatContentType", tshow item.chatContentType),
+            Just ("messageCreatedAt", tshow8601 item.createdAt),
+            ("readAt",) . tshow8601 <$> item.readAt,
+            ("deliveredAt",) . tshow8601 <$> item.deliveredAt,
+            notEmpty "mediaFileIds" (T.intercalate "," (map getId item.mediaFileIds)),
+            notEmpty "mediaFileUrls" (T.intercalate "," (map (.url) item.mediaFiles))
+          ]
+
+    notEmpty key value = if T.null value then Nothing else Just (key, value)
+    tshow = T.pack . show
+    tshow8601 = T.pack . iso8601Show
+
+    senderLabel DCM.SENDER_OPERATOR = "Support Agent"
+    -- fallback if sender name is not resolved
+    senderLabel DCM.SENDER_RIDER = "Customer"
+    senderLabel DCM.SENDER_DRIVER = "Driver"

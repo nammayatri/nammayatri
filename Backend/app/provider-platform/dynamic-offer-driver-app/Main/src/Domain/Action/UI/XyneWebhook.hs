@@ -8,6 +8,7 @@ import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Domain.Action.UI.XyneWebhook as XyneShared
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Ticket.XyneSpaces.Config as Xyne
+import qualified Kernel.External.Ticket.XyneSpaces.Types as XyneTypes
 import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
@@ -34,6 +35,11 @@ postXyneBearerWebhook :: Maybe Text -> RawByteString -> Flow APISuccess
 postXyneBearerWebhook mbAuth rawBody = do
   bearerToken <- asks (.xyneWebhookBearerToken)
   XyneShared.processXyneBearerWebhook bearerToken AUI.driverIssueHandle Common.DRIVER mbAuth rawBody
+
+getXyneIssues :: Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Flow [XyneTypes.XyneInboundReq]
+getXyneIssues mbSince mbLimit mbOffset mbAuth = do
+  bearerToken <- asks (.xyneWebhookBearerToken)
+  XyneShared.fetchXyneIssues bearerToken AUI.driverIssueHandle Common.DRIVER mbSince mbLimit mbOffset mbAuth
 
 lookupXyneCfg ::
   KId.Id Common.Merchant ->
