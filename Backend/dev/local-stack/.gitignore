@@ -16,3 +16,8 @@ bin/
 # 20 MB of extracted OSM place names, rebuilt in ~4 minutes by
 # ./geocoder-prepare.sh extract. The script is source; its output is not.
 geocoder/places.csv
+
+# TLS private keys and the ACME account. Never in git, on any branch, ever --
+# a private key in history is a key that has to be revoked.
+edge-certs/
+edge-webroot/

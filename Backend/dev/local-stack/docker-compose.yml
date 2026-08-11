@@ -337,6 +337,93 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # The lock on the OTP check. See auth-guard/server.js for the measurement
+  # behind it: the backend answers with `attempts: 3` and enforces nothing, so
+  # all 10,000 four-digit codes take about ten minutes.
+  #
+  # Harmless while every port but SSH is shut; not harmless the moment the API
+  # is published on 443. It is deployed and verified *before* the edge, and the
+  # edge sends the whole of /v2/ through it -- a guard you can route around is
+  # not a guard.
+  #
+  # Belongs in the backend, where the counter already exists. It is here because
+  # this stack runs prebuilt binaries from a CI job with a 350-minute budget,
+  # and rebuilding to change a counter is not a proportionate risk.
+  auth-guard:
+    image: node:20-alpine
+    container_name: ny-auth-guard
+    network_mode: host
+    working_dir: /app
+    command: node server.js
+    environment:
+      PORT: "8031"
+      UPSTREAM_URL: "http://127.0.0.1:8013"
+      MAX_ATTEMPTS: "3"
+      AUTH_TTL_MS: "600000"
+      LOCK_MS: "900000"
+    volumes:
+      - ./auth-guard:/app:ro
+    restart: unless-stopped
+
+  # ── The only thing the internet can reach, besides SSH ────────────────────
+  #
+  # TLS on 443, publishing exactly one thing: the rider API, and only through
+  # the auth guard. Postgres, Redis, the tile server, the driver API, the demo
+  # pages, mock-google, OSRM and Swagger all stay on loopback. See
+  # edge/nginx.conf.
+  #
+  # network_mode: host on purpose. A bridged container with published ports
+  # would bypass ufw entirely -- the trap that makes `ufw default deny`
+  # insufficient on this box. Bound to the host directly, 80 and 443 are
+  # governed by ufw like anything else, so the firewall still means something.
+  #
+  # Certificates come from ./edge-certs (Let's Encrypt via certbot, HTTP-01).
+  # Bring this up only after the guard is running and verified: publishing 443
+  # is what turns the OTP hole from theoretical into reachable.
+  edge:
+    image: nginx:alpine
+    container_name: ny-edge
+    network_mode: host
+    # nginx reads its certificate once, at start. A renewed certificate on disk
+    # therefore changes nothing until it reloads -- which is how a stack like
+    # this serves an expired certificate two months after renewing it
+    # successfully. Reloading every six hours costs nothing and removes that
+    # entire class of outage.
+    command: >
+      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+             nginx -g 'daemon off;'"
+    volumes:
+      - ./edge/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./edge/proxy-common.inc:/etc/nginx/conf.d/proxy-common.inc:ro
+      - ./edge-certs:/etc/letsencrypt:ro
+      - ./edge-webroot:/var/www/certbot:ro
+    depends_on:
+      - auth-guard
+    restart: unless-stopped
+
+  # Renewal only. The first certificate is issued by hand with --standalone
+  # (see README); after that this wakes twice a day, renews anything inside 30
+  # days of expiry over the HTTP-01 path nginx keeps open on port 80, and tells
+  # nginx to pick it up. Twice a day is Let's Encrypt's own recommendation --
+  # it means a failed renewal has ~60 chances before anything expires.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: ny-certbot
+    volumes:
+      - ./edge-certs:/etc/letsencrypt
+      - ./edge-webroot:/var/www/certbot
+    # List form, not a folded block. A `>` block collapses the newlines into
+    # one line and mangles the inner quoting -- the container then starts,
+    # reports healthy, and errors on every pass. It did exactly that here, and
+    # the only symptom was one line of log nobody would read for sixty days.
+    #
+    # No --deploy-hook: nginx reloads itself every six hours regardless, which
+    # covers the renewal without another moving part to get wrong.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
+    restart: unless-stopped
+
   # rider-app uses host networking, so its port lives inside the Docker VM and
   # isn't published to Windows. This forwards it to localhost:8014.
   proxy:

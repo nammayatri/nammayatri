@@ -330,6 +330,97 @@ the id comes from the tileset metadata inside the MBTiles, not the filename.
 - Labels use OSM's `name`. OpenMapTiles also carries `name:fr` and `name:ar`, so
   switching the map to one language is a style change, not a rebuild.
 
+## Published on the internet — TLS, and the lock that had to come first
+
+```
+https://api.169-58-139-65.sslip.io/v2/...
+```
+
+Until now everything was reached through an SSH tunnel: safe, and useless for
+handing an APK to anyone else. This publishes **exactly one thing** — the rider
+API — over TLS, and nothing else.
+
+### The lock went in first, and that ordering is the whole point
+
+`POST /v2/auth` answers with `attempts: 3`, and the backend enforces nothing.
+Measured on this stack: **62 consecutive wrong codes, the counter never moved,
+and the same session still accepted the right code afterwards.** Four digits is
+10,000 possibilities — about ten minutes.
+
+Harmless while every port but SSH is shut. Not harmless one second after 443
+opens. So `auth-guard` was built, deployed and **proved** while the stack was
+still private, and only then did the edge go up.
+
+| | Before | Now |
+|---|---|---|
+| Wrong codes per session | unlimited | **3**, then locked 15 min |
+| Auth session lifetime | forever | **10 minutes** |
+| Sign-ins per phone number | unlimited | **5/hour** |
+| Requests per address | unlimited | 20/min on auth, 240/min otherwise |
+| Full 10,000-code sweep | **~10 minutes** | **~28 days per number** |
+
+The session lock alone would have been theatre: an attacker just asks for a new
+`authId` and spends three guesses on that. **Throttling session creation is what
+makes the session lock mean anything** — and it is the same control that stops
+someone burning our SMS credit the day a real gateway exists.
+
+```bash
+./prove-lockout.sh https://api.169-58-139-65.sslip.io   # six checks, all must pass
+```
+
+### Why the guard is not in the backend
+
+That is where it belongs — the counter already exists in the response and
+enforcing it would be a few lines of Haskell. But this stack runs **prebuilt
+binaries** from a CI job with a `timeout-minutes: 350` budget and a cache that
+accumulates across runs. Rebuilding to change a counter means a multi-hour cycle
+and a real chance of ending up with binaries that differ from the ones every
+test so far has run against. When the backend is next rebuilt for another
+reason, the check should move into it and the guard becomes belt-and-braces.
+
+### What is exposed, and what is not
+
+Verified by scanning from outside, not by reading the config:
+
+| Open | Closed |
+|---|---|
+| 22 SSH · 80 redirect + ACME · **443 rider API** | Postgres, Redis, tile server, driver API, demo pages, mock-google, OSRM, auth-guard, **Swagger** |
+
+Swagger in particular is a complete, executable description of the API, and
+there is no reason to publish it.
+
+**Every `/v2/` request goes through the guard.** That is not a detail: an nginx
+`location` that reached rider-app directly would quietly undo the whole thing,
+so no such location exists.
+
+`edge` runs with `network_mode: host` **on purpose**. A bridged container with
+published ports bypasses ufw entirely — the trap that makes `ufw default deny`
+insufficient on this box. Bound to the host directly, 80 and 443 are governed by
+ufw like anything else.
+
+### Certificate
+
+Let's Encrypt, HTTP-01, issued with `--standalone`, renewed by the `certbot`
+container over `--webroot` twice a day. nginx **reloads itself every six hours**
+because it reads its certificate once at start — that is how a stack serves an
+expired certificate two months after renewing it successfully.
+
+Renewal was dry-run against staging before anything real was requested, and the
+challenge path was proved reachable from outside. Two things worth knowing:
+
+- Registered **without an email**, so there are no expiry warnings. Add one with
+  `certbot update_account -m <address>` if you want the safety net.
+- The hostname is `sslip.io`, which is public DNS resolving any
+  `*.169-58-139-65.sslip.io` to this box. Swapping to a real domain is one
+  `server_name`, one certificate, and nothing else.
+
+### Still missing for a shareable APK
+
+The API is reachable; **the tile server is not**, so a release build would sign
+in and then show a broken map. Publishing tiles is one more `location` block —
+but it is bandwidth we would be giving away to anyone who finds the URL, so it
+is a decision rather than an oversight.
+
 ## Place search — finding somewhere to go
 
 The map draws Algeria and OSRM routes across it, but until now nothing could
