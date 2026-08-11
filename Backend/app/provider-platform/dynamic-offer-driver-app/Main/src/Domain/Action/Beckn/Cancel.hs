@@ -52,7 +52,7 @@ import Kernel.External.Maps
 -- import Tools.DynamicLogic
 
 import Kernel.External.Types (ServiceFlow)
-import Kernel.Prelude (HasField, roundToIntegral)
+import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
