@@ -56,6 +56,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -235,8 +236,16 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
       Query.create imageEntity
 
       -- skipping validation for rc as validation not available in idfy
+      let validationFromDocConfigs =
+            let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
+             in ( maybe True (.isImageValidationRequired) mbDocCfg,
+                  mbDocCfg >>= (.markImageValidOnValidationSkip)
+                )
       (isImageValidationRequired, markValidOnSkip) <-
-        if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
+        -- A fleet upload carrying an rcNumber is a VEHICLE document; those are governed by
+        -- docConfigs like driver uploads. The fleet-owner table only describes the fleet
+        -- owner's own identity documents.
+        if person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] && isNothing rcNumber
           then do
             --------------- Image validation for fleet (different config table than docConfigs)
             fleetDocConfigs <- listToMaybe <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, role = Nothing}) Nothing
@@ -244,25 +253,34 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
               ( maybe True (.isImageValidationRequired) fleetDocConfigs,
                 fleetDocConfigs >>= (.markImageValidOnValidationSkip)
               )
-          else do
-            let mbDocCfg = find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
-            return
-              ( maybe True (.isImageValidationRequired) mbDocCfg,
-                mbDocCfg >>= (.markImageValidOnValidationSkip)
-              )
+          else return validationFromDocConfigs
+      let guardTarget = case mbRcId of
+            Just rcId -> SGuard.TargetVehicleById rcId
+            Nothing
+              | person.role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> SGuard.TargetFleetOwner personId
+              | otherwise -> SGuard.TargetDriver personId
+          -- Status writes go through the onboarding-action wrapper: entity lock + flag recompute.
+          setVerificationStatus status =
+            SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Approve guardTarget $
+              Query.updateVerificationStatusOnlyById status imageEntity.id
+          markStatusOnValidationSkip =
+            setVerificationStatus $
+              if markValidOnSkip == Just True
+                then Documents.VALID
+                else Documents.MANUAL_VERIFICATION_REQUIRED
       if isImageValidationRequired && isNothing validationStatus
         then do
           validationOutput <-
             Verification.validateImage merchantId merchantOpCityId $
               Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-          when validationOutput.validationAvailable $ do
-            checkErrors imageEntity.id imageType validationOutput.detectedImage
-          Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-        else
-          when (isNothing validationStatus) $
-            if markValidOnSkip == Just True
-              then Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-              else Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+          if validationOutput.validationAvailable
+            then do
+              checkErrors imageEntity.id imageType validationOutput.detectedImage
+              setVerificationStatus Documents.VALID
+            else -- the provider cannot validate this document type: a doc that was never checked
+            -- must follow the validation-skip semantics, not get stamped VALID
+              markStatusOnValidationSkip
+        else when (isNothing validationStatus) markStatusOnValidationSkip
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $ do
           runDeferredFaceMatchOnSelfie person imageEntity.createdAt
