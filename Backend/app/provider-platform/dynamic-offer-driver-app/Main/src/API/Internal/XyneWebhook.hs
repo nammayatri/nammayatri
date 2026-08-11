@@ -12,6 +12,7 @@ import qualified Domain.Action.UI.XyneWebhook
 import Environment
 import EulerHS.Prelude
 import qualified IssueManagement.Domain.Action.UI.XyneWebhook as XyneShared
+import qualified Kernel.External.Ticket.XyneSpaces.Types as XyneTypes
 import Kernel.External.Ticket.XyneSpaces.Webhook (RawByteString, RawJson)
 import qualified Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -51,7 +52,7 @@ type IssuesAPI =
     :> QueryParam "since" Kernel.Prelude.UTCTime
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
-    :> Get '[JSON] [XyneShared.XyneIssueListItem]
+    :> Get '[JSON] [XyneTypes.XyneInboundReq]
 
 issuesHandler :: FlowServer IssuesAPI
 issuesHandler = getXyneIssues
