@@ -117,7 +117,6 @@ tfQuotesInfo provider fulfillments validTill item = do
   case tripCategoryToPricingPolicy tripCategory of
     EstimateBased _ -> do
       let bppEstimateId_ = Id itemId_
-      driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
       let businessDiscountInfo_ = Beckn.OnDemand.Utils.OnSearch.buildBusinessDiscountInfo item currency
       let personalDiscountInfo_ = Beckn.OnDemand.Utils.OnSearch.buildPersonalDiscountInfo item currency
@@ -135,7 +134,6 @@ tfQuotesInfo provider fulfillments validTill item = do
             { bppEstimateId = bppEstimateId_,
               descriptions = descriptions_,
               discount = discount_,
-              driversLocation = driversLocation_,
               estimateBreakupList = estimateBreakupList_,
               estimatedFare = estimatedFare_,
               estimatedTotalFare = estimatedTotalFare_,

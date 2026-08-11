@@ -76,7 +76,6 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.device device,
       Se.Set Beam.discount (discount <&> (.amount)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
-      Se.Set Beam.driversLocation driversLocation,
       Se.Set Beam.estimateBreakupListJson (Storage.Queries.Transformers.Estimate.encodeEstimateBreakupList estimateBreakupList),
       Se.Set Beam.estimatedDistance (Kernel.Types.Common.distanceToHighPrecMeters <$> estimatedDistance),
       Se.Set Beam.estimatedDistanceValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance),
