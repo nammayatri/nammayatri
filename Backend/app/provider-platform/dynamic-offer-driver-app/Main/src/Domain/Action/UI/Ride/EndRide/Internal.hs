@@ -294,13 +294,7 @@ processEndRideFinance ::
   TransporterConfig ->
   m ()
 processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
-  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-      walletFinanceEnabled = isPrepaidSubscriptionAndWalletEnabled || thresholdConfig.driverWalletConfig.enableDriverWallet
-  let capEnabled = walletFinanceEnabled && fromMaybe False booking.fareRecomputeCapEnabled
-      rawTotalFare = fromMaybe 0 ride.fare
-      cappedTotalFare = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
-      mbFareCap = if capEnabled && cappedTotalFare < rawTotalFare then Just cappedTotalFare else Nothing
-      totalFare = fromMaybe rawTotalFare mbFareCap
+  let (walletFinanceEnabled, totalFare, mbFareCap) = settlementTotalFareWithCap merchant thresholdConfig booking ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       parkingAmount = fromMaybe 0 newFareParams.parkingCharge

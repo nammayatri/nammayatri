@@ -363,6 +363,11 @@ mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
 
 -- TODO: make some tests for it
 
+-- | NOTE: every component summed here must be mapped in
+--   'Domain.Action.UI.Ride.EndRide.absorbFareRecomputeExcess' (drain schedule or
+--   protected tier) so the fare-recompute cap stays enforceable. That function
+--   constructs FareParameters in full, so adding a record field breaks its
+--   compile — decide the new component's drain tier there when you do.
 fareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
 fareSum fareParams conditionalChargeCategories =
   pureFareSum

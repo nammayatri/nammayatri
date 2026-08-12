@@ -43,7 +43,6 @@ library
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
-      Lib.Finance.OfferHold
       Lib.Finance.Reconciliation.Job
       Lib.Finance.Reconciliation.Recipe
       Lib.Finance.Reconciliation.Runner
@@ -74,6 +73,7 @@ library
       Lib.Finance.Storage.Queries.SapJournalEntryExtra
       Lib.Finance.Tax.Interface
       Lib.Finance.Tax.Types
+      Lib.Finance.TempBalanceHold
       Lib.Finance.Utils.SensitiveData
       Tools.Beam.UtilsTH
       Lib.Finance.Domain.Types.Account

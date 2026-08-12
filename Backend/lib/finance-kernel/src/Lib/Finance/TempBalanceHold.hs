@@ -1,5 +1,5 @@
 {-
-  Lib.Finance.OfferHold
+  Lib.Finance.TempBalanceHold
 
   Redis-backed provisional holds for balances at offer time, before any
   ledger entry exists. One sorted set per owner key: each member is an
@@ -13,12 +13,13 @@
   the key naming (e.g. "WalletOfferHolds:<ownerId>") and pass the full
   Redis key to every function here.
 -}
-module Lib.Finance.OfferHold
+module Lib.Finance.TempBalanceHold
   ( OfferHold (..),
     addOfferHoldAtKey,
     removeOfferHoldAtKey,
     liveOfferHoldsAtKey,
     getOfferHoldTotalAtKey,
+    getOfferHoldTotalExcludingAtKey,
     getOfferHoldAmountAtKey,
   )
 where
@@ -77,6 +78,16 @@ getOfferHoldTotalAtKey key = do
   _ <- Redis.zRemRangeByScore key 0 (utcToMilliseconds now)
   holds <- liveOfferHoldsAtKey key
   pure $ sum $ map realToFrac $ Map.elems holds
+
+-- | Sum of all unexpired holds at the key except the given offer's own hold.
+--   Total and exclusion come from ONE sorted-set read (a single Redis command,
+--   hence atomic), so a hold added concurrently can never produce a negative
+--   result the way subtracting two separate reads could.
+getOfferHoldTotalExcludingAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Maybe Text -> m HighPrecMoney
+getOfferHoldTotalExcludingAtKey key mbOfferId = do
+  holds <- liveOfferHoldsAtKey key
+  let others = maybe holds (`Map.delete` holds) mbOfferId
+  pure $ sum $ map realToFrac $ Map.elems others
 
 -- | The unexpired hold amount for one offer, 0 if none.
 getOfferHoldAmountAtKey :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m HighPrecMoney

@@ -26,6 +26,7 @@ module Domain.Action.UI.Payment
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Text as T
 import qualified Data.Tuple.Extra as Tuple
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DADriver
@@ -641,7 +642,7 @@ resolveInvoiceIssuedToAddress :: Maybe DDG.DriverGstin -> Maybe DFOI.FleetOwnerI
 resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress =
   fromMaybe opCityAddress (gstinAddress <|> fleetOwnerAddress)
   where
-    nonBlank t = if t == "" then Nothing else Just t
+    nonBlank t = if T.null (T.strip t) then Nothing else Just t
     gstinAddress = (mbBuyerGstinRow >>= (.address)) >>= nonBlank
     fleetOwnerAddress = do
       addr <- (mbFleetInfo >>= (.address)) >>= nonBlank

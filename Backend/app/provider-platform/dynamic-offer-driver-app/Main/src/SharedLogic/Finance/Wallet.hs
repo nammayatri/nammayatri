@@ -152,22 +152,11 @@ module SharedLogic.Finance.Wallet
     panAadhaarLinkTdsEnabled,
     estimateWalletDeductions,
     formatStripeAddress,
-    walletReferenceStatutoryHold,
     createWalletHold,
-    findPendingWalletHoldByReference,
-    getPendingWalletHoldAmountByReference,
     voidWalletHoldByReference,
-    getWalletHoldBalanceByOwner,
     getWalletAvailableBalanceByOwner,
     makeWalletRunningBalanceLockKey,
-    addWalletOfferHold,
-    removeWalletOfferHold,
-    getWalletOfferHoldTotal,
-    getWalletOfferHoldAmount,
-    addPrepaidOfferHold,
     removePrepaidOfferHold,
-    getPrepaidOfferHoldTotal,
-    getPrepaidOfferHoldAmount,
     addOfferHoldsForSearchTry,
     getTotalWalletHoldBalance,
     removeOfferHolds,
@@ -178,7 +167,7 @@ module SharedLogic.Finance.Wallet
     applyFareRecomputeBuffer,
     cashWalletCheckEnabled,
     shouldCheckCashWallet,
-    estimateBufferedStatutoryDeductions,
+    settlementTotalFareWithCap,
   )
 where
 
@@ -189,6 +178,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
@@ -204,8 +194,8 @@ import Kernel.Utils.Common
 import Lib.Finance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
-import Lib.Finance.OfferHold (addOfferHoldAtKey, getOfferHoldAmountAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, getOfferHoldTotalExcludingAtKey, removeOfferHoldAtKey)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -947,20 +937,24 @@ removeWalletOfferHold = removeOfferHoldAtKey . makeWalletOfferHoldsKey
 getWalletOfferHoldTotal :: (CacheFlow m r, MonadFlow m) => Text -> m HighPrecMoney
 getWalletOfferHoldTotal = getOfferHoldTotalAtKey . makeWalletOfferHoldsKey
 
-getWalletOfferHoldAmount :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m HighPrecMoney
-getWalletOfferHoldAmount = getOfferHoldAmountAtKey . makeWalletOfferHoldsKey
-
 addPrepaidOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> HighPrecMoney -> UTCTime -> m ()
 addPrepaidOfferHold = addOfferHoldAtKey . makePrepaidOfferHoldsKey
 
 removePrepaidOfferHold :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m ()
 removePrepaidOfferHold = removeOfferHoldAtKey . makePrepaidOfferHoldsKey
 
-getPrepaidOfferHoldTotal :: (CacheFlow m r, MonadFlow m) => Text -> m HighPrecMoney
-getPrepaidOfferHoldTotal = getOfferHoldTotalAtKey . makePrepaidOfferHoldsKey
-
-getPrepaidOfferHoldAmount :: (CacheFlow m r, MonadFlow m) => Text -> Text -> m HighPrecMoney
-getPrepaidOfferHoldAmount = getOfferHoldAmountAtKey . makePrepaidOfferHoldsKey
+-- | Settlement-side fare cap for end-ride money movement: the total fare to
+--   settle, capped at estimate + buffer when the booking opted in. ride.fare is
+--   already capped at recompute time; this is the safety net for flows that end
+--   without a recompute. Returns (walletFinanceEnabled, totalFare, mbFareCap).
+settlementTotalFareWithCap :: DM.Merchant -> DTC.TransporterConfig -> SRB.Booking -> Maybe HighPrecMoney -> (Bool, HighPrecMoney, Maybe HighPrecMoney)
+settlementTotalFareWithCap merchant transporterConfig booking mbRideFare =
+  let walletFinanceEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet
+      capEnabled = walletFinanceEnabled && fromMaybe False booking.fareRecomputeCapEnabled
+      rawTotalFare = fromMaybe 0 mbRideFare
+      cappedTotalFare = applyFareRecomputeBuffer transporterConfig.driverWalletConfig booking.estimatedFare
+      mbFareCap = if capEnabled && cappedTotalFare < rawTotalFare then Just cappedTotalFare else Nothing
+   in (walletFinanceEnabled, fromMaybe rawTotalFare mbFareCap, mbFareCap)
 
 -- | Everything currently held against the wallet: PENDING ledger holds plus
 --   live Redis offer holds.
@@ -1008,16 +1002,10 @@ removeOfferHolds ownerId searchTryId = do
 -- | Total live wallet offer holds, excluding the given search try's own hold
 --   (used when that hold is about to convert into a real ledger hold).
 getWalletOfferHoldTotalExcluding :: (CacheFlow m r, MonadFlow m) => Text -> Maybe Text -> m HighPrecMoney
-getWalletOfferHoldTotalExcluding ownerId mbSearchTryId = do
-  total <- getWalletOfferHoldTotal ownerId
-  own <- maybe (pure 0) (getWalletOfferHoldAmount ownerId) mbSearchTryId
-  pure (total - own)
+getWalletOfferHoldTotalExcluding = getOfferHoldTotalExcludingAtKey . makeWalletOfferHoldsKey
 
 getPrepaidOfferHoldTotalExcluding :: (CacheFlow m r, MonadFlow m) => Text -> Maybe Text -> m HighPrecMoney
-getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId = do
-  total <- getPrepaidOfferHoldTotal ownerId
-  own <- maybe (pure 0) (getPrepaidOfferHoldAmount ownerId) mbSearchTryId
-  pure (total - own)
+getPrepaidOfferHoldTotalExcluding = getOfferHoldTotalExcludingAtKey . makePrepaidOfferHoldsKey
 
 -- | For a cash ride at assignment time: re-check the wallet can cover the buffered
 --   statutory deductions (net of other outstanding offer holds), create the
