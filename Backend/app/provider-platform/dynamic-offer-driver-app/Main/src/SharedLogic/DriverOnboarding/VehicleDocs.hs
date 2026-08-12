@@ -394,15 +394,15 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
             then pure Nothing
             else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType mbPersonId (Just rcId) docType
         let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
-        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbMetadata) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo) mbCommonDoc
+        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbMetadata, mbProcessedDocumentId) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo) mbCommonDoc
         case mbStatus of
           Just status -> do
             mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata, commonDocumentData = mbCommonDocData}
+            return $ DocumentStatusItem {documentType = docType, documentId = mbProcessedDocumentId, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = mbMetadata, commonDocumentData = mbCommonDocData}
           Nothing -> do
-            (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs mbCommonDoc
+            (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress, mbInProgressDocumentId) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs mbCommonDoc
             mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-            return $ DocumentStatusItem {documentType = docType, documentId = Just processedVehicle.id.getId, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing, commonDocumentData = mbCommonDocData}
+            return $ DocumentStatusItem {documentType = docType, documentId = mbInProgressDocumentId, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry, metadata = Nothing, commonDocumentData = mbCommonDocData}
 
     let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
         rcS3Path = mbRcImage <&> (.s3Path)
@@ -539,9 +539,9 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                           then pure Nothing
                           else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType mbPersonId mbRcId docType
                       let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
-                      (status, mbReason, mbUrl, _, mbS3Path, mbImageId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs mbCommonDoc
+                      (status, mbReason, mbUrl, _, mbS3Path, mbImageId, mbInProgressDocumentId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs mbCommonDoc
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
-                      return $ DocumentStatusItem {documentType = docType, documentId = Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
+                      return $ DocumentStatusItem {documentType = docType, documentId = mbInProgressDocumentId <|> Just verificationReqRecord.id, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
                   let mbRcIdText = (.getId) <$> mbRcId
                       mbRcImage =
                         find
@@ -636,7 +636,7 @@ withCommonDocumentStatus entityImagesInfo mbCommonDoc (mbS3Path, mbImageId) from
               documentId = Just commonDoc.id.getId
             }
 
-getProcessedVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Maybe DCDOD.CommonDriverOnboardingDocuments -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata)
+getProcessedVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> DVC.DocumentType -> RC.VehicleRegistrationCertificate -> Maybe IQuery.RcImagesInfo -> Maybe DCDOD.CommonDriverOnboardingDocuments -> m (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe DocumentMetadata, Maybe Text)
 getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo mbCommonDoc = do
   let entity = entityImagesInfo.entity
       (mbS3Path, mbImageId) = getImageMetaFromVehicleImage entityImagesInfo docType mbRcImagesInfo
@@ -655,53 +655,53 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo m
               | otherwise = vehicleRC.rejectReason
             (s3, iid) = lookupImage vehicleRC.documentImageId
         mbMetadata <- if enableMetadata then Just <$> mkRCMetadata vehicleRC else pure Nothing
-        return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
+        return (Just status, reason, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata, Nothing)
       DVC.VehiclePermit -> do
         mbDoc <- listToMaybe <$> VPQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
         mbMetadata <- if enableMetadata then mkVehiclePermitMetadata vehicleRC mbDoc else pure Nothing
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid, mbMetadata)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.permitExpiry, s3, iid, mbMetadata, Nothing)
       DVC.VehicleFitnessCertificate -> do
         mbDoc <- listToMaybe <$> VFCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
         mbMetadata <- if enableMetadata then mkVehicleFitnessMetadata vehicleRC mbDoc else pure Nothing
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, Just vehicleRC.fitnessExpiry, s3, iid, mbMetadata, Nothing)
       DVC.VehicleInsurance -> do
         mbDoc <- listToMaybe <$> VIQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
         mbMetadata <- if enableMetadata then mkVehicleInsuranceMetadata vehicleRC mbDoc else pure Nothing
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, mbMetadata)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), (mbDoc >>= (.rejectReason)), Nothing, vehicleRC.insuranceValidity, s3, iid, mbMetadata, Nothing)
       DVC.VehiclePUC -> do
         mbDoc <- listToMaybe <$> VPUCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
         mbMetadata <- if enableMetadata then mkVehiclePUCMetadata mbDoc else pure Nothing
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid, mbMetadata)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, vehicleRC.pucExpiry, s3, iid, mbMetadata, Nothing)
       DVC.VehicleNOC -> do
         mbDoc <- listToMaybe <$> VNOCQuery.findByRcId (Just 1) Nothing vehicleRC.id
         let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId)) mbDoc
-        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid, Nothing)
+        return (mapStatus <$> (mbDoc <&> (.verificationStatus)), Nothing, Nothing, mbDoc <&> (.nocExpiry), s3, iid, Nothing, Nothing)
       DVC.VehicleInspectionForm -> do
         -- Check all vehicle photos based on RC, not driver
         (status, reason, url) <- checkVehiclePhotosStatusByRC mbRcImagesInfo
-        return (Just status, reason, url, Nothing, Nothing, Nothing, Nothing)
+        return (Just status, reason, url, Nothing, Nothing, Nothing, Nothing, Nothing)
       DVC.InspectionHub -> do
         registrationNo <- decrypt vehicleRC.certificateNumber
         (status, reason) <- getInspectionHubStatusAndReason DOHR.ONBOARDING_INSPECTION Nothing (Just registrationNo)
-        return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing)
+        return (status, reason, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       DVC.BotApproval ->
-        return (Just $ getBotApprovalStatusForVehicle vehicleRC.approved, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        return (Just $ getBotApprovalStatusForVehicle vehicleRC.approved, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       DVC.SubscriptionPlan -> case entity of
         IQuery.PersonEntity person -> do
           mbPlan <- QDPlan.findByDriverIdWithServiceName (cast person.id) Plan.YATRI_SUBSCRIPTION -- fix later on basis of vehicle category
-          return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
-        IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+          return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       _ -> do
         let mbLatestImage = case mbRcImagesInfo of
               Just rcImagesInfo -> listToMaybe (IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType)
               Nothing -> Nothing
-        return (mbLatestImage >>= (.verificationStatus) <&> mapStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
+        return (mbLatestImage >>= (.verificationStatus) <&> mapStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing, Nothing)
   where
-    fromCommonDoc res = (Just res.status, res.reason, Nothing, Nothing, res.s3Path, res.imageId, Nothing)
+    fromCommonDoc res = (Just res.status, res.reason, Nothing, Nothing, res.s3Path, res.imageId, Nothing, res.documentId)
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case
       True -> VALID
@@ -779,7 +779,7 @@ vehicleDocsLoadedByRcId =
          DVC.VehicleNOC
        ]
 
-getInProgressVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> [DVC.DocumentVerificationConfig] -> Maybe DCDOD.CommonDriverOnboardingDocuments -> m (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text)
+getInProgressVehicleDocuments :: OnboardingFlow m r => IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> [DVC.DocumentVerificationConfig] -> Maybe DCDOD.CommonDriverOnboardingDocuments -> m (ResponseStatus, Maybe Text, Maybe BaseUrl, Maybe UTCTime, Maybe Text, Maybe Text, Maybe Text)
 getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs mbCommonDoc = do
   let onlyImageLookup = maybe False (fromMaybe False . (.onlyImageVerificationStatusLookupRequired)) $ find (\c -> c.documentType == docType) docVerificationConfigs
       (mbS3Path, mbImageId) = case mbRcImagesInfo of
@@ -821,9 +821,9 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
           Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
       _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup
       _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId)
+    return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId, Nothing)
   where
-    fromCommonDoc res = (res.status, res.reason, Nothing, Nothing, res.s3Path, res.imageId)
+    fromCommonDoc res = (res.status, res.reason, Nothing, Nothing, res.s3Path, res.imageId, res.documentId)
 
 checkIfImageUploadedOrInvalidatedByRC :: Maybe IQuery.RcImagesInfo -> DDVC.DocumentType -> Bool -> (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType onlyImageLookup = do
