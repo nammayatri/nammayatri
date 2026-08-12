@@ -189,7 +189,7 @@ types:
   # FieldObject: children in `fields` become a nested object under `requestKey`.
   # FieldArray:  `fields` describe the shape of EACH element of the array under `requestKey`.
   FieldType:
-    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray"
+    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate"
   # `requestKey` = the JSON key this field's value occupies in register's documentData; `_type` = its JSON value type.
   # Simple:  { _type: FieldText,   requestKey: "identifierNumber" }                    -> { "identifierNumber": "..." }
   # Nested:  { _type: FieldObject, requestKey: "registration", fields: [ ...leaves ] } -> { "registration": { ... } }
@@ -205,6 +205,10 @@ types:
     dropdownValues: Maybe [Text]
     requestKey: Maybe Text
     fields: Maybe [FieldInfo]
+    images: Maybe [ImageInfo]
+  ImageInfo:
+    title: Text
+    text: Maybe Text
     imageUrl: Maybe Text
   DocumentApplicableType:
     enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"

@@ -844,6 +844,14 @@ castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
       dropdownValues = dropdownValues,
       requestKey = requestKey,
       fields = fmap (map castDocumentFieldInfo) fields,
+      images = fmap (map castImageInfo) images
+    }
+
+castImageInfo :: Domain.Types.DocumentVerificationConfig.ImageInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.ImageInfo
+castImageInfo Domain.Types.DocumentVerificationConfig.ImageInfo {..} =
+  API.Types.ProviderPlatform.Fleet.Onboarding.ImageInfo
+    { title = title,
+      text = text,
       imageUrl = imageUrl
     }
 
@@ -856,6 +864,7 @@ castDocumentFieldType = \case
   Domain.Types.DocumentVerificationConfig.FieldImage -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldImage
   Domain.Types.DocumentVerificationConfig.FieldObject -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldObject
   Domain.Types.DocumentVerificationConfig.FieldArray -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldArray
+  Domain.Types.DocumentVerificationConfig.FieldDate -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDate
 
 castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
 castDocumentOnboardingStage = \case

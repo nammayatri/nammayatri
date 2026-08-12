@@ -138,7 +138,7 @@ data FieldInfo = FieldInfo
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     fields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
-    imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    images :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo],
     isMandatory :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     placeholder :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -147,7 +147,10 @@ data FieldInfo = FieldInfo
   }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FieldType = FieldText | FieldInt | FieldDouble | FieldDropdown | FieldImage | FieldObject | FieldArray deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FieldType = FieldText | FieldInt | FieldDouble | FieldDropdown | FieldImage | FieldObject | FieldArray | FieldDate deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text}
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SupportedVehicleClasses
   = DLValidClasses [Kernel.Prelude.Text]

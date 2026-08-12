@@ -632,7 +632,7 @@ DocumentVerificationConfig:
     FieldType:
       # FieldObject: this node has no value of its own; its `fields` become a nested JSON object under `requestKey`.
       # FieldArray:  this node is a JSON array under `requestKey`; its `fields` describe the shape of EACH element.
-      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray"
+      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate"
     # FieldInfo drives BOTH how the UI renders an input AND where the entered value lands in the `documentData`
     # JSON that comes back on register (CommonDocumentReq.documentData). `requestKey` is that JSON key; `_type`
     # governs the JSON value type. The assembled `documentData` is strict-decoded into a CommonDocumentData variant
@@ -674,6 +674,11 @@ DocumentVerificationConfig:
       dropdownValues: Maybe [Text]
       requestKey: Maybe Text
       fields: Maybe [FieldInfo]
+      images: Maybe [ImageInfo]
+      derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
+    ImageInfo:
+      title: Text
+      text: Maybe Text
       imageUrl: Maybe Text
       derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
   fields:
@@ -1342,7 +1347,6 @@ FleetOwnerDocumentVerificationConfig:
     isApprovalSupported: Maybe Bool
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     documentFields: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
-    isApprovalSupported: Maybe Bool
   default:
     order: "0"
     role: "'FLEET_OWNER'"
