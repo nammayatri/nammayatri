@@ -999,22 +999,9 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               pickupGateId = booking.pickupGateId,
               fareSettlementType = booking.fareSettlementType
             }
-      let recomputedFare = Fare.fareSum fareParams Nothing
-          fareCap = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
-          capApplies = fromMaybe False booking.fareRecomputeCapEnabled && recomputedFare > fareCap
-          finalFareParams =
-            if capApplies
-              then absorbFareRecomputeExcess (Fare.computeTotalGstRate thresholdConfig.taxConfig.rideGst) (recomputedFare - fareCap) fareParams
-              else fareParams
-          finalFare = Fare.fareSum finalFareParams Nothing
-          distanceDiff = recalcDistance - oldDistance
+      (finalFare, finalFareParams) <- capRecomputedFare thresholdConfig booking estimatedFare fareParams
+      let distanceDiff = recalcDistance - oldDistance
           fareDiff = finalFare - estimatedFare
-      when capApplies $
-        logTagInfo "Fare recompute cap" $
-          "Capped recomputed fare " <> show recomputedFare <> " to " <> show finalFare <> " (cap " <> show fareCap <> ", estimate " <> show estimatedFare <> ")"
-            <> (let residual = finalFare - fareCap in if residual > 0 then " cap not fully applied, residual=" <> show residual else "")
-            <> " for booking "
-            <> booking.id.getId
       logTagInfo "Fare recalculation" $
         "Fare difference: "
           <> show (realToFrac @_ @Double fareDiff)
@@ -1022,6 +1009,26 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           <> show distanceDiff
       putDiffMetric merchantId fareDiff distanceDiff
       return (recalcDistance, finalFare, Just finalFareParams)
+
+-- | Cap the recomputed fare at the buffered estimate when the booking opted in,
+--   absorbing the excess into fare components; returns the final fare and params.
+capRecomputedFare :: (Log m, Monad m) => DTConf.TransporterConfig -> SRB.Booking -> HighPrecMoney -> FareParameters -> m (HighPrecMoney, FareParameters)
+capRecomputedFare thresholdConfig booking estimatedFare fareParams = do
+  let recomputedFare = Fare.fareSum fareParams Nothing
+      fareCap = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
+      capApplies = fromMaybe False booking.fareRecomputeCapEnabled && recomputedFare > fareCap
+      finalFareParams =
+        if capApplies
+          then absorbFareRecomputeExcess (Fare.computeTotalGstRate thresholdConfig.taxConfig.rideGst) (recomputedFare - fareCap) fareParams
+          else fareParams
+      finalFare = Fare.fareSum finalFareParams Nothing
+  when capApplies $
+    logTagInfo "Fare recompute cap" $
+      "Capped recomputed fare " <> show recomputedFare <> " to " <> show finalFare <> " (cap " <> show fareCap <> ", estimate " <> show estimatedFare <> ")"
+        <> (let residual = finalFare - fareCap in if residual > 0 then " cap not fully applied, residual=" <> show residual else "")
+        <> " for booking "
+        <> booking.id.getId
+  pure (finalFare, finalFareParams)
 
 absorbFareRecomputeExcess :: Maybe Double -> HighPrecMoney -> FareParameters -> FareParameters -- TODO: Improve later
 absorbFareRecomputeExcess mbGstRate totalExcess fareParams =

@@ -88,7 +88,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
-import SharedLogic.Finance.Wallet (addPrepaidOfferHold, addWalletOfferHold, applyFareRecomputeBuffer, cashWalletCheckEnabled, estimateBufferedStatutoryDeductions, shouldCheckCashWallet)
+import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
@@ -258,13 +258,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
     let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
     let holdOwnerId = fromMaybe dPoolRes.driverPoolResult.driverId.getId dPoolRes.driverPoolResult.fleetOwnerId
-    when (cashWalletCheckEnabled transporterConfig.driverWalletConfig && shouldCheckCashWallet searchTry.paymentInstrument) $ do
-      let offerFare = searchTry.baseFare + fromMaybe 0 tripQuoteDetail.govtCharges + fromMaybe 0 tripQuoteDetail.tollCharges + fromMaybe 0 tripQuoteDetail.driverParkingCharge
-          offerDeduction = estimateBufferedStatutoryDeductions transporterConfig.driverWalletConfig transporterConfig.taxConfig (Just offerFare) tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge
-      when (offerDeduction > 0) $ addWalletOfferHold holdOwnerId searchTry.id.getId offerDeduction validTill
-    when isPrepaidEnabled $ do
-      let prepaidOfferHold = applyFareRecomputeBuffer transporterConfig.driverWalletConfig searchTry.baseFare
-      when (prepaidOfferHold > 0) $ addPrepaidOfferHold holdOwnerId searchTry.id.getId prepaidOfferHold validTill
+    addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTry.id.getId searchTry.paymentInstrument searchTry.baseFare tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
     let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig)
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData

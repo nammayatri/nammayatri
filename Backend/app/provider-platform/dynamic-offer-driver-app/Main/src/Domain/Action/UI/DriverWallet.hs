@@ -173,10 +173,8 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
         if useClickhouse
           then fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate
           else fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate
-      dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
-      offerHoldBalance <- getWalletOfferHoldTotal ownerId
-      let holdBalance = dbHoldBalance + offerHoldBalance
-          (additions, deductions, nonRedeemableBalance, netEarningsBalance) =
+      holdBalance <- getTotalWalletHoldBalance counterparty ownerId
+      let (additions, deductions, nonRedeemableBalance, netEarningsBalance) =
             aggregateWalletRows accountIds cutoff rows
           redeemableBalance = max 0 (currentBalance - nonRedeemableBalance - holdBalance)
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
@@ -626,9 +624,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
       Nothing -> pure (0, [], 0)
       Just accountId -> getPayoutEligibilityData accountId cutoff now
-    dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ctx.driverId.getId
-    offerHoldBalance <- getWalletOfferHoldTotal ctx.driverId.getId
-    let holdBalance = dbHoldBalance + offerHoldBalance
+    holdBalance <- getTotalWalletHoldBalance counterparty ctx.driverId.getId
     logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", holdBalance=" <> show holdBalance <> ", redeemableEntryIds=" <> show redeemableIds
     let payoutableBalance = walletBalance - nonRedeemable - holdBalance
     ensureMinimumPayoutAmount ctx payoutableBalance

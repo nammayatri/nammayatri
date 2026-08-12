@@ -2045,6 +2045,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         unless sameFleetStillActive $ do
           FWallet.removeWalletOfferHold holdOwnerId searchTry.id.getId
           FWallet.removePrepaidOfferHold holdOwnerId searchTry.id.getId
+      fork "releaseOfferHoldsOnDriverReject" $ releaseOfferHoldsOnReject sReqFD searchTry.id
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
@@ -2348,6 +2349,19 @@ buildDriverQuote clientId driver driverStats searchReq sd estimateId tripCategor
         preferenceMatchScore = sd.preferenceMatchScore,
         isAutoAccepted = sd.isAutoAccepted
       }
+
+-- | On driver reject, release the offer holds for this search try — unless the
+--   holds belong to a fleet that still has another driver actively offered.
+--   TODO : Handle race if needed later
+releaseOfferHoldsOnReject :: SearchRequestForDriver -> Id DST.SearchTry -> Flow ()
+releaseOfferHoldsOnReject sReqFD searchTryId = do
+  let holdOwnerId = maybe sReqFD.driverId.getId (.getId) sReqFD.fleetOwnerId
+  sameFleetStillActive <- case sReqFD.fleetOwnerId of
+    Nothing -> pure False
+    Just fleetOwnerId -> do
+      activeSRFDs <- runInMasterRedis $ QSRD.findAllActiveBySTId searchTryId DSRD.Active
+      pure $ any (\srfd -> srfd.id /= sReqFD.id && srfd.fleetOwnerId == Just fleetOwnerId) activeSRFDs
+  unless sameFleetStillActive $ FWallet.removeOfferHolds holdOwnerId searchTryId.getId
 
 acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Flow [SearchRequestForDriver]
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking = do
