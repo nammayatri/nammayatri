@@ -131,17 +131,19 @@ instance ToHttpApiData [ServiceTierType] where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data ServiceSubType = LF | EV
+data ServiceSubType = LF | EV | TRAVELLER
   deriving (Eq, Ord, Show, Read, Generic, ToParamSchema, ToSchema)
 
 instance FromJSON ServiceSubType where
   parseJSON (String "LF") = pure LF
   parseJSON (String "EV") = pure EV
+  parseJSON (String "TRAVELLER") = pure TRAVELLER
   parseJSON _ = mzero -- Silently ignore unknown values
 
 instance ToJSON ServiceSubType where
   toJSON LF = String "LF"
   toJSON EV = String "EV"
+  toJSON TRAVELLER = String "TRAVELLER"
 
 $(mkHttpInstancesForEnum ''ServiceSubType)
 
