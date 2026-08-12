@@ -142,7 +142,7 @@ postSpecialZoneQueueManualQueueAdd merchantShortId opCity req = do
       <> ", queuePosition="
       <> show req.queuePosition
       <> ", reason=dashboard manual queue add (cleanup before re-add)"
-  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_re_add")
+  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_re_add") True
   void $ LTSFlow.manualQueueAdd req.specialLocationId req.vehicleType merchant.id driverId req.queuePosition
   logInfo $ "Dashboard: added driver " <> req.driverId <> " to queue at position " <> show req.queuePosition <> " for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
@@ -159,7 +159,7 @@ postSpecialZoneQueueManualQueueRemove merchantShortId opCity req = do
       <> ", vehicleType="
       <> req.vehicleType
       <> ", reason=dashboard manual queue remove"
-  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_manual_remove")
+  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_manual_remove") True
   logInfo $ "Dashboard: removed driver " <> req.driverId <> " from queue for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
 
@@ -172,12 +172,12 @@ queueReadFailSafeSize = 10
 
 readQueueLastTsPresence :: [Text] -> Environment.Flow [Bool]
 readQueueLastTsPresence [] = pure []
-readQueueLastTsPresence keys = do
-  primary <- Redis.withLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw keys
+readQueueLastTsPresence lastTsKeys = do
+  primary <- Redis.withLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
   mbSecondary <- asks (.secondaryLTSHedisEnv)
   secondary <- case mbSecondary of
-    Nothing -> pure $ map (const Nothing) keys
-    Just _ -> Redis.withSecondaryLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw keys
+    Nothing -> pure $ map (const Nothing) lastTsKeys
+    Just _ -> Redis.withSecondaryLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
   pure $ zipWith (\p s -> isJust p || isJust s) primary secondary
 
 getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow SZQT.SpecialZoneQueueStatsRes)
@@ -234,7 +234,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
                 <> " evictedStale="
                 <> show staleCount
             forM_ staleDriverIds $ \did ->
-              void $ LTSFlow.manualQueueRemove specialLocationId (show vt') merchant.id did (Just "stale_queue_last_ts_expired")
+              void $ LTSFlow.manualQueueRemove specialLocationId (show vt') merchant.id did (Just "stale_queue_last_ts_expired") False
 
   let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
   vehicleStats <- forM cityServiceTiers $ \vst -> do

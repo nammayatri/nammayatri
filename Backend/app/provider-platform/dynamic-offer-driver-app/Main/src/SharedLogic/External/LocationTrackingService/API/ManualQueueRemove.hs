@@ -23,7 +23,8 @@ import Kernel.Types.Id
 import Servant
 
 data ManualQueueRemoveRequest = ManualQueueRemoveRequest
-  { reason :: Maybe Text
+  { reason :: Maybe Text,
+    preservePosition :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
