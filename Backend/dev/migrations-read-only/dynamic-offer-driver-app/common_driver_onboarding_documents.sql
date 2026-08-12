@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ADD PRIMAR
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ALTER COLUMN document_data TYPE text;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ADD COLUMN rc_id character varying(36) ;

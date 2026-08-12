@@ -75,7 +75,8 @@ data BankAccountResp = BankAccountResp
 data CommonDocumentReq = CommonDocumentReq
   { documentData :: Kernel.Prelude.Text,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
-    imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image)
+    imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    registrationNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

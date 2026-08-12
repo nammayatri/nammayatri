@@ -1643,6 +1643,7 @@ CommonDriverOnboardingDocuments:
     id: Id CommonDriverOnboardingDocuments
     documentImageId: Maybe (Id Image)
     driverId: Maybe (Id Person)
+    rcId: Maybe (Id VehicleRegistrationCertificate)
     documentType: DocumentType
     documentData: CommonDocumentData|NoRelation  # typed per-documentType payload; stored as raw text, parsed/rendered in fromTType/toTType
     rejectReason: Maybe Text
@@ -1660,6 +1661,7 @@ CommonDriverOnboardingDocuments:
     id: PrimaryKey
     driverId: SecondaryKey
     documentImageId: SecondaryKey
+    rcId: "!SecondaryKey"
   queries:
     findById:
       kvFunction: findOneWithKV

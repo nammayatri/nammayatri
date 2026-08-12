@@ -28,12 +28,12 @@ createMany = traverse_ create
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
 findByDriverIdAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments])
 findByDriverIdAndDocumentType driverId documentType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId), Se.Is Beam.documentType $ Se.Eq documentType]]
 
 findById ::
@@ -68,6 +68,7 @@ updateByPrimaryKey (Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnb
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.rcId (Kernel.Types.Id.getId <$> rcId),
       Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.updatedAt _now
@@ -86,6 +87,7 @@ instance FromTType' Beam.CommonDriverOnboardingDocuments Domain.Types.CommonDriv
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            rcId = Kernel.Types.Id.Id <$> rcId,
             rejectReason = rejectReason,
             verificationStatus = verificationStatus,
             createdAt = createdAt,
@@ -102,6 +104,7 @@ instance ToTType' Beam.CommonDriverOnboardingDocuments Domain.Types.CommonDriver
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.rcId = Kernel.Types.Id.getId <$> rcId,
         Beam.rejectReason = rejectReason,
         Beam.verificationStatus = verificationStatus,
         Beam.createdAt = createdAt,

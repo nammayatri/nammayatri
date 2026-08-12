@@ -191,6 +191,7 @@ types:
     documentType: DocumentType
     documentData: Text  # JSON string containing all document data
     imageId: Maybe (Id Image)  # Optional image for documents that need it
+    registrationNo: Maybe Text  # Set for vehicle documents so the doc is scoped to that RC
   VehiclePhotosResp:
     left: [Text]
     right: [Text]
