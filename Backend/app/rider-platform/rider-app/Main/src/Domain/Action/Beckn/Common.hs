@@ -610,7 +610,7 @@ rideAssignedReqHandler req = do
                       Payment.JUSPAY_DECLINED -> "Payment was declined. Please use a different payment method."
                       _ -> "Payment could not be processed. Please try again with a different payment method."
                 logError $ "Payment intent in non-capturable status " <> show order.status <> ", cancelling ride. PI: " <> paymentResp.paymentIntentId
-                handle (\(_ :: SomeException) -> pure ()) $
+                handle (\(e :: SomeException) -> logError $ "cancelPaymentIntent failed for ride: " <> ride.id.getId <> ", booking: " <> booking.id.getId <> ", error: " <> show e) $
                   SPayment.cancelPaymentIntent booking.merchantId merchantOperatingCityId booking.paymentMode ride.id
                 let paymentError = toException (Payment.CardError (Payment.StripeErrorInfo {errorCode = Just (show order.status), errorMessage = Just reason}))
                 SPayment.paymentErrorHandler booking paymentError

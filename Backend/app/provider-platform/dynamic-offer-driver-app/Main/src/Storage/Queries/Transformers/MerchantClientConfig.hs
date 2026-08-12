@@ -16,7 +16,7 @@ getServiceName :: Domain.ClientServiceConfig -> Domain.ClientService
 getServiceName (Domain.ClientFCMServiceConfig _) = Domain.ClientFCMService
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ClientService -> m Domain.ClientServiceConfig
-mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
+mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantClientConfigT.configJSON for serviceName: " <> show serviceName <> " Error:" <> err)) return $ case serviceName of
   Domain.ClientFCMService -> Domain.ClientFCMServiceConfig <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a

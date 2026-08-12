@@ -63,21 +63,6 @@ create val = do
   Queries.create val
   clearCache val.merchantId val.merchantOperatingCityId (getServiceName val)
 
--- findAllMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantServiceConfig]
--- findAllMerchantOpCityId id =
---   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
---     Just a -> return $ fmap (coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig) a
---     Nothing -> cacheMerchantServiceConfigForCity id /=<< Queries.findAllMerchantOpCityId id
-
--- cacheMerchantServiceConfigForCity :: CacheFlow m r => Id MerchantOperatingCity -> [MerchantServiceConfig] -> m ()
--- cacheMerchantServiceConfigForCity merchantOperatingCityId cfg = do
---   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
---   let merchantIdKey = makeMerchantOpCityIdKey merchantOperatingCityId
---   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (fmap (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe)) cfg) expTime
-
--- makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
--- makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantServiceConfig:MerchantOperatingCityId-" <> id.getId
-
 findByMerchantOpCityIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantOpCityIdAndService id mocId serviceName =
   logDebug ("findByMerchantOpCityIdAndService: " <> show id <> " " <> show mocId <> " " <> show serviceName)
