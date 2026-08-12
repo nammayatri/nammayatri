@@ -9,25 +9,31 @@ where
 
 import qualified API.Types.UI.AlertWebhook
 import qualified Domain.Action.UI.AlertWebhook
+import qualified Domain.Types.AlertIncident
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( "api" :> "v1" :> "alerts" :> "update" :> QueryParam "isManual" Kernel.Prelude.Bool :> QueryParam "rca" Kernel.Prelude.Text
-      :> ReqBody
+  ( "api" :> "v1" :> "alerts" :> "update" :> QueryParam "incidentId" (Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident)
+      :> QueryParam
+           "isManual"
+           Kernel.Prelude.Bool
+      :> QueryParam "rca" Kernel.Prelude.Text
+      :> ReqBody '[JSON] API.Types.UI.AlertWebhook.VmAlertWebhookReq
+      :> Post
            '[JSON]
-           API.Types.UI.AlertWebhook.VmAlertWebhookReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
 handler = postApiV1AlertsUpdate
 
-postApiV1AlertsUpdate :: (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.AlertWebhook.VmAlertWebhookReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postApiV1AlertsUpdate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.AlertWebhook.postApiV1AlertsUpdate a3 a2 a1
+postApiV1AlertsUpdate :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.AlertIncident.AlertIncident) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.AlertWebhook.VmAlertWebhookReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postApiV1AlertsUpdate a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.AlertWebhook.postApiV1AlertsUpdate a4 a3 a2 a1
