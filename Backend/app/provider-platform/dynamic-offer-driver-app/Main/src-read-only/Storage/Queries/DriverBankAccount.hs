@@ -4,10 +4,12 @@
 
 module Storage.Queries.DriverBankAccount (module Storage.Queries.DriverBankAccount, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverBankAccount
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -26,6 +28,9 @@ createMany = traverse_ create
 
 deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteById driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+findByAccountId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.External.Payment.Stripe.Types.AccountId -> m (Maybe Domain.Types.DriverBankAccount.DriverBankAccount))
+findByAccountId accountId = do findOneWithKV [Se.Is Beam.accountId $ Se.Eq accountId]
 
 updateAccountLink ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -51,10 +56,13 @@ updateByPrimaryKey (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
       Se.Set Beam.currentAccountLink (Kernel.Prelude.fmap showBaseUrl currentAccountLink),
       Se.Set Beam.currentAccountLinkExpiry currentAccountLinkExpiry,
       Se.Set Beam.detailsSubmitted detailsSubmitted,
+      Se.Set Beam.futureRequirements (Data.Aeson.toJSON <$> futureRequirements),
       Se.Set Beam.ifscCode ifscCode,
+      Se.Set Beam.lastSyncedAt lastSyncedAt,
       Se.Set Beam.nameAtBank nameAtBank,
       Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.payoutsEnabled payoutsEnabled,
+      Se.Set Beam.requirements (Data.Aeson.toJSON <$> requirements),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now

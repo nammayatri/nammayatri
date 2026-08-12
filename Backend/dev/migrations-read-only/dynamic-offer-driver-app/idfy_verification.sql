@@ -73,3 +73,8 @@ ALTER TABLE atlas_driver_offer_bpp.idfy_verification ADD COLUMN oxygen boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

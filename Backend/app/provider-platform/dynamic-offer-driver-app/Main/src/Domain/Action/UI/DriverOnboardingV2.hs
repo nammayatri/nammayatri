@@ -1167,12 +1167,12 @@ getDriverRegisterBankAccountStatus ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountResp
   )
-getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
+getDriverRegisterBankAccountStatus (mbPersonId, _, merchantOpCityId) mbForceRefresh = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  SPBA.getPersonRegisterBankAccountStatus person
+  SPBA.getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId
 
 -- TDS Certificate validation functions
 

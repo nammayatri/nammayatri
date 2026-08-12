@@ -375,6 +375,7 @@ library
       Domain.Action.UI.SpecialLocationWarrior
       Domain.Action.UI.SpecialZoneQueue
       Domain.Action.UI.StclMembership
+      Domain.Action.UI.StripeAccountWebhook
       Domain.Action.UI.SubscriptionTransaction
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.Tokenization

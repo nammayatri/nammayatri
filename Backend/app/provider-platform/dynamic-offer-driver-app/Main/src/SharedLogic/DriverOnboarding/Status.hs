@@ -91,6 +91,7 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
+import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
@@ -1159,13 +1160,21 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
           else pure Nothing
       return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.BankingDetails -> do
+      mbDriverInfo <- DIQuery.findById (cast driverId)
+      unless (maybe False (.enabled) mbDriverInfo) $
+        void $
+          withTryCatch "getPersonRegisterBankAccountStatus:getProcessedDriverDocuments" $
+            SPBA.getPersonRegisterBankAccountStatus (Just True) driverId merchantOpCityId
       mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
-      let mbChargesEnabled = (.chargesEnabled) <$> mbBankAccount
+      bankingDetailsConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DVC.BankingDetails Nothing
+      let isManualVerification = maybe False (.isDefaultEnabledOnManualVerification) (listToMaybe bankingDetailsConfigs)
+          mbChargesEnabled = (.chargesEnabled) <$> mbBankAccount
           mbPayoutsEnabled = mbBankAccount >>= (.payoutsEnabled)
           mbDetailsSubmitted = (.detailsSubmitted) <$> mbBankAccount
           bankAccountStatus
             | mbChargesEnabled == Just True && mbPayoutsEnabled == Just True = Just VALID
-            | mbDetailsSubmitted == Just True = Just MANUAL_VERIFICATION_REQUIRED
+            | mbDetailsSubmitted == Just True =
+              if isManualVerification then Just MANUAL_VERIFICATION_REQUIRED else Just PENDING
             | otherwise = Nothing
           mkBankingMetadata accountNumber ifscCode nameAtBank upiId =
             BankingDetailsMetadata
@@ -1189,7 +1198,6 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
                   else Nothing
               )
           else do
-            mbDriverInfo <- DIQuery.findById (cast driverId)
             return
               ( maybe False (\di -> isJust di.driverBankAccountDetails || isJust di.payerVpa) mbDriverInfo,
                 if enableMetadata

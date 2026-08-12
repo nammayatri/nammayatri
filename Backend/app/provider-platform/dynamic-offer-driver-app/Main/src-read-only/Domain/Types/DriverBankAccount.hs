@@ -8,6 +8,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -21,10 +22,13 @@ data DriverBankAccount = DriverBankAccount
     currentAccountLinkExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     detailsSubmitted :: Kernel.Prelude.Bool,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     ifscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lastSyncedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     nameAtBank :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

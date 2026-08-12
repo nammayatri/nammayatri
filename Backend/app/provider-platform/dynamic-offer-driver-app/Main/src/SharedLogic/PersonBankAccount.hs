@@ -6,18 +6,30 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Types.SlidingWindowCounters (SlidingWindowOptions (..))
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions (..))
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowCounters (convertPeriodTypeToSeconds)
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import Tools.Error
@@ -29,13 +41,28 @@ data PersonStripeInfo = PersonStripeInfo
     idNumber :: Maybe (EncryptedHashed Text),
     companyName :: Maybe Text,
     fleetType :: Maybe DFOI.FleetType,
-    vatNumber :: Maybe Text, -- VAT number -> Stripe company[vat_id]
-    businessRegistrationNumber :: Maybe (EncryptedHashed Text) -- business reg no (Y-tunnus) -> Stripe company[tax_id]
+    vatNumber :: Maybe Text,
+    businessRegistrationNumber :: Maybe (EncryptedHashed Text)
   }
 
 newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
   { fetchPersonStripeInfo :: Flow PersonStripeInfo
   }
+
+defaultRefreshLimit :: APIRateLimitOptions
+defaultRefreshLimit = APIRateLimitOptions {limit = 3, limitResetTimeInSec = 3600}
+
+toRateLimitOptions :: DTC.TransporterConfig -> APIRateLimitOptions
+toRateLimitOptions cfg =
+  APIRateLimitOptions
+    { limit = fromMaybe defaultRefreshLimit.limit cfg.stripeStatusRefreshCountThreshold,
+      limitResetTimeInSec = maybe defaultRefreshLimit.limitResetTimeInSec fromWindow cfg.stripeStatusRefreshCountWindow
+    }
+  where
+    fromWindow SlidingWindowOptions {..} = fromInteger (period * convertPeriodTypeToSeconds periodType)
+
+refreshRateLimitKey :: Id Domain.Types.Person.Person -> Text
+refreshRateLimitKey driverId = "BPP:Stripe:StatusRefresh:" <> driverId.getId <> ":hitsCount"
 
 getPersonRegisterBankAccountLink ::
   PersonRegisterBankAccountLinkHandle ->
@@ -48,22 +75,10 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
   now <- getCurrentTime
   case mPersonBankAccount of
     Just bankAccount -> do
-      when bankAccount.chargesEnabled $ throwError $ InvalidRequest "Bank account already enabled"
-      case (bankAccount.currentAccountLink, bankAccount.currentAccountLinkExpiry) of
-        (Just link, Just expiry) -> do
-          if expiry > now
-            then
-              return $
-                API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-                  { chargesEnabled = bankAccount.chargesEnabled,
-                    payoutsEnabled = bankAccount.payoutsEnabled,
-                    accountLink = link,
-                    accountUrlExpiry = expiry,
-                    detailsSubmitted = bankAccount.detailsSubmitted,
-                    paymentMode
-                  }
-            else refreshLink bankAccount paymentMode
-        _ -> refreshLink bankAccount paymentMode
+      let currentlyDue = fromMaybe [] (bankAccount.requirements >>= (.currentlyDue))
+      when (bankAccount.chargesEnabled && null currentlyDue) $
+        throwError $ InvalidRequest "Bank account already enabled"
+      refreshLink bankAccount paymentMode
     _ -> createAccount now paymentMode
   where
     refreshLink :: DDBA.DriverBankAccount -> DMPM.PaymentMode -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
@@ -115,8 +130,8 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
               Just
                 Payment.CompanyConnectDetails
                   { name = companyName,
-                    taxId = businessRegistrationNumber, -- Y-tunnus -> company[tax_id]
-                    vatId = personStripeInfo.vatNumber, -- VAT -> company[vat_id]
+                    taxId = businessRegistrationNumber,
+                    vatId = personStripeInfo.vatNumber,
                     address = personStripeInfo.address
                   }
           Nothing ->
@@ -153,7 +168,10 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 createdAt = now,
                 updatedAt = now,
                 ifscCode = Nothing,
-                nameAtBank = Nothing
+                nameAtBank = Nothing,
+                requirements = resp.requirements,
+                futureRequirements = resp.futureRequirements,
+                lastSyncedAt = Just now
               }
       QDBA.create driverBankAccount
       QDBA.syncBankAccountToPool person.id resp.chargesEnabled (Just paymentMode)
@@ -183,33 +201,50 @@ validatePaymentMode mbPaymentMode mbDriverBankAccount = do
   pure paymentMode
 
 getPersonRegisterBankAccountStatus ::
-  Domain.Types.Person.Person ->
-  Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountResp
-getPersonRegisterBankAccountStatus person = do
-  driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id >>= fromMaybeM (DriverBankAccountNotFound person.id.getId)
-  let paymentMode = fromMaybe DMPM.LIVE driverBankAccount.paymentMode
-  -- Skip the Stripe poll only when both flags are already true in our cache. Legacy rows
-  -- without payoutsEnabled (Nothing) fail the && so we re-poll Stripe and cache the value.
-  if driverBankAccount.chargesEnabled && fromMaybe False driverBankAccount.payoutsEnabled
-    then
-      return $
-        API.Types.UI.DriverOnboardingV2.BankAccountResp
-          { chargesEnabled = driverBankAccount.chargesEnabled,
-            payoutsEnabled = driverBankAccount.payoutsEnabled,
-            detailsSubmitted = driverBankAccount.detailsSubmitted,
-            paymentMode,
-            requirements = Nothing,
-            futureRequirements = Nothing
-          }
-    else do
-      resp <- TPayment.getAccount person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
-      QDBA.updateAccountStatus resp.chargesEnabled resp.payoutsEnabled resp.detailsSubmitted person.id
-      return $
-        API.Types.UI.DriverOnboardingV2.BankAccountResp
-          { chargesEnabled = resp.chargesEnabled,
-            payoutsEnabled = Just resp.payoutsEnabled,
-            detailsSubmitted = resp.detailsSubmitted,
-            paymentMode,
-            requirements = resp.requirements,
-            futureRequirements = resp.futureRequirements
-          }
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    Kernel.Storage.Hedis.HedisFlow m r,
+    Kernel.Storage.Hedis.HedisLTSFlowEnv r
+  ) =>
+  Maybe Bool ->
+  Id Domain.Types.Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m API.Types.UI.DriverOnboardingV2.BankAccountResp
+getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
+  bankAccount <- runInReplica $ QDBA.findByPrimaryKey personId >>= fromMaybeM (DriverBankAccountNotFound personId.getId)
+  let paymentMode = fromMaybe DMPM.LIVE bankAccount.paymentMode
+      forceRefresh = fromMaybe False mbForceRefresh
+      currentlyDue = fromMaybe [] (bankAccount.requirements >>= (.currentlyDue))
+      isBankAccountSuccessfullyLinked = bankAccount.chargesEnabled && null currentlyDue
+  bankAccount' <-
+    if not forceRefresh || isBankAccountSuccessfullyLinked
+      then pure bankAccount
+      else do
+        rateLimitOpts <- getRateLimitOpts merchantOpCityId
+        limited <- try @_ @SomeException (checkSlidingWindowLimitWithOptions (refreshRateLimitKey personId) rateLimitOpts)
+        case limited of
+          Left _ -> pure bankAccount
+          Right _ -> do
+            resp <- TPayment.getAccount merchantOpCityId (Just paymentMode) bankAccount.accountId
+            QDBA.updateAccountStatus resp.chargesEnabled resp.payoutsEnabled resp.detailsSubmitted resp.requirements resp.futureRequirements personId
+            pure
+              bankAccount
+                { DDBA.chargesEnabled = resp.chargesEnabled,
+                  DDBA.payoutsEnabled = Just resp.payoutsEnabled,
+                  DDBA.detailsSubmitted = resp.detailsSubmitted,
+                  DDBA.requirements = resp.requirements,
+                  DDBA.futureRequirements = resp.futureRequirements
+                }
+  pure $
+    API.Types.UI.DriverOnboardingV2.BankAccountResp
+      { chargesEnabled = bankAccount'.chargesEnabled,
+        payoutsEnabled = bankAccount'.payoutsEnabled,
+        detailsSubmitted = bankAccount'.detailsSubmitted,
+        requirements = bankAccount'.requirements,
+        futureRequirements = bankAccount'.futureRequirements,
+        paymentMode
+      }
+  where
+    getRateLimitOpts opCityId = do
+      mbCfg <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) Nothing
+      pure $ maybe defaultRefreshLimit toRateLimitOptions mbCfg

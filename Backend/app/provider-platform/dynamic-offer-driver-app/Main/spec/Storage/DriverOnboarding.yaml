@@ -22,6 +22,7 @@ imports:
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
   AccountId: Kernel.External.Payment.Stripe.Types
+  RequirementsInfo: Kernel.External.Payment.Interface.Types
   ImageExtractionValidation: Domain.Types.IdfyVerification
   MediaFileDocumentType: Domain.Types.Common
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
@@ -1197,21 +1198,36 @@ DriverBankAccount:
     paymentMode: Maybe PaymentMode
     ifscCode: Maybe Text
     nameAtBank: Maybe Text
+    requirements: Maybe RequirementsInfo
+    futureRequirements: Maybe RequirementsInfo
+    lastSyncedAt: Maybe UTCTime
 
   constraints:
     driverId: PrimaryKey
     accountId: "!SecondaryKey" # forcing to be a secondary key
+  sqlType:
+    requirements: json
+    futureRequirements: json
   beamType:
     currentAccountLink: Maybe Text
+    requirements: Maybe Value
+    futureRequirements: Maybe Value
   toTType:
     currentAccountLink: Kernel.Prelude.fmap showBaseUrl|I
+    requirements: Data.Aeson.toJSON <$> requirements|E
+    futureRequirements: Data.Aeson.toJSON <$> futureRequirements|E
   fromTType:
     currentAccountLink: Kernel.Prelude.mapM parseBaseUrl|MI
+    requirements: Kernel.Utils.JSON.valueToMaybe =<< requirements|E
+    futureRequirements: Kernel.Utils.JSON.valueToMaybe =<< futureRequirements|E
   queries:
     updateAccountLink:
       kvFunction: updateOneWithKV
       params: [currentAccountLink, currentAccountLinkExpiry]
       where: driverId
+    findByAccountId:
+      kvFunction: findOneWithKV
+      where: accountId
     deleteById:
       kvFunction: deleteWithKV
       where: driverId

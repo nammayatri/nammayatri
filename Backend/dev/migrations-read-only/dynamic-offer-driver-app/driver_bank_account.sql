@@ -27,3 +27,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN ifsc_code text
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN payouts_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN requirements json ;
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN last_synced_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN future_requirements json ;

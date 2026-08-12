@@ -3,6 +3,7 @@
 
 module Storage.Beam.DriverBankAccount where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -13,20 +14,23 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DriverBankAccountT f = DriverBankAccountT
-  { accountId :: (B.C f Kernel.External.Payment.Stripe.Types.AccountId),
-    chargesEnabled :: (B.C f Kernel.Prelude.Bool),
-    currentAccountLink :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    currentAccountLinkExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    detailsSubmitted :: (B.C f Kernel.Prelude.Bool),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    ifscCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    nameAtBank :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    paymentMode :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode)),
-    payoutsEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { accountId :: B.C f Kernel.External.Payment.Stripe.Types.AccountId,
+    chargesEnabled :: B.C f Kernel.Prelude.Bool,
+    currentAccountLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    currentAccountLinkExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    detailsSubmitted :: B.C f Kernel.Prelude.Bool,
+    driverId :: B.C f Kernel.Prelude.Text,
+    futureRequirements :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    ifscCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    lastSyncedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    nameAtBank :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
+    payoutsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    requirements :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +40,6 @@ instance B.Table DriverBankAccountT where
 
 type DriverBankAccount = DriverBankAccountT Identity
 
-$(enableKVPG (''DriverBankAccountT) [('driverId)] [[('accountId)]])
+$(enableKVPG ''DriverBankAccountT ['driverId] [['accountId]])
 
-$(mkTableInstances (''DriverBankAccountT) "driver_bank_account")
+$(mkTableInstances ''DriverBankAccountT "driver_bank_account")

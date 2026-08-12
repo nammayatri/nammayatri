@@ -44,6 +44,8 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.authPhoneNumberCountWindow2 authPhoneNumberCountWindow2,
       Se.Set Beam.fraudAuthCountThreshold fraudAuthCountThreshold,
       Se.Set Beam.fraudAuthCountWindow fraudAuthCountWindow,
+      Se.Set Beam.stripeStatusRefreshCountThreshold stripeStatusRefreshCountThreshold,
+      Se.Set Beam.stripeStatusRefreshCountWindow stripeStatusRefreshCountWindow,
       Se.Set Beam.authIpBlockedUntilInMins authIpBlockedUntilInMins,
       Se.Set Beam.pickupLocThreshold pickupLocThreshold,
       Se.Set Beam.dropLocThreshold dropLocThreshold,
