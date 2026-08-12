@@ -138,3 +138,82 @@ Types: feat, fix, chore, ci, docs, perf, refactor, test
 | `15-conventions.md` | Haskell conventions |
 | `16-status-definitions.md` | Status enums, state transitions |
 | `17-testing-framework.md` | Config sync, integration tests, mock servers, test tools |
+
+---
+
+# This fork: Movin DZ (Algeria)
+
+Everything above is upstream Namma Yatri and still applies to the Haskell
+services. This section is what is different here, and it is mostly about what
+**not** to look for.
+
+## What we actually run
+
+The whole deployment is `Backend/dev/local-stack` — Docker Compose, one VPS,
+~20 containers. Read that directory's README first; it is the real
+documentation for this fork. `./setup.sh` brings it up.
+
+Three services were replaced so the stack needs no Google account and no bill:
+
+| Upstream | Here |
+|---|---|
+| Google Directions | **OSRM**, our own, on the Algeria OSM extract |
+| Google Maps tiles | **tileserver-gl**, same extract |
+| Google Places / geocoding | **`maps-shim`**, answering from a Postgres place index |
+
+The trick that makes those possible is worth knowing before adding a fourth:
+**service endpoints are database config, not compiled in.** `Maps_Google` in
+`atlas_app.merchant_service_config` carries `"googleMapsUrl"`, and pointing it
+at `maps-shim` is the entire integration. The same is true of
+`Sms_MyValueFirst`, which is how OTP delivery can be replaced later without
+rebuilding anything.
+
+## The rider app is NOT in this repository
+
+`Frontend/` here is upstream's PureScript app and **we do not build or ship
+it.** The Movin DZ rider app is React Native (Expo), in its own private repo,
+cloned alongside this one:
+
+    ~/ny-algeria-passenger      github.com/nammayatri-algeria/namma-yatri-frontend
+
+Anything about screens, the APK, the signing key or the map UI belongs there.
+
+## Binaries, and why patches go around the backend
+
+The services run as **prebuilt images** from a CI job with a ~6-hour budget and
+a cache that accumulates across runs. Rebuilding to change one line risks
+ending up with binaries that differ from everything tested so far.
+
+So: prefer config, SQL, or a shim in front. The OTP attempt limit lives in
+nginx for exactly this reason, not in the Haskell that already had the counter.
+
+## Algeria-specific data
+
+- Service area is the **national border**, in `algeria-geofences.sql`. Note
+  that `serviceable: true` therefore means "inside Algeria", not "a car will
+  come" — Tamanrasset is serviceable and 1,900 km from any driver.
+- Phone numbers are `+213`, and the server wants the **trunk zero**
+  (`0550123456`); the international form is rejected.
+- The place index is built by `./geocoder-prepare.sh` from the same
+  `algeria-latest.osm.pbf` that feeds OSRM and the tiles.
+
+## Backups
+
+`./backup.sh` — nightly, encrypted, off to cloud storage. It deliberately skips
+the 155 MB place index (rebuildable) and deliberately includes the **passetto**
+database, without which restored phone numbers are unreadable ciphertext. See
+the header of that script.
+
+## Traps that have each cost an afternoon
+
+- **Driver locations go stale silently.** The dispatch pool ignores old
+  positions, so search returns zero estimates with no error anywhere. Run
+  `./setup.sh drivers` before any demo.
+- **`docker exec -i` inside `ssh host "bash -s" <<EOF` eats the rest of the
+  script** from stdin. Drop the `-i`.
+- **`ufw limit` rejects the sixth SSH connection in 30 seconds** — exit 255 and
+  no output. Batch remote work into one connection.
+- **Replacing a bind-mounted file breaks the mount.** `tar -x` unlinks the
+  inode; the container keeps serving the old file while `nginx -t` passes.
+  Use `scp`, which truncates in place.
+- **Editing a script through the Windows UNC path strips its exec bit.**

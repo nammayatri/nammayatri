@@ -617,6 +617,78 @@ All three signing parties use the same dev key, so the single public key in the
 registry fixture is correct for all of them and signature auth works unmodified
 (`disableSignatureAuth = False` throughout).
 
+## Backups — `./backup.sh`
+
+```bash
+./backup.sh              # take one now
+./backup.sh restore F    # restore F into a scratch database and check it
+./backup.sh list         # what we hold, and how old the newest is
+./backup.sh install      # install the nightly systemd timer (02:30)
+```
+
+Nightly, encrypted with GPG AES-256, uploaded off the server with `rclone`.
+**1.8 MB** per backup out of a 183 MB database, which is the whole point of the
+next two sections.
+
+### It is not `pg_dump atlas_dev`, for two reasons
+
+**The encryption keys are in a different container.** `atlas_app` stores rider
+phone numbers encrypted and the keys live in `ny-passetto-db`. A dump of
+`ny-postgres` alone restores perfectly and leaves every number permanently
+unreadable — a backup that looks complete and is not. Both databases go into the
+archive, and a restore is only meaningful with both.
+
+**Most of the database is rebuildable, and skipping it is 183 MB → 1.8 MB:**
+
+| Schema | Size | In the backup? |
+|---|---|---|
+| `geo` | 155 MB | no — `./geocoder-prepare.sh` rebuilds it in ~5 min |
+| `public` | 7 MB | no — PostGIS `spatial_ref_sys`, ships with the extension |
+| `tiger`, `tiger_data`, `topology` | 2 MB | no — PostGIS reference data |
+| `atlas_app` | 3.9 MB | **yes** — riders, bookings, rides |
+| `atlas_driver_offer_bpp` | 3.6 MB | **yes** — drivers, fares, the BPP side |
+| `atlas_registry` | 40 kB | **yes** |
+
+An include list has one failure mode: a schema added later is left out silently.
+So the script **refuses to run if the schema set has changed**, and says which
+one is new. That guard earned itself on its first run by catching `tiger_data`.
+
+### Setting it up
+
+```bash
+openssl rand -base64 32 > /root/.movin-backup-pass
+chmod 600 /root/.movin-backup-pass
+
+rclone config                                        # once, interactively
+RCLONE_REMOTE=movin-drive:movin-backups ./backup.sh install
+```
+
+**The passphrase must not live only on this server.** It is the one thing
+standing between the uploaded archive and every rider's phone number, and the
+backups exist for the case where this machine is gone. Keep it wherever the
+Android signing key is kept. Changing it later does **not** re-encrypt existing
+backups, so the old value has to be kept too.
+
+With `RCLONE_REMOTE` unset the backup still runs and says loudly that it stayed
+on this server. That is deliberate — a local-only backup is worth something, and
+a script that implied it went offsite when it did not would be worth less than
+nothing.
+
+### Verifying, rather than assuming
+
+`./backup.sh restore` decrypts into a **scratch database**, never the live one,
+and checks the row counts against the manifest inside the archive. Do it against
+a copy pulled back down from the remote, not the local file — that is the copy
+that will actually be used.
+
+Two traps met while building this, both silent:
+
+- `docker exec -i` inside `ssh host "bash -s" <<EOF` **consumes the rest of the
+  script** from stdin; the first query runs and nothing after it does.
+- A unit that works when you run it can still fail under systemd. Fire
+  `systemctl start movin-backup.service` and read the journal, the same way the
+  certbot timer had to be checked.
+
 ## Gotchas
 
 **Use `/swagger`, not `/swagger/`.** With a trailing slash the page's relative
