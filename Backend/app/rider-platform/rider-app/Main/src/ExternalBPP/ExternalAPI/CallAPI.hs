@@ -322,8 +322,8 @@ getStationList integrationBPPConfig = do
           stations
     _ -> throwError $ InternalError "Unimplemented!"
 
-getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
-getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
+getPaymentDetails :: (MonadFlow m) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
+getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = throwError $ InternalError "getPaymentDetails: Unimplemented!"
 
 getChangeOverAndViaPoints :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m (Text, Text, Text)
 getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do

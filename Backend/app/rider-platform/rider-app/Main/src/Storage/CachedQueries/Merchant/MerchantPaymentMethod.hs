@@ -49,7 +49,7 @@ cacheMerchantPaymentMethods merchantId cfg = do
   Hedis.setExp merchantIdKey cfg expTime
 
 makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
-makeMerchantOperatingCityIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantOperatingCityId-" <> id.getId
+makeMerchantOperatingCityIdKey id = "rider-app:CachedQueries:MerchantPaymentMethod:MerchantOperatingCityId-" <> id.getId
 
 makeIdKey :: Id MerchantPaymentMethod -> Text
 makeIdKey id = "rider-app:CachedQueries:MerchantPaymentMethod:Id-" <> id.getId

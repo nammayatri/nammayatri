@@ -35,7 +35,7 @@ import qualified Utils.Common.JWT.Config as GW
 
 getServiceConfigFromDomain :: (MonadFlow m) => Domain.ServiceName -> A.Value -> m Domain.ServiceConfig
 getServiceConfigFromDomain serviceName configJSON = do
-  maybe (throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON - " <> show serviceName <> " | " <> encodeToText configJSON)) return $ case serviceName of
+  maybe (throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON - " <> show serviceName)) return $ case serviceName of
     Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
     Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON

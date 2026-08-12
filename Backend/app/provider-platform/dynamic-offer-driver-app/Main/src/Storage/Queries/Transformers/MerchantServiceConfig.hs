@@ -255,7 +255,7 @@ getPayoutServiceConfigJson = \case
     Nothing -> Payout.Stripe
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
-mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
+mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON for serviceName: " <> show serviceName <> " Error:" <> err)) return $ case serviceName of
   Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> eitherValue configJSON
   Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> eitherValue configJSON
   Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> eitherValue configJSON
