@@ -118,7 +118,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                       <> ", requestId="
                       <> requestId.getId
                       <> ", reason=no-show at pickup zone after accepting request"
-                  void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "no_show_at_pickup")
+                  void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "no_show_at_pickup") False
                   QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired requestId
                   SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId gateId vehicleType
                   -- A no-show frees a committed slot — drop the trigger's net accept
