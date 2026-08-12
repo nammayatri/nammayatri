@@ -1,5 +1,6 @@
 imports:
   APISuccess: Kernel.Types.APISuccess
+  AlertIncident: Domain.Types.AlertIncident
 
 module: AlertWebhook
 
@@ -37,5 +38,6 @@ apis:
       query:
         isManual: Bool
         rca: Text
+        incidentId: Id AlertIncident
       response:
         type: APISuccess
