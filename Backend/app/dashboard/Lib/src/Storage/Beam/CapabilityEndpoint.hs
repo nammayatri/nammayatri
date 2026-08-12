@@ -29,12 +29,12 @@ data CapabilityEndpointT f = CapabilityEndpointT
 
 instance B.Table CapabilityEndpointT where
   data PrimaryKey CapabilityEndpointT f
-    = CapabilityEndpointKey (B.C f Text) (B.C f Text)
+    = CapabilityEndpointKey (B.C f Text) (B.C f Text) (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey CapabilityEndpointT {..} = CapabilityEndpointKey serverName endpointId
+  primaryKey CapabilityEndpointT {..} = CapabilityEndpointKey serverName endpointId capabilityId
 
 type CapabilityEndpoint = CapabilityEndpointT Identity
 
-$(enableKVPG ''CapabilityEndpointT ['serverName, 'endpointId] [])
+$(enableKVPG ''CapabilityEndpointT ['serverName, 'endpointId, 'capabilityId] [])
 
 $(mkTableInstancesGenericSchema ''CapabilityEndpointT "capability_endpoint")
