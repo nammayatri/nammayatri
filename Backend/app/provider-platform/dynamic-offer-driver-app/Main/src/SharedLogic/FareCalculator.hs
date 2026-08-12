@@ -371,14 +371,11 @@ fareSum fareParams conditionalChargeCategories =
     - (if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0)
     - (if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0)
   where
-    edcCollectsParking :: Bool
-    edcCollectsParking = SL.edcCollectsParking fareParams.fareSettlementType
-
     pureFareSum :: HighPrecMoney
     pureFareSum = do
       let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
-          parkingContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.parkingCharge
-          parkingTaxContribution = if edcCollectsParking then 0.0 else fromMaybe 0.0 fareParams.parkingChargeTax
+          parkingContribution = fromMaybe 0.0 (SL.excludeIfEdcCollectsParking fareParams.fareSettlementType fareParams.parkingCharge)
+          parkingTaxContribution = fromMaybe 0.0 (SL.excludeIfEdcCollectsParking fareParams.fareSettlementType fareParams.parkingChargeTax)
       fareParams.baseFare
         + fromMaybe 0.0 fareParams.serviceCharge
         + fromMaybe 0.0 fareParams.waitingCharge

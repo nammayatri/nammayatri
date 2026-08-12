@@ -28,6 +28,7 @@ import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude hiding (show)
 import Kernel.Types.Id
+import Kernel.Types.Price (HighPrecMoney)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
@@ -68,6 +69,12 @@ edcCollectsParking = (`elem` [Just ParkingOnly, Just CommissionAndParking])
 
 commissionCollectedAtBooth :: Maybe FareSettlementType -> Bool
 commissionCollectedAtBooth = (`elem` [Just CommissionOnly, Just CommissionAndParking])
+
+
+excludeIfEdcCollectsParking :: Maybe FareSettlementType -> Maybe HighPrecMoney -> Maybe HighPrecMoney
+excludeIfEdcCollectsParking fareSettlementType amount
+  | edcCollectsParking fareSettlementType = Nothing
+  | otherwise = amount
 
 parsePaymentModes :: Maybe Text -> Either Text (Maybe [PaymentMode])
 parsePaymentModes mbRaw =
