@@ -2,7 +2,7 @@ module Storage.Queries.CommonDriverOnboardingDocumentsExtra
   ( CommonDocumentsFilter (..),
     findAllForCommonDocuments,
     countForCommonDocuments,
-    findLatestByDriverIdAndDocumentType,
+    findLatestByDriverIdAndRcIdAndDocumentType,
   )
 where
 
@@ -12,6 +12,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -94,17 +95,19 @@ countForCommonDocuments CommonDocumentsFilter {..} = do
               B.all_ (BeamCommon.commonDriverOnboardingDocuments BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findLatestByDriverIdAndDocumentType ::
+findLatestByDriverIdAndRcIdAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe (Id.Id DP.Person) ->
+  Maybe (Id.Id DRC.VehicleRegistrationCertificate) ->
   DVC.DocumentType ->
   m [DCommonDoc.CommonDriverOnboardingDocuments]
-findLatestByDriverIdAndDocumentType driverId documentType =
+findLatestByDriverIdAndRcIdAndDocumentType driverId mbRcId documentType =
   findAllWithOptionsKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is Beam.driverId $ Se.Eq (Id.getId <$> driverId),
           Se.Is Beam.documentType $ Se.Eq documentType
         ]
+          <> maybe [] (\rcId -> [Se.Is Beam.rcId $ Se.Eq (Just $ Id.getId rcId)]) mbRcId
     ]
     (Se.Desc Beam.updatedAt)
     (Just 1)

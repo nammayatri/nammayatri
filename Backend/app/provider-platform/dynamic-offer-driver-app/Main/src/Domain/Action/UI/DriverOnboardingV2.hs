@@ -1295,13 +1295,18 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
       let errorJson = decodeUtf8 $ BSL.toStrict $ A.encode validationErrors
       throwError $ InvalidRequest $ "TDS Certificate validation failed: " <> errorJson
 
+  mbVehicleRcId <- forM registrationNo $ \rcNo -> do
+    rcNoEnc <- encrypt rcNo
+    rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for registrationNo: " <> rcNo)
+    pure rc.id
+
   -- Create the common document entry
-  documentEntry <- buildCommonDocument driverId
+  documentEntry <- buildCommonDocument driverId mbVehicleRcId
   logInfo $ "documentEntry: " <> show documentEntry
   QCommonDriverOnboardingDocuments.create documentEntry
   return Success
   where
-    buildCommonDocument driverId = do
+    buildCommonDocument driverId mbVehicleRcId = do
       id <- generateGUID
       now <- getCurrentTime
       let typedDocumentData = DCommonDocData.parseCommonDocumentDataSafe documentType documentData
@@ -1310,6 +1315,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
           { id = id,
             documentImageId = imageId,
             driverId = Just driverId,
+            rcId = mbVehicleRcId,
             documentType = documentType,
             documentData = typedDocumentData,
             rejectReason = Nothing,

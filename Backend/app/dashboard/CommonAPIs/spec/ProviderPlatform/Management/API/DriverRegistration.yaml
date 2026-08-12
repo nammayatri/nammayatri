@@ -576,6 +576,8 @@ types:
     - documentType: DocumentType
     - documentData: Text
     - imageId: Maybe (Id Image)
+    - registrationNo: Maybe Text
+    - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CommonDocumentCreateRes:
     - result: Text

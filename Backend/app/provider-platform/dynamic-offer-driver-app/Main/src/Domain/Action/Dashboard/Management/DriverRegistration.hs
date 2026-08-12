@@ -718,6 +718,15 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   whenJust imageId $ \imgId -> do
     void $ QImage.findById (cast imgId) >>= fromMaybeM (InvalidRequest "Image not found")
 
+  mbDocConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType documentType), vehicleCategory = Just (fromMaybe DVCat.CAR vehicleCategory)}) Nothing
+  let isVehicleDoc = ((.documentCategory) =<< mbDocConfig) == Just DVC.Vehicle
+  mbVehicleRcId <- forM registrationNo $ \rcNo -> do
+    rcNoEnc <- encrypt rcNo
+    rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for registrationNo: " <> rcNo)
+    pure rc.id
+  when (isVehicleDoc && isNothing mbVehicleRcId) $
+    throwError $ InvalidRequest $ "registrationNo is required for vehicle document type " <> show documentType
+
   -- Validate TDSCertificate document data (same as UI /driver/register/commonDocument)
   when (documentType == Common.TDSCertificate) $ do
     tdsData <- parseTDSCertificateData documentData
@@ -743,6 +752,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
                   documentImageId = cast <$> imageId,
                   documentType = mapDocumentType documentType,
                   driverId = Just driverPersonId,
+                  rcId = mbVehicleRcId,
                   documentData = typedDocumentData,
                   rejectReason = Nothing,
                   verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
