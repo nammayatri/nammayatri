@@ -13,6 +13,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrder as QRSO
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 type API =
   "receiver_recon"
@@ -27,7 +28,7 @@ receiverRecon ::
   SignatureAuthResult ->
   Spec.ReceiverReconReq ->
   FlowHandler Spec.RSFAckResponse
-receiverRecon _ req = withFlowHandlerAPI $ do
+receiverRecon _authResult req = withFlowHandlerAPI $ do
   let ctx = req.receiverReconReqContext
   case validateContext ctx of
     Just nack -> pure nack
@@ -54,10 +55,17 @@ receiverRecon _ req = withFlowHandlerAPI $ do
                   logError $ "RSF: no merchant found for bpp_id=" <> bppId
                   pure $ RSFUtils.buildNack ("No merchant found for bpp_id: " <> bppId)
                 Just merchant -> do
-                  domainReq <- ACL.buildReceiverReconDomain req
-                  fork "rsf-receiver-recon" $ do
-                    DRecon.handleReceiverRecon merchant.id domainReq
-                  pure RSFUtils.buildAck
+                  mbMoc <- CQMOC.findByMerchantIdAndCity merchant.id merchant.city
+                  case mbMoc of
+                    Nothing -> do
+                      logError $ "RSF: no operating city for merchant=" <> bppId
+                      pure $ RSFUtils.buildNack "No operating city found for merchant"
+                    Just moc -> do
+                      domainReq <- ACL.buildReceiverReconDomain req
+                      DRecon.ingestReceiverRecon merchant.id moc.id domainReq
+                      fork "rsf-receiver-recon" $
+                        DRecon.reconcileIngestedOrders merchant.id moc.id domainReq
+                      pure RSFUtils.buildAck
 
 validateContext :: Spec.RSFContext -> Maybe Spec.RSFAckResponse
 validateContext ctx
@@ -65,4 +73,6 @@ validateContext ctx
     Just $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidDomain
   | ctx.rsfContextAction /= Just "receiver_recon" =
     Just $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidAction
+  | ctx.rsfContextCoreVersion /= Just "1.0.0" =
+    Just $ RSFUtils.buildNackForCode RSFUtils.RSFInvalidVersion
   | otherwise = Nothing

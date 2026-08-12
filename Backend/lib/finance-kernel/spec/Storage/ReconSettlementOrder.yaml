@@ -7,9 +7,6 @@ ReconSettlementOrder:
   tableName: recon_settlement_order
 
   types:
-    RefundObligationStatus:
-      enum: "OWED,REFUNDED"
-      derive: "ToParamSchema"
     ReconSourceType:
       enum: "BAP_CLAIMED,UNSOLICITED,ADMIN_SETTLED"
       derive: "ToParamSchema"
@@ -54,8 +51,6 @@ ReconSettlementOrder:
     orderSequence: Int
     settlementDetailIndex: Int
     settlementClearedAt: Maybe UTCTime
-    correctionForOrderRowId: Maybe (Id ReconSettlementOrder)
-    refundStatus: Maybe RefundObligationStatus
     manuallyConfirmedAt: Maybe UTCTime
     manuallyConfirmedBy: Maybe Text
     manualConfirmationReason: Maybe Text
@@ -63,8 +58,6 @@ ReconSettlementOrder:
     diffAmount: Maybe HighPrecMoney
     remarks: Maybe Text
     payoutEligible: Maybe Bool
-    refundReference: Maybe Text
-    refundedAt: Maybe UTCTime
     rawJson: Text
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -93,7 +86,6 @@ ReconSettlementOrder:
     settlementType: character varying(50)
     reasonCode: character varying(10)
     sourceType: character varying(50)
-    refundStatus: character varying(50)
     ourReconStatus: character varying(50)
     diffAmount: numeric(30,2)
     rawJson: text

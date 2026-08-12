@@ -20,3 +20,14 @@ ALTER TABLE atlas_app.recon_utr_settlement ADD COLUMN total_orders integer NOT N
 ALTER TABLE atlas_app.recon_utr_settlement ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.recon_utr_settlement ADD COLUMN utr text NOT NULL;
 ALTER TABLE atlas_app.recon_utr_settlement ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN send_status DROP NOT NULL;
+ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN send_attempts DROP NOT NULL;
+ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN deadline DROP NOT NULL;
+--- Drop section ends. Please check before running ---

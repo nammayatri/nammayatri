@@ -58,3 +58,7 @@ ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN refunded_at
 ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN refund_reference text ;
 ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN reconciliation_status text ;
 ALTER TABLE atlas_driver_offer_bpp.recon_settlement_order ADD COLUMN payout_eligible boolean ;
+
+
+------- SQL updates -------
+

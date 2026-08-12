@@ -86,47 +86,51 @@ rsoRowsToSourceRecords ::
 rsoRowsToSourceRecords rsoRows = do
   let grouped :: Map.Map Text [RSO.ReconSettlementOrder]
       grouped = Map.fromListWith (<>) [(r.orderId, [r]) | r <- rsoRows]
-  fmap catMaybes . forM (Map.toList grouped) $ \(orderId, rows) -> do
-    let firstRow = head rows
-        bff = fromMaybe 0 firstRow.bffAmount
-        gst = fromMaybe 0 firstRow.withholdingTaxGst
-        tds = fromMaybe 0 firstRow.withholdingTaxTds
-        ded = fromMaybe 0 firstRow.deductionByCollector
-        totalClaimed = sum [r.claimedSettlementAmount | r <- rows]
-    mbBooking <- B.runInReplica $ QBooking.findById (Id orderId)
-    mbRide <- case mbBooking of
-      Nothing -> pure Nothing
-      Just booking -> B.runInReplica $ QRide.findOneByBookingId booking.id
-    let rideFare = fromMaybe 0 (mbRide >>= (.fare))
-        rideIdText = (.id.getId) <$> mbRide
-        driverIdText = (.driverId.getId) <$> mbRide
-        expectedNet = rideFare - bff - gst - tds - ded
-        meta =
-          A.object
-            [ "totalClaimed" .= totalClaimed,
-              "rideFare" .= rideFare,
-              "rideId" .= rideIdText,
-              "driverId" .= driverIdText,
-              "bff" .= bff,
-              "gst" .= gst,
-              "tds" .= tds,
-              "deductions" .= ded,
-              "expectedNet" .= expectedNet,
-              "rsoIds" .= map (.id.getId) rows
-            ]
-    pure $
-      Just
-        ReconT.SourceRecord
-          { srcId = orderId,
-            srcEntityId = Just orderId,
-            srcPartyId = driverIdText,
-            srcAmount = expectedNet,
-            srcMatchKey = Just orderId,
-            srcComponent = Nothing,
-            srcMeta = Just meta,
-            srcTimestamp = firstRow.receivedAt,
-            srcLifecycle = if isJust mbRide then ReconT.Settled else ReconT.InFlight
-          }
+      orderIds = Map.keys grouped
+  bookings <- B.runInReplica $ QBooking.findByIds (map Id orderIds)
+  let bookingMap = Map.fromList [(booking.id.getId, booking) | booking <- bookings]
+      bookingIds = map (.id) bookings
+  rides <- B.runInReplica $ QRide.findRidesByBookingId bookingIds
+  let rideByBookingId = Map.fromListWith (\a b -> if a.createdAt >= b.createdAt then a else b) [(ride.bookingId.getId, ride) | ride <- rides]
+  pure . catMaybes $
+    flip map (Map.toList grouped) $ \(orderId, rows) ->
+      let firstRow = head rows
+          bff = fromMaybe 0 firstRow.bffAmount
+          gst = fromMaybe 0 firstRow.withholdingTaxGst
+          tds = fromMaybe 0 firstRow.withholdingTaxTds
+          ded = fromMaybe 0 firstRow.deductionByCollector
+          totalClaimed = sum [r.claimedSettlementAmount | r <- rows]
+          mbBooking = Map.lookup orderId bookingMap
+          mbRide = mbBooking >>= \b -> Map.lookup b.id.getId rideByBookingId
+          rideFare = fromMaybe 0 (mbRide >>= (.fare))
+          rideIdText = (.id.getId) <$> mbRide
+          driverIdText = (.driverId.getId) <$> mbRide
+          expectedNet = rideFare -- No deductions to be calculated by system for now as we are going to settle bff and bff gst if applicable offline
+          meta =
+            A.object
+              [ "totalClaimed" .= totalClaimed,
+                "rideFare" .= rideFare,
+                "rideId" .= rideIdText,
+                "driverId" .= driverIdText,
+                "bff" .= bff,
+                "gst" .= gst,
+                "tds" .= tds,
+                "deductions" .= ded,
+                "expectedNet" .= expectedNet,
+                "rsoIds" .= map (.id.getId) rows
+              ]
+       in Just
+            ReconT.SourceRecord
+              { srcId = orderId,
+                srcEntityId = Just orderId,
+                srcPartyId = driverIdText,
+                srcAmount = expectedNet,
+                srcMatchKey = Just orderId,
+                srcComponent = Nothing,
+                srcMeta = Just meta,
+                srcTimestamp = firstRow.receivedAt,
+                srcLifecycle = if isJust mbRide then ReconT.Settled else ReconT.InFlight
+              }
 
 fetchTargets ::
   ( BeamFlow m r,
@@ -170,13 +174,12 @@ rsfClassify srcs tgts
     let expectedNet = sum (map (.srcAmount) srcs)
         totalClaimed = sum (map (.tgtAmount) tgts)
         diff = expectedNet - totalClaimed
-        tolerance = 1.0
-     in if abs diff <= tolerance
+     in if diff == 0
           then ReconT.ReconResult ReconT.MATCHED Nothing
           else
             if diff > 0
-              then ReconT.ReconResult ReconT.HIGHER_IN_TARGET (Just "Underpaid")
-              else ReconT.ReconResult ReconT.LOWER_IN_TARGET (Just "Overpaid")
+              then ReconT.ReconResult ReconT.LOWER_IN_TARGET (Just "Underpaid")
+              else ReconT.ReconResult ReconT.HIGHER_IN_TARGET (Just "Overpaid")
 
 syncRsoStatus ::
   ( BeamFlow m r,
@@ -205,8 +208,8 @@ syncRsoStatus _spec src status = do
 frameworkToRsfVerdict :: ReconT.ReconciliationStatus -> RSO.OrderReconVerdict
 frameworkToRsfVerdict = \case
   ReconT.MATCHED -> RSO.PAID
-  ReconT.HIGHER_IN_TARGET -> RSO.UNDERPAID
-  ReconT.LOWER_IN_TARGET -> RSO.OVERPAID
+  ReconT.HIGHER_IN_TARGET -> RSO.OVERPAID
+  ReconT.LOWER_IN_TARGET -> RSO.UNDERPAID
   ReconT.MISSING_IN_TARGET -> RSO.NOT_PAID
   ReconT.MISSING_IN_SOURCE -> RSO.UNMATCHED
   ReconT.AWAITING_SETTLEMENT -> RSO.PENDING

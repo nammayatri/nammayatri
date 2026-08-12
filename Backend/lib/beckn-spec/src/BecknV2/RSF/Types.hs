@@ -36,6 +36,9 @@ module BecknV2.RSF.Types
     RSFAckMessage (..),
     RSFAckResponse (..),
     RSFError (..),
+    RSFOnReceiverReconMessage (..),
+    RSFOnReceiverReconOrderbook (..),
+    RSFOnReconSettlementDetail (..),
   )
 where
 
@@ -75,7 +78,7 @@ optionsReceiverReconReq =
 
 data OnReceiverReconReq = OnReceiverReconReq
   { onReceiverReconReqContext :: RSFContext,
-    onReceiverReconReqMessage :: RSFOrderbookMessage
+    onReceiverReconReqMessage :: RSFOnReceiverReconMessage
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -376,7 +379,7 @@ optionsRSFSettlementDetail =
 data RSFPayerDetails = RSFPayerDetails
   { rsfPayerDetailsPayerName :: Maybe Text,
     rsfPayerDetailsPayerAddress :: Maybe Text,
-    rsfPayerDetailsPayerAccountNo :: Maybe Double,
+    rsfPayerDetailsPayerAccountNo :: Maybe Text,
     rsfPayerDetailsPayerBankCode :: Maybe Text,
     rsfPayerDetailsPayerVirtualPaymentAddress :: Maybe Text
   }
@@ -483,10 +486,10 @@ data RSFOnReceiverReconOrder = RSFOnReceiverReconOrder
     rsfOnOrderOrderReconStatus :: Maybe Text,
     rsfOnOrderTransactionId :: Maybe Text,
     rsfOnOrderSettlementId :: Maybe Text,
-    rsfOnOrderSettlementReferenceNo :: Maybe Text,
     rsfOnOrderCounterpartyReconStatus :: Maybe Text,
     rsfOnOrderCounterpartyDiffAmount :: Maybe RSFCounterpartyDiffAmount,
-    rsfOnOrderMessage :: Maybe RSFDiffMessage
+    rsfOnOrderMessage :: Maybe RSFDiffMessage,
+    rsfOnOrderSettlementDetails :: Maybe [RSFOnReconSettlementDetail]
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -511,10 +514,10 @@ optionsRSFOnOrder =
         ("rsfOnOrderOrderReconStatus", "order_recon_status"),
         ("rsfOnOrderTransactionId", "transaction_id"),
         ("rsfOnOrderSettlementId", "settlement_id"),
-        ("rsfOnOrderSettlementReferenceNo", "settlement_reference_no"),
         ("rsfOnOrderCounterpartyReconStatus", "counterparty_recon_status"),
         ("rsfOnOrderCounterpartyDiffAmount", "counterparty_diff_amount"),
-        ("rsfOnOrderMessage", "message")
+        ("rsfOnOrderMessage", "message"),
+        ("rsfOnOrderSettlementDetails", "settlement_details")
       ]
 
 data RSFCounterpartyDiffAmount = RSFCounterpartyDiffAmount
@@ -651,4 +654,68 @@ optionsRSFError =
     table =
       [ ("rsfErrorMessage", "message"),
         ("rsfErrorCode", "code")
+      ]
+
+newtype RSFOnReceiverReconMessage = RSFOnReceiverReconMessage
+  { rsfOnReceiverReconMessageOrderbook :: RSFOnReceiverReconOrderbook
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON RSFOnReceiverReconMessage where
+  parseJSON = genericParseJSON optionsRSFOnReceiverReconMessage
+
+instance ToJSON RSFOnReceiverReconMessage where
+  toJSON = genericToJSON optionsRSFOnReceiverReconMessage
+
+optionsRSFOnReceiverReconMessage :: Options
+optionsRSFOnReceiverReconMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table = [("rsfOnReceiverReconMessageOrderbook", "orderbook")]
+
+newtype RSFOnReceiverReconOrderbook = RSFOnReceiverReconOrderbook
+  { rsfOnReceiverReconOrderbookOrders :: [RSFOnReceiverReconOrder]
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON RSFOnReceiverReconOrderbook where
+  parseJSON = genericParseJSON optionsRSFOnReceiverReconOrderbook
+
+instance ToJSON RSFOnReceiverReconOrderbook where
+  toJSON = genericToJSON optionsRSFOnReceiverReconOrderbook
+
+optionsRSFOnReceiverReconOrderbook :: Options
+optionsRSFOnReceiverReconOrderbook =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table = [("rsfOnReceiverReconOrderbookOrders", "orders")]
+
+data RSFOnReconSettlementDetail = RSFOnReconSettlementDetail
+  { rsfOnReconSdSettlementId :: Maybe Text,
+    rsfOnReconSdSettlementReferenceNo :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON RSFOnReconSettlementDetail where
+  parseJSON = genericParseJSON optionsRSFOnReconSettlementDetail
+
+instance ToJSON RSFOnReconSettlementDetail where
+  toJSON = genericToJSON optionsRSFOnReconSettlementDetail
+
+optionsRSFOnReconSettlementDetail :: Options
+optionsRSFOnReconSettlementDetail =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("rsfOnReconSdSettlementId", "settlement_id"),
+        ("rsfOnReconSdSettlementReferenceNo", "settlement_reference_no")
       ]

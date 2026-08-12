@@ -16,7 +16,6 @@ data ReconSettlementOrder = ReconSettlementOrder
     bffType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     claimedGrossAmount :: Kernel.Types.Common.HighPrecMoney,
     claimedSettlementAmount :: Kernel.Types.Common.HighPrecMoney,
-    correctionForOrderRowId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconSettlementOrder.ReconSettlementOrder),
     createdAt :: Kernel.Prelude.UTCTime,
     deductionByCollector :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     diffAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -43,9 +42,6 @@ data ReconSettlementOrder = ReconSettlementOrder
     receivedAt :: Kernel.Prelude.UTCTime,
     reconTransactionId :: Kernel.Prelude.Text,
     reconciliationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    refundReference :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    refundStatus :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.ReconSettlementOrder.RefundObligationStatus,
-    refundedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     remarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementClearedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -68,10 +64,6 @@ data OrderReconVerdict = PENDING | PAID | UNDERPAID | OVERPAID | NOT_PAID | UNMA
 
 data ReconSourceType = BAP_CLAIMED | UNSOLICITED | ADMIN_SETTLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data RefundObligationStatus = OWED | REFUNDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OrderReconVerdict))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconSourceType))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RefundObligationStatus))

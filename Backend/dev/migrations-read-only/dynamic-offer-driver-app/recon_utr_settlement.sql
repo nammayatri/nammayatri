@@ -37,3 +37,14 @@ ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD COLUMN deadline_brea
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ALTER COLUMN send_status DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ALTER COLUMN send_attempts DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ALTER COLUMN deadline DROP NOT NULL;
+--- Drop section ends. Please check before running ---

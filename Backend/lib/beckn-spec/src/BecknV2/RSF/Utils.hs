@@ -34,26 +34,32 @@ parseISO8601DurationToSeconds :: Text -> Maybe Int
 parseISO8601DurationToSeconds t = do
   let s = T.unpack t
   case s of
-    'P' : rest -> parseDuration rest 0
+    'P' : rest
+      | null rest -> Nothing
+      | otherwise -> parseDuration rest 0 False
     _ -> Nothing
   where
-    parseDuration [] acc = Just acc
-    parseDuration ('T' : rest) acc = parseTimePart rest acc
-    parseDuration rest acc = do
+    parseDuration [] acc hadComponent
+      | hadComponent = Just acc
+      | otherwise = Nothing
+    parseDuration ('T' : rest) acc hadComponent = parseTimePart rest acc hadComponent
+    parseDuration rest acc _hadComponent = do
       let (numStr, remaining) = span isDigit rest
       num <- readMaybe numStr
       case remaining of
-        'D' : rest' -> parseDuration rest' (acc + num * 86400)
+        'D' : rest' -> parseDuration rest' (acc + num * 86400) True
         _ -> Nothing
 
-    parseTimePart [] acc = Just acc
-    parseTimePart rest acc = do
+    parseTimePart [] acc hadComponent
+      | hadComponent = Just acc
+      | otherwise = Nothing
+    parseTimePart rest acc _hadComponent = do
       let (numStr, remaining) = span isDigit rest
       num <- readMaybe numStr
       case remaining of
-        'H' : rest' -> parseTimePart rest' (acc + num * 3600)
-        'M' : rest' -> parseTimePart rest' (acc + num * 60)
-        'S' : rest' -> parseTimePart rest' (acc + num)
+        'H' : rest' -> parseTimePart rest' (acc + num * 3600) True
+        'M' : rest' -> parseTimePart rest' (acc + num * 60) True
+        'S' : rest' -> parseTimePart rest' (acc + num) True
         _ -> Nothing
 
     isDigit c = c >= '0' && c <= '9'
@@ -102,12 +108,18 @@ data RSFErrorCode
   | RSFDuplicateMessage
   deriving (Show, Eq)
 
+-- Per the ONDC RSF v1.0 error table: 70001 ("Enumeration - Wrong Enum Value
+-- Provided") is the single generic bucket for every fixed-value field check
+-- -- domain, action, and core_version are all instances of the same
+-- category, not separate codes. 70002 is "wrong key/value format" (a
+-- different failure mode entirely) and 70003 is "Duplicate Transaction ID"
+-- -- neither has anything to do with domain/action/version mismatches.
 rsfErrorCodeToText :: RSFErrorCode -> Text
 rsfErrorCodeToText = \case
   RSFMissingMandatory -> "70000"
   RSFInvalidDomain -> "70001"
-  RSFInvalidVersion -> "70002"
-  RSFInvalidAction -> "70003"
+  RSFInvalidVersion -> "70001"
+  RSFInvalidAction -> "70001"
   RSFInvalidSignature -> "70004"
   RSFDuplicateMessage -> "70005"
 
