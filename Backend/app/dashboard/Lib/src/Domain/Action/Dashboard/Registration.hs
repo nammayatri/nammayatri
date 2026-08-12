@@ -589,10 +589,19 @@ initiate2FASetup Initiate2FASetupReq {..} = do
       -- No existing authenticator or no TOTP provided: email OTP flow
       reqId <- generateGUID
       let emailReq = InternalClient.SendEmailOTPReq {email = personEmail}
+      -- Pick the platform from the merchant's own short id, not from
+      -- serverNames. Post-unification the BPP row (`X_PARTNER`) advertises
+      -- APP_BACKEND too, so a serverNames test always chose BAP and then handed
+      -- rider-app a `_PARTNER` short id it has never heard of — surfacing as
+      -- "No merchant matches passed data" from one hop downstream.
+      --
+      -- The suffix is the reliable signal: `X_PARTNER` is the driver-app's own
+      -- short id, `X` is the rider-app's. Routing by it means the short id we
+      -- forward is always one the target already knows, with no translation.
       let callInternalSendEmailOTP =
-            if DTServer.APP_BACKEND `elem` merchant.serverNames
-              then InternalClient.callBAPInternalSendEmailOTP
-              else InternalClient.callBPPInternalSendEmailOTP
+            if "_PARTNER" `T.isSuffixOf` getShortId merchant.shortId
+              then InternalClient.callBPPInternalSendEmailOTP
+              else InternalClient.callBAPInternalSendEmailOTP
       emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) city' emailReq
       otpCode <- emailRes.otp & fromMaybeM (InternalError "OTP not returned from internal email service")
       let pendingData =
