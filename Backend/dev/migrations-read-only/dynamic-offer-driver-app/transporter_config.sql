@@ -1037,3 +1037,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_non_fleet
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_downward_recompute_for_different_destination boolean ;
+
+
+------- SQL updates -------
+
