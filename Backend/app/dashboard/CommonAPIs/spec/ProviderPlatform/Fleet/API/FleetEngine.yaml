@@ -1,0 +1,22 @@
+module: FleetEngine
+
+apis:
+  # Mints a short-lived, read-only, fleet-wide Google Fleet Engine JWT for the
+  # ops fleet-tracking dashboard (Google JS Journey Sharing / Fleet Tracking
+  # library). The token is signed server-side with the city's fleet reader
+  # service account (read-only IAM role); the service-account JSON never leaves
+  # the backend. ApiAuthV2 authenticates the dashboard user; the merchant/city
+  # scope the fleet. Reachable at
+  # /driver-offer/{merchantId}/{city}/fleetEngine/readerToken.
+  - GET:
+      name: getReaderToken
+      endpoint: /readerToken
+      auth: ApiAuthV2
+      response:
+        type: FleetReaderTokenRes
+
+types:
+  FleetReaderTokenRes:
+    - token: Text
+    - providerId: Text
+    - expiresInSeconds: Int

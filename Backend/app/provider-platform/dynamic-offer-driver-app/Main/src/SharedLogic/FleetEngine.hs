@@ -14,6 +14,7 @@
 -- tripId = BPP rideId (1:1); vehicleId = driverId (1:1).
 module SharedLogic.FleetEngine
   ( mkDriverToken,
+    mkFleetReaderToken,
     notifyDriverOnline,
     notifyTripCreated,
     notifyDriverArrived,
@@ -102,6 +103,39 @@ mkDriverToken merchantOpCityId driverId = do
               logError $ "FleetEngine: driver token mint failed for city " <> merchantOpCityId.getId <> ": " <> T.pack err
               pure Nothing
             Right token -> pure $ Just (token, vehicleId, cfg.providerId)
+
+-- | Mints a read-only, fleet-wide Fleet Engine JWT for the ops fleet-tracking
+-- dashboard (Google JS Journey Sharing / Fleet Tracking library). Signed with
+-- the city's fleet reader service account (read-only IAM role). Returns
+-- 'Nothing' when Fleet Engine is off for the city or the reader SA is not
+-- provisioned; logs (never throws) on config/token errors.
+mkFleetReaderToken ::
+  FleetEngineFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe (Text, Text, Integer)) -- (token, providerId, ttlSeconds)
+mkFleetReaderToken merchantOpCityId = do
+  mbCfg <- getFleetEngineCfg merchantOpCityId
+  case mbCfg of
+    Nothing -> pure Nothing -- no config for this city
+    Just cfg | cfg.enabled /= Just True -> pure Nothing -- config present but kill switch off (Nothing / Just False both = off)
+    Just cfg -> case cfg.fleetReaderServiceAccountJson of
+      Nothing -> do
+        logError $ "FleetEngine: fleet reader service account not provisioned for city " <> merchantOpCityId.getId
+        pure Nothing
+      Just encReaderSa -> do
+        saText <- decrypt encReaderSa
+        case FEAuth.parseServiceAccount saText of
+          Left err -> do
+            logError $ "FleetEngine: invalid fleet reader service account for city " <> merchantOpCityId.getId <> ": " <> T.pack err
+            pure Nothing
+          Right sa -> do
+            let ttl = fromMaybe FEConfig.defaultFleetReaderTokenTtl cfg.fleetReaderTokenTtlSeconds
+            eToken <- liftIO $ FEAuth.mintFleetEngineToken sa FEAuth.FleetReaderToken ttl
+            case eToken of
+              Left err -> do
+                logError $ "FleetEngine: fleet reader token mint failed for city " <> merchantOpCityId.getId <> ": " <> T.pack err
+                pure Nothing
+              Right token -> pure $ Just (token, cfg.providerId, ttl)
 
 -- | Registers the vehicle so a pool trip landing before this driver's first ride finds it.
 notifyDriverOnline ::
