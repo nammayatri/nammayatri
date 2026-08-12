@@ -250,11 +250,11 @@ blockDriverLocationsTill merchantId driverId blockTill = do
   logDebug $ "lts driver block till: " <> show blockLocationsTillResp
   return blockLocationsTillResp
 
-manualQueueRemove :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Maybe Text -> m APISuccess
-manualQueueRemove specialLocationId vehicleType merchantId driverId reason = do
+manualQueueRemove :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Text -> Text -> Id DM.Merchant -> Id DP.Person -> Maybe Text -> Bool -> m APISuccess
+manualQueueRemove specialLocationId vehicleType merchantId driverId reason preservePosition = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
-  let req = ManualQueueRemoveAPI.ManualQueueRemoveRequest {reason}
+  let req = ManualQueueRemoveAPI.ManualQueueRemoveRequest {reason, preservePosition = Just preservePosition}
   manualQueueRemoveResp <-
     withShortRetry $
       callAPI url (ManualQueueRemoveAPI.manualQueueRemove specialLocationId vehicleType merchantId driverId req) "manualQueueRemove" ManualQueueRemoveAPI.manualQueueRemoveAPI
