@@ -75,10 +75,16 @@ sendEmailVerificationOtp tokenInfo req = do
   loginRateLimitOptions <- asks (.loginRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeEmailOtpHitsCountKey tokenInfo.personId email) loginRateLimitOptions
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
+  -- Route by the merchant's own short id, not serverNames: post-unification the
+  -- BPP row (`X_PARTNER`) advertises APP_BACKEND too, so a serverNames test
+  -- always chose BAP and handed rider-app a `_PARTNER` short id it does not
+  -- have. The suffix is the reliable signal — `X_PARTNER` is driver-app's own
+  -- short id, `X` is rider-app's — so the id we forward is always one the
+  -- target knows. Mirrors Domain.Action.Dashboard.Registration.
   let callInternalSendEmailOTP =
-        if DTServer.APP_BACKEND `elem` merchant.serverNames
-          then InternalClient.callBAPInternalSendEmailOTP
-          else InternalClient.callBPPInternalSendEmailOTP
+        if "_PARTNER" `T.isSuffixOf` getShortId merchant.shortId
+          then InternalClient.callBPPInternalSendEmailOTP
+          else InternalClient.callBAPInternalSendEmailOTP
   emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) tokenInfo.city (InternalClient.SendEmailOTPReq {email = email})
   otpCode <- emailRes.otp & fromMaybeM (InternalError "OTP not returned from internal email service")
   envOtpTTL <- asks (.twoFaOtpTTLInSecs)
@@ -125,10 +131,12 @@ verifyEmailOtp tokenInfo req = do
           Redis.del key
           Redis.del attemptsKey
           throwError (InvalidRequest "Email already registered by another user")
+      -- Same routing rule as sendEmailVerificationOtp above: the short id we
+      -- forward must be one the target platform knows.
       let callInternalVerifyEmailUpdate =
-            if DTServer.APP_BACKEND `elem` merchant.serverNames
-              then InternalClient.callBAPInternalVerifyEmailUpdate
-              else InternalClient.callBPPInternalVerifyEmailUpdate
+            if "_PARTNER" `T.isSuffixOf` getShortId merchant.shortId
+              then InternalClient.callBPPInternalVerifyEmailUpdate
+              else InternalClient.callBAPInternalVerifyEmailUpdate
           updateReq = InternalClient.VerifyEmailUpdateReq {email = email, requesteeId = requesteeId.getId, requestorId = tokenInfo.personId.getId}
       void $ callInternalVerifyEmailUpdate (getShortId merchant.shortId) updateReq
       encEmail <- encrypt email
