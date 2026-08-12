@@ -188,7 +188,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
           tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> tollCharges,
           tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
-          useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
+          useSilentFCMForForwardBatch = useSilentFCMForForwardBatch && nearbyReq.isForwardRequest,
           isOnRide = nearbyReq.isForwardRequest,
           isReferredRideReq = searchRequest.driverIdForSearch $> True,
           isFavourite = nearbyReq.isFavourite,
