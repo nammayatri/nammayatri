@@ -2553,6 +2553,7 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   mbFleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId)
   whenJust mbFleetOwnerInfo $ \fleetOwnerInfo -> do
     reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+    reqBusinessLicenseNumber <- forM req.businessLicenseNumber encrypt
     let newFleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
         updFleetOwnerInfo =
           fleetOwnerInfo
@@ -2560,7 +2561,8 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
               DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
               DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
               DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-              DFOI.fleetType = newFleetType
+              DFOI.fleetType = newFleetType,
+              DFOI.businessLicenseNumber = reqBusinessLicenseNumber <|> fleetOwnerInfo.businessLicenseNumber
             }
     FOI.updateFleetOwnerInfo updFleetOwnerInfo
     -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.

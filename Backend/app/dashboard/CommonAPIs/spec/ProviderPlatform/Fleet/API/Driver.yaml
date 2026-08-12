@@ -2093,6 +2093,7 @@ types:
     - stripeIdNumber: Maybe Text
     - fleetName: Maybe Text
     - fleetType: Maybe FleetType
+    - businessLicenseNumber: Maybe Text
     - derive: "'HideSecrets"
   CreateDriversReq:
     - file: FilePath
