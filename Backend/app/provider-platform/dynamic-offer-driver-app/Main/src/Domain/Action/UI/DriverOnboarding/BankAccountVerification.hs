@@ -88,7 +88,10 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
                 createdAt = now,
                 updatedAt = now,
                 ifscCode = resp.ifscCode,
-                nameAtBank = resp.nameAtBank
+                nameAtBank = resp.nameAtBank,
+                requirements = Nothing,
+                futureRequirements = Nothing,
+                lastSyncedAt = Nothing
               }
       when (resp.accountExists) $ do
         mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey personId

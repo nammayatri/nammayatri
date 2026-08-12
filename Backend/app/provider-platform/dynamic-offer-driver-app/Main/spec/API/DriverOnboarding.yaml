@@ -364,6 +364,8 @@ apis:
   - GET:
       endpoint: /driver/register/bankAccount/status
       auth: TokenAuth PROVIDER_TYPE
+      query:
+        - forceRefresh: Bool
       response:
         type: BankAccountResp
 

@@ -310,6 +310,8 @@ data TransporterConfig = TransporterConfig
     specialZoneBookingOtpExpiry :: Kernel.Prelude.Int,
     stclConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.StclConfig,
     stepFunctionToConvertCoins :: Kernel.Prelude.Int,
+    stripeStatusRefreshCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stripeStatusRefreshCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     subscription :: Kernel.Prelude.Bool,
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,

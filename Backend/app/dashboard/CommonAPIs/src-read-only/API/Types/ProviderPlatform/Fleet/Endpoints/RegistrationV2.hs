@@ -159,13 +159,20 @@ type PostRegistrationV2RegisterBankAccountLinkHelper =
       :> Post '[JSON] FleetBankAccountLinkResp
   )
 
-type GetRegistrationV2RegisterBankAccountStatus = ("register" :> "bankAccount" :> "status" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> Get '[JSON] FleetBankAccountResp)
+type GetRegistrationV2RegisterBankAccountStatus =
+  ( "register" :> "bankAccount" :> "status" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> QueryParam
+           "forceRefresh"
+           Kernel.Prelude.Bool
+      :> Get '[JSON] FleetBankAccountResp
+  )
 
 type GetRegistrationV2RegisterBankAccountStatusHelper =
   ( "register" :> "bankAccount" :> "status" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
-      :> MandatoryQueryParam
-           "requestorId"
-           Kernel.Prelude.Text
+      :> QueryParam
+           "forceRefresh"
+           Kernel.Prelude.Bool
+      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Get '[JSON] FleetBankAccountResp
   )
 
@@ -187,7 +194,7 @@ data RegistrationV2APIs = RegistrationV2APIs
     postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2,
     postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
-    getRegistrationV2RegisterBankAccountStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountResp,
+    getRegistrationV2RegisterBankAccountStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountResp,
     putRegistrationV2ProfileLanguage :: Kernel.Prelude.Text -> FleetOwnerUpdateLanguageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getRegistrationV2ProfileLanguage :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetOwnerLanguageRes
   }

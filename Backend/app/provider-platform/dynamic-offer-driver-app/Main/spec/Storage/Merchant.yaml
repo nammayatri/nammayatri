@@ -1082,6 +1082,8 @@ TransporterConfig:
     authPhoneNumberCountWindow2: Maybe SlidingWindowOptions
     fraudAuthCountThreshold: Maybe Int
     fraudAuthCountWindow: Maybe SlidingWindowOptions
+    stripeStatusRefreshCountThreshold: Maybe Int
+    stripeStatusRefreshCountWindow: Maybe SlidingWindowOptions
     authIpBlockedUntilInMins: Maybe Minutes
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
@@ -1698,6 +1700,7 @@ TransporterConfig:
     authPhoneNumberCountWindow1: json
     authPhoneNumberCountWindow2: json
     fraudAuthCountWindow: json
+    stripeStatusRefreshCountWindow: json
     authIpBlockedUntilInMins: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
@@ -1973,6 +1976,8 @@ TransporterConfig:
         - authPhoneNumberCountWindow2
         - fraudAuthCountThreshold
         - fraudAuthCountWindow
+        - stripeStatusRefreshCountThreshold
+        - stripeStatusRefreshCountWindow
         - authIpBlockedUntilInMins
         - pickupLocThreshold
         - dropLocThreshold

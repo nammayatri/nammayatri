@@ -174,10 +174,11 @@ getRegistrationV2RegisterBankAccountStatus ::
   City.City ->
   ApiTokenInfo ->
   Maybe Text ->
+  Maybe Bool ->
   Flow Common.FleetBankAccountResp
-getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId = do
+getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId mbForceRefresh = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId mbForceRefresh apiTokenInfo.personId.getId
 
 putRegistrationV2ProfileLanguage ::
   ShortId DM.Merchant ->

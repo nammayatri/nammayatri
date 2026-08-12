@@ -1753,7 +1753,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
     if merchant.onlinePayment
       then do
         mbDriverBankAccount <- QDBA.findByPrimaryKey id
-        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, requirements = Nothing, futureRequirements = Nothing, ..})
+        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {paymentMode = fromMaybe DMPM.LIVE paymentMode, ..})
       else return Nothing
   (refCode, dynamicReferralCode) <-
     case referralCode of

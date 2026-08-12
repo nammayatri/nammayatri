@@ -585,12 +585,13 @@ getRegistrationV2RegisterBankAccountStatus ::
   ShortId DMerchant.Merchant ->
   City.City ->
   Maybe Text ->
+  Maybe Bool ->
   Text ->
   Flow Common.FleetBankAccountResp
-getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId requestorId = do
+getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId mbForceRefresh requestorId = do
   let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
   FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
-  castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus fleetOwner
+  castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus mbForceRefresh fleetOwner.id fleetOwner.merchantOperatingCityId
 
 castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
 castFleetBankAccountResp Onboarding.BankAccountResp {..} = Common.FleetBankAccountResp {..}

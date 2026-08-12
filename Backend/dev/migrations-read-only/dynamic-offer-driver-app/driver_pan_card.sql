@@ -64,3 +64,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN reject_reason text
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

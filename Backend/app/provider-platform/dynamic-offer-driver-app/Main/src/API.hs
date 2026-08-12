@@ -30,11 +30,13 @@ import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboardi
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.SafetyWebhook as SafetyWebhook
+import qualified Domain.Action.UI.StripeAccountWebhook as StripeAccountWH
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as Plan
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import qualified Kernel.External.Payment.Stripe.AccountWebhook as StripeAccount
 import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.External.Payout.Stripe.Webhook as Stripe
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
@@ -107,6 +109,15 @@ type MainAPI =
              :> "test"
              :> Stripe.PayoutStripeWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> StripeAccount.AccountStripeWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> "test"
+             :> StripeAccount.AccountStripeWebhookAPI
+         )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
@@ -132,6 +143,8 @@ mainServer env =
     :<|> juspayPayoutWebhookHandlerV2
     :<|> stripePayoutWebhookHandler
     :<|> stripeTestPayoutWebhookHandler
+    :<|> stripeAccountWebhookHandler
+    :<|> stripeTestAccountWebhookHandler
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
@@ -278,3 +291,21 @@ stripeTestPayoutWebhookHandler ::
   FlowHandler AckResponse
 stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
   withFlowHandlerAPI . Payout.stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
+
+stripeAccountWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Text ->
+  RawByteString ->
+  FlowHandler AckResponse
+stripeAccountWebhookHandler merchantShortId mbOpCity mbSigHeader =
+  withFlowHandlerAPI . StripeAccountWH.stripeAccountWebhookHandler merchantShortId mbOpCity mbSigHeader
+
+stripeTestAccountWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Text ->
+  RawByteString ->
+  FlowHandler AckResponse
+stripeTestAccountWebhookHandler merchantShortId mbOpCity mbSigHeader =
+  withFlowHandlerAPI . StripeAccountWH.stripeTestAccountWebhookHandler merchantShortId mbOpCity mbSigHeader

@@ -94,6 +94,7 @@ apis:
       auth: ApiAuthV2
       query:
         - fleetOwnerId: Text
+        - forceRefresh: Bool
       response:
         type: FleetBankAccountResp
       helperApi:
@@ -102,6 +103,7 @@ apis:
             auth: ApiAuthV2
             query:
               - fleetOwnerId: Text
+              - forceRefresh: Bool
             mandatoryQuery:
               - requestorId: Text
             response:
