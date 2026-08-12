@@ -1118,6 +1118,7 @@ TransporterConfig:
     actualRideDistanceDiffThreshold: HighPrecMeters
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
+    enableDownwardRecomputeForDifferentDestination: Maybe Bool
     upwardsRecomputeBuffer: HighPrecMeters
     upwardsRecomputeBufferPercentage: Maybe Int
     approxRideDistanceDiffThreshold: HighPrecMeters
