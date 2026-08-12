@@ -168,7 +168,10 @@ type JobExecutorEnv r = (HasField "streamName" r Text, HasField "maxShards" r In
 
 type JobExecutor r m = (JobExecutorEnv r, JobMonad r m)
 
-type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r, HasField "blackListedJobs" r [Text])
+-- 'CoreMetrics m' is required so that job creation/execution can emit the
+-- scheduler_job_lifecycle_counter metric without every call site having to
+-- thread the constraint through itself.
+type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r, HasField "blackListedJobs" r [Text], Metrics.CoreMetrics m)
 
 runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do
