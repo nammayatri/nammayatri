@@ -26,6 +26,7 @@ module Tools.Auth.Capability
 where
 
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Capability as DC
 import qualified Domain.Types.Person as DP
@@ -163,21 +164,24 @@ enforce person endpointId = do
       logTagError "SUPER_ADMIN_BREAKGLASS" $
         "personId: " <> person.id.getId <> ", endpointId: " <> endpointId
     else do
-      mbEndpoint <- QCE.findByEndpointId endpointId
-      case mbEndpoint of
+      -- An endpoint may be assigned to several capabilities; holding ANY of
+      -- them grants the call. Same ANY-of rule the frontend applies to
+      -- NavItem.requires.
+      endpoints <- QCE.findAllByEndpointId endpointId
+      let capabilityIds = map (.capabilityId.getId) endpoints
+      case capabilityIds of
         -- Fail closed. An unmapped endpoint is a seeding bug, not an open
         -- door: extend the shim in generate_capability_seed.py and reseed.
-        Nothing -> do
+        [] -> do
           logTagError "CAPABILITY_UNMAPPED_ENDPOINT" $
             "endpointId: " <> endpointId <> ", personId: " <> person.id.getId
           throwError AccessDenied
-        Just endpoint -> do
-          let capabilityId = endpoint.capabilityId.getId
-          unless (capabilityId `elem` access.capabilities) $ do
+        _ ->
+          unless (any (`elem` access.capabilities) capabilityIds) $ do
             logTagError "CAPABILITY_DENIED" $
               "endpointId: " <> endpointId
-                <> ", capabilityId: "
-                <> capabilityId
+                <> ", capabilityIds: "
+                <> T.intercalate "|" capabilityIds
                 <> ", personId: "
                 <> person.id.getId
                 <> ", roleId: "
