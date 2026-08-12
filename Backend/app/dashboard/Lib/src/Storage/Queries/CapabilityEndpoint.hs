@@ -28,9 +28,14 @@ import qualified Storage.Beam.CapabilityEndpoint as BeamCE
 dashboardServerName :: Text
 dashboardServerName = "DASHBOARD"
 
-findByEndpointId :: BeamFlow m r => Text -> m (Maybe DC.CapabilityEndpoint)
-findByEndpointId endpointId =
-  findOneWithKV
+-- | Every capability an endpoint is assigned to. An endpoint may be assigned to
+-- several, so a narrow role can hold its own capability over an endpoint a
+-- broader role also reaches. Callers must treat the result as ANY-of: holding
+-- any one of the returned capabilities grants the call. An empty list means the
+-- endpoint is unmapped, which denies.
+findAllByEndpointId :: BeamFlow m r => Text -> m [DC.CapabilityEndpoint]
+findAllByEndpointId endpointId =
+  findAllWithKV
     [ Se.And
         [ Se.Is BeamCE.serverName $ Se.Eq dashboardServerName,
           Se.Is BeamCE.endpointId $ Se.Eq endpointId
