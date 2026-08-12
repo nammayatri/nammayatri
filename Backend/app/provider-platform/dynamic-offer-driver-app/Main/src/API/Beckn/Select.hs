@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Select as DSelect
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -28,6 +29,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
@@ -48,6 +50,7 @@ select ::
   FlowHandler AckResponse
 select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.selectReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SelectV2 API Flow" "Reached"
     dSelectReq <- ACL.buildSelectReqV2 subscriber reqV2

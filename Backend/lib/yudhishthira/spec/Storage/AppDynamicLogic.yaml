@@ -75,6 +75,7 @@ AppDynamicLogicRollout:
     modifiedBy: Maybe (Id Person)
     experimentStatus: Maybe ExperimentStatus
     isBaseVersion: Maybe Bool
+    experimentGroup: Maybe Text
 
   constraints:
     merchantOperatingCityId: "PrimaryKey | CompositeSecondaryKey MerchantOpCityDomain"

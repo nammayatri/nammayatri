@@ -111,17 +111,17 @@ DriverPoolConfig:
       where: merchantOperatingCityId
       orderBy: tripDistance
 
-  configPilot:
-    configType: DriverPoolConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just []) Nothing"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.DriverPoolConfig
-    filterDimensions:
-      - tripDistance
-      - area
-      - vehicleVariant
-      - tripCategory
+#   configPilot:
+#     configType: DriverPoolConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just []) Nothing"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.DriverPoolConfig
+#     filterDimensions:
+#       - tripDistance
+#       - area
+#       - vehicleVariant
+#       - tripCategory
 
 MerchantState:
   tableName: merchant_state

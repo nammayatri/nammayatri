@@ -43,9 +43,9 @@ ReminderConfig:
   excludedDefaultQueries:
     - findByPrimaryKey
 
-  configPilot:
-    configType: ReminderConfig
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.ReminderConfig
-    filterDimensions: [documentType]
+#   configPilot:
+#     configType: ReminderConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     returnType: List
+#     queryModule: Storage.Queries.ReminderConfig
+#     filterDimensions: [documentType]

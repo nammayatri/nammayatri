@@ -297,15 +297,15 @@ MerchantMessage:
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
 
-  configPilot:
-    configType: MerchantMessage
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.MerchantMessage
-    filterDimensions:
-      - messageKey
-      - vehicleCategory
+#   configPilot:
+#     configType: MerchantMessage
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.MerchantMessage
+#     filterDimensions:
+#       - messageKey
+#       - vehicleCategory
 
 LlmPrompt:
   derives: Generic,Show,'UsageSafety
@@ -567,17 +567,17 @@ Overlay:
         and:
           [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
-  configPilot:
-    configType: Overlay
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.Overlay
-    filterDimensions:
-      - overlayKey
-      - language
-      - udf1
-      - vehicleCategory
+#   configPilot:
+#     configType: Overlay
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.Overlay
+#     filterDimensions:
+#       - overlayKey
+#       - language
+#       - udf1
+#       - vehicleCategory
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -2018,11 +2018,11 @@ TransporterConfig:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
 
-  configPilot:
-    configType: TransporterConfig
-    fetchQuery: getTransporterConfigFromDB
-    returnType: Maybe
-    queryModule: Storage.CachedQueries.Merchant.TransporterConfig
+#   configPilot:
+#     configType: TransporterConfig
+#     fetchQuery: getTransporterConfigFromDB
+#     returnType: Maybe
+#     queryModule: Storage.CachedQueries.Merchant.TransporterConfig
 
 MerchantServiceConfig:
   derives: Generic,Show,'UsageSafety
@@ -2129,14 +2129,14 @@ MerchantPushNotification:
       where:
         and: [merchantOperatingCityId, key, tripCategory]
 
-  configPilot:
-    configType: MerchantPushNotification
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.MerchantPushNotification
-    filterDimensions:
-      - key
-      - tripCategory
+#   configPilot:
+#     configType: MerchantPushNotification
+#     fetchQuery: findAllByMerchantOpCityId
+#     returnType: List
+#     queryModule: Storage.Queries.MerchantPushNotification
+#     filterDimensions:
+#       - key
+#       - tripCategory
 
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config
@@ -2178,14 +2178,14 @@ RideRelatedNotificationConfig:
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
 
-  configPilot:
-    configType: RideRelatedNotificationConfig
-    fetchQuery: findAllByMerchantOperatingCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
-    filterDimensions:
-      - timeDiffEvent
+#   configPilot:
+#     configType: RideRelatedNotificationConfig
+#     fetchQuery: findAllByMerchantOperatingCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
+#     filterDimensions:
+#       - timeDiffEvent
 
 PayoutConfig:
   tableName: payout_config
@@ -2262,15 +2262,15 @@ PayoutConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  configPilot:
-    configType: PayoutConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.PayoutConfig
-    filterDimensions:
-      - vehicleCategory
-      - isPayoutEnabled
+#   configPilot:
+#     configType: PayoutConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.PayoutConfig
+#     filterDimensions:
+#       - vehicleCategory
+#       - isPayoutEnabled
 
 ScheduledPayoutConfig:
   tableName: scheduled_payout_config
@@ -2321,9 +2321,9 @@ ScheduledPayoutConfig:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
 
-  configPilot:
-    configType: ScheduledPayoutConfig
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.ScheduledPayoutConfig
-    filterDimensions: [isEnabled, payoutCategory]
+#   configPilot:
+#     configType: ScheduledPayoutConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     returnType: List
+#     queryModule: Storage.Queries.ScheduledPayoutConfig
+#     filterDimensions: [isEnabled, payoutCategory]

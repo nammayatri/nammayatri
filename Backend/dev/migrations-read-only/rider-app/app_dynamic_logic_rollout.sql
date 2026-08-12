@@ -27,3 +27,9 @@ ALTER TABLE atlas_app.app_dynamic_logic_rollout ADD COLUMN is_base_version boole
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.app_dynamic_logic_rollout ADD COLUMN experiment_group text ;

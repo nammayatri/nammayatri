@@ -27,6 +27,7 @@ import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra as CADLE
+import Lib.Yudhishthira.Tools.DynamicLogicGroup (TxnIdKey (..), chooseWithGroups)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
@@ -37,13 +38,6 @@ data PersonIdKey = PersonIdKey
   deriving anyclass (ToJSON, FromJSON)
 
 instance OptionEntity PersonIdKey Text
-
--- | Key for storing txnId in EulerHS option local context.
-data TxnIdKey = TxnIdKey
-  deriving stock (Generic, Typeable, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON)
-
-instance OptionEntity TxnIdKey Text
 
 -- | Per-request selection of the active dynamic-logic element versions for a
 -- config domain.
@@ -84,27 +78,20 @@ selectActiveElementVersions logicDomain merchantOpCityId = do
     getActiveRolloutVersionsWithToss = do
       allActiveRollouts <- CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
       let nonBaseRollouts = filter (\r -> r.isBaseVersion /= Just True) allActiveRollouts
-      let cumulativeRollouts = buildCumulativeRollouts nonBaseRollouts
-      toss <- getRandomInRange (1, 100 :: Int)
-      let selectedRollout = find (\(_, cumulativePerc) -> toss <= cumulativePerc) cumulativeRollouts
+      -- Group-aware selection of the experiment (non-base) rollout: honors a
+      -- per-transaction experiment-group decision (TxnIdKey) shared with the
+      -- legacy Tools.DynamicLogic path. Falls back to a plain toss when no txn/group.
+      mbSelectedRollout <- chooseWithGroups nonBaseRollouts tossOverCumulative
       let baseRollout = find (\rollout -> rollout.isBaseVersion == Just True) allActiveRollouts
-      let selectedRollouts = maybeToList (fst <$> selectedRollout) <> maybeToList baseRollout
-      logDebug $
-        "CP Log: [SELECT_TOSS] domain=" <> show logicDomain
-          <> " toss="
-          <> show toss
-          <> " cumulativeBuckets="
-          <> show (map (\(r, cum) -> (r.version, r.percentageRollout, cum)) cumulativeRollouts)
-          <> " base="
-          <> show ((.version) <$> baseRollout)
-          <> " expVersionPicked="
-          <> show ((.version) . fst <$> selectedRollout)
-          <> " finalVersions="
-          <> show ((.version) <$> selectedRollouts)
+      let selectedRollouts = maybeToList mbSelectedRollout <> maybeToList baseRollout
       when (null allActiveRollouts) $ logDebug $ "CP Log: [SELECT_NO_ROLLOUTS] domain=" <> show logicDomain <> " mocId=" <> merchantOpCityId.getId <> " -> serving raw default (no logic applied)"
       when (isNothing baseRollout) $ logDebug $ "CP Log: [SELECT_NO_BASE] domain=" <> show logicDomain <> " mocId=" <> merchantOpCityId.getId <> " -> no base version; only experiment (if any) applied"
-      logDebug $ "[GETCONFIG_SELECT] domain=" <> show logicDomain <> " active=" <> show (map (\r -> (r.version, r.isBaseVersion)) allActiveRollouts) <> " toss=" <> show toss <> " base=" <> show ((.version) <$> baseRollout) <> " selected=" <> show ((.version) <$> selectedRollouts)
+      logDebug $ "[GETCONFIG_SELECT] domain=" <> show logicDomain <> " active=" <> show (map (\r -> (r.version, r.isBaseVersion)) allActiveRollouts) <> " base=" <> show ((.version) <$> baseRollout) <> " selected=" <> show ((.version) <$> selectedRollouts)
       pure $ (.version) <$> selectedRollouts
+    tossOverCumulative cands = do
+      let cumulativeRollouts = buildCumulativeRollouts cands
+      toss <- getRandomInRange (1, 100 :: Int)
+      pure $ fst <$> find (\(_, cumulativePerc) -> toss <= cumulativePerc) cumulativeRollouts
     buildCumulativeRollouts rollouts =
       snd $
         foldl'
