@@ -641,7 +641,7 @@ in  { logger_cfg
     , drainer_delay = 2
     , new_ride_drainer_delay = 2
     , kafka_cfg
-    , port = env:SERVICE_PORT ? 8081
+    , port = env:SERVICE_PORT ? 8098
     , auth_url = "http://127.0.0.1:${driverAppPort}/internal/auth"
     , rider_auth_url = "http://127.0.0.1:${riderAppPort}/v2/auth"
     , rider_auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"

@@ -2,7 +2,7 @@
 @token2 = {{driver-offer-bpp-auto-token2}}
 @driverId = favorit-auto2-0000000000000000000000
 @driver-offer-bpp-host = http://localhost:8016
-@location-tracking-service-host = http://localhost:8081
+@location-tracking-service-host = http://localhost:8098
 @merchantId = favorit0-0000-0000-0000-00000favorit
 
 

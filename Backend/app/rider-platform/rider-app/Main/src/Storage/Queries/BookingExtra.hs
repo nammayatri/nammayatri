@@ -1,4 +1,8 @@
-module Storage.Queries.BookingExtra where
+module Storage.Queries.BookingExtra
+  ( module Storage.Queries.BookingExtra,
+    RideLiteRow (..),
+  )
+where
 
 import Control.Applicative
 import Data.List.Extra (notNull)
@@ -6,6 +10,7 @@ import qualified Database.Beam as B
 import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.BookingLite (RideLiteRow (..))
 import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.BookingStatus as Domain
 import qualified Domain.Types.BookingStatus as DRB
@@ -28,6 +33,7 @@ import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverOffer ()
@@ -556,3 +562,65 @@ updateEstimatedFare bookingId newFare = do
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+-- | Lightweight read-model queries for the "My Rides" list (rideBooking/listV3),
+-- avoiding the per-row location decode (the "10 rides = ~40-60 location queries"
+-- problem). The booking side uses Storage.Queries.QueriesExtra.BookingLite
+-- (findAllByRiderIdLite) — a KV-cached read model whose FromTType' reads scalars
+-- only, no location hydration. The ride side is a raw Beam column projection
+-- (RideLiteRow, re-exported from here). from/to names come free from the
+-- denormalized locationNames column; the only extra query is the domain-Booking
+-- fallback, and only for pre-column (old) rows.
+
+-- | Ride projection for a page of bookings (one query, no ride location decode).
+findLiteRidesByBookingIds :: (MonadFlow m) => [Id Booking] -> m [RideLiteRow]
+findLiteRidesByBookingIds [] = pure []
+findLiteRidesByBookingIds bookingIds = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $ do
+          r <-
+            B.filter_'
+              (\r -> B.sqlBool_ (BeamR.bookingId r `B.in_` (B.val_ <$> (getId <$> bookingIds))))
+              (B.all_ (BeamCommon.ride BeamCommon.atlasDB))
+          pure (BeamR.id r, BeamR.bookingId r, BeamR.totalFare r, BeamR.cancellationChargesOnCancel r, BeamR.cancellationFeeStatus r)
+  pure $ either (const []) (map toRideLiteRow) res
+  where
+    toRideLiteRow (rId, bId, tFare, cancCharge, cancFeeStatus) =
+      RideLiteRow
+        { rideId = Id rId,
+          bookingId = Id bId,
+          totalFare = tFare,
+          cancellationChargesOnCancel = cancCharge,
+          cancellationFeeStatus = cancFeeStatus
+        }
+
+-- | Fallback for bookings created before the denormalized `locationNames`
+-- column existed: fetch the domain Booking (which resolves fromLocation /
+-- bookingDetails via its FromTType') and build the [from, ...stops, to] array.
+-- This DOES pay the location decode, but only for old rows on the page (a
+-- shrinking set) — new bookings read the column and never reach here.
+-- Returns bookingId -> [from, ...stops, to].
+resolveLocationNamesFallback ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  [Id Booking] ->
+  m [(Id Booking, [Text])]
+resolveLocationNamesFallback [] = pure []
+resolveLocationNamesFallback bookingIds = do
+  bookings <- findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]
+  pure $ map (\b -> (b.id, bookingLocationNames b)) bookings
+  where
+    bookingLocationNames booking =
+      let (mbToLocation, stops) = case booking.bookingDetails of
+            DRB.OneWayDetails detail -> (Just detail.toLocation, detail.stops)
+            DRB.RentalDetails detail -> (detail.stopLocation, [])
+            DRB.DriverOfferDetails detail -> (Just detail.toLocation, detail.stops)
+            DRB.OneWaySpecialZoneDetails detail -> (Just detail.toLocation, detail.stops)
+            DRB.InterCityDetails detail -> (Just detail.toLocation, [])
+            DRB.AmbulanceDetails detail -> (Just detail.toLocation, [])
+            DRB.DeliveryDetails detail -> (Just detail.toLocation, [])
+            DRB.MeterRideDetails detail -> (detail.toLocation, [])
+            DRB.EasyBookingDetails detail -> (detail.stopLocation, [])
+       in SLM.mkLocationNames booking.fromLocation stops mbToLocation

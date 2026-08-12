@@ -36,6 +36,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
+import Domain.Types.Common (TripCategory)
 import qualified Domain.Types.Journey as DJ
 import Domain.Types.Location
 import Domain.Types.LocationAddress
@@ -49,6 +50,8 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.RideStatus as SRide
+import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pack, safeHead)
@@ -81,6 +84,7 @@ import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingExtra as QBL
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
@@ -88,6 +92,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.PassTypeExtra as QPassType
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPassExtra as QPurchasedPass
+import qualified Storage.Queries.QueriesExtra.BookingLite as QBLite
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -280,6 +285,39 @@ data BookingListResV2 = BookingListResV2
 data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.JourneyInfoResp | MultiModalPass PassAPI.PurchasedPassAPIEntity
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
+-- listV3 (lightweight My Rides): lite taxi row, or a multimodal journey card.
+data BookingAPIEntityV3 = RideLiteV3 BookingAPIEntityLite | MultiModalRideV3 APITypes.JourneyInfoResp
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data BookingListResV3 = BookingListResV3
+  { list :: [BookingAPIEntityV3],
+    bookingOffset :: Maybe Int,
+    journeyOffset :: Maybe Int,
+    hasMoreData :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data BookingAPIEntityLite = BookingAPIEntityLite
+  { bookingId :: Id SRB.Booking,
+    rideId :: Maybe (Id DTR.Ride),
+    status :: SRB.BookingStatus,
+    isScheduled :: Bool,
+    rideScheduledTime :: UTCTime,
+    createdAt :: UTCTime,
+    locationNames :: [Text],
+    fare :: HighPrecMoney,
+    currency :: Currency,
+    serviceTierName :: Maybe Text,
+    vehicleServiceTierType :: DVST.ServiceTierType,
+    vehicleIconUrl :: Maybe Text,
+    isAirConditioned :: Maybe Bool,
+    tripCategory :: Maybe TripCategory,
+    cancellationChargesOnCancel :: Maybe HighPrecMoney,
+    cancellationFeeStatus :: Maybe DTR.CancellationFeeStatus,
+    cancellationSource :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 bookingListV2ByCustomerLookup :: Id Merchant.Merchant -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> Maybe [SRB.BookingStatus] -> Maybe [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow BookingListResV2
 bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbMobileNo mbCountryCode mbEmail mbCustomerId = do
   personId <- case mbCustomerId of
@@ -420,6 +458,9 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
               logInfo $ "rbList: test " <> show rbList_
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
+
+-- listV3 merge stream: lite taxi row (by startTime) or journey (by createdAt).
+data MergedLiteItem = MLBooking QBLite.BookingLite | MLJourney DJ.Journey
 
 buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Bool -> Flow ([BookingAPIEntityV2], Int, Int, Int)
 buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset dontNeedFareBreakup = do
@@ -567,6 +608,131 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
           logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from booking list"
           return Nothing
         else Just <$> generateJourneyInfoResponse journey legsInfo
+
+-- Top-level copy of V2's journey builder; only invoked for journeys on the page.
+buildJourneyApiEntityForList :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
+buildJourneyApiEntityForList journey = do
+  legsInfo <-
+    withTryCatch "getAllLegsInfo:buildJourneyApiEntityForList" (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo listV3 measureLatency: "))
+      >>= \case
+        Left err -> do
+          logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from listV3 : " <> show err
+          return []
+        Right legsInfo -> return legsInfo
+  if null legsInfo
+    then do
+      logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from listV3"
+      return Nothing
+    else Just <$> generateJourneyInfoResponse journey legsInfo
+
+-- Lightweight My Rides: lite taxi rows + time-interleaved multimodal journey cards.
+bookingListV3 ::
+  (Id Person.Person, Id Merchant.Merchant) ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Integer ->
+  [SLT.BillingCategory] ->
+  [SLT.RideType] ->
+  [SRB.BookingStatus] ->
+  [DJ.JourneyStatus] ->
+  Maybe Bool ->
+  Flow BookingListResV3
+bookingListV3 (personId, _merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset _mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList bookingStatusList journeyStatusList mbIsPaymentSuccess = do
+  let limit = maybe 10 fromIntegral mbLimit
+      mbFromDate = millisecondsToUTC <$> mbFromDate'
+      mbToDate = millisecondsToUTC <$> mbToDate'
+      mbInitialBookingOffset = mbBookingOffset <|> mbOffset
+      mbInitialJourneyOffset = mbJourneyOffset <|> mbOffset
+
+  -- 1. Lite taxi rows (journey legs already excluded in the query), newest-first.
+  liteRows0 <- QBLite.findAllByRiderIdLite personId (Just limit) (fromIntegral <$> mbInitialBookingOffset) mbFromDate mbToDate bookingStatusList
+  let liteRows = filter (matchesLiteFilters billingCategoryList rideTypeList) liteRows0
+
+  -- 2. Multimodal journeys (only when filters allow) — extra queries, journeys only.
+  journeys <-
+    if shouldIncludeJourneys billingCategoryList rideTypeList
+      then getJourneyList personId (Just (fromIntegral limit)) mbInitialJourneyOffset mbFromDate' mbToDate' journeyStatusList mbIsPaymentSuccess
+      else pure []
+
+  -- 3. Time-merge both newest-first streams, keep newest `limit`; offsets advance by items consumed.
+  let taggedTaxi = map (\r -> (r.startTime, MLBooking r)) liteRows
+      taggedJourney = map (\j -> (j.createdAt, MLJourney j)) journeys
+      mergedItems = map snd $ take limit $ sortBy (comparing (Down . fst)) (taggedTaxi <> taggedJourney)
+      bookingCount = length [() | MLBooking _ <- mergedItems]
+      journeyCount = length [() | MLJourney _ <- mergedItems]
+
+  -- 4. Batch supporting data ONLY for the taxi rows that made the page.
+  let pageLiteRows = [b | MLBooking b <- mergedItems]
+      bookingIds = (.id) <$> pageLiteRows
+  rides <- QBL.findLiteRidesByBookingIds bookingIds
+  let idsNeedingFallback = map (.id) $ filter (\r -> maybe True null r.locationNames) pageLiteRows
+  fallbackNames <- if null idsNeedingFallback then pure [] else QBL.resolveLocationNamesFallback idsNeedingFallback
+  let rideByBooking bId = find (\r -> r.bookingId == bId) rides
+      fallbackArr bId = maybe [] snd (find (\(b, _) -> b == bId) fallbackNames)
+      namesByBooking row = case row.locationNames of
+        Just ns | not (null ns) -> ns
+        _ -> fallbackArr row.id
+
+  -- 5. Build tagged entities in time order (a journey with no legs is dropped).
+  entities <-
+    forM mergedItems $ \case
+      MLBooking row -> pure $ Just $ RideLiteV3 (makeBookingAPIEntityLite row (rideByBooking row.id) (namesByBooking row))
+      MLJourney journey -> fmap MultiModalRideV3 <$> buildJourneyApiEntityForList journey
+
+  pure $
+    BookingListResV3
+      { list = catMaybes entities,
+        bookingOffset = Just (fromMaybe 0 (fromIntegral <$> mbInitialBookingOffset) + bookingCount),
+        journeyOffset = Just (fromMaybe 0 (fromIntegral <$> mbInitialJourneyOffset) + journeyCount),
+        -- mirror listV2: more data if the fetched (post-filter) page filled the limit.
+        hasMoreData = length liteRows + length journeys >= limit
+      }
+  where
+    -- V2's billing/ride-type filter on the lite row (ride type via tripCategory).
+    matchesLiteFilters bcs rts row =
+      (null bcs || maybe False (`elem` bcs) row.billingCategory)
+        && (null rts || maybe False (\tc -> rideTypeFromTripCategory tc `elem` rts) row.tripCategory)
+    -- Journeys (NammaTransit) only for PERSONAL billing + NORMAL ride type (mirror listV2).
+    shouldIncludeJourneys bcs rts =
+      (null bcs || SLT.PERSONAL `elem` bcs) && (null rts || SLT.NORMAL `elem` rts)
+
+-- | tripCategory -> RideType (lite path has no bookingDetails); no MeterRide category, CrossCity -> INTERCITY.
+rideTypeFromTripCategory :: TripCategory -> SLT.RideType
+rideTypeFromTripCategory = \case
+  DTrip.Rental _ -> SLT.RENTAL
+  DTrip.InterCity _ _ -> SLT.INTERCITY
+  DTrip.CrossCity _ _ -> SLT.INTERCITY
+  DTrip.Ambulance _ -> SLT.AMBULANCE
+  DTrip.Delivery _ -> SLT.DELIVERY
+  DTrip.EasyBooking _ -> SLT.NORMAL
+  DTrip.OneWay _ -> SLT.NORMAL
+  DTrip.RideShare _ -> SLT.NORMAL
+
+makeBookingAPIEntityLite :: QBLite.BookingLite -> Maybe QBL.RideLiteRow -> [Text] -> BookingAPIEntityLite
+makeBookingAPIEntityLite row mbRide names =
+  BookingAPIEntityLite
+    { bookingId = row.id,
+      rideId = (.rideId) <$> mbRide,
+      status = row.status,
+      isScheduled = fromMaybe False row.isScheduled,
+      rideScheduledTime = row.startTime,
+      createdAt = row.createdAt,
+      locationNames = names,
+      fare = fromMaybe row.estimatedFare (mbRide >>= (.totalFare)),
+      currency = INR,
+      serviceTierName = row.serviceTierName,
+      vehicleServiceTierType = row.vehicleServiceTierType,
+      vehicleIconUrl = row.vehicleIconUrl,
+      isAirConditioned = row.isAirConditioned,
+      tripCategory = row.tripCategory,
+      cancellationChargesOnCancel = mbRide >>= (.cancellationChargesOnCancel),
+      cancellationFeeStatus = mbRide >>= (.cancellationFeeStatus),
+      cancellationSource = Nothing
+    }
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
