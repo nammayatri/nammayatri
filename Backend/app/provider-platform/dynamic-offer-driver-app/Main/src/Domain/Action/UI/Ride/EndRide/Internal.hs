@@ -294,22 +294,13 @@ processEndRideFinance ::
   TransporterConfig ->
   m ()
 processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
-  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-      walletFinanceEnabled = isPrepaidSubscriptionAndWalletEnabled || thresholdConfig.driverWalletConfig.enableDriverWallet
-  let capEnabled = walletFinanceEnabled && fromMaybe False booking.fareRecomputeCapEnabled
-      rawTotalFare = fromMaybe 0 ride.fare
-      cappedTotalFare = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
-      mbFareCap = if capEnabled && cappedTotalFare < rawTotalFare then Just cappedTotalFare else Nothing
-      totalFare = fromMaybe rawTotalFare mbFareCap
+  let (walletFinanceEnabled, totalFare, mbFareCap) = settlementTotalFareWithCap merchant thresholdConfig booking ride.fare
       gstAmount = fromMaybe 0 newFareParams.govtCharges
       tollAmount = fromMaybe 0 newFareParams.tollCharges
       -- totalFare (ride.fare) already excludes parking when EDC-collected (see fareSum's gate),
       -- so subtracting it again here would double-count; zero it out in that case.
       edcParkingCollected = SL.edcCollectsParking newFareParams.fareSettlementType
       parkingAmount = if edcParkingCollected then 0 else fromMaybe 0 newFareParams.parkingCharge
-      baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-      isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-      parkingAmount = fromMaybe 0 newFareParams.parkingCharge
       baseFare = max 0 (totalFare - gstAmount - tollAmount - parkingAmount)
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False thresholdConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       -- When wallet isolation is enabled, scope all prepaid ops to the ride's vehicle category.
@@ -795,9 +786,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             then do
               transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
               void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
-            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
-              void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline
-            else void $ transfer OwnerLiability GovtIndirect (capDeduction taxAmount) taxRefCash
+            else void $ transfer OwnerLiability GovtIndirect (capDeduction taxAmount) taxRefCash Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
         void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef Nothing
@@ -906,9 +895,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           case paymentChargeResult of
             Left err -> fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e)) (Left err)
             Right _ -> pure ()
-
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 makeDriverLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
 makeDriverLeaderBoardKey leaderBoardType isCached merchantOpCityId fromDate toDate =

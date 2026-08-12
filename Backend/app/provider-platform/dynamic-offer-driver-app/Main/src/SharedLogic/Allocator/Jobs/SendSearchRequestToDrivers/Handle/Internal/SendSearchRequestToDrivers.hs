@@ -248,6 +248,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
     DriverIdleTime.resetIdleOnRequestSent personId
 
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
+  let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated

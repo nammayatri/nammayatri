@@ -49,6 +49,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DocumentVerificationConfig as DTO
+import qualified Domain.Types.ConditionalCharges as DCond
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
@@ -1017,49 +1018,279 @@ capRecomputedFare thresholdConfig booking estimatedFare fareParams = do
   let recomputedFare = Fare.fareSum fareParams Nothing
       fareCap = applyFareRecomputeBuffer thresholdConfig.driverWalletConfig booking.estimatedFare
       capApplies = fromMaybe False booking.fareRecomputeCapEnabled && recomputedFare > fareCap
-      finalFareParams =
+      (finalFareParams, belowFloorDrained, protectedDrained) =
         if capApplies
-          then absorbFareRecomputeExcess (Fare.computeTotalGstRate thresholdConfig.taxConfig.rideGst) (recomputedFare - fareCap) fareParams
-          else fareParams
+          then absorbFareRecomputeExcess (Fare.computeTotalGstRate thresholdConfig.taxConfig.rideGst) (recomputedFare - fareCap) (Just booking.fareParams) fareParams
+          else (fareParams, 0, 0)
       finalFare = Fare.fareSum finalFareParams Nothing
-  when capApplies $
+  when capApplies $ do
     logTagInfo "Fare recompute cap" $
       "Capped recomputed fare " <> show recomputedFare <> " to " <> show finalFare <> " (cap " <> show fareCap <> ", estimate " <> show estimatedFare <> ")"
-        <> (let residual = finalFare - fareCap in if residual > 0 then " cap not fully applied, residual=" <> show residual else "")
         <> " for booking "
         <> booking.id.getId
+    -- The floored pass (growth over the estimated breakup) should always cover
+    -- the excess; draining below floors means the estimated params disagree
+    -- with the estimated fare the cap was computed from.
+    when (belowFloorDrained > 0) $
+      logTagError "FareRecomputeCap" $
+        "Drained " <> show belowFloorDrained <> " below estimated floors (estimate/params mismatch?) for booking " <> booking.id.getId
+    -- Funding the cap from protected components (pass-throughs / customer
+    -- amounts / cancellation dues) is an error worth alerting on even though
+    -- the cap is still enforced.
+    when (protectedDrained > 0) $
+      logTagError "FareRecomputeCap" $
+        "Drained " <> show protectedDrained <> " from protected components to enforce cap for booking " <> booking.id.getId
+    -- Tripwire: with every fareSum component in the drain schedule this should be
+    -- impossible; fires only if a new fareSum component isn't mapped in
+    -- absorbFareRecomputeExcess.
+    let residual = finalFare - fareCap
+    when (residual > 0) $
+      logTagError "FareRecomputeCap" $
+        "BREACH: cap not fully applied, residual=" <> show residual <> " for booking " <> booking.id.getId
   pure (finalFare, finalFareParams)
 
-absorbFareRecomputeExcess :: Maybe Double -> HighPrecMoney -> FareParameters -> FareParameters -- TODO: Improve later
-absorbFareRecomputeExcess mbGstRate totalExcess fareParams =
+-- | Absorb a fare-recompute overrun so the total charged never exceeds the cap
+--   (estimate + buffer), regardless of which component grew — including tolls
+--   and parking (doc: "final fare would fallback to buffer + fare estimate").
+--
+--   Three passes:
+--     Pass 1 (floored): tiers 1-5 drain only each component's GROWTH over its
+--       estimated value (floors from the booking's estimated fare params), so
+--       components that didn't contribute to the overrun are never touched.
+--       Growth always covers the excess by exactly the buffer amount
+--       (excess = total growth − buffer), so this pass is normally sufficient.
+--     Pass 2 (unfloored): only if pass 1 ran dry (estimate/params data
+--       mismatch) — same tiers again with floors at 0. Reported to the caller.
+--     Pass 3 (protected last resort): driverSelectedFare, customerExtraFee,
+--       pass-throughs (insurance, card / payment-processing fees, conditional
+--       charges) and finally customerCancellationDues. Reported to the caller.
+--
+--   Tier order within a pass (contributors first):
+--     1. recompute deltas (extra km / duration fares)
+--     2. tollCharges / parkingCharge, with their own tax lines reduced pro-rata
+--     3. usage surcharges (waiting, night shift, congestion, priority, ...)
+--     4. baseFare
+--     5. remaining service-type charges (service charge, allowances, ...)
+--   Only discounts stay untouched (negative components — draining raises fare).
+--
+--   The running excess is tracked GROSS (as charged to the BAP): draining a
+--   GST-bearing component by d reduces the total by d*(1+gstRate) since
+--   govtCharges tracks the taxable base, while toll/parking reduce gross
+--   against their own tax fields.
+--
+--   Returns (cappedParams, drained below floors in pass 2, drained from
+--   protected components in pass 3).
+absorbFareRecomputeExcess :: Maybe Double -> HighPrecMoney -> Maybe FareParameters -> FareParameters -> (FareParameters, HighPrecMoney, HighPrecMoney)
+absorbFareRecomputeExcess mbGstRate totalExcess mbEstimates fareParams =
   let gstRate = if isJust fareParams.govtCharges then toRational (fromMaybe 0 mbGstRate) else 0
-      componentExcess = HighPrecMoney (totalExcess.getHighPrecMoney / (1 + gstRate))
-      (details', excessAfterDetails) = case fareParams.fareParametersDetails of
-        ProgressiveDetails det ->
-          let (extraKmFare', e1) = drainMb det.extraKmFare componentExcess
-              (rideDurationFare', e2) = drainMb det.rideDurationFare e1
-           in (ProgressiveDetails det {extraKmFare = extraKmFare', rideDurationFare = rideDurationFare'}, e2)
-        RentalDetails det ->
-          let (distBasedFare', e1) = drain det.distBasedFare componentExcess
-              (timeBasedFare', e2) = drain det.timeBasedFare e1
-           in (RentalDetails det {distBasedFare = distBasedFare', timeBasedFare = timeBasedFare'}, e2)
-        InterCityDetails det ->
-          let (extraDistanceFare', e1) = drain det.extraDistanceFare componentExcess
-              (extraTimeFare', e2) = drain det.extraTimeFare e1
-           in (InterCityDetails det {extraDistanceFare = extraDistanceFare', extraTimeFare = extraTimeFare'}, e2)
-        AmbulanceDetails det ->
-          let (distBasedFare', e1) = drain det.distBasedFare componentExcess
-           in (AmbulanceDetails det {distBasedFare = distBasedFare'}, e1)
-        slabDetails@(SlabDetails _) -> (slabDetails, componentExcess)
-      (baseFare', excessLeft) = drain fareParams.baseFare excessAfterDetails
-      drained = componentExcess - excessLeft
-      govtCharges' = (\g -> max 0 (g - HighPrecMoney (drained.getHighPrecMoney * gstRate))) <$> fareParams.govtCharges
-   in fareParams {baseFare = baseFare', fareParametersDetails = details', govtCharges = govtCharges'}
-  where
-    drain amt excess = let d = min excess (max 0 amt) in (amt - d, excess - d)
-    drainMb mbAmt excess =
-      let (amt', e) = drain (fromMaybe 0 mbAmt) excess
-       in (if amt' <= 0 then Nothing else Just amt', e)
+
+      -- Drain a GST-bearing component down to its floor; state is
+      -- (remaining gross excess, net drained from GST base).
+      drainGst fl (excess, acc) amt =
+        let d = min (max 0 (amt - max 0 fl)) (HighPrecMoney (excess.getHighPrecMoney / (1 + gstRate)))
+         in (amt - d, (excess - HighPrecMoney (d.getHighPrecMoney * (1 + gstRate)), acc + d))
+      drainMbGst fl st@(excess, _) mbAmt
+        -- Excess exhausted: hand back the input untouched (in particular, a
+        -- Just 0 stays Just 0 instead of being normalized to Nothing).
+        | excess <= 0 = (mbAmt, st)
+        | otherwise =
+          let (amt', st') = drainGst fl st (fromMaybe 0 mbAmt)
+           in (if amt' <= 0 then Nothing else Just amt', st')
+      -- Drain a pass-through component 1:1 (no associated tax line).
+      drainGross fl (excess, acc) amt =
+        let d = min (max 0 (amt - max 0 fl)) excess
+         in (amt - d, (excess - d, acc))
+      drainMbGross fl st@(excess, _) mbAmt
+        | excess <= 0 = (mbAmt, st)
+        | otherwise =
+          let (amt', st') = drainGross fl st (fromMaybe 0 mbAmt)
+           in (if amt' <= 0 then Nothing else Just amt', st')
+      -- Drain a component that carries its own tax line (toll, parking): the tax
+      -- shrinks pro-rata with the component and both count toward the gross excess.
+      drainOwnTax _ st@(excess, _) mbAmt mbTax | excess <= 0 = (mbAmt, mbTax, st)
+      drainOwnTax fl (excess, acc) mbAmt mbTax =
+        let amt = max 0 (fromMaybe 0 mbAmt)
+            tax = max 0 (fromMaybe 0 mbTax)
+            taxRate = if amt > 0 then tax.getHighPrecMoney / amt.getHighPrecMoney else 0
+            d = min (max 0 (amt - max 0 fl)) (HighPrecMoney (excess.getHighPrecMoney / (1 + taxRate)))
+            amt' = amt - d
+            tax' = HighPrecMoney (tax.getHighPrecMoney - d.getHighPrecMoney * taxRate)
+            mb v = if v <= 0 then Nothing else Just v
+         in (mb amt', mb tax', (excess - (amt - amt') - (tax - tax'), acc))
+
+      -- Tiers 1-5 over the ordinary components. Floors (when given) are the
+      -- estimated component values, so a drain may only consume growth over the
+      -- estimate; with Nothing every floor is 0.
+      runOrdinaryTiers mbFl st fp =
+        let flMb g = maybe 0 (max 0 . fromMaybe 0 . g) mbFl
+            flOf g = maybe 0 (max 0 . g) mbFl
+            mbFlDetails = (.fareParametersDetails) <$> mbFl
+            -- Tier 1: recompute deltas
+            (details', s1) = case fp.fareParametersDetails of
+              ProgressiveDetails det ->
+                let (extraKmFl, durFl) = case mbFlDetails of
+                      Just (ProgressiveDetails ed) -> (fromMaybe 0 ed.extraKmFare, fromMaybe 0 ed.rideDurationFare)
+                      _ -> (0, 0)
+                    (extraKmFare', sA) = drainMbGst extraKmFl st det.extraKmFare
+                    (rideDurationFare', sB) = drainMbGst durFl sA det.rideDurationFare
+                 in (ProgressiveDetails det {extraKmFare = extraKmFare', rideDurationFare = rideDurationFare'}, sB)
+              RentalDetails det ->
+                let (distFl, timeFl) = case mbFlDetails of
+                      Just (RentalDetails ed) -> (ed.distBasedFare, ed.timeBasedFare)
+                      _ -> (0, 0)
+                    (distBasedFare', sA) = drainGst distFl st det.distBasedFare
+                    (timeBasedFare', sB) = drainGst timeFl sA det.timeBasedFare
+                 in (RentalDetails det {distBasedFare = distBasedFare', timeBasedFare = timeBasedFare'}, sB)
+              InterCityDetails det ->
+                let (distFl, timeFl) = case mbFlDetails of
+                      Just (InterCityDetails ed) -> (ed.extraDistanceFare, ed.extraTimeFare)
+                      _ -> (0, 0)
+                    (extraDistanceFare', sA) = drainGst distFl st det.extraDistanceFare
+                    (extraTimeFare', sB) = drainGst timeFl sA det.extraTimeFare
+                 in (InterCityDetails det {extraDistanceFare = extraDistanceFare', extraTimeFare = extraTimeFare'}, sB)
+              AmbulanceDetails det ->
+                let distFl = case mbFlDetails of
+                      Just (AmbulanceDetails ed) -> ed.distBasedFare
+                      _ -> 0
+                    (distBasedFare', sA) = drainGst distFl st det.distBasedFare
+                 in (AmbulanceDetails det {distBasedFare = distBasedFare'}, sA)
+              slabDetails@(SlabDetails _) -> (slabDetails, st)
+            -- Tier 2: additional charges with their own tax lines
+            (tollCharges', tollFareTax', s2) = drainOwnTax (flMb (.tollCharges)) s1 fp.tollCharges fp.tollFareTax
+            (parkingCharge', parkingChargeTax', s3) = drainOwnTax (flMb (.parkingCharge)) s2 fp.parkingCharge fp.parkingChargeTax
+            -- Tier 3: usage surcharges
+            (waitingCharge', s4) = drainMbGst (flMb (.waitingCharge)) s3 fp.waitingCharge
+            (rideExtraTimeFare', s5) = drainMbGst (flMb (.rideExtraTimeFare)) s4 fp.rideExtraTimeFare
+            (nightShiftCharge', s6) = drainMbGst (flMb (.nightShiftCharge)) s5 fp.nightShiftCharge
+            (congestionCharge', s7) = drainMbGst (flMb (.congestionCharge)) s6 fp.congestionCharge
+            (priorityCharges', s8) = drainMbGst (flMb (.priorityCharges)) s7 fp.priorityCharges
+            (stopCharges', s9) = drainMbGst (flMb (.stopCharges)) s8 fp.stopCharges
+            (petCharges', s10) = drainMbGst (flMb (.petCharges)) s9 fp.petCharges
+            (luggageCharge', s11) = drainMbGst (flMb (.luggageCharge)) s10 fp.luggageCharge
+            -- Tier 4: base fare
+            (baseFare', s12) = drainGst (flOf (.baseFare)) s11 fp.baseFare
+            -- Tier 5: remaining service-type charges
+            (serviceCharge', s13) = drainMbGst (flMb (.serviceCharge)) s12 fp.serviceCharge
+            (driverAllowance', s14) = drainMbGst (flMb (.driverAllowance)) s13 fp.driverAllowance
+            (airportConvenienceFee', s15) = drainMbGst (flMb (.airportConvenienceFee)) s14 fp.airportConvenienceFee
+            (returnFeeCharge', s16) = drainMbGst (flMb (.returnFeeCharge)) s15 fp.returnFeeCharge
+            (boothCharge', s17) = drainMbGst (flMb (.boothCharge)) s16 fp.boothCharge
+         in ( fp
+                { fareParametersDetails = details',
+                  tollCharges = tollCharges',
+                  tollFareTax = tollFareTax',
+                  parkingCharge = parkingCharge',
+                  parkingChargeTax = parkingChargeTax',
+                  waitingCharge = waitingCharge',
+                  rideExtraTimeFare = rideExtraTimeFare',
+                  nightShiftCharge = nightShiftCharge',
+                  congestionCharge = congestionCharge',
+                  priorityCharges = priorityCharges',
+                  stopCharges = stopCharges',
+                  petCharges = petCharges',
+                  luggageCharge = luggageCharge',
+                  baseFare = baseFare',
+                  serviceCharge = serviceCharge',
+                  driverAllowance = driverAllowance',
+                  airportConvenienceFee = airportConvenienceFee',
+                  returnFeeCharge = returnFeeCharge',
+                  boothCharge = boothCharge'
+                },
+              s17
+            )
+
+      st0 = (totalExcess, 0)
+      -- Pass 1: floored — only growth over the estimated breakup is consumed.
+      (fpFloored, stFloored@(excessAfterFloored, _)) = runOrdinaryTiers mbEstimates st0 fareParams
+      -- Pass 2: unfloored — only if pass 1 ran dry (estimate/params mismatch).
+      (fpOrdinary, stOrdinary@(excessAfterOrdinary, _)) =
+        if excessAfterFloored > 0
+          then runOrdinaryTiers Nothing stFloored fpFloored
+          else (fpFloored, stFloored)
+      -- Pass 3 (last resort): protected components — reaching here is reported
+      -- to the caller (third tuple element) and logged as an error there.
+      (driverSelectedFare', st18) = drainMbGst 0 stOrdinary fpOrdinary.driverSelectedFare
+      (customerExtraFee', st19) = drainMbGst 0 st18 fpOrdinary.customerExtraFee
+      (insuranceCharge', st20) = drainMbGross 0 st19 fpOrdinary.insuranceCharge
+      (paymentProcessingFee', st21) = drainMbGross 0 st20 fpOrdinary.paymentProcessingFee
+      (cardChargeOnFare', st22) = drainMbGross 0 st21 (fpOrdinary.cardCharge >>= (.onFare))
+      (cardChargeFixed', st23) = drainMbGross 0 st22 (fpOrdinary.cardCharge >>= (.fixed))
+      (conditionalChargesRev, st24) = foldl' drainConditional ([], st23) fpOrdinary.conditionalCharges
+      conditionalCharges' = reverse conditionalChargesRev
+      (customerCancellationDues', (excessLeft, gstDrained)) = drainMbGross 0 st24 fpOrdinary.customerCancellationDues
+      drainConditional (accCcs, st) cc =
+        let (charge', st') = drainGross 0 st cc.charge
+         in (cc {DCond.charge = charge'} : accCcs, st')
+      belowFloorDrained = excessAfterFloored - excessAfterOrdinary
+      protectedDrained = excessAfterOrdinary - excessLeft
+      cardCharge' = fpOrdinary.cardCharge <&> \cc -> cc {Fare.onFare = cardChargeOnFare', Fare.fixed = cardChargeFixed'}
+      govtCharges' = (\g -> max 0 (g - HighPrecMoney (gstDrained.getHighPrecMoney * gstRate))) <$> fareParams.govtCharges
+      -- Full construction (not record-update) on purpose: adding a field to
+      -- FareParameters fails compilation right here, forcing a decision on
+      -- whether the new component joins the drain schedule, stays protected,
+      -- or is not part of fareSum at all.
+      cappedParams =
+        FareParameters
+          { id = fareParams.id,
+            driverSelectedFare = driverSelectedFare',
+            customerExtraFee = customerExtraFee',
+            serviceCharge = fpOrdinary.serviceCharge,
+            parkingCharge = fpOrdinary.parkingCharge,
+            stopCharges = fpOrdinary.stopCharges,
+            govtCharges = govtCharges',
+            baseFare = fpOrdinary.baseFare,
+            waitingCharge = fpOrdinary.waitingCharge,
+            rideExtraTimeFare = fpOrdinary.rideExtraTimeFare,
+            nightShiftCharge = fpOrdinary.nightShiftCharge,
+            nightShiftRateIfApplies = fareParams.nightShiftRateIfApplies,
+            fareParametersDetails = fpOrdinary.fareParametersDetails,
+            customerCancellationDues = customerCancellationDues',
+            tollCharges = fpOrdinary.tollCharges,
+            congestionCharge = fpOrdinary.congestionCharge,
+            petCharges = fpOrdinary.petCharges,
+            driverAllowance = fpOrdinary.driverAllowance,
+            airportConvenienceFee = fpOrdinary.airportConvenienceFee,
+            -- discounts are negative components: draining them would raise the fare
+            businessDiscount = fareParams.businessDiscount,
+            personalDiscount = fareParams.personalDiscount,
+            priorityCharges = fpOrdinary.priorityCharges,
+            -- not part of fareSum
+            congestionChargeViaDp = fareParams.congestionChargeViaDp,
+            insuranceCharge = insuranceCharge',
+            cardCharge = cardCharge',
+            luggageCharge = fpOrdinary.luggageCharge,
+            returnFeeCharge = fpOrdinary.returnFeeCharge,
+            boothCharge = fpOrdinary.boothCharge,
+            -- top-level platformFee, sgst, cgst are breakdown-only (fareSum uses the
+            -- details-level platform fee)
+            platformFee = fareParams.platformFee,
+            sgst = fareParams.sgst,
+            cgst = fareParams.cgst,
+            platformFeeChargesBy = fareParams.platformFeeChargesBy,
+            currency = fareParams.currency,
+            updatedAt = fareParams.updatedAt,
+            merchantId = fareParams.merchantId,
+            merchantOperatingCityId = fareParams.merchantOperatingCityId,
+            conditionalCharges = conditionalCharges',
+            shouldApplyBusinessDiscount = fareParams.shouldApplyBusinessDiscount,
+            shouldApplyPersonalDiscount = fareParams.shouldApplyPersonalDiscount,
+            paymentProcessingFee = paymentProcessingFee',
+            isVatTaxType = fareParams.isVatTaxType,
+            -- reporting partition slots, not summed; not re-derived after draining
+            discountApplicableRideFareTaxExclusive = fareParams.discountApplicableRideFareTaxExclusive,
+            discountApplicableRideFareTax = fareParams.discountApplicableRideFareTax,
+            nonDiscountApplicableRideFareTaxExclusive = fareParams.nonDiscountApplicableRideFareTaxExclusive,
+            nonDiscountApplicableRideFareTax = fareParams.nonDiscountApplicableRideFareTax,
+            tollFareTaxExclusive = fareParams.tollFareTaxExclusive,
+            tollFareTax = fpOrdinary.tollFareTax,
+            cancellationFeeTaxExclusive = fareParams.cancellationFeeTaxExclusive,
+            cancellationTax = fareParams.cancellationTax,
+            driverCancellationNotAllowed = fareParams.driverCancellationNotAllowed,
+            fareSettlementType = fareParams.fareSettlementType,
+            parkingChargeTaxExclusive = fareParams.parkingChargeTaxExclusive,
+            parkingChargeTax = fpOrdinary.parkingChargeTax
+          }
+   in (cappedParams, belowFloorDrained, protectedDrained)
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
 isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do

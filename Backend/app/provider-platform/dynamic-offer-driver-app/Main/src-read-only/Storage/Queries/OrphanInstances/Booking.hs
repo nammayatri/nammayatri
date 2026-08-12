@@ -163,7 +163,6 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.estimatedStaticDuration = estimatedStaticDuration,
         Beam.exotelDeclinedCallStatusReceivingTime = exotelDeclinedCallStatusReceivingTime,
         Beam.fareParametersId = (Kernel.Types.Id.getId $ (.id) fareParams),
-        Beam.fareParametersId = Kernel.Types.Id.getId $ (.id) fareParams,
         Beam.fareRecomputeCapEnabled = fareRecomputeCapEnabled,
         Beam.fareSettlementType = fareSettlementType,
         Beam.financeInvoiceId = financeInvoiceId,

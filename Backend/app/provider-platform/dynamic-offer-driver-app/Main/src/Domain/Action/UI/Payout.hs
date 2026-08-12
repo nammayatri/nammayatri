@@ -452,7 +452,6 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
             voidWalletHoldByReference counterparty driverId.getId prId ("Payout terminal status: " <> show updPayoutStatus)
         when (isPayoutOrderSuccess updPayoutStatus) $ do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
           currentBal <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
           when (currentBal < amount) $
             logError $ "BREACH: payout debit overdraws wallet for driver " <> driverId.getId <> " balance=" <> show currentBal <> " debit=" <> show amount <> " payoutOrder=" <> payoutOrder.id.getId
@@ -489,8 +488,6 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
               recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges
                 >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
 
-          whenJust mbPayoutReq $ \payoutReq -> do
-            mbEntryIds <- Redis.get (makePayoutEntryIdsKey payoutReq.id.getId)
           whenJust mbPayoutRequestId $ \prId ->
             voidWalletHoldByReference counterparty driverId.getId prId ("Payout successful, debit posted: " <> payoutOrder.id.getId)
 

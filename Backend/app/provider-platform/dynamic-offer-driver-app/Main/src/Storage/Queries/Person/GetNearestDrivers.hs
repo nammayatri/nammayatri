@@ -430,36 +430,3 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
               | otherwise -> do
                 cashOk <- checkBalance cashAccount c
                 if cashOk then checkBalance airportAccount a else pure False
-
-shouldCheckCashWallet :: Maybe MP.PaymentInstrument -> Bool
-shouldCheckCashWallet = \case
-  Nothing -> True
-  Just MP.Cash -> True
-  Just MP.BoothOnline -> True
-  _ -> False
-
--- | Estimate deductions (govtCharges + TDS) from fare components.
-estimateDeductionsFromConfig :: DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
-estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkingCharge_ =
-  case rideFare of
-    Nothing -> 0
-    Just totalFare ->
-      let gstAmount = fromMaybe 0 govtCharges_
-          tollAmount = fromMaybe 0 tollCharges_
-          parkingAmount = fromMaybe 0 parkingCharge_
-          baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-          tdsRate = Just taxConfig.invalidPanTdsRate.rate
-       in gstAmount + estimateWalletDeductions tdsRate baseFare
-    passesLiabilityGates cashReq airportReq r = do
-      let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
-          cashAccount = (cashCp, cashOwner)
-          airportAccount = (counterpartyDriver, r.driverId.getId)
-      case (cashReq, airportReq) of
-        (Nothing, Nothing) -> pure True
-        (Just c, Nothing) -> checkBalance cashAccount c
-        (Nothing, Just a) -> checkBalance airportAccount a
-        (Just c, Just a)
-          | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
-          | otherwise -> do
-            cashOk <- checkBalance cashAccount c
-            if cashOk then checkBalance airportAccount a else pure False

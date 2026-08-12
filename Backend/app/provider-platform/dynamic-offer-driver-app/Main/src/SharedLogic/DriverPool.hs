@@ -1059,7 +1059,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             onlinePayment,
             now,
             paymentMode,
-            searchTryId = Just currentSearchInfo.searchTry.id.getId
+            searchTryId = Just currentSearchInfo.searchTry.id.getId,
             mbSearchTryId
           }
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq

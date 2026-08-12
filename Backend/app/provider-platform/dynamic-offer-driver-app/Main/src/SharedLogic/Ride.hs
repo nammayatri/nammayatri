@@ -116,7 +116,6 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
