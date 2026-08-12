@@ -1167,7 +1167,7 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
             SPBA.getPersonRegisterBankAccountStatus (Just True) driverId merchantOpCityId
       mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
       bankingDetailsConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DVC.BankingDetails Nothing
-      let isManualVerification = maybe False (.isDefaultEnabledOnManualVerification) (listToMaybe bankingDetailsConfigs)
+      let isManualVerification = maybe False (.doStrictVerifcation) (listToMaybe bankingDetailsConfigs)
           mbChargesEnabled = (.chargesEnabled) <$> mbBankAccount
           mbPayoutsEnabled = mbBankAccount >>= (.payoutsEnabled)
           mbDetailsSubmitted = (.detailsSubmitted) <$> mbBankAccount
