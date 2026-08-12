@@ -29,6 +29,7 @@ import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler.Environment
+import Lib.Scheduler.Metrics (JobLifecycleStatus (..), incrementJobLifecycleCounter)
 import Lib.Scheduler.Types
 
 createJob ::
@@ -115,6 +116,10 @@ createJobImpl merchantId merchantOperatingCityId uuid createJobFunc scheduledAt 
   let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
   let job = makeJob shardId id now
   createJobFunc $ AnyJob job
+  -- Counted only after createJobFunc succeeds, so `created` never overstates
+  -- what actually reached the store.
+  fork "jobLifecycleCreated" $
+    incrementJobLifecycleCounter (show (fromSing (sing :: Sing e))) JobCreated
   pure id
   where
     idToShardNumber uuidTxt = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuidTxt)) `mod` maxShards
