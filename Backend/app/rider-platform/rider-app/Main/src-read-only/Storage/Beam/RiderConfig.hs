@@ -34,6 +34,7 @@ data RiderConfigT f = RiderConfigT
     blockedUntilInMins :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),
     bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     boostSearchPreSelectionServiceTierConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    busApproachingNotificationTiers :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     busBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     busFareCachingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     busScanRouteCalculationEnabledModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

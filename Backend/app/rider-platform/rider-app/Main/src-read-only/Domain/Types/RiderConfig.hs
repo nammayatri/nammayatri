@@ -36,6 +36,7 @@ data RiderConfig = RiderConfig
     blockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boostSearchPreSelectionServiceTierConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
+    busApproachingNotificationTiers :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     busBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busFareCachingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busScanRouteCalculationEnabledModes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

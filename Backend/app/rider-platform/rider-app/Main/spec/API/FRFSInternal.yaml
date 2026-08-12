@@ -4,7 +4,14 @@ imports:
 
 module: FRFSInternal
 
-types: {}
+types:
+  NotifyBusApproachingReq:
+    gtfsId: Text
+    routeId: Text
+    vehicleNumber: Text
+    etaSeconds: Maybe Int
+    distanceMeters: Double
+    thresholdType: Text
 
 apis:
   - GET:
@@ -24,5 +31,17 @@ apis:
         token: Text
       params:
         tripId: Text
+      response:
+        type: "Kernel.Types.APISuccess.APISuccess"
+  - POST:
+      endpoint: /frfs/trip/{tripId}/stop/{stopCode}/notifyApproaching
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        tripId: Text
+        stopCode: Text
+      request:
+        type: NotifyBusApproachingReq
       response:
         type: "Kernel.Types.APISuccess.APISuccess"
