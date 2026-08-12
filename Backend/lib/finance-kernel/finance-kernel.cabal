@@ -43,6 +43,7 @@ library
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
+      Lib.Finance.OfferHold
       Lib.Finance.Reconciliation.Job
       Lib.Finance.Reconciliation.Recipe
       Lib.Finance.Reconciliation.Runner

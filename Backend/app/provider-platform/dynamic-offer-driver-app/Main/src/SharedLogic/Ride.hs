@@ -62,7 +62,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
-import SharedLogic.Finance.Wallet (applyFareRecomputeBuffer, cashWalletCheckEnabled, createWalletHold, estimateBufferedStatutoryDeductions, getPendingWalletHoldAmountByReference, getPrepaidOfferHoldAmount, getPrepaidOfferHoldTotal, getWalletAvailableBalanceByOwner, getWalletOfferHoldAmount, getWalletOfferHoldTotal, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, removeWalletOfferHold, resolveIsOnlineFromBooking, voidWalletHoldByReference)
+import SharedLogic.Finance.Wallet (applyFareRecomputeBuffer, getPrepaidOfferHoldTotalExcluding, makeWalletRunningBalanceLockKey, removePrepaidOfferHold, reserveWalletForCashRide, voidWalletHoldByReference)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -110,6 +110,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
@@ -132,12 +133,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       throwError $
         InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
     whenJust mbAccount $ \account -> do
-      mbDriverQuote <- QDQ.findById (Id booking.quoteId)
-      let mbSearchTryId = (.getId) . (.searchTryId) <$> mbDriverQuote
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
         mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-        prepaidOfferHolds <- getPrepaidOfferHoldTotal ownerId
-        ownPrepaidOfferHold <- maybe (pure 0) (getPrepaidOfferHoldAmount ownerId) mbSearchTryId
+        otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
         existingBookingHold <- maybe 0 (.amount) <$> findPendingPrepaidHoldByReference account.id prepaidRideDebitReferenceType booking.id.getId
         let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
             tollAmount = fromMaybe 0 booking.fareParams.tollCharges
@@ -147,7 +145,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
               Just _ -> transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold
               Nothing -> transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold
             balance = fromMaybe 0 mbAvailableBalance
-        when (balance + existingBookingHold - (prepaidOfferHolds - ownPrepaidOfferHold) < applyFareRecomputeBuffer transporterConfig.driverWalletConfig rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
+        when (balance + existingBookingHold - otherPrepaidOfferHolds < applyFareRecomputeBuffer transporterConfig.driverWalletConfig rideFare + threshold) $ throwError (InvalidRequest "Low balance.")
         _ <-
           createPrepaidHold
             counterpartyType
@@ -161,33 +159,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             mbVehicleCategory
             >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
         whenJust mbSearchTryId $ removePrepaidOfferHold ownerId
-  isOnline <- resolveIsOnlineFromBooking booking
-  unless isOnline $
-    when (cashWalletCheckEnabled transporterConfig.driverWalletConfig) $ do
-      let (walletCounterpartyType, walletOwnerId) = case mFleetOwnerId of
-            Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
-            Nothing -> (counterpartyDriver, driver.id.getId)
-          holdAmount =
-            estimateBufferedStatutoryDeductions
-              transporterConfig.driverWalletConfig
-              transporterConfig.taxConfig
-              (Just booking.estimatedFare)
-              booking.fareParams.govtCharges
-              booking.fareParams.tollCharges
-              booking.fareParams.parkingCharge
-      when (holdAmount > 0) $ do
-        mbDriverQuote <- QDQ.findById (Id booking.quoteId)
-        let mbSearchTryId = (.getId) . (.searchTryId) <$> mbDriverQuote
-        Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey walletOwnerId) 10 10 $ do
-          availableBalance <- fromMaybe 0 <$> getWalletAvailableBalanceByOwner walletCounterpartyType walletOwnerId
-          offerHolds <- getWalletOfferHoldTotal walletOwnerId
-          ownOfferHold <- maybe (pure 0) (getWalletOfferHoldAmount walletOwnerId) mbSearchTryId
-          existingBookingHold <- getPendingWalletHoldAmountByReference walletCounterpartyType walletOwnerId booking.id.getId
-          when (availableBalance + existingBookingHold - (offerHolds - ownOfferHold) < holdAmount) $ throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
-          _ <-
-            createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId.getId booking.merchantOperatingCityId.getId booking.id.getId (Just driver.id.getId) Nothing
-              >>= fromEitherM (\err -> InternalError ("Failed to create wallet hold: " <> show err))
-          whenJust mbSearchTryId $ removeWalletOfferHold walletOwnerId
+  reserveWalletForCashRide transporterConfig driver booking ((.getId) <$> mFleetOwnerId) mbSearchTryId
   otpCode <-
     case mbOtpCode of
       Just otp -> pure otp

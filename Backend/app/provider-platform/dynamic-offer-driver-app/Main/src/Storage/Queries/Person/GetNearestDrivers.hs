@@ -331,9 +331,8 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
                 let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
                     (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
                 mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-                prepaidOfferHolds <- getPrepaidOfferHoldTotal ownerId
-                ownPrepaidOfferHold <- maybe (pure 0) (getPrepaidOfferHoldAmount ownerId) mbSearchTryId
-                pure $ maybe False (\b -> b - (prepaidOfferHolds - ownPrepaidOfferHold) >= applyFareRecomputeBuffer driverWalletConfig fare + threshold) mbBalance
+                otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
+                pure $ maybe False (\b -> b - otherPrepaidOfferHolds >= applyFareRecomputeBuffer driverWalletConfig fare + threshold) mbBalance
             )
             results
         _ -> pure results
@@ -342,7 +341,7 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
         case minWalletAmountForCashRides of
           Just minAmt
             | cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument ->
-              Just (minAmt + estimateBufferedStatutoryDeductions driverWalletConfig taxConfig ((\bf -> bf + fromMaybe 0 govtCharges + fromMaybe 0 tollCharges + fromMaybe 0 parkingCharge) <$> rideFare) govtCharges tollCharges parkingCharge)
+              Just (minAmt + estimateOfferDeductions driverWalletConfig taxConfig rideFare govtCharges tollCharges parkingCharge)
           _ -> Nothing
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
@@ -357,9 +356,8 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
 
     checkBalance (counterpartyType, ownerId) required = do
       mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
-      offerHolds <- getWalletOfferHoldTotal ownerId
-      ownOfferHold <- maybe (pure 0) (getWalletOfferHoldAmount ownerId) mbSearchTryId
-      pure $ maybe False (\b -> b - (offerHolds - ownOfferHold) >= required) mbBalance
+      otherOfferHolds <- getWalletOfferHoldTotalExcluding ownerId mbSearchTryId
+      pure $ maybe False (\b -> b - otherOfferHolds >= required) mbBalance
 
     passesLiabilityGates cashReq airportReq r = do
       let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r

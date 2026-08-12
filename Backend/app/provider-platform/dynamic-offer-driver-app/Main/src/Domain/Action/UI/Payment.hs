@@ -36,6 +36,7 @@ import Domain.Action.UI.Ride.EndRide.Internal
 import qualified Domain.Action.UI.StclMembership as DStclMembership
 import qualified Domain.Action.WebhookHandler as AWebhook
 import Domain.Types.DriverFee
+import qualified Domain.Types.DriverGstin as DDG
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -634,6 +635,18 @@ processNonClearedDriverFees merchantId person driverFee = do
       _ <- updatePrepaidBalanceAndExpiry merchantId person driverFee
       pure ()
 
+-- | Buyer address for a subscription invoice: prefer the GSTIN-registered
+--   address, then the fleet owner's registered address, else the operating city.
+resolveInvoiceIssuedToAddress :: Maybe DDG.DriverGstin -> Maybe DFOI.FleetOwnerInformation -> Text -> Text
+resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress =
+  fromMaybe opCityAddress (gstinAddress <|> fleetOwnerAddress)
+  where
+    nonBlank t = if t == "" then Nothing else Just t
+    gstinAddress = (mbBuyerGstinRow >>= (.address)) >>= nonBlank
+    fleetOwnerAddress = do
+      addr <- (mbFleetInfo >>= (.address)) >>= nonBlank
+      pure $ addr <> maybe "" (\st -> ", " <> show st) (mbFleetInfo >>= (.addressState))
+
 processSubscriptionPurchasePayment ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
@@ -692,12 +705,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         gstinOfParty <- maybe (pure Nothing) (mapM decrypt . (.gstNumber)) mbFleetInfo
         let issuedByAddress = Just $ show merchant.city <> ", " <> show merchant.state <> ", " <> show merchant.country
             opCityAddress = show merchantOperatingCity.city <> ", " <> show merchantOperatingCity.state <> ", " <> show merchantOperatingCity.country
-            nonBlank t = if t == "" then Nothing else Just t
-            gstinAddress = (mbBuyerGstinRow >>= (.address)) >>= nonBlank
-            fleetOwnerAddress = do
-              addr <- (mbFleetInfo >>= (.address)) >>= nonBlank
-              pure $ addr <> maybe "" (\st -> ", " <> show st) (mbFleetInfo >>= (.addressState))
-            issuedToAddress = Just $ fromMaybe opCityAddress (gstinAddress <|> fleetOwnerAddress)
+            issuedToAddress = Just $ resolveInvoiceIssuedToAddress mbBuyerGstinRow mbFleetInfo opCityAddress
             -- For fleet invoices show the registered fleet name; fall back to the owner's first name when unset
             resolvedIssuedToName = Just $ fromMaybe person.firstName (mbFleetInfo >>= (.fleetName))
         let invoiceParams =

@@ -275,10 +275,8 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
       (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
         Nothing -> pure (0, [], 0)
         Just accountId -> getPayoutEligibilityData accountId cutoff now
-      dbHoldBalance <- getWalletHoldBalanceByOwner counterparty personId.getId
-      offerHoldBalance <- getWalletOfferHoldTotal personId.getId
-      let holdBalance = dbHoldBalance + offerHoldBalance
-          payoutableBalance = walletBalance - nonRedeemable - holdBalance
+      holdBalance <- getTotalWalletHoldBalance counterparty personId.getId
+      let payoutableBalance = walletBalance - nonRedeemable - holdBalance
       logDebug $
         "[SBP-DEBUG] payee=" <> personId.getId
           <> " role="
