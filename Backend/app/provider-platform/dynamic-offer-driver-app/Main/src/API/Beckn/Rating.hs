@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -28,6 +29,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
@@ -48,6 +50,7 @@ rating ::
   FlowHandler AckResponse
 rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.ratingReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2
     dRatingReq <- ACL.buildRatingReqV2 subscriber reqV2

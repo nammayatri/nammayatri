@@ -30,6 +30,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry (SearchTry)
 import qualified Domain.Types.VehicleVariant as DVeh
+import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Clickhouse.Config as CH
@@ -41,6 +42,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
@@ -212,6 +214,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   let searchTryId = jobData.searchTryId
   searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  L.setOptionLocal TxnIdKey searchReq.transactionId
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
   -- An early batch advance orphans the job that was already scheduled. Terminate the orphan here

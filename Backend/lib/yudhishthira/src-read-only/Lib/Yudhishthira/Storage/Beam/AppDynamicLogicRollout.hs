@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 
 data AppDynamicLogicRolloutT f = AppDynamicLogicRolloutT
   { domain :: (B.C f Lib.Yudhishthira.Types.LogicDomain),
+    experimentGroup :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     experimentStatus :: (B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ExperimentStatus)),
     isBaseVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),

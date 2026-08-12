@@ -496,6 +496,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
               timeBounds = "Unbounded",
               version = baseVersion,
               versionDescription = Just "System generated base rollout",
+              experimentGroup = Nothing,
               createdAt = now,
               updatedAt = now
             }
@@ -512,6 +513,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
             timeBounds = "Unbounded",
             version = version,
             versionDescription = req.description,
+            experimentGroup = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -635,7 +637,7 @@ getLogicRollout merchantOpCityId _ mbActiveOnly domain = do
   where
     combineRollout :: NonEmpty AppDynamicLogicRollout -> Maybe Lib.Yudhishthira.Types.LogicRolloutObject
     combineRollout logicRollouts =
-      let rollout = DLNE.map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription) logicRollouts
+      let rollout = DLNE.map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription r.experimentGroup) logicRollouts
           firstElement = DLNE.head logicRollouts
        in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout) (firstElement.modifiedBy)
 
@@ -795,6 +797,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq _giveConfigs opCity 
           timeBounds = "Unbounded",
           version = newVersion,
           versionDescription = Just "System generated base rollout",
+          experimentGroup = Nothing,
           createdAt = now,
           updatedAt = now,
           ..
@@ -1098,6 +1101,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
           timeBounds = "Unbounded",
           version = newVersion,
           versionDescription = Just "System generated base rollout",
+          experimentGroup = Nothing,
           createdAt = now,
           updatedAt = now,
           ..

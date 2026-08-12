@@ -771,15 +771,15 @@ DocumentVerificationConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  configPilot:
-    configType: DocumentVerificationConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.DocumentVerificationConfig
-    filterDimensions:
-      - documentType
-      - vehicleCategory
+#   configPilot:
+#     configType: DocumentVerificationConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.DocumentVerificationConfig
+#     filterDimensions:
+#       - documentType
+#       - vehicleCategory
 
 VehiclePermit:
   tableName: vehicle_permit
@@ -1399,13 +1399,13 @@ FleetOwnerDocumentVerificationConfig:
       where:
         and: [merchantOperatingCityId, role]
 
-  configPilot:
-    configType: FleetOwnerDocumentVerificationConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
-    filterDimensions: [documentType, role]
+#   configPilot:
+#     configType: FleetOwnerDocumentVerificationConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+#     filterDimensions: [documentType, role]
 
 AadhaarCard:
   tableName: aadhaar_card

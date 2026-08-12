@@ -29,3 +29,9 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN is_base_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN experiment_group text ;

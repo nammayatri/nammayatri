@@ -787,7 +787,8 @@ instance HideSecrets LogicRolloutObject where
 data RolloutVersion = RolloutVersion
   { version :: Int,
     rolloutPercentage :: Int,
-    versionDescription :: Maybe Text
+    versionDescription :: Maybe Text,
+    experimentGroup :: Maybe Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

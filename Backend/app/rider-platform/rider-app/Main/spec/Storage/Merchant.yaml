@@ -659,14 +659,14 @@ MerchantPushNotification:
       where:
         and: [merchantOperatingCityId, key, tripCategory]
 
-  configPilot:
-    configType: MerchantPushNotificationRider
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.MerchantPushNotification
-    filterDimensions:
-      - key
-      - tripCategory
+#   configPilot:
+#     configType: MerchantPushNotificationRider
+#     fetchQuery: findAllByMerchantOpCityId
+#     returnType: List
+#     queryModule: Storage.Queries.MerchantPushNotification
+#     filterDimensions:
+#       - key
+#       - tripCategory
 
 PayoutConfig:
   tableName : payout_config

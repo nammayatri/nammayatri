@@ -64,6 +64,7 @@ import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
 import Domain.Utils (mapConcurrently)
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Google.PolyLinePoints
@@ -80,6 +81,7 @@ import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
+import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius, getGatesBySpecialLocationIdCached)
 import qualified Lib.Types.GateInfoExtra as GExtra
@@ -271,6 +273,7 @@ getRouteServiceability merchantId merchantOpCityId _distanceUnit fromLocation to
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = do
+  L.setOptionLocal TxnIdKey sReq.transactionId
   bapMetadata <- mkBapMetaData
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name

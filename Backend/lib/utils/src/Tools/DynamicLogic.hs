@@ -18,6 +18,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as DALE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as DALR
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
+import qualified Lib.Yudhishthira.Tools.DynamicLogicGroup as LYG
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
@@ -168,7 +169,7 @@ selectVersionForUnboundedConfigs merchantOpCityId domain mbToss = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
   let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") $ filterActiveRollouts configs
-  mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
+  mbSelectedConfig <- chooseLogicWithGroups applicapleConfigs mbToss
   return $ mbSelectedConfig <&> (.version)
 
 isExperimentRunning :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m Bool
@@ -198,7 +199,7 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss = do
             if null boundedConfigs
               then unboundedConfigs activeConfigs
               else boundedConfigs
-  mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
+  mbSelectedConfig <- chooseLogicWithGroups applicapleConfigs mbToss
   return $ mbSelectedConfig <&> (.version)
   where
     unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
@@ -222,6 +223,12 @@ chooseLogic logics mbToss = do
   let cumulative = cumulativeRollout logics
   toss <- maybe (getRandomInRange (1, 100 :: Int)) pure mbToss
   return $ findLogic toss cumulative
+
+-- | Group-aware version of 'chooseLogic': delegates to the shared per-transaction
+-- experiment-group resolver (reads 'LYG.TxnIdKey' via option-local), using this
+-- engine's cumulative-percentage 'chooseLogic' as the candidate selector.
+chooseLogicWithGroups :: (BeamFlow m r) => [AppDynamicLogicRollout] -> Maybe Int -> m (Maybe AppDynamicLogicRollout)
+chooseLogicWithGroups applicable mbToss = LYG.chooseWithGroups applicable (\cands -> chooseLogic cands mbToss)
 
 -- Function to find the logic corresponding to the random number
 findLogic :: Int -> [(AppDynamicLogicRollout, Int)] -> Maybe AppDynamicLogicRollout
