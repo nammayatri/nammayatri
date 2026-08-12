@@ -1045,6 +1045,7 @@ library
       API.Types.UI.FavouriteDriver
       API.Types.UI.FinanceInvoice
       API.Types.UI.FollowRide
+      API.Types.UI.FRFSInternal
       API.Types.UI.FRFSTicketService
       API.Types.UI.Insurance
       API.Types.UI.Invoice
