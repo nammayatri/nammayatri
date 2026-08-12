@@ -660,7 +660,7 @@ incrementSkipAndCheckThreshold specialLocationId vehicleType merchantId driverId
           <> ", threshold="
           <> show threshold
           <> ", reason=skip-count threshold reached"
-      void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "skip_threshold_reached")
+      void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "skip_threshold_reached") False
       resetQueueSkipCount specialLocationId driverId
       logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " skips at " <> specialLocationId
 
@@ -1181,6 +1181,7 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
             merchantId
             driver
             (Just reason)
+            True
   pure (eligibleDrivers, driverVariantMap)
 
 -- | Fetch all gates of a special location with their parsed pickup-zone polygons.
@@ -1269,6 +1270,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
               dl.merchantId
               dl.driverId
               (Just "stale_driver_location")
+              True
       let locByDriver = Map.fromList $ map (\dl -> (dl.driverId, LatLong dl.lat dl.lon)) freshLocations
       (kept, dropped) <-
         flip partitionM driverIds $ \driverId ->
@@ -1283,6 +1285,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
                       merchantId
                       driverId
                       (Just "no_driver_location")
+                      True
               pure False
             Just loc -> do
               let nearTarget = maybe False (isPointInOrNearGate loc gateProximityExclusionMeters) mbTargetCached
@@ -1422,6 +1425,6 @@ handleQueueSkipIfApplicable (Just gateId) vehicleType driverId merchantId search
               <> ", threshold="
               <> show threshold
               <> ", reason=search-flow timeout, skip-count threshold reached"
-          void $ LTSFlow.manualQueueRemove slId vehicleType merchantId driverId (Just "search_skip_threshold")
+          void $ LTSFlow.manualQueueRemove slId vehicleType merchantId driverId (Just "search_skip_threshold") False
           resetQueueSkipCount slId driverId
           logInfo $ "Driver " <> driverId.getId <> " removed from queue at " <> slId <> " after " <> show newCount <> " skips"
