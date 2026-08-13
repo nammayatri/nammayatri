@@ -11,6 +11,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data AllRiderPreferencesResp = AllRiderPreferencesResp {locationPickups :: [LocationPickupRespData], rideConfig :: Kernel.Prelude.Maybe RideConfigData}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LocationPickupReqData = LocationPickupReqData
   { pickupAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupAddressSubtitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -39,14 +43,23 @@ data LocationPickupRespData = LocationPickupRespData
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RiderPreferenceReq = RiderPreferenceReq {locationData :: Kernel.Prelude.Maybe LocationPickupReqData, preferenceType :: Domain.Types.Extra.RiderPreferences.PreferenceType}
+data RideConfigData = RideConfigData
+  { isAutoAssign :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isBusiness :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isPetRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isTransitEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RiderPreferenceReq = RiderPreferenceReq
+  { locationData :: Kernel.Prelude.Maybe LocationPickupReqData,
+    preferenceType :: Domain.Types.Extra.RiderPreferences.PreferenceType,
+    rideConfigData :: Kernel.Prelude.Maybe RideConfigData
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RiderPreferencesResp = RiderPreferencesResp {locationPickups :: [LocationPickupRespData]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data AllRiderPreferencesResp = AllRiderPreferencesResp {locationPickups :: [LocationPickupRespData]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

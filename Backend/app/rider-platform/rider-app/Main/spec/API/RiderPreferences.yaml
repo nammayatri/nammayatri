@@ -24,11 +24,17 @@ types:
     pickupAddress: Maybe Text
     pickupAddressSubtitle: Maybe Text
 
+  RideConfigData:
+    isPetRide: Maybe Bool
+    isBusiness: Maybe Bool
+    isTransitEnabled: Maybe Bool
+    isAutoAssign: Maybe Bool
+
   # Top-level POST body — preferenceType tells us which optional data block to read.
-  # Only locationData is relevant right now; other blocks can be added later.
   RiderPreferenceReq:
     preferenceType: PreferenceType
     locationData: Maybe LocationPickupReqData
+    rideConfigData: Maybe RideConfigData
 
   # ---------- GET response ----------
   # One entry per saved pickup location (one per source geohash).
@@ -54,8 +60,10 @@ types:
 
   # GET ALL response — all preferences for the rider, grouped by type.
   # locationPickups contains all saved pickup locations (not filtered by geohash).
+  # rideConfig is Nothing when the rider has never saved one.
   AllRiderPreferencesResp:
     locationPickups: "[LocationPickupRespData]"
+    rideConfig: Maybe RideConfigData
 
 apis:
   # Save or update a preference.
@@ -72,7 +80,6 @@ apis:
   # Fetch all preferences for the logged-in rider.
   # sourceLat + sourceLon are the current source location — always required.
   # Backend computes the geohash and returns the matching LOCATION_PICKUP entry.
-  # Result is Redis-cached by riderId; cache is invalidated on POST and DELETE.
   - GET:
       endpoint: /riderPreference
       auth: TokenAuth
@@ -82,9 +89,15 @@ apis:
       response:
         type: RiderPreferencesResp
 
+
+  - GET:
+      endpoint: /riderPreference/rideConfig
+      auth: TokenAuth
+      response:
+        type: RideConfigData
+
   # Fetch all preferences for the logged-in rider regardless of location.
   # Used for settings/profile screens to show everything the user has saved.
-  # Result is Redis-cached by riderId; cache is invalidated on POST and DELETE.
   - GET:
       endpoint: /riderPreference/all
       auth: TokenAuth

@@ -1,7 +1,8 @@
 module Domain.Action.UI.RiderPreferences
   ( postRiderPreference,
     getRiderPreference,
-    getAllRiderPreferences,
+    getRiderPreferenceRideConfig,
+    getRiderPreferenceAll,
     deleteRiderPreference,
   )
 where
@@ -32,6 +33,30 @@ postRiderPreference ::
 postRiderPreference (mbPersonId, _merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   case req.preferenceType of
+    RP.RIDE_CONFIG -> do
+      cfg <- req.rideConfigData & fromMaybeM (InvalidRequest "rideConfigData is required for RIDE_CONFIG")
+      now <- getCurrentTime
+      mbExisting <- Kernel.Prelude.listToMaybe <$> QRP.findByRiderIdAndType personId RP.RIDE_CONFIG
+      case mbExisting of
+        Just existing -> do
+          let existingCfg = case existing.preferenceData of
+                RP.RideConfigPreference d -> Kernel.Prelude.Just d
+                RP.LocationPickupPreference _ -> Kernel.Prelude.Nothing
+          QRP.updateRideConfigByRiderId personId (mergeRideConfigData existingCfg cfg)
+        Nothing -> do
+          newId <- generateGUID
+          person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+          QRP.create
+            DRP.RiderPreferences
+              { id = Id newId,
+                riderId = personId,
+                preferenceType = RP.RIDE_CONFIG,
+                preferenceData = RP.RideConfigPreference (buildRideConfigData cfg),
+                merchantId = person.merchantId,
+                merchantOperatingCityId = person.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
     RP.LOCATION_PICKUP -> do
       locData <- req.locationData & fromMaybeM (InvalidRequest "locationData is required for LOCATION_PICKUP")
       geohash <- Geohash.encode 8 (locData.sourceLat, locData.sourceLon) & fromMaybeM (InvalidRequest "Invalid source coordinates")
@@ -73,6 +98,20 @@ postRiderPreference (mbPersonId, _merchantId) req = do
           pickupAddress = locData.pickupAddress,
           pickupAddressSubtitle = locData.pickupAddressSubtitle
         }
+    buildRideConfigData cfg =
+      RP.RideConfigData
+        { isPetRide = cfg.isPetRide,
+          isBusiness = cfg.isBusiness,
+          isTransitEnabled = cfg.isTransitEnabled,
+          isAutoAssign = cfg.isAutoAssign
+        }
+    mergeRideConfigData mbOld new =
+      RP.RideConfigData
+        { isPetRide = new.isPetRide <|> (mbOld >>= (.isPetRide)),
+          isBusiness = new.isBusiness <|> (mbOld >>= (.isBusiness)),
+          isTransitEnabled = new.isTransitEnabled <|> (mbOld >>= (.isTransitEnabled)),
+          isAutoAssign = new.isAutoAssign <|> (mbOld >>= (.isAutoAssign))
+        }
 
 getRiderPreference ::
   ( Kernel.Prelude.Maybe (Id Person.Person),
@@ -88,22 +127,38 @@ getRiderPreference (mbPersonId, _merchantId) mbSourceLat mbSourceLon = do
   geohash <- Geohash.encode 8 (sourceLat, sourceLon) & fromMaybeM (InvalidRequest "Invalid source coordinates")
   let geohashText = T.pack geohash
   mbPref <- QRP.findLocationPickupByGeohash personId geohashText
-  let locationPickups = maybe [] (pure . toLocationPickupRespData) mbPref
+  let locationPickups = maybeToList (mbPref >>= toLocationPickupRespData)
   pure API.RiderPreferencesResp {locationPickups}
 
-getAllRiderPreferences ::
+getRiderPreferenceRideConfig ::
+  ( Kernel.Prelude.Maybe (Id Person.Person),
+    Id Domain.Types.Merchant.Merchant
+  ) ->
+  Environment.Flow API.RideConfigData
+getRiderPreferenceRideConfig (mbPersonId, _merchantId) = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  mbPref <- Kernel.Prelude.listToMaybe <$> QRP.findByRiderIdAndType personId RP.RIDE_CONFIG
+  pure $ Kernel.Prelude.fromMaybe emptyRideConfig (mbPref >>= toRideConfigData)
+  where
+    emptyRideConfig =
+      API.RideConfigData
+        { isPetRide = Kernel.Prelude.Nothing,
+          isBusiness = Kernel.Prelude.Nothing,
+          isTransitEnabled = Kernel.Prelude.Nothing,
+          isAutoAssign = Kernel.Prelude.Nothing
+        }
+
+getRiderPreferenceAll ::
   ( Kernel.Prelude.Maybe (Id Person.Person),
     Id Domain.Types.Merchant.Merchant
   ) ->
   Environment.Flow API.AllRiderPreferencesResp
-getAllRiderPreferences (mbPersonId, _merchantId) = do
+getRiderPreferenceAll (mbPersonId, _merchantId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   allPrefs <- QRP.findAllByRiderId personId
-  let locationPickups = map toLocationPickupRespData $ filter isLocationPickup allPrefs
-  pure API.AllRiderPreferencesResp {locationPickups}
-  where
-    isLocationPickup pref = case pref.preferenceData of
-      RP.LocationPickupPreference _ -> True
+  let locationPickups = mapMaybe toLocationPickupRespData allPrefs
+      rideConfig = Kernel.Prelude.listToMaybe (mapMaybe toRideConfigData allPrefs)
+  pure API.AllRiderPreferencesResp {locationPickups, rideConfig}
 
 deleteRiderPreference ::
   ( Kernel.Prelude.Maybe (Id Person.Person),
@@ -120,19 +175,33 @@ deleteRiderPreference (mbPersonId, _merchantId) preferenceId = do
   QRP.deleteByRiderIdAndId personId preferenceId
   pure APISuccess.Success
 
-toLocationPickupRespData :: DRP.RiderPreferences -> API.LocationPickupRespData
+toLocationPickupRespData :: DRP.RiderPreferences -> Kernel.Prelude.Maybe API.LocationPickupRespData
 toLocationPickupRespData pref = case pref.preferenceData of
   RP.LocationPickupPreference d ->
-    API.LocationPickupRespData
-      { id = pref.id,
-        sourceGeohash = d.sourceGeohash,
-        sourceLat = d.sourceLat,
-        sourceLon = d.sourceLon,
-        sourceAddress = d.sourceAddress,
-        pickupLat = d.pickupLat,
-        pickupLon = d.pickupLon,
-        pickupAddress = d.pickupAddress,
-        pickupAddressSubtitle = d.pickupAddressSubtitle,
-        createdAt = pref.createdAt,
-        updatedAt = pref.updatedAt
-      }
+    Kernel.Prelude.Just
+      API.LocationPickupRespData
+        { id = pref.id,
+          sourceGeohash = d.sourceGeohash,
+          sourceLat = d.sourceLat,
+          sourceLon = d.sourceLon,
+          sourceAddress = d.sourceAddress,
+          pickupLat = d.pickupLat,
+          pickupLon = d.pickupLon,
+          pickupAddress = d.pickupAddress,
+          pickupAddressSubtitle = d.pickupAddressSubtitle,
+          createdAt = pref.createdAt,
+          updatedAt = pref.updatedAt
+        }
+  RP.RideConfigPreference _ -> Kernel.Prelude.Nothing
+
+toRideConfigData :: DRP.RiderPreferences -> Kernel.Prelude.Maybe API.RideConfigData
+toRideConfigData pref = case pref.preferenceData of
+  RP.RideConfigPreference d ->
+    Kernel.Prelude.Just
+      API.RideConfigData
+        { isPetRide = d.isPetRide,
+          isBusiness = d.isBusiness,
+          isTransitEnabled = d.isTransitEnabled,
+          isAutoAssign = d.isAutoAssign
+        }
+  RP.LocationPickupPreference _ -> Kernel.Prelude.Nothing
