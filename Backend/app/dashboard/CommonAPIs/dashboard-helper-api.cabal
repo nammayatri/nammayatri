@@ -41,6 +41,7 @@ library
       Dashboard.Common.Rewards.RedemptionTargetType
       Dashboard.Common.Rewards.SponsorType
       Dashboard.Common.Ride
+      Dashboard.Common.RSFReconciliation
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Fleet.Driver
@@ -57,6 +58,7 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
+      Dashboard.ProviderPlatform.Management.RSFReconciliation
       Dashboard.ProviderPlatform.Operator.Driver
       Dashboard.ProviderPlatform.Operator.Registration
       Dashboard.RiderPlatform.Management.FRFSTicket
@@ -111,6 +113,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.RSFReconciliation
       API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
@@ -132,6 +135,7 @@ library
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.RSFReconciliation
       API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue

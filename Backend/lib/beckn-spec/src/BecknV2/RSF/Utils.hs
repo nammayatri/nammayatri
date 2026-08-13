@@ -42,7 +42,9 @@ parseISO8601DurationToSeconds t = do
     parseDuration [] acc hadComponent
       | hadComponent = Just acc
       | otherwise = Nothing
-    parseDuration ('T' : rest) acc hadComponent = parseTimePart rest acc hadComponent
+    parseDuration ('T' : rest) acc hadComponent
+      | null rest = Nothing
+      | otherwise = parseTimePart rest acc hadComponent False False False
     parseDuration rest acc _hadComponent = do
       let (numStr, remaining) = span isDigit rest
       num <- readMaybe numStr
@@ -50,16 +52,16 @@ parseISO8601DurationToSeconds t = do
         'D' : rest' -> parseDuration rest' (acc + num * 86400) True
         _ -> Nothing
 
-    parseTimePart [] acc hadComponent
+    parseTimePart [] acc hadComponent _ _ _
       | hadComponent = Just acc
       | otherwise = Nothing
-    parseTimePart rest acc _hadComponent = do
+    parseTimePart rest acc _hadComponent seenH seenM seenS = do
       let (numStr, remaining) = span isDigit rest
       num <- readMaybe numStr
       case remaining of
-        'H' : rest' -> parseTimePart rest' (acc + num * 3600) True
-        'M' : rest' -> parseTimePart rest' (acc + num * 60) True
-        'S' : rest' -> parseTimePart rest' (acc + num) True
+        'H' : rest' | not seenH -> parseTimePart rest' (acc + num * 3600) True True seenM seenS
+        'M' : rest' | not seenM -> parseTimePart rest' (acc + num * 60) True seenH True seenS
+        'S' : rest' | not seenS -> parseTimePart rest' (acc + num) True seenH seenM True
         _ -> Nothing
 
     isDigit c = c >= '0' && c <= '9'
@@ -72,10 +74,11 @@ buildRSFContext ::
   Text ->
   Text ->
   Text ->
+  Text ->
   UTCTimeRFC3339 ->
   Maybe Text ->
   Spec.RSFContext
-buildRSFContext domain action bapId bapUri bppId bppUri messageId timestamp ttl =
+buildRSFContext domain action bapId bapUri bppId bppUri transactionId messageId timestamp ttl =
   Spec.RSFContext
     { rsfContextDomain = Just domain,
       rsfContextCountry = Just "IND",
@@ -86,7 +89,7 @@ buildRSFContext domain action bapId bapUri bppId bppUri messageId timestamp ttl 
       rsfContextBapUri = Just bapUri,
       rsfContextBppId = Just bppId,
       rsfContextBppUri = Just bppUri,
-      rsfContextTransactionId = Nothing,
+      rsfContextTransactionId = Just transactionId,
       rsfContextMessageId = Just messageId,
       rsfContextTimestamp = Just timestamp,
       rsfContextTtl = ttl

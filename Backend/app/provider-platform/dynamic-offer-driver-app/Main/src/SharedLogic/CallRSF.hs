@@ -18,6 +18,7 @@ import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth (getHttpManagerKey)
 import qualified Lib.Finance.Domain.Types.ReconSettlementOrder as RSO
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.ReconSettlementOrder as QRSO
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrderExtra as QRSOExtra
 import qualified Lib.Finance.Storage.Queries.ReconUtrSettlement as QRUS
 import SharedLogic.RSFOrderStatus (computeOrderStatus)
@@ -40,8 +41,8 @@ sendOnReceiverRecon merchantId settlementId =
   -- Prevents two concurrent trigger-send calls for the same settlement from
   -- both reading the same unsent rows before either has written "SENT" back,
   -- which would double-dispatch on_receiver_recon to the BAP.
-  Hedis.withLockRedis ("RsfSendLock:" <> settlementId) 60 $ do
-    allOrders <- QRSOExtra.findBySettlementId settlementId
+  Hedis.withLockRedis ("RsfSendLock:" <> merchantId.getId <> ":" <> settlementId) 60 $ do
+    allOrders <- QRSOExtra.findBySettlementIdAndMerchant merchantId.getId settlementId
     when (null allOrders) $
       throwError $ InvalidRequest "No orders found for this settlement ID"
 
@@ -49,7 +50,7 @@ sendOnReceiverRecon merchantId settlementId =
     when (null unsentOrders) $
       throwError $ InvalidRequest "All orders for this settlement ID have already been sent"
 
-    let firstOrder = head allOrders
+    firstOrder <- fromMaybeM (InvalidRequest "No orders found for this settlement ID") (listToMaybe allOrders)
     utrId <- fromMaybeM (InvalidRequest "No UTR attached to order") firstOrder.utrSettlementId
     utr <- QRUS.findById utrId >>= fromMaybeM (InvalidRequest "UTR not found")
 
@@ -62,39 +63,41 @@ sendOnReceiverRecon merchantId settlementId =
     bppNwAddress <- asks (.nwAddress)
     let bppUri = showBaseUrl bppNwAddress
 
-    let groupedOrders = Map.fromList [(settlementId, unsentOrders)]
+    let batchOrders = unsentOrders
 
     bapBaseUrl <- parseBaseUrl utr.bapUri
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
-    forM_ (Map.toList groupedOrders) $ \(batchSettlementId, batchOrders) -> do
-      payload <- ACL.buildOnReceiverReconReq utr batchOrders bppSubscriberId bppUri
+    payload <- ACL.buildOnReceiverReconReq utr batchOrders bppSubscriberId bppUri
 
-      let payloadJson = TE.decodeUtf8 (BSL.toStrict (A.encode payload))
-      logInfo $ "RSF outbound payload: " <> payloadJson
+    let payloadJson = TE.decodeUtf8 (BSL.toStrict (A.encode payload))
+    logInfo $ "RSF outbound payload: " <> payloadJson
 
-      logInfo $ "RSF outbound sent: UTR=" <> utr.utr <> " settlementId=" <> batchSettlementId <> " orders=" <> show (length batchOrders)
+    logInfo $ "RSF outbound sent: UTR=" <> utr.utr <> " settlementId=" <> settlementId <> " orders=" <> show (length batchOrders)
 
-      _res <-
-        withShortRetry $
-          Beckn.callBecknAPI
-            (Just $ ET.ManagerSelector $ getHttpManagerKey bppSubscriberId)
-            Nothing
-            "on_receiver_recon"
-            RSFAPIs.onReceiverReconAPI
-            bapBaseUrl
-            internalEndPointHashMap
-            payload
+    _res <-
+      withShortRetry $
+        Beckn.callBecknAPI
+          (Just $ ET.ManagerSelector $ getHttpManagerKey bppSubscriberId)
+          Nothing
+          "on_receiver_recon"
+          RSFAPIs.onReceiverReconAPI
+          bapBaseUrl
+          internalEndPointHashMap
+          payload
 
-      logInfo "RSF outbound call returned Success"
-      -- Group the batch's rows by orderId once, compute each order's live verdict
-      -- via the same computeOrderStatus the ACL used to build the payload, and
-      -- stamp each row with (verdict, diff, 'SENT') in one atomic UPDATE. The
-      -- verdict/diff written here become the row's permanent historical record
-      -- of what the BAP was told at this exact moment.
-      let rowsByOrderId = Map.fromListWith (<>) [(rso.orderId, [rso]) | rso <- batchOrders]
-      forM_ (Map.toList rowsByOrderId) $ \(_orderId, orderRows) -> do
-        let fare = fromMaybe 0 (listToMaybe (mapMaybe (.platformGrossFare) orderRows))
-            (verdict, diff) = computeOrderStatus fare orderRows
-        forM_ orderRows $ \rso ->
-          QRSOExtra.markSentWithVerdict rso.id verdict (Just diff)
+    logInfo "RSF outbound call returned Success"
+    -- Group the batch's rows by orderId once, compute each order's live verdict
+    -- via the same computeOrderStatus the ACL used to build the payload, and
+    -- stamp each row with (verdict, diff, 'SENT') in one atomic UPDATE. The
+    -- verdict/diff written here become the row's permanent historical record
+    -- of what the BAP was told at this exact moment.
+    let rowsByOrderId = Map.fromListWith (<>) [(rso.orderId, [rso]) | rso <- batchOrders]
+    forM_ (Map.toList rowsByOrderId) $ \(_orderId, orderRows) -> do
+      let fare = fromMaybe 0 (listToMaybe (mapMaybe (.platformGrossFare) orderRows))
+          (verdict, diff) = computeOrderStatus fare orderRows
+      forM_ orderRows $ \rso -> do
+        fresh <- QRSO.findByIds [getId rso.id]
+        case fresh of
+          (freshRow : _) | isJust freshRow.manuallyConfirmedAt -> QRSOExtra.markSentPreservingVerdict rso.id
+          _ -> QRSOExtra.markSentWithVerdict rso.id verdict (Just diff)

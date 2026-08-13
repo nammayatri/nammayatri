@@ -28,6 +28,10 @@ ReconUtrSettlement:
     claimedTotalAmount: numeric(30,2)
     bankVerifiedAmount: numeric(30,2)
 
+  extraIndexes:
+    - columns: [utr]
+      unique: true
+
   queries:
     findByUtr:
       kvFunction: findOneWithKV
@@ -39,6 +43,7 @@ ReconUtrSettlement:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

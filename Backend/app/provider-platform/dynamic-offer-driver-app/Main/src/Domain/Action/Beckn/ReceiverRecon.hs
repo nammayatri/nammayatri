@@ -23,7 +23,6 @@ import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrder as QRSO
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrderExtra as QRSOExtra
-import qualified Lib.Finance.Storage.Queries.ReconUtrSettlement as QRUS
 import qualified Lib.Finance.Storage.Queries.ReconUtrSettlementExtra as QRUSExtra
 import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide as RsfRecipe
 
@@ -72,53 +71,43 @@ ingestReceiverRecon ::
   ReceiverReconRequest ->
   Flow ()
 ingestReceiverRecon merchantId merchantOpCityId req =
-  -- serialized check with no race condition on multi batched orders
-  acquireAll lockPrefix orderIds ingestBody
-  where
-    -- sorted orders will avoid deadlock situation between two batches [o1, o2] and [o2, o1]
-    orderIds = sort . HS.toList . HS.fromList $ map (.orderId) req.orders
-    lockPrefix = "RsfIngestLock:" <> merchantId.getId <> "|"
+  Hedis.withLockRedis ("RsfIngestLock:" <> merchantId.getId <> ":" <> req.messageId) 60 $ do
+    now <- getCurrentTime
+    let merchantIdText = Just merchantId.getId
+        merchantOpCityIdText = Just merchantOpCityId.getId
+        orderIds = sort . HS.toList . HS.fromList $ map (.orderId) req.orders
 
-    acquireAll _ [] action = action
-    acquireAll prefix (oid : rest) action =
-      Hedis.withLockRedis (prefix <> oid) 60 $
-        acquireAll prefix rest action
+    existingRows <- QRSOExtra.findByOrderIds orderIds
 
-    ingestBody = do
-      now <- getCurrentTime
-      let merchantIdText = Just merchantId.getId
-          merchantOpCityIdText = Just merchantOpCityId.getId
+    -- Dedup key is (orderId, utr) -- this is the row's real identity (also
+    -- the DB's own unique constraint on recon_settlement_order), not a
+    -- per-message positional index. A correction or a second independent
+    -- claim for the same order legitimately arrives under a different utr
+    -- and must not be skipped; the exact same (orderId, utr) arriving again
+    -- (a genuine replay) is the only case meant to be skipped here.
+    let existingKeys = HS.fromList [(r.orderId, r.settlementReferenceNo) | r <- existingRows]
+        incomingPairs =
+          [ (order, detail)
+            | order <- req.orders,
+              detail <- order.settlementDetails
+          ]
+        newPairs =
+          filter
+            (\(order, detail) -> not $ HS.member (order.orderId, detail.utr) existingKeys)
+            incomingPairs
+        skippedCount = length incomingPairs - length newPairs
 
-      existingRows <- QRSOExtra.findByOrderIds orderIds
-      let existingKeys = HS.fromList [(r.orderId, r.settlementReferenceNo) | r <- existingRows]
-          incomingPairs =
-            [ (order, detail)
-              | order <- req.orders,
-                detail <- order.settlementDetails
-            ]
-          newPairs =
-            snd $
-              foldl'
-                ( \(seen, acc) pair@(order, detail) ->
-                    let key = (order.orderId, detail.utr)
-                     in if HS.member key seen
-                          then (seen, acc)
-                          else (HS.insert key seen, acc <> [pair])
-                )
-                (existingKeys, [])
-                incomingPairs
-          skippedCount = length incomingPairs - length newPairs
+    when (skippedCount > 0) $
+      logWarning $
+        "RSF ingest: skipped "
+          <> show skippedCount
+          <> " already-claimed (order,UTR) pair(s), messageId="
+          <> req.messageId
 
-      when (skippedCount > 0) $
-        logWarning $
-          "RSF ingest: skipped "
-            <> show skippedCount
-            <> " already-claimed (order,UTR) pair(s), messageId="
-            <> req.messageId
-
-      let utrGroups = groupDetailsByUtr newPairs
-      utrIdMap <- fmap Map.fromList . forM (Map.toList utrGroups) $ \(utrVal, pairs) -> do
-        utrId <- generateGUID
+    let utrGroups = groupDetailsByUtr newPairs
+    utrIdMap <- fmap Map.fromList . forM (Map.toList utrGroups) $ \(utrVal, pairs) -> do
+      utrId <- generateGUID
+      actualId <-
         QRUSExtra.upsertByUtr $
           RUS.ReconUtrSettlement
             { id = utrId,
@@ -135,68 +124,67 @@ ingestReceiverRecon merchantId merchantOpCityId req =
               createdAt = now,
               updatedAt = now
             }
-        actualId <- maybe utrId (.id) <$> QRUS.findByUtr utrVal
-        pure (utrVal, actualId)
+      pure (utrVal, actualId)
 
-      orderRows <- forM newPairs $ \(order, detail) -> do
-        rowId <- generateGUID
-        pure
-          RSO.ReconSettlementOrder
-            { id = rowId,
-              merchantId = merchantIdText,
-              merchantOperatingCityId = merchantOpCityIdText,
-              utrSettlementId = Map.lookup detail.utr utrIdMap,
-              sourceType = Just RSO.BAP_CLAIMED,
-              orderId = order.orderId,
-              messageId = req.messageId,
-              reconTransactionId = req.reconTransactionId,
-              orderTransactionId = order.orderTransactionId,
-              invoiceNo = order.invoiceNo,
-              orderState = order.orderState,
-              settlementId = order.settlementId,
-              settlementReferenceNo = detail.utr,
-              reasonCode = order.reasonCode,
-              claimedGrossAmount = order.claimedGrossAmount,
-              claimedSettlementAmount = detail.amount,
-              paymentStatus = order.paymentStatus,
-              settlementType = detail.sdSettlementType,
-              settlementDate = detail.sdSettlementDate,
-              bffType = order.bffType,
-              bffAmount = order.bffAmount,
-              withholdingTaxGst = order.withholdingTaxGst,
-              withholdingTaxTds = order.withholdingTaxTds,
-              deductionByCollector = order.deductionByCollector,
-              receivedAt = now,
-              rideId = Nothing,
-              driverId = Nothing,
-              platformGrossFare = Nothing,
-              platformNetReceivable = Nothing,
-              platformOrderTimestamp = Nothing,
-              allocatedBankCash = Nothing,
-              reconciliationStatus = Nothing,
-              wireReconStatus = order.wireReconStatus,
-              wireOrderReconStatus = order.wireOrderReconStatus,
-              settlementClearedAt = Nothing,
-              manuallyConfirmedAt = Nothing,
-              manuallyConfirmedBy = Nothing,
-              manualConfirmationReason = Nothing,
-              ourReconStatus = RSO.PENDING,
-              diffAmount = Nothing,
-              remarks = Nothing,
-              rawJson = order.rawJson,
-              createdAt = now,
-              updatedAt = now
-            }
+    orderRows <- forM newPairs $ \(order, detail) -> do
+      rowId <- generateGUID
+      pure
+        RSO.ReconSettlementOrder
+          { id = rowId,
+            merchantId = merchantIdText,
+            merchantOperatingCityId = merchantOpCityIdText,
+            utrSettlementId = Map.lookup detail.utr utrIdMap,
+            sourceType = Just RSO.BAP_CLAIMED,
+            orderId = order.orderId,
+            messageId = req.messageId,
+            reconTransactionId = req.reconTransactionId,
+            orderTransactionId = order.orderTransactionId,
+            invoiceNo = order.invoiceNo,
+            orderState = order.orderState,
+            settlementId = order.settlementId,
+            settlementReferenceNo = detail.utr,
+            reasonCode = order.reasonCode,
+            claimedGrossAmount = order.claimedGrossAmount,
+            claimedSettlementAmount = detail.amount,
+            paymentStatus = order.paymentStatus,
+            settlementType = detail.sdSettlementType,
+            settlementDate = detail.sdSettlementDate,
+            bffType = order.bffType,
+            bffAmount = order.bffAmount,
+            withholdingTaxGst = order.withholdingTaxGst,
+            withholdingTaxTds = order.withholdingTaxTds,
+            deductionByCollector = order.deductionByCollector,
+            receivedAt = now,
+            rideId = Nothing,
+            driverId = Nothing,
+            platformGrossFare = Nothing,
+            platformNetReceivable = Nothing,
+            platformOrderTimestamp = Nothing,
+            allocatedBankCash = Nothing,
+            reconciliationStatus = Nothing,
+            wireReconStatus = order.wireReconStatus,
+            wireOrderReconStatus = order.wireOrderReconStatus,
+            settlementClearedAt = Nothing,
+            manuallyConfirmedAt = Nothing,
+            manuallyConfirmedBy = Nothing,
+            manualConfirmationReason = Nothing,
+            ourReconStatus = RSO.PENDING,
+            diffAmount = Nothing,
+            remarks = Nothing,
+            rawJson = order.rawJson,
+            createdAt = now,
+            updatedAt = now
+          }
 
-      QRSO.createMany orderRows
+    QRSO.createMany orderRows
 
-      logInfo $
-        "RSF ingest complete: messageId="
-          <> req.messageId
-          <> " rows="
-          <> show (length orderRows)
-          <> " orders="
-          <> show (length req.orders)
+    logInfo $
+      "RSF ingest complete: messageId="
+        <> req.messageId
+        <> " rows="
+        <> show (length orderRows)
+        <> " orders="
+        <> show (length req.orders)
 
 reconcileIngestedOrders ::
   Id DM.Merchant ->

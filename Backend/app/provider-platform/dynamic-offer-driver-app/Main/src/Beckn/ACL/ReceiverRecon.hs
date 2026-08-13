@@ -6,6 +6,7 @@ where
 import qualified BecknV2.RSF.Types as Spec
 import qualified BecknV2.RSF.Utils as RSFUtils
 import qualified Data.Aeson as A
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Action.Beckn.ReceiverRecon as DRecon
@@ -64,8 +65,8 @@ buildOrder order = do
       claimedSettlementAmount = sum $ fmap (.amount) parsedDetails
       bffType = payment.rsfPaymentBuyerAppFinderFeeType
       rawBffValue = payment.rsfPaymentBuyerAppFinderFeeAmount >>= RSFUtils.parseMonetaryString
-      bffAmount = case bffType of
-        Just "Percentage" -> do
+      bffAmount = case T.toLower <$> bffType of
+        Just "percentage" -> do
           pct <- rawBffValue
           pure $ claimedGrossAmount * pct / 100
         _ -> rawBffValue

@@ -8,7 +8,7 @@ where
 import Data.Aeson ((.=))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
-import qualified Data.Aeson.Types as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.HashSet as HS
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
@@ -74,8 +74,8 @@ fetchSourcesById ::
   ReconT.MerchantScope ->
   [Text] ->
   m [ReconT.SourceRecord]
-fetchSourcesById _scope utrIds = do
-  rsoRows <- QRSOExtra.findByUtrSettlementIds utrIds
+fetchSourcesById scope utrIds = do
+  rsoRows <- QRSOExtra.findByUtrSettlementIdsAndMerchant scope.merchantId utrIds
   rsoRowsToSourceRecords rsoRows
 
 rsoRowsToSourceRecords ::
@@ -127,14 +127,14 @@ fetchTargets ::
   ReconT.MerchantScope ->
   HS.HashSet Text ->
   m [ReconT.TargetRecord]
-fetchTargets _scope utrIds = do
+fetchTargets scope utrIds = do
   let ids = map Id (HS.toList utrIds)
-  utrs <- QRUSExtra.findByIds ids
+  utrs <- QRUSExtra.findByIdsAndMerchant scope.merchantId ids
   pure
     [ ReconT.TargetRecord
         { tgtId = getId utr.id,
           tgtMatchKey = getId utr.id,
-          tgtAmount = fromMaybe 0 utr.bankVerifiedAmount,
+          tgtAmount = verified,
           tgtMeta = Nothing,
           tgtSettlementId = Nothing,
           tgtSettlementDate = Just utr.createdAt,
@@ -142,7 +142,8 @@ fetchTargets _scope utrIds = do
           tgtRrn = Just utr.utr,
           tgtTransactionDate = Just utr.createdAt
         }
-      | utr <- utrs
+      | utr <- utrs,
+        Just verified <- [utr.bankVerifiedAmount]
     ]
 
 syncUtrStatus ::
@@ -208,17 +209,17 @@ syncUtrStatus src _status = do
 
 applyUnderpaidWaterfall :: (BeamFlow m r) => [RSO.ReconSettlementOrder] -> KTC.HighPrecMoney -> m ()
 applyUnderpaidWaterfall [] _ = pure ()
-applyUnderpaidWaterfall _ remaining | remaining <= 0 = pure ()
-applyUnderpaidWaterfall (order : rest) remaining = do
+applyUnderpaidWaterfall _ shortfall | shortfall <= 0 = pure ()
+applyUnderpaidWaterfall (order : rest) shortfall = do
   let orderAmt = order.claimedSettlementAmount
-  if orderAmt <= remaining
+  if orderAmt <= shortfall
     then do
       QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID orderAmt (Just orderAmt)
-      applyUnderpaidWaterfall rest (remaining - orderAmt)
-    else QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID orderAmt (Just remaining)
+      applyUnderpaidWaterfall rest (shortfall - orderAmt)
+    else QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID orderAmt (Just shortfall)
 
 extractText :: Text -> A.Value -> Maybe Text
-extractText key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of
-  Just v -> v
-  Nothing -> Nothing
+extractText key (A.Object o) = case AKM.lookup (AK.fromText key) o of
+  Just (A.String s) -> Just s
+  _ -> Nothing
 extractText _ _ = Nothing

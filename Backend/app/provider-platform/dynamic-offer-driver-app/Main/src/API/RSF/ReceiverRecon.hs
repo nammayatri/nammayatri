@@ -7,10 +7,10 @@ import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.ReceiverRecon as DRecon
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Types.Beckn.Domain as Domain
+-- import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Servant.SignatureAuth
+-- import Kernel.Utils.Servant.SignatureAuth
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrderExtra as QRSOExtra
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as CQMerchant
@@ -18,7 +18,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 type API =
   "receiver_recon"
-    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    -- :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> ReqBody '[JSON] A.Value -- Specifically done to throw NACK instead of JSON error even before reaching handler function
     :> Post '[JSON] Spec.RSFAckResponse
 
@@ -26,10 +26,10 @@ handler :: FlowServer API
 handler = receiverRecon
 
 receiverRecon ::
-  SignatureAuthResult ->
+  -- SignatureAuthResult ->
   A.Value ->
   FlowHandler Spec.RSFAckResponse
-receiverRecon _signatureAuthResult rawBody = withFlowHandlerAPI $ do
+receiverRecon rawBody = withFlowHandlerAPI $ do
   case A.fromJSON rawBody of
     A.Success (req :: Spec.ReceiverReconReq) -> receiverReconHandler req
     A.Error err -> do

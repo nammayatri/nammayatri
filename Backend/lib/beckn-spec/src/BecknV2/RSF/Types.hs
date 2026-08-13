@@ -47,6 +47,7 @@ import Data.Aeson.Types (Options (..), defaultOptions)
 import Data.Data (Data)
 import Data.List (lookup)
 import Data.Maybe (fromMaybe)
+import Data.Scientific (Scientific)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import Kernel.Types.TimeRFC339 (UTCTimeRFC3339)
@@ -331,7 +332,7 @@ optionsRSFPaymentParams =
 data RSFSettlementDetail = RSFSettlementDetail
   { rsfSettlementDetailCounterparty :: Maybe Text,
     rsfSettlementDetailPhase :: Maybe Text,
-    rsfSettlementDetailAmount :: Maybe Double,
+    rsfSettlementDetailAmount :: Maybe Scientific,
     rsfSettlementDetailType :: Maybe Text,
     rsfSettlementDetailBankAccountNo :: Maybe Text,
     rsfSettlementDetailIfscCode :: Maybe Text,

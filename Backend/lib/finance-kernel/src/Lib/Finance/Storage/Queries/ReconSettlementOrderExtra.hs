@@ -4,10 +4,14 @@ module Lib.Finance.Storage.Queries.ReconSettlementOrderExtra
   ( messageIdExists,
     findByMerchantAndReceivedAtRange,
     findByMerchantIdAndReceivedAtRange,
+    findByMerchantIdSourceTypeAndReceivedAtRange,
     findByIds,
     findByOrderIds,
+    findByOrderIdsAndMerchant,
     findBySettlementId,
+    findBySettlementIdAndMerchant,
     findByUtrSettlementIds,
+    findByUtrSettlementIdsAndMerchant,
     findByRideIds,
     updateReconciliationStatus,
     updateRsfReconResult,
@@ -15,6 +19,7 @@ module Lib.Finance.Storage.Queries.ReconSettlementOrderExtra
     updateManualConfirmation,
     listBatchSummariesForDashboard,
     markSentWithVerdict,
+    markSentPreservingVerdict,
   )
 where
 
@@ -101,6 +106,23 @@ findByMerchantIdAndReceivedAtRange merchantId from to =
         ]
     ]
 
+findByMerchantIdSourceTypeAndReceivedAtRange ::
+  (BeamFlow m r) =>
+  Text ->
+  [Domain.ReconSourceType] ->
+  UTCTime ->
+  UTCTime ->
+  m [Domain.ReconSettlementOrder]
+findByMerchantIdSourceTypeAndReceivedAtRange merchantId sourceTypes from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Just merchantId),
+          Se.Is Beam.sourceType $ Se.In (map Just sourceTypes),
+          Se.Is Beam.receivedAt $ Se.GreaterThanOrEq from,
+          Se.Is Beam.receivedAt $ Se.LessThan to
+        ]
+    ]
+
 findByOrderIds ::
   (BeamFlow m r) =>
   [Text] ->
@@ -109,12 +131,41 @@ findByOrderIds [] = pure []
 findByOrderIds orderIds =
   findAllWithKV [Se.Is Beam.orderId $ Se.In orderIds]
 
+findByOrderIdsAndMerchant ::
+  (BeamFlow m r) =>
+  Text ->
+  [Text] ->
+  m [Domain.ReconSettlementOrder]
+findByOrderIdsAndMerchant _ [] = pure []
+findByOrderIdsAndMerchant merchantId orderIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Just merchantId),
+          Se.Is Beam.sourceType $ Se.Eq (Just Domain.BAP_CLAIMED),
+          Se.Is Beam.orderId $ Se.In orderIds
+        ]
+    ]
+
 findBySettlementId ::
   (BeamFlow m r) =>
   Text ->
   m [Domain.ReconSettlementOrder]
 findBySettlementId settlementId =
   findAllWithKV [Se.Is Beam.settlementId $ Se.Eq settlementId]
+
+findBySettlementIdAndMerchant ::
+  (BeamFlow m r) =>
+  Text ->
+  Text ->
+  m [Domain.ReconSettlementOrder]
+findBySettlementIdAndMerchant merchantId settlementId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Just merchantId),
+          Se.Is Beam.sourceType $ Se.Eq (Just Domain.BAP_CLAIMED),
+          Se.Is Beam.settlementId $ Se.Eq settlementId
+        ]
+    ]
 
 findByUtrSettlementIds ::
   (BeamFlow m r) =>
@@ -123,6 +174,21 @@ findByUtrSettlementIds ::
 findByUtrSettlementIds [] = pure []
 findByUtrSettlementIds utrIds =
   findAllWithKV [Se.Is Beam.utrSettlementId $ Se.In (map Just utrIds)]
+
+findByUtrSettlementIdsAndMerchant ::
+  (BeamFlow m r) =>
+  Text ->
+  [Text] ->
+  m [Domain.ReconSettlementOrder]
+findByUtrSettlementIdsAndMerchant _ [] = pure []
+findByUtrSettlementIdsAndMerchant merchantId utrIds =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Just merchantId),
+          Se.Is Beam.sourceType $ Se.Eq (Just Domain.BAP_CLAIMED),
+          Se.Is Beam.utrSettlementId $ Se.In (map Just utrIds)
+        ]
+    ]
 
 -- | Order-level write: verdict/diff are the *same* value for every row
 -- sharing an order (fare vs. the order's total claimed amount, nothing
@@ -227,6 +293,7 @@ listBatchSummariesForDashboard ::
 listBatchSummariesForDashboard merchantId _mbBapId from to limit offset = do
   let clauses =
         [ Se.Is Beam.merchantId $ Se.Eq (Just merchantId),
+          Se.Is Beam.sourceType $ Se.Eq (Just Domain.BAP_CLAIMED),
           Se.Is Beam.receivedAt $ Se.GreaterThanOrEq from,
           Se.Is Beam.receivedAt $ Se.LessThan to,
           Se.Is Beam.settlementId $ Se.Not $ Se.Eq ""
@@ -263,6 +330,18 @@ markSentWithVerdict rsoId verdict diffAmt = do
     [ Se.Set Beam.reconciliationStatus (Just "SENT"),
       Se.Set Beam.ourReconStatus verdict,
       Se.Set Beam.diffAmount diffAmt,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq (getId rsoId)]
+
+markSentPreservingVerdict ::
+  (BeamFlow m r) =>
+  Id Domain.ReconSettlementOrder ->
+  m ()
+markSentPreservingVerdict rsoId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.reconciliationStatus (Just "SENT"),
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (getId rsoId)]

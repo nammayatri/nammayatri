@@ -2,6 +2,7 @@ module Beckn.ACL.OnReceiverRecon (buildOnReceiverReconReq) where
 
 import qualified BecknV2.RSF.Types as Spec
 import qualified BecknV2.RSF.Utils as RSFUtils
+import Data.List (sortOn)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -21,6 +22,7 @@ buildOnReceiverReconReq ::
 buildOnReceiverReconReq utr orders bppId bppUri = do
   now <- getCurrentTime
   messageId <- generateGUID
+  transactionId <- generateGUID
   let sendableOrders = filter (\rso -> rso.ourReconStatus /= RSO.PENDING) orders
       grouped = Map.fromListWith (<>) [(r.orderId, [r]) | r <- sendableOrders]
       wireOrders = map (uncurry buildWireOrder) (Map.toList grouped)
@@ -32,6 +34,7 @@ buildOnReceiverReconReq utr orders bppId bppUri = do
           utr.bapUri
           bppId
           bppUri
+          transactionId
           messageId
           (UTCTimeRFC3339 now)
           (Just "P2D")
@@ -49,19 +52,20 @@ buildOnReceiverReconReq utr orders bppId bppUri = do
 
 buildWireOrder :: Text -> [RSO.ReconSettlementOrder] -> Spec.RSFOnReceiverReconOrder
 buildWireOrder orderId rsoRows =
-  let firstRow = head rsoRows
-      fare = fromMaybe 0 firstRow.platformGrossFare
+  let sortedRows = sortOn (\r -> (r.platformOrderTimestamp, r.createdAt, r.id)) rsoRows
+      firstRow = listToMaybe sortedRows
+      fare = fromMaybe 0 (firstRow >>= (.platformGrossFare))
       (orderVerdict, orderDiff) = computeOrderStatus fare rsoRows
       (cpStatus, diffAmt, diffMsg) = verdictToWire orderVerdict (Just orderDiff)
       settlementDetails = map buildSettlementDetail rsoRows
    in Spec.RSFOnReceiverReconOrder
         { rsfOnOrderId = Just orderId,
-          rsfOnOrderInvoiceNo = firstRow.invoiceNo,
+          rsfOnOrderInvoiceNo = firstRow >>= (.invoiceNo),
           rsfOnOrderCollectorAppId = Nothing,
           rsfOnOrderReceiverAppId = Nothing,
-          rsfOnOrderOrderReconStatus = Just firstRow.wireOrderReconStatus,
-          rsfOnOrderTransactionId = Just firstRow.orderTransactionId,
-          rsfOnOrderSettlementId = Just firstRow.settlementId,
+          rsfOnOrderOrderReconStatus = fmap (.wireOrderReconStatus) firstRow,
+          rsfOnOrderTransactionId = fmap (.orderTransactionId) firstRow,
+          rsfOnOrderSettlementId = fmap (.settlementId) firstRow,
           rsfOnOrderCounterpartyReconStatus = Just cpStatus,
           rsfOnOrderCounterpartyDiffAmount = diffAmt,
           rsfOnOrderMessage = diffMsg,
@@ -97,7 +101,7 @@ verdictToWire verdict mbDiff = case verdict of
       mkDiffAmount mbDiff,
       Just $ Spec.RSFDiffMessage (Just "Order not found in platform records") (Just "less")
     )
-  RSO.PENDING -> ("01", Nothing, Nothing)
+  RSO.PENDING -> error "PENDING rows must be filtered out before calling verdictToWire"
 
 mkDiffAmount :: Maybe HighPrecMoney -> Maybe Spec.RSFCounterpartyDiffAmount
 mkDiffAmount = fmap $ \amt ->

@@ -67,6 +67,17 @@ ReconSettlementOrder:
     messageId: "!SecondaryKey"
     rideId: "!SecondaryKey"
 
+  extraIndexes:
+    # !SecondaryKey (Forced) fields are not covered by GENERATE_INDEXES'
+    # automatic default-indexing (that only applies to plain SecondaryKey) --
+    # these need explicit plain (non-unique) entries.
+    - columns: [orderId]
+    - columns: [utrSettlementId]
+    - columns: [messageId]
+    - columns: [rideId]
+    - columns: [orderId, settlementReferenceNo]
+      unique: true
+
   sqlType:
     claimedGrossAmount: numeric(30,2)
     claimedSettlementAmount: numeric(30,2)
@@ -112,6 +123,7 @@ ReconSettlementOrder:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

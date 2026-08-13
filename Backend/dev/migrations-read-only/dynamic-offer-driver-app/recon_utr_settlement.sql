@@ -117,3 +117,18 @@ ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ALTER COLUMN resolution_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.recon_utr_settlement ADD CONSTRAINT recon_utr_settlement_unique_idx_utr UNIQUE (utr);
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

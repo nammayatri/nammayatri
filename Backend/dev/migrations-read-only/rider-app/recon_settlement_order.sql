@@ -99,3 +99,21 @@ ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN reconciliation_status te
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN platform_order_timestamp timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.recon_settlement_order ADD CONSTRAINT recon_settlement_order_unique_idx_order_id_settlement_reference_no UNIQUE (order_id, settlement_reference_no);
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY recon_settlement_order_idx_message_id ON atlas_app.recon_settlement_order USING btree (message_id);
+CREATE INDEX CONCURRENTLY recon_settlement_order_idx_order_id ON atlas_app.recon_settlement_order USING btree (order_id);
+CREATE INDEX CONCURRENTLY recon_settlement_order_idx_ride_id ON atlas_app.recon_settlement_order USING btree (ride_id);
+CREATE INDEX CONCURRENTLY recon_settlement_order_idx_utr_settlement_id ON atlas_app.recon_settlement_order USING btree (utr_settlement_id);

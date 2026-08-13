@@ -9,6 +9,7 @@ where
 import Data.Aeson ((.=))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as A
 import qualified Data.HashSet as HS
 import qualified Data.Map.Strict as Map
@@ -60,7 +61,7 @@ fetchSources ::
   ReconT.DateRange ->
   m [ReconT.SourceRecord]
 fetchSources scope range = do
-  rsoRows <- QRSOExtra.findByMerchantIdAndReceivedAtRange scope.merchantId range.from range.to
+  rsoRows <- QRSOExtra.findByMerchantIdSourceTypeAndReceivedAtRange scope.merchantId [RSO.BAP_CLAIMED] range.from range.to
   rsoRowsToSourceRecords rsoRows
 
 fetchSourcesById ::
@@ -72,8 +73,8 @@ fetchSourcesById ::
   ReconT.MerchantScope ->
   [Text] ->
   m [ReconT.SourceRecord]
-fetchSourcesById _scope orderIds = do
-  rsoRows <- QRSOExtra.findByOrderIds orderIds
+fetchSourcesById scope orderIds = do
+  rsoRows <- QRSOExtra.findByOrderIdsAndMerchant scope.merchantId orderIds
   rsoRowsToSourceRecords rsoRows
 
 rsoRowsToSourceRecords ::
@@ -144,8 +145,8 @@ fetchTargets ::
   ReconT.MerchantScope ->
   HS.HashSet Text ->
   m [ReconT.TargetRecord]
-fetchTargets _scope orderIds = do
-  rsoRows <- QRSOExtra.findByOrderIds (HS.toList orderIds)
+fetchTargets scope orderIds = do
+  rsoRows <- QRSOExtra.findByOrderIdsAndMerchant scope.merchantId (HS.toList orderIds)
   let grouped :: Map.Map Text [RSO.ReconSettlementOrder]
       grouped = Map.fromListWith (<>) [(r.orderId, [r]) | r <- rsoRows]
   pure
@@ -219,19 +220,19 @@ effectiveClaimedAmount rso = case rso.allocatedBankCash of
   Nothing -> rso.claimedSettlementAmount - fromMaybe 0 rso.diffAmount
 
 extractText :: Text -> A.Value -> Maybe Text
-extractText key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of
-  Just v -> v
-  Nothing -> Nothing
+extractText key (A.Object o) = case AKM.lookup (AK.fromText key) o of
+  Just (A.String s) -> Just s
+  _ -> Nothing
 extractText _ _ = Nothing
 
 extractMoney :: Text -> A.Value -> Maybe HighPrecMoney
-extractMoney key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of
-  Just v -> v
-  Nothing -> Nothing
+extractMoney key (A.Object o) = case AKM.lookup (AK.fromText key) o of
+  Just v -> A.parseMaybe A.parseJSON v
+  _ -> Nothing
 extractMoney _ _ = Nothing
 
 extractUTCTime :: Text -> A.Value -> Maybe UTCTime
-extractUTCTime key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of
-  Just v -> v
-  Nothing -> Nothing
+extractUTCTime key (A.Object o) = case AKM.lookup (AK.fromText key) o of
+  Just v -> A.parseMaybe A.parseJSON v
+  _ -> Nothing
 extractUTCTime _ _ = Nothing
