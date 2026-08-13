@@ -76,6 +76,7 @@ type API =
              :> QueryParam "onlyMandatoryDocs" Bool
              :> QueryParam "useDriverLanguage" Bool
              :> QueryParam "enableDocumentMetadata" Bool
+             :> QueryParam "rcNo" Text
              :> Get '[JSON] DriverOnboarding.StatusRes
            :<|> "validateImage"
              :> TokenAuth
@@ -157,8 +158,8 @@ verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverO
 verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req False Nothing
 
-statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage enableDocumentMetadata = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage enableDocumentMetadata
+statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler DriverOnboarding.StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage enableDocumentMetadata mbRcNo = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useDriverLanguage enableDocumentMetadata mbRcNo
 
 verifyPan :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverPanReq -> FlowHandler DriverOnboarding.DriverPanRes
 verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ do
