@@ -45,6 +45,9 @@ module Lib.Yudhishthira.Types
     GetLogicsResp (..),
     LogicRolloutObject (..),
     RolloutVersion (..),
+    UpdateRolloutGroupObject (..),
+    UpdateRolloutGroupReq,
+    RolloutGroupInfo (..),
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
     TimeBoundResp,
@@ -782,6 +785,33 @@ data RolloutVersion = RolloutVersion
 
 instance HideSecrets RolloutVersion where
   hideSecrets = identity
+
+type UpdateRolloutGroupReq = [UpdateRolloutGroupObject]
+
+data UpdateRolloutGroupObject = UpdateRolloutGroupObject
+  { domain :: LogicDomain,
+    version :: Int,
+    timeBounds :: Maybe Text,
+    experimentGroup :: Maybe Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateRolloutGroupReq where
+  hideSecrets = identity
+
+-- | Flat, read-only view of a domain's active rollouts and their experiment
+-- group tags (for a given city). Base and RUNNING rows are included; CONCLUDED /
+-- DISCARDED / REVERTED rows are excluded.
+data RolloutGroupInfo = RolloutGroupInfo
+  { domain :: LogicDomain,
+    timeBounds :: Text,
+    version :: Int,
+    rolloutPercentage :: Int,
+    experimentGroup :: Maybe Text,
+    experimentStatus :: Maybe ExperimentStatus,
+    isBaseVersion :: Maybe Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 type AppDynamicLogicVersionResp = [AppDynamicLogicVersion]
 
