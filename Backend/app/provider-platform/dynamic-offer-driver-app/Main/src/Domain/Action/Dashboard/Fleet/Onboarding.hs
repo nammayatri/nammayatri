@@ -156,8 +156,9 @@ getOnboardingRegisterStatus ::
   Maybe Bool ->
   Maybe Dashboard.Common.DocsVerificationStatus ->
   Maybe Bool ->
+  Maybe Text ->
   Environment.Flow CommonOnboarding.StatusRes
-getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs mbDocsVerificationStatusFilter enableDocumentMetadata = do
+getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs mbDocsVerificationStatusFilter enableDocumentMetadata mbRcNo = do
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -170,7 +171,7 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now, enableDocumentMetadata = fromMaybe False enableDocumentMetadata}
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
-  statusRes <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+  statusRes <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages mbRcNo
   -- Re-pull stuck doc verifications; fleet-owner GST/UDYAM are reachable only via this endpoint.
   UIStatus.pullPendingDocStatuses transporterConfig person statusRes.driverDocuments statusRes.vehicleDocuments
   let res = castStatusRes statusRes
@@ -180,7 +181,7 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
         case mbDocsVerificationStatusFilter of
           Just _ -> mbDocsVerificationStatusFilter
           Nothing ->
-            if transporterConfig.enableManualDocumentStatusCheck == Just True
+            if transporterConfig.enableManualDocumentStatusCheck == Just True && isNothing mbRcNo
               then Just Dashboard.Common.ADMIN_APPROVED
               else Nothing
   pure $ applyVehicleDocsFilter effectiveFilter res

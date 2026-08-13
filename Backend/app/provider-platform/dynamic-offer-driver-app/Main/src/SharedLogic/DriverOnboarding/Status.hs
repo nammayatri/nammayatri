@@ -72,6 +72,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
+import qualified Domain.Types.VehicleVariant as DV
 import GHC.Records.Extra (HasField)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -421,7 +422,7 @@ runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId =
             True
         pure res.ofrPersonEnabled
       else do
-        statusRes <- statusHandler' statusPerson statusEntityImagesInfo Nothing Nothing Nothing Nothing (Just True) False (Just True) True
+        statusRes <- statusHandler' statusPerson statusEntityImagesInfo Nothing Nothing Nothing Nothing (Just True) False (Just True) True Nothing
         pure $ Just statusRes.enabled
 
 runRefreshOnboardingFlagsFleet :: OnboardingFlow m r => Maybe DP.Person -> Maybe DTC.TransporterConfig -> Id DP.Person -> m (Maybe Bool)
@@ -505,12 +506,37 @@ buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipM
     if SDO.isFleetRole person.role
       then Left <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Nothing}) Nothing
       else Right <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) Nothing
-  let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
-  vehicleDocumentsUnverified <-
-    if SDO.isFleetRole person.role
-      then pure []
-      else fetchVehicleDocuments entityImagesInfo driverDocConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
+  let baseDriverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
+  (driverDocConfigs, vehicleDocumentsUnverified) <-
+    case (SDO.isFleetRole person.role, mbReqRegistrationNo) of
+      (True, Just reqRegistrationNo) -> do
+        (vehicleDocItem, vehicleDocConfigs) <- fetchFleetOwnerVehicleDocs person entityImagesInfo language reqRegistrationNo onlyMandatoryDocs skipMessages
+        pure (vehicleDocConfigs, [vehicleDocItem])
+      (True, Nothing) -> pure (baseDriverDocConfigs, [])
+      (False, _) -> (baseDriverDocConfigs,) <$> fetchVehicleDocuments entityImagesInfo baseDriverDocConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
   pure VehicleDocsContext {allDocVerificationConfigs, driverDocConfigs, vehicleDocumentsUnverified}
+  where
+    fetchFleetOwnerVehicleDocs ::
+      OnboardingFlow m r =>
+      DP.Person ->
+      IQuery.EntityImagesInfo ->
+      Language ->
+      Text ->
+      Maybe Bool ->
+      Bool ->
+      m (VehicleDocumentItem, [DVC.DocumentVerificationConfig])
+    fetchFleetOwnerVehicleDocs person entityImagesInfo language reqRegistrationNo onlyMandatoryDocs skipMessages = do
+      let merchantOperatingCity = entityImagesInfo.merchantOperatingCity
+          transporterConfig = entityImagesInfo.transporterConfig
+          registrationNo = normalizeRegistrationNo reqRegistrationNo
+      rcNoEnc <- encrypt registrationNo
+      rc <-
+        RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+          >>= fromMaybeM (InvalidRequest $ "Vehicle not found with registrationNo " <> registrationNo)
+      fetchVehicleDocStatusesForRC rc merchantOperatingCity transporterConfig language registrationNo onlyMandatoryDocs entityImagesInfo.enableDocumentMetadata skipMessages
+
+normalizeRegistrationNo :: Text -> Text
+normalizeRegistrationNo = T.toUpper . SDO.removeSpaceAndDash
 
 -- | The onboarding status engine. Builds the per-document status list returned to the app, and as a
 --   side-effect mutates onboarding state:
@@ -529,8 +555,9 @@ statusHandler' ::
   Bool ->
   Maybe Bool ->
   Bool ->
+  Maybe Text ->
   m StatusRes'
-statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages = do
+statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs skipMessages mbReqRegistrationNo = do
   let merchantId = entityImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = entityImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
@@ -538,8 +565,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       personId = person.id
   let language = fromMaybe merchantOperatingCity.language person.language
 
+  let mbFetchScopedRegistrationNo = if SDO.isFleetRole person.role then mbReqRegistrationNo else Nothing
   VehicleDocsContext {allDocVerificationConfigs, driverDocConfigs, vehicleDocumentsUnverified} <-
-    buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages Nothing
+    buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipMessages mbFetchScopedRegistrationNo
 
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
@@ -673,10 +701,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
       then SDDigilocker.getDigiLockerAuthorizationUrl personId
       else pure Nothing
 
+  let requestedVehicleDocuments = case mbReqRegistrationNo of
+        Nothing -> vehicleDocuments
+        Just reqRegistrationNo -> filter (\vehicleDoc -> vehicleDoc.registrationNo == normalizeRegistrationNo reqRegistrationNo) vehicleDocuments
+
   return $
     StatusRes'
       { driverDocuments,
-        vehicleDocuments,
+        vehicleDocuments = requestedVehicleDocuments,
         enabled = enabled,
         verified = verified,
         approved = approved,

@@ -54,6 +54,7 @@ apis:
         - onlyMandatoryDocs: Bool
         - docsVerificationStatus: DocsVerificationStatus
         - enableDocumentMetadata: Bool
+        - rcNo: Text
       response:
         type: StatusRes
       helperApi:
@@ -70,6 +71,7 @@ apis:
               - onlyMandatoryDocs: Bool
               - docsVerificationStatus: DocsVerificationStatus
               - enableDocumentMetadata: Bool
+              - rcNo: Text
             response:
               type: StatusRes
   # Vehicle-only RC verify-status. Resolves the RC from registrationNo/rcId. Dashboard callers are already
