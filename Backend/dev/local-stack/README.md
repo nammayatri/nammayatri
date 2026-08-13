@@ -617,6 +617,52 @@ All three signing parties use the same dev key, so the single public key in the
 registry fixture is correct for all of them and signature auth works unmodified
 (`disableSignatureAuth = False` throughout).
 
+## The tariff — `./apply-tariff.sh`
+
+```bash
+./apply-tariff.sh          # applies algeria-tariff.sql AND clears the caches
+```
+
+| Category | Variant | Start | Per km | Pickup | Driver may add |
+|---|---|---|---|---|---|
+| Economy | HATCHBACK | 100 | 35 | 50 | up to 300 |
+| Comfort | SEDAN | 150 | 45 | 70 | up to 300 |
+| Premium | SUV | 200 | 60 | 100 | up to 300 |
+
+Set by the client on 2026-08-13, replacing the upstream Bangalore seed (10 / 12
+/ 120) that made every vehicle cost the same 258 DZD. A 13.7 km trip is now
+**629 / 836 / 1121**.
+
+**Never run the SQL on its own.** The driver service caches fare policies in
+Redis and does not notice a row changing underneath it, so `psql -f` reports
+success for every statement, the table holds the new numbers, and the app keeps
+quoting the old ones. No error, nothing in any log. That is what
+`apply-tariff.sh` exists to prevent.
+
+There are **two** caches and they are not spelled alike:
+
+```
+driver-offer:CachedQueries:FarePolicy:*        the fares
+driver-offer:CachedQueries:RestrictExtraFee:*  the cap on the driver's extra
+```
+
+The second is `RestrictExtraFee` while its table is `restricted_extra_fare` — a
+scan for `*Fare*` misses it, so clearing only the first updates the prices and
+silently leaves the driver's extra at its old value. Both are cleared by
+pattern; never `FLUSHALL`, because the same Redis holds auth sessions and the
+OTP lockout counters.
+
+Two more things the table alone does not tell you:
+
+- **There are two merchants** — `NAMMA_YATRI_PARTNER` and `OTHER_MERCHANT_2`,
+  with 6 and 7 seeded drivers. Both dispatch, so a tariff applied to one leaves
+  half the fleet quoting the old price. The SQL is deliberately not filtered by
+  merchant.
+- **`base_distance_meters` is 0**, so the per-km charge runs from the first
+  metre and the "starting price" is a flat charge on top. The seed had it
+  covering the first 3 km. If the client meant the start to include some
+  distance, that is the one value to change.
+
 ## Driver freshness — `./drivers-keepalive.sh`
 
 **The single most misleading failure in this stack.** The dispatch pool only
