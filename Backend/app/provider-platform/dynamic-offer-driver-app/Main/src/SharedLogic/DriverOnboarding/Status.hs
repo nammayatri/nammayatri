@@ -72,7 +72,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
-import qualified Domain.Types.VehicleVariant as DV
 import GHC.Records.Extra (HasField)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -510,22 +509,13 @@ buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipM
   (driverDocConfigs, vehicleDocumentsUnverified) <-
     case (SDO.isFleetRole person.role, mbReqRegistrationNo) of
       (True, Just reqRegistrationNo) -> do
-        (vehicleDocItem, vehicleDocConfigs) <- fetchFleetOwnerVehicleDocs person entityImagesInfo language reqRegistrationNo onlyMandatoryDocs skipMessages
+        (vehicleDocItem, vehicleDocConfigs) <- fetchFleetOwnerVehicleDocs reqRegistrationNo
         pure (vehicleDocConfigs, [vehicleDocItem])
       (True, Nothing) -> pure (baseDriverDocConfigs, [])
       (False, _) -> (baseDriverDocConfigs,) <$> fetchVehicleDocuments entityImagesInfo baseDriverDocConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages
   pure VehicleDocsContext {allDocVerificationConfigs, driverDocConfigs, vehicleDocumentsUnverified}
   where
-    fetchFleetOwnerVehicleDocs ::
-      OnboardingFlow m r =>
-      DP.Person ->
-      IQuery.EntityImagesInfo ->
-      Language ->
-      Text ->
-      Maybe Bool ->
-      Bool ->
-      m (VehicleDocumentItem, [DVC.DocumentVerificationConfig])
-    fetchFleetOwnerVehicleDocs person entityImagesInfo language reqRegistrationNo onlyMandatoryDocs skipMessages = do
+    fetchFleetOwnerVehicleDocs reqRegistrationNo = do
       let merchantOperatingCity = entityImagesInfo.merchantOperatingCity
           transporterConfig = entityImagesInfo.transporterConfig
           registrationNo = normalizeRegistrationNo reqRegistrationNo
