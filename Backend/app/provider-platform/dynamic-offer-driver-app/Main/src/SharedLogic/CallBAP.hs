@@ -31,6 +31,7 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirmV2,
     callOnStatusV2,
+    callOnSelectV2ForQuote,
     buildBppUrl,
     sendSafetyAlertToBAP,
     sendPhoneCallRequestUpdateToBAP,
@@ -49,6 +50,7 @@ import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.OnDemand.Transformer.MSIL.OnStatus as MSILOnStatus
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
@@ -92,6 +94,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideDetails as DRD
@@ -198,6 +201,48 @@ callOnSelectV2 transporter searchRequest srfd searchTry content = do
 
 mkTxnIdKey :: Text -> Text
 mkTxnIdKey txnId = "driver-offer:CachedQueries:Select:transactionId-" <> txnId
+
+-- | MSIL pilot: /on_select for the new Quote-based (static/scheduled) /select
+-- capability. Unlike 'callOnSelectV2' above (which answers a /select for the
+-- dynamic-offer/bidding flow asynchronously, once a driver has bid -- hence
+-- its Redis-cached message_id lookup, since /select's Ack and this call can be
+-- far apart in time), this is called synchronously from within the same
+-- request that validated the Quote: no driver bid to wait for, no
+-- SearchRequestForDriver/SearchTry exist yet for this flow (driver assignment
+-- happens later, at Confirm-time batching), so the
+-- messageId from the inbound /select is used directly instead.
+callOnSelectV2ForQuote ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  Text ->
+  DQuote.Quote ->
+  Spec.OnSelectReqMessage ->
+  m ()
+callOnSelectV2ForQuote transporter searchRequest msgId quote content = do
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+      bppSubscriberId = getShortId $ transporter.subscriberId
+  bppUri <- buildBppUrl (transporter.id)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  let vehicleCategory = Utils.mapServiceTierToCategory quote.vehicleServiceTier
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+  ttl <- bppConfig.onSelectTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) (Just ttl)
+  logDebug $ "on_selectV2 (quote) request bpp: " <> show content
+  let onSelectReq = Spec.OnSelectReq context Nothing (Just content)
+  res <- withShortRetry $ callBecknAPIWithSignature' transporter.id bppSubscriberId (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap onSelectReq
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnSelectV2ForQuote" "BPP" (Just searchRequest.transactionId) (Just onSelectReq) res
 
 callOnUpdateV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -878,7 +923,8 @@ sendDriverArrivalUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "scheduledCategorySignalMerchantIds" r [Text]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -905,7 +951,16 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
-  void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+  -- Pilot: merchants in scheduledCategorySignalMerchantIds get this push re-routed
+  -- through on_status (Beckn.OnDemand.Transformer.MSIL.OnStatus.toOnStatusReq),
+  -- spec-correct per ONDC v2.1.0; everyone else keeps getting it via on_update,
+  -- unchanged (doc 25 s11). Do NOT dual-send on both endpoints -- see doc 23 s10's
+  -- idempotency risk: the BAP has no way to dedupe the same event on two APIs.
+  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+  let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+  if isMsilPilotMerchant
+    then void $ callOnStatusV2 (MSILOnStatus.toOnStatusReq driverArrivedMsgV2) retryConfig merchant.id
+    else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
   fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 
 sendPhoneCallRequestUpdateToBAP ::

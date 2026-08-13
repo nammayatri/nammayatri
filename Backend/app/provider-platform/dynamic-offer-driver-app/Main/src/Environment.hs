@@ -196,6 +196,9 @@ data AppCfg = AppCfg
     -- category signal (SCHEDULED_TRIP/SCHEDULED_RENTAL). Empty for everyone else, who
     -- keep today's behaviour unchanged. See Beckn.OnDemand.Transformer.MSIL.*.
     scheduledCategorySignalMerchantIds :: [Text],
+    -- | Acceptable band, as a fraction of the quote's current fare, for a BAP-proposed
+    -- negotiated fare on the Quote-based /select flow: fare*(1-y) <= bid <= fare*(1+y).
+    negotiationFareTolerancePct :: Double,
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     ttenTokenCacheExpiry :: Seconds,
@@ -330,6 +333,7 @@ data AppEnv = AppEnv
     driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions,
     noSignatureSubscribers :: [Text],
     scheduledCategorySignalMerchantIds :: [Text],
+    negotiationFareTolerancePct :: Double,
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,

@@ -15,9 +15,13 @@ module Domain.Action.Beckn.Select
   ( DSelectReq (..),
     validateRequest,
     handler,
+    validateQuoteSelect,
+    handleQuoteSelect,
   )
 where
 
+import qualified Beckn.OnDemand.Transformer.MSIL.OnSelect as MSILOnSelect
+import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
@@ -25,9 +29,11 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ParcelType as DParcel
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Yudhishthira as Y
@@ -41,13 +47,19 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.DriverPool
+import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FareParameters as QFareParams
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
@@ -61,6 +73,14 @@ data DSelectReq = DSelectReq
     pickupTime :: UTCTime,
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe HighPrecMoney,
+    -- | BAP-proposed total fare for the Quote-based /select negotiation flow
+    -- (ONDC v2.1.0 Pre-Order Bid). Layer 1 (Beckn.ACL.Select) always sets this
+    -- to Nothing; only Beckn.OnDemand.Transformer.MSIL.Select.msilParser fills
+    -- it in, from item.price.value, for scheduledCategorySignalMerchantIds
+    -- pilot merchants. Deliberately a separate field from customerExtraFee,
+    -- which is an additive tip/extra-fee delta used by the Estimate-based
+    -- dynamic-offer flow -- this one is the bid's absolute proposed total.
+    negotiatedFare :: Maybe HighPrecMoney,
     isPetRide :: Bool,
     customerPhoneNum :: Maybe Text,
     isAdvancedBookingEnabled :: Bool,
@@ -177,3 +197,58 @@ addNammaTags tagData sReq = do
   newSearchTags <- withTryCatch "computeNammaTags:Select" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast sReq.merchantOperatingCityId) Yudhishthira.Select (Just sReq.transactionId) tagData)
   let tags = sReq.searchTags <> eitherToMaybe newSearchTags
   QSR.updateSearchTags tags sReq.id
+
+-- MSIL pilot: /select for the new Quote-based (static/scheduled) capability --
+-- Dispatched only for merchants on scheduledCategorySignalMerchantIds,
+-- at the API layer (API.Beckn.Select), when the wire item.id resolves to a Quote
+-- instead of an Estimate.
+
+-- | Validate a Quote-based /select. Pure read -- no DB writes, no driver-search
+-- trigger (unlike 'handler' above, which is the Estimate-based/dynamic-offer path).
+-- Driver search for this flow already starts later, at /confirm
+-- (Domain.Action.Beckn.Confirm.handleStaticOfferFlow).
+validateQuoteSelect :: Id DM.Merchant -> Id DQuote.Quote -> Text -> Maybe HighPrecMoney -> Double -> Flow (DM.Merchant, DSR.SearchRequest, DQuote.Quote)
+validateQuoteSelect merchantId quoteId transactionId mbNegotiatedFare negotiationFareTolerancePct = do
+  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
+  now <- getCurrentTime
+  unless (quote.validTill > now) $
+    throwError $ QuoteExpired quoteId.getId
+  searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+  unless (searchReq.transactionId == transactionId) $
+    throwError $ InvalidRequest "select transaction_id does not match the search context this quote belongs to"
+  quote' <- case mbNegotiatedFare of
+    Nothing -> return quote
+    Just negotiatedFare -> applyNegotiatedFare quoteId quote negotiationFareTolerancePct negotiatedFare
+  return (merchant, searchReq, quote')
+
+-- Validate the negotiated fare and update fare policy and quotes according to that
+applyNegotiatedFare :: Id DQuote.Quote -> DQuote.Quote -> Double -> HighPrecMoney -> Flow DQuote.Quote
+applyNegotiatedFare quoteId quote negotiationFareTolerancePct negotiatedFare = do
+  let currentFare = quote.estimatedFare
+      minAcceptable = currentFare * (1 - realToFrac negotiationFareTolerancePct)
+      maxAcceptable = currentFare * (1 + realToFrac negotiationFareTolerancePct)
+  unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $ -- We can discuss on this comparisation logic
+    throwError $ NegotiatedFareNotAcceptable quoteId.getId
+  let negotiationDelta = negotiatedFare - currentFare
+      updatedFareParams = quote.fareParams {DFareParams.baseFare = quote.fareParams.baseFare + negotiationDelta} -- Need to discuss that should we store negotiationDelta information in other field at fare params to keep this information how much we negotiate with bap for this transaction?
+  QFareParams.updateFareParameters updatedFareParams quote.fareParams.id
+  QQuote.updateEstimatedFare quoteId negotiatedFare
+  return quote {DQuote.estimatedFare = negotiatedFare, DQuote.fareParams = updatedFareParams}
+
+-- | Build and send /on_select for a validated Quote (see
+-- Beckn.OnDemand.Transformer.MSIL.OnSelect for the builder). Called from a fork,
+-- same as 'handler' above, using the inbound /select's own messageId -- unlike
+-- the dynamic-offer flow's callOnSelectV2, there's no driver bid to wait for, so
+-- this is synchronous within the same request, not deferred to a later event.
+handleQuoteSelect :: Text -> DM.Merchant -> DSR.SearchRequest -> DQuote.Quote -> Flow ()
+handleQuoteSelect msgId merchant searchReq quote = do
+  now <- getCurrentTime
+  let vehicleCategory = BUtils.mapServiceTierToCategory quote.vehicleServiceTier
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+  vehicleServiceTierItem <-
+    CQVST.findByServiceTierTypeAndCityIdInRideFlow quote.vehicleServiceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+      >>= fromMaybeM (VehicleServiceTierNotFound (show quote.vehicleServiceTier))
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
+  let onSelectMsg = MSILOnSelect.mkOnSelectMessageV2FromQuote bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
+  CallBAP.callOnSelectV2ForQuote merchant searchReq msgId quote onSelectMsg
