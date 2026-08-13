@@ -995,7 +995,8 @@ setActivity ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasKafkaProducer r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
