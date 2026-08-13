@@ -11,7 +11,6 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.EstimateStatus
 import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -38,7 +37,6 @@ data EstimateT f = EstimateT
     device :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
-    driversLocation :: B.C f [Kernel.External.Maps.LatLong],
     estimateBreakupListJson :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     estimatedDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
