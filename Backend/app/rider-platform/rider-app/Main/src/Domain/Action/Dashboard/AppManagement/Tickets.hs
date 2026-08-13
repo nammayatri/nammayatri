@@ -287,9 +287,12 @@ getTicketPlaces ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
-getTicketPlaces merchantShortId _opCity = do
+getTicketPlaces merchantShortId opCity = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketPlaces (Nothing, m.id)
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity m.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> m.id.getId <> " city: " <> show opCity)
+  Domain.Action.UI.TicketService.getTicketPlacesByOpCity merchantOpCity.id
 
 getTicketPlaceServices ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

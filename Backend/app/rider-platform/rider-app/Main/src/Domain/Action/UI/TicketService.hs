@@ -143,8 +143,12 @@ convertBusinessHT (Domain.Types.BusinessHour.Duration startTime endTime) = Conve
 getTicketPlaces :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
 getTicketPlaces (_, merchantId) = do
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
+  getTicketPlacesByOpCity merchantOpCity.id
+
+getTicketPlacesByOpCity :: Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
+getTicketPlacesByOpCity merchantOpCityId = do
   context <- TicketRule.getCurrentContext 330 Nothing Nothing
-  ticketPlaces' <- QTicketPlace.getTicketPlaces merchantOpCity.id
+  ticketPlaces' <- QTicketPlace.getTicketPlaces merchantOpCityId
   let ticketPlaces = TicketRule.processEntity context <$> ticketPlaces'
   pure $ sortBy (comparing (Down . (.priority))) $ filterEnforcedAsSubPlace $ filterEndedOrUnPublishedPlaces ticketPlaces
   where
