@@ -758,6 +758,27 @@ instance IsHTTPError EstimateError where
 
 instance IsAPIError EstimateError
 
+data NegotiatedFareError
+  = NegotiatedFareNotAcceptable Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'HTTPException ''NegotiatedFareError
+
+instance IsBaseError NegotiatedFareError where
+  toMessage = \case
+    NegotiatedFareNotAcceptable quoteId -> Just $ "Negotiated fare for quoteId \"" <> show quoteId <> "\" is outside the acceptable range."
+
+instance IsHTTPError NegotiatedFareError where
+  toErrorCode = \case
+    NegotiatedFareNotAcceptable _ -> "NEGOTIATED_FARE_NOT_ACCEPTABLE" -- TODO: swap for ONDC spec numeric code once confirmed
+  toHttpCode = \case
+    NegotiatedFareNotAcceptable _ -> E400
+
+instance IsAPIError NegotiatedFareError
+
+instance IsBecknAPIError NegotiatedFareError where
+  toType _ = DOMAIN_ERROR
+
 -- TODO move to lib
 data MerchantPaymentMethodError
   = MerchantPaymentMethodNotFound Text

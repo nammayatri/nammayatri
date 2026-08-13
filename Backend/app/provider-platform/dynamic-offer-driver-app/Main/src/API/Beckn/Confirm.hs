@@ -17,6 +17,7 @@ module API.Beckn.Confirm (API, handler) where
 import qualified API.UI.Ride as RAPI
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
+import qualified Beckn.OnDemand.Transformer.MSIL.OnConfirm as MSILOnConfirm
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -125,7 +126,16 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId (dConfirmRes.booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
       bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
-      let onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
+      let onConfirmMessage' = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
+      -- Pilot: merchants in scheduledCategorySignalMerchantIds get the NEW ->
+      -- RIDE_CONFIRMED fulfillment-state fix (Beckn.OnDemand.Transformer.MSIL.OnConfirm);
+      -- everyone else's onConfirmMessage is exactly what Layer 1 built, unchanged.
+      scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+      let isMsilPilotMerchant = dConfirmRes.transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+          onConfirmMessage =
+            if isMsilPilotMerchant
+              then MSILOnConfirm.fixFulfillmentState onConfirmMessage'
+              else onConfirmMessage'
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmProcessingLockKey :: Text -> Text

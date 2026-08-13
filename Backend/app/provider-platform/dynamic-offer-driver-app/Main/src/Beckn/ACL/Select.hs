@@ -99,6 +99,10 @@ buildSelectReqV2 subscriber req = do
         pickupTime = now,
         autoAssignEnabled = autoAssignEnabled,
         customerExtraFee = customerExtraFee,
+        -- Layer 1 has no notion of a Quote-based negotiated bid; only the MSIL
+        -- pilot's Layer 2 parser (Beckn.OnDemand.Transformer.MSIL.Select) fills
+        -- this in, from item.price.value, for pilot merchants.
+        negotiatedFare = Nothing,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
