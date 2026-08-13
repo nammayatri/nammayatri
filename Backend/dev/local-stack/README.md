@@ -617,6 +617,41 @@ All three signing parties use the same dev key, so the single public key in the
 registry fixture is correct for all of them and signature auth works unmodified
 (`disableSignatureAuth = False` throughout).
 
+## Driver freshness — `./drivers-keepalive.sh`
+
+**The single most misleading failure in this stack.** The dispatch pool only
+considers drivers whose recorded position is recent. Real drivers send one
+constantly; the seeded ones are rows nobody updates. So a stack that worked
+yesterday returns **zero estimates today, with no error anywhere** — empty
+arrays, HTTP 200, nothing in any log — and it looks exactly like broken
+dispatch.
+
+Measured on 12 Aug: six drivers within 600 m of the pickup, every one invisible,
+positions **1 day 21 hours** old. It has cost time twice.
+
+```bash
+./setup.sh drivers              # place them, once
+./drivers-keepalive.sh install  # keep them visible, every 2 minutes
+./drivers-keepalive.sh status   # is the timer up, how fresh are they
+```
+
+The timer only re-stamps rows `setup.sh drivers` already created — it does not
+move anyone, so a driver placed by hand for a test stays where they were put.
+
+**It is a demo prop, not a fix.** The real fix is a driver app sending real
+positions, and on the day that exists this should be *deleted* rather than left
+quietly keeping fictional cars alive next to real ones:
+
+```bash
+./drivers-keepalive.sh uninstall
+```
+
+Also worth knowing for anyone testing by hand: a rider only reaches drivers
+whose **vehicle matches the variant they picked**, and the seeded fleet is 9
+auto-rickshaws, 2 sedans, 1 hatchback and 1 SUV. "SUV" therefore reaches exactly
+one driver, and dispatch will look unreliable for reasons that are nothing to do
+with dispatch.
+
 ## Backups — `./backup.sh`
 
 ```bash
