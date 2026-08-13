@@ -238,6 +238,9 @@ castVariant Variant.BIKE_PLUS = (show Enums.TWO_WHEELER, "BIKE_PLUS")
 castVariant Variant.E_RICKSHAW = (show Enums.TOTO, "E_RICKSHAW")
 castVariant Variant.AUTO_LITE = (show Enums.AUTO_RICKSHAW, "AUTO_LITE")
 castVariant Variant.PINK_AUTO = (show Enums.AUTO_RICKSHAW, "PINK_AUTO")
+castVariant Variant.EV_HATCHBACK = (show Enums.CAB, "EV_HATCHBACK")
+castVariant Variant.EV_SEDAN = (show Enums.CAB, "EV_SEDAN")
+castVariant Variant.EV_SUV = (show Enums.CAB, "EV_SUV")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -286,6 +289,9 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "TOTO", Just "E_RICKSHAW") -> Just Variant.E_RICKSHAW
   (Just "AUTO_RICKSHAW", Just "AUTO_LITE") -> Just Variant.AUTO_LITE
   (Just "AUTO_RICKSHAW", Just "PINK_AUTO") -> Just Variant.PINK_AUTO
+  (Just "CAB", Just "EV_HATCHBACK") -> Just Variant.EV_HATCHBACK
+  (Just "CAB", Just "EV_SEDAN") -> Just Variant.EV_SEDAN
+  (Just "CAB", Just "EV_SUV") -> Just Variant.EV_SUV
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
