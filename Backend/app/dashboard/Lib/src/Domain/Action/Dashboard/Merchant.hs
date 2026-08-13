@@ -102,8 +102,11 @@ createMerchantWithAdmin tokenInfo req = do
   merchant <- buildMerchant CreateMerchantReq {shortId = req.shortId, defaultOperatingCity = req.defaultOperatingCity, supportedOperatingCities = req.supportedOperatingCities, domain = req.domain, website = req.website}
   person <- buildPersonCreateReq req role merchant.id
   decPerson <- decrypt person
-  QP.create person
+  -- Insert order follows the reference: person.merchantId carries a foreign key onto merchant.id
+  -- (ddl-migrations/*/[0097|0074|0012]-add-merchant-id-to-person.sql), so creating the person first
+  -- fails the constraint.
   QMerchant.create merchant
+  QP.create person
   merchantAccess <- DPerson.buildMerchantAccess person.id merchant.id merchant.shortId tokenInfo.city
   QAccess.create merchantAccess
   pure $ AP.makePersonAPIEntity decPerson role [merchant.shortId] (Just [DP.AvailableCitiesForMerchant {merchantShortId = merchant.shortId, operatingCity = [req.defaultOperatingCity]}]) Nothing Nothing

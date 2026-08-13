@@ -251,25 +251,27 @@ adminEmailDomainError = "Administrator accounts must use an approved organizatio
 -- | Admin mutations that address a person directly by id must not reach across merchants.
 -- Without this an admin of any merchant could act on an arbitrary person id.
 --
--- Authority comes from two sources, unioned:
+-- merchant_access rows are authoritative whenever the person has any: those merchants, and only
+-- those, may act on them. A person shared across merchants therefore stays manageable by each.
 --
---   * person.merchantId — the merchant the person was provisioned under. Written once at
---     creation, never updated, and not reachable from any admin endpoint. This is the anchor.
---   * merchant_access rows — merchants the person has since been granted access to. Included
---     so that a person shared across merchants stays manageable by each of them.
+-- The access rows cannot be the whole story though, because they are deletable. An earlier
+-- version of this function used them alone and was bypassable: resetMerchantAccess and
+-- resetMerchantCityAccess delete access rows and leave the person row alive, so an attacker could
+-- empty a victim's rows and then claim them as "unowned". That state is also reachable with no
+-- attack at all — a merchant revoking its own user's last access produces it.
 --
--- The access rows alone are not a safe basis, and an earlier version of this function that used
--- only them was bypassable: resetMerchantAccess and resetMerchantCityAccess delete access rows
--- and leave the person row alive, so an attacker could empty a victim's rows and then claim them
--- as "unowned". That is also reachable without any attack — a merchant revoking its own user's
--- last access produces exactly that state. person.merchantId survives both, which is the point:
--- authorization must not derive from state the unauthorized party can modify.
+-- person.merchantId, the merchant the person was provisioned under, closes that. It is written
+-- once at creation, never updated, and not settable from any admin endpoint, so it holds the
+-- claim when the rows are gone. It is deliberately consulted ONLY as a fallback rather than
+-- unioned in: unioning would leave the provisioning merchant with authority forever, including
+-- over a person whose access has since moved entirely to somebody else. Access, once granted,
+-- decides; provisioning only decides when there is no access to speak of.
 --
--- No claimants at all is still permitted, and now means only two things. Either the person was
--- created moments ago and has not been granted access yet (createPerson does not write an access
--- row; createUserForMerchant grants it on the next line) — rejecting that would strand an admin
--- who typo'd an email at creation, unable to fix or delete the account. Or the row predates the
--- merchantId column and was never backfilled. Neither is forgeable by a caller.
+-- No claimant at all is still permitted, and now means one of two things: the person was created
+-- moments ago and has not been granted access yet (createPerson writes no access row;
+-- createUserForMerchant grants it on the next line), so rejecting would strand an admin who
+-- typo'd an email at creation; or the row predates this column and the backfill found no access
+-- row to derive one from. Neither is forgeable by a caller.
 assertPersonInCallerMerchant ::
   BeamFlow m r =>
   TokenInfo ->
@@ -278,7 +280,10 @@ assertPersonInCallerMerchant ::
 assertPersonInCallerMerchant tokenInfo personId = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   allAccess <- QAccess.findAllMerchantAccessByPersonId personId
-  let claimants = maybe [] (: []) person.merchantId <> map (.merchantId) allAccess
+  let claimants =
+        if null allAccess
+          then maybe [] (: []) person.merchantId
+          else map (.merchantId) allAccess
   unless (null claimants) $
     unless (tokenInfo.merchantId `elem` claimants) $
       throwError (PersonDoesNotExist personId.getId)
@@ -563,8 +568,15 @@ changePassword tokenInfo req = do
 -- | Rate-limit bucket keyed on email. Deliberately shared with login (Registration.login) so an
 -- attacker cannot get a fresh budget by switching between the two endpoints that both resolve
 -- credentials via findByEmailAndPassword.
+--
+-- Normalized the same way the lookup is: findByEmailAndPasswordWithType hashes the lower-cased
+-- email, so a mixed-case and a lower-case spelling resolve to one account. Keying on the raw string
+-- gave each casing its own budget, which is a fresh set of guesses per variant against one account.
+-- Stripping surrounding whitespace only ever merges buckets further, so it cannot widen the budget.
 makeEmailHitsCountKey :: Maybe Text -> Text
-makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
+makeEmailHitsCountKey email = "Email:" <> maybe "" normalizeEmailForKey email <> ":hitsCount"
+  where
+    normalizeEmailForKey = T.toLower . T.strip
 
 changePasswordAfterExpiry ::
   ( BeamFlow m r,
