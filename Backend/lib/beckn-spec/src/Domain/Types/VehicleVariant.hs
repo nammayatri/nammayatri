@@ -69,6 +69,9 @@ data VehicleVariant
   | E_RICKSHAW
   | AUTO_LITE
   | PINK_AUTO
+  | EV_HATCHBACK
+  | EV_SEDAN
+  | EV_SUV
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded, EP.Hashable)
 
 instance CH.ClickhouseValue VehicleVariant
@@ -130,9 +133,9 @@ castServiceTierToVariant = \case
   DVST.AUTO_LITE -> AUTO_LITE
   DVST.PINK_AUTO -> PINK_AUTO
   DVST.MAHILA_SHAKTI -> AUTO_RICKSHAW
-  DVST.EV_HATCHBACK -> HATCHBACK
-  DVST.EV_SEDAN -> SEDAN
-  DVST.EV_SUV -> SUV
+  DVST.EV_HATCHBACK -> EV_HATCHBACK
+  DVST.EV_SEDAN -> EV_SEDAN
+  DVST.EV_SUV -> EV_SUV
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -172,6 +175,9 @@ castVariantToServiceTier = \case
   E_RICKSHAW -> DVST.E_RICKSHAW
   AUTO_LITE -> DVST.AUTO_LITE
   PINK_AUTO -> DVST.PINK_AUTO
+  EV_HATCHBACK -> DVST.EV_HATCHBACK
+  EV_SEDAN -> DVST.EV_SEDAN
+  EV_SUV -> DVST.EV_SUV
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -211,6 +217,9 @@ castVehicleVariantToVehicleCategory = \case
   E_RICKSHAW -> DVC.TOTO
   AUTO_LITE -> DVC.AUTO_CATEGORY
   PINK_AUTO -> DVC.AUTO_CATEGORY
+  EV_HATCHBACK -> DVC.CAR
+  EV_SEDAN -> DVC.CAR
+  EV_SUV -> DVC.CAR
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
 castServiceTierToVehicleCategory = \case
