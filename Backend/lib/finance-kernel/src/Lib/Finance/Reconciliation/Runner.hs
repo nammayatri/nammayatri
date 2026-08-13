@@ -168,12 +168,22 @@ runNextChunk recipe input = do
 -- ─── Source-scoped reconciliation (event-driven) ──────────────────────────
 
 reconcileSources ::
-  (BeamFlow.BeamFlow m r) =>
+  ( BeamFlow.BeamFlow m r,
+    Hedis.HedisFlow m r
+  ) =>
   Recipe m ->
   MerchantScope ->
   [SourceId] ->
   m ()
 reconcileSources recipe scope sourceIds = do
+  let lockPrefix =
+        "ReconSourceLock:"
+          <> specKey recipe.spec
+          <> "|"
+          <> scope.merchantId
+          <> "|"
+          <> scope.merchantOperatingCityId
+          <> "|"
   logInfo $
     "reconcileSources: spec="
       <> specKey recipe.spec
@@ -181,7 +191,13 @@ reconcileSources recipe scope sourceIds = do
       <> scope.merchantId
       <> " sources="
       <> show (length sourceIds)
-  processChunkByIds recipe scope (map (.getId) sourceIds)
+  acquireAll lockPrefix sourceIds $
+    processChunkByIds recipe scope (map (.getId) sourceIds)
+  where
+    acquireAll _ [] action = action
+    acquireAll prefix (sid : rest) action =
+      Hedis.withLockRedis (prefix <> sid.getId) 300 $
+        acquireAll prefix rest action
 
 -- ─── Per-chunk processing ──────────────────────────────────────────────────
 

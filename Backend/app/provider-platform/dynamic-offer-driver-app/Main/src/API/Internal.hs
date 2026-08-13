@@ -32,6 +32,7 @@ import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.QuoteRespond as QuoteRespond
+import qualified API.Internal.RSFRecon as RSFRecon
 import qualified API.Internal.RefundLedger as RefundLedger
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
@@ -69,6 +70,7 @@ type API =
            :<|> PopulateTipAmount.API
            :<|> RefundLedger.API
            :<|> Ride.API
+           :<|> RSFRecon.API
            :<|> StopDetection.API
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
@@ -94,7 +96,6 @@ type API =
            :<|> MasterCloudForward.API
            :<|> XyneWebhook.API
            :<|> XyneWebhook.BearerAPI
-           :<|> XyneWebhook.IssuesAPI
            :<|> NotificationWebhook.API
        )
 
@@ -117,6 +118,7 @@ handler env =
     :<|> PopulateTipAmount.handler
     :<|> RefundLedger.handler
     :<|> Ride.handler
+    :<|> RSFRecon.handler
     :<|> StopDetection.handler
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
@@ -142,5 +144,4 @@ handler env =
     :<|> MasterCloudForward.handler env
     :<|> XyneWebhook.handler
     :<|> XyneWebhook.bearerHandler
-    :<|> XyneWebhook.issuesHandler
     :<|> NotificationWebhook.handler

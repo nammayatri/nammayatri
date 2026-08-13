@@ -1,0 +1,44 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+
+ReconUtrSettlement:
+  tableName: recon_utr_settlement
+
+  fields:
+    id: Id ReconUtrSettlement
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe Text
+    utr: Text
+    bapId: Text
+    bapUri: Text
+    claimedTotalAmount: HighPrecMoney
+    totalOrders: Int
+    bankVerifiedAmount: Maybe HighPrecMoney
+    resolvedAt: Maybe UTCTime
+    resolvedBy: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    utr: "!SecondaryKey"
+
+  sqlType:
+    claimedTotalAmount: numeric(30,2)
+    bankVerifiedAmount: numeric(30,2)
+
+  queries:
+    findByUtr:
+      kvFunction: findOneWithKV
+      where: utr
+
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
