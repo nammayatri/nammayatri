@@ -32,6 +32,7 @@ data BecknConfigT f = BecknConfigT
     onUpdateTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
+    sendOndcCancellationCodes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     settlementType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     settlementWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     staticTermsUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
