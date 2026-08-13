@@ -285,8 +285,8 @@ fleetOwnerLogin req = do
     fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
     unless fleetOwnerInfo.enabled (throwError $ InvalidRequest "fleetOwner is not enabled")
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
-  let useFakeOtpM = useFakeSms smsCfg
-  otp <- maybe generateOTPCode (return . show) useFakeOtpM
+  let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+  otp <- maybe generateOTPCode return useFakeOtpM
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = otp
