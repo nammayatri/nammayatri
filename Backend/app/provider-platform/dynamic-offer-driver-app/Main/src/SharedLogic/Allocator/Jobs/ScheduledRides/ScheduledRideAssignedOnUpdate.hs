@@ -180,7 +180,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated driver/vehicle/booking/latestScheduledPickup/transporterConfig is Nothing."
         (True, DRide.UPCOMING, _) -> do
           now <- getCurrentTime
-          mbActiveRide <- QRide.getActiveByDriverId driverId
+          mbActiveRide <- QRide.getLatestActiveByDriverId driverId
           mbVehicle <- runInReplica $ QVeh.findById driverId
           mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
           result <- runMaybeT $ do

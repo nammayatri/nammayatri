@@ -247,9 +247,13 @@ getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
   let rideData = map (\ride -> (ride.id, ride.status)) ride'
   pure rideData
 
-getActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
-getActiveByDriverId (Id personId) =
-  findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+getLatestActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
+getLatestActiveByDriverId (Id personId) =
+  findAllWithOptionsKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+
+getCurrentActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
+getCurrentActiveByDriverId (Id personId) =
+  findAllWithOptionsKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] (Se.Asc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
 getUpcomingOrActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getUpcomingOrActiveByDriverId (Id personId) =
