@@ -26,6 +26,7 @@ import qualified API.Types.ProviderPlatform.Management.Message
 import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
+import qualified API.Types.ProviderPlatform.Management.RSFReconciliation
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.SearchTry
@@ -67,6 +68,7 @@ data ManagementAPIs = ManagementAPIs
     nammaTagDSL :: API.Types.ProviderPlatform.Management.NammaTag.NammaTagAPIs,
     payoutDSL :: API.Types.ProviderPlatform.Management.Payout.PayoutAPIs,
     planManagementDSL :: API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementAPIs,
+    rSFReconciliationDSL :: API.Types.ProviderPlatform.Management.RSFReconciliation.RSFReconciliationAPIs,
     revenueDSL :: API.Types.ProviderPlatform.Management.Revenue.RevenueAPIs,
     rideDSL :: API.Types.ProviderPlatform.Management.Ride.RideAPIs,
     searchTryDSL :: API.Types.ProviderPlatform.Management.SearchTry.SearchTryAPIs,
@@ -103,6 +105,7 @@ mkManagementAPIs merchantId city token = do
   let nammaTagDSL = API.Types.ProviderPlatform.Management.NammaTag.mkNammaTagAPIs nammaTagClientDSL
   let payoutDSL = API.Types.ProviderPlatform.Management.Payout.mkPayoutAPIs payoutClientDSL
   let planManagementDSL = API.Types.ProviderPlatform.Management.PlanManagement.mkPlanManagementAPIs planManagementClientDSL
+  let rSFReconciliationDSL = API.Types.ProviderPlatform.Management.RSFReconciliation.mkRSFReconciliationAPIs rSFReconciliationClientDSL
   let revenueDSL = API.Types.ProviderPlatform.Management.Revenue.mkRevenueAPIs revenueClientDSL
   let rideDSL = API.Types.ProviderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let searchTryDSL = API.Types.ProviderPlatform.Management.SearchTry.mkSearchTryAPIs searchTryClientDSL
@@ -115,7 +118,7 @@ mkManagementAPIs merchantId city token = do
   let volunteerDSL = API.Types.ProviderPlatform.Management.Volunteer.mkVolunteerAPIs volunteerClientDSL
   (ManagementAPIs {..})
   where
-    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> driverVehicleQualityClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> searchTryClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleClientDSL :<|> vehicleDetailsClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    accountClientDSL :<|> bookingClientDSL :<|> coinsConfigClientDSL :<|> communicationClientDSL :<|> domainDiscountConfigClientDSL :<|> driverClientDSL :<|> driverCoinsClientDSL :<|> driverGoHomeClientDSL :<|> driverReferralClientDSL :<|> driverRegistrationClientDSL :<|> driverVehicleQualityClientDSL :<|> entityInfoClientDSL :<|> feedbackFormClientDSL :<|> financeManagementClientDSL :<|> knowledgeCenterClientDSL :<|> mediaClientDSL :<|> mediaFileDocumentClientDSL :<|> merchantClientDSL :<|> messageClientDSL :<|> nammaTagClientDSL :<|> payoutClientDSL :<|> planManagementClientDSL :<|> rSFReconciliationClientDSL :<|> revenueClientDSL :<|> rideClientDSL :<|> searchTryClientDSL :<|> sosMediaClientDSL :<|> specialZoneQueueClientDSL :<|> systemClientDSL :<|> vehicleClientDSL :<|> vehicleDetailsClientDSL :<|> vehicleInfoClientDSL :<|> volunteerClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

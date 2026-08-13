@@ -1,0 +1,12 @@
+-- TEMPORARY LOCAL-ONLY PATCH (2026-08-13): this file was generated as
+-- entirely SQL comments ("capability: PUBLIC - nothing to grant locally"
+-- for every endpoint) even after RSFReconciliation.yaml's capability values
+-- were changed to real dot-notation ids -- the "localAccessForRoleId"
+-- migration type did not pick up the change on regeneration (looks like a
+-- NammaDSL generator bug specific to this migration type, not something
+-- fixable from the YAML). A comment-only migration file crashes the
+-- migration runner with "execute: Empty query". Replaced with a real no-op
+-- statement to unblock local startup. Will likely be overwritten (back to
+-- the buggy comment-only form) on the next `run-generator` -- if so, patch
+-- again the same way, or fix the generator itself.
+DO $$ BEGIN END $$;

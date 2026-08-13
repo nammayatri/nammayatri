@@ -1,0 +1,257 @@
+imports:
+  ReconSettlementOrder: Lib.Finance.Domain.Types.ReconSettlementOrder
+  ReconUtrSettlement: Lib.Finance.Domain.Types.ReconUtrSettlement
+  UtrResolutionStatus: Lib.Finance.Domain.Types.ReconUtrSettlement
+  OrderReconVerdict: Lib.Finance.Domain.Types.ReconSettlementOrder
+
+module: RSFReconciliation
+
+apis:
+  # ----- Settlement batches (landing page) -----
+  # A "batch" = the set of RSO rows sharing one settlement_id. Landing page
+  # shows every batch with at least one row not yet SENT. A batch drops off
+  # the list only when every row under it is SENT.
+  - GET: # SettlementBatchListAPI
+      endpoint: /rsf/settlements
+      migrate:
+        capability: financeManagement.rsfSettlements.list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        bapId: Text
+      response:
+        type: SettlementBatchListRes
+
+  - GET: # SettlementBatchUtrListAPI
+      endpoint: /rsf/settlements/{settlementId}/utrs
+      migrate:
+        capability: financeManagement.rsfSettlements.utrs
+      auth: ApiAuthV2
+      params:
+        settlementId: Text
+      response:
+        type: SettlementBatchUtrListRes
+
+  - GET: # SettlementBatchOrderListAPI
+      endpoint: /rsf/settlements/{settlementId}/orders
+      migrate:
+        capability: financeManagement.rsfSettlements.orders
+      auth: ApiAuthV2
+      params:
+        settlementId: Text
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: SettlementBatchOrderListRes
+
+  - POST: # SettlementBatchSendAPI
+      endpoint: /rsf/settlements/{settlementId}/send
+      migrate:
+        capability: financeManagement.rsfSettlements.send
+      auth: ApiAuthV2
+      params:
+        settlementId: Text
+      response:
+        type: APISuccess
+
+  # ----- UTRs -----
+  - GET: # UtrListAPI
+      endpoint: /rsf/utrs
+      migrate:
+        capability: financeManagement.rsfUtrs.list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        bapId: Text
+        isVerified: Bool
+      response:
+        type: UtrListRes
+
+  - GET: # UtrDetailAPI
+      endpoint: /rsf/utrs/{utrId}
+      name: getRSFReconciliationRsfUtr
+      migrate:
+        capability: financeManagement.rsfUtrs.detail
+      auth: ApiAuthV2
+      params:
+        utrId: (Id ReconUtrSettlement)
+      response:
+        type: UtrDetailRes
+
+  - POST: # UtrBankVerifyAPI
+      endpoint: /rsf/utrs/{utrId}/verify
+      name: postRSFReconciliationRsfUtrBankVerify
+      migrate:
+        capability: financeManagement.rsfUtrs.bankVerify
+      auth: ApiAuthV2
+      params:
+        utrId: (Id ReconUtrSettlement)
+      request:
+        type: BankVerifyReq
+      response:
+        type: APISuccess
+
+  # ----- Order-level manual confirm -----
+  - POST: # OrderManualConfirmAPI
+      endpoint: /rsf/orders/{rsoId}/confirm
+      migrate:
+        capability: financeManagement.rsfOrders.confirm
+      auth: ApiAuthV2
+      params:
+        rsoId: (Id ReconSettlementOrder)
+      request:
+        type: ManualConfirmReq
+      response:
+        type: APISuccess
+
+  # ----- BAP Reconciliation report (MSIL PRD "BAP Reconciliation" screen) -----
+  # Matched / Mismatch / Pending tabs, plus the Manually Confirmed filter --
+  # all served from RSO rows via one shared grid shape and one live-compute
+  # pass. `status` and `manuallyConfirmedOnly` are independent filters (a
+  # manually confirmed row can itself be Matched or a locked historical
+  # Mismatch), matching how the PRD's download report treats "Manually
+  # Confirmed" as its own category orthogonal to the verdict.
+  - GET: # ReconGridAPI
+      endpoint: /rsf/recon/grid
+      migrate:
+        capability: financeManagement.rsfRecon.grid
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+        bapId: Text
+        status: ReconTabStatus
+        manuallyConfirmedOnly: Bool
+      response:
+        type: ReconGridListRes
+
+  # Rides that completed on the platform but have zero RSO rows at all --
+  # never claimed by the BAP in any receiver_recon message. Structurally
+  # different data source from the grid above (no RSO row to derive a
+  # verdict from), so it's its own endpoint rather than a `status` filter
+  # value on /rsf/recon/grid.
+  - GET: # ReconUnmatchedAPI
+      endpoint: /rsf/recon/unmatched
+      migrate:
+        capability: financeManagement.rsfRecon.unmatched
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: ReconGridListRes
+
+types:
+  ReconTabStatus:
+    - enum: "Matched, Unmatched, Mismatch, Pending"
+    - derive: "HttpInstance"
+
+  ReconGridListRes:
+    - totalItems: Int
+    - rows: [ReconGridRow]
+
+  # Common Grid Fields from the MSIL admin spec, one row per orderId.
+  # `buyerAppName` is the raw bapId -- no bapId-to-display-name registry
+  # exists in this codebase yet, so the BAP's own subscriber id is shown
+  # as-is. `payoutEligible` is a placeholder heuristic (Matched && fully
+  # sent) pending the real payout-bridge ledger integration (documented gap,
+  # not yet built). `communicationStatus` doubles as the Mismatch tab's
+  # "Communication Status" field -- always populated since it's cheap and
+  # keeps one row shape across every tab.
+  ReconGridRow:
+    - rsoIds: [(Id ReconSettlementOrder)]
+    - rideId: Maybe Text
+    - orderId: Text
+    - buyerAppName: Text
+    - rideDateTime: Maybe UTCTime
+    - driverId: Maybe Text
+    - grossFarePlatform: Maybe HighPrecMoney
+    - netReceivablePlatform: Maybe HighPrecMoney
+    - bapSettlementAmount: HighPrecMoney
+    - amountDifference: HighPrecMoney
+    - settlementDateBap: Maybe UTCTime
+    - settlementUtrs: [Text]
+    - reconciliationStatus: ReconTabStatus
+    - payoutEligible: Bool
+    - anyManuallyConfirmed: Bool
+    - communicationStatus: Text
+  # ----- Requests (moved verbatim from API/Internal/RSFRecon.hs) -----
+  BankVerifyReq:
+    - bankVerifiedAmount: HighPrecMoney
+
+  # Finance confirms an amount, never a verdict -- see confirmOrder handler.
+  ManualConfirmReq:
+    - confirmedBy: Text
+    - reason: Text
+    - confirmedAmount: HighPrecMoney
+
+  # ----- Responses -----
+  SettlementBatchListRes:
+    - totalItems: Int
+    - batches: [SettlementBatchSummary]
+
+  # One row per settlement_id with at least one unsent RSO row.
+  SettlementBatchSummary:
+    - settlementId: Text
+    - bapId: Text
+    - receivedAt: UTCTime                        # earliest RSO.receivedAt within the batch
+    - utrCount: Int
+    - orderCount: Int
+    - unsentOrderCount: Int                      # <= orderCount; > 0 by construction
+
+  SettlementBatchUtrListRes:
+    - utrs: [UtrSummary]
+
+  SettlementBatchOrderListRes:
+    - totalItems: Int
+    - orders: [OrderRow]
+
+  UtrListRes:
+    - totalItems: Int
+    - utrs: [UtrSummary]
+
+  UtrSummary:
+    - id: (Id ReconUtrSettlement)
+    - utr: Text
+    - bapId: Text
+    - claimedTotalAmount: HighPrecMoney
+    - bankVerifiedAmount: Maybe HighPrecMoney
+    - totalOrders: Int
+    - createdAt: UTCTime
+
+  UtrDetailRes:
+    - utr: UtrSummary
+    - orders: [OrderRow]                          # every RSO row under this UTR, live-computed per-order status
+
+  # One row per orderId, with live-computed order-level verdict + diff.
+  # settlementUtrs is the deduped array of every UTR text this order touches
+  # (matches the "Settlement UTR(Array)" field in the MSIL admin spec).
+  OrderRow:
+    - rsoIds: [(Id ReconSettlementOrder)]         # all per-(order,UTR) rows for this order
+    - orderId: Text
+    - rideId: Maybe Text
+    - driverId: Maybe Text
+    - platformGrossFare: Maybe HighPrecMoney
+    - claimedTotalAmount: HighPrecMoney           # sum(claimedSettlementAmount) across all rows
+    - receivedTotal: HighPrecMoney                # sum(effectiveClaimedAmount) across all rows
+    - orderVerdict: OrderReconVerdict             # LIVE-COMPUTED via computeOrderStatus
+    - orderDiff: HighPrecMoney                    # LIVE-COMPUTED via computeOrderStatus
+    - settlementUtrs: [Text]                      # deduped
+    - anyManuallyConfirmed: Bool                  # true if any row under this order has manuallyConfirmedAt set
+    - allSent: Bool                               # true if every row's reconciliationStatus == Just "SENT"
+    - receivedAt: UTCTime                         # earliest RSO.receivedAt across rows
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
