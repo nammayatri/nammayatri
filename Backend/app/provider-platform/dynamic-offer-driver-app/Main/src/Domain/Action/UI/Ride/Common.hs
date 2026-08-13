@@ -62,7 +62,7 @@ import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as KET
-import Kernel.Prelude (roundToIntegral)
+import Kernel.Prelude (readMaybe, roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
@@ -628,9 +628,10 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
         fleetOwnerId = rideDetails.fleetOwnerId,
         enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
-        cancellationSource = fmap (\cr -> cr.source) cancellationReason,
-        cancellationReasonCode = cancellationReason >>= (.reasonCode) <&> (\(DTCR.CancellationReasonCode code) -> code),
-        cancellationAdditionalInfo = cancellationReason >>= (.additionalInfo),
+        -- per-ride columns preferred (correct under reallocation), BCR as fallback for old rides
+        cancellationSource = maybe (fmap (\cr -> cr.source) cancellationReason) Just (ride.cancelledBy >>= (readMaybe . T.unpack)),
+        cancellationReasonCode = maybe (cancellationReason >>= (.reasonCode)) Just ride.cancellationReasonCode <&> (\(DTCR.CancellationReasonCode code) -> code),
+        cancellationAdditionalInfo = maybe (cancellationReason >>= (.additionalInfo)) Just ride.cancellationAdditionalInfo,
         cancellationCompensation = flip PriceAPIEntity ride.currency <$> ride.cancellationChargesOnCancel,
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
