@@ -342,7 +342,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
             >>= maybe (throwError (PersonWithPhoneNotFound dtmfNumber)) pure
         return (person, Just dtmfNumber)
 
-  activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  activeRide <- runInReplica (QRide.getLatestActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   ensureCallStatusExists id' callSid activeRide.id callStatus dtmfNumberUsed activeRide.merchantOperatingCityId
 
   activeBooking <-
@@ -460,7 +460,7 @@ sendFCMToBAPOnFailedCallStatus callStatus idInfo = do
       deploymentVersion <- asks (.version)
       (ride, booking) <- case idInfo of
         Left driverId -> do
-          ride <- runInReplica $ QRide.getActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
+          ride <- runInReplica $ QRide.getLatestActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
           booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           return (ride, booking)
         Right maybeEntityId -> do
@@ -637,7 +637,7 @@ sendFCMToBPPOnFailedCallStatus callStatus idInfo = do
     then do
       (ride, booking) <- case idInfo of
         Left driverId -> do
-          ride <- runInReplica $ QRide.getActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
+          ride <- runInReplica $ QRide.getLatestActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
           booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           return (ride, booking)
         Right maybeEntityId -> do

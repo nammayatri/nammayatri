@@ -155,12 +155,7 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
       let routeDeviationThreshold = transportConfig.routeDeviationThreshold
           nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
           key = multipleRouteKey booking.transactionId
-          oldKey = multipleRouteKey rideId.getId
           shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
-      oldMultipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get oldKey
-      whenJust oldMultipleRoutes $ \allRoutes -> do
-        Redis.setExp key allRoutes 3600
-        Redis.del oldKey
       multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case multipleRoutes of
         Just routes -> do
@@ -309,7 +304,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames tollIds -> void (QRide.updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds))
       ( \driverId accurateWaypoints allWaypoints mbPreviousRouteSegment -> do
-          ride <- QRide.getActiveByDriverId driverId
+          ride <- maybe (QRide.getCurrentActiveByDriverId driverId) QRide.findById rideId
           let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
           routeDeviation <-
             if null accurateWaypoints
@@ -325,7 +320,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
             mbPreviousRouteSegment
       )
       ( \driverId estimatedDistance estimatedTollInfo -> do
-          ride <- QRide.getActiveByDriverId driverId
+          ride <- maybe (QRide.getCurrentActiveByDriverId driverId) QRide.findById rideId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
       )
       transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
@@ -340,7 +335,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
       ( \driverId -> do
           driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
-          mbRide <- QRide.getActiveByDriverId driverId
+          mbRide <- maybe (QRide.getCurrentActiveByDriverId driverId) QRide.findById rideId
           mbBooking <- maybe (return Nothing) (QBooking.findById . bookingId) mbRide
           vehicle <- QVeh.findById driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId)
           BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
