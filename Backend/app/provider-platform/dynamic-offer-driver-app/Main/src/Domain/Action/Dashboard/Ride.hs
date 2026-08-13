@@ -897,7 +897,7 @@ mkMultipleRideData rideId Common.RideSyncRes {..} =
 currentActiveRide :: ShortId DM.Merchant -> Text -> Flow (Id Common.Ride)
 currentActiveRide _ vehicleNumber = do
   vehicle <- VQuery.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleNotFound vehicleNumber)
-  activeRide <- runInReplica $ QRideLite.getActiveByDriverIdLite vehicle.driverId >>= fromMaybeM NoActiveRidePresent
+  activeRide <- runInReplica $ QRideLite.getLatestActiveByDriverIdLite vehicle.driverId >>= fromMaybeM NoActiveRidePresent
   let rideId = cast @DRide.Ride @Common.Ride activeRide.id
   pure rideId
 
@@ -917,10 +917,10 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
       when req.endRideForVehicle do
         mbvehicle <- VQuery.findByRegistrationNo req.vehicleNumber
         whenJust mbvehicle $ \vehicle -> do
-          activeRideId <- runInReplica $ QRide.getActiveByDriverId vehicle.driverId
+          activeRideId <- runInReplica $ QRide.getLatestActiveByDriverId vehicle.driverId
           whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id merchantOpCityId
       when req.endRideForDriver do
-        activeRideId <- runInReplica $ QRide.getActiveByDriverId person.id
+        activeRideId <- runInReplica $ QRide.getLatestActiveByDriverId person.id
         whenJust activeRideId $ \rideId -> endActiveRide rideId.id merchant.id merchantOpCityId
       now <- getCurrentTime
       case mblinkedVehicle of
