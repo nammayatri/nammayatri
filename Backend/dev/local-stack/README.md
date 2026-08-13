@@ -623,15 +623,36 @@ registry fixture is correct for all of them and signature auth works unmodified
 ./apply-tariff.sh          # applies algeria-tariff.sql AND clears the caches
 ```
 
-| Category | Variant | Start | Per km | Pickup | Driver may add |
-|---|---|---|---|---|---|
-| Economy | HATCHBACK | 100 | 35 | 50 | up to 300 |
-| Comfort | SEDAN | 150 | 45 | 70 | up to 300 |
-| Premium | SUV | 200 | 60 | 100 | up to 300 |
+| Category | Variant | Start | Per km | Pickup |
+|---|---|---|---|---|
+| Economy | HATCHBACK | 100 | 35 | 50 |
+| Comfort | SEDAN | 150 | 45 | 70 |
+| Premium | SUV | 200 | 60 | 100 |
 
 Set by the client on 2026-08-13, replacing the upstream Bangalore seed (10 / 12
 / 120) that made every vehicle cost the same 258 DZD. A 13.7 km trip is now
 **629 / 836 / 1121**.
+
+The driver may add an extra, capped at roughly **half the fare** and growing
+with distance — measured across three real searches:
+
+| Trip | Economy | Comfort | Premium |
+|---|---|---|---|
+| 1.6 km | 205 → 280 (37%) | 291 → 366 (26%) | 394 → 469 (19%) |
+| 7.4 km | 409 → 589 (44%) | 553 → 733 (33%) | 744 → 924 (24%) |
+| 13.7 km | 629 → 914 (45%) | 836 → 1121 (34%) | 1121 → 1406 (25%) |
+
+**The bands are identical for every category, and that is deliberate.**
+Per-category caps were loaded first and the backend ignored them: three searches
+with Economy/Comfort/Premium caps of 100/125/150, 180/245/330 and 250/335/450
+came back `+125`, `+330` and `+450` — the *same* value for all three categories
+in each search, taken from a different variant's row each time. The cap is
+resolved once per search rather than per estimate.
+
+So whatever cap is chosen applies to all three, which means it has to be sized
+against the **cheapest** category or Economy goes over half. Each band is 50% of
+the *Economy* fare at the band's lower bound; Comfort and Premium then sit
+further under, which is the right way round.
 
 **Never run the SQL on its own.** The driver service caches fare policies in
 Redis and does not notice a row changing underneath it, so `psql -f` reports

@@ -9,7 +9,9 @@
 --   Comfort    SEDAN          150       45       70
 --   Premium    SUV            200       60      100
 --
--- Driver's maximum extra: 300 DZD, flat, all categories.
+-- Driver's maximum extra: **grows with distance, ~50% of the fare**. See the
+-- band table at the bottom. A flat cap was tried first and rejected — 300 is
+-- 44% of a long ride and 118% of a short one.
 --
 -- ── Three things this has to get right, none of them obvious ────────────────
 --
@@ -83,15 +85,66 @@ UPDATE atlas_driver_offer_bpp.fare_policy
        updated_at           = now()
  WHERE vehicle_variant = 'AUTO_RICKSHAW';
 
--- ── The cap the backend actually obeys ─────────────────────────────────────
--- Flat 300 at every distance, per the client on 2026-08-13. He also said the
--- extra should ideally be at most 50% of the fare, which this table could
--- express — it is keyed on `min_trip_distance` precisely so the cap can grow
--- with the trip — but he chose the flat number for now. The bands are left in
--- place so that switching to the percentage rule later is an UPDATE, not a
--- schema change.
-UPDATE atlas_driver_offer_bpp.restricted_extra_fare
-   SET driver_max_extra_fare = 300;
+-- ── The cap the backend actually obeys, growing with distance ──────────────
+--
+-- The client's rule, agreed 2026-08-13: the driver's extra should be **at most
+-- half the fare**. A flat cap cannot do that — 300 is 44% of a 15 km Economy
+-- ride and 118% of a 3 km one, and short trips are most trips.
+--
+-- This table is keyed on `min_trip_distance` precisely so the cap can grow, so
+-- the rule is expressible without touching the backend.
+--
+-- ── THE BANDS ARE THE SAME FOR EVERY CATEGORY, AND THAT IS NOT LAZINESS ────
+-- Per-category bands were tried first and **the backend does not honour them**.
+-- Measured with three searches after loading Economy/Comfort/Premium caps of
+-- 100/125/150, 180/245/330 and 250/335/450:
+--
+--   1.6 km   Economy, Comfort and Premium ALL came back +125
+--   7.4 km   all three came back +330
+--  13.7 km   all three came back +450
+--
+-- Identical across categories within one search, and a different variant's row
+-- each time — so the cap is resolved once per search rather than per estimate,
+-- and which row wins is not something to rely on.
+--
+-- The consequence is the whole design of this table: **the cap must be sized
+-- against the CHEAPEST category**, because whatever is chosen applies to all
+-- three. Economy is the cheapest, so each band is 50% of the *Economy* fare at
+-- the band's lower bound. Comfort and Premium then sit comfortably under half,
+-- which is the right way round — the error is always in the rider's favour.
+--
+--   Economy = 150 + 35/km   (start 100 + pickup 50, then distance)
+--
+-- The bands are close together on purpose. A cap only steps up at a boundary
+-- while the fare rises continuously, so wide bands drift well below 50% before
+-- catching up; these track it within a few percent.
+--
+-- Rebuilt rather than updated, because the number of bands changes. Both
+-- merchants get rows: without them a merchant falls back to
+-- `fare_policy.driver_max_extra_fee`, which would leave half the fleet on a
+-- flat cap while the other half grows.
+
+DELETE FROM atlas_driver_offer_bpp.restricted_extra_fare;
+
+INSERT INTO atlas_driver_offer_bpp.restricted_extra_fare
+       (id, merchant_id, vehicle_variant, min_trip_distance, driver_max_extra_fare)
+SELECT gen_random_uuid()::text, m.id, v.variant, b.from_m, b.cap
+  FROM atlas_driver_offer_bpp.merchant m
+ CROSS JOIN (VALUES ('HATCHBACK'), ('SEDAN'), ('SUV'), ('AUTO_RICKSHAW'))
+         AS v(variant)
+ CROSS JOIN (VALUES
+        --  from      cap     50% of the Economy fare at that distance
+        (     0,       75),   --      150
+        (  2000,      110),   --      220
+        (  4000,      145),   --      290
+        (  6000,      180),   --      360
+        (  8000,      215),   --      430
+        ( 10000,      250),   --      500
+        ( 12000,      285),   --      570
+        ( 15000,      335),   --      675
+        ( 20000,      425),   --      850
+        ( 30000,      600)    --    1 200
+      ) AS b(from_m, cap);
 
 COMMIT;
 
