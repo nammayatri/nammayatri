@@ -453,6 +453,7 @@ data CreateRCInput = CreateRCInput
     fleetOwnerId :: Maybe Text,
     vehicleCategory :: Maybe DVC.VehicleCategory,
     documentImageId :: Id Domain.Image,
+    documentImageId2 :: Maybe (Id Domain.Image),
     vehicleClass :: Maybe Text,
     vehicleClassCategory :: Maybe Text,
     insuranceValidity :: Maybe UTCTime,
@@ -532,6 +533,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
     VehicleRegistrationCertificate
       { id,
         documentImageId = input.documentImageId,
+        documentImageId2 = input.documentImageId2,
         certificateNumber,
         fitnessExpiry = expiry,
         permitExpiry = input.permitValidityUpto,
@@ -1252,15 +1254,15 @@ enforceSelfieReuploadPolicy person priorSelfies =
         <|> DL.find ((== Documents.MANUAL_VERIFICATION_REQUIRED) . snd) docs
         <|> listToMaybe docs
 
-mkRCIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m DIdfy.IdfyVerification
-mkRCIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
+mkRCIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe Int -> Maybe Text -> m DIdfy.IdfyVerification
+mkRCIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbImageId2 mbRetryCnt mbStatus = do
   id <- generateGUID
   return $
     DIdfy.IdfyVerification
       { id,
         driverId = person.id,
         documentImageId1 = imageId,
-        documentImageId2 = Nothing,
+        documentImageId2 = mbImageId2,
         requestId,
         docType = docTypeToText ODC.VehicleRegistrationCertificate,
         documentNumber = encryptedRC,

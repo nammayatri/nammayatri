@@ -298,6 +298,7 @@ VehicleRegistrationCertificate:
   fields:
     id: Id VehicleRegistrationCertificate
     documentImageId: Id Image
+    documentImageId2: Maybe (Id Image)
     certificateNumber: EncryptedHashedField e Text
     unencryptedCertificateNumber: Maybe Text
     fitnessExpiry: UTCTime

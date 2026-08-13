@@ -1041,6 +1041,7 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
       oxygen,
       ventilator,
       documentImageId = "",
+      documentImageId2 = Nothing,
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,
       insuranceValidity = Nothing,

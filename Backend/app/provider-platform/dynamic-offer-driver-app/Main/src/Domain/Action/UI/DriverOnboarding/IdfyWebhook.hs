@@ -231,6 +231,7 @@ onVerify (Idfy.VerificationResponse rsp) respDump = do
             (Just verificationReq.imageExtractionValidation)
             (Just verificationReq.documentNumber)
             verificationReq.documentImageId1
+            verificationReq.documentImageId2
             verificationReq.retryCount
             (Just verificationReq.status)
             (Just VT.Idfy)
@@ -285,11 +286,11 @@ handleIdfySourceDown person retryFunc verificationReq = do
             Verification.AsyncResp res -> do
               now <- getCurrentTime
               case res.requestor of
-                VT.Idfy -> IVQuery.create =<< SLogicOnboarding.mkRCIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
-                VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
+                VT.Idfy -> IVQuery.create =<< SLogicOnboarding.mkRCIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 verificationReq.documentImageId2 Nothing Nothing
+                VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 verificationReq.documentImageId2 Nothing Nothing res.transactionId
                 _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
               CQO.setVerificationPriorityList person.id resp'.remPriorityList
-            Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res.response (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing verificationReq.vehicleCategory
+            Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res.response (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.retryCount (Just verificationReq.status) Nothing verificationReq.vehicleCategory
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do

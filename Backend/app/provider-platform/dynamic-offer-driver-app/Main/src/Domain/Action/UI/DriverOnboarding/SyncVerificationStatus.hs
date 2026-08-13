@@ -186,5 +186,5 @@ pullRcStatus person rcImageIdTxt =
 
 dispatchRc :: Person.Person -> SDO.VerificationReqRecord -> KEV.GetTaskResp -> KEV.VerificationService -> Flow ()
 dispatchRc person req resp service = case resp of
-  KEV.RCResp o -> void $ DRC.onVerifyRC person (Just req) o Nothing Nothing Nothing req.documentImageId1 req.retryCount (Just req.status) (Just service) Nothing
+  KEV.RCResp o -> void $ DRC.onVerifyRC person (Just req) o Nothing Nothing Nothing req.documentImageId1 req.documentImageId2 req.retryCount (Just req.status) (Just service) Nothing
   _ -> logInfo $ "pullRcStatus: unexpected response for " <> req.requestId

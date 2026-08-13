@@ -1008,7 +1008,7 @@ activateRCAutomatically personId merchantOpCity rcNumber = do
 mkDLMetadata :: OnboardingFlow m r => Maybe DL.DriverLicense -> m (Maybe DocumentMetadata)
 mkDLMetadata mbDl = forM mbDl $ \dl -> do
   licenseNumberDec <- decrypt dl.licenseNumber
-  pure $ DLMetadata DLDocumentMetadata {driverLicenseNumber = licenseNumberDec, driverDateOfBirth = dl.driverDob, dateOfExpiry = dl.licenseExpiry}
+  pure $ DLMetadata DLDocumentMetadata {driverLicenseNumber = licenseNumberDec, driverDateOfBirth = dl.driverDob, dateOfExpiry = dl.licenseExpiry, imageId1 = Just dl.documentImageId1.getId, imageId2 = dl.documentImageId2 <&> (.getId)}
 
 mkAadhaarMetadata :: OnboardingFlow m r => Maybe DAadhaarCard.AadhaarCard -> m (Maybe DocumentMetadata)
 mkAadhaarMetadata mbAadhaarCard = forM mbAadhaarCard $ \aadhaar -> do
