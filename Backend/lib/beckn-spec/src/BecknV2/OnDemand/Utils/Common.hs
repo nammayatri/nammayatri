@@ -102,6 +102,9 @@ mapVariantToVehicle = \case
   DTV.E_RICKSHAW -> Enums.TOTO
   DTV.AUTO_LITE -> Enums.AUTO_RICKSHAW
   DTV.PINK_AUTO -> Enums.AUTO_RICKSHAW
+  DTV.EV_HATCHBACK -> Enums.CAB
+  DTV.EV_SEDAN -> Enums.CAB
+  DTV.EV_SUV -> Enums.CAB
 
 castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
 castVehicleCategoryToDomain = \case

@@ -180,6 +180,9 @@ castVehicleVariant = \case
   VehVar.E_RICKSHAW -> (show Enums.TOTO, "E_RICKSHAW")
   VehVar.AUTO_LITE -> (show Enums.AUTO_RICKSHAW, "AUTO_LITE")
   VehVar.PINK_AUTO -> (show Enums.AUTO_RICKSHAW, "PINK_AUTO")
+  VehVar.EV_HATCHBACK -> (show Enums.CAB, "EV_HATCHBACK")
+  VehVar.EV_SEDAN -> (show Enums.CAB, "EV_SEDAN")
+  VehVar.EV_SUV -> (show Enums.CAB, "EV_SUV")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -220,6 +223,9 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "TOTO", Just "E_RICKSHAW") -> Just VehVar.E_RICKSHAW
     (Just "AUTO_RICKSHAW", Just "AUTO_LITE") -> Just VehVar.AUTO_LITE
     (Just "AUTO_RICKSHAW", Just "PINK_AUTO") -> Just VehVar.PINK_AUTO
+    (Just "CAB", Just "EV_HATCHBACK") -> Just VehVar.EV_HATCHBACK
+    (Just "CAB", Just "EV_SEDAN") -> Just VehVar.EV_SEDAN
+    (Just "CAB", Just "EV_SUV") -> Just VehVar.EV_SUV
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
@@ -388,6 +394,9 @@ mapTextToVehicle = \case
   "TRUCK" -> Just Enums.TRUCK
   "AUTO_LITE" -> Just Enums.AUTO_RICKSHAW
   "PINK_AUTO" -> Just Enums.AUTO_RICKSHAW
+  "EV_HATCHBACK" -> Just Enums.CAB
+  "EV_SEDAN" -> Just Enums.CAB
+  "EV_SUV" -> Just Enums.CAB
   "BUS" -> Just Enums.BUS
   _ -> Nothing
 
