@@ -2,6 +2,7 @@
 
 module SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide
   ( recipe,
+    effectiveClaimedAmount,
   )
 where
 
@@ -12,6 +13,7 @@ import qualified Data.Aeson.Types as A
 import qualified Data.HashSet as HS
 import qualified Data.Map.Strict as Map
 import Data.Time (nominalDay)
+import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
@@ -21,7 +23,6 @@ import Lib.Finance.Reconciliation.Recipe (Recipe (..))
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrderExtra as QRSOExtra
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 
 recipe ::
@@ -87,10 +88,7 @@ rsoRowsToSourceRecords rsoRows = do
   let grouped :: Map.Map Text [RSO.ReconSettlementOrder]
       grouped = Map.fromListWith (<>) [(r.orderId, [r]) | r <- rsoRows]
       orderIds = Map.keys grouped
-  bookings <- B.runInReplica $ QBooking.findByIds (map Id orderIds)
-  let bookingMap = Map.fromList [(booking.id.getId, booking) | booking <- bookings]
-      bookingIds = map (.id) bookings
-  rides <- B.runInReplica $ QRide.findRidesByBookingId bookingIds
+  rides <- B.runInReplica $ QRide.findRidesByBookingId (map Id orderIds)
   let rideByBookingId = Map.fromListWith (\a b -> if a.createdAt >= b.createdAt then a else b) [(ride.bookingId.getId, ride) | ride <- rides]
   pure . catMaybes $
     flip map (Map.toList grouped) $ \(orderId, rows) ->
@@ -99,13 +97,17 @@ rsoRowsToSourceRecords rsoRows = do
           gst = fromMaybe 0 firstRow.withholdingTaxGst
           tds = fromMaybe 0 firstRow.withholdingTaxTds
           ded = fromMaybe 0 firstRow.deductionByCollector
-          totalClaimed = sum [r.claimedSettlementAmount | r <- rows]
-          mbBooking = Map.lookup orderId bookingMap
-          mbRide = mbBooking >>= \b -> Map.lookup b.id.getId rideByBookingId
-          rideFare = fromMaybe 0 (mbRide >>= (.fare))
+          totalClaimed = sum (map effectiveClaimedAmount rows)
+          mbRide = Map.lookup orderId rideByBookingId
           rideIdText = (.id.getId) <$> mbRide
           driverIdText = (.driverId.getId) <$> mbRide
-          expectedNet = rideFare -- No deductions to be calculated by system for now as we are going to settle bff and bff gst if applicable offline
+          orderTimestamp = (\ride -> fromMaybe ride.createdAt ride.tripEndTime) <$> mbRide -- best way to sort instead of order sequence
+          (rideFare, lifecycle) = case mbRide of
+            Nothing -> (0, ReconT.InFlight)
+            Just ride
+              | Just fare <- ride.fare -> (fare, ReconT.Settled)
+              | ride.status == DRide.CANCELLED -> (fromMaybe 0 ride.cancellationChargesOnCancel, ReconT.Cancelled)
+              | otherwise -> (0, ReconT.InFlight)
           meta =
             A.object
               [ "totalClaimed" .= totalClaimed,
@@ -116,7 +118,8 @@ rsoRowsToSourceRecords rsoRows = do
                 "gst" .= gst,
                 "tds" .= tds,
                 "deductions" .= ded,
-                "expectedNet" .= expectedNet,
+                "expectedNet" .= rideFare, -- No deductions to be calculated by system for now, not debt-driven
+                "orderTimestamp" .= orderTimestamp,
                 "rsoIds" .= map (.id.getId) rows
               ]
        in Just
@@ -124,12 +127,12 @@ rsoRowsToSourceRecords rsoRows = do
               { srcId = orderId,
                 srcEntityId = Just orderId,
                 srcPartyId = driverIdText,
-                srcAmount = expectedNet,
+                srcAmount = rideFare,
                 srcMatchKey = Just orderId,
                 srcComponent = Nothing,
                 srcMeta = Just meta,
                 srcTimestamp = firstRow.receivedAt,
-                srcLifecycle = if isJust mbRide then ReconT.Settled else ReconT.InFlight
+                srcLifecycle = lifecycle
               }
 
 fetchTargets ::
@@ -149,7 +152,7 @@ fetchTargets _scope orderIds = do
     [ ReconT.TargetRecord
         { tgtId = orderId,
           tgtMatchKey = orderId,
-          tgtAmount = sum [r.claimedSettlementAmount | r <- rows],
+          tgtAmount = sum (map effectiveClaimedAmount rows),
           tgtMeta = Nothing,
           tgtSettlementId = (.settlementId) <$> listToMaybe rows,
           tgtSettlementDate = (.settlementDate) <$> listToMaybe rows,
@@ -181,6 +184,7 @@ rsfClassify srcs tgts
               then ReconT.ReconResult ReconT.LOWER_IN_TARGET (Just "Underpaid")
               else ReconT.ReconResult ReconT.HIGHER_IN_TARGET (Just "Overpaid")
 
+-- | Order-level write-back for the automatic order-vs-ride check. No fresh
 syncRsoStatus ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -193,26 +197,26 @@ syncRsoStatus ::
   m ()
 syncRsoStatus _spec src status = do
   let orderId = fromMaybe "" src.srcEntityId
-      verdict = frameworkToRsfVerdict status
       meta = src.srcMeta
       rideId = meta >>= extractText "rideId"
       driverId = meta >>= extractText "driverId"
-      rideFare = meta >>= extractMoney "rideFare"
-      expectedNet = meta >>= extractMoney "expectedNet"
-      totalClaimed = meta >>= extractMoney "totalClaimed"
-      diffAmt = case (expectedNet, totalClaimed) of
-        (Just en, Just tc) -> Just (en - tc)
-        _ -> Nothing
-  QRSOExtra.updateRsfReconResult orderId verdict diffAmt rideId driverId rideFare expectedNet
+      rideFare = fromMaybe 0 (meta >>= extractMoney "rideFare")
+      totalClaimed = fromMaybe 0 (meta >>= extractMoney "totalClaimed")
+      orderTimestamp = meta >>= extractUTCTime "orderTimestamp"
+      diffAmt = rideFare - totalClaimed
+      verdict
+        | diffAmt == 0 = RSO.PAID
+        | diffAmt > 0 = RSO.UNDERPAID
+        | otherwise = RSO.OVERPAID
 
-frameworkToRsfVerdict :: ReconT.ReconciliationStatus -> RSO.OrderReconVerdict
-frameworkToRsfVerdict = \case
-  ReconT.MATCHED -> RSO.PAID
-  ReconT.HIGHER_IN_TARGET -> RSO.OVERPAID
-  ReconT.LOWER_IN_TARGET -> RSO.UNDERPAID
-  ReconT.MISSING_IN_TARGET -> RSO.NOT_PAID
-  ReconT.MISSING_IN_SOURCE -> RSO.UNMATCHED
-  ReconT.AWAITING_SETTLEMENT -> RSO.PENDING
+  case status of
+    ReconT.AWAITING_SETTLEMENT -> pure ()
+    _ -> QRSOExtra.updateRsfReconResult orderId verdict (Just diffAmt) rideId driverId (Just rideFare) (Just rideFare) orderTimestamp
+
+effectiveClaimedAmount :: RSO.ReconSettlementOrder -> HighPrecMoney
+effectiveClaimedAmount rso = case rso.allocatedBankCash of
+  Just amount -> amount
+  Nothing -> rso.claimedSettlementAmount - fromMaybe 0 rso.diffAmount
 
 extractText :: Text -> A.Value -> Maybe Text
 extractText key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of
@@ -225,3 +229,9 @@ extractMoney key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key
   Just v -> v
   Nothing -> Nothing
 extractMoney _ _ = Nothing
+
+extractUTCTime :: Text -> A.Value -> Maybe UTCTime
+extractUTCTime key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of
+  Just v -> v
+  Nothing -> Nothing
+extractUTCTime _ _ = Nothing

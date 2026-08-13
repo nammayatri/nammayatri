@@ -9,6 +9,7 @@ import Kernel.Types.TimeRFC339 (UTCTimeRFC3339 (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.ReconSettlementOrder as RSO
 import qualified Lib.Finance.Domain.Types.ReconUtrSettlement as RUS
+import SharedLogic.RSFOrderStatus (computeOrderStatus)
 
 buildOnReceiverReconReq ::
   (MonadFlow m) =>
@@ -48,9 +49,10 @@ buildOnReceiverReconReq utr orders bppId bppUri = do
 
 buildWireOrder :: Text -> [RSO.ReconSettlementOrder] -> Spec.RSFOnReceiverReconOrder
 buildWireOrder orderId rsoRows =
-  let orderVerdict = aggregateVerdict rsoRows
-      firstRow = head rsoRows
-      (cpStatus, diffAmt, diffMsg) = verdictToWire orderVerdict (aggregateDiff rsoRows)
+  let firstRow = head rsoRows
+      fare = fromMaybe 0 firstRow.platformGrossFare
+      (orderVerdict, orderDiff) = computeOrderStatus fare rsoRows
+      (cpStatus, diffAmt, diffMsg) = verdictToWire orderVerdict (Just orderDiff)
       settlementDetails = map buildSettlementDetail rsoRows
    in Spec.RSFOnReceiverReconOrder
         { rsfOnOrderId = Just orderId,
@@ -72,20 +74,6 @@ buildSettlementDetail rso =
     { rsfOnReconSdSettlementId = Just rso.settlementId,
       rsfOnReconSdSettlementReferenceNo = Just rso.settlementReferenceNo
     }
-
-aggregateVerdict :: [RSO.ReconSettlementOrder] -> RSO.OrderReconVerdict
-aggregateVerdict rsoRows
-  | any (isJust . (.manuallyConfirmedAt)) rsoRows = RSO.PAID
-  | any ((== RSO.NOT_PAID) . (.ourReconStatus)) rsoRows = RSO.NOT_PAID
-  | any ((== RSO.UNMATCHED) . (.ourReconStatus)) rsoRows = RSO.UNMATCHED
-  | any ((== RSO.UNDERPAID) . (.ourReconStatus)) rsoRows = RSO.UNDERPAID
-  | any ((== RSO.OVERPAID) . (.ourReconStatus)) rsoRows = RSO.OVERPAID
-  | otherwise = RSO.PAID
-
-aggregateDiff :: [RSO.ReconSettlementOrder] -> Maybe HighPrecMoney
-aggregateDiff rsoRows =
-  let diffs = mapMaybe (.diffAmount) rsoRows
-   in if null diffs then Nothing else Just (sum diffs)
 
 verdictToWire ::
   RSO.OrderReconVerdict ->

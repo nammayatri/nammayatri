@@ -46,7 +46,6 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.ReconUtrSettlement.ReconUtrSettleme
       Se.Set Beam.claimedTotalAmount claimedTotalAmount,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
-      Se.Set Beam.resolutionStatus resolutionStatus,
       Se.Set Beam.resolvedAt resolvedAt,
       Se.Set Beam.resolvedBy resolvedBy,
       Se.Set Beam.totalOrders totalOrders,

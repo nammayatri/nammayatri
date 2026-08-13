@@ -97,7 +97,7 @@ rsoRowsToSourceRecords rsoRows = do
         Just utrId ->
           Just $
             let totalClaimed = sum [r.claimedSettlementAmount | r <- rows]
-                sortedOrders = L.sortOn (.orderSequence) rows
+                sortedOrders = L.sortOn (\r -> (r.platformOrderTimestamp, r.createdAt, r.id)) rows
                 orderIds = map (\r -> getId r.id) sortedOrders
                 firstRow = head rows
                 meta =
@@ -172,7 +172,7 @@ syncUtrStatus src _status = do
               consumed rso = rso.claimedSettlementAmount - fromMaybe 0 rso.diffAmount
               consumedByLocked = sum (map consumed locked)
               remaining = bankVerifiedAmount - consumedByLocked
-              sortedOpen = L.sortOn (.orderSequence) open
+              sortedOpen = L.sortOn (\r -> (r.platformOrderTimestamp, r.createdAt, r.id)) open
               openClaimedTotal = sum (map (.claimedSettlementAmount) sortedOpen)
               diff = openClaimedTotal - remaining
 
@@ -189,12 +189,21 @@ syncUtrStatus src _status = do
                 <> ") -- every open order will show full shortfall"
 
           if diff == 0
-            then forM_ sortedOpen $ \rso -> QRSOExtra.updateReconVerdict rso.id RSO.PAID (Just 0)
-            else
+            then forM_ sortedOpen $ \rso -> QRSOExtra.updateReconVerdict rso.id RSO.PAID rso.claimedSettlementAmount (Just 0)
+            else do
+              -- Reset every open row to a clean PAID baseline first. The
+              -- waterfall/overpaid branch below only ever writes the rows it
+              -- actually needs to (the tail it consumes, or the single head
+              -- order) -- without this reset, any open row that branch
+              -- doesn't touch would silently keep whatever stale verdict an
+              -- earlier bank-verify pass left on it, instead of correctly
+              -- coming out PAID now that it's fully covered by the remaining
+              -- pot.
+              forM_ sortedOpen $ \rso -> QRSOExtra.updateReconVerdict rso.id RSO.PAID rso.claimedSettlementAmount (Just 0)
               if diff > 0
                 then applyUnderpaidWaterfall (reverse sortedOpen) diff
                 else case sortedOpen of
-                  (headOrder : _) -> QRSOExtra.updateReconVerdict headOrder.id RSO.OVERPAID (Just diff)
+                  (headOrder : _) -> QRSOExtra.updateReconVerdict headOrder.id RSO.OVERPAID headOrder.claimedSettlementAmount (Just diff)
                   [] -> pure ()
 
 applyUnderpaidWaterfall :: (BeamFlow m r) => [RSO.ReconSettlementOrder] -> KTC.HighPrecMoney -> m ()
@@ -204,9 +213,9 @@ applyUnderpaidWaterfall (order : rest) remaining = do
   let orderAmt = order.claimedSettlementAmount
   if orderAmt <= remaining
     then do
-      QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID (Just orderAmt)
+      QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID orderAmt (Just orderAmt)
       applyUnderpaidWaterfall rest (remaining - orderAmt)
-    else QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID (Just remaining)
+    else QRSOExtra.updateReconVerdict order.id RSO.UNDERPAID orderAmt (Just remaining)
 
 extractText :: Text -> A.Value -> Maybe Text
 extractText key (A.Object o) = case A.parseMaybe (\_ -> o A..:? AK.fromText key) () of

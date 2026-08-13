@@ -20,6 +20,7 @@ import qualified Lib.Finance.Domain.Types.ReconSettlementOrder as RSO
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.ReconSettlementOrderExtra as QRSOExtra
 import qualified Lib.Finance.Storage.Queries.ReconUtrSettlement as QRUS
+import SharedLogic.RSFOrderStatus (computeOrderStatus)
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 
 sendOnReceiverRecon ::
@@ -55,15 +56,13 @@ sendOnReceiverRecon merchantId settlementId =
     when (any (\rso -> rso.ourReconStatus == RSO.PENDING) unsentOrders) $
       throwError $ InvalidRequest "Cannot send UTR: Some orders are still PENDING"
 
-    let sendableOrders = unsentOrders
-
     merchant <- CQMerchant.findById merchantId >>= fromMaybeM (InvalidRequest "Merchant not found")
 
     let bppSubscriberId = getShortId merchant.subscriberId
     bppNwAddress <- asks (.nwAddress)
     let bppUri = showBaseUrl bppNwAddress
 
-    let groupedOrders = Map.fromList [(settlementId, sendableOrders)]
+    let groupedOrders = Map.fromList [(settlementId, unsentOrders)]
 
     bapBaseUrl <- parseBaseUrl utr.bapUri
     internalEndPointHashMap <- asks (.internalEndPointHashMap)
@@ -88,5 +87,14 @@ sendOnReceiverRecon merchantId settlementId =
             payload
 
       logInfo "RSF outbound call returned Success"
-      forM_ batchOrders $ \rso ->
-        QRSOExtra.updateReconciliationStatus rso.id "SENT"
+      -- Group the batch's rows by orderId once, compute each order's live verdict
+      -- via the same computeOrderStatus the ACL used to build the payload, and
+      -- stamp each row with (verdict, diff, 'SENT') in one atomic UPDATE. The
+      -- verdict/diff written here become the row's permanent historical record
+      -- of what the BAP was told at this exact moment.
+      let rowsByOrderId = Map.fromListWith (<>) [(rso.orderId, [rso]) | rso <- batchOrders]
+      forM_ (Map.toList rowsByOrderId) $ \(_orderId, orderRows) -> do
+        let fare = fromMaybe 0 (listToMaybe (mapMaybe (.platformGrossFare) orderRows))
+            (verdict, diff) = computeOrderStatus fare orderRows
+        forM_ orderRows $ \rso ->
+          QRSOExtra.markSentWithVerdict rso.id verdict (Just diff)

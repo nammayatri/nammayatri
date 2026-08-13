@@ -3,6 +3,7 @@ module API.RSF.ReceiverRecon (API, handler) where
 import qualified Beckn.ACL.ReceiverRecon as ACL
 import qualified BecknV2.RSF.Types as Spec
 import qualified BecknV2.RSF.Utils as RSFUtils
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.ReceiverRecon as DRecon
 import Environment
 import Kernel.Prelude
@@ -10,7 +11,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import qualified Lib.Finance.Storage.Queries.ReconSettlementOrder as QRSO
+import qualified Lib.Finance.Storage.Queries.ReconSettlementOrderExtra as QRSOExtra
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -18,7 +19,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 type API =
   "receiver_recon"
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> ReqBody '[JSON] Spec.ReceiverReconReq
+    :> ReqBody '[JSON] A.Value -- Specifically done to throw NACK instead of JSON error even before reaching handler function
     :> Post '[JSON] Spec.RSFAckResponse
 
 handler :: FlowServer API
@@ -26,9 +27,17 @@ handler = receiverRecon
 
 receiverRecon ::
   SignatureAuthResult ->
-  Spec.ReceiverReconReq ->
+  A.Value ->
   FlowHandler Spec.RSFAckResponse
-receiverRecon _authResult req = withFlowHandlerAPI $ do
+receiverRecon _signatureAuthResult rawBody = withFlowHandlerAPI $ do
+  case A.fromJSON rawBody of
+    A.Success (req :: Spec.ReceiverReconReq) -> receiverReconHandler req
+    A.Error err -> do
+      logError $ "RSF: receiver_recon malformed body: " <> show err
+      pure $ RSFUtils.buildNackForCode RSFUtils.RSFMissingMandatory
+
+receiverReconHandler :: Spec.ReceiverReconReq -> Flow Spec.RSFAckResponse
+receiverReconHandler req = do
   let ctx = req.receiverReconReqContext
   case validateContext ctx of
     Just nack -> pure nack
@@ -43,7 +52,7 @@ receiverRecon _authResult req = withFlowHandlerAPI $ do
           logError "RSF: receiver_recon missing bpp_id"
           pure $ RSFUtils.buildNackForCode RSFUtils.RSFMissingMandatory
         (Just msgId, Just bppId) -> do
-          isDuplicate <- QRSO.messageIdExists msgId
+          isDuplicate <- QRSOExtra.messageIdExists msgId
           if isDuplicate
             then do
               logWarning $ "RSF: duplicate messageId=" <> msgId
@@ -61,11 +70,14 @@ receiverRecon _authResult req = withFlowHandlerAPI $ do
                       logError $ "RSF: no operating city for merchant=" <> bppId
                       pure $ RSFUtils.buildNack "No operating city found for merchant"
                     Just moc -> do
-                      domainReq <- ACL.buildReceiverReconDomain req
-                      DRecon.ingestReceiverRecon merchant.id moc.id domainReq
-                      fork "rsf-receiver-recon" $
-                        DRecon.reconcileIngestedOrders merchant.id moc.id domainReq
-                      pure RSFUtils.buildAck
+                      eDomainReq <- ACL.buildReceiverReconDomain req
+                      case eDomainReq of
+                        Left nack -> pure nack
+                        Right domainReq -> do
+                          fork "rsf-receiver-recon" $ do
+                            DRecon.ingestReceiverRecon merchant.id moc.id domainReq
+                            DRecon.reconcileIngestedOrders merchant.id moc.id domainReq
+                          pure RSFUtils.buildAck
 
 validateContext :: Spec.RSFContext -> Maybe Spec.RSFAckResponse
 validateContext ctx

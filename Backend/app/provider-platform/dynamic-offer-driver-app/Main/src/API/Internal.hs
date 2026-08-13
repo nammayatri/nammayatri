@@ -70,6 +70,7 @@ type API =
            :<|> PopulateTipAmount.API
            :<|> RefundLedger.API
            :<|> Ride.API
+           :<|> RSFRecon.API
            :<|> StopDetection.API
            :<|> Multimodal.API
            :<|> DriverReachedDestination.API
@@ -96,7 +97,6 @@ type API =
            :<|> XyneWebhook.API
            :<|> XyneWebhook.BearerAPI
            :<|> NotificationWebhook.API
-           :<|> RSFRecon.API
        )
 
 handler :: AppEnv -> FlowServer API
@@ -118,6 +118,7 @@ handler env =
     :<|> PopulateTipAmount.handler
     :<|> RefundLedger.handler
     :<|> Ride.handler
+    :<|> RSFRecon.handler
     :<|> StopDetection.handler
     :<|> Multimodal.handler
     :<|> DriverReachedDestination.handler
@@ -144,4 +145,3 @@ handler env =
     :<|> XyneWebhook.handler
     :<|> XyneWebhook.bearerHandler
     :<|> NotificationWebhook.handler
-    :<|> RSFRecon.handler

@@ -48,8 +48,6 @@ ReconSettlementOrder:
     reconciliationStatus: Maybe Text
     wireReconStatus: Text
     wireOrderReconStatus: Text
-    orderSequence: Int
-    settlementDetailIndex: Int
     settlementClearedAt: Maybe UTCTime
     manuallyConfirmedAt: Maybe UTCTime
     manuallyConfirmedBy: Maybe Text
@@ -57,10 +55,10 @@ ReconSettlementOrder:
     ourReconStatus: OrderReconVerdict
     diffAmount: Maybe HighPrecMoney
     remarks: Maybe Text
-    payoutEligible: Maybe Bool
     rawJson: Text
     createdAt: UTCTime
     updatedAt: UTCTime
+    platformOrderTimestamp: Maybe UTCTime
 
   constraints:
     id: PrimaryKey
@@ -91,8 +89,6 @@ ReconSettlementOrder:
     rawJson: text
 
   default:
-    orderSequence: "0"
-    settlementDetailIndex: "0"
     sourceType: "'BAP_CLAIMED'"
     utrSettlementId: "NULL"
     ourReconStatus: "'PENDING'"

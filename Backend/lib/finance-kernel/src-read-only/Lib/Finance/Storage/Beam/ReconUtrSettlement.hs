@@ -8,7 +8,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.ReconUtrSettlement
 import Tools.Beam.UtilsTH
 
 data ReconUtrSettlementT f = ReconUtrSettlementT
@@ -20,7 +19,6 @@ data ReconUtrSettlementT f = ReconUtrSettlementT
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    resolutionStatus :: (B.C f Lib.Finance.Domain.Types.ReconUtrSettlement.UtrResolutionStatus),
     resolvedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     resolvedBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     totalOrders :: (B.C f Kernel.Prelude.Int),

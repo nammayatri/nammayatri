@@ -19,7 +19,6 @@ ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN merchant_id text ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN merchant_operating_city_id text ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN message_id text NOT NULL;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN order_id text NOT NULL;
-ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN order_sequence integer NOT NULL default 0;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN order_state text NOT NULL;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN order_transaction_id text NOT NULL;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN our_recon_status character varying(50) NOT NULL default 'PENDING';
@@ -34,7 +33,6 @@ ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN refund_status character 
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN ride_id text ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN settlement_cleared_at timestamp with time zone ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN settlement_date timestamp with time zone NOT NULL;
-ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN settlement_detail_index integer NOT NULL default 0;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN settlement_id text NOT NULL;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN settlement_reference_no text NOT NULL;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN settlement_type character varying(50) NOT NULL;
@@ -57,8 +55,47 @@ ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN remarks text ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN refunded_at timestamp with time zone ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN refund_reference text ;
 ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN reconciliation_status text ;
-ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN payout_eligible boolean ;
+
+------- SQL updates -------
+
+
 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.recon_settlement_order ADD COLUMN platform_order_timestamp timestamp with time zone ;

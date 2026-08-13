@@ -617,6 +617,7 @@ library
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
+      SharedLogic.RSFOrderStatus
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchRequestProcessing

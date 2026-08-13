@@ -17,6 +17,7 @@ import qualified Lib.Finance.Storage.Queries.ReconUtrSettlement as QRUS
 import qualified Lib.Finance.Storage.Queries.ReconUtrSettlementExtra as QRUSExtra
 import Servant hiding (throwError)
 import qualified SharedLogic.CallRSF as CallRSF
+import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide as RsfOrderRecipe
 import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfUtrVsBankDeposit as RsfUtrRecipe
 import Storage.Beam.SystemConfigs ()
 
@@ -25,9 +26,11 @@ data BankVerifyReq = BankVerifyReq
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+-- Finance confirms an amount, never a verdict -- see confirmOrder.
 data ManualConfirmReq = ManualConfirmReq
   { confirmedBy :: Text,
-    reason :: Text
+    reason :: Text,
+    confirmedAmount :: HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -70,24 +73,42 @@ bankVerifyAndRecon utrId bankVerifiedAmount = do
 
   ReconRunner.reconcileSources RsfUtrRecipe.recipe scope [ReconT.SourceId $ getId utrId]
 
+-- | Finance confirms an amount, never a verdict. Does NOT block on
+-- ourReconStatus == PAID -- Axis A (wire claim vs fare) never looks at
+-- bank-verified truth, so finance must be able to override a false-positive
+-- PAID with what they actually know. Blocks when platformGrossFare is
+-- Nothing (ride/booking not resolved yet) -- confirming here would silently
+-- compute a verdict against a zero fare.
 confirmOrder :: Id RSO.ReconSettlementOrder -> ManualConfirmReq -> FlowHandler APISuccess
 confirmOrder rsoId req = withFlowHandlerAPI $ do
-  -- Guards against two concurrent confirm calls for the same row both
-  -- passing the "not already confirmed" check before either writes.
   Hedis.withLockRedis ("RsfConfirmLock:" <> getId rsoId) 30 $ do
     rsos <- QRSO.findByIds [getId rsoId]
     rso <- case rsos of
       [] -> throwError $ InvalidRequest "RSO not found"
       (r : _) -> pure r
-    when (rso.ourReconStatus == RSO.PAID) $
-      throwError $ InvalidRequest "Order already PAID"
+    when (isNothing rso.platformGrossFare) $
+      throwError $ InvalidRequest "Ride not resolved yet for this order -- cannot confirm before the fare is known"
     when (rso.reconciliationStatus == Just "SENT") $
       throwError $ InvalidRequest "Order already sent to BAP"
     when (isJust rso.manuallyConfirmedAt) $
       throwError $ InvalidRequest "Order already manually confirmed"
     now <- getCurrentTime
-    QRSOExtra.updateManualConfirmation rsoId now req.confirmedBy req.reason
-    logInfo $ "RSF manual confirm: orderId=" <> rso.orderId <> " by=" <> req.confirmedBy
+
+    siblingRows <- QRSO.findByOrderId rso.orderId
+    let fare = fromMaybe 0 rso.platformGrossFare
+        otherRowsClaimed = sum [RsfOrderRecipe.effectiveClaimedAmount r | r <- siblingRows, r.id /= rso.id]
+        totalClaimed = otherRowsClaimed + req.confirmedAmount
+        diffAmt = fare - totalClaimed
+        verdict
+          | diffAmt == 0 = RSO.PAID
+          | diffAmt > 0 = RSO.UNDERPAID
+          | otherwise = RSO.OVERPAID
+
+    QRSOExtra.updateManualConfirmation rsoId now req.confirmedBy req.reason req.confirmedAmount verdict (Just diffAmt)
+    logInfo $ "RSF manual confirm: orderId=" <> rso.orderId <> " by=" <> req.confirmedBy <> " amount=" <> show req.confirmedAmount
+
+    let scope = ReconT.MerchantScope (fromMaybe "" rso.merchantId) (fromMaybe "" rso.merchantOperatingCityId)
+    ReconRunner.reconcileSources RsfOrderRecipe.recipe scope [ReconT.SourceId rso.orderId]
   pure Success
 
 triggerSend :: Text -> FlowHandler APISuccess

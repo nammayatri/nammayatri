@@ -18,7 +18,6 @@ data ReconUtrSettlement = ReconUtrSettlement
     id :: Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconUtrSettlement.ReconUtrSettlement,
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    resolutionStatus :: Lib.Finance.Domain.Types.ReconUtrSettlement.UtrResolutionStatus,
     resolvedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     resolvedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     totalOrders :: Kernel.Prelude.Int,
@@ -26,7 +25,3 @@ data ReconUtrSettlement = ReconUtrSettlement
     utr :: Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data UtrResolutionStatus = RES_PENDING | APPROVED | REVISED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UtrResolutionStatus))

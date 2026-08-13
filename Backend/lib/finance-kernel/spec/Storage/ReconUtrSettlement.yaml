@@ -5,11 +5,6 @@ imports:
 ReconUtrSettlement:
   tableName: recon_utr_settlement
 
-  types:
-    UtrResolutionStatus:
-      enum: "RES_PENDING,APPROVED,REVISED"
-      derive: "ToParamSchema"
-
   fields:
     id: Id ReconUtrSettlement
     merchantId: Maybe Text
@@ -20,7 +15,6 @@ ReconUtrSettlement:
     claimedTotalAmount: HighPrecMoney
     totalOrders: Int
     bankVerifiedAmount: Maybe HighPrecMoney
-    resolutionStatus: UtrResolutionStatus
     resolvedAt: Maybe UTCTime
     resolvedBy: Maybe Text
     createdAt: UTCTime
@@ -33,10 +27,6 @@ ReconUtrSettlement:
   sqlType:
     claimedTotalAmount: numeric(30,2)
     bankVerifiedAmount: numeric(30,2)
-    resolutionStatus: character varying(50)
-
-  default:
-    resolutionStatus: "'RES_PENDING'"
 
   queries:
     findByUtr:

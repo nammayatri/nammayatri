@@ -31,3 +31,72 @@ ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN send_status DROP NOT NUL
 ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN send_attempts DROP NOT NULL;
 ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN deadline DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+
+------- SQL updates -------
+
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_app.recon_utr_settlement ALTER COLUMN resolution_status DROP NOT NULL;
+--- Drop section ends. Please check before running ---
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
