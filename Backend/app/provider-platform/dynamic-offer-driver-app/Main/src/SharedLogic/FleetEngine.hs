@@ -47,6 +47,7 @@ import qualified Kernel.External.FleetEngine.Types as FETypes
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -60,7 +61,8 @@ type FleetEngineFlow m r =
     CacheFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    HasKafkaProducer r
   )
 
 getFleetEngineCfg ::
