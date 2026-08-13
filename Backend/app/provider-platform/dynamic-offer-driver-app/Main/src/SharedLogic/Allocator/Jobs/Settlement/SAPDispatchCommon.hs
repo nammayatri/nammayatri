@@ -487,8 +487,8 @@ saveSapJournalEntries ::
   SJE.JournalEntryStatus ->
   SJE.TransactionType ->
   Int ->
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
   Maybe Text ->
@@ -522,8 +522,8 @@ saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodSt
             periodStartTime = periodStart,
             periodEndTime = periodEnd,
             rawResponse = (.rawXml) <$> mbResp,
-            merchantId = mId,
-            merchantOperatingCityId = mocid
+            merchantId = mId.getId,
+            merchantOperatingCityId = mocid.getId
           }
     pure (sapEntryId, reqHeader.batchId)
   listToMaybe results & fromMaybeM (InternalError "SAP journal entry creation returned no entry ID")
@@ -606,8 +606,8 @@ handleSAPResponse ::
   Either Text SAPJournalResponse ->
   SJE.TransactionType ->
   Int ->
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
   Currency ->

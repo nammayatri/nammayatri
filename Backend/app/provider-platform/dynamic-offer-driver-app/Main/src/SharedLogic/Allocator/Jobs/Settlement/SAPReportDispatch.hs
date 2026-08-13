@@ -19,6 +19,8 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch
 where
 
 import qualified Data.Map.Strict as M
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.SAP.Config as SAPConfig
@@ -69,8 +71,8 @@ runSAPSubscriptionPurchaseDispatchJob Job {id, jobInfo} = do
         dispatchSubscriptionPurchase
           sapCfg
           token
-          params.merchantId.getId
-          params.merchantOperatingCityId.getId
+          params.merchantId
+          params.merchantOperatingCityId
           SubscriptionPurchase
           params.maxApiRetries
           params.startTime
@@ -109,11 +111,11 @@ runSAPPGSettlementDispatchJob Job {id, jobInfo} = do
         merchantOperatingCity <- CQMOC.findById mocid >>= fromMaybeM (MerchantOperatingCityNotFound mocid.getId)
         let currency = merchantOperatingCity.currency
         pgSettlementOrderOk <-
-          dispatchEntry sapCfg token mId.getId mocid.getId retries PGSettlementOrder pgTotals.totalOrderAmount pgTotals.orderCount fromTime toTime currency orderRows
+          dispatchEntry sapCfg token mId mocid retries PGSettlementOrder pgTotals.totalOrderAmount pgTotals.orderCount fromTime toTime currency orderRows
         refundOk <-
-          dispatchEntry sapCfg token mId.getId mocid.getId retries RefundEntry pgTotals.totalRefundAmount pgTotals.refundCount fromTime toTime currency refundRows
+          dispatchEntry sapCfg token mId mocid retries RefundEntry pgTotals.totalRefundAmount pgTotals.refundCount fromTime toTime currency refundRows
         chargebackOk <-
-          dispatchEntry sapCfg token mId.getId mocid.getId retries ChargebackEntry pgTotals.totalChargebackAmount pgTotals.chargebackCount fromTime toTime currency chargebackRows
+          dispatchEntry sapCfg token mId mocid retries ChargebackEntry pgTotals.totalChargebackAmount pgTotals.chargebackCount fromTime toTime currency chargebackRows
         pure $ pgSettlementOrderOk && refundOk && chargebackOk
     )
 
@@ -132,8 +134,8 @@ dispatchEntry ::
   ) =>
   SAPConfig.SAPServiceConfig ->
   Text ->
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Int ->
   SAPEntryType ->
   HighPrecMoney ->
@@ -153,7 +155,7 @@ dispatchEntry sapCfg token mId mocid maxRetries entryType amount txnCount fromTi
   req <- buildJournalRequest sapCfg entryType amount fromTime currency
   logInfo $ "SAP journal entry request body = " <> show req
   result <- callSAPWithRetry sapCfg token req label maxRetries
-  let saveTransactionAction sapEntryId sapBatchId = savePGSettlementTransactions mId mocid sapEntryId sapBatchId pgRows
+  let saveTransactionAction sapEntryId sapBatchId = savePGSettlementTransactions mId mocid sapEntryId sapBatchId currency pgRows
   handleSAPResponse label req result (toTransactionType entryType) txnCount mId mocid fromTime toTime currency saveTransactionAction
 
 scheduleNextSubscriptionPurchaseJob ::
@@ -283,8 +285,8 @@ dispatchSubscriptionPurchase ::
   ) =>
   SAPConfig.SAPServiceConfig ->
   Text ->
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   SAPEntryType ->
   Int ->
   UTCTime ->
@@ -312,7 +314,7 @@ dispatchSubscriptionPurchase sapCfg token mId mocid entryType maxRetries fromTim
       <> show totals.netAmount
   req <- buildSubscriptionJournalRequest sapCfg fromTime totals entryType currency
   result <- callSAPWithRetry sapCfg token req "SubscriptionPurchase" maxRetries
-  let saveTransactionAction sapEntryId sapBatchId = saveSubscriptionTransactions mId mocid sapEntryId sapBatchId subRows
+  let saveTransactionAction sapEntryId sapBatchId = saveSubscriptionTransactions mId mocid sapEntryId sapBatchId currency subRows
   handleSAPResponse "SubscriptionPurchase" req result SJE.SubscriptionPurchase totals.txnCount mId mocid fromTime toTime currency saveTransactionAction
 
 buildSubscriptionJournalRequest ::
@@ -402,13 +404,14 @@ mkSAPPGSettlementDispatchJobData SAPDispatchJobParams {..} = SAPPGSettlementDisp
 
 saveSubscriptionTransactions ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   (Id SJE.SapJournalEntry) ->
   Text ->
+  Currency ->
   [SubscriptionTransactionRow] ->
   m ()
-saveSubscriptionTransactions mId mocId sapEntryId batchId rows = do
+saveSubscriptionTransactions mId mocId sapEntryId batchId currency rows = do
   now <- getCurrentTime
   aInfo <- asks (.actorInfo)
   forM_ rows $ \row -> do
@@ -418,15 +421,15 @@ saveSubscriptionTransactions mId mocId sapEntryId batchId rows = do
         { id = Id txnId,
           debitAmount = row.debitAmount,
           creditAmount = row.creditAmount,
-          currency = INR,
+          currency,
           description = "Subscription Purchase",
           subscriptionId = Just row.subscriptionId,
           sapJournalEntryId = sapEntryId,
           sapBatchId = batchId,
           transactionType = SJE.SubscriptionPurchase,
           status = row.status,
-          merchantId = mId,
-          merchantOperatingCityId = mocId,
+          merchantId = mId.getId,
+          merchantOperatingCityId = mocId.getId,
           createdAt = now,
           updatedAt = now,
           createdBy = aInfo.actorType,
@@ -437,13 +440,14 @@ saveSubscriptionTransactions mId mocId sapEntryId batchId rows = do
 
 savePGSettlementTransactions ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   (Id SJE.SapJournalEntry) ->
   Text ->
+  Currency ->
   [PGSettlementTransactionRow] ->
   m ()
-savePGSettlementTransactions mId mocId sapEntryId batchId rows = do
+savePGSettlementTransactions mId mocId sapEntryId batchId currency rows = do
   now <- getCurrentTime
   aInfo <- asks (.actorInfo)
   forM_ rows $ \row -> do
@@ -453,15 +457,15 @@ savePGSettlementTransactions mId mocId sapEntryId batchId rows = do
         { id = Id txnId,
           debitAmount = row.amount,
           creditAmount = row.amount,
-          currency = INR,
+          currency,
           description = show row.txnType,
           subscriptionId = row.subscriptionPurchaseId,
           sapJournalEntryId = sapEntryId,
           sapBatchId = batchId,
           transactionType = pgTxnTypeToSJE row.txnType,
           status = row.txnStatus,
-          merchantId = mId,
-          merchantOperatingCityId = mocId,
+          merchantId = mId.getId,
+          merchantOperatingCityId = mocId.getId,
           createdAt = now,
           updatedAt = now,
           createdBy = aInfo.actorType,

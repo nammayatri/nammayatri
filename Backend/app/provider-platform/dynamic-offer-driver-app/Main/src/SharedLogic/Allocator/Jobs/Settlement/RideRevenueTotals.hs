@@ -161,7 +161,7 @@ fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
                 grossAmount = acc.grossAmount + gross,
                 txnCount = acc.txnCount + 1
                },
-            RevenueRecognitionTransactionRow gross refId (show st) : rs
+            RevenueRecognitionTransactionRow {amount = gross, referenceId = refId, txnStatus = show st} : rs
           )
 
 -- | List RideFare/Output ITT rows whose booking also has a SETTLED tax ledger leg
@@ -254,7 +254,7 @@ fetchDriverEarningAccrualTotals merchantOpCityId fromTime toTime = do
   where
     go (acc, rs) (refId, amt, st) =
       ( acc {accrualAmount = acc.accrualAmount + amt, txnCount = acc.txnCount + 1},
-        RevenueRecognitionTransactionRow amt refId (show st) : rs
+        RevenueRecognitionTransactionRow {amount = amt, referenceId = refId, txnStatus = show st} : rs
       )
 
 -- | List BaseRide legs that credit OwnerLiability.
@@ -322,7 +322,7 @@ fetchPayoutTotals merchantOpCityId fromTime toTime = do
   where
     go (acc, rs) le =
       ( acc {payoutAmount = acc.payoutAmount + le.amount, txnCount = acc.txnCount + 1},
-        RevenueRecognitionTransactionRow le.amount le.referenceId (show le.status) : rs
+        RevenueRecognitionTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs
       )
 
 -- ---------------------------------------------------------------------------
@@ -358,5 +358,5 @@ fetchTdsTotals merchantOpCityId fromTime toTime = do
   where
     go (acc, rs) dtt =
       ( acc {deductionAmount = acc.deductionAmount + dtt.tdsAmount, deductionCount = acc.deductionCount + 1},
-        RevenueRecognitionTransactionRow dtt.tdsAmount dtt.referenceId (show dtt.tdsTreatment) : rs
+        RevenueRecognitionTransactionRow {amount = dtt.tdsAmount, referenceId = dtt.referenceId, txnStatus = show dtt.tdsTreatment} : rs
       )

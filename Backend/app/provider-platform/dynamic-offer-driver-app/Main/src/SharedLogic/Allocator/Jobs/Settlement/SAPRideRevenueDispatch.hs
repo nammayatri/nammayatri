@@ -12,6 +12,8 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
   )
 where
 
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.SAP.Config as SAPConfig
@@ -195,8 +197,8 @@ postRevenueRecognitionJV sapCfg token params label txnCount items currency rows 
       logInfo $ "SAP journal entry request body = " <> show req
       result <- callSAPWithRetry sapCfg token req label maxRetries
       let saveTransactionAction sapEntryId sapBatchId =
-            saveRevenueRecognitionTransactions mId.getId mocid.getId sapEntryId sapBatchId label rows
-      handleSAPResponse label req result SJE.RevenueRecognition txnCount mId.getId mocid.getId fromTime toTime currency saveTransactionAction
+            saveRevenueRecognitionTransactions mId mocid sapEntryId sapBatchId label currency rows
+      handleSAPResponse label req result SJE.RevenueRecognition txnCount mId mocid fromTime toTime currency saveTransactionAction
 
 -- 1/3. Ride fare rev-rec (online or offline)
 -- Online: Dr BUYER_APP_RECEIVABLE / Cr RIDE_FARE_REVENUE + GST
@@ -411,14 +413,15 @@ scheduleNextRideRevenueJob NextSAPDispatchSchedule {scheduleAfter, minScheduleTi
 
 saveRevenueRecognitionTransactions ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
-  Text ->
-  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id SJE.SapJournalEntry ->
   Text ->
   Text ->
+  Currency ->
   [RevenueRecognitionTransactionRow] ->
   m ()
-saveRevenueRecognitionTransactions mId mocId sapEntryId batchId label rows = do
+saveRevenueRecognitionTransactions mId mocId sapEntryId batchId label currency rows = do
   now <- getCurrentTime
   aInfo <- asks (.actorInfo)
   forM_ rows $ \row -> do
@@ -428,15 +431,15 @@ saveRevenueRecognitionTransactions mId mocId sapEntryId batchId label rows = do
         { id = Id txnId,
           debitAmount = row.amount,
           creditAmount = row.amount,
-          currency = INR,
+          currency,
           description = label,
           subscriptionId = Just row.referenceId, -- FIXME referenceId
           sapJournalEntryId = sapEntryId,
           sapBatchId = batchId,
           transactionType = SJE.RevenueRecognition,
           status = row.txnStatus,
-          merchantId = mId,
-          merchantOperatingCityId = mocId,
+          merchantId = mId.getId,
+          merchantOperatingCityId = mocId.getId,
           createdAt = now,
           updatedAt = now,
           createdBy = aInfo.actorType,
