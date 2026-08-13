@@ -9,6 +9,8 @@ module SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch
     payoutClearingToBankLabel,
     tdsDeductionLabel,
     tdsReimbursementLabel,
+    subscriptionRideRevenueLabel,
+    subscriptionExpiryRevenueLabel,
   )
 where
 
@@ -65,6 +67,12 @@ tdsDeductionLabel = "TdsDeduction"
 tdsReimbursementLabel :: Text
 tdsReimbursementLabel = "TdsReimbursement"
 
+subscriptionRideRevenueLabel :: Text
+subscriptionRideRevenueLabel = "SubscriptionRideRevenue"
+
+subscriptionExpiryRevenueLabel :: Text
+subscriptionExpiryRevenueLabel = "SubscriptionExpiryRevenue"
+
 -- ---------------------------------------------------------------------------
 -- AccountMapping keys (must match MerchantServiceConfig SAP_Journal seed / 0011 migration)
 -- ---------------------------------------------------------------------------
@@ -98,6 +106,12 @@ sgstPayableAcct = "SGST_PAYABLE A/C"
 
 igstPayableAcct :: Text
 igstPayableAcct = "IGST_PAYABLE A/C"
+
+deferredRevenueAcct :: Text
+deferredRevenueAcct = "DEFERRED_REVENUE A/C"
+
+subscriptionRevenueAcct :: Text
+subscriptionRevenueAcct = "SUBSCRIPTION_REVENUE A/C"
 
 -- ---------------------------------------------------------------------------
 -- Ride Revenue Dispatch Job
@@ -158,7 +172,9 @@ dispatchRideRevenue sapCfg token params totals = do
   tdsOk <-
     let (tdsTotals, deductionRows, reimbursementRows) = totals.tds
      in dispatchTds sapCfg token params currency tdsTotals deductionRows reimbursementRows
-  pure $ onlineOk && settleOk && offlineOk && accrualOk && payoutOk && tdsOk
+  rideSubOk <- uncurry (dispatchSubscriptionRevenue sapCfg token params subscriptionRideRevenueLabel currency) totals.subscriptionRideRevenue
+  expirySubOk <- uncurry (dispatchSubscriptionRevenue sapCfg token params subscriptionExpiryRevenueLabel currency) totals.subscriptionExpiryRevenue
+  pure $ onlineOk && settleOk && offlineOk && accrualOk && payoutOk && tdsOk && rideSubOk && expirySubOk
 
 postRevenueRecognitionJV ::
   ( BeamFlow m r,
@@ -393,6 +409,39 @@ dispatchTds sapCfg token params currency totals deductionRows reimbursementRows 
             ]
         postRevenueRecognitionJV sapCfg token params tdsReimbursementLabel totals.reimbursementCount items currency reimbursementRows
   pure $ dedOk && reimbOk
+
+-- 7. Subscription revenue recognised: Dr DEFERRED_REVENUE / Cr SUBSCRIPTION_REVENUE
+--    Ride vs expiry use the same legs, different description labels.
+dispatchSubscriptionRevenue ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    Finance.HasActorInfo m r,
+    HasRequestId r,
+    MonadReader r m
+  ) =>
+  SAPConfig.SAPServiceConfig ->
+  Text ->
+  SAPDispatchJobParams ->
+  Text ->
+  Currency ->
+  SubscriptionRevenueTotals ->
+  [RevenueRecognitionTransactionRow] ->
+  m Bool
+dispatchSubscriptionRevenue _ _ _params label _currency totals _rows
+  | totals.recognizedAmount == 0 = do
+    logInfo $ "No " <> label <> " totals, skipping"
+    pure True
+dispatchSubscriptionRevenue sapCfg token params label currency totals rows = do
+  let acctMap = sapCfg.accountMapping
+  bId <- getNextBatchId
+  items <-
+    sequence
+      [ mkItem bId "1" deferredRevenueAcct acctMap Debit totals.recognizedAmount currency,
+        mkItem bId "2" subscriptionRevenueAcct acctMap Credit totals.recognizedAmount currency
+      ]
+  postRevenueRecognitionJV sapCfg token params label totals.txnCount items currency rows
 
 scheduleNextRideRevenueJob ::
   ( BeamFlow m r,

@@ -51,7 +51,7 @@ flowchart LR
 - **Daily aggregated JVs** for phase-1 (not per-ride posts) — matches build-plan recommendation.
 - Shared shell / SAP call / audit helpers extracted to [`SAPDispatchCommon.hs`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/Allocator/Jobs/Settlement/SAPDispatchCommon.hs); subscription + PG stay in [`SAPReportDispatch.hs`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/Allocator/Jobs/Settlement/SAPReportDispatch.hs).
 - New job module [`SAPRideRevenueDispatch.hs`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/Allocator/Jobs/Settlement/SAPRideRevenueDispatch.hs) + totals twin [`RideRevenueTotals.hs`](Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/Allocator/Jobs/Settlement/RideRevenueTotals.hs) (mirrors `SubscriptionTotals.hs`).
-- Matrix event identity = **`sap_journal_entry.description` labels** (not a new enum column): `OnlineRideRevRec`, `OfflineCashRide`, `BuyerAppSettlement`, `DriverEarningAccrual`, `PayoutToClearing`, `PayoutClearingToBank`, `TdsDeduction`, `TdsReimbursement`.
+- Matrix event identity = **`sap_journal_entry.description` labels** (not a new enum column): `OnlineRideRevRec`, `OfflineCashRide`, `BuyerAppSettlement`, `DriverEarningAccrual`, `PayoutToClearing`, `PayoutClearingToBank`, `TdsDeduction`, `TdsReimbursement`, `SubscriptionRideRevenue`, `SubscriptionExpiryRevenue`.
 - `SapJournalEntry.TransactionType` += `RevenueRecognition` (append-only).
 - Idempotency: day lock + `idempotencyJobType = "RevenueRecognition"`; every JV builder / `buildJournalRequestFromItems` keeps **debit == credit**.
 - Account mapping keys added in migration `0011` (see §4).
@@ -107,6 +107,8 @@ flowchart LR
 | `PayoutClearingToBank` | `PAYOUT_CLEARING` | `BANK` | Same payout amount (second JV) |
 | `TdsDeduction` | `DRIVER_BALANCE` | `TDS_PAYABLE` | `direct_tax_transaction` `Deducted` |
 | `TdsReimbursement` | `TDS_RECEIVABLE` | `DRIVER_BALANCE` | **Forced 0** until WS8 `Reimbursed` rows |
+| `SubscriptionRideRevenue` | `DEFERRED_REVENUE` | `SUBSCRIPTION_REVENUE` | SETTLED `RideRevenueRecognition` |
+| `SubscriptionExpiryRevenue` | `DEFERRED_REVENUE` | `SUBSCRIPTION_REVENUE` | SETTLED `ExpiryRevenueRecognition` |
 
 Zero amounts skip posting. Ride-fare builders also assert `gross == net + cgst + sgst + igst` before the shared request builder’s Dr==Cr check.
 
@@ -140,7 +142,7 @@ Zero amounts skip posting. Ride-fare builders also assert `gross == net + cgst +
 
 **Done.** [`0011-add-sap-ride-revenue-account-mapping.sql`](Backend/dev/migrations-after-release/dynamic-offer-driver-app/0011-add-sap-ride-revenue-account-mapping.sql) jsonb-merges into `SAP_Journal.accountMapping` for `MSIL_PARTNER` / Hyderabad (cannot edit applied `0006` — right-hand `||` overwrites shared keys). Keys (code uses `"… A/C"` suffix):
 
-`BANK`, `PG_CLEARING`, `DEFERRED_REVENUE`, `CGST_PAYABLE`, `SGST_PAYABLE`, `IGST_PAYABLE`, `BUYER_APP_RECEIVABLE`, `BUYER_APP_POOL`, `RIDE_FARE_REVENUE`, `DRIVER_BALANCE`, `PAYOUT_CLEARING`, `TDS_PAYABLE`, `TDS_RECEIVABLE`.
+`BANK`, `PG_CLEARING`, `DEFERRED_REVENUE`, `CGST_PAYABLE`, `SGST_PAYABLE`, `IGST_PAYABLE`, `BUYER_APP_RECEIVABLE`, `BUYER_APP_POOL`, `RIDE_FARE_REVENUE`, `DRIVER_BALANCE`, `PAYOUT_CLEARING`, `TDS_PAYABLE`, `TDS_RECEIVABLE`, `SUBSCRIPTION_REVENUE`.
 
 ---
 

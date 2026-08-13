@@ -5,6 +5,7 @@ module SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
     DriverEarningAccrualTotals (..),
     PayoutTotals (..),
     TdsTotals (..),
+    SubscriptionRevenueTotals (..),
     RevenueRecognitionTransactionRow (..),
     fetchRideRevenueTotals,
   )
@@ -23,6 +24,7 @@ import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerDomain
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTaxTransactionExtra
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
+import qualified SharedLogic.Finance.Prepaid as Prepaid
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Beam.Common as BeamCommon
 
@@ -89,6 +91,14 @@ data TdsTotals = TdsTotals
   }
   deriving (Generic, Show, Eq)
 
+-- | Subscription revenue recognised: Dr DEFERRED_REVENUE / Cr SUBSCRIPTION_REVENUE.
+--   Ride vs expiry are separate SAP JVs (different description labels).
+data SubscriptionRevenueTotals = SubscriptionRevenueTotals
+  { recognizedAmount :: HighPrecMoney,
+    txnCount :: Int
+  }
+  deriving (Generic, Show, Eq)
+
 -- ---------------------------------------------------------------------------
 -- Combined daily totals for one merchant operating city
 -- ---------------------------------------------------------------------------
@@ -100,7 +110,9 @@ data RideRevenueTotals = RideRevenueTotals
     offlineCashRide :: (RideFareRevRecTotals, [RevenueRecognitionTransactionRow]),
     driverEarningAccrual :: (DriverEarningAccrualTotals, [RevenueRecognitionTransactionRow]),
     payout :: (PayoutTotals, [RevenueRecognitionTransactionRow]),
-    tds :: (TdsTotals, [RevenueRecognitionTransactionRow], [RevenueRecognitionTransactionRow])
+    tds :: (TdsTotals, [RevenueRecognitionTransactionRow], [RevenueRecognitionTransactionRow]),
+    subscriptionRideRevenue :: (SubscriptionRevenueTotals, [RevenueRecognitionTransactionRow]),
+    subscriptionExpiryRevenue :: (SubscriptionRevenueTotals, [RevenueRecognitionTransactionRow])
   }
   deriving (Generic, Show, Eq)
 
@@ -131,6 +143,8 @@ fetchRideRevenueTotals merchantOpCityId fromTime toTime = do
   driverEarningAccrual <- fetchDriverEarningAccrualTotals merchantOpCityId fromTime toTime
   payout <- fetchPayoutTotals merchantOpCityId fromTime toTime
   tds <- fetchTdsTotals merchantOpCityId fromTime toTime
+  subscriptionRideRevenue <- fetchSubscriptionRevenueTotals Prepaid.subscriptionRideReferenceType merchantOpCityId fromTime toTime
+  subscriptionExpiryRevenue <- fetchSubscriptionRevenueTotals Prepaid.expiryRevenueRecognitionReferenceType merchantOpCityId fromTime toTime
   pure RideRevenueTotals {..}
 
 -- ---------------------------------------------------------------------------
@@ -359,4 +373,33 @@ fetchTdsTotals merchantOpCityId fromTime toTime = do
     go (acc, rs) dtt =
       ( acc {deductionAmount = acc.deductionAmount + dtt.tdsAmount, deductionCount = acc.deductionCount + 1},
         RevenueRecognitionTransactionRow {amount = dtt.tdsAmount, referenceId = dtt.referenceId, txnStatus = show dtt.tdsTreatment} : rs
+      )
+
+-- ---------------------------------------------------------------------------
+-- Subscription revenue recognised (deferred → revenue after ride / expiry)
+-- ---------------------------------------------------------------------------
+
+-- | One SETTLED referenceType → one SAP event (ride vs expiry stay separate JVs).
+fetchSubscriptionRevenueTotals ::
+  (RideRevenueTotalsFlow m r) =>
+  Text ->
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m (SubscriptionRevenueTotals, [RevenueRecognitionTransactionRow])
+fetchSubscriptionRevenueTotals referenceType merchantOpCityId fromTime toTime = do
+  rawRows <-
+    QLedgerEntryExtra.findSettledByReferenceTypeAndDateRange
+      referenceType
+      merchantOpCityId.getId
+      fromTime
+      toTime
+      Nothing
+      Nothing
+  let (totals, txnRowsRev) = foldl' go (SubscriptionRevenueTotals 0 0, []) rawRows
+  pure (totals, reverse txnRowsRev)
+  where
+    go (acc, rs) le =
+      ( acc {recognizedAmount = acc.recognizedAmount + le.amount, txnCount = acc.txnCount + 1},
+        RevenueRecognitionTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs
       )
