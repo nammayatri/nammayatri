@@ -18,6 +18,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Utils.Common (logDebug)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout (AppDynamicLogicRollout)
 
@@ -71,8 +72,15 @@ chooseWithGroups ::
 chooseWithGroups applicable chooseFn = do
   mbTxnId <- L.getOptionLocal TxnIdKey
   case mbTxnId of
-    Nothing -> chooseFn applicable
+    Nothing -> do
+      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " no txnId in scope -> plain toss (grouping disabled)"
+      chooseFn applicable
     Just txnId -> resolveWithGroups txnId applicable chooseFn 0
+
+-- | Log-friendly label for the domain being resolved (all applicable rollouts
+-- share one domain). Only used for debug logging.
+domainLabelOf :: [AppDynamicLogicRollout] -> Text
+domainLabelOf = maybe "unknown" (show . (.domain)) . listToMaybe
 
 resolveWithGroups ::
   (BeamFlow m r) =>
@@ -86,8 +94,11 @@ resolveWithGroups txnId applicable chooseFn attempt = do
   decisions <- forM presentGroups $ \g -> (g,) <$> readGroupDecision txnId g
   let decidedIn = [g | (g, Just GroupIn) <- decisions]
       decidedOut = [g | (g, Just GroupOut) <- decisions]
+  logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " attempt=" <> show attempt <> " presentGroups=" <> show presentGroups <> " decidedIn=" <> show decidedIn <> " decidedOut=" <> show decidedOut
   case find (\r -> maybe False (`elem` decidedIn) r.experimentGroup) applicable of
-    Just r -> pure (Just r)
+    Just r -> do
+      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " already-IN group=" <> show r.experimentGroup <> " -> reuse version=" <> show r.version <> " (no toss)"
+      pure (Just r)
     Nothing -> do
       -- Toss over remaining rollouts (other than those decided out earlier)
       let candidates = filter (\r -> maybe True (`notElem` decidedOut) r.experimentGroup) applicable
@@ -98,9 +109,11 @@ resolveWithGroups txnId applicable chooseFn attempt = do
       authoritative <- forM undecidedGroups $ \g -> do
         let desired = if Just g == winnerGroup then GroupIn else GroupOut
         auth <- tryLockGroup txnId g desired
+        logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " locked group=" <> g <> " desired=" <> show desired <> " authoritative=" <> show auth
         pure (g, auth)
       -- Race Condition Handling (1 try, 2nd time just take winner)
       let raced = any (\(g, auth) -> (Just g == winnerGroup) /= (auth == GroupIn)) authoritative
+      logDebug $ "DYNAMIC_LOGIC_GROUP: domain=" <> domainLabelOf applicable <> " txnId=" <> txnId <> " tossedWinnerVersion=" <> show (fmap (.version) mbWinner) <> " winnerGroup=" <> show winnerGroup <> " raced=" <> show raced
       if raced && attempt < 2
         then resolveWithGroups txnId applicable chooseFn (attempt + 1)
         else pure mbWinner

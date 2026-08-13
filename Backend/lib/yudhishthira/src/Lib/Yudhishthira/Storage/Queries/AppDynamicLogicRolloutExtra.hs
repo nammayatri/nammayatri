@@ -60,6 +60,25 @@ findActiveByMerchantOpCityAndDomain merchantOperatingCityId domain =
         ]
     ]
 
+updateExperimentGroup ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  Text ->
+  Int ->
+  Maybe Text ->
+  m ()
+updateExperimentGroup cityId domain timeBounds version mbGroup =
+  updateWithKV
+    [Se.Set Beam.experimentGroup mbGroup]
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId cityId),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.timeBounds $ Se.Eq timeBounds,
+          Se.Is Beam.version $ Se.Eq version
+        ]
+    ]
+
 findByCityAndDomainAndIsBase ::
   (BeamFlow.BeamFlow m r) =>
   ( Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
