@@ -93,6 +93,7 @@ Quote:
     vehicleServiceTierLuggageCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     isAirConditioned: Maybe Bool
+    driverCancellationNotAllowed: Maybe Bool
     serviceTierName: Maybe Text
     serviceTierShortDesc: Maybe Text
     merchantOperatingCityId : Id MerchantOperatingCity

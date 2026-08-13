@@ -36,17 +36,20 @@ import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.CommunicationEngine.Parser as CMParser
 import qualified Lib.CommunicationEngine.Types as CMT
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.ConsequenceEngine.Parser as CEParser
 import qualified Lib.ConsequenceEngine.Types as CET
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
+import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -175,8 +178,22 @@ dispatchConsequence ctx driverId = \case
   CET.Nudge params -> sendOverlayByKey ctx driverId params.nudgeKey
   CET.Warn params -> sendOverlayByKey ctx driverId params.warnKey
   CET.ChargeFee params -> do
-    logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency
-    pure ()
+    logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency <> " (" <> params.chargeReason <> ")"
+    let penaltyAmount :: HighPrecMoney = realToFrac params.penaltyAmount
+        currency = fromMaybe INR (readMaybe $ toString params.currency)
+    if penaltyAmount <= 0
+      then logWarning $ "Ignoring non-positive ChargeFee amount for driver " <> driverId.getId
+      else do
+        mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ctx.merchantOperatingCityId.getId}) Nothing
+        case mbTransporterConfig of
+          Nothing -> logError $ "ChargeFee skipped: TransporterConfig not found for city " <> ctx.merchantOperatingCityId.getId
+          Just transporterConfig -> do
+            feeId <- DCP.chargeDriverPenaltyFee ctx.merchantId ctx.merchantOperatingCityId (cast driverId) penaltyAmount currency transporterConfig
+            logInfo $ "Charged behavior penalty fee " <> feeId.getId <> " (" <> params.chargeReason <> ") of " <> show penaltyAmount <> " to driver " <> driverId.getId
+            -- Belt against rule-authoring mistakes: rules must also guard on
+            -- {"var": "cooldowns.<feeCooldownTag>"} to avoid re-emitting CHARGE_FEE.
+            whenJust params.feeCooldownTag $ \cooldownTag ->
+              BT.writeCooldownKey BTT.DRIVER driverId.getId cooldownTag (fromMaybe 24 params.feeCooldownHours)
   CET.IncrementCounter params -> do
     case (ctx.counterConfig, ctx.actionEvent) of
       (Just config, Just event) -> do
@@ -201,6 +218,7 @@ parseBlockReasonFlag = \case
   Just "ExtraFareWeekly" -> ExtraFareWeekly
   Just "DrunkAndDriveViolation" -> DrunkAndDriveViolation
   Just "DocumentExpiry" -> DocumentExpiry
+  Just "PickupStall" -> PickupStall
   Just "ByDashboard" -> ByDashboard
   Just other -> fromMaybe ByDashboard (readMaybe $ toString other)
   Nothing -> ByDashboard

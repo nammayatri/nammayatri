@@ -109,7 +109,11 @@ data PermanentBlockParams = PermanentBlockParams
 data ChargeFeeParams = ChargeFeeParams
   { penaltyAmount :: Double,
     currency :: Text,
-    chargeReason :: Text
+    chargeReason :: Text,
+    -- Cooldown written after a successful charge so rules guarding on
+    -- {"var": "cooldowns.<tag>"} don't re-charge the same offence window.
+    feeCooldownTag :: Maybe Text,
+    feeCooldownHours :: Maybe Int
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

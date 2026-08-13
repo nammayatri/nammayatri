@@ -23,6 +23,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     checkRequestCount,
     isBookAny,
     makeTaggedDriverPool,
+    ensurePoolingLogicVersion,
     splitSilentDriversAndSortWithDistance,
     previouslyAttemptedDriversKey,
   )
@@ -31,6 +32,7 @@ where
 import qualified Control.Monad as CM
 import Data.Aeson as A
 import Data.Aeson.Types as A
+import qualified Data.Hashable as DH
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Domain.Types as DVST
@@ -45,9 +47,11 @@ import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
@@ -57,6 +61,7 @@ import SharedLogic.DriverPool
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 
@@ -104,6 +109,33 @@ previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
         return []
       a -> return a
 
+-- | Deterministic 1-100 toss derived from the search request id, used for POOLING
+-- version selection. All selections for one search request must land on the same
+-- rollout even when they race (normal vs on-ride pool within a batch, overlapping
+-- batch jobs reading a not-yet-persisted version), so the toss cannot be random per call.
+poolingLogicVersionToss :: Id DSR.SearchRequest -> Int
+poolingLogicVersionToss searchReqId = (DH.hash searchReqId.getId `mod` 100) + 1
+
+-- | Resolve the POOLING logic version for a search request exactly once and persist it.
+-- Called before each batch execution so that every consumer in that execution (normal and
+-- on-ride pool selection, search_request_for_driver rows) and every later batch or search
+-- try of the same search request sees the same version.
+ensurePoolingLogicVersion ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  DSR.SearchRequest ->
+  m DSR.SearchRequest
+ensurePoolingLogicVersion searchReq
+  | isJust searchReq.poolingLogicVersion = pure searchReq
+  | otherwise = do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.merchantOperatingCityId.getId)
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    mbVersion <- selectAppDynamicLogicVersion (cast searchReq.merchantOperatingCityId) LYT.POOLING localTime (Just $ poolingLogicVersionToss searchReq.id)
+    whenJust mbVersion $ \_ -> QSR.updatePoolingLogicVersion mbVersion searchReq.id
+    pure $ searchReq {DSR.poolingLogicVersion = mbVersion}
+
 makeTaggedDriverPool ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -127,8 +159,7 @@ makeTaggedDriverPool ::
   m (Maybe Int, [DriverPoolWithActualDistResult])
 makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTryId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
-  (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion Nothing
-  updateVersionInSearchReq mbVersion
+  (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
@@ -187,11 +218,6 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
 
     updateDriverPoolResult DriverPoolResult {..} =
       DriverPoolResult {customerTags = Just $ maybe A.emptyObject LYTU.convertTags customerNammaTags, ..}
-
-    updateVersionInSearchReq mbVersion =
-      whenJust mbVersion $ \_ -> do
-        when (isNothing mbPoolingLogicVersion) $
-          QSR.updatePoolingLogicVersion mbVersion searchReq.id
 
     pushTaggedPoolToKafka taggedPool = do
       pushToKafka

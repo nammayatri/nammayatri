@@ -2182,7 +2182,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
     QST.updateStatus DST.COMPLETED searchTry.id
     mSReqFD <- QSRD.findByDriverAndSearchTryId driver.id searchTry.id
     whenJust mSReqFD $ \sReqFD -> QBooking.updateDqDurationToPickup booking.id sReqFD.durationToPickup
-  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id)
+  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)

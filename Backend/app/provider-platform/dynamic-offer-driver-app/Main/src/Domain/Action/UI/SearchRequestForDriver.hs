@@ -45,7 +45,8 @@ data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
     searchRequestValidTill :: UTCTime,
     distanceWithUnit :: Maybe Distance,
     duration :: Maybe Seconds,
-    isReferredRideReq :: Maybe Bool
+    isReferredRideReq :: Maybe Bool,
+    driverCancellationNotAllowed :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -117,7 +118,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     coinsRewardedOnGoldTierRide :: Maybe Int,
     safetyPlusCharges :: Maybe HighPrecMoney,
     commissionCharges :: Maybe HighPrecMoney,
-    isPaymentOnline :: Maybe Bool
+    isPaymentOnline :: Maybe Bool,
+    driverCancellationNotAllowed :: Maybe Bool
   }
   deriving (Generic, ToSchema, Show)
 
@@ -203,6 +205,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           safetyPlusCharges = Just safetyCharges,
           commissionCharges = nearbyReq.commissionCharges,
           isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument,
+          driverCancellationNotAllowed = nearbyReq.driverCancellationNotAllowed,
           ..
         }
   where

@@ -220,3 +220,12 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN commissi
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_number text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN fleet_owner_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_cancellation_not_allowed boolean ;
+
+
+------- SQL updates -------
+

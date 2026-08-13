@@ -184,6 +184,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 sgst = sgst,
                 cgst = cgst,
                 driverCancellationPenaltyAmount = driverCancellationPenaltyAmount,
+                driverCancellationNotAllowed = driverCancellationNotAllowed,
                 discountApplicableRideFareTaxExclusive = discountApplicableRideFareTaxExclusive,
                 discountApplicableRideFareTax = discountApplicableRideFareTax,
                 nonDiscountApplicableRideFareTaxExclusive = nonDiscountApplicableRideFareTaxExclusive,
@@ -264,5 +265,6 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.sgst = sgst,
         BeamFP.cgst = cgst,
         BeamFP.driverCancellationPenaltyAmount = driverCancellationPenaltyAmount,
+        BeamFP.driverCancellationNotAllowed = driverCancellationNotAllowed,
         BeamFP.fareSettlementType = fareSettlementType
       }

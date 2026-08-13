@@ -27,6 +27,7 @@ data VehicleServiceTier = VehicleServiceTier
     baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     cancellationRateConfig :: Kernel.Prelude.Maybe Dashboard.Common.CancellationRateConfig,
     defaultForVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
+    driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,

@@ -116,6 +116,14 @@ getIsAirConditioned provider item = do
     Nothing -> return Nothing
     Just airConditioned -> return $ (readMaybe (T.unpack airConditioned) :: Maybe Bool)
 
+getDriverCancellationNotAllowed :: MonadFlow m => Spec.Provider -> Spec.Item -> m (Maybe Bool)
+getDriverCancellationNotAllowed provider item = do
+  let mbTagValue = do
+        fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
+        fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
+        getTagV2' Tag.VEHICLE_INFO Tag.DRIVER_CANCELLATION_NOT_ALLOWED (fulfillment.fulfillmentTags)
+  return $ mbTagValue >>= (readMaybe . T.unpack)
+
 getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do
   price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")

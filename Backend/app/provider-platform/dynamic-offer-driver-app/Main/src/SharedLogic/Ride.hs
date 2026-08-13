@@ -53,7 +53,9 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.Allocator (AllocatorJobType (..), CheckDriverPickupProgressJobData (..))
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
@@ -102,8 +104,9 @@ initializeRide ::
   Maybe Text ->
   Maybe Bool ->
   Maybe (Id Person) ->
+  Bool ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress = do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
@@ -189,6 +192,18 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
   unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+  -- Monitoring is opted in by the caller: remote-driver assignments (Beckn confirm) monitor;
+  -- OTP/meter rides (customer is already with the driver) and scheduled-booking accepts don't.
+  when (monitorPickupProgress && not booking.isScheduled) $
+    fork "schedule pickup progress monitor" $ do
+      mbMonitoringTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      whenJust (mbMonitoringTransporterConfig >>= (.pickupStallMonitoringConfig)) $ \monitoringConfig ->
+        createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.gracePeriodSec) $
+          CheckDriverPickupProgressJobData
+            { driverId = ride.driverId,
+              bookingId = booking.id,
+              rideId = ride.id
+            }
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit

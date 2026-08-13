@@ -174,7 +174,7 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
-data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation | DocumentExpiry deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation | DocumentExpiry | PickupStall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BlockReasonFlag)
 
@@ -458,6 +458,21 @@ instance IsHTTPError DriverQuoteError where
     CustomerCancelled -> E400
 
 instance IsAPIError DriverQuoteError
+
+newtype RideCancellationError
+  = DriverCancellationNotAllowedOnRide Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideCancellationError
+
+instance IsBaseError RideCancellationError where
+  toMessage (DriverCancellationNotAllowedOnRide rideId) = Just $ "Cancellation by driver is not allowed for this ride:-" <> rideId
+
+instance IsHTTPError RideCancellationError where
+  toErrorCode (DriverCancellationNotAllowedOnRide _) = "DRIVER_CANCELLATION_NOT_ALLOWED_ON_RIDE"
+  toHttpCode (DriverCancellationNotAllowedOnRide _) = E403
+
+instance IsAPIError RideCancellationError
 
 data FareParametersError
   = FareParametersNotFound Text

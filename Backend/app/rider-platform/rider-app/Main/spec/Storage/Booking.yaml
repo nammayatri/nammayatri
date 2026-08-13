@@ -222,6 +222,7 @@ Booking:
     vehicleCategory: Maybe VehicleCategory
     vehicleIconUrl: Maybe BaseUrl
     isAirConditioned: Maybe Bool
+    driverCancellationNotAllowed: Maybe Bool
     isDashboardRequest: Maybe Bool
     bookingDetails: BookingDetails
     merchantId: Id Merchant

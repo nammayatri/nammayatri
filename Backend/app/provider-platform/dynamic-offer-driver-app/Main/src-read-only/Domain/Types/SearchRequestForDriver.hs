@@ -44,6 +44,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     customerTags :: Kernel.Prelude.Maybe Data.Aeson.Value,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAvailableTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDefaultStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverMaxExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -101,12 +102,12 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverSearchRequestStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationSource))

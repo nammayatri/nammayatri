@@ -55,6 +55,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.specialZoneQuoteId (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
       Se.Set Beam.staticBppQuoteId (Storage.Queries.Transformers.Quote.getStaticBppQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
+      Se.Set Beam.driverCancellationNotAllowed driverCancellationNotAllowed,
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
       Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),

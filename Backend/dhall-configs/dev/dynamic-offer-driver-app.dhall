@@ -299,6 +299,7 @@ let AllocatorJobType =
       | ScheduleTagActionNotification
       | DriverReferralPayout
       | ScheduledRideAssignedOnUpdate
+      | CheckDriverPickupProgress
       | Daily
       | Weekly
       | Monthly
@@ -366,6 +367,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.ScheduledRideAssignedOnUpdate
         , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.CheckDriverPickupProgress
+        , mapValue = False
         }
       , { mapKey = AllocatorJobType.DriverReferralPayout, mapValue = True }
       , { mapKey = AllocatorJobType.Daily, mapValue = True }

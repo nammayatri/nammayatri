@@ -43,14 +43,12 @@ imports:
   ConfigNames: Dashboard.Common.Merchant
   DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
   DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
-  Value: Data.Aeson
   WhiteListOperatingCityReq: Dashboard.Common.Merchant
   WhiteListOperatingCityRes: Dashboard.Common.Merchant
   ServiceTierType: Dashboard.Common
   Centesimal: Kernel.Types.Common
   SpecialLocationType: Lib.Types.SpecialLocation
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
-  Area: Lib.Types.SpecialLocation
   TimeBound: Kernel.Types.TimeBound
   TripCategory: Dashboard.Common
   Months: Kernel.Types.Time
@@ -1270,6 +1268,7 @@ types:
     - seatingCapacity: Maybe Int
     - airConditionedThreshold: Maybe Double
     - isAirConditioned: Maybe Bool
+    - driverCancellationNotAllowed: Maybe Bool
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
     - allowedVehicleVariant: [VehicleVariant]
@@ -1302,6 +1301,7 @@ types:
     - seatingCapacity: Maybe Int
     - airConditionedThreshold: Maybe Double
     - isAirConditioned: Maybe Bool
+    - driverCancellationNotAllowed: Maybe Bool
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
     - allowedVehicleVariant: Maybe [VehicleVariant]
@@ -1337,6 +1337,7 @@ types:
     - seatingCapacity: Int
     - airConditionedThreshold: Maybe Double
     - isAirConditioned: Maybe Bool
+    - driverCancellationNotAllowed: Maybe Bool
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
     - allowedVehicleVariant: [VehicleVariant]

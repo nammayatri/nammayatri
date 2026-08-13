@@ -87,7 +87,7 @@ tfProviderFulfillments res pricing = do
       isScheduled = res.startTime > res.now
       mbScheduledPickupDuration = if isScheduled then Just (BUtils.formatTimeDifference res.transporterConfig.scheduleRideBufferTime) else Nothing
       fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops res.fromLocation res.toLocation res.stops res.startTime mbScheduledPickupDuration
-      fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned pricing.isAirConditioned
+      fulfillmentTags_ = Beckn.OnDemand.Utils.Common.mkVehicleTags pricing.vehicleServiceTierAirConditioned pricing.isAirConditioned (pricing.fareParams >>= (.driverCancellationNotAllowed))
       fulfillmentType_ = Just pricing.fulfillmentType
       fulfillmentVehicle_ = tfVehicle pricing
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}

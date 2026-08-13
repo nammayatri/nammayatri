@@ -51,6 +51,7 @@ data Booking = Booking
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverInsuredAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverPreference :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

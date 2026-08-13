@@ -99,6 +99,7 @@ Estimate:
     vehicleServiceTierAirConditioned : Maybe Double
     vehicleCategory: Maybe VehicleCategory
     isAirConditioned: Maybe Bool
+    driverCancellationNotAllowed: Maybe Bool
     itemId : Text
     estimateBreakupList : "[EstimateBreakup]"
     nightShiftInfo : Maybe NightShiftInfo

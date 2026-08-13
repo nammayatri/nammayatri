@@ -519,6 +519,7 @@ data BecknTag
   | -- Vehicle Air Conditioned info tag
     IS_AIR_CONDITIONED -- deprecated
   | IS_AIR_CONDITIONED_VEHICLE
+  | DRIVER_CANCELLATION_NOT_ALLOWED
   | IS_FORWARD_BATCH_ENABLED
   | -- rating tags
     RIDER_PHONE_NUMBER
@@ -600,6 +601,7 @@ instance CompleteTag BecknTag where
   getTagDisplay = \case
     IS_AIR_CONDITIONED -> True
     IS_AIR_CONDITIONED_VEHICLE -> True
+    DRIVER_CANCELLATION_NOT_ALLOWED -> True
     SPECIAL_LOCATION_TAG -> True
     SMART_TIP_REASON -> True
     MAX_ESTIMATED_DISTANCE -> True
@@ -764,6 +766,7 @@ instance CompleteTag BecknTag where
     -- Vehicle info tags
     IS_AIR_CONDITIONED -> VEHICLE_INFO
     IS_AIR_CONDITIONED_VEHICLE -> VEHICLE_INFO
+    DRIVER_CANCELLATION_NOT_ALLOWED -> VEHICLE_INFO
     VEHICLE_ICON_URL -> VEHICLE_INFO
     -- Estimated end time range tags
     ESTIMATED_END_TIME_RANGE_START -> ESTIMATED_END_TIME_RANGE

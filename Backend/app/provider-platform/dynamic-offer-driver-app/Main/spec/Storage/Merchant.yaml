@@ -916,6 +916,26 @@ TransporterConfig:
       dailySlabs: "[SlabType]"
       weeklySlabs: "[SlabType]"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    PickupStallTerminalAction:
+      enum: "REALLOCATE_RIDE,RECORD_ONLY"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
+    PickupStallStage:
+      afterStallSec: Int
+      overlayKey: Text
+      terminalAction: Maybe PickupStallTerminalAction
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    PickupStallCaseConfig:
+      stages: "[PickupStallStage]"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    PickupStallMonitoringConfig:
+      tickIntervalSec: Int
+      gracePeriodSec: Int
+      progressThresholdMeters: Int
+      badTickDebounce: Int
+      stalledConfig: Maybe PickupStallCaseConfig
+      retreatingConfig: Maybe PickupStallCaseConfig
+      locationDarkConfig: Maybe PickupStallCaseConfig
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
       cancellationRateThresholdWeekly: Int
@@ -1325,6 +1345,7 @@ TransporterConfig:
     allowPanAadhaarLinkage: Maybe Bool
     individualPANCheck: Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
+    pickupStallMonitoringConfig: Maybe PickupStallMonitoringConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
     rcChangeThresholdDays: Maybe Int
@@ -1455,6 +1476,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
+    pickupStallMonitoringConfig: Maybe Value
     feedbackNotificationConfig: Maybe Value
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
     sameRiderDriverRideCountLookbackDays: Maybe Int
@@ -1550,6 +1572,7 @@ TransporterConfig:
     isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
+    pickupStallMonitoringConfig: Data.Aeson.toJSON <$> pickupStallMonitoringConfig|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
     analyticsConfig: Just . Data.Aeson.toJSON|I
     driverWalletConfig: Just . Data.Aeson.toJSON|I
@@ -1664,6 +1687,9 @@ TransporterConfig:
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       cancellationRateSlabConfig|E
+    pickupStallMonitoringConfig: (\val -> case Data.Aeson.fromJSON val of
+      Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
+      pickupStallMonitoringConfig|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
     analyticsConfig:
       Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig
@@ -1756,6 +1782,7 @@ TransporterConfig:
     minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
+    pickupStallMonitoringConfig: json
     driverCallingOption: text
     missingMappingFallbackVariant: text
     analyticsConfig: json

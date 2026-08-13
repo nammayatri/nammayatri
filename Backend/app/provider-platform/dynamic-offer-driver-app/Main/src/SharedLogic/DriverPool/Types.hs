@@ -368,7 +368,8 @@ data TripQuoteDetail = TripQuoteDetail
     govtCharges :: Maybe HighPrecMoney,
     estimateOrQuoteId :: Text,
     eligibleForUpgrade :: Bool,
-    commissionCharges :: Maybe HighPrecMoney
+    commissionCharges :: Maybe HighPrecMoney,
+    driverCancellationNotAllowed :: Maybe Bool
   }
 
 data DriverSearchBatchInput m = DriverSearchBatchInput

@@ -62,6 +62,7 @@ import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
 import SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout (sendSpecialZonePayout)
+import SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress (checkDriverPickupProgress)
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (runReconciliationJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler (runReconciliationSchedulerJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep (runReconciliationSweepJob)
@@ -153,6 +154,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendScheduledRideNotificationsToDriver
           & putJobHandlerInListWrapper flowRt env sendTagActionNotification
           & putJobHandlerInListWrapper flowRt env sendScheduledRideAssignedOnUpdate
+          & putJobHandlerInListWrapper flowRt env checkDriverPickupProgress
           & putJobHandlerInListWrapper flowRt env checkExotelCallStatusAndNotifyBAP
           & putJobHandlerInListWrapper flowRt env sendFleetAlert
           & putJobHandlerInListWrapper flowRt env runDailyJob

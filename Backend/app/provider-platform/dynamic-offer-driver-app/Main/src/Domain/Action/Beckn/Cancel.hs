@@ -24,33 +24,22 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
--- import Data.Aeson as A
 import Data.Maybe
+import qualified Data.Text as Text
 import Domain.Action.UI.Ride.CancelRide.Internal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.Common as DTC
--- import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
--- import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.SearchTry as ST
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Maps
--- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
--- import qualified Lib.Yudhishthira.Types as LYT
-
--- import qualified SharedLogic.UserCancellationDues as UserCancellationDues
-
--- import qualified Storage.Queries.CallStatus as QCallStatus
-
--- import Tools.DynamicLogic
-
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -63,8 +52,10 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.DriverPool as DP
@@ -150,6 +141,20 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+
+    -- Driver-fault attribution: if the pickup progress monitor had an active stall case
+    -- when the customer cancelled, count it against the driver (unless the monitor already
+    -- recorded it at a terminal stage — the ride tag marks that). Runs regardless of
+    -- whether this cancel results in reallocation: a customer forced to cancel/reallocate
+    -- because the driver never moved is exactly the case this must catch.
+    whenJust mbRide $ \ride ->
+      fork "record pickup stall on customer cancel" $ do
+        let alreadyRecorded = any (\(LYT.TagNameValue t) -> PickupStall.pickupStallRideTagPrefix `Text.isPrefixOf` t) (fromMaybe [] ride.rideTags)
+        unless alreadyRecorded $ do
+          mbMonitorState :: Maybe PickupStall.PickupProgressState <- Redis.safeGet (PickupStall.pickupProgressStateKey ride.id)
+          whenJust (mbMonitorState >>= (.activeCase)) $ \stallCase -> do
+            QRide.updateRideTags (Just $ PickupStall.mkPickupStallRideTag stallCase : fromMaybe [] ride.rideTags) ride.id
+            PickupStall.recordPickupStall transporterConfig ride.driverId ride.merchantOperatingCityId ride.id stallCase PickupStall.CustomerCancelledDriverAtFault
 
     isReallocated <-
       case mbRide of

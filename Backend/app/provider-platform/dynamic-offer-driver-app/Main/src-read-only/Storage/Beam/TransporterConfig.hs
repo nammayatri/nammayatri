@@ -267,6 +267,7 @@ data TransporterConfigT f = TransporterConfigT
     payoutRideMoneyToDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     payoutRideScheduleTimeBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     pickupLocThreshold :: B.C f Kernel.Types.Common.Meters,
+    pickupStallMonitoringConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     qarCalRadiusInKm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -352,8 +353,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
+$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)

@@ -393,6 +393,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 isSafetyPlus = Just isEligibleForSafetyPlusCharge,
                 coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
                 commissionCharges = tripQuoteDetail.commissionCharges,
+                driverCancellationNotAllowed = tripQuoteDetail.driverCancellationNotAllowed,
                 ..
               }
       pure searchRequestForDriver

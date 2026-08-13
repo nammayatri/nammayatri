@@ -201,6 +201,7 @@ buildSelectedQuote estimate providerInfo now req@QSRLite.SearchRequestLite {..} 
                     },
             vehicleServiceTierAirConditioned = estimate.vehicleServiceTierAirConditioned,
             isAirConditioned = estimate.isAirConditioned,
+            driverCancellationNotAllowed = estimate.driverCancellationNotAllowed,
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             vehicleServiceTierLuggageCapacity = estimate.vehicleServiceTierLuggageCapacity,
             specialLocationName = estimate.specialLocationName,

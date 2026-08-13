@@ -1682,6 +1682,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     stateEntryPermitCharges :: Text,
     conditionalCharges :: Text,
     driverCancellationPenaltyAmount :: Text,
+    driverCancellationNotAllowed :: Text,
     perLuggageCharge :: Text,
     returnFee :: Text,
     boothCharges :: Text,
@@ -1788,6 +1789,7 @@ instance ToNamedRecord FarePolicyCSVRow where
         "state_entry_permit_charges" .= stateEntryPermitCharges,
         "additional_charges" .= conditionalCharges,
         "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
+        "driver_cancellation_not_allowed" .= driverCancellationNotAllowed,
         "per_luggage_charge" .= perLuggageCharge,
         "return_fee" .= returnFee,
         "booth_charges" .= boothCharges,
@@ -1893,6 +1895,7 @@ farePolicyCSVHeader =
       "state_entry_permit_charges",
       "additional_charges",
       "driver_cancellation_penalty_amount",
+      "driver_cancellation_not_allowed",
       "per_luggage_charge",
       "return_fee",
       "booth_charges",
@@ -1998,6 +2001,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "state_entry_permit_charges"
       <*> r .: "additional_charges"
       <*> r .: "driver_cancellation_penalty_amount"
+      -- optional column: old fare-policy CSV templates don't have it
+      <*> (r .: "driver_cancellation_not_allowed" <|> pure "")
       <*> r .: "per_luggage_charge"
       <*> r .: "return_fee"
       <*> r .: "booth_charges"
@@ -2653,6 +2658,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     stateEntryPermitCharges = stateEntryPermit,
                     conditionalCharges = conditionalChargesJson,
                     driverCancellationPenaltyAmount = maybe "" showT farePolicy.driverCancellationPenaltyAmount,
+                    driverCancellationNotAllowed = maybe "" showT farePolicy.driverCancellationNotAllowed,
                     perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
                     returnFee = returnFeeVal,
                     boothCharges = boothChargesVal,
@@ -3019,6 +3025,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
+      let driverCancellationNotAllowed :: (Maybe Bool) = readMaybeCSVField idx row.driverCancellationNotAllowed "Driver Cancellation Not Allowed"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let driverAllowance :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverAllowance "Driver Allowance"
@@ -4766,6 +4773,7 @@ applyVehicleServiceTierUpdate existing req =
       DVST.seatingCapacity = req.seatingCapacity <|> existing.seatingCapacity,
       DVST.airConditionedThreshold = req.airConditionedThreshold <|> existing.airConditionedThreshold,
       DVST.isAirConditioned = req.isAirConditioned <|> existing.isAirConditioned,
+      DVST.driverCancellationNotAllowed = req.driverCancellationNotAllowed <|> existing.driverCancellationNotAllowed,
       DVST.isIntercityEnabled = req.isIntercityEnabled <|> existing.isIntercityEnabled,
       DVST.isRentalsEnabled = req.isRentalsEnabled <|> existing.isRentalsEnabled,
       DVST.oxygen = req.oxygen <|> existing.oxygen,
@@ -4871,6 +4879,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         seatingCapacity = Just req.seatingCapacity,
         airConditionedThreshold = req.airConditionedThreshold,
         isAirConditioned = req.isAirConditioned,
+        driverCancellationNotAllowed = req.driverCancellationNotAllowed,
         isIntercityEnabled = req.isIntercityEnabled,
         isRentalsEnabled = req.isRentalsEnabled,
         allowedVehicleVariant = req.allowedVehicleVariant,

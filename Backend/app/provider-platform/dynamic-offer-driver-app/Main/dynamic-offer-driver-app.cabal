@@ -481,6 +481,7 @@ library
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
+      SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress
       SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
       SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler
       SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep
@@ -515,6 +516,7 @@ library
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
+      SharedLogic.BehaviourManagement.PickupStall
       SharedLogic.BehaviourManagement.Visibility
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking

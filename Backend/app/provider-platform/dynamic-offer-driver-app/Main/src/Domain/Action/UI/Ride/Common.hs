@@ -237,7 +237,8 @@ data DriverRideRes = DriverRideRes
     amountToCollectInCashWithCurrency :: Maybe PriceAPIEntity,
     amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
     rideEarnings :: Maybe RideEarnings,
-    customerLanguage :: Maybe Maps.Language
+    customerLanguage :: Maybe Maps.Language,
+    driverCancellationNotAllowed :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -596,6 +597,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fromMaybe 0 estimatedFareParams.customerCancellationDues,
+        driverCancellationNotAllowed = estimatedFareParams.driverCancellationNotAllowed,
         estimatedTollCharges = estimatedFareParams.tollCharges,
         parkingCharge = displayParkingCharge,
         tollCharges = ride.tollCharges,

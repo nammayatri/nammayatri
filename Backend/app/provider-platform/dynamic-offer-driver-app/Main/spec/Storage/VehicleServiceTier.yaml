@@ -25,6 +25,7 @@ VehicleServiceTier:
     seatingCapacity: Maybe Int
     airConditionedThreshold: Maybe Double
     isAirConditioned: Maybe Bool
+    driverCancellationNotAllowed: Maybe Bool
     isIntercityEnabled: Maybe Bool
     isRentalsEnabled: Maybe Bool
     oxygen: Maybe Double

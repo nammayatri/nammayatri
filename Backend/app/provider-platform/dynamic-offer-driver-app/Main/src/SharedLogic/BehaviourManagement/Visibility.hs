@@ -79,6 +79,17 @@ defaultDriverDomainConfig =
                 counters = [BTT.ACTION_COUNT],
                 periods = []
               }
+          ),
+          ( "PICKUP_STALL",
+            BTT.CounterConfig
+              { windowSizeDays = 30,
+                counters = [BTT.ACTION_COUNT],
+                periods =
+                  [ BTT.mkPeriodConfig "daily" 1,
+                    BTT.mkPeriodConfig "weekly" 7,
+                    BTT.mkPeriodConfig "monthly" 30
+                  ]
+              }
           )
         ],
       blockReasonTags =
@@ -91,7 +102,10 @@ defaultDriverDomainConfig =
           "AC_USAGE",
           "HARD_BLOCK",
           "SOFT_BLOCK",
-          "PERMANENT_BLOCK"
+          "PERMANENT_BLOCK",
+          "PickupStall",
+          "PICKUP_STALL_FEE",
+          "PICKUP_STALL_BLOCK"
         ],
       blockTypes = [BTT.HARD_BLOCK, BTT.SOFT_BLOCK, BTT.FEATURE_BLOCK, BTT.PERMANENT_BLOCK]
     }

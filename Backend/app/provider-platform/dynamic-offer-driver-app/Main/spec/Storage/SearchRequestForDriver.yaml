@@ -111,6 +111,7 @@ SearchRequestForDriver:
     conditionalCharges: "[ConditionalChargesCategories]"
     coinsRewardedOnGoldTierRide: Maybe Int
     commissionCharges: Maybe HighPrecMoney
+    driverCancellationNotAllowed: Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text

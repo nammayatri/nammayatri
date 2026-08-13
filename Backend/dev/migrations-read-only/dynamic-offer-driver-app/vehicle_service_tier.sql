@@ -459,3 +459,12 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN cancellation_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN availability_check_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN driver_cancellation_not_allowed boolean ;
+
+
+------- SQL updates -------
+

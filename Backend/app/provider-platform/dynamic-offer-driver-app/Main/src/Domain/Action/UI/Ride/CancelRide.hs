@@ -226,6 +226,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
           buildRideCancelationReason Nothing Nothing Nothing DBCR.ByFleetOwner ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.FleetOwner)
         _ -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
+          -- Fare-params snapshot of the service-tier/fare-policy config; dashboard and system requestors stay exempt.
+          when (booking.fareParams.driverCancellationNotAllowed == Just True) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
           goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled, driverGoHomeRequestId) <-

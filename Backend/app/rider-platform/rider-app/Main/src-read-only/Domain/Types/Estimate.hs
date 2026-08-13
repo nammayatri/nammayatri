@@ -36,6 +36,7 @@ data Estimate = Estimate
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driversLocation :: [Kernel.External.Maps.LatLong],
     estimateBreakupList :: [Domain.Types.Estimate.EstimateBreakup],
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

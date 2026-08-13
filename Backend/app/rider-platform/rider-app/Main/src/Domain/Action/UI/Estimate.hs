@@ -69,6 +69,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     isBlockedRoute :: Maybe Bool,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
+    driverCancellationNotAllowed :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierLuggageCapacity :: Maybe Int,
     validTill :: UTCTime,

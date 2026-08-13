@@ -304,7 +304,13 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
       logDebug $ "farePolicy after updating driverExtraFeeBounds: " <> show farePolicy <> " and mbDriverExtraFeeBounds: " <> show mbDriverExtraFeeBounds
       let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity
       mbFareSettlementType <- getFareSettlementTypeForSpecialZone mbSpecialZoneId
-      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType}
+      -- Driver cancellation block needs a double opt-in: the service tier enables it,
+      -- and the fare policy can explicitly opt out with Just False for finer scopes.
+      let resolvedDriverCancellationNotAllowed =
+            if (mbVehicleServiceTierItem >>= (.driverCancellationNotAllowed)) == Just True && farePolicy.driverCancellationNotAllowed /= Just False
+              then Just True
+              else Nothing
+      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed}
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
           if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)

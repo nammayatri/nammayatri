@@ -74,6 +74,7 @@ data AllocatorJobType
   | ScheduleTagActionNotification
   | DriverReferralPayout
   | ScheduledRideAssignedOnUpdate
+  | CheckDriverPickupProgress
   | CheckExotelCallStatusAndNotifyBAP
   | Daily
   | Weekly
@@ -132,6 +133,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduleTagActionNotification jobData = AnyJobInfo <$> restoreJobInfo SScheduleTagActionNotification jobData
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
+  restoreAnyJobInfo SCheckDriverPickupProgress jobData = AnyJobInfo <$> restoreJobInfo SCheckDriverPickupProgress jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
@@ -459,6 +461,17 @@ data ScheduledRideAssignedOnUpdateJobData = ScheduledRideAssignedOnUpdateJobData
 instance JobInfoProcessor 'ScheduledRideAssignedOnUpdate
 
 type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedOnUpdateJobData
+
+data CheckDriverPickupProgressJobData = CheckDriverPickupProgressJobData
+  { bookingId :: Id DB.Booking,
+    rideId :: Id SRide.Ride,
+    driverId :: Id DP.Person
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckDriverPickupProgress
+
+type instance JobContent 'CheckDriverPickupProgress = CheckDriverPickupProgressJobData
 
 data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
   { rideId :: Id DRide.Ride,

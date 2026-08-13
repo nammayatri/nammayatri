@@ -42,6 +42,7 @@ data QuoteT f = QuoteT
     specialZoneQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     staticBppQuoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    driverCancellationNotAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     estimatedPickupDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,

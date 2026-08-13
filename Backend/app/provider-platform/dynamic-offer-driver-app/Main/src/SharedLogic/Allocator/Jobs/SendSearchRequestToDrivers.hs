@@ -154,8 +154,8 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         parcelType = Nothing,
         parcelQuantity = Nothing,
         parallelSearchRequestCount = Nothing,
-        poolingLogicVersion = Nothing,
-        poolingConfigVersion = Nothing,
+        poolingLogicVersion = searchReq.poolingLogicVersion,
+        poolingConfigVersion = searchReq.poolingConfigVersion,
         tripEstimatedDistance = Nothing,
         tripEstimatedDuration = Nothing,
         backendAppVersion = Nothing,
@@ -164,7 +164,8 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         clientBundleVersion = Nothing,
         clientConfigVersion = Nothing,
         clientDevice = Nothing,
-        reactBundleVersion = Nothing
+        reactBundleVersion = Nothing,
+        driverCancellationNotAllowed = Nothing
       }
 
 sendSearchRequestToDrivers ::
@@ -227,7 +228,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
               driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
               businessDiscount = if searchTry.billingCategory == SLT.BUSINESS then fromMaybe 0.0 quote.fareParams.businessDiscount else 0.0
               personalDiscount = if searchTry.billingCategory == SLT.PERSONAL then fromMaybe 0.0 quote.fareParams.personalDiscount else 0.0
-          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False quote.fareParams.congestionCharge searchTry.petCharges quote.fareParams.priorityCharges Nothing quote.fareParams.tollCharges quote.fareParams.govtCharges
+          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False quote.fareParams.congestionCharge searchTry.petCharges quote.fareParams.priorityCharges Nothing quote.fareParams.tollCharges quote.fareParams.govtCharges quote.fareParams.driverCancellationNotAllowed
 
   tripQuoteDetails <-
     case tripQuoteDetailsWithoutUpgrades of
@@ -282,7 +283,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
           driverAdditionalCharges = filterChargesByApplicability (fromMaybe [] $ (.conditionalCharges) <$> estimate.farePolicy) searchReq
           businessDiscount = if searchTry.billingCategory == SLT.BUSINESS then fromMaybe 0.0 estimate.businessDiscount else 0.0
           personalDiscount = if searchTry.billingCategory == SLT.PERSONAL then fromMaybe 0.0 estimate.personalDiscount else 0.0
-      SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges estimate.eligibleForUpgrade ((.congestionCharge) =<< estimate.fareParams) searchTry.petCharges (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges))
+      SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges estimate.eligibleForUpgrade ((.congestionCharge) =<< estimate.fareParams) searchTry.petCharges (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed))
     filterChargesByApplicability conditionalCharges sReq = do
       let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
           nyregularCharges = if fromMaybe False sReq.isReserveRide then find (\ac -> (ac.chargeCategory) == DAC.NYREGULAR_SUBSCRIPTION_CHARGE) conditionalCharges else Nothing
@@ -327,12 +328,14 @@ sendSearchRequestToDrivers' ::
   DriverSearchBatchInput m ->
   GoHomeConfig ->
   m (ExecutionResult, PoolType, Maybe Seconds)
-sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg = do
+sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput' goHomeCfg = do
+  searchReqWithPoolingVersion <- I.ensurePoolingLogicVersion driverSearchBatchInput'.searchReq
+  let driverSearchBatchInput = driverSearchBatchInput' {searchReq = searchReqWithPoolingVersion}
   -- In case of static offer flow we will have booking created before driver ride request is sent
   mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId
-  handler (handle mbBooking) goHomeCfg driverSearchBatchInput.searchReq.transactionId
+  handler (handle mbBooking driverSearchBatchInput) goHomeCfg searchReqWithPoolingVersion.transactionId
   where
-    handle mbBooking =
+    handle mbBooking driverSearchBatchInput =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,

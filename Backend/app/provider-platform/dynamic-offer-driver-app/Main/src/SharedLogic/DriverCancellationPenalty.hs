@@ -15,6 +15,7 @@
 module SharedLogic.DriverCancellationPenalty
   ( mkCancellationPenaltyFee,
     accumulateCancellationPenalty,
+    chargeDriverPenaltyFee,
   )
 where
 
@@ -203,43 +204,62 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
             QRide.updateDriverCancellationPenalty Nothing (Just penaltyAmount) ride.id
           else do
             -- Legacy path: create/update DriverFee
-            now <- getCurrentTime
-            existingCancellationFee <-
-              QDF.findOngoingCancellationPenaltyFeeByDriverIdAndServiceName
-                (cast ride.driverId)
-                DPlan.YATRI_SUBSCRIPTION
-                booking.providerId
-                booking.merchantOperatingCityId
-                now
-            (feeId, penAmt) <- case existingCancellationFee of
-              Just existingFee -> do
-                Redis.whenWithLockRedis (cancellationPenaltyLockKey existingFee.id.getId) 10 $ do
-                  let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
-                      newAmount = currentAmount + penaltyAmount
-                      newNumRides = existingFee.numRides + 1
-                  QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
-                return (existingFee.id, penaltyAmount)
-              Nothing -> do
-                (_, newFee) <-
-                  mkCancellationPenaltyFee
-                    now
-                    booking.providerId
-                    booking.merchantOperatingCityId
-                    ride.driverId
-                    penaltyAmount
-                    booking.currency
-                    transporterConfig
-                QDF.create newFee
-                logInfo $
-                  "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
-                    <> " for ₹"
-                    <> show penaltyAmount
-                return (newFee.id, penaltyAmount)
-            QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penAmt) ride.id
+            feeId <- chargeDriverPenaltyFee booking.providerId booking.merchantOperatingCityId ride.driverId penaltyAmount booking.currency transporterConfig
+            QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penaltyAmount) ride.id
       Nothing ->
         logError $
           "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "
             <> ride.id.getId
+
+-- | Create or top up the driver's ongoing CANCELLATION_PENALTY fee. Shared by the
+-- per-ride cancellation penalty (accumulateCancellationPenalty) and the behavior
+-- engine's CHARGE_FEE consequence (ConsequenceDispatcher) — both ride the same
+-- DriverFee collection and dashboard waiver rails.
+chargeDriverPenaltyFee ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMerc.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Driver ->
+  HighPrecMoney ->
+  Currency ->
+  DTC.TransporterConfig ->
+  m (Id DF.DriverFee)
+chargeDriverPenaltyFee merchantId merchantOpCityId driverId penaltyAmount currency transporterConfig = do
+  now <- getCurrentTime
+  existingCancellationFee <-
+    QDF.findOngoingCancellationPenaltyFeeByDriverIdAndServiceName
+      (cast driverId)
+      DPlan.YATRI_SUBSCRIPTION
+      merchantId
+      merchantOpCityId
+      now
+  case existingCancellationFee of
+    Just existingFee -> do
+      Redis.whenWithLockRedis (cancellationPenaltyLockKey existingFee.id.getId) 10 $ do
+        let currentAmount = fromMaybe 0 existingFee.cancellationPenaltyAmount
+            newAmount = currentAmount + penaltyAmount
+            newNumRides = existingFee.numRides + 1
+        QDF.updateCancellationPenaltyAmountAndNumRides existingFee.id newAmount newNumRides now
+      return existingFee.id
+    Nothing -> do
+      (_, newFee) <-
+        mkCancellationPenaltyFee
+          now
+          merchantId
+          merchantOpCityId
+          driverId
+          penaltyAmount
+          currency
+          transporterConfig
+      QDF.create newFee
+      logInfo $
+        "Created new CANCELLATION_PENALTY DriverFee " <> newFee.id.getId
+          <> " for ₹"
+          <> show penaltyAmount
+      return newFee.id
 
 cancellationPenaltyLockKey :: Text -> Text
 cancellationPenaltyLockKey id' = "Driver:Cancellation:Penalty:DriverFeeId-" <> id'

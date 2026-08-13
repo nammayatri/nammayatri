@@ -695,3 +695,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_service_tier_luggage_capacity 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN navigation_instruction text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN driver_cancellation_not_allowed boolean ;

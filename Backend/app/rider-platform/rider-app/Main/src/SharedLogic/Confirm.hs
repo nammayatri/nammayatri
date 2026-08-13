@@ -444,6 +444,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
           vehicleIconUrl = quote.vehicleIconUrl,
           isAirConditioned = quote.isAirConditioned,
+          driverCancellationNotAllowed = quote.driverCancellationNotAllowed,
           serviceTierShortDesc = quote.serviceTierShortDesc,
           clientBundleVersion = quote.clientBundleVersion,
           clientSdkVersion = quote.clientSdkVersion,

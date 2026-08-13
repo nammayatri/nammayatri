@@ -67,6 +67,7 @@ data FareParameters = FareParameters
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
     driverCancellationPenaltyAmount :: Maybe HighPrecMoney,
+    driverCancellationNotAllowed :: Maybe Bool,
     -- | Payment processing fee (blended or method-specific)
     -- TODO: Will be enhanced when payment context is available
     paymentProcessingFee :: Maybe HighPrecMoney,

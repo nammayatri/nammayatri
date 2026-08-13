@@ -151,3 +151,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN vehicle_service_tier_luggage_capacity int
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN navigation_instruction text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN driver_cancellation_not_allowed boolean ;
