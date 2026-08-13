@@ -305,10 +305,22 @@ validateUploadedFileType enforce docType content mbDeclaredExtension = do
         logWarning $ "UploadFileTypeCheck:shadow: would have rejected upload. " <> logDetail
         pure mbFileType
 
+-- | The declared extension is caller-supplied and reaches 'createPath', where it is concatenated
+-- into the S3 object key. Anything outside a bare alphanumeric run is rejected rather than
+-- cleaned, so a value carrying separators or traversal segments (@png/../../other-driver/x@)
+-- cannot steer the key out of the driver's own prefix; it falls through to the @png@ default
+-- instead. Length is bounded for the same reason — an extension is a handful of characters, and
+-- an unbounded one is only ever an attempt to shape the key.
 normalizeExtension :: Text -> Maybe Text
 normalizeExtension ext = do
   let normalized = ext & T.strip & T.dropWhile (== '.') & T.toLower
-  if T.null normalized then Nothing else Just normalized
+  if T.null normalized || T.length normalized > 8 || not (T.all (`elem` allowedExtensionChars) normalized)
+    then Nothing
+    else Just normalized
+  where
+    -- Already lower-cased above, so the lower-case run is the whole alphanumeric set.
+    allowedExtensionChars :: [Char]
+    allowedExtensionChars = ['a' .. 'z'] <> ['0' .. '9']
 
 -- | Extension the object is stored under.
 --

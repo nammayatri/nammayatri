@@ -139,8 +139,17 @@ postTicketsTicketdashboardRegister merchantShortId opCity req = do
   when (null ticketDashboardRoleIds) $ throwError $ InternalError "No ticket dashboard roles found"
   unlessM (isNothing <$> QP.findByMobileNumberAndRoleIdsWithType @'PT.TicketDashboard req.mobileNumber req.mobileCountryCode ticketDashboardRoleIds) $
     throwError (InvalidRequest "Phone already registered")
+  -- The merchant the user is registered under comes from the body, not from the path (the path one
+  -- is deliberately skipMerchantCityAccessCheck'd here), so it is caller-supplied and unchecked
+  -- until it is resolved. Resolving it and running the server-access check before the outbound call
+  -- means an unknown or unreachable merchantId is rejected outright, instead of after the rider app
+  -- has already created a user that the local insert then refuses to match.
+  merchant <-
+    QMerchant.findByShortId (Kernel.Types.Id.ShortId req.merchantId)
+      >>= fromMaybeM (MerchantDoesNotExist req.merchantId)
+  merchantServerAccessCheck merchant
   res <- API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardRegister) req
-  registerTicketDashboard req res.id
+  registerTicketDashboard req res.id merchant
 
 ------------------------------------ HELPER FUNCTIONS --------------------------------
 
@@ -197,17 +206,14 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType merchantId = 
         entityId = Nothing
       }
 
-registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) => API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Maybe Text -> m API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
-registerTicketDashboard req mbPersonId = do
+-- | The merchant is resolved and access-checked by the caller, before the outbound registration
+-- call, and passed in here so the two cannot disagree about who the user belongs to.
+registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) => API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Maybe Text -> Domain.Types.Merchant.Merchant -> m API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
+registerTicketDashboard req mbPersonId merchant = do
   runRequestValidation validateTicketDashboardRegister req
   ticketDashboardRole <-
     QRole.findByDashboardAccessType DRole.TICKET_DASHBOARD_USER
       >>= fromMaybeM (RoleDoesNotExist "TICKET_DASHBOARD_USER")
-  -- Merchant first: the user being created belongs to it, so buildTicketDashboardUser needs its id.
-  merchant <-
-    QMerchant.findByShortId (Kernel.Types.Id.ShortId req.merchantId)
-      >>= fromMaybeM (MerchantDoesNotExist req.merchantId)
-  merchantServerAccessCheck merchant
   ticketUser <- buildTicketDashboardUser req mbPersonId ticketDashboardRole.id ticketDashboardRole.dashboardAccessType merchant.id
   let city' = merchant.defaultOperatingCity
   merchantAccess <- DP.buildMerchantAccess ticketUser.id merchant.id merchant.shortId city'

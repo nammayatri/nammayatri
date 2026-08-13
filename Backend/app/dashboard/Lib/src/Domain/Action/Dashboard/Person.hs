@@ -563,8 +563,15 @@ changePassword tokenInfo req = do
 -- | Rate-limit bucket keyed on email. Deliberately shared with login (Registration.login) so an
 -- attacker cannot get a fresh budget by switching between the two endpoints that both resolve
 -- credentials via findByEmailAndPassword.
+--
+-- Normalized the same way the lookup is: findByEmailAndPasswordWithType hashes the lower-cased
+-- email, so a mixed-case and a lower-case spelling resolve to one account. Keying on the raw string
+-- gave each casing its own budget, which is a fresh set of guesses per variant against one account.
+-- Stripping surrounding whitespace only ever merges buckets further, so it cannot widen the budget.
 makeEmailHitsCountKey :: Maybe Text -> Text
-makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
+makeEmailHitsCountKey email = "Email:" <> maybe "" normalizeEmailForKey email <> ":hitsCount"
+  where
+    normalizeEmailForKey = T.toLower . T.strip
 
 changePasswordAfterExpiry ::
   ( BeamFlow m r,
