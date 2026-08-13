@@ -17,6 +17,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -37,7 +38,8 @@ getFleetEngineDriverToken ::
     CacheFlow m r,
     EncFlow m r,
     CoreMetrics m,
-    HasRequestId r
+    HasRequestId r,
+    HasKafkaProducer r
   ) =>
   (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   m FleetEngineDriverTokenRes
