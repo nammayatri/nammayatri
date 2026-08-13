@@ -28,6 +28,7 @@ SpecialZoneQueueRequest:
     gateName: Text
     specialLocationName: Text
     vehicleType: Text
+    vehicleName: "Maybe Text"
     triggerSource: "Maybe TriggerSource"
     triggerRequestId: "Maybe Text"
     createdAt: UTCTime

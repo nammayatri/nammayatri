@@ -28,6 +28,7 @@ data SpecialZoneQueueRequest = SpecialZoneQueueRequest
     triggerSource :: Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.TriggerSource,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
+    vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
