@@ -42,9 +42,10 @@ handler = syncSearch
 syncSearch ::
   Text ->
   Maybe Text ->
+  Maybe Bool ->
   Search.SearchReqV2 ->
   FlowHandler Spec.OnSearchReq
-syncSearch merchantIdRaw mbToken reqV2 = withFlowHandlerAPI $ do
+syncSearch merchantIdRaw mbToken mbIsShadowSearch reqV2 = withFlowHandlerAPI $ do
   let transporterId = Id merchantIdRaw :: Id DM.Merchant
   merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
   unless (Just merchant.internalApiKey == mbToken) $
@@ -60,13 +61,17 @@ syncSearch merchantIdRaw mbToken reqV2 = withFlowHandlerAPI $ do
     city <- Utils.getContextCity context
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
     void $ Utils.validateSearchContext context transporterId moc.id
-    dSearchReq <- ACL.buildSearchReqV2Raw bapId bapUri reqV2 bapUri
+    dSearchReq' <- ACL.buildSearchReqV2Raw bapId bapUri reqV2 bapUri
+    let isShadowSearch = fromMaybe False mbIsShadowSearch
+        dSearchReq = dSearchReq' {DSearch.isShadowSearch = isShadowSearch}
     msgId <- Utils.getMessageId context
     country <- Utils.getContextCountry context
 
+    -- A shadow search arrives under its own transaction id (the BAP creates a separate
+    -- search request for it), so it never collides with the search it shadows here.
     isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
     unless isFirst $
       throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
-    (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "sync_search" (toJSON reqV2)
+    (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
     logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
     pure onSearchReq

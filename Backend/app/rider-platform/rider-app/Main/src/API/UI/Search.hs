@@ -100,6 +100,7 @@ import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
+import qualified SharedLogic.BetterRoutePointSearch as BRPS
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
@@ -284,27 +285,93 @@ syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
 dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> Maybe Bool -> Flow (Maybe DQuote.GetQuotesRes)
 dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing
   shouldSync <-
     if fromMaybe False mbEnableSyncSearch
       then do
-        mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing
         let mbSyncCfg = mbRiderConfig >>= (.syncSearchDispatchConfig)
             mbFromSpecialLocId = Id <$> dSearchRes.searchRequest.fromSpecialLocationId
         pure $ SSD.shouldDispatchSync mbSyncCfg req mbFromSpecialLocId
       else pure False
+  -- Look for a point on the resolved route that would cut a detour out of the ride. On a
+  -- hit this persists a shadow search request; it is priced by the BPP in parallel below,
+  -- and never replaces what the customer asked for.
+  mbSuggestedRes <- case mbRiderConfig of
+    Just riderConfig ->
+      withTryCatch "betterRoutePointSearch" (JMU.measureLatency (BRPS.buildSuggestedSearchRes riderConfig dSearchRes) "betterRoutePoint.total") >>= \case
+        Right res -> pure res
+        Left e -> do
+          logError $ "better_route_point: shadow search build failed, continuing without it: " <> T.pack (show e)
+          pure Nothing
+    Nothing -> pure Nothing
+  suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedRes
   if shouldSync
     then do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
       fork "search cabs" $
         void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-      awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
+      mbQuotesRes <- awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
+      -- Both searches were dispatched together; only now do we join on the suggestion, so
+      -- its latency overlaps the real search's instead of adding to it.
+      case (mbQuotesRes, suggestedAwaitable) of
+        (Just quotesRes, Just awaitable) -> do
+          mbSuggested <- awaitSuggestedSearch dSearchRes awaitable
+          pure . Just $ quotesRes {DQuote.suggestedEstimates = mbSuggested}
+        _ -> pure mbQuotesRes
     else do
       fork "search cabs" . withShortRetry $ do
         becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
         let generatedJson = encode becknTaxiReqV2
         logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
         void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+      -- Async path: nothing to join on. The shadow's estimates are persisted by its inline
+      -- on_search, and /rideSearch/results picks them up via parentSearchRequestId.
+      pure Nothing
+
+-- | Fires the shadow search at the BPP's internal sync endpoint, in parallel with the real
+-- search. Not routed through the gateway: this is a second price lookup for one customer
+-- intent, and it must not look like a second market-wide search.
+dispatchSuggestedSearch :: DSearch.SearchRes -> DSearch.SearchRes -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
+dispatchSuggestedSearch parentRes suggestedRes =
+  awaitableFork "betterRoutePointSearchDispatch" $ do
+    becknReq <- TaxiACL.buildSearchReqV2 suggestedRes
+    eRes <-
+      withTryCatch "betterRoutePointSearch:syncSearch" $
+        JMU.measureLatency
+          ( CallBPP.searchV2Sync
+              parentRes.merchant.driverOfferBaseUrl
+              parentRes.merchant.driverOfferMerchantId
+              parentRes.merchant.driverOfferApiKey
+              True
+              becknReq
+          )
+          "betterRoutePoint.bppSyncSearch"
+    case eRes of
+      Left e -> do
+        logWarning $ "better_route_point: sync_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
+        pure Nothing
+      Right onSearchReq ->
+        withTryCatch "betterRoutePointSearch:processOnSearch" (JMU.measureLatency (BeckOnSearch.processOnSearchInline onSearchReq) "betterRoutePoint.inlineOnSearch") >>= \case
+          Right (Just onSearchResult) ->
+            DQuote.mkSuggestedEstimates suggestedRes.searchRequest onSearchResult.estimates
+          Right Nothing -> pure Nothing
+          Left e -> do
+            logError $ "better_route_point: inline on_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
+            pure Nothing
+
+-- | Joins on the shadow search. It shares the real search's timeout budget, so a slow
+-- suggestion degrades to no suggestion rather than delaying the estimates the customer
+-- is waiting for.
+awaitSuggestedSearch :: DSearch.SearchRes -> ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)) -> Flow (Maybe DQuote.SuggestedEstimates)
+awaitSuggestedSearch dSearchRes awaitable =
+  L.await (Just syncSearchTimeoutMicros) awaitable >>= \case
+    Right r -> pure r
+    Left AwaitingTimeout -> do
+      logWarning $ "better_route_point: shadow search exceeded timeout for txn " <> dSearchRes.searchRequest.id.getId
+      pure Nothing
+    Left (ForkedFlowError e) -> do
+      logError $ "better_route_point: shadow search fork failed for txn " <> dSearchRes.searchRequest.id.getId <> ": " <> e
       pure Nothing
 
 awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
@@ -326,7 +393,7 @@ trySyncSearch dSearchRes becknTaxiReqV2 = do
       bppUrl = dSearchRes.merchant.driverOfferBaseUrl
       bppMerchantId = dSearchRes.merchant.driverOfferMerchantId
       token = dSearchRes.merchant.driverOfferApiKey
-  eRes <- withTryCatch "syncSearchDispatch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token becknTaxiReqV2
+  eRes <- withTryCatch "syncSearchDispatch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token False becknTaxiReqV2
   case eRes of
     Right onSearchReq -> do
       logInfo $ "sync_search succeeded for txn " <> txnId <> "; processing inline"

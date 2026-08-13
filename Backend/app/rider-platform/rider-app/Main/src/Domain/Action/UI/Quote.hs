@@ -15,6 +15,8 @@
 module Domain.Action.UI.Quote
   ( GetQuotesRes (..),
     OfferRes (..),
+    SuggestedEstimates (..),
+    mkSuggestedEstimates,
     getQuotes,
     getQuotesFromInMemory,
     estimateBuildLockKey,
@@ -109,7 +111,27 @@ data GetQuotesRes = GetQuotesRes
     estimates :: [UEstimate.EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity],
     allJourneysLoaded :: Bool,
-    journey :: Maybe [JourneyData]
+    journey :: Maybe [JourneyData],
+    suggestedEstimates :: Maybe SuggestedEstimates
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- | Estimates for a nearby pickup/drop that cuts a detour out of the ride, offered
+-- alongside the estimates for what the customer actually asked for. Their own pickup and
+-- drop are never overridden -- picking one of these is an explicit choice, and the
+-- estimate ids here belong to a separate search request that select/init resolve on their
+-- own.
+data SuggestedEstimates = SuggestedEstimates
+  { -- | The search request these estimates belong to. Selecting any of them books this one.
+    searchId :: Id SSR.SearchRequest,
+    estimates :: [UEstimate.EstimateAPIEntity],
+    -- | Where to walk from, and to. Absent when that end of the ride is unchanged.
+    suggestedPickup :: Maybe DL.LocationAPIEntity,
+    suggestedDrop :: Maybe DL.LocationAPIEntity,
+    walkDistanceToPickup :: Maybe Meters,
+    walkDistanceFromDrop :: Maybe Meters,
+    -- | How much shorter the ride becomes.
+    rideDistanceSaved :: Meters
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -195,7 +217,12 @@ getQuotes searchRequestId mbAllowMultiple = do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
     quoteList <- QQuote.findAllBySRId searchRequest.id
     estimateList <- QEstimate.findAllBySRId searchRequest.id
-    buildGetQuotesRes searchRequest estimateList quoteList riderConfig
+    res <- buildGetQuotesRes searchRequest estimateList quoteList riderConfig
+    -- The sync path already has the suggestion in hand and overrides this field; on the
+    -- polling path the shadow search has been persisting its estimates in the background
+    -- since /rideSearch, so read them here.
+    mbSuggested <- loadSuggestedEstimates searchRequest
+    pure res {suggestedEstimates = mbSuggested}
 
 -- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
 -- produced by 'Domain.Action.Beckn.OnSearch.onSearch'. Skips the Redis
@@ -243,8 +270,52 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
         estimates,
         paymentMethods = [],
         allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
-        journey = journeyData
+        journey = journeyData,
+        -- Filled in by the caller: the sync path passes it inline, the polling path reads
+        -- it from the shadow search. See loadSuggestedEstimates.
+        suggestedEstimates = Nothing
       }
+
+-- | The better-route-point suggestion for a search, if a shadow search was created for it
+-- and the BPP has answered. Absent is the normal case.
+loadSuggestedEstimates :: SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
+loadSuggestedEstimates searchRequest
+  -- A shadow never has a shadow of its own; asking would be a pointless read.
+  | isJust searchRequest.parentSearchRequestId = pure Nothing
+  | otherwise =
+    QSR.findByParentSearchRequestId searchRequest.id >>= \case
+      Nothing -> pure Nothing
+      Just shadow -> do
+        shadowEstimates <- QEstimate.findAllBySRId shadow.id
+        mkSuggestedEstimates shadow shadowEstimates
+
+-- | Renders a shadow search's estimates for the customer. Takes the shadow search request
+-- itself, since that is what carries the moved pickup/drop and the saving.
+mkSuggestedEstimates :: SSR.SearchRequest -> [DEstimate.Estimate] -> Flow (Maybe SuggestedEstimates)
+mkSuggestedEstimates shadow estimateList = do
+  -- Nothing to suggest without both a priced estimate and a saving to justify the walk.
+  case (nonEmpty estimateList, shadow.betterPointRideDistanceSaved) of
+    (Just _, Just rideDistanceSaved) -> do
+      person <- QP.findById shadow.riderId >>= fromMaybeM (PersonDoesNotExist shadow.riderId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = shadow.merchantOperatingCityId.getId}) Nothing
+      let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
+          isReferredRide = isJust shadow.driverIdentifier
+          language = fromMaybe Lang.ENGLISH person.language
+      providerLookup <- buildProviderLookup estimateList []
+      apiEstimates <- getEstimates shadow enableRideHailingOffers isReferredRide providerLookup estimateList language
+      pure . Just $
+        SuggestedEstimates
+          { searchId = shadow.id,
+            estimates = apiEstimates,
+            -- Only the end that actually moved gets a location; the other is unchanged from
+            -- what the customer entered, so repeating it would imply a walk that isn't there.
+            suggestedPickup = DL.makeLocationAPIEntity shadow.fromLocation <$ shadow.betterPointWalkToPickup,
+            suggestedDrop = shadow.betterPointWalkFromDrop >> (DL.makeLocationAPIEntity <$> shadow.toLocation),
+            walkDistanceToPickup = shadow.betterPointWalkToPickup,
+            walkDistanceFromDrop = shadow.betterPointWalkFromDrop,
+            rideDistanceSaved
+          }
+    _ -> pure Nothing
 
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe Bool -> CancellationStage -> m ()
 processActiveBooking booking mbIsDashBoardRequest cancellationStage = do

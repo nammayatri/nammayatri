@@ -105,6 +105,16 @@ SearchRequest:
     toSpecialLocationId: Maybe Text    # Fixed route: destination area ID
     discoveredSpecialLocationId: Maybe Text  # Auto-discovered special location from source geolocation
     syncSearch: Maybe Bool
+    # Better route point suggestion. A search request with parentSearchRequestId set is a
+    # shadow of that parent: same rider and time, but pickup/drop moved onto a point of the
+    # parent's route that cuts a detour out of the ride. It exists so the suggestion gets its
+    # own BPP transaction (and therefore its own route cache and estimates), letting the
+    # customer select it without disturbing the real search. Never surfaced as a search of
+    # its own -- only its estimates are, via suggestedEstimates on the parent's quotes.
+    parentSearchRequestId: Maybe (Id SearchRequest)
+    betterPointWalkToPickup: Maybe Meters
+    betterPointWalkFromDrop: Maybe Meters
+    betterPointRideDistanceSaved: Maybe Meters
 
 
   default:
@@ -270,6 +280,9 @@ SearchRequest:
   constraints:
     id: PrimaryKey
     riderId: SecondaryKey
+    # Read back by findByParentSearchRequestId in Storage.Queries.SearchRequestExtra, so the
+    # forced form is required for the KV secondary-key list to include it.
+    parentSearchRequestId: "!SecondaryKey"
 
   extraOperations:
     - EXTRA_QUERY_FILE

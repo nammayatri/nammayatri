@@ -346,37 +346,45 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       deploymentVersion <- asks (.version)
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription)
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
-      updateRiderPreferredOption quotes
+      -- A better-route-point shadow search (see SharedLogic.BetterRoutePointSearch) exists
+      -- only to price an alternative pickup/drop the customer may or may not accept. Its
+      -- estimates are persisted -- that is the point -- but it must not move rider state,
+      -- must not double-count analytics against the real search it shadows, and above all
+      -- must not auto-select: that would book a pickup the customer never chose.
+      let isShadowSearch = isJust searchRequest.parentSearchRequestId
+      unless isShadowSearch $ updateRiderPreferredOption quotes
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
-      fork "triggerEstimateEvents" $
-        forM_ estimates $ \est ->
-          triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
-      unless (null estimates) $
-        fork "event_tracking: user_request_quotes" $
-          ET.trackEvent searchRequest.merchantId searchRequest.merchantOperatingCityId (ET.UserRequestedQuotes (getId searchRequest.riderId) (length estimates))
+      unless isShadowSearch $ do
+        fork "triggerEstimateEvents" $
+          forM_ estimates $ \est ->
+            triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
+        unless (null estimates) $
+          fork "event_tracking: user_request_quotes" $
+            ET.trackEvent searchRequest.merchantId searchRequest.merchantOperatingCityId (ET.UserRequestedQuotes (getId searchRequest.riderId) (length estimates))
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
       Redis.withLockRedis lockKey 5 $ do
         QEstimate.createMany estimates
         QQuote.createMany quotes
         QPFS.clearCache searchRequest.riderId
 
-      when (searchRequest.isMeterRideSearch == Just True) $ do
+      when (searchRequest.isMeterRideSearch == Just True && not isShadowSearch) $ do
         quoteForMeterRide <- listToMaybe quotes & fromMaybeM (InvalidRequest "Quote for meter ride doesn't exist")
         void $ DConfirm.confirm searchRequest.riderId quoteForMeterRide.id Nothing Nothing Nothing Nothing False Nothing
 
-      whenJust mbRequiredEstimate $ \requiredEstimate -> do
-        shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId
-        let shouldAutoSelectForReserved = isReservedSearch && isJust mbNySubscription
-            shouldAutoSelectFinal = shouldAutoSelect || shouldAutoSelectForReserved
+      unless isShadowSearch $
+        whenJust mbRequiredEstimate $ \requiredEstimate -> do
+          shouldAutoSelect <- SLCF.createFares requestId.getId requiredEstimate.id.getId
+          let shouldAutoSelectForReserved = isReservedSearch && isJust mbNySubscription
+              shouldAutoSelectFinal = shouldAutoSelect || shouldAutoSelectForReserved
 
-        when shouldAutoSelectForReserved $ do
-          logTagInfo "onSearch" $ "Auto-selecting estimate for reserved ride: " <> show searchRequest.id.getId
-          -- Update NyRegularInstanceLog status to AUTO_SELECTED
-          void $
-            fork "Update NyRegularInstanceLog status" $
-              updateNyRegularInstanceLogStatus searchRequest.id.getId
+          when shouldAutoSelectForReserved $ do
+            logTagInfo "onSearch" $ "Auto-selecting estimate for reserved ride: " <> show searchRequest.id.getId
+            -- Update NyRegularInstanceLog status to AUTO_SELECTED
+            void $
+              fork "Update NyRegularInstanceLog status" $
+                updateNyRegularInstanceLogStatus searchRequest.id.getId
 
-        when shouldAutoSelectFinal $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
+          when shouldAutoSelectFinal $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
 
       Metrics.finishSearchMetrics merchant.name transactionId
       pure $ Just OnSearchResult {searchRequest, estimates, quotes, riderConfig}

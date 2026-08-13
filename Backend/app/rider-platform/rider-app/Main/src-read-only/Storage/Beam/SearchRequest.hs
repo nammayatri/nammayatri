@@ -29,6 +29,9 @@ data SearchRequestT f = SearchRequestT
     availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    betterPointRideDistanceSaved :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    betterPointWalkFromDrop :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    betterPointWalkToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -76,6 +79,7 @@ data SearchRequestT f = SearchRequestT
     offersFraudCheckFailureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     originStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    parentSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     placeNameSource :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -102,6 +106,6 @@ instance B.Table SearchRequestT where
 
 type SearchRequest = SearchRequestT Identity
 
-$(enableKVPG ''SearchRequestT ['id] [['riderId]])
+$(enableKVPG ''SearchRequestT ['id] [['parentSearchRequestId], ['riderId]])
 
 $(mkTableInstances ''SearchRequestT "search_request")

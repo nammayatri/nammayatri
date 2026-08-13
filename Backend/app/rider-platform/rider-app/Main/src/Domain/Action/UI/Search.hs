@@ -818,6 +818,12 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         offersFraudCheckFailureReason = Nothing,
         cloudType = cloudType,
         syncSearch = mbEnableSyncSearch,
+        -- Only the better-route-point shadow built in SharedLogic.BetterRoutePointSearch
+        -- sets these; a search the customer actually made is never a shadow of anything.
+        parentSearchRequestId = Nothing,
+        betterPointWalkToPickup = Nothing,
+        betterPointWalkFromDrop = Nothing,
+        betterPointRideDistanceSaved = Nothing,
         ..
       }
   where
