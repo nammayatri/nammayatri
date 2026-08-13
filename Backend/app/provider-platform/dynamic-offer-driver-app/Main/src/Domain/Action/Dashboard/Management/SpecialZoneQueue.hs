@@ -16,6 +16,7 @@ import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time (NominalDiffTime, addUTCTime)
+import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
@@ -141,7 +142,7 @@ postSpecialZoneQueueManualQueueAdd merchantShortId opCity req = do
       <> ", queuePosition="
       <> show req.queuePosition
       <> ", reason=dashboard manual queue add (cleanup before re-add)"
-  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_re_add")
+  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_re_add") True
   void $ LTSFlow.manualQueueAdd req.specialLocationId req.vehicleType merchant.id driverId req.queuePosition
   logInfo $ "Dashboard: added driver " <> req.driverId <> " to queue at position " <> show req.queuePosition <> " for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
@@ -158,9 +159,26 @@ postSpecialZoneQueueManualQueueRemove merchantShortId opCity req = do
       <> ", vehicleType="
       <> req.vehicleType
       <> ", reason=dashboard manual queue remove"
-  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_manual_remove")
+  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_manual_remove") True
   logInfo $ "Dashboard: removed driver " <> req.driverId <> " from queue for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
+
+mkQueueLastTsKey :: Text -> Text -> Kernel.Types.Id.Id DP.Person -> Text
+mkQueueLastTsKey specialLocationId vehicleType driverId =
+  "lts:queue_last_ts:" <> specialLocationId <> ":" <> vehicleType <> ":" <> driverId.getId
+
+queueReadFailSafeSize :: Int
+queueReadFailSafeSize = 10
+
+readQueueLastTsPresence :: [Text] -> Environment.Flow [Bool]
+readQueueLastTsPresence [] = pure []
+readQueueLastTsPresence lastTsKeys = do
+  primary <- Redis.withLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
+  mbSecondary <- asks (.secondaryLTSHedisEnv)
+  secondary <- case mbSecondary of
+    Nothing -> pure $ map (const Nothing) lastTsKeys
+    Just _ -> Redis.withSecondaryLTSRedis $ Redis.withCrossAppRedis $ V.toList <$> Redis.mGetStandaloneRaw lastTsKeys
+  pure $ zipWith (\p s -> isJust p || isJust s) primary secondary
 
 getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow SZQT.SpecialZoneQueueStatsRes)
 getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
@@ -187,6 +205,36 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
       uniqVariantsList = nub $ concatMap getCalloutVars cityServiceTiers
   uniqVariantsQueueList <- mapM (\vt' -> do resp <- LTSFlow.getQueueDrivers specialLocationId (show vt'); pure (vt', resp)) uniqVariantsList
   let uniqVariantsQueueMap = Map.fromList uniqVariantsQueueList
+
+  fork "reapStaleQueueMembers" $
+    forM_ uniqVariantsQueueList $ \(vt', qResp) -> do
+      let qDriverIds = map (.driverId) qResp.drivers
+      unless (null qDriverIds) $ do
+        let lastTsKeys = map (mkQueueLastTsKey specialLocationId (show vt')) qDriverIds
+        present <- readQueueLastTsPresence lastTsKeys
+        let staleDriverIds = [did | (did, isPresent) <- zip qDriverIds present, not isPresent]
+            total = length qDriverIds
+            staleCount = length staleDriverIds
+        if staleCount == total && total >= queueReadFailSafeSize
+          then
+            logError $
+              "[reapStaleQueueMembers] skipping eviction (suspected LTS read failure): all "
+                <> show total
+                <> " queued drivers reported stale for specialLocationId="
+                <> specialLocationId
+                <> " vehicleType="
+                <> show vt'
+          else unless (null staleDriverIds) $ do
+            logInfo $
+              "[reapStaleQueueMembers] specialLocationId=" <> specialLocationId
+                <> " vehicleType="
+                <> show vt'
+                <> " queued="
+                <> show total
+                <> " evictedStale="
+                <> show staleCount
+            forM_ staleDriverIds $ \did ->
+              void $ LTSFlow.manualQueueRemove specialLocationId (show vt') merchant.id did (Just "stale_queue_last_ts_expired") False
 
   let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
   vehicleStats <- forM cityServiceTiers $ \vst -> do
