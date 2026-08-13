@@ -1868,16 +1868,17 @@ getFinanceManagementFinanceSapJournals ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe SJE.JournalEntryStatus ->
   Maybe SJE.TransactionType ->
   Flow API.SapJournalListRes
-getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbGlNumber mbLimit mbOffset mbStatus mbTransactionType = do
+getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr mbDateFrom mbDateTo mbDescription mbGlNumber mbLimit mbOffset mbStatus mbTransactionType = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let limitVal = mkPageLimit mbLimit
-  entries <- QSapJournalEntryBPP.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber (Just limitVal) mbOffset
+  entries <- QSapJournalEntryBPP.findByMerchantIdWithFilters merchant.id.getId merchantOpCityId.getId mbDateFrom mbDateTo mbTransactionType mbStatus mbBatchId mbBelnr mbGlNumber mbDescription (Just limitVal) mbOffset
   let totalItems = length entries
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
       journals = map toSapJournalItem entries
@@ -1886,13 +1887,14 @@ getFinanceManagementFinanceSapJournals merchantShortId opCity mbBatchId mbBelnr 
 getFinanceManagementFinanceSapJournalsTransactions ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
   Text ->
   SJE.TransactionType ->
   Flow API.SapJournalTransactionsRes
-getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbLimit mbOffset mbSubscriptionId batchId transactionType = do
+getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbDescription mbLimit mbOffset mbSubscriptionId batchId transactionType = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   journalEntry <- listToMaybe <$> QSJE.findByBatchId batchId >>= fromMaybeM (InvalidRequest $ "No SAP journal entry found for batchId: " <> batchId)
@@ -1905,6 +1907,7 @@ getFinanceManagementFinanceSapJournalsTransactions merchantShortId opCity mbLimi
       transactionType
       mbSubscriptionId
       batchId
+      mbDescription
       mbLimit
       mbOffset
   let items = map toTransactionItem entries

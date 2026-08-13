@@ -16,10 +16,11 @@ findByMerchantIdWithFilters ::
   TransactionType ->
   Maybe Text ->
   Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   m [Domain.JournalEntryTransaction]
-findByMerchantIdWithFilters merchantId merchantOperatingCityId transactionType mbSubscriptionId batchId mbLimit mbOffset =
+findByMerchantIdWithFilters merchantId merchantOperatingCityId transactionType mbSubscriptionId batchId mbDescription mbLimit mbOffset =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
@@ -28,6 +29,7 @@ findByMerchantIdWithFilters merchantId merchantOperatingCityId transactionType m
           Se.Is Beam.sapBatchId $ Se.Eq batchId
         ]
           <> [Se.Is Beam.subscriptionId $ Se.Eq (Just subId) | Just subId <- [mbSubscriptionId]]
+          <> [Se.Is Beam.description $ Se.Eq description | Just description <- [mbDescription]]
     ]
     (Se.Desc Beam.createdAt)
     (Just $ min 100 $ fromMaybe 20 mbLimit)

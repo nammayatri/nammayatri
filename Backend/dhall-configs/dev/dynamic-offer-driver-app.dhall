@@ -327,6 +327,7 @@ let AllocatorJobType =
       | TriggerSpecialZoneNotify
       | SAPPGSettlementDispatch
       | SAPSubscriptionPurchaseDispatch
+      | SAPRideRevenueDispatch
       | ReconciliationScheduler
       | ReconciliationSweep
       | ConnectAccountChargeDeduction
@@ -411,6 +412,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SAPPGSettlementDispatch, mapValue = True }
+      , { mapKey = AllocatorJobType.SAPRideRevenueDispatch, mapValue = True }
       , { mapKey = AllocatorJobType.ReconciliationScheduler, mapValue = True }
       , { mapKey = AllocatorJobType.ReconciliationSweep, mapValue = True }
       ]
