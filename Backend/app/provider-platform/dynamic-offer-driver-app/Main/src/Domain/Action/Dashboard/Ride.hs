@@ -897,7 +897,7 @@ mkMultipleRideData rideId Common.RideSyncRes {..} =
 currentActiveRide :: ShortId DM.Merchant -> Text -> Flow (Id Common.Ride)
 currentActiveRide _ vehicleNumber = do
   vehicle <- VQuery.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleNotFound vehicleNumber)
-  activeRide <- runInReplica $ QRideLite.getActiveByDriverIdLite vehicle.driverId >>= fromMaybeM NoActiveRidePresent
+  activeRide <- runInReplica $ QRideLite.getLatestActiveByDriverIdLite vehicle.driverId >>= fromMaybeM NoActiveRidePresent
   let rideId = cast @DRide.Ride @Common.Ride activeRide.id
   pure rideId
 
