@@ -1,5 +1,8 @@
 imports:
   DocumentRegisterReq: API.Types.ProviderPlatform.Management.DriverRegistration
+  GetDocumentResponse: API.Types.ProviderPlatform.Management.DriverRegistration
+  EntityType: API.Types.ProviderPlatform.Management.DriverRegistration
+  DocumentType: Domain.Types.DocumentVerificationConfig
   APISuccess: Kernel.Types.APISuccess
 
 module: DriverDocument
@@ -14,3 +17,13 @@ apis:
         type: DocumentRegisterReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /driver/document/get/{entityId}
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        entityId: Text
+      query:
+        docType: DocumentType
+        entityType: EntityType
+      response:
+        type: GetDocumentResponse

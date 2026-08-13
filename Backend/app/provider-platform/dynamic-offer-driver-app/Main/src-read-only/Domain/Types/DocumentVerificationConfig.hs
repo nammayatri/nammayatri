@@ -12,6 +12,7 @@ import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data DocumentVerificationConfig = DocumentVerificationConfig
@@ -131,7 +132,7 @@ data DocumentType
   | LegalEntityLegalEntityId
   | LegalEntityTAXDetails
   | LegalEntityCompanyDetails
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data FieldInfo = FieldInfo
   { _type :: Domain.Types.DocumentVerificationConfig.FieldType,
@@ -179,6 +180,8 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentCategory)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentFlowGrouping)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
+
+$(mkHttpInstancesForEnum ''DocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FieldType)
 
