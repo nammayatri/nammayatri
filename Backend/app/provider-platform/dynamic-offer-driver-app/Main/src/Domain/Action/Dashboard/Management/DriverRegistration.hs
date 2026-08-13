@@ -1115,7 +1115,7 @@ getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id 
 getDriverRegistrationDocumentsInfo merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   pure $ castToManagementStatusRes statusRes
 
 castToManagementStatusRes :: DStatus.StatusRes -> Common.StatusRes
