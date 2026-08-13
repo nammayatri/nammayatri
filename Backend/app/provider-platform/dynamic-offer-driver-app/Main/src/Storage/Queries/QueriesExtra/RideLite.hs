@@ -45,8 +45,11 @@ findActiveByRBIdLite (Kernel.Types.Id.Id rbId) = findOneWithKV [Se.And [Se.Is Be
 findInProgressByDriverId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
 findInProgressByDriverId (Kernel.Types.Id.Id driverId) = findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.status $ Se.Eq Domain.Types.Ride.INPROGRESS]]
 
-getActiveByDriverIdLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
-getActiveByDriverIdLite (Kernel.Types.Id.Id personId) = findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq personId, Se.Is Beam.status $ Se.In [Domain.Types.Ride.INPROGRESS, Domain.Types.Ride.NEW]]]
+getLatestActiveByDriverIdLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
+getLatestActiveByDriverIdLite (Kernel.Types.Id.Id personId) = findAllWithOptionsKV [Se.And [Se.Is Beam.driverId $ Se.Eq personId, Se.Is Beam.status $ Se.In [Domain.Types.Ride.INPROGRESS, Domain.Types.Ride.NEW]]] (Se.Desc Beam.createdAt) (Just 1) Nothing <&> listToMaybe
+
+getCurrentActiveByDriverIdLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe RideLite)
+getCurrentActiveByDriverIdLite (Kernel.Types.Id.Id personId) = findAllWithOptionsKV [Se.And [Se.Is Beam.driverId $ Se.Eq personId, Se.Is Beam.status $ Se.In [Domain.Types.Ride.INPROGRESS, Domain.Types.Ride.NEW]]] (Se.Asc Beam.createdAt) (Just 1) Nothing <&> listToMaybe
 
 findRideByRideShortIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId RideLite -> m (Maybe RideLite))
 findRideByRideShortIdLite shortId = findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]

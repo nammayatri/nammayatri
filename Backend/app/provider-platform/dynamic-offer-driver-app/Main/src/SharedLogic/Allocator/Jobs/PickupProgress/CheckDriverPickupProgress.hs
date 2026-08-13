@@ -119,7 +119,7 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                 now <- getCurrentTime
                 let rescheduleResult = ReSchedule $ addUTCTime (fromIntegral monitoringConfig.tickIntervalSec) now
                 mbDriverInfo <- QDI.findById driverId
-                mbActiveRide <- QRide.getActiveByDriverId driverId
+                mbActiveRide <- QRide.getLatestActiveByDriverId driverId
                 -- Forward-batch guard: while the driver is still finishing a previous ride they are
                 -- expected to move toward that ride's drop, possibly away from our pickup.
                 let onAnotherRide = (mbDriverInfo <&> (.onRide)) == Just True && (mbActiveRide <&> (.id)) /= Just rideId
