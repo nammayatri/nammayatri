@@ -51,6 +51,11 @@ findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchReq
 findAllByPerson :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [SearchRequest]
 findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq personId]
 
+-- | The better-route-point shadow of a search request, if one was created for it.
+-- At most one exists per parent: it is written once during /rideSearch and never updated.
+findByParentSearchRequestId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
+findByParentSearchRequestId (Id parentId) = findOneWithKV [Se.Is BeamSR.parentSearchRequestId $ Se.Eq (Just parentId)]
+
 findLatestSearchRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe SearchRequest)
 findLatestSearchRequest (Id riderId) = findAllWithOptionsKV [Se.Is BeamSR.riderId $ Se.Eq riderId] (Se.Desc BeamSR.createdAt) (Just 1) Nothing <&> listToMaybe
 

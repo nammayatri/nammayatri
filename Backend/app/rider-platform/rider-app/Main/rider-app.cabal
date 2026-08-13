@@ -493,6 +493,8 @@ library
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
       SharedLogic.BehaviourManagement.CustomerCancellationRate
+      SharedLogic.BetterRoutePoint
+      SharedLogic.BetterRoutePointSearch
       SharedLogic.Booking
       SharedLogic.Cac
       SharedLogic.CallBPP

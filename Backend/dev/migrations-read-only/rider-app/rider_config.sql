@@ -795,3 +795,22 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_share_number_with_driver bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN pass_extra_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_better_route_point_suggestion boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_walk_distance_for_better_point integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_ride_distance_saving_for_better_point integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_aversion double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_walk_pct_of_ride double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_min_saving_pct_of_ride double precision ;

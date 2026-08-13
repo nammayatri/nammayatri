@@ -112,10 +112,12 @@ searchV2Sync ::
   BaseUrl ->
   Text ->
   Text ->
+  -- | isShadowSearch: pricing a better-route-point suggestion rather than the real search
+  Bool ->
   API.SearchReqV2 ->
   m API.SyncSearchRes
-searchV2Sync bppUrl bppMerchantId token req = do
-  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) req
+searchV2Sync bppUrl bppMerchantId token isShadowSearch req = do
+  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) (Just isShadowSearch) req
   callAPI bppUrl cl "internalSyncSearch" internalSyncSearchAPI
     >>= fromEitherM (ExternalAPICallError (Just "INTERNAL_SYNC_SEARCH_FAILED") bppUrl)
 

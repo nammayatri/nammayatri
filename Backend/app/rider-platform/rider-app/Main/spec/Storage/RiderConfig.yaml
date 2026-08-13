@@ -276,6 +276,22 @@ RiderConfig:
     maxAlternateRouteVehicles: Int
     includeVehiclesWithNoEta: Maybe Bool
     invoiceConfig: Maybe RiderInvoiceConfig
+    # Better route point suggestion: detect a point already on the search route that
+    # is a short walk from the customer's pickup/drop but cuts a large detour out of
+    # the ride (one-ways, dividers, lanes). Suggested as an extra estimate, the
+    # customer's own pickup/drop are never silently overridden.
+    enableBetterRoutePointSuggestion: Maybe Bool
+    minRideDistanceSavingForBetterPoint: Maybe Meters
+    maxWalkDistanceForBetterPoint: Maybe Meters
+    # How many metres of riding one metre of walking is worth when ranking candidate
+    # points. 1 sends the customer to the walk cap for any extra saving; higher values
+    # keep short walks winning. Ranking only -- never changes whether a point qualifies.
+    betterPointWalkAversion: Maybe Double
+    # Thresholds scale with the ride: a 300m walk is absurd on a 2km hop and trivial on a
+    # 20km one. minRideDistanceSavingForBetterPoint / maxWalkDistanceForBetterPoint act as
+    # the absolute floor and ceiling around these.
+    betterPointMaxWalkPctOfRide: Maybe Double
+    betterPointMinSavingPctOfRide: Maybe Double
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

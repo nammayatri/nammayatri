@@ -19,7 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
-import Servant (Capture, Header, JSON, Post, ReqBody, (:>))
+import Servant (Capture, Header, JSON, Post, QueryParam, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage
 
@@ -53,10 +53,16 @@ searchAPIV2 = Proxy
 
 type SyncSearchRes = Spec.OnSearchReq
 
+-- | isShadowSearch marks a request the BAP is making to price a better-route-point
+-- suggestion alongside a real search. The BPP still persists a SearchRequest and Estimates
+-- for it (the customer can select them), but suppresses the search/estimate events, namma
+-- tags and demand-hotspot updates that would otherwise be counted twice for one customer
+-- intent. Absent or False means an ordinary search.
 type SyncSearchAPI =
   "sync_search"
     :> Capture "merchantId" Text
     :> Header "token" Text
+    :> QueryParam "isShadowSearch" Bool
     :> ReqBody '[JSON] SearchReqV2
     :> Post '[JSON] SyncSearchRes
 

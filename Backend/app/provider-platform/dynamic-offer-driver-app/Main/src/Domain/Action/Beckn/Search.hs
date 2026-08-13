@@ -174,7 +174,14 @@ data DSearchReq = DSearchReq
     userBackendAppVersion :: Maybe Text,
     riderPreferredOption :: DRPO.RiderPreferredOption,
     emailDomain :: Maybe Text,
-    businessEmailDomain :: Maybe Text
+    businessEmailDomain :: Maybe Text,
+    -- | Set only by the internal sync_search endpoint when the BAP is pricing a
+    -- better-route-point suggestion alongside a real search. Such a request must still
+    -- produce a SearchRequest and Estimates -- the customer can select them, and
+    -- select/init resolve through estimate.requestId -- but it is a second search for one
+    -- customer intent, so it must not fire search/estimate events, add namma tags, or feed
+    -- demand hotspots. Always False on the Beckn path.
+    isShadowSearch :: Bool
   }
 
 -- data EstimateExtraInfo = EstimateExtraInfo
@@ -336,7 +343,10 @@ handler ValidatedDSearchReq {..} sReq = do
           Just number -> do
             -- consent tag is only emitted at confirm, not search, so no consent to record yet here
             (riderDetails, isNewRider) <- SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False Nothing
-            when isNewRider $ QRD.create riderDetails
+            -- A shadow search runs concurrently with the real one for the same rider, so
+            -- both would try to insert the same new rider. Leave the insert to the real
+            -- search; the dues on the freshly built record are what a new rider owes anyway.
+            when (isNewRider && not sReq.isShadowSearch) $ QRD.create riderDetails
             return riderDetails.cancellationDues
           Nothing -> do
             logWarning "Failed to calculate Customer Cancellation Dues as BAP Phone Number is NULL"
@@ -345,20 +355,22 @@ handler ValidatedDSearchReq {..} sReq = do
   let mbDriverInfo = driverIdForSearch
   searchReq <- buildSearchRequest sReq bapCity mbPickupGateId mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId' merchantOpCityId customerCancellationDue fromLocation mbToLocation mbDistance mbDuration mbStaticDuration spcllocationTag specialLocName allFarePoliciesProduct.area mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohashh toLocGeohash mbVersion stops mbDriverInfo configVersionMap
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
-  triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
+  unless sReq.isShadowSearch $
+    triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId'}
   void $ QSR.createDSReq searchReq
 
-  fork "Add Namma Tags" $ do
-    let tagData =
-          Y.TagData
-            { searchRequest = searchReq,
-              area = show allFarePoliciesProduct.area,
-              specialLocationTag = spcllocationTag,
-              specialLocationName = allFarePoliciesProduct.specialLocationName
-            }
-    addNammaTags tagData
-  fork "Updating Demand Hotspots on search" $ do
-    DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
+  unless sReq.isShadowSearch $ do
+    fork "Add Namma Tags" $ do
+      let tagData =
+            Y.TagData
+              { searchRequest = searchReq,
+                area = show allFarePoliciesProduct.area,
+                specialLocationTag = spcllocationTag,
+                specialLocationName = allFarePoliciesProduct.specialLocationName
+              }
+      addNammaTags tagData
+    fork "Updating Demand Hotspots on search" $ do
+      DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
 
   -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
   -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
@@ -386,7 +398,8 @@ handler ValidatedDSearchReq {..} sReq = do
   QEst.createMany estimates
   for_ quotes QQuote.create
 
-  forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}
+  unless sReq.isShadowSearch $
+    forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap (mbAreaForVST >>= SL.pickupSpecialZoneIdFromArea)
   buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber allFarePoliciesProduct.fareSettlementType now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
