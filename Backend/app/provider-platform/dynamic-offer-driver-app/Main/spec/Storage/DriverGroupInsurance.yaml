@@ -1,0 +1,71 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Day: Data.Time
+
+DriverGroupInsurance:
+  tableName: driver_group_insurance
+
+  types:
+    DriverGroupInsuranceType:
+      enum: "GMC,GPA"
+      derive: "HttpInstance"
+    DriverGroupInsuranceStatus:
+      enum: "Draft,Verified,Enabled,Exported"
+      derive: "HttpInstance"
+    DriverGroupInsuranceGender:
+      enum: "Male,Female,Other"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id DriverGroupInsurance
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    insuranceType: DriverGroupInsuranceType
+    fullName: Text
+    mobile: Text
+    dob: Maybe Day
+    age: Maybe Int
+    gender: Maybe DriverGroupInsuranceGender
+    nomineeName: Maybe Text
+    nomineeRelationship: Maybe Text
+    nomineeDob: Maybe Day
+    secondBotCheckAt: Maybe UTCTime
+    enabledAt: Maybe UTCTime
+    status: DriverGroupInsuranceStatus
+    lastExportedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverIdAndType:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, insuranceType]
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    updateSecondBotCheckAt:
+      kvFunction: updateOneWithKV
+      params: [secondBotCheckAt]
+      where: id
+    updateEnabledAtAndStatus:
+      kvFunction: updateOneWithKV
+      params: [enabledAt, status]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

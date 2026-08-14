@@ -1,0 +1,22 @@
+CREATE TABLE atlas_driver_offer_bpp.driver_group_insurance ();
+
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN age integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN dob date ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN driver_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN enabled_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN full_name text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN gender text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN insurance_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN last_exported_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN mobile text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN nominee_dob date ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN nominee_name text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN nominee_relationship text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN second_bot_check_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.driver_group_insurance ADD PRIMARY KEY ( id);

@@ -1,0 +1,37 @@
+imports:
+  DriverGroupInsurance: Domain.Types.DriverGroupInsurance
+  DriverGroupInsuranceType: Domain.Types.DriverGroupInsurance
+  DriverGroupInsuranceGender: Domain.Types.DriverGroupInsurance
+  Day: Data.Time
+
+module: DriverGroupInsurance
+
+types:
+  DriverGroupInsuranceUpsertReq:
+    insuranceType: DriverGroupInsuranceType
+    fullName: Text
+    mobile: Text
+    dob: Maybe Day
+    age: Maybe Int
+    gender: Maybe DriverGroupInsuranceGender
+    nomineeName: Maybe Text
+    nomineeRelationship: Maybe Text
+    nomineeDob: Maybe Day
+  DriverGroupInsuranceRes:
+    insurance: Domain.Types.DriverGroupInsurance.DriverGroupInsurance
+
+apis:
+  - GET:
+      endpoint: /driverGroupInsurance/get
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        insuranceType: DriverGroupInsuranceType
+      response:
+        type: API.Types.UI.DriverGroupInsurance.DriverGroupInsuranceRes
+  - POST:
+      endpoint: /driverGroupInsurance/upsert
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverGroupInsurance.DriverGroupInsuranceUpsertReq
+      response:
+        type: API.Types.UI.DriverGroupInsurance.DriverGroupInsuranceRes
