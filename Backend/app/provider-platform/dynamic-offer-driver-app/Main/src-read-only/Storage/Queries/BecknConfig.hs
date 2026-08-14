@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
       Se.Set Beam.multimodalOnSearchTTLSec multimodalOnSearchTTLSec,
       Se.Set Beam.networkId networkId,
+      Se.Set Beam.offlineContract offlineContract,
       Se.Set Beam.onCancelTTLSec onCancelTTLSec,
       Se.Set Beam.onConfirmTTLSec onConfirmTTLSec,
       Se.Set Beam.onInitTTLSec onInitTTLSec,
@@ -83,3 +84,75 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
+  fromTType' (Beam.BecknConfigT {..}) = do
+    gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
+    registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
+    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
+    subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
+    pure $
+      Just
+        Domain.Types.BecknConfig.BecknConfig
+          { buyerFinderFee = buyerFinderFee,
+            collectedBy = collectedBy,
+            domain = domain,
+            gatewayUrl = gatewayUrl',
+            id = Kernel.Types.Id.Id id,
+            multimodalOnSearchTTLSec = multimodalOnSearchTTLSec,
+            offlineContract = offlineContract,
+            onCancelTTLSec = onCancelTTLSec,
+            onConfirmTTLSec = onConfirmTTLSec,
+            onInitTTLSec = onInitTTLSec,
+            onSearchTTLSec = onSearchTTLSec,
+            onSelectTTLSec = onSelectTTLSec,
+            onStatusTTLSec = onStatusTTLSec,
+            onTrackTTLSec = onTrackTTLSec,
+            onUpdateTTLSec = onUpdateTTLSec,
+            paymentParamsJson = paymentParamsJson,
+            registryUrl = registryUrl',
+            settlementType = settlementType,
+            settlementWindow = settlementWindow,
+            staticTermsUrl = staticTermsUrl',
+            subscriberId = subscriberId,
+            subscriberUrl = subscriberUrl',
+            uniqueKeyId = uniqueKeyId,
+            vehicleCategory = vehicleCategory,
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
+  toTType' (Domain.Types.BecknConfig.BecknConfig {..}) = do
+    Beam.BecknConfigT
+      { Beam.buyerFinderFee = buyerFinderFee,
+        Beam.collectedBy = collectedBy,
+        Beam.domain = domain,
+        Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
+        Beam.id = Kernel.Types.Id.getId id,
+        Beam.multimodalOnSearchTTLSec = multimodalOnSearchTTLSec,
+        offlineContract = offlineContract,
+        Beam.onCancelTTLSec = onCancelTTLSec,
+        Beam.onConfirmTTLSec = onConfirmTTLSec,
+        Beam.onInitTTLSec = onInitTTLSec,
+        Beam.onSearchTTLSec = onSearchTTLSec,
+        Beam.onSelectTTLSec = onSelectTTLSec,
+        Beam.onStatusTTLSec = onStatusTTLSec,
+        Beam.onTrackTTLSec = onTrackTTLSec,
+        Beam.onUpdateTTLSec = onUpdateTTLSec,
+        Beam.paymentParamsJson = paymentParamsJson,
+        Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
+        Beam.settlementType = settlementType,
+        Beam.settlementWindow = settlementWindow,
+        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
+        Beam.subscriberId = subscriberId,
+        Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,
+        Beam.uniqueKeyId = uniqueKeyId,
+        Beam.vehicleCategory = vehicleCategory,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.createdAt = createdAt,
+        Beam.updatedAt = updatedAt
+      }

@@ -291,7 +291,8 @@ validateRequest ::
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasFlowEnv m r '["scheduledCategorySignalMerchantIds" ::: [Text]]
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
@@ -310,7 +311,15 @@ validateRequest subscriber transporterId req now = do
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         _ -> False
-  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
+  -- Verifying: MSIL pilot merchants are expected to be non-value-add NPs
+  -- (isValueAddNP is legitimately False for them) yet still need scheduled
+  -- trip categories (e.g. OneWay OneWayOnDemandStaticOffer) allowed through
+  -- /confirm -- so the isValueAddNP-gated restriction above is bypassed for
+  -- them specifically, instead of registering them as value-add NPs just to
+  -- satisfy this unrelated check.
+  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+  let isMsilPilotMerchant = transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+  when (not isMsilPilotMerchant && not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter

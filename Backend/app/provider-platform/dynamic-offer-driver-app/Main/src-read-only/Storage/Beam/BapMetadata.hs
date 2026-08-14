@@ -16,6 +16,7 @@ data BapMetadataT f = BapMetadataT
     id :: B.C f Data.Text.Text,
     logoUrl :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     name :: B.C f Data.Text.Text,
+    staticTermsUrl :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

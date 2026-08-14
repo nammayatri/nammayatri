@@ -22,6 +22,7 @@ data BecknConfigT f = BecknConfigT
     id :: B.C f Kernel.Prelude.Text,
     multimodalOnSearchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     networkId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    offlineContract :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     onCancelTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onConfirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onInitTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
