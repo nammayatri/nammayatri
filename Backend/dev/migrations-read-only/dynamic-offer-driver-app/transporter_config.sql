@@ -1111,7 +1111,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN area_preference
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
 
-
+------- MSIL scheduled rides (SWS-1 / SWS-2) -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_booking_window integer;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_booking_window integer;
 
 ------- SQL updates -------
 

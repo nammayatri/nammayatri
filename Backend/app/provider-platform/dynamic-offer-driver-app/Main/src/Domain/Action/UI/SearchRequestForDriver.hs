@@ -119,7 +119,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     safetyPlusCharges :: Maybe HighPrecMoney,
     commissionCharges :: Maybe HighPrecMoney,
     isPaymentOnline :: Maybe Bool,
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    isScheduled :: Bool
   }
   deriving (Generic, ToSchema, Show)
 
@@ -179,6 +180,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           -- customerCancellationDues = nearbyReq.customerCancellationDues,
           -- customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
           tripCategory = searchTry.tripCategory,
+          isScheduled = searchTry.isScheduled,
           duration = searchRequest.estimatedDuration,
           pickupZone = nearbyReq.pickupZone,
           driverPickUpCharges = roundToIntegral <$> driverPickUpCharges,
