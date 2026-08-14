@@ -398,6 +398,9 @@ let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 let seatBookingConfirmAPIRateLimitOptions =
       { limit = +1, limitResetTimeInSec = +30 }
 
+let bookingGroupCheckoutAPIRateLimitOptions =
+      { limit = +2, limitResetTimeInSec = +60 }
+
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 
 let erssStatusUpdateRateLimitOptions =
@@ -450,7 +453,7 @@ in  { esqDBCfg
       , "dev/ddl-migrations/scheduler"
       , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/ddl-migrations/rider-app"
       ]
-    , autoMigrate = True
+    , autoMigrate = False
     , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig
@@ -518,6 +521,7 @@ in  { esqDBCfg
     , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
+    , bookingGroupCheckoutAPIRateLimitOptions
     , sosTrackingRateLimitOptions
     , erssStatusUpdateRateLimitOptions
     , inMemConfig

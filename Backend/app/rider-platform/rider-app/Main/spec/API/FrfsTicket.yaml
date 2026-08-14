@@ -40,6 +40,8 @@ imports:
   Person: Domain.Types.Person
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
   CumulativeOfferResp: SharedLogic.OfferTypes
+  FRFSBookingGroup: Domain.Types.FRFSBookingGroup
+  FRFSBookingGroupStatus: Domain.Types.FRFSBookingGroup
 
 module: FRFSTicketService
 types:
@@ -63,6 +65,12 @@ types:
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
     quotes: [FRFSQuoteAPIRes] # For Sync Search API, we return the quotes for the search.
+
+  FRFSSearchGroupReq:
+    searches: "[FRFSSearchAPIReq]"
+
+  FRFSSearchGroupRes:
+    results: "[FRFSSearchAPIRes]"
 
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
@@ -183,6 +191,24 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     bppOrderId: Maybe Text
     isSpotBooking: Maybe Bool
+    derive: "Show"
+
+  FRFSBookingGroupSlotReq:
+    quoteId: Id FRFSQuote
+    offered: Maybe [FRFSCategorySelectionReq]
+    crisSdkResponse: Maybe CrisSdkResponse
+    enableOffer: Maybe Bool
+    tripId: Maybe Text
+    isSpotBooking: Maybe Bool
+
+  FRFSBookingGroupCheckoutReq:
+    slots: "[FRFSBookingGroupSlotReq]"
+
+  FRFSBookingGroupStatusAPIRes:
+    bookingGroupId: Id FRFSBookingGroup
+    status: FRFSBookingGroupStatus
+    totalPrice: PriceAPIEntity
+    bookings: "[FRFSTicketBookingStatusAPIRes]"
     derive: "Show"
 
   FRFSRefundAttemptAPI:
@@ -571,6 +597,22 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 
+  # Same as /frfs/search, but for a multiselect: N independent searches (e.g. several departure
+  # times on one route), run concurrently, one result per input in the same order.
+  - POST:
+      endpoint: /frfs/searchGroup
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        integratedBppConfigId: Id IntegratedBPPConfig
+        newServiceTiers: [ServiceTierType]
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSSearchGroupReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSSearchGroupRes
+
   # Discovery Search for finding metro/bus providers for a given city
   - POST:
       endpoint: /frfs/discovery/search
@@ -615,6 +657,25 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # Checkout a cart of multiple booked slots (e.g. shuttle/premium bus departures) with one combined payment
+  - POST:
+      endpoint: /frfs/bookingGroup/checkout
+      query:
+        isMockPayment: Bool
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingGroupCheckoutReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+
+  - GET:
+      endpoint: /frfs/bookingGroup/{bookingGroupId}/status
+      params:
+        bookingGroupId: Id FRFSBookingGroup
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
 
   # Retry payment
   - POST:

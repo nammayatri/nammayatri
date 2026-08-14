@@ -210,3 +210,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_spot_booking boolean ;
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN waybill_no text ;
 CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_waybill_no ON atlas_app.frfs_ticket_booking USING btree (waybill_no);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN booking_group_id character varying(36) ;
+CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_booking_group_id ON atlas_app.frfs_ticket_booking USING btree (booking_group_id);
