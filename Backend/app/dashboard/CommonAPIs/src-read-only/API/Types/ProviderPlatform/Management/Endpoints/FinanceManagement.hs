@@ -469,7 +469,8 @@ data WalletLedgerItem = WalletLedgerItem
     debitAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     openingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     closingBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    subscriptionAllocations :: Kernel.Prelude.Maybe [Lib.Finance.Domain.Types.LedgerEntry.SubscriptionCreditAllocation]
+    subscriptionAllocations :: Kernel.Prelude.Maybe [Lib.Finance.Domain.Types.LedgerEntry.SubscriptionCreditAllocation],
+    reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

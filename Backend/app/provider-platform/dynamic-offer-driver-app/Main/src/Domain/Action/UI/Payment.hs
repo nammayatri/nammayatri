@@ -570,7 +570,7 @@ processWalletTopupWebhook driver order transactionStatus = do
                   periodEnd = Nothing
                 }
         result <- runFinance ctx $ do
-          _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup
+          _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup Nothing
           invoice topupInvoiceConfig
         void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
         let notificationTitle = "Wallet Top-up Successful"

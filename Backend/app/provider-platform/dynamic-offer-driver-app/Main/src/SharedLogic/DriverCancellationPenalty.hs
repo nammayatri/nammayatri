@@ -173,7 +173,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
             mbDriverInfo <- QDI.findById (cast ride.driverId)
             ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
             result <- runFinance ctx $ do
-              _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
+              _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
               invoice
                 InvoiceConfig
                   { invoiceType = RideCancellation,

@@ -755,8 +755,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             if isOnline
               then do
                 transfer_ BuyerAsset BuyerExternal amt ref
-                void $ transfer BuyerExternal OwnerLiability amt ref
-              else void $ transfer BuyerControl OwnerControl amt ref
+                void $ transfer BuyerExternal OwnerLiability amt ref Nothing
+              else void $ transfer BuyerControl OwnerControl amt ref Nothing
       if isVat
         then do
           let rideEarningComponents =
@@ -778,23 +778,23 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           if isOnline
             then do
               transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
-              void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline
-            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash
+              void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
+            else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
-        void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
+        void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef Nothing
       when (isVat && serviceVatAmount > 0) $
         void $ transferWithoutAttribution GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
         transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
-        void $ transfer BuyerExternal OwnerLiability customerDiscountAmount discountsRef
+        void $ transfer BuyerExternal OwnerLiability customerDiscountAmount discountsRef Nothing
       -- Tip — online: BuyerAsset → OwnerLiability (1 leg). Cash: Control.
       when (tipAmount > 0) $
         if isOnline
-          then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips
-          else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips
+          then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips Nothing
+          else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips Nothing
       invoice customerInvoiceConfig
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
@@ -848,22 +848,22 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 periodEnd = Nothing
               }
       commissionResult <- runFinance ctx $ do
-        void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef
+        void $ transfer OwnerLiability SellerRevenue commissionBaseAmount commissionRef Nothing
         when (commissionVatAmount > 0) $
-          void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef
+          void $ transfer OwnerLiability SellerRevenue commissionVatAmount commissionVatRef Nothing
         when (cancellationCommissionBase > 0) $
-          void $ transfer OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission
+          void $ transfer OwnerLiability SellerRevenue cancellationCommissionBase walletReferenceCancellationCommission Nothing
         when (cancellationCommissionVat > 0) $
-          void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT
+          void $ transfer OwnerLiability SellerRevenue cancellationCommissionVat walletReferenceCancellationCommissionVAT Nothing
         -- Reversal mirrors every posted leg; shared refType, so the wallet still shows one summed row.
         when shouldReverseCommissionWalletDebit $ do
-          void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform
+          void $ transfer SellerRevenue OwnerLiability commissionBaseAmount walletReferenceDeductedAtPaymentByPlatform Nothing
           when (commissionVatAmount > 0) $
-            void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform
+            void $ transfer SellerRevenue OwnerLiability commissionVatAmount walletReferenceDeductedAtPaymentByPlatform Nothing
           when (cancellationCommissionBase > 0) $
-            void $ transfer SellerRevenue OwnerLiability cancellationCommissionBase walletReferenceDeductedAtPaymentByPlatform
+            void $ transfer SellerRevenue OwnerLiability cancellationCommissionBase walletReferenceDeductedAtPaymentByPlatform Nothing
           when (cancellationCommissionVat > 0) $
-            void $ transfer SellerRevenue OwnerLiability cancellationCommissionVat walletReferenceDeductedAtPaymentByPlatform
+            void $ transfer SellerRevenue OwnerLiability cancellationCommissionVat walletReferenceDeductedAtPaymentByPlatform Nothing
         invoice commissionInvoiceConfig
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)

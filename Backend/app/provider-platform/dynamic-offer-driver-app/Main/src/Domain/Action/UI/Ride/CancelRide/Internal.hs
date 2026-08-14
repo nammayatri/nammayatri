@@ -876,9 +876,9 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
         driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
         ctx <- buildCancellationFinanceCtx booking ride transporterConfig
         commissionResult <- runFinance ctx $ do
-          void $ transfer OwnerLiability SellerRevenue ccBase walletReferenceCancellationCommission
+          void $ transfer OwnerLiability SellerRevenue ccBase walletReferenceCancellationCommission Nothing
           when (ccVat > 0) $
-            void $ transfer OwnerLiability SellerRevenue ccVat walletReferenceCancellationCommissionVAT
+            void $ transfer OwnerLiability SellerRevenue ccVat walletReferenceCancellationCommissionVAT Nothing
           invoice
             InvoiceConfig
               { invoiceType = Commission,

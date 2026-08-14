@@ -80,7 +80,7 @@ postDriverWalletWalletAirportCashRecharge ::
 postDriverWalletWalletAirportCashRecharge merchantShortId opCity driverId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @DP.Person) Kernel.Prelude.<$> mbRequestorId) Kernel.Prelude.$ do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
-  DDriverWallet.recordAirportCashRecharge (driverId, merchant.id, merchantOpCityId) req.amount req.referenceId
+  DDriverWallet.recordAirportCashRecharge (driverId, merchant.id, merchantOpCityId) req.amount req.referenceId req.reason
   Kernel.Prelude.pure APISuccess.Success
 
 getDriverWalletWalletPayoutHistory ::

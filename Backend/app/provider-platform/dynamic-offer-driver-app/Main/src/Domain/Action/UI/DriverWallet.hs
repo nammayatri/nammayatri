@@ -72,6 +72,7 @@ import Lib.Finance
     InvoiceConfig (..),
     InvoiceLineItem (..),
     ItemType (..),
+    LedgerEntryMetadata (..),
     LineItemDescription (..),
     findByAccountWithFilters,
     getEntriesByReference,
@@ -457,7 +458,8 @@ getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDat
                     isCredit = e.toAccountId == walletAcc.id,
                     status = e.status,
                     paymentOrder = paymentOrder,
-                    date = e.timestamp
+                    date = e.timestamp,
+                    reason = e.metadataV2 >>= (.reason)
                   }
       pure DriverWallet.WalletTransactionHistoryResponse {items = map mkItem entries}
   where
@@ -848,8 +850,9 @@ recordAirportCashRecharge ::
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->
   Text -> -- referenceId for idempotency (e.g. booth receipt id)
+  Maybe Text -> -- reason for the booth payment (stored on the ledger entry metadata)
   m ()
-recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
+recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbReason = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   now <- getCurrentTime
@@ -861,10 +864,6 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
       referenceType = if isReversal then walletReferenceAirportCashWithdrawal else walletReferenceAirportCashRecharge
   existing <- getEntriesByReference referenceType referenceId
   when (null existing) $ do
-    when isReversal $ do
-      currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner FAccount.DRIVER driverId.getId
-      when (currentBalance < absAmount) $
-        throwError $ InvalidRequest "Insufficient wallet balance for airport cash withdrawal"
     merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
     let currency = merchantOpCity.currency
     ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
@@ -885,11 +884,22 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               periodStart = Nothing,
               periodEnd = Nothing
             }
+    let mbLedgerMetadata =
+          mbReason <&> \reason ->
+            LedgerEntryMetadata
+              { d2cReferralEarnings = Nothing,
+                d2dReferralEarnings = Nothing,
+                dailyStatsId = Nothing,
+                driverPayable = Nothing,
+                payoutOrderId = Nothing,
+                reason = Just reason,
+                subscriptionAllocations = Nothing
+              }
     result <-
       runFinance ctx $
         if isReversal
-          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType
+          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType mbLedgerMetadata
           else do
-            _ <- transfer PlatformAsset OwnerLiability amount referenceType
+            _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
             void $ invoice cashRechargeInvoiceConfig
     void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result

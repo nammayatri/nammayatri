@@ -134,7 +134,7 @@ postLegs ctx mode legs refundRequestId = do
     forM_ legs $ \(fromRole, toRole, amount, refType) ->
       void $ case mode of
         Pending -> transferPending fromRole toRole amount refType
-        Settled -> transfer fromRole toRole amount refType
+        Settled -> transfer fromRole toRole amount refType Nothing
   case res of
     Left err -> throwError $ InternalError $ "Refund ledger write failed for " <> refundRequestId <> ": " <> show err
     Right _ -> pure ()
