@@ -121,6 +121,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.RiderDriverCorrelation as QRiderDriverCorrelation
 import qualified Storage.Queries.StopInformation as QSI
 import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.Error
@@ -613,8 +614,17 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
         rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
     priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.sameRiderDriverRideCountLookbackDays
-    let shouldBlockCoinsForSameRiderFlow = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
-    when shouldBlockCoinsForSameRiderFlow $ QRiderDetails.flagRiderForCoinZero booking.riderId
+    isFavouritePair <- isFavouriteDriverRiderPair (cast driverId) booking.riderId
+    (shouldBlockCoinsForSameRiderFlow, shouldFlagRiderForRepeatCustomerFraud) <-
+      if isFavouritePair
+        then do
+          priorRidesSameCustomerToday <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay 1
+          let exceededFavouriteDailyCap = priorRidesSameCustomerToday >= thresholdConfig.favouriteDriverDailyCoinRideThreshold
+          pure (exceededFavouriteDailyCap, False)
+        else do
+          let exceededLookback = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
+          pure (exceededLookback, exceededLookback)
+    when shouldFlagRiderForRepeatCustomerFraud $ QRiderDetails.flagRiderForCoinZero booking.riderId
     newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) LYT.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
@@ -636,7 +646,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           metroRideType = determineMetroRideType booking.specialLocationTag "SureMetro" "SureWarriorMetro"
       logDebug $ "MetroRideType : " <> show metroRideType
       dailyCoinsAlreadyBlocked <- isDriverCoinsBlockedForDay driverId
-      let shouldBlockCoins = shouldBlockCoinsForSameRiderFlow || dailyCoinsAlreadyBlocked
+      let shouldBlockCoins = shouldFlagRiderForRepeatCustomerFraud || dailyCoinsAlreadyBlocked
       if shouldBlockCoins
         then blockDriverCoinsForToday driverId thresholdConfig.timeDiffFromUtc
         else do
@@ -771,6 +781,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       }
   where
     mkDriverCoinsBlockedForDayKey id = "driverCoins:blocked:today:dId:" <> id.getId
+
+    isFavouriteDriverRiderPair driverId' mbRiderDetailsId = case mbRiderDetailsId of
+      Nothing -> pure False
+      Just riderDetailsId -> isJust <$> QRiderDriverCorrelation.checkRiderFavDriver riderDetailsId driverId' True
 
     isDriverCoinsBlockedForDay id = do
       mbBlocked <- Redis.withCrossAppRedis $ Redis.safeGet (mkDriverCoinsBlockedForDayKey id)

@@ -189,6 +189,7 @@ data TransporterConfigT f = TransporterConfigT
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     fareRecomputeWeeklyExtraKmsThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
+    favouriteDriverDailyCoinRideThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fcmServiceAccount :: B.C f Kernel.Prelude.Text,
     fcmTokenKeyPrefix :: B.C f Kernel.Prelude.Text,
     fcmUrl :: B.C f Kernel.Prelude.Text,
