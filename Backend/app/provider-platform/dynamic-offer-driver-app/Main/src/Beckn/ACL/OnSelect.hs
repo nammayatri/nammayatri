@@ -217,6 +217,7 @@ mkQuoteBreakupInner quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
 mkQuotationPrice quote =

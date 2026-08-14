@@ -266,7 +266,9 @@ data RideCompletedReq = RideCompletedReq
     rideEndTime :: Maybe UTCTime,
     paymentStatus :: Maybe DRB.PaymentStatus,
     isValidRide :: Maybe Bool,
-    commission :: Maybe HighPrecMoney
+    commission :: Maybe HighPrecMoney,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeBearer :: Maybe Text
   }
 
 data ValidatedRideCompletedReq = ValidatedRideCompletedReq
@@ -286,7 +288,9 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     person :: DPerson.Person,
     paymentStatus :: Maybe DRB.PaymentStatus,
     isValidRide :: Maybe Bool,
-    commission :: Maybe HighPrecMoney
+    commission :: Maybe HighPrecMoney,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeBearer :: Maybe Text
   }
 
 data ValidatedFarePaidReq = ValidatedFarePaidReq
@@ -439,6 +443,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         -- Commission is provider-side data, calculated on BPP. On BAP side, it remains Nothing.
         -- If commission is needed on BAP, it should be calculated here or received from BPP.
         commission = booking.commission,
+        paymentCharge = booking.paymentCharge,
+        paymentChargeBearer = booking.paymentChargeBearer,
         cloudType = cloudType,
         sosId = Nothing,
         isTierUpgrade = Just isTierUpgrade,
@@ -537,7 +543,7 @@ rideAssignedReqHandler req = do
     assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
-      let applicationFeeAmount = fromMaybe 0 booking.commission
+      let applicationFeeAmount = fromMaybe 0 booking.commission + SPayment.paymentChargeForAppFee booking.paymentCharge booking.paymentChargeBearer
       mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
       let bookingDiscountAmount = maybe 0 (.discountAmount) mbBookingOfferEntity
           bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
@@ -906,6 +912,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- `fare` stays the fare the policy computed; `totalFare` is what is actually collected.
   let totalFareWithTip = mkPrice (Just totalFare.currency) (totalFare.amount + maybe 0 (.amount) ride.tipAmount)
   let rideCommission = maybe booking.commission Just commission
+      ridePaymentCharge = maybe booking.paymentCharge Just paymentCharge
+      ridePaymentChargeBearer = maybe booking.paymentChargeBearer Just paymentChargeBearer
       updRide =
         ride{status = DRide.COMPLETED,
              fare = Just fare,
@@ -917,7 +925,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              paymentStatus = if SPayment.isOnlinePayment mbMerchant booking then DRide.NotInitiated else DRide.Completed,
              endOdometerReading,
              rideTags = ride.rideTags <> ((\valid -> ["ValidRide#" <> if valid then "Yes" else "No"] :: [Text]) <$> isValidRide),
-             commission = rideCommission
+             commission = rideCommission,
+             paymentCharge = ridePaymentCharge,
+             paymentChargeBearer = ridePaymentChargeBearer
             }
   -- Persist offer details in Ride OfferEntity table for fast lookup in rideList,
   -- apply the offer for cash rides, and schedule the cashback-payout job when
@@ -962,7 +972,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       addOffersNammaTags updRide person
 
   -- we should create job for collecting money from customer
-  let applicationFeeAmount' = fromMaybe 0 rideCommission
+  let applicationFeeAmount' = fromMaybe 0 rideCommission + SPayment.paymentChargeForAppFee ridePaymentCharge ridePaymentChargeBearer
 
   if not onlinePayment
     then do

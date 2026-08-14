@@ -87,6 +87,8 @@ data RideT f = RideT
     offersFraudCheckFailureReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     onlinePayment :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     otp :: (B.C f Kernel.Prelude.Text),
+    paymentCharge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    paymentChargeBearer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     paymentStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PaymentStatus)),
     pickupEtaLogicVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     pickupRouteCallCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

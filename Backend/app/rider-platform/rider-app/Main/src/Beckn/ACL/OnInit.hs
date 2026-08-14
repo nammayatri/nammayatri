@@ -45,6 +45,8 @@ buildOnInitReqV2 req = do
     fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
     let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
         commission = extractCommissionFromPaymentTags order.orderPayments
+        paymentCharge = extractHighPrecTagFromPaymentTags Tags.PAYMENT_CHARGE order.orderPayments
+        paymentChargeBearer = extractTextTagFromPaymentTags Tags.PAYMENT_CHARGE_BEARER order.orderPayments
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do
@@ -55,6 +57,8 @@ buildOnInitReqV2 req = do
                 discount = Nothing, -- TODO : replace when actual discount logic is implemented
                 paymentUrl = Nothing, -- TODO check with ONDC
                 commission = commission,
+                paymentCharge = paymentCharge,
+                paymentChargeBearer = paymentChargeBearer,
                 ..
               }
   where
@@ -102,6 +106,17 @@ buildOnInitReqV2 req = do
       paymentTags <- payment.paymentTags
       commissionText <- ACL.getTagV2' Tags.SETTLEMENT_DETAILS Tags.COMMISSION (Just paymentTags)
       Common.highPrecMoneyFromText commissionText
+
+    extractTextTagFromPaymentTags :: Tags.BecknTag -> Maybe [Spec.Payment] -> Maybe Text
+    extractTextTagFromPaymentTags tagName mbPayments = do
+      payments <- mbPayments
+      payment <- listToMaybe payments
+      paymentTags <- payment.paymentTags
+      ACL.getTagV2' Tags.SETTLEMENT_DETAILS tagName (Just paymentTags)
+
+    extractHighPrecTagFromPaymentTags :: Tags.BecknTag -> Maybe [Spec.Payment] -> Maybe Common.HighPrecMoney
+    extractHighPrecTagFromPaymentTags tagName mbPayments =
+      extractTextTagFromPaymentTags tagName mbPayments >>= Common.highPrecMoneyFromText
 
 handleErrorV2 ::
   (MonadFlow m) =>

@@ -464,3 +464,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN enable_otp_less_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN ride_tags text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN payment_charge_bearer text ;
+ALTER TABLE atlas_app.ride ADD COLUMN payment_charge double precision ;

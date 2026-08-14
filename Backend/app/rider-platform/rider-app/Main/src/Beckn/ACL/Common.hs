@@ -254,6 +254,15 @@ parseRideCompletedEvent order msgId txnId = do
         tags <- payment.paymentTags
         txt <- getTagV2' Tag.SETTLEMENT_DETAILS Tag.COMMISSION (Just tags)
         highPrecMoneyFromText txt
+      paymentCharge = do
+        payment <- order.orderPayments >>= listToMaybe
+        tags <- payment.paymentTags
+        txt <- getTagV2' Tag.SETTLEMENT_DETAILS Tag.PAYMENT_CHARGE (Just tags)
+        highPrecMoneyFromText txt
+      paymentChargeBearer = do
+        payment <- order.orderPayments >>= listToMaybe
+        tags <- payment.paymentTags
+        getTagV2' Tag.SETTLEMENT_DETAILS Tag.PAYMENT_CHARGE_BEARER (Just tags)
   pure $
     Common.RideCompletedReq
       { bookingDetails,

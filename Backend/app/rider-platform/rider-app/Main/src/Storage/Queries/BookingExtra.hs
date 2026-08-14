@@ -292,6 +292,16 @@ updateCommission rbId mbCommission = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+updatePaymentCharge :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe HighPrecMoney -> Maybe Text -> m ()
+updatePaymentCharge rbId mbPaymentCharge mbPaymentChargeBearer = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.paymentCharge mbPaymentCharge,
+      Se.Set BeamB.paymentChargeBearer mbPaymentChargeBearer,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime

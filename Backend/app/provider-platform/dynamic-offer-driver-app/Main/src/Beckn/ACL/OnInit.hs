@@ -57,12 +57,15 @@ tfOrder res becknConfig mbFarePolicy = do
       orderUpdatedAt = Just res.booking.updatedAt
     }
 
-mkCommissionTagGroup :: Maybe Common.HighPrecMoney -> Maybe [Spec.TagGroup]
-mkCommissionTagGroup mbCommission = do
-  commission <- mbCommission
-  Tags.buildTagGroups
-    [ Tags.COMMISSION Tags.~= Common.highPrecMoneyToText commission
-    ]
+mkCommissionTagGroup :: Maybe Common.HighPrecMoney -> Maybe Common.HighPrecMoney -> Maybe Text -> Maybe [Spec.TagGroup]
+mkCommissionTagGroup mbCommission mbPaymentCharge mbPaymentChargeBearer =
+  let tags =
+        catMaybes
+          [ (Tags.COMMISSION Tags.~=) . Common.highPrecMoneyToText <$> mbCommission,
+            (Tags.PAYMENT_CHARGE Tags.~=) . Common.highPrecMoneyToText <$> mbPaymentCharge,
+            (Tags.PAYMENT_CHARGE_BEARER Tags.~=) <$> mbPaymentChargeBearer
+          ]
+   in if null tags then Nothing else Tags.buildTagGroups tags
 
 tfFulfillments :: DInit.InitRes -> Maybe [Spec.Fulfillment]
 tfFulfillments res =
@@ -82,7 +85,7 @@ tfPayments res bppConfig = do
   let mPrice = Just $ mkPrice (Just res.booking.currency) res.booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
   let basePayment = mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
-      commissionTagGroup = mkCommissionTagGroup res.booking.commission
+      commissionTagGroup = mkCommissionTagGroup res.booking.commission res.booking.paymentCharge res.booking.paymentChargeBearer
       updatedPaymentTags = case (basePayment.paymentTags, commissionTagGroup) of
         (Just existingTags, Just commissionTags) -> Just (existingTags <> commissionTags)
         (Just existingTags, Nothing) -> Just existingTags
