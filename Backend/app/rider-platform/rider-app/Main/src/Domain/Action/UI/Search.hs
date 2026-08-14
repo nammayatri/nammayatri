@@ -22,13 +22,16 @@ import Control.Monad
 import Data.Aeson
 import qualified Data.Aeson.Text as AT
 import Data.Default.Class
+import qualified Data.Geohash as Geohash
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
+import qualified Data.Time as Time
 import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Serviceability as DSrv
 import Domain.Types (GatewayAndRegistryService (..))
+import qualified Domain.Types.CachedRouteResponse as DCachedRouteResponse
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.HotSpot hiding (address, updatedAt)
@@ -79,6 +82,7 @@ import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
 import Storage.ConfigPilot.Config.HotSpotConfig (HotSpotConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.CachedRouteResponse as QCachedRouteResponse
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
@@ -616,12 +620,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       SearchReq ->
       m (RouteDetails, Maybe Text)
     getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide = \case
-      OneWaySearch oneWayReq -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.enforceTollRoute
-      AmbulanceSearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
-      InterCitySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
+      OneWaySearch oneWayReq -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.enforceTollRoute oneWayReq.shouldCacheRoute
+      AmbulanceSearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
+      InterCitySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
       EasyBookingSearch easyBookingReq -> processEasyBookingSearch person easyBookingReq originCity
-      DeliverySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing
+      DeliverySearch _ -> processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderCfg isMeterRide Nothing Nothing
       PTSearch _ -> do
         return
           ( RouteDetails
@@ -658,8 +662,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       RiderConfig ->
       Maybe Bool ->
       Maybe Bool ->
+      Maybe Bool ->
       m (RouteDetails, Maybe Text)
-    processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderConfig isMeterRide mbEnforceTollRoute = do
+    processOneWaySearch person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip riderConfig isMeterRide mbEnforceTollRoute mbShouldCacheRoute = do
       destinationLatLong <- case lastMaybe stopsLatLong of
         Just latLong -> return (Just latLong)
         Nothing -> do
@@ -672,7 +677,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             Just latLong -> return [sourceLatLong, latLong, sourceLatLong]
             Nothing -> throwError (InvalidRequest "Destination is required for Round Trips ")
           else return $ sourceLatLong : stopsLatLong
-      calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest_
+      calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest_ mbShouldCacheRoute
 
     processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text)
     processRentalSearch person rentalReq stopsLatLong originCity = do
@@ -843,6 +848,17 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
       searchRequestExpiry <- maybe 1800 fromIntegral <$> asks (.searchRequestExpiry)
       pure $ addUTCTime (fromInteger searchRequestExpiry) time
 
+routeCacheGeohashPrecision :: Int
+routeCacheGeohashPrecision = 9
+
+routeCacheMaxAge :: NominalDiffTime
+routeCacheMaxAge = fromInteger (30 * 24 * 60 * 60)
+
+getLocalHourOfDay :: Seconds -> UTCTime -> Int
+getLocalHourOfDay timeDiffFromUtc now =
+  let localTime = addUTCTime (fromIntegral timeDiffFromUtc.getSeconds) now
+   in Time.todHour (Time.timeToTimeOfDay (Time.utctDayTime localTime)) + 1
+
 calculateDistanceAndRoutes ::
   SearchRequestFlow m r =>
   RiderConfig ->
@@ -852,27 +868,57 @@ calculateDistanceAndRoutes ::
   [LatLong] ->
   Maybe Bool -> -- mbEnforceTollRoute, echoed from the serviceability response by the UI
   Bool ->
+  Maybe Bool ->
   m (RouteDetails, Maybe Text)
-calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest = do
-  let request =
-        Maps.GetRoutesReq
-          { waypoints = NE.fromList latLongs,
-            calcPoints = True,
-            mode = Just Maps.CAR
-          }
-      sourceLatLong = NE.head (NE.fromList latLongs)
+calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute isDashboardRequest mbShouldCacheRoute = do
+  now <- getCurrentTime
+  let neLatLongs = NE.fromList latLongs
+      sourceLatLong = NE.head neLatLongs
+      destLatLong = NE.last neLatLongs
+      cacheEnabled = mbShouldCacheRoute == Just True
+      cacheReadEnabled = riderConfig.enableRouteCacheRead == Just True
+      hourOfDay = getLocalHourOfDay riderConfig.timeDiffFromUtc now
+      mbPickupGeohash = T.pack <$> Geohash.encode routeCacheGeohashPrecision (sourceLatLong.lat, sourceLatLong.lon)
+      mbDropGeohash = T.pack <$> Geohash.encode routeCacheGeohashPrecision (destLatLong.lat, destLatLong.lon)
+      mbCacheKey = (,) <$> mbPickupGeohash <*> mbDropGeohash
+
   mbSpecialLocation <- withTimeAPI "rideSearch" "findSpecialLocationByLatLong" $ QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
+
   let mbSpecialLocationEnforceToll = QSpecialLocation.filterGates mbSpecialLocation True >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
   let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll
       isAvoidTollEffective = if mustEnforceToll then False else riderConfig.isAvoidToll
       finalEffectiveToll = if isDashboardRequest then not <$> mbEnforceTollRoute else Just isAvoidTollEffective
-  routeResponse <- withTimeAPI "rideSearch" "getRoutes" $ Maps.getRoutes finalEffectiveToll person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
+
+  mbCacheEntry <-
+    case (cacheReadEnabled, mbCacheKey) of
+      (True, Just (pickupGeohash, dropGeohash)) -> QCachedRouteResponse.findByRiderIdAndGeohashAndHourAndToll person.id pickupGeohash dropGeohash hourOfDay finalEffectiveToll
+      _ -> pure Nothing
+  let mbCachedRawRoutes = mbCacheEntry >>= \entry -> if Time.diffUTCTime now entry.createdAt <= routeCacheMaxAge then Just entry.routes else Nothing
+      staleEntryExists = isJust mbCacheEntry && isNothing mbCachedRawRoutes
+
+  rawRoutes <- case mbCachedRawRoutes of
+    Just cachedRoutes -> do
+      logInfo $ "Route cache hit for rider " <> person.id.getId <> " at hour " <> show hourOfDay
+      pure cachedRoutes
+    Nothing -> do
+      let request =
+            Maps.GetRoutesReq
+              { waypoints = neLatLongs,
+                calcPoints = True,
+                mode = Just Maps.CAR
+              }
+      withTimeAPI "rideSearch" "getRoutes" $ Maps.getRoutes finalEffectiveToll person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
+  when (isNothing mbCachedRawRoutes && (cacheEnabled || staleEntryExists)) $
+    whenJust mbCacheKey $ \(pickupGeohash, dropGeohash) ->
+      fork "caching route response" $
+        upsertCachedRouteResponse person merchantOperatingCity pickupGeohash dropGeohash hourOfDay finalEffectiveToll rawRoutes riderConfig.distanceWeightage now
 
   finalRoutes <-
     if mustEnforceToll
-      then withTimeAPI "rideSearch" "filterRoutesPreferringToll" $ TollsDetector.filterRoutesPreferringToll merchantOperatingCity.id.getId routeResponse
-      else pure routeResponse
+      then withTimeAPI "rideSearch" "filterRoutesPreferringToll" $ TollsDetector.filterRoutesPreferringToll merchantOperatingCity.id.getId rawRoutes
+      else pure rawRoutes
+
   let distanceWeightage = riderConfig.distanceWeightage
       durationWeightage = 100 - distanceWeightage
       (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo finalRoutes distanceWeightage durationWeightage
@@ -882,3 +928,36 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
       shortestRouteStaticDuration = (.staticDuration) =<< shortestRouteInfo
       mbDiscoveredSpecialLocId = fmap (.id.getId) mbSpecialLocation
   return (RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition finalRoutes shortestRouteIndex, ..}, mbDiscoveredSpecialLocId)
+
+upsertCachedRouteResponse ::
+  SearchRequestFlow m r =>
+  DPerson.Person ->
+  DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  Int ->
+  Maybe Bool ->
+  [Maps.RouteInfo] ->
+  Int ->
+  UTCTime ->
+  m ()
+upsertCachedRouteResponse person merchantOperatingCity pickupGeohash dropGeohash hourOfDay avoidToll routes distanceWeightage now = do
+  QCachedRouteResponse.deleteByRiderIdAndGeohashAndHourAndToll person.id pickupGeohash dropGeohash hourOfDay avoidToll
+  newId <- generateGUID
+  let (shortestRouteInfo, _) = Search.getEfficientRouteInfo routes distanceWeightage (100 - distanceWeightage)
+  QCachedRouteResponse.create $
+    DCachedRouteResponse.CachedRouteResponse
+      { id = newId,
+        riderId = person.id,
+        pickupGeohash = pickupGeohash,
+        dropGeohash = dropGeohash,
+        hourOfDay = hourOfDay,
+        avoidToll = avoidToll,
+        distance = (.distance) =<< shortestRouteInfo,
+        duration = (.duration) =<< shortestRouteInfo,
+        routes = routes,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just merchantOperatingCity.id,
+        createdAt = now,
+        updatedAt = now
+      }

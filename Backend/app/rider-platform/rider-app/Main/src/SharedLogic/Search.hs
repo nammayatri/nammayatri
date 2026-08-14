@@ -118,7 +118,8 @@ data OneWaySearchReq = OneWaySearchReq
     subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription),
     verifyBeforeCancellingOldBooking :: Maybe Bool,
     numberOfLuggages :: Maybe Int,
-    doMultimodalSearch :: Maybe Bool
+    doMultimodalSearch :: Maybe Bool,
+    shouldCacheRoute :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

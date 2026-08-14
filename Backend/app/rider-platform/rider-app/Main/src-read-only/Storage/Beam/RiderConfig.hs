@@ -82,6 +82,7 @@ data RiderConfigT f = RiderConfigT
     enableRewardsManagement :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRideEndOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableRideHailingOffers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableRouteCacheRead :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableShareNumberWithDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
     excludedVehicleVariants :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
