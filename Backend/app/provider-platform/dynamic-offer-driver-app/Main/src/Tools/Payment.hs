@@ -142,7 +142,7 @@ retryAccountLink ::
   ServiceFlow m r =>
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
-  Payment.AccountId ->
+  Payment.RetryAccountLinkReq ->
   m Payment.RetryAccountLink
 retryAccountLink = runWithServiceConfig Payment.retryAccountLink (.retryBankAccountLink)
 

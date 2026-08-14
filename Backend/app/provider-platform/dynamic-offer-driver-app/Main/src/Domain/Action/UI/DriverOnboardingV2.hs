@@ -38,6 +38,7 @@ import Domain.Types.FarePolicy
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as DIV
 import qualified Domain.Types.Image as Image
+import qualified Domain.Types.InitiatedBy as DIB
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -1141,10 +1142,11 @@ getDriverRegisterBankAccountLink ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Maybe DIB.InitiatedBy ->
     Maybe DMPM.PaymentMode ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
   )
-getDriverRegisterBankAccountLink (mbPersonId, _, _) paymentMode = do
+getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy paymentMode = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let fetchPersonStripeInfo = do
@@ -1160,7 +1162,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) paymentMode = do
               businessRegistrationNumber = Nothing
             }
   let driverRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle paymentMode person
+  SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.DriverApp mbInitiatedBy) person
 
 getDriverRegisterBankAccountStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

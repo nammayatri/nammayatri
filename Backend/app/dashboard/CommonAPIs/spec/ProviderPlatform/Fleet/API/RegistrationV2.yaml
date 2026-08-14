@@ -7,6 +7,7 @@ imports:
   Language: Kernel.External.Types
   IndianState: Kernel.Types.Beckn.Context
   AddressDocumentType: Dashboard.Common.Driver
+  InitiatedBy: Domain.Types.InitiatedBy
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -75,6 +76,7 @@ apis:
       query:
         - fleetOwnerId: Text
         - paymentMode: PaymentMode
+        - initiatedBy: InitiatedBy
       response:
         type: FleetBankAccountLinkResp
       helperApi:
@@ -84,6 +86,7 @@ apis:
             query:
               - fleetOwnerId: Text
               - paymentMode: PaymentMode
+              - initiatedBy: InitiatedBy
             mandatoryQuery:
               - requestorId: Text
             response:

@@ -444,7 +444,6 @@ library
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
-      Domain.Types.InitiatedBy
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
       Domain.Types.OnCancel

@@ -39,6 +39,7 @@ imports:
   RequirementsInfo: Kernel.External.Payment.Interface.Types
   Address: Kernel.External.Payment.Stripe.Types
   DocumentStatusItem: SharedLogic.DriverOnboarding.VehicleDocs
+  InitiatedBy: Domain.Types.InitiatedBy
 
 module: DriverOnboardingV2
 types:
@@ -359,6 +360,7 @@ apis:
       endpoint: /driver/register/bankAccount/link
       query:
         paymentMode: PaymentMode
+        initiatedBy: InitiatedBy
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: BankAccountLinkResp

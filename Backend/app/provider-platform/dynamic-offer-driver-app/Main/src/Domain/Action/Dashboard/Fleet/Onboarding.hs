@@ -270,7 +270,8 @@ castFleetInfoToAssociationInfo f =
       enabled = Nothing,
       isActive = f.isActive,
       isAssociated = f.isAssociated,
-      associatedTill = f.associatedTill
+      associatedTill = f.associatedTill,
+      requestReason = f.requestReason
     }
 
 castDocumentStatusItem :: SStatus.DocumentStatusItem -> CommonOnboarding.DocumentStatusItem

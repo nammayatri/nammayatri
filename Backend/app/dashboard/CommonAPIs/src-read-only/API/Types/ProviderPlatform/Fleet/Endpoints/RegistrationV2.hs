@@ -8,6 +8,7 @@ import qualified Dashboard.Common.Driver
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.PaymentMode
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -147,6 +148,7 @@ type PostRegistrationV2RegisterBankAccountLink =
       :> QueryParam
            "paymentMode"
            Domain.Types.PaymentMode.PaymentMode
+      :> QueryParam "initiatedBy" Domain.Types.InitiatedBy.InitiatedBy
       :> Post '[JSON] FleetBankAccountLinkResp
   )
 
@@ -155,8 +157,13 @@ type PostRegistrationV2RegisterBankAccountLinkHelper =
       :> QueryParam
            "paymentMode"
            Domain.Types.PaymentMode.PaymentMode
-      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
-      :> Post '[JSON] FleetBankAccountLinkResp
+      :> QueryParam "initiatedBy" Domain.Types.InitiatedBy.InitiatedBy
+      :> MandatoryQueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Post
+           '[JSON]
+           FleetBankAccountLinkResp
   )
 
 type GetRegistrationV2RegisterBankAccountStatus =
@@ -193,7 +200,7 @@ data RegistrationV2APIs = RegistrationV2APIs
   { postRegistrationV2LoginOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> FleetOwnerLoginReqV2 -> EulerHS.Types.EulerClient FleetOwnerLoginResV2,
     postRegistrationV2VerifyOtp :: FleetOwnerVerifyReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postRegistrationV2Register :: Kernel.Prelude.Text -> FleetOwnerRegisterReqV2 -> EulerHS.Types.EulerClient FleetOwnerRegisterResV2,
-    postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
+    postRegistrationV2RegisterBankAccountLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountLinkResp,
     getRegistrationV2RegisterBankAccountStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetBankAccountResp,
     putRegistrationV2ProfileLanguage :: Kernel.Prelude.Text -> FleetOwnerUpdateLanguageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getRegistrationV2ProfileLanguage :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient FleetOwnerLanguageRes
