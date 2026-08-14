@@ -319,8 +319,10 @@ dispatchDriverEarningAccrual sapCfg token params currency totals rows = do
       ]
   postRevenueRecognitionJV sapCfg token params driverEarningAccrualLabel totals.txnCount items currency rows
 
--- 5. Payout: DRIVER_BALANCE → PAYOUT_CLEARING → BANK (two balanced JVs in one request via two headers is heavier;
---    phase-1: single multi-line JV with clearing in the middle nets Dr==Cr)
+-- 5. Payout: two balanced JVs. Phase-1 both use the same WalletPayout total
+--    (clearing is a same-day wash). Intended sources:
+--      PayoutToClearing      = ledger WalletPayout (driver liability debit on SUCCESS)
+--      PayoutClearingToBank  = pg_payout_settlement_report (PG/bank file; WS4 ingest, idealy separate scheduler job should be created)
 dispatchPayout ::
   ( BeamFlow m r,
     EncFlow m r,
@@ -351,6 +353,7 @@ dispatchPayout sapCfg token params currency totals rows = do
         mkItem bId1 "2" payoutClearingAcct acctMap Credit amount currency
       ]
   ok1 <- postRevenueRecognitionJV sapCfg token params payoutToClearingLabel totals.txnCount items1 currency rows
+  -- Same amount as JV1 until WS4 wires pg_payout_settlement_report.
   -- JV2: Dr PAYOUT_CLEARING / Cr BANK
   bId2 <- getNextBatchId
   items2 <-

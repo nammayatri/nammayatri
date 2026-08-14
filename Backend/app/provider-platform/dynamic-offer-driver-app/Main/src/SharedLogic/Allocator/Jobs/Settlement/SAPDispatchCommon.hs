@@ -197,7 +197,7 @@ runSAPDispatchShell jobId cfg params scheduleNext runDomain = withLogTag ("JobId
             pure True
           Just sapCfg -> do
             let retries = params.maxApiRetries
-            tokenResult <- fetchSAPTokenWithRetry sapCfg retries
+            tokenResult <- fetchSAPTokenWithRetry sapCfg merchantOperatingCityId retries
             case tokenResult of
               Left err -> do
                 logError $ "SAP token fetch failed after " <> show retries <> " retries: " <> err
@@ -532,8 +532,8 @@ saveSapJournalEntries req mbResp entryStatus txnType txnCount mId mocid periodSt
 -- SAP API call with retry
 -- ---------------------------------------------------------------------------
 
-sapTokenCacheKey :: Text
-sapTokenCacheKey = "SAP:CachedToken"
+sapTokenCacheKey :: Id DMOC.MerchantOperatingCity -> Text
+sapTokenCacheKey mocId = "SAP:CachedToken:" <> mocId.getId
 
 fetchSAPTokenWithRetry ::
   ( EncFlow m r,
@@ -544,21 +544,23 @@ fetchSAPTokenWithRetry ::
     MonadReader r m
   ) =>
   SAPConfig.SAPServiceConfig ->
+  Id DMOC.MerchantOperatingCity ->
   Int ->
   m (Either Text Text)
-fetchSAPTokenWithRetry sapCfg maxRetries = do
-  cachedToken <- Hedis.get sapTokenCacheKey
+fetchSAPTokenWithRetry sapCfg mocId maxRetries = do
+  cachedToken <- Hedis.get cacheKey
   case (cachedToken :: Maybe Text) of
     Just token -> do
       logInfo "Using cached SAP token"
       pure $ Right token
     Nothing -> go 0
   where
+    cacheKey = sapTokenCacheKey mocId
     go attempt = do
       result <- try @_ @SomeException $ SAP.fetchSAPToken sapCfg
       case result of
         Right resp -> do
-          Hedis.setExp sapTokenCacheKey resp.access_token resp.expires_in
+          Hedis.setExp cacheKey resp.access_token resp.expires_in
           pure $ Right resp.access_token
         Left err -> do
           let attemptsLeft = maxRetries - attempt - 1

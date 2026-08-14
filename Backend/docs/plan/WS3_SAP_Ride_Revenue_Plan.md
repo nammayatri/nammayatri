@@ -104,7 +104,7 @@ flowchart LR
 | `BuyerAppSettlement` | `BANK` | `BUYER_APP_RECEIVABLE` | **Stub → 0** (WS2) |
 | `DriverEarningAccrual` | `RIDE_FARE_REVENUE` | `DRIVER_BALANCE` | BaseRide OwnerLiability credit legs |
 | `PayoutToClearing` | `DRIVER_BALANCE` | `PAYOUT_CLEARING` | SETTLED `WalletPayout` legs |
-| `PayoutClearingToBank` | `PAYOUT_CLEARING` | `BANK` | Same payout amount (second JV) |
+| `PayoutClearingToBank` | `PAYOUT_CLEARING` | `BANK` | Phase-1: **same** `WalletPayout` total. Intended: `pg_payout_settlement_report` (WS4 file ingest) |
 | `TdsDeduction` | `DRIVER_BALANCE` | `TDS_PAYABLE` | `direct_tax_transaction` `Deducted` |
 | `TdsReimbursement` | `TDS_RECEIVABLE` | `DRIVER_BALANCE` | **Forced 0** until WS8 `Reimbursed` rows |
 | `SubscriptionRideRevenue` | `DEFERRED_REVENUE` | `SUBSCRIPTION_REVENUE` | SETTLED `RideRevenueRecognition` |

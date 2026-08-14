@@ -71,9 +71,10 @@ data DriverEarningAccrualTotals = DriverEarningAccrualTotals
   }
   deriving (Generic, Show, Eq)
 
--- | Payout request → PG payout: DRIVER_BALANCE → PAYOUT_CLEARING → BANK
---   Amount from SETTLED WalletPayout ledger legs (channel-agnostic; WS4 adds
---   Stripe/bank-file/gating later without changing this aggregate shape).
+-- | Payout request → PG payout: DRIVER_BALANCE → PAYOUT_CLEARING → BANK.
+--   Phase-1: both SAP JVs use this one SETTLED WalletPayout total (trivial same
+--   amount). Intended split: JV1 = this ledger debit; JV2 = pg_payout_settlement_report
+--   (PG/bank file, WS4 ingest) — same pattern as PGSettlement ← pg_payment_settlement_report.
 data PayoutTotals = PayoutTotals
   { payoutAmount :: HighPrecMoney,
     txnCount :: Int
@@ -178,8 +179,11 @@ fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
             RevenueRecognitionTransactionRow {amount = gross, referenceId = refId, txnStatus = show st} : rs
           )
 
--- | List RideFare/Output ITT rows whose booking also has a SETTLED tax ledger leg
+-- | List RideFare/Output ITT rows whose booking also has a SETTLED tax ledger
 -- with the given online-or-cash reference types.
+-- EXISTS (not inner join): online GST posts two GSTOnline legs (BuyerAsset →
+-- BuyerExternal pass-through + BuyerExternal → GovtIndirect); a join would
+-- return the same ITT twice and the fold would double totals.
 findRideFareITTRowsByLedgerTaxRefs ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -195,38 +199,38 @@ findRideFareITTRowsByLedgerTaxRefs merchantOpCityId startTime endTime taxRefA ta
       L.findRows $
         B.select $
           fmap
-            ( \(itt, le) ->
+            ( \itt ->
                 ( itt.referenceId,
                   itt.taxableValue,
                   itt.cgstAmount,
                   itt.sgstAmount,
-                  itt.igstAmount,
-                  le.status
+                  itt.igstAmount
                 )
             )
             $ B.filter_'
-              ( \(itt, le) ->
+              ( \itt ->
                   itt.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
-                    B.&&?. le.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
                     B.&&?. itt.transactionType B.==?. B.val_ ITTDomain.RideFare
                     B.&&?. itt.gstCreditType B.==?. B.val_ ITTDomain.Output
                     B.&&?. B.sqlBool_ (itt.transactionDate B.>=. B.val_ startTime)
                     B.&&?. B.sqlBool_ (itt.transactionDate B.<=. B.val_ endTime)
-                    B.&&?. le.status B.==?. B.val_ LedgerDomain.SETTLED
-                    B.&&?. B.sqlBool_ (B.isNothing_ le.reversalOf)
+                    B.&&?. B.sqlBool_
+                      ( B.exists_ $
+                          B.filter_
+                            ( \le ->
+                                le.referenceId B.==. itt.referenceId
+                                  B.&&. (le.referenceType B.==. B.val_ taxRefA B.||. le.referenceType B.==. B.val_ taxRefB)
+                                  B.&&. le.merchantOperatingCityId B.==. B.val_ merchantOpCityId.getId
+                                  B.&&. le.status B.==. B.val_ LedgerDomain.SETTLED
+                                  B.&&. B.isNothing_ le.reversalOf
+                            )
+                            (B.all_ (BeamCommon.financeLedgerEntry BeamCommon.atlasDB))
+                      )
               )
-              do
-                itt <- B.all_ (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB)
-                le <-
-                  B.join_
-                    (BeamCommon.financeLedgerEntry BeamCommon.atlasDB)
-                    ( \le ->
-                        le.referenceId B.==. itt.referenceId
-                          B.&&. (le.referenceType B.==. B.val_ taxRefA B.||. le.referenceType B.==. B.val_ taxRefB)
-                    )
-                pure (itt, le)
+              (B.all_ (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB))
   case res of
-    Right rows -> pure rows
+    Right rows ->
+      pure $ (\(refId, net, cgst, sgst, igst) -> (refId, net, cgst, sgst, igst, LedgerDomain.SETTLED)) <$> rows
     Left err -> do
       L.logError ("findRideFareITTRowsByLedgerTaxRefs" :: Text) $
         "failed for mocId=" <> merchantOpCityId.getId <> " taxRefs=" <> taxRefA <> "/" <> taxRefB <> " error=" <> show err
@@ -319,8 +323,9 @@ findBaseRideOwnerLiabilityRows merchantOpCityId startTime endTime = do
 -- Payout
 -- ---------------------------------------------------------------------------
 
--- | Successful wallet payouts (Juspay today). WS4 (Stripe/bank-file/gating) is an
--- extension of eligibility/channels, not required for this aggregate.
+-- | Successful wallet payouts (Juspay webhook → WalletPayout ledger). Feeds both
+-- phase-1 payout JVs. WS4: keep this for PayoutToClearing; PayoutClearingToBank
+-- should switch to pg_payout_settlement_report once the payout file is ingested.
 fetchPayoutTotals ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
