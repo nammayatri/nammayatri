@@ -38,6 +38,24 @@ instance IsAPIError RatingError
 
 instanceExceptionWithParent 'HTTPException ''RatingError
 
+data ScheduledBookingError
+  = ScheduledBookingWindowInvalid Text
+  deriving (Eq, Show)
+
+instance IsBaseError ScheduledBookingError where
+  toMessage (ScheduledBookingWindowInvalid reason) = Just reason
+
+instance IsHTTPError ScheduledBookingError where
+  toErrorCode (ScheduledBookingWindowInvalid _) = "SCHEDULED_BOOKING_WINDOW_INVALID"
+  toHttpCode (ScheduledBookingWindowInvalid _) = E400
+
+instance IsAPIError ScheduledBookingError
+
+instance IsBecknAPIError ScheduledBookingError where
+  toType _ = DOMAIN_ERROR
+
+instanceExceptionWithParent 'HTTPException ''ScheduledBookingError
+
 data LocationServiceabilityError
   = LocationUnserviceable
   deriving (Eq, Show, IsBecknAPIError)

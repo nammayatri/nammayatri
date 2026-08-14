@@ -1322,6 +1322,8 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
+    minBookingWindow: Maybe Seconds
+    maxBookingWindow: Maybe Seconds
     issueBreachConfig: Maybe [IssueBreachConfig]
     gpsTollBehaviorWindowDays: Maybe Int
     enableGpsTollBehavior: Bool
