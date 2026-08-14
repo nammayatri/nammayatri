@@ -718,6 +718,11 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
   where
     getVehicleDocuments driverDocConfs role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification separateEnablement driverDocuments merchantOpCityId = do
       let personId = person.id
+      mbDriverInfo <-
+        if role == DP.DRIVER
+          then Just <$> (DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId))
+          else pure Nothing
+      let dontAutoEnable = fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         let allVehicleDocsVerified = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
@@ -731,7 +736,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 else ((allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
 
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
-        -- isActive=False means RC was explicitly deactivated — skip auto-reactivation
+        -- isActive=False means RC was explicitly deactivated — skip auto-reactivation for already-enabled drivers.
+        -- First-time onboarding still auto-activates: associations are created with isRcActive=False.
         -- Under enableBotFlow: write VRC.verified (= all isMandatory vehicle docs VALID) both ways;
         -- `approved` and RC activation are BOT-owned (suppressed below).
         let enableBotFlow = entityImagesInfo.transporterConfig.enableBotFlow == Just True || entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
@@ -753,10 +759,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 }
               (entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
         mbVehicle <- QVehicle.findById personId
+        let firstTimeOnboarding = maybe False (isNothing . (.enabledAt)) mbDriverInfo
+            allowAutoActivate =
+              isActive
+                || (firstTimeOnboarding && not dontAutoEnable)
         let unifiedRecompute = entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER) $ do
+        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && firstTimeOnboarding) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler:unifiedRecompute" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
-        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && (isActive || not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver))) $ do
+        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && allowAutoActivate) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
           -- Enable driver when RC is activated (only when flow is NOT separated)
           -- When separated, driver enablement is handled separately in the driver enablement section
