@@ -495,7 +495,7 @@ FRFSTicketBooking:
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
     OverrideType:
-      enum: "PassOverride"
+      enum: "PassOverride, OtherOverride"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fromTType:
@@ -880,6 +880,12 @@ FRFSRecon:
     entityType: Maybe EntityType
     reconStatus: Maybe ReconStatus
     paymentGateway: Maybe Text
+    overrideType: Maybe OverrideType
+    overriddenAmount: Maybe HighPrecMoney
+    overrideAppliedEntityId: Maybe Text
+
+  sqlType:
+    overrideType: text
 
   constraints:
     frfsTicketBookingId: SecondaryKey

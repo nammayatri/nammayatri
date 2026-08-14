@@ -539,16 +539,14 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
   plans <- mapM mkLegConfirmPlan allLegs
   validatePassSelections plans
   mapM_ confirmLeg plans
-  -- Legs whose fare a pass fully covers are not confirmed inline (see SharedLogic.FRFSPassConfirm).
-  -- When at least one leg is payable, the journey's payment success drives them. When none is, no
-  -- payment is ever created, so nothing else would -- confirm them here, once every leg is booked.
   let bookablePlans = filter (\plan -> not plan.shouldBookLater && plan.legInfo.bookingAllowed) plans
-      journeyHasPayableLeg = any (\plan -> isNothing (plan.mbElement >>= (.purchasedPassPaymentId))) bookablePlans
-  unless journeyHasPayableLeg $
-    void $
-      withTryCatch "startJourney:confirmPassCoveredLegs" $ do
-        legBookings <- mapMaybeM (QTBooking.findBySearchId . Id . (.searchId) . (.legInfo)) bookablePlans
-        FRFSPassConfirm.confirmPassCoveredLegs legBookings
+  void $
+    withTryCatch "startJourney:confirmPassCoveredLegs" $ do
+      legBookings <- mapMaybeM (QTBooking.findBySearchId . Id . (.searchId) . (.legInfo)) bookablePlans
+      -- Whether a leg is payable has to come from the resulting overriddenAmount, not from whether
+      -- a pass id was supplied: a pass giving only a partial discount still leaves a balance.
+      let journeyHasPayableLeg = any (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) legBookings
+      unless journeyHasPayableLeg $ FRFSPassConfirm.confirmPassCoveredLegs legBookings
   where
     mkLegConfirmPlan leg = do
       let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
@@ -605,7 +603,8 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
       let distinctPaymentIds = foldr (\pid acc -> if pid `elem` acc then acc else pid : acc) [] (map fst selections)
       forM_ distinctPaymentIds $ \paymentId -> do
         let legsUsingPass = [plan | (pid, plan) <- selections, pid == paymentId]
-            tripsRequired = length legsUsingPass
+            -- A trip per ticket, not per leg: a two-ticket leg costs the pass two.
+            tripsRequired = sum (map (.ticketQuantityTotal) legsUsingPass)
             mbOption = KP.listToMaybe [option | plan <- legsUsingPass, option <- plan.legInfo.applicablePasses, option.purchasedPassPaymentId == paymentId]
         whenJust mbOption $ \option ->
           unless option.unlimitedTripCount $

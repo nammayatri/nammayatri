@@ -25,6 +25,7 @@ data PassT f = PassT
     documentsRequired :: B.C f [Domain.Types.Pass.PassDocumentType],
     enable :: B.C f Kernel.Prelude.Bool,
     formVerificationConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    frfsCancelLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     frfsPriceOverrideApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     maxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

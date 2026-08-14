@@ -102,7 +102,10 @@ data FRFSBookingPaymentStatusAPI
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
-  { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+  { cancelOverrideEntityId :: Data.Maybe.Maybe Data.Text.Text,
+    cancelOverrideEntityName :: Data.Maybe.Maybe Data.Text.Text,
+    cancelOverrideEntityType :: Data.Maybe.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
+    cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationsUsed :: Data.Maybe.Maybe Kernel.Prelude.Int,
     isCancellable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     maxCancellationCount :: Data.Maybe.Maybe Kernel.Prelude.Int,

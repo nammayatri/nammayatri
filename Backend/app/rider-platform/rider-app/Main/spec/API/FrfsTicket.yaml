@@ -353,9 +353,11 @@ types:
     cancellationCharges: Maybe HighPrecMoney
     refundAmount: Maybe HighPrecMoney
     isCancellable: Maybe Bool
-    # Both Nothing when the rider's service tier has no cancellation cap configured.
     cancellationsUsed: Maybe Int
     maxCancellationCount: Maybe Int
+    cancelOverrideEntityType: Maybe OverrideType
+    cancelOverrideEntityId: Maybe Text
+    cancelOverrideEntityName: Maybe Text
 
   FRFSCancelStatus:
     cancellationCharges: Maybe HighPrecMoney

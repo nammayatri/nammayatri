@@ -26,6 +26,7 @@ data Pass = Pass
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     enable :: Kernel.Prelude.Bool,
     formVerificationConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    frfsCancelLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     frfsPriceOverrideApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

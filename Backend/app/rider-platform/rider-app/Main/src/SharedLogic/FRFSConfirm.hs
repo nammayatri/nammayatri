@@ -332,7 +332,15 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       -- actual bus departure rather than the booking creation time. Bus-only: metro/subway
       -- have no waybill schedule and leave firstTripId Nothing, so they fall back to `now`.
       mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
-      let mbLegDepartureTime = mbJourneyLeg >>= (.fromDepartureTime)
+      -- Only for a pass booking, where the departure decides which day the pass window is checked
+      -- against. Non-pass bookings keep the original `now`. Also rejects a departure that is not in
+      -- the future: journey_leg.fromDepartureTime comes from a timetable lookup, and where there is
+      -- no timing for the stop it is the epoch (95% of subway legs), which would otherwise land in
+      -- booking.startTime and feed calculateCancellationCharges.
+      let mbLegDepartureTime =
+            if isJust mbPurchasedPassPaymentId'
+              then mfilter (> now) (mbJourneyLeg >>= (.fromDepartureTime))
+              else Nothing
       bookingStartTime <-
         case (firstTripId, mbRouteCode) of
           (Just tripId, Just routeCode) -> do
@@ -435,19 +443,14 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       bookingWithOverride <- case mbResolved of
         Nothing -> pure booking
         Just (applicablePass, passOption) -> do
-          consumed <- FRFSPassOverride.consumeTripOnce booking.searchId applicablePass.purchasedPassPayment applicablePass.benefit
-          case consumed of
-            FRFSPassOverride.Exhausted -> do
-              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-              throwError (InvalidRequest $ "Pass has no trips remaining, purchasedPassPaymentId=" <> applicablePass.purchasedPassPayment.id.getId)
-            FRFSPassOverride.AlreadyConsumed -> do
-              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-              throwError (InvalidRequest $ "Duplicate booking for this search, pass already applied elsewhere, searchId=" <> booking.searchId.getId)
-            _ -> do
-              let overriddenAmount = passOption.overriddenTotalPrice.amount
-                  entityId = passOption.purchasedPassPaymentId.getId
-              QFRFSTicketBooking.updatePassOverrideById (Just DFRFSTicketBooking.PassOverride) (Just overriddenAmount) (Just entityId) booking.id
-              pure booking {DFRFSTicketBooking.overrideType = Just DFRFSTicketBooking.PassOverride, DFRFSTicketBooking.overriddenAmount = Just overriddenAmount, DFRFSTicketBooking.overrideAppliedEntityId = Just entityId}
+          -- The trip is spent at ticket confirm, not here. resolvePassOverride has already checked
+          -- the pass has trips left; booking only records the intent. A journey the rider abandons
+          -- before paying therefore costs no trip, and there is nothing to release.
+          let overriddenAmount = passOption.overriddenTotalPrice.amount
+              entityId = passOption.purchasedPassPaymentId.getId
+          _ <- pure applicablePass
+          QFRFSTicketBooking.updatePassOverrideById (Just DFRFSTicketBooking.PassOverride) (Just overriddenAmount) (Just entityId) booking.id
+          pure booking {DFRFSTicketBooking.overrideType = Just DFRFSTicketBooking.PassOverride, DFRFSTicketBooking.overriddenAmount = Just overriddenAmount, DFRFSTicketBooking.overrideAppliedEntityId = Just entityId}
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
@@ -562,13 +565,19 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
       void $ QFRFSTicketBooking.updateValidTillById validTillPass dConfirmRes.id
       void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING dConfirmRes.id
       void $ QFRFSTicketBooking.updateOnInitDone (Just True) dConfirmRes.id
-      confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderNamePass, mRiderNumberPass) dConfirmRes updatedQuoteCategories isSingleMode
-      case confirmResp of
-        Left err -> do
-          void $ QFRFSTicketBooking.updateFailureReasonById (Just err) dConfirmRes.id
+      spent <- FRFSPassOverride.spendTripForBooking rider dConfirmRes
+      if not spent
+        then do
+          void $ QFRFSTicketBooking.updateFailureReasonById (Just "Pass has no trips remaining") dConfirmRes.id
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED dConfirmRes.id
-          void $ withTryCatch "confirmWithoutPayment:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure dConfirmRes.searchId dConfirmRes.overrideAppliedEntityId)
-        Right _ -> pure ()
+        else do
+          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderNamePass, mRiderNumberPass) dConfirmRes updatedQuoteCategories isSingleMode
+          case confirmResp of
+            Left err -> do
+              void $ QFRFSTicketBooking.updateFailureReasonById (Just err) dConfirmRes.id
+              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED dConfirmRes.id
+              void $ withTryCatch "confirmWithoutPayment:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure dConfirmRes)
+            Right _ -> pure ()
     else when isMultiInitAllowed $ do
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
       let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))

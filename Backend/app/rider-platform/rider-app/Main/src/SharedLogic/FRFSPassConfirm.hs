@@ -107,10 +107,16 @@ confirmOne booking = do
       void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING latest.id
       void $ QFRFSTicketBooking.updateOnInitDone (Just True) latest.id
       logInfo $ "FRFSPassConfirm: confirming pass-covered leg bookingId=" <> latest.id.getId
-      confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) latest quoteCategories Nothing
-      case confirmResp of
-        Left err -> do
-          void $ QFRFSTicketBooking.updateFailureReasonById (Just err) latest.id
+      spent <- FRFSPassOverride.spendTripForBooking rider latest
+      if not spent
+        then do
+          void $ QFRFSTicketBooking.updateFailureReasonById (Just "Pass has no trips remaining") latest.id
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED latest.id
-          void $ withTryCatch "FRFSPassConfirm:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure latest.searchId latest.overrideAppliedEntityId)
-        Right _ -> pure ()
+        else do
+          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) latest quoteCategories Nothing
+          case confirmResp of
+            Left err -> do
+              void $ QFRFSTicketBooking.updateFailureReasonById (Just err) latest.id
+              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED latest.id
+              void $ withTryCatch "FRFSPassConfirm:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure latest)
+            Right _ -> pure ()

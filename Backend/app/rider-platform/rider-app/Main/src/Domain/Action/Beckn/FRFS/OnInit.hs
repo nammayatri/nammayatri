@@ -143,16 +143,12 @@ dropPassOverrideOnFareChange ::
   m FTBooking.FRFSTicketBooking
 dropPassOverrideOnFareChange booking = case booking.overrideAppliedEntityId of
   Nothing -> pure booking
-  Just entityId -> do
+  Just _ -> do
+    -- on_init runs before the ticket is confirmed, and the trip is only spent at confirm
+    -- (spendTripForBooking), so there is nothing to give back here -- just drop the override.
     logError $ "OnInit:dropPassOverrideOnFareChange fare changed under a pass-covered booking, dropping override bookingId=" <> booking.id.getId
-    released <- withTryCatch "onInit:dropOverrideReleaseTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId))
-    case released of
-      Left err -> do
-        logError $ "OnInit:dropPassOverrideOnFareChange trip release failed, keeping override fields for retry bookingId=" <> booking.id.getId <> " err=" <> show err
-        pure booking
-      Right _ -> do
-        QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing booking.id
-        pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing}
+    QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing booking.id
+    pure booking {FTBooking.overrideType = Nothing, FTBooking.overriddenAmount = Nothing, FTBooking.overrideAppliedEntityId = Nothing}
 
 createPayments ::
   ( EsqDBReplicaFlow m r,
@@ -202,4 +198,4 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
     markBookingFailed booking = do
       void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
-      void $ withTryCatch "onInit:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+      void $ withTryCatch "onInit:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)

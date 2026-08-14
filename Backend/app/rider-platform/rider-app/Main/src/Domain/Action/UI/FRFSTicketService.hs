@@ -1130,13 +1130,19 @@ getFrfsBookingCanCancelStatus _ bookingId = do
   mbCancellationsUsed <- forM mbQuota FRFSUtils.getCancellationsUsed
   -- Folded into isCancellable too, so a client reading only that field does not offer a dead button.
   let quotaExhausted = fromMaybe False ((>=) <$> mbCancellationsUsed <*> ((.maxCancellations) <$> mbQuota))
+      (mbCancelEntityId, mbCancelEntityName) = case (.source) <$> mbQuota of
+        Just (FRFSUtils.PassQuota eid ename) -> (Just eid, ename)
+        _ -> (Nothing, Nothing)
   return $
     FRFSCanCancelStatus
       { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,
         refundAmount = getAbsoluteValue ticketBooking.refundAmount,
         isCancellable = if quotaExhausted then Just False else ticketBooking.isBookingCancellable,
         cancellationsUsed = mbCancellationsUsed,
-        maxCancellationCount = (.maxCancellations) <$> mbQuota
+        maxCancellationCount = (.maxCancellations) <$> mbQuota,
+        cancelOverrideEntityType = DFRFSTicketBooking.PassOverride <$ mbCancelEntityId,
+        cancelOverrideEntityId = mbCancelEntityId,
+        cancelOverrideEntityName = mbCancelEntityName
       }
 
 postFrfsBookingCancel :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow APISuccess.APISuccess

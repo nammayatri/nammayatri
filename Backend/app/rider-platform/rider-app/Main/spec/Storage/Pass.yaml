@@ -49,6 +49,7 @@ Pass:
     verificationValidity: Seconds
     documentsRequired: "[PassDocumentType]"
     frfsPriceOverrideApplicable: Maybe Bool
+    frfsCancelLimit: Maybe Int
     order: Int
     enable: Bool
     autoApply: Bool

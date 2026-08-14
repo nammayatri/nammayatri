@@ -97,7 +97,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
   when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $ do
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-    void $ withTryCatch "frfsStatus:releaseTripOnExpiry" (FRFSPassOverride.releasePassOverrideTripOnFailure booking'.searchId booking'.overrideAppliedEntityId)
+    void $ withTryCatch "frfsStatus:releaseTripOnExpiry" (FRFSPassOverride.releasePassOverrideTripOnFailure booking')
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
@@ -127,7 +127,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           then do
             logInfo $ "booking is expired in confirming: " <> show booking
             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-            void $ withTryCatch "frfsStatus:releaseTripOnConfirmingExpiry" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+            void $ withTryCatch "frfsStatus:releaseTripOnConfirmingExpiry" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
             buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
           else do
@@ -147,7 +147,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         if paymentBookingStatus == FRFSTicketService.FAILURE
           then do
             logInfo $ "payment failed in approved: " <> show booking
-            void $ withTryCatch "frfsStatus:releaseTripOnPaymentFail" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+            void $ withTryCatch "frfsStatus:releaseTripOnPaymentFail" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
@@ -229,19 +229,22 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           -- Use payment categories if available, otherwise fall back to quote categories
                           paymentCategories <- QFRFSTicketBookingPaymentCategory.findAllByPaymentId paymentBooking.id
                           let categoriesToUse = if null paymentCategories then quoteCategories else map paymentCategoryToQuoteCategory paymentCategories
-                          confirmResp <- CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
-                          -- The journey is paid for, so its pass-covered legs (which have no payment
-                          -- row of their own and were deliberately not confirmed at booking time) can
-                          -- now be confirmed. Swallowed: a failure here must not undo the paid leg.
-                          void $ withTryCatch "frfsStatus:confirmPassCoveredLegs" (FRFSPassConfirm.confirmPassCoveredLegsOfJourney quoteUpdatedBooking)
+                          -- A partially discounted pass booking reaches the BPP through this path,
+                          -- not the 0-fare one, so the trip is spent here too.
+                          passSpent <- FRFSPassOverride.spendTripForBooking person quoteUpdatedBooking
+                          confirmResp <-
+                            if passSpent
+                              then CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) quoteUpdatedBooking categoriesToUse mbIsSingleMode
+                              else pure (Left "Pass has no trips remaining")
                           updatedBooking <-
                             case confirmResp of
                               Left err -> do
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-                                void $ withTryCatch "frfsStatus:releaseTripOnConfirmFail" (FRFSPassOverride.releasePassOverrideTripOnFailure booking.searchId booking.overrideAppliedEntityId)
+                                void $ withTryCatch "frfsStatus:releaseTripOnConfirmFail" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              Right _ ->
+                              Right _ -> do
+                                void $ withTryCatch "frfsStatus:confirmPassCoveredLegs" (FRFSPassConfirm.confirmPassCoveredLegsOfJourney quoteUpdatedBooking)
                                 case integratedBppConfig.providerConfig of
                                   DIBC.ONDC _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                                   _ -> do

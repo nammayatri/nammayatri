@@ -17,6 +17,7 @@ module SharedLogic.FRFSPassOverride
     getFRFSOverrideApplicablePassesByPersonId,
     applyOverrideBenefit,
     benefitForOverrideAppliedEntity,
+    passForOverrideAppliedEntity,
     parseOverrideBenefitConfig,
     isFullyPassCovered,
     PassCandidate (..),
@@ -30,6 +31,7 @@ module SharedLogic.FRFSPassOverride
     isUnlimitedBenefit,
     consumeTrip,
     consumeTripOnce,
+    spendTripForBooking,
     refundTrip,
   )
 where
@@ -39,6 +41,8 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
 import qualified Data.Time as T
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.Person as DP
@@ -53,6 +57,7 @@ import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 
@@ -323,6 +328,7 @@ passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnit
     | applicablePass <- applicablePasses,
       coversTier applicablePass,
       coversQuantity applicablePass,
+      hasTripsForQuantity applicablePass,
       let overriddenTotal = totalWith (applyOverrideBenefit applicablePass.benefit),
       overriddenTotal.amount < baseTotal.amount,
       coverageSupported integratedBPPConfig overriddenTotal
@@ -338,6 +344,10 @@ passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnit
       maybe False (`elem` applicablePass.pass.applicableVehicleServiceTiers) mbServiceTier
     coversQuantity applicablePass =
       withinQuantityCap totalQuantity applicablePass.benefit.maxTicketQuantityPerOverride
+    -- Each ticket costs a trip, so offering a 2-trip pass on a 3-ticket quote would only get as
+    -- far as confirm, where the spend fails and the booking dies.
+    hasTripsForQuantity applicablePass =
+      maybe True (>= totalQuantity) applicablePass.availableTripCount
 
 applyOverrideBenefit :: OverrideBenefit -> Price -> Price
 applyOverrideBenefit benefit basePrice
@@ -353,6 +363,16 @@ applyOverrideBenefit benefit basePrice
   where
     isEnabled = fromMaybe False
     discounted saving = mkPrice (Just basePrice.currency) (max 0 (basePrice.amount - saving))
+
+passForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe (DPPP.PurchasedPassPayment, DPass.Pass))
+passForOverrideAppliedEntity Nothing = pure Nothing
+passForOverrideAppliedEntity (Just entityId) = do
+  mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
+  case mbPayment of
+    Nothing -> pure Nothing
+    Just payment -> case payment.passId of
+      Nothing -> pure Nothing
+      Just passId -> fmap (payment,) <$> CQPass.findById passId
 
 benefitForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe OverrideBenefit)
 benefitForOverrideAppliedEntity Nothing = pure Nothing
@@ -407,44 +427,58 @@ claimTripMarker phase ttl searchId =
 passMarkerTtl :: Int
 passMarkerTtl = 120
 
-consumeTripOnce :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> DPPP.PurchasedPassPayment -> OverrideBenefit -> m ConsumeResult
-consumeTripOnce searchId payment benefit = do
+consumeTripOnce :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> DPPP.PurchasedPassPayment -> OverrideBenefit -> Int -> m ConsumeResult
+consumeTripOnce searchId payment benefit quantity = do
   firstConsume <- claimTripMarker "TripConsumed" passMarkerTtl searchId
   if not firstConsume
     then do
       logWarning $ "FRFSPassOverride:consumeTripOnce duplicate booking for searchId=" <> searchId.getId <> ", not applying override"
       pure AlreadyConsumed
-    else consumeTrip payment benefit
+    else consumeTrip payment benefit quantity
 
-consumeTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefit -> m ConsumeResult
-consumeTrip payment benefit
+-- | Spend `quantity` trips -- one per ticket, not one per booking.
+--
+-- The override discounts every ticket in the booking (passOptionsForQuote applies the benefit to
+-- each unit price), so a 3-ticket booking that debited a single trip would be handing out two free
+-- fares. maxTicketQuantityPerOverride bounds how many tickets one booking may cover; it does not
+-- make them cost one trip between them.
+consumeTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefit -> Int -> m ConsumeResult
+consumeTrip payment benefit quantity
   | isUnlimitedBenefit benefit = pure Unmetered
   | otherwise = do
     let allowance = allowanceFor payment benefit
+        toSpend = max 1 quantity
     void $ seededRemainingTrips payment allowance
     let key = makeTripCountKey payment.id
-    firstTry <- Redis.decrIfExist key
+    firstTry <- decrBySpend key toSpend
     remaining <-
       if firstTry < 0
         then do
-          logWarning $ "FRFSPassOverride:consumeTrip key missing or zero, reseeding paymentId=" <> payment.id.getId
+          logWarning $ "FRFSPassOverride:consumeTrip key missing or short, reseeding paymentId=" <> payment.id.getId
           void $ seededRemainingTrips payment allowance
-          Redis.decrIfExist key
+          decrBySpend key toSpend
         else pure firstTry
     if remaining < 0
       then do
-        logWarning $ "FRFSPassOverride:consumeTrip EXHAUSTED paymentId=" <> payment.id.getId
+        logWarning $ "FRFSPassOverride:consumeTrip EXHAUSTED paymentId=" <> payment.id.getId <> " needed=" <> show toSpend
         pure Exhausted
       else do
         refreshTripCountTtl payment key
         QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
         pure $ Consumed (fromIntegral remaining)
+  where
+    -- DECRBY is atomic but will happily go negative, so an overspend is put straight back. Two
+    -- riders racing the last trip both see a negative and both restore it; neither is charged.
+    decrBySpend key toSpend = do
+      remaining <- Redis.decrby key (fromIntegral toSpend)
+      when (remaining < 0) . void $ Redis.incrby key (fromIntegral toSpend)
+      pure remaining
 
-refundTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefit -> m ()
-refundTrip payment benefit = unless (isUnlimitedBenefit benefit) $ do
+refundTrip :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DPPP.PurchasedPassPayment -> OverrideBenefit -> Int -> m ()
+refundTrip payment benefit quantity = unless (isUnlimitedBenefit benefit) $ do
   let key = makeTripCountKey payment.id
   void $ seededRemainingTrips payment (allowanceFor payment benefit)
-  remaining <- Redis.incr key
+  remaining <- Redis.incrby key (fromIntegral (max 1 quantity))
   refreshTripCountTtl payment key
   QPurchasedPassPayment.updateAvailableTripCountById (Just (fromIntegral remaining)) payment.id
   logInfo $ "FRFSPassOverride:refundTrip paymentId=" <> payment.id.getId <> " -> " <> show remaining
@@ -532,8 +566,9 @@ resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTie
             pure Nothing
           (passOption : _) -> pure (Just (applicablePass, passOption))
 
-refundPassOverrideTrip :: (CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> Id DPPP.PurchasedPassPayment -> m ()
-refundPassOverrideTrip searchId paymentId = do
+-- | Give back the trips a booking spent. `quantity` must match what it debited -- one per ticket.
+refundPassOverrideTrip :: (CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> Id DPPP.PurchasedPassPayment -> Int -> m ()
+refundPassOverrideTrip searchId paymentId quantity = do
   mbPayment <- QPurchasedPassPayment.findByPrimaryKey paymentId
   case mbPayment of
     Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip payment not found paymentId=" <> paymentId.getId
@@ -544,11 +579,54 @@ refundPassOverrideTrip searchId paymentId = do
         Just benefit -> do
           firstRelease <- claimTripMarker "TripReleased" passMarkerTtl searchId
           if firstRelease
-            then refundTrip payment benefit
+            then refundTrip payment benefit quantity
             else logInfo $ "FRFSPassOverride:refundPassOverrideTrip already released for searchId=" <> searchId.getId
 
-releasePassOverrideTripOnFailure :: (CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> Maybe Text -> m ()
-releasePassOverrideTripOnFailure searchId mbEntityId =
-  whenJust mbEntityId $ \entityId -> do
-    logInfo $ "FRFSPassOverride: releasing trip for failed booking searchId=" <> searchId.getId <> " paymentId=" <> entityId
-    refundPassOverrideTrip searchId (Id entityId)
+-- | Give a trip back for a failed booking -- but only if it ever spent one.
+--
+-- The trip is deducted at ticket confirm (spendTripForBooking), not at booking creation, so a
+-- booking that failed before reaching CONFIRMING never debited anything and must not be credited.
+releasePassOverrideTripOnFailure :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
+releasePassOverrideTripOnFailure booking =
+  whenJust booking.overrideAppliedEntityId $ \entityId ->
+    if booking.status `elem` [DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.CONFIRMED]
+      then do
+        quantity <- ticketQuantityForBooking booking
+        logInfo $ "FRFSPassOverride: releasing " <> show quantity <> " trip(s) for failed booking searchId=" <> booking.searchId.getId <> " paymentId=" <> entityId
+        refundPassOverrideTrip booking.searchId (Id entityId) quantity
+      else logInfo $ "FRFSPassOverride: booking never confirmed (status=" <> show booking.status <> "), no trip to give back searchId=" <> booking.searchId.getId
+
+-- | Spend the pass trip for a booking that is about to be confirmed with the BPP.
+--
+-- Deliberately at confirm time rather than at booking creation: a rider who abandons before the
+-- ticket is issued should not lose a trip, and if nothing is ever spent there is nothing to release.
+-- Returns False when the pass has run out, in which case the caller must not confirm.
+spendTripForBooking :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> DFRFSTicketBooking.FRFSTicketBooking -> m Bool
+spendTripForBooking person booking = case booking.overrideAppliedEntityId of
+  Nothing -> pure True
+  Just entityId -> do
+    mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
+    tripDay <- localTripDay person (fromMaybe booking.createdAt booking.startTime)
+    mbApplicable <- case mbPayment of
+      Just payment
+        | payment.personId == booking.riderId
+            && payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] ->
+          toApplicablePass booking.vehicleType tripDay payment
+      _ -> pure Nothing
+    case mbApplicable of
+      Nothing -> do
+        logWarning $ "FRFSPassOverride:spendTripForBooking pass no longer applicable at confirm paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
+        pure False
+      Just applicable -> do
+        quantity <- ticketQuantityForBooking booking
+        consumeTripOnce booking.searchId applicable.purchasedPassPayment applicable.benefit quantity >>= \case
+          Exhausted -> do
+            logWarning $ "FRFSPassOverride:spendTripForBooking exhausted paymentId=" <> entityId <> " needed=" <> show quantity
+            pure False
+          _ -> pure True
+
+-- | Tickets this booking covers, and therefore trips it costs.
+ticketQuantityForBooking :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Int
+ticketQuantityForBooking booking = do
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+  pure . max 1 . sum $ map (.selectedQuantity) quoteCategories

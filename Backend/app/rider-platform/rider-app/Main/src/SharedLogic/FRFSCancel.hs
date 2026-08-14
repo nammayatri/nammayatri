@@ -85,26 +85,29 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
   mRiderNumber <- mapM decrypt person.mobileNumber
   val :: Maybe Text <- Redis.get (FRFSUtils.makecancelledTtlKey booking.id)
   fullyCancelled <-
-    if val /= Just messageId && counterCancellationPossible
-      then do
-        void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
-        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
-        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
-        return False
-      else do
-        void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
-        void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
-        void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
-        void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
-        void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
-        void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
-        void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-        -- A fully pass-covered booking has no payment row, so this is conditional now.
-        whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
-        whenJust booking.overrideAppliedEntityId $ \entityId ->
-          void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId))
-        return True
+    if booking.status == DFRFSTicketBooking.CANCELLED
+      then pure False
+      else
+        if val /= Just messageId && counterCancellationPossible
+          then do
+            void $ QTBooking.updateStatusById DFRFSTicketBooking.COUNTER_CANCELLED booking.id
+            void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
+            void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
+            return False
+          else do
+            void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
+            void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id
+            void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
+            void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
+            void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
+            void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
+            void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
+            whenJust mbPaymentBooking $ \paymentBooking ->
+              void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+            whenJust booking.overrideAppliedEntityId $ \entityId ->
+              -- One trip per ticket went out at confirm, so the same number comes back here.
+              void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId) fareParameters.totalQuantity)
+            return True
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId

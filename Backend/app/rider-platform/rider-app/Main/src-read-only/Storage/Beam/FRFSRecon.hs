@@ -6,6 +6,7 @@ module Storage.Beam.FRFSRecon where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FRFSRecon
+import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -30,6 +31,9 @@ data FRFSReconT f = FRFSReconT
     message :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     networkOrderId :: B.C f Kernel.Prelude.Text,
+    overriddenAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    overrideAppliedEntityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    overrideType :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType),
     paymentGateway :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,
     providerName :: B.C f Kernel.Prelude.Text,

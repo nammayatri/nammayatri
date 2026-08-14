@@ -123,3 +123,16 @@ ALTER TABLE atlas_app.pass ADD COLUMN override_benefit_config_json jsonb ;
 
 ------- SQL updates -------
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN frfs_cancel_limit integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

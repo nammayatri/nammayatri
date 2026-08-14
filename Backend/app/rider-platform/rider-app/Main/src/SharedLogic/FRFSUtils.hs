@@ -108,6 +108,7 @@ import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
@@ -999,12 +1000,35 @@ data CancellationQuota = CancellationQuota
   { quotaKey :: Text,
     quotaMember :: Text,
     maxCancellations :: Int,
-    windowSeconds :: Int
+    windowSeconds :: Int,
+    source :: QuotaSource
   }
 
 -- | Cancellation quota for a booking, or Nothing when the rider is not capped. Never throws.
+data QuotaSource
+  = TierQuota
+  | PassQuota Text (Maybe Text)
+
 getCancellationQuota :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe CancellationQuota)
-getCancellationQuota booking =
+getCancellationQuota booking = do
+  mbTierQuota <- tierCancellationQuota booking
+  mbPass <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
+  let mbPassQuota = do
+        entityId <- booking.overrideAppliedEntityId
+        (payment, pass) <- mbPass
+        limit <- pass.frfsCancelLimit
+        tierQuota <- mbTierQuota
+        guard (limit > 0)
+        pure
+          tierQuota
+            { quotaKey = tierQuota.quotaKey <> ":purchasedPassPaymentId-" <> entityId,
+              maxCancellations = limit,
+              source = PassQuota entityId payment.passName
+            }
+  pure (mbPassQuota <|> mbTierQuota)
+
+tierCancellationQuota :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe CancellationQuota)
+tierCancellationQuota booking =
   case getServiceTierTypeFromRouteStationsJson booking.routeStationsJson of
     Nothing -> return Nothing
     Just serviceTierType -> do
@@ -1031,7 +1055,8 @@ getCancellationQuota booking =
                       { quotaKey = "FRFS:Cancel:Quota:v1:mocId-" <> booking.merchantOperatingCityId.getId <> ":personId-" <> booking.riderId.getId,
                         quotaMember = booking.id.getId,
                         maxCancellations = maxCancellations',
-                        windowSeconds = windowSeconds'
+                        windowSeconds = windowSeconds',
+                        source = TierQuota
                       }
 
 -- | How many cancellations the rider has spent in the current window. Also repairs a key that lost
@@ -1083,15 +1108,20 @@ totalOrderValue paymentBookingStatus booking =
 
 -- TODO :: This function called in Ticket Cancellation flow does not properly handle multiple quote category, whe enabling cancellation for multiple categories this needs to be rectified.
 updateTotalOrderValueAndSettlementAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> [DFRFSQuoteCategory.FRFSQuoteCategory] -> BecknConfig -> m ()
-updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig = do
+updateTotalOrderValueAndSettlementAmount booking _quoteCategories bapConfig = do
   mbPaymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findTicketBookingPayment booking
   unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
     throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+  -- Divide by the number of recon rows, which is one per ticket the BPP issued -- NOT by the
+  -- ticket quantity. buildReconTable splits the fare across `length tickets`, and an operator
+  -- issuing one ticket for a multi-quantity booking is the common case, so dividing by quantity
+  -- here rewrote a row holding the whole fare down to a fraction of it on every cancellation.
+  ticketCount <- length <$> QFRFSTicket.findAllByTicketBookingId booking.id
+  let reconRows = max 1 ticketCount
       finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
-      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
+      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational reconRows)
   tOrderPrice <- maybe (pure booking.totalPrice) (\paymentBooking -> totalOrderValue paymentBooking.status booking) mbPaymentBooking
-  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational fareParameters.totalQuantity)
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational reconRows)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
 
