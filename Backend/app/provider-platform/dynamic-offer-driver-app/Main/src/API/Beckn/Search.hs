@@ -109,6 +109,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
         void $ Utils.validateSearchContext context transporterId moc.id
         dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
+        DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
         msgId <- Utils.getMessageId context
         country <- Utils.getContextCountry context
 

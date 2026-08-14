@@ -634,6 +634,7 @@ library
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledBooking.OverlapCheck
+      SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry

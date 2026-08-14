@@ -5044,11 +5044,13 @@ postDriverFleetScheduledBookingAssign ::
 postDriverFleetScheduledBookingAssign merchantShortId opCity fleetOwnerId Common.AssignScheduledBookingReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  when transporterConfig.disableListScheduledBookingAPI $ throwError (InvalidRequest "Fleet scheduled booking assignment is disabled for this operating city")
   let driverPersonId = cast @Common.Driver @DP.Person driverId
   fleetDriverAssociation <- QFDAExtra.findByDriverId driverPersonId True >>= fromMaybeM (InvalidRequest "Driver not associated with fleet")
   unless (fleetDriverAssociation.fleetOwnerId == fleetOwnerId) $ throwError (InvalidRequest "Driver does not belong to this fleet owner")
   -- Driver's selected service tiers must include booking's service tier (drivers can downgrade variant)
-  booking <- QRB.findById (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
   vehicle <- QVehicle.findById driverPersonId >>= fromMaybeM (VehicleNotFound driverPersonId.getId)
   unless (booking.vehicleServiceTier `elem` vehicle.selectedServiceTiers) $ throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
   void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId)
