@@ -719,6 +719,97 @@ auto-rickshaws, 2 sedans, 1 hatchback and 1 SUV. "SUV" therefore reaches exactly
 one driver, and dispatch will look unreliable for reasons that are nothing to do
 with dispatch.
 
+## The driver API — and why the source tree lies about it
+
+Proven end to end against the running server on 13 Aug. Read this before writing
+any driver code, because **the checked-out source describes a different system**.
+
+### The trap, first
+
+`Backend/dev/local-stack/bin/MANIFEST.txt` records the build ref the deployed
+binaries came from: `03a7531`. That ref **is an ancestor of this branch's HEAD**
+— the running backend is *older* than the tree you are reading, and on this code
+path the two disagree completely.
+
+Read the current source and you conclude driver positions come from the
+**location-tracking service**, a separate Rust binary that is not in
+`docker-compose.yml`. `Storage/Queries/DriverLocation/Internal.hs` calls
+`LF.nearBy`, which unconditionally calls it, and there is no database fallback.
+Taken at face value that means a whole extra service must be deployed before a
+driver app is possible at all.
+
+It is wrong. The running binary still has `POST /ui/driver/location`, which the
+current source deleted, and it writes `atlas_driver_offer_bpp.driver_location`
+in Postgres directly. Three independent confirmations:
+
+```bash
+# 1. the string is in the deployed binary and not in the tree
+strings -n 6 bin/dynamic-offer-driver-app-exe | grep -i 'Domain.Action.UI.Location.UpdateLocation'
+
+# 2. drivers-keepalive.sh measurably works, and all it does is UPDATE that table
+# 3. a live POST moved a real driver's row within two seconds
+```
+
+**So: for the driver side, the binary is the authority, not the source tree.**
+The binary publishes its own route list, which is the reference to use:
+
+```bash
+curl -s http://localhost:8017/openapi | python3 -m json.tool | less
+```
+
+### The routes, as they actually exist
+
+All under `/ui`, on port **8017** (8016 inside the Docker VM).
+
+```
+POST /ui/auth                                  merchantId is the merchant UUID,
+                                               NOT the short id — the rider side
+                                               wants the short id, which is why
+                                               this is so easy to get wrong.
+                                               A number with no driver CREATES one.
+POST /ui/auth/{authId}/verify                  otp 7891
+POST /ui/driver/setActivity                    go online / offline
+GET  /ui/driver/nearbyRideRequest              poll for incoming requests
+POST /ui/driver/searchRequest/quote/offer      the driver's fare
+POST /ui/driver/searchRequest/quote/respond    accept / decline
+POST /ui/driver/ride/{rideId}/arrived/pickup
+POST /ui/driver/ride/{rideId}/start            the rider's OTP
+POST /ui/driver/ride/{rideId}/end
+POST /ui/driver/ride/{rideId}/cancel
+GET  /ui/driver/ride/list
+POST /ui/driver/location                       position — see below
+GET  /ui/driver/location/{rideId}              NO AUTH. This is what the rider
+                                               app uses to track the driver.
+```
+
+### `POST /ui/driver/location`, and its one nasty property
+
+Header `token`. Body is a **non-empty array**:
+
+```json
+[ { "pt": {"lat": 36.7574, "lon": 3.0588}, "ts": "2026-08-13T13:39:31Z", "acc": 8.0 } ]
+```
+
+Measured: batching works and the **last point wins**; the rate limit is 100/s,
+so cadence is a client battery decision and not a server constraint.
+
+**`ts` comes from the phone, and a point not newer than the stored one is
+dropped — while still answering `200 Success`.** A driver whose clock is behind
+reports healthily forever and never moves. Nothing distinguishes this from
+working correctly except watching the row. Count fixes and successful posts
+separately in any client; the two agreeing proves nothing.
+
+### Not reachable from a phone yet
+
+`edge/nginx.conf` publishes the rider API and the tiles and nothing else, on
+purpose. `/ui/` is loopback-only.
+
+Publishing it is not just an nginx `location` block: driver auth **creates a
+driver for any unknown number**, and the OTP is still the fixed `7891`. As it
+stands, exposing it lets anyone create a driver and go online. It needs the same
+treatment `auth-guard` gives the rider side, and `auth-guard` currently matches
+the rider's `/v2/auth` shape rather than `/ui/auth`.
+
 ## Backups — `./backup.sh`
 
 ```bash

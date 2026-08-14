@@ -187,6 +187,20 @@ ending up with binaries that differ from everything tested so far.
 So: prefer config, SQL, or a shim in front. The OTP attempt limit lives in
 nginx for exactly this reason, not in the Haskell that already had the counter.
 
+**The running binary is older than this tree, and on some paths they disagree
+outright.** `Backend/dev/local-stack/bin/MANIFEST.txt` names the build ref
+(`03a7531`), which is an *ancestor* of this branch. Upstream has since replaced
+whole subsystems. Measured case: the tree says driver positions come from the
+location-tracking service, a separate Rust binary we do not run; the deployed
+binary still has `POST /ui/driver/location` writing Postgres directly, and that
+is what actually serves us.
+
+So when the question is "what does the server do", **ask the server**, not the
+source. It publishes its own route list at `/openapi`, and `strings` on the
+binaries in `bin/` settles anything else. Reading the tree instead has already
+produced one confident, wrong conclusion — that a driver app required deploying
+another service first. See the driver API section of the local-stack README.
+
 ## Algeria-specific data
 
 - Service area is the **national border**, in `algeria-geofences.sql`. Note
