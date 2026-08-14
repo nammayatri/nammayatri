@@ -398,6 +398,9 @@ let nearByDriverAPIRateLimitOptions = { limit = +5, limitResetTimeInSec = +30 }
 let seatBookingConfirmAPIRateLimitOptions =
       { limit = +1, limitResetTimeInSec = +30 }
 
+let bookingGroupCheckoutAPIRateLimitOptions =
+      { limit = +2, limitResetTimeInSec = +60 }
+
 let sosTrackingRateLimitOptions = { limit = +60, limitResetTimeInSec = +60 }
 
 let erssStatusUpdateRateLimitOptions =
@@ -518,6 +521,7 @@ in  { esqDBCfg
     , zendeskWebhookToken = sec.zendeskWebhookToken
     , nearByDriverAPIRateLimitOptions
     , seatBookingConfirmAPIRateLimitOptions
+    , bookingGroupCheckoutAPIRateLimitOptions
     , sosTrackingRateLimitOptions
     , erssStatusUpdateRateLimitOptions
     , inMemConfig

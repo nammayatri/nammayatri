@@ -27,6 +27,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
             bookingAuthCode = bookingAuthCode,
+            bookingGroupId = Kernel.Types.Id.Id <$> bookingGroupId,
             bppBankAccountNumber = bppBankAccountNumber,
             bppBankCode = bppBankCode,
             bppDelayedInterest = bppDelayedInterest,
@@ -119,6 +120,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
         Beam.bookingAuthCode = bookingAuthCode,
+        Beam.bookingGroupId = Kernel.Types.Id.getId <$> bookingGroupId,
         Beam.bppBankAccountNumber = bppBankAccountNumber,
         Beam.bppBankCode = bppBankCode,
         Beam.bppDelayedInterest = bppDelayedInterest,

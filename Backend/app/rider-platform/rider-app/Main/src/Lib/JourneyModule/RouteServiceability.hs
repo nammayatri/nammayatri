@@ -148,84 +148,6 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               overrideDestinationStopCode = mbOverrideDestinationStopCode
             }
   where
-    getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' = do
-      -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
-      let vehicleNos = map (.vehicle_no) busScheduleDetails'
-      liveInfoResults <-
-        if null vehicleNos
-          then do
-            logDebug $ "getBusScheduleInfo: No vehicles found for routeId=" <> routeId' <> ", returning empty list"
-            pure []
-          else
-            JMU.measureLatency
-              (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
-              ("getBusScheduleInfo: getVehicleMetadata routeId=" <> routeId' <> " vehicles=" <> show (length vehicleNos))
-      let busLiveInfoMap = zip vehicleNos liveInfoResults
-      -- Hoist stop index lookup once (same cache key for all vehicles)
-      mStopIndices <-
-        JMU.measureLatency
-          (JMU.getRouteStopIndices routeId' fromStopCode' toStopCode' integratedBPPConfig')
-          ("getBusScheduleInfo: getRouteStopIndices routeId=" <> routeId')
-      catMaybes
-        <$> mapConcurrently
-          ( \detail -> do
-              let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
-              logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
-              mbVehicleMetadata <-
-                JMU.measureLatency
-                  (JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] detail.vehicle_no)
-                  ("getBusScheduleInfo: getVehicleMetadataFromInMem vehicle=" <> detail.vehicle_no)
-              let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
-              case mbServiceTier of
-                Just serviceTier -> do
-                  let frfsServiceTier = lookup serviceTier frfsTierMap'
-                  let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
-                      mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
-
-                  let combinedTripId = do
-                        waybill <- detail.waybill_no
-                        tNum <- detail.trip_number
-                        return $ waybill <> "-" <> show tNum
-                  let mbSeatLayoutMapping = join (Map.lookup detail.vehicle_no seatLayoutMappingByVehicleNo')
-                  let mbSeatLayoutId = (.seatLayoutId) <$> mbSeatLayoutMapping
-                      seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
-                  (isAvailable, availableSeatsCount) <- case mbSeatLayoutId of
-                    Just layoutId -> case combinedTripId of
-                      Nothing -> return (False, Nothing)
-                      Just tripId -> do
-                        case mStopIndices of
-                          Just (fromIdx, toIdx) -> do
-                            avail <- SeatBooking.getAvailableSeatCount layoutId tripId fromIdx toIdx
-                            logInfo $ "seatAvailability routeId=" <> routeId' <> " tripId=" <> tripId <> " vehicle=" <> detail.vehicle_no <> " available=" <> show avail
-                            return (avail > 0, Just avail)
-                          _ -> return (True, Nothing)
-                    Nothing -> return (True, Nothing)
-
-                  if not isAvailable
-                    then return Nothing
-                    else do
-                      logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
-                      return . Just $
-                        API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
-                          { eta = Just detail.eta,
-                            position = (\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo,
-                            locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
-                            serviceTierType = serviceTier,
-                            serviceTierName = (.shortName) <$> frfsServiceTier,
-                            vehicleNumber = detail.vehicle_no,
-                            tripId = combinedTripId,
-                            isActiveTrip = detail.is_active_trip,
-                            serviceSubTypes = mbServiceSubTypes,
-                            vehicleTagNumber = mbVehicleTagNumber,
-                            availableSeats = availableSeatsCount,
-                            seatSelectionType = seatSelType
-                          }
-                Nothing -> do
-                  logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
-                  return Nothing
-          )
-          busScheduleDetails'
-
     getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' = do
       allVehicles <-
         catMaybes
@@ -279,6 +201,97 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               sortOn (\v -> distanceBetweenInMeters sourceLatLong v.position) allVehicles
             Nothing -> allVehicles
       pure $ take maxLiveCount sorted
+
+-- | Builds the scheduled-trip listing for a route/stop-pair -- no live-vehicle GPS enrichment,
+--   no upcoming-buses Redis cache, no seat-hold-reaper trigger. Split out of
+--   buildRouteWithLiveVehicle so callers that only need schedule/quote data (not the live map)
+--   can skip the rest of that function's work.
+getBusScheduleInfo ::
+  NandiTypes.BusScheduleDetails ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  Text ->
+  [(BecknV2.FRFS.Enums.ServiceTierType, DFRFSVehicleServiceTier.FRFSVehicleServiceTier)] ->
+  Map.Map Text (Maybe DVSLM.VehicleSeatLayoutMapping) ->
+  Flow [API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo]
+getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' = do
+  -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
+  let vehicleNos = map (.vehicle_no) busScheduleDetails'
+  liveInfoResults <-
+    if null vehicleNos
+      then do
+        logDebug $ "getBusScheduleInfo: No vehicles found for routeId=" <> routeId' <> ", returning empty list"
+        pure []
+      else
+        JMU.measureLatency
+          (JLCF.getVehicleMetadata vehicleNos integratedBPPConfig')
+          ("getBusScheduleInfo: getVehicleMetadata routeId=" <> routeId' <> " vehicles=" <> show (length vehicleNos))
+  let busLiveInfoMap = zip vehicleNos liveInfoResults
+  -- Hoist stop index lookup once (same cache key for all vehicles)
+  mStopIndices <-
+    JMU.measureLatency
+      (JMU.getRouteStopIndices routeId' fromStopCode' toStopCode' integratedBPPConfig')
+      ("getBusScheduleInfo: getRouteStopIndices routeId=" <> routeId')
+  catMaybes
+    <$> mapConcurrently
+      ( \detail -> do
+          let busLiveInfo = join $ lookup detail.vehicle_no busLiveInfoMap
+          logDebug $ "getBusScheduleInfo: getBusLiveInfo vehicle=" <> detail.vehicle_no <> ", found=" <> show (isJust busLiveInfo) <> ", details=" <> show (fmap (\v -> (v.vehicle_number, v.latitude, v.longitude, v.timestamp, v.routes_info, v.bearing)) busLiveInfo)
+          mbVehicleMetadata <-
+            JMU.measureLatency
+              (JMU.getVehicleMetadataFromInMem [integratedBPPConfig'] detail.vehicle_no)
+              ("getBusScheduleInfo: getVehicleMetadataFromInMem vehicle=" <> detail.vehicle_no)
+          let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
+          case mbServiceTier of
+            Just serviceTier -> do
+              let frfsServiceTier = lookup serviceTier frfsTierMap'
+              let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
+                  mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
+
+              let combinedTripId = do
+                    waybill <- detail.waybill_no
+                    tNum <- detail.trip_number
+                    return $ waybill <> "-" <> show tNum
+              let mbSeatLayoutMapping = join (Map.lookup detail.vehicle_no seatLayoutMappingByVehicleNo')
+              let mbSeatLayoutId = (.seatLayoutId) <$> mbSeatLayoutMapping
+                  seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
+              (isAvailable, availableSeatsCount) <- case mbSeatLayoutId of
+                Just layoutId -> case combinedTripId of
+                  Nothing -> return (False, Nothing)
+                  Just tripId -> do
+                    case mStopIndices of
+                      Just (fromIdx, toIdx) -> do
+                        avail <- SeatBooking.getAvailableSeatCount layoutId tripId fromIdx toIdx
+                        logInfo $ "seatAvailability routeId=" <> routeId' <> " tripId=" <> tripId <> " vehicle=" <> detail.vehicle_no <> " available=" <> show avail
+                        return (avail > 0, Just avail)
+                      _ -> return (True, Nothing)
+                Nothing -> return (True, Nothing)
+
+              if not isAvailable
+                then return Nothing
+                else do
+                  logDebug $ "getBusScheduleInfo: vehicle=" <> detail.vehicle_no <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", hasLiveInfo=" <> show (isJust busLiveInfo) <> ", eta=" <> show detail.eta <> ", position=" <> show ((\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo) <> ", timestamp=" <> show ((.timestamp) <$> busLiveInfo)
+                  return . Just $
+                    API.Types.UI.MultimodalConfirm.ScheduledVehicleInfo
+                      { eta = Just detail.eta,
+                        position = (\bli -> LatLong bli.latitude bli.longitude) <$> busLiveInfo,
+                        locationUTCTimestamp = posixSecondsToUTCTime . fromIntegral . (.timestamp) <$> busLiveInfo,
+                        serviceTierType = serviceTier,
+                        serviceTierName = (.shortName) <$> frfsServiceTier,
+                        vehicleNumber = detail.vehicle_no,
+                        tripId = combinedTripId,
+                        isActiveTrip = detail.is_active_trip,
+                        serviceSubTypes = mbServiceSubTypes,
+                        vehicleTagNumber = mbVehicleTagNumber,
+                        availableSeats = availableSeatsCount,
+                        seatSelectionType = seatSelType
+                      }
+            Nothing -> do
+              logError $ "Vehicle info not found for bus: " <> detail.vehicle_no
+              return Nothing
+      )
+      busScheduleDetails'
 
 enrichBusStopETA :: DIntegratedBPPConfig.IntegratedBPPConfig -> CQMMB.BusStopETA -> Flow CQMMB.BusStopETA
 enrichBusStopETA integratedBPPConfig' eta =
