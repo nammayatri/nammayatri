@@ -76,6 +76,7 @@ checkDriverPickupProgress ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasBPPMetrics m r,
     HasLongDurationRetryCfg r c,
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     TranslateFlow m r,

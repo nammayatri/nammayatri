@@ -154,6 +154,7 @@ import Tools.Utils
 
 endRideTransaction ::
   ( CacheFlow m r,
+    Metrics.HasBPPMetrics m r,
     EsqDBFlow m r,
     EncFlow m r,
     Finance.HasActorInfo m r,
@@ -188,6 +189,7 @@ endRideTransaction ::
   TransporterConfig ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
+  Metrics.incrementRideCompletedCount booking.providerId.getId booking.merchantOperatingCityId.getId (show booking.vehicleServiceTier)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active

@@ -275,6 +275,7 @@ handler ValidatedDSearchReq {..} sReq = do
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId' = merchant.id
+  Metrics.incrementSearchRequestCount merchantId'.getId merchantOpCityId.getId
   sessiontoken <- generateGUIDText
   let fromLocGeohashh = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (sReq.pickupLocation.lat, sReq.pickupLocation.lon)
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation

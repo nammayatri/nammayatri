@@ -67,6 +67,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
@@ -235,6 +236,7 @@ handler merchant req validatedQuote = do
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
     mkDConfirmResp mbRideInfo uBooking riderDetails = do
+      Metrics.incrementBookingCreatedCount uBooking.providerId.getId uBooking.merchantOperatingCityId.getId (show uBooking.vehicleServiceTier)
       mDriverStats <-
         if isNothing mbRideInfo
           then pure Nothing
@@ -271,6 +273,7 @@ validateRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    Metrics.HasBPPMetrics m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,

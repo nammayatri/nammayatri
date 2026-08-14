@@ -107,6 +107,7 @@ initiateDriverSearchBatch ::
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
+    Metrics.HasBPPMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Log m,
@@ -229,6 +230,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               <> show searchReq.estimatedDistance
               <> "; estimated base fare:"
               <> show estimatedFare
+          Metrics.incrementSearchTryCount merchant.id.getId searchReq.merchantOperatingCityId.getId (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType)
           return searchTry
 
 buildSearchTry ::

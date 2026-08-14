@@ -38,6 +38,7 @@ import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Text.Printf (printf)
+import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
@@ -47,6 +48,7 @@ cancelBooking ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     MonadCatch m,
+    Metrics.HasBPPMetrics m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasHttpClientOptions r c,

@@ -87,6 +87,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
+import qualified Tools.Metrics.ARDUBPPMetrics as TMetrics
 import qualified Tools.Notifications as Notify
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
@@ -129,7 +130,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r, TMetrics.HasBPPMetrics m r)
 
 driverStartRide ::
   (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text], HasField "activeDriversListKeyShards" r Int, Finance.HasActorInfo m r) =>
@@ -261,7 +262,9 @@ startRideHandler ServiceHandle {..} rideId req = do
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
         else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
 
-      fork "Push Start Ride Metric" $ incrementRideStartCounter "startRide"
+      fork "Push Start Ride Metric" $ do
+        incrementRideStartCounter "startRide"
+        TMetrics.incrementRideStartedCount booking.providerId.getId booking.merchantOperatingCityId.getId (show booking.vehicleServiceTier)
       -- Schedule payout for special zone rides if enabled
       let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
       when

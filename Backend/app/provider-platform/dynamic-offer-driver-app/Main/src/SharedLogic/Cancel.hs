@@ -76,6 +76,7 @@ reAllocateBookingIfPossible ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    Metrics.HasBPPMetrics m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "version" r DeploymentVersion,
     HasField "jobInfoMap" r (M.Map Text Bool),

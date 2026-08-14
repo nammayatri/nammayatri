@@ -29,10 +29,30 @@ type HasBPPMetrics m r = (HasFlowEnv m r ["bppMetrics" ::: BPPMetricsContainer, 
 
 type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
+-- Labels: (merchant_id, merchant_operating_city_id, version)
+type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
+
+-- Labels: (merchant_id, merchant_operating_city_id, vehicle_service_tier, search_repeat_type, version)
+type SearchTryCounterMetric = P.Vector P.Label5 P.Counter
+
+-- Labels: (merchant_id, merchant_operating_city_id, vehicle_service_tier, version)
+type RideFunnelCounterMetric = P.Vector P.Label4 P.Counter
+
+-- Labels: (merchant_id, merchant_operating_city_id, vehicle_service_tier, cancellation_source, version)
+type RideCancelledCounterMetric = P.Vector P.Label5 P.Counter
+
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric,
-    countingDeviation :: CountingDeviationMetric
+    countingDeviation :: CountingDeviationMetric,
+    searchRequestCounter :: SearchRequestCounterMetric,
+    searchTryCounter :: SearchTryCounterMetric,
+    searchRequestSentToDriverCounter :: RideFunnelCounterMetric,
+    searchRequestExpiredCounter :: RideFunnelCounterMetric,
+    bookingCreatedCounter :: RideFunnelCounterMetric,
+    rideStartedCounter :: RideFunnelCounterMetric,
+    rideCompletedCounter :: RideFunnelCounterMetric,
+    rideCancelledCounter :: RideCancelledCounterMetric
   }
 
 data CountingDeviationMetric = CountingDeviationMetric
@@ -44,7 +64,35 @@ registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
 registerBPPMetricsContainer searchDurationTimeout = do
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   countingDeviation <- registerCountingDeviationMetric
+  searchRequestCounter <- registerSearchRequestCounter
+  searchTryCounter <- registerSearchTryCounter
+  searchRequestSentToDriverCounter <- registerRideFunnelCounter "BPP_search_request_sent_to_driver_count" "Count of search requests fanned out to drivers, batched per driver"
+  searchRequestExpiredCounter <- registerRideFunnelCounter "BPP_search_request_expired_count" "Count of driver search requests retracted without any driver response"
+  bookingCreatedCounter <- registerRideFunnelCounter "BPP_booking_created_count" "Count of bookings confirmed on the BPP"
+  rideStartedCounter <- registerRideFunnelCounter "BPP_ride_started_count" "Count of rides started"
+  rideCompletedCounter <- registerRideFunnelCounter "BPP_ride_completed_count" "Count of rides completed"
+  rideCancelledCounter <- registerRideCancelledCounter
   return $ BPPMetricsContainer {..}
+
+registerSearchRequestCounter :: IO SearchRequestCounterMetric
+registerSearchRequestCounter =
+  P.register . P.vector ("merchant_id", "merchant_operating_city_id", "version") . P.counter $
+    P.Info "BPP_search_request_count" "Count of search requests received by the BPP"
+
+registerSearchTryCounter :: IO SearchTryCounterMetric
+registerSearchTryCounter =
+  P.register . P.vector ("merchant_id", "merchant_operating_city_id", "vehicle_service_tier", "search_repeat_type", "version") . P.counter $
+    P.Info "BPP_search_try_count" "Count of search tries (driver allocation attempts) created"
+
+registerRideFunnelCounter :: Text -> Text -> IO RideFunnelCounterMetric
+registerRideFunnelCounter name description =
+  P.register . P.vector ("merchant_id", "merchant_operating_city_id", "vehicle_service_tier", "version") . P.counter $
+    P.Info name description
+
+registerRideCancelledCounter :: IO RideCancelledCounterMetric
+registerRideCancelledCounter =
+  P.register . P.vector ("merchant_id", "merchant_operating_city_id", "vehicle_service_tier", "cancellation_source", "version") . P.counter $
+    P.Info "BPP_ride_cancelled_count" "Count of bookings cancelled, labelled by cancellation source"
 
 registerCountingDeviationMetric :: IO CountingDeviationMetric
 registerCountingDeviationMetric =

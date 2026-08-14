@@ -128,6 +128,7 @@ cancelRideImpl ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    Metrics.HasBPPMetrics m r,
     HasKafkaProducer r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "jobInfoMap" r (M.Map Text Bool),

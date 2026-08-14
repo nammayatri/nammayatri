@@ -33,6 +33,54 @@ putFareAndDistanceDeviations agencyName fareDiff distanceDiff = do
   liftIO $ P.withLabel countingDeviationMetric.realFareDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromIntegral fareDiff)
   liftIO $ P.withLabel countingDeviationMetric.realDistanceDeviation (agencyName, version.getDeploymentVersion) (`P.observe` fromIntegral distanceDiff)
 
+incrementSearchRequestCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> m ()
+incrementSearchRequestCount merchantId merchantOpCityId = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.searchRequestCounter (merchantId, merchantOpCityId, version.getDeploymentVersion) P.incCounter
+
+incrementSearchTryCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
+incrementSearchTryCount merchantId merchantOpCityId vehicleServiceTier searchRepeatType = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.searchTryCounter (merchantId, merchantOpCityId, vehicleServiceTier, searchRepeatType, version.getDeploymentVersion) P.incCounter
+
+addSearchRequestSentToDriverCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Int -> m ()
+addSearchRequestSentToDriverCount merchantId merchantOpCityId vehicleServiceTier count = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.searchRequestSentToDriverCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) (void . (`P.addCounter` fromIntegral count))
+
+addSearchRequestExpiredCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Int -> m ()
+addSearchRequestExpiredCount merchantId merchantOpCityId vehicleServiceTier count = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.searchRequestExpiredCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) (void . (`P.addCounter` fromIntegral count))
+
+incrementBookingCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> m ()
+incrementBookingCreatedCount merchantId merchantOpCityId vehicleServiceTier = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.bookingCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) P.incCounter
+
+incrementRideStartedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> m ()
+incrementRideStartedCount merchantId merchantOpCityId vehicleServiceTier = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.rideStartedCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) P.incCounter
+
+incrementRideCompletedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> m ()
+incrementRideCompletedCount merchantId merchantOpCityId vehicleServiceTier = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.rideCompletedCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) P.incCounter
+
+incrementRideCancelledCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> m ()
+incrementRideCancelledCount merchantId merchantOpCityId vehicleServiceTier cancellationSource = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.rideCancelledCounter (merchantId, merchantOpCityId, vehicleServiceTier, cancellationSource, version.getDeploymentVersion) P.incCounter
+
 type SearchMetricsMVar = MVar Milliseconds
 
 startSearchMetrics :: HasBPPMetrics m r => Text -> m SearchMetricsMVar

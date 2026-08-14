@@ -87,6 +87,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
+import qualified Tools.Metrics as TM
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
 
@@ -99,7 +100,7 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion, "bppMetrics" ::: TM.BPPMetricsContainer],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -160,17 +161,29 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
+  -- Previous batch's still-active unresponded requests, fetched once: shared by the
+  -- special-zone queue-skip fork and the expired-request accounting below. Fetched
+  -- before createMany so the new batch's rows can't leak in.
+  unrespondedSRFDs <-
+    if isJust searchReq.pickupZoneGateId || not (null prevBatchDrivers)
+      then filter (isNothing . (.response)) <$> QSRD.findAllActiveBySTId searchTry.id Active
+      else pure []
   -- Handle queue skip for timed-out special zone drivers before marking them inactive.
   -- Forked because it's independent of the search-batch flow — failures must not
   -- block driver dispatch or add latency to the allocator.
   when (isJust searchReq.pickupZoneGateId) $
     fork "specialZoneQueueSkipForTimedOutDrivers" $ do
-      activeSRFDs <- QSRD.findAllActiveBySTId searchTry.id Active
-      let timedOutQueueDrivers = filter (\srfd -> isNothing srfd.response && srfd.pickupZone) activeSRFDs
+      let timedOutQueueDrivers = filter (.pickupZone) unrespondedSRFDs
       forM_ timedOutQueueDrivers $ \srfd ->
         SpecialZoneDriverDemand.handleQueueSkipIfApplicable searchReq.pickupZoneGateId (show searchTry.vehicleServiceTier) srfd.driverId searchReq.providerId (searchTry.id.getId <> ":" <> srfd.driverId.getId)
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ do
+    -- these unresponded requests are being retracted here: count them as expired
+    forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) unrespondedSRFDs) $ \(serviceTier, expiredCount) ->
+      TM.addSearchRequestExpiredCount searchReq.providerId.getId searchReq.merchantOperatingCityId.getId (show serviceTier) expiredCount
+    QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
+  forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
+    TM.addSearchRequestSentToDriverCount searchReq.providerId.getId searchReq.merchantOperatingCityId.getId (show serviceTier) sentCount
 
   -- Count one "request sent" per driver in this batch for the SRDStats sliding-window counters
   -- and reset each driver's idle clock, both surfaced in the POOLING dynamic-logic data.
