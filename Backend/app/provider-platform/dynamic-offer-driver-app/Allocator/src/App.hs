@@ -59,6 +59,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDri
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
+import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout)
 import SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout (sendSpecialZonePayout)
@@ -185,6 +186,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env scheduledTDSDistribution
           & putJobHandlerInListWrapper flowRt env triggerIffcoTokioInsuranceForOnRideDrivers
           & putJobHandlerInListWrapper flowRt env runAggregatedCommissionInvoiceCreationJob
+          & putJobHandlerInListWrapper flowRt env sendConnectAccountCharge
     }
 
 runDriverOfferAllocator ::

@@ -290,3 +290,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_charges_logic_ve
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN payment_charge_bearer text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN payment_charge double precision ;

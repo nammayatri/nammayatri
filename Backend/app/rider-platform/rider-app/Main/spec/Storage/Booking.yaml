@@ -256,6 +256,8 @@ Booking:
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
     commission: Maybe HighPrecMoney
+    paymentCharge: Maybe HighPrecMoney
+    paymentChargeBearer: Maybe Text
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text

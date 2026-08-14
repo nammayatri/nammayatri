@@ -139,6 +139,8 @@ Ride:
     driverCancellationPenaltyWaivedReason: Maybe Text
     commission: Maybe HighPrecMoney
     cancellationCommission: Maybe HighPrecMoney
+    paymentCharge: Maybe HighPrecMoney
+    paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
     driverGpsTurnedOff: Maybe Bool
     finalFarePolicyId: Maybe (Id FarePolicy)
@@ -324,6 +326,10 @@ Ride:
     updateCommissionAndDiscount:
       kvFunction: updateOneWithKV
       params: [commission, cancellationCommission, discountAmount]
+      where: id
+    updatePaymentCharge:
+      kvFunction: updateOneWithKV
+      params: [paymentCharge, paymentChargeBearer]
       where: id
     updatePreviousRideTripEndPosAndTime:
       kvFunction: updateOneWithKV

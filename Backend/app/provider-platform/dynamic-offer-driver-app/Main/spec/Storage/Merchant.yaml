@@ -1011,9 +1011,23 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     PayoutFeeType:
       enum: "PERCENTAGE, FIXED"
+    PaymentChargeBearer:
+      enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM, PAYMENT_CUSTOMER_AND_DRIVER"
+    PayoutChargeBearer:
+      enum: "DRIVER_BEARER, PLATFORM_BEARER"
+    ConnectChargeBearer:
+      enum: "CONNECT_PLATFORM, CONNECT_DRIVER"
+    ChargeFrequency:
+      enum: "CHARGE_DAILY, CHARGE_WEEKLY, CHARGE_MONTHLY"
     PayoutFeeConfig:
       feeType: PayoutFeeType
       feeValue: HighPrecMoney
+      # Stripe payout charge = fixedFee + percentageRate% * payoutAmount; feeBearer decides who funds it.
+      # All new fields MUST stay Maybe — payoutFee is parsed as a whole record, so a non-Maybe
+      # addition would make every existing stored blob fail FromJSON and collapse payoutFee to Nothing.
+      fixedFee: Maybe HighPrecMoney
+      percentageRate: Maybe Double
+      feeBearer: Maybe PayoutChargeBearer
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq
     DriverWalletConfig:
       enableDriverWallet: Bool
@@ -1029,6 +1043,16 @@ TransporterConfig:
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
+      # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
+      paymentChargeBearer: Maybe PaymentChargeBearer
+      paymentChargeRate: Maybe Double
+      # Stripe connect-account maintenance charge (scheduled deduction).
+      connectAccountCharge: Maybe HighPrecMoney
+      connectAccountChargeFrequency: Maybe ChargeFrequency
+      connectAccountChargeBearer: Maybe ConnectChargeBearer
+      connectAccountChargeTimeOfDay: Maybe Text
+      connectAccountChargeDayOfWeek: Maybe Int
+      connectAccountChargeDayOfMonth: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney

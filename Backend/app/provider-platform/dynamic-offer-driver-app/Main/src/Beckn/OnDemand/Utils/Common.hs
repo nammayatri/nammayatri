@@ -873,6 +873,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
@@ -905,6 +906,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
@@ -936,6 +938,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX)
         _ -> True
 
