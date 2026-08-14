@@ -669,9 +669,11 @@ getExperimentGroups merchantOpCityId mbDomain = do
   let activeRollouts =
         filter
           ( \r ->
-              r.experimentStatus /= Just LYT.CONCLUDED
-                && r.experimentStatus /= Just LYT.DISCARDED
-                && r.experimentStatus /= Just LYT.REVERTED
+              r.isBaseVersion == Just True
+                || ( r.experimentStatus /= Just LYT.CONCLUDED
+                       && r.experimentStatus /= Just LYT.DISCARDED
+                       && r.experimentStatus /= Just LYT.REVERTED
+                   )
           )
           allDomainRollouts
   pure $ map toGroupInfo activeRollouts
