@@ -204,6 +204,7 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
     useNewPlaceDetails :: Maybe Bool,
+    useGeoCodeV4 :: Maybe Bool,
     googleAutocompleteParams :: Maybe [Text],
     mobilityBillingUrl :: Maybe BaseUrl,
     useRouteMatrix :: Maybe Bool,

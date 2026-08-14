@@ -31,6 +31,7 @@ buildGoogleConfig encTools GoogleCfgUnencrypted {..} = do
       GoogleCfg
         { googleKey = googleKeyEncrypted,
           googleGeocodeUrl = Nothing,
+          useGeoCodeV4 = Nothing,
           ..
         }
 
