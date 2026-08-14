@@ -188,10 +188,6 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   let specialLocationId = gate.specialLocationId.getId
   mbSpecialLocation <- QSL.findById (Kernel.Types.Id.Id specialLocationId)
   let specialLocationName = maybe "" (.locationName) mbSpecialLocation
-  -- Get all drivers near gate once, filter to those inside pickup zone
-  driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 2500 merchant.id Nothing Nothing
-  driversInPickupZone <- filterM (isInsideGateGeometry gate.id) driversNearGate
-  let pickupZoneDriverIds = map (.driverId) driversInPickupZone
   -- Compute the queue-request lookback cutoff once, reused across all variants.
   now <- getCurrentTime
   let queueRequestCutoff = addUTCTime (negate (2 * 60 * 60)) now
@@ -236,7 +232,11 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
             forM_ staleDriverIds $ \did ->
               void $ LTSFlow.manualQueueRemove specialLocationId (show vt') merchant.id did (Just "stale_queue_last_ts_expired") False
 
-  let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
+  let allQueuedDriverIds = nub $ concatMap (\(_, qResp) -> map (.driverId) qResp.drivers) uniqVariantsQueueList
+  queuedDriverLocs <- LTSFlow.driversLocation allQueuedDriverIds
+  driversInPickupZone <- filterM (isInsideGateGeometry gate.id) queuedDriverLocs
+  let pickupZoneDriverIds = map (.driverId) driversInPickupZone
+      driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) queuedDriverLocs
   vehicleStats <- forM cityServiceTiers $ \vst -> do
     let vt = show vst.serviceTierType
         calloutVars = getCalloutVars vst
@@ -257,7 +257,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         acceptedDriverIds = map (\r -> r.driverId.getId) acceptedRequests
         -- Check per-driver notified key to determine committedToPickup
         notifiedDriverIds = acceptedDriverIds -- drivers who accepted are committed
-        -- Build per-driver details with location from the nearBy data
+        -- Build per-driver details with location from the queued-driver location data
         driverDetails = mapMaybe (mkDriverDetail driverLocMap pickupZoneDriverIds acceptedDriverIds notifiedDriverIds) mergedDrivers
     pure
       SZQT.VehicleQueueStats
