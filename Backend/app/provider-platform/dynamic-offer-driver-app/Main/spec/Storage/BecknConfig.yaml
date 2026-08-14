@@ -22,6 +22,7 @@ BecknConfig:
     vehicleCategory: VehicleCategory|NoRelation
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
+    offlineContract: Maybe Bool
     buyerFinderFee: Maybe Text
     settlementWindow: Maybe Text
     multimodalOnSearchTTLSec: Maybe Int

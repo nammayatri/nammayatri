@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN domain text ;
 ------------ DONT RUN THIS IN MASTER OR PROD --------------
 
 ALTER TABLE atlas_driver_offer_bpp.bap_metadata ALTER COLUMN id TYPE character varying(255);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.bap_metadata ADD COLUMN static_terms_url text ;

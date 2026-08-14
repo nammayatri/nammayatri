@@ -51,6 +51,8 @@ import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Transformer.MSIL.OnStatus as MSILOnStatus
+import qualified Beckn.OnDemand.Utils.MSIL.Category as MSILCategory
+import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentState as MSILFulfillmentState
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
@@ -553,7 +555,8 @@ buildOnConfirmMessage ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "scheduledCategorySignalMerchantIds" r [Text]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -564,10 +567,25 @@ buildOnConfirmMessage booking ride driver veh = do
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
+  onConfirmMessage' <- fromJust <$> TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
+  -- MSIL pilot: SCHEDULED_RIDE_ASSIGNED isn't an ONDC-valid fulfillment-state
+  -- code, and item.category_ids must agree with on_search's SCHEDULED_TRIP/
+  -- SCHEDULED_RENTAL for a scheduled booking -- see
+  -- Beckn.OnDemand.Utils.MSIL.FulfillmentState and .Category.
+  merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+  let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+      onConfirmMessage =
+        if isMsilPilotMerchant
+          then
+            onConfirmMessage'
+              { Spec.confirmReqMessageOrder =
+                  MSILCategory.overrideOrderCategoryIds booking.isScheduled (MSILFulfillmentState.overrideOrderFulfillmentState (Spec.confirmReqMessageOrder onConfirmMessage'))
+              }
+          else onConfirmMessage'
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
-  pure . fromJust $ onConfirmMessage
+  pure onConfirmMessage
 
 sendOnConfirmToBAP ::
   ( MonadFlow m,
@@ -582,7 +600,8 @@ sendOnConfirmToBAP ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "scheduledCategorySignalMerchantIds" r [Text]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -622,7 +641,8 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    HasField "scheduledCategorySignalMerchantIds" r [Text]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -636,7 +656,21 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
-  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  rideAssignedMsgV2' <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  -- MSIL pilot: SCHEDULED_RIDE_ASSIGNED isn't an ONDC-valid fulfillment-state
+  -- code, and item.category_ids must agree with on_search's SCHEDULED_TRIP/
+  -- SCHEDULED_RENTAL for a scheduled booking -- see
+  -- Beckn.OnDemand.Utils.MSIL.FulfillmentState and .Category. Gated on
+  -- booking.isScheduled, not the isScheduledRideAssignment parameter above --
+  -- that one only distinguishes which caller/notification path this is, not
+  -- whether the underlying booking itself is a scheduled one.
+  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+  let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+      fixMsg msg = msg {Spec.confirmReqMessageOrder = MSILCategory.overrideOrderCategoryIds booking.isScheduled (MSILFulfillmentState.overrideOrderFulfillmentState (Spec.confirmReqMessageOrder msg))}
+      rideAssignedMsgV2 =
+        if isMsilPilotMerchant
+          then rideAssignedMsgV2' {Spec.onUpdateReqMessage = fixMsg <$> Spec.onUpdateReqMessage rideAssignedMsgV2'}
+          else rideAssignedMsgV2'
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) EmptyDynamicParam
@@ -952,14 +986,16 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
   -- Pilot: merchants in scheduledCategorySignalMerchantIds get this push re-routed
-  -- through on_status (Beckn.OnDemand.Transformer.MSIL.OnStatus.toOnStatusReq),
-  -- spec-correct per ONDC v2.1.0; everyone else keeps getting it via on_update,
-  -- unchanged (doc 25 s11). Do NOT dual-send on both endpoints -- see doc 23 s10's
-  -- idempotency risk: the BAP has no way to dedupe the same event on two APIs.
+  -- through on_status, built in one pass by
+  -- Beckn.OnDemand.Transformer.MSIL.OnStatus.msilOnStatusMessageBuild (relabel +
+  -- fulfillment.type override), spec-correct per ONDC v2.1.0; everyone else keeps
+  -- getting it via on_update, unchanged (doc 25 s11). Do NOT dual-send on both
+  -- endpoints -- see doc 23 s10's idempotency risk: the BAP has no way to dedupe
+  -- the same event on two APIs.
   scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
   let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
   if isMsilPilotMerchant
-    then void $ callOnStatusV2 (MSILOnStatus.toOnStatusReq driverArrivedMsgV2) retryConfig merchant.id
+    then void $ callOnStatusV2 (MSILOnStatus.msilOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
     else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
   fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 

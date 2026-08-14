@@ -16,8 +16,11 @@ module API.Beckn.Init (API, handler) where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Beckn.ACL.OnInit as ACL
+import qualified Beckn.OnDemand.Transformer.MSIL.Init as MSILInit
+import qualified Beckn.OnDemand.Transformer.MSIL.OnInit as MSILOnInit
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
@@ -42,6 +45,7 @@ import SharedLogic.Cancel
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
@@ -75,20 +79,41 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       dInitReq <- ACL.buildInitReqV2 subscriber reqV2 isValueAddNP
       pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri)
 
+    -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
+    -- against its BapMetadata row, so it can be echoed back later at
+    -- on_confirm. Pilot-gated, update-only -- see MSIL.Terms/CachedQueries.BapMetadata.
+    merchant <- QMerch.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
+    scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+    let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+    when isMsilPilotMerchant $ do
+      let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
+      MSILTerms.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
+
+    -- Verifying: Layer 1's echo-based fulfillment-id parse (QuoteId vs
+    -- DriverQuoteId) is unreliable for MSIL, since our own fulfillment.type
+    -- override on /on_select collapses the signal it depends on -- see
+    -- Beckn.OnDemand.Utils.MSIL.FulfillmentType.correctFulfillmentId.
+    dInitReq' <-
+      if isMsilPilotMerchant
+        then do
+          correctedFulfillmentId <- MSILInit.correctFulfillmentId transactionId dInitReq.fulfillmentId
+          pure dInitReq {DInit.fulfillmentId = correctedFulfillmentId}
+        else pure dInitReq
+
     let txnId = Just transactionId
         initFulfillmentId =
-          case dInitReq.fulfillmentId of
+          case dInitReq'.fulfillmentId of
             DInit.DriverQuoteId (Id fId) -> fId
             DInit.QuoteId (Id fId) -> fId
     Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
       mbProcessed :: Maybe Text <- Redis.withMasterRedis $ Redis.get (initProcessedKey initFulfillmentId)
       unless (isJust mbProcessed) $ do
-        validatedRes <- DInit.validateRequest transporterId dInitReq
+        validatedRes <- DInit.validateRequest transporterId dInitReq'
         fork "init request processing" $ do
           Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
             dInitRes <-
               callWithErrorHandling validatedRes.searchRequest.transactionId $ do
-                DInit.handler transporterId dInitReq validatedRes
+                DInit.handler transporterId dInitReq' validatedRes
             internalEndPointHashMap <- asks (.internalEndPointHashMap)
             let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
             bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -100,7 +125,15 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
             void . handle (errHandler dInitRes.booking dInitRes.transporter) $
               Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
                 mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
-                let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+                let onInitMessage' = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+                -- Building: BPP_TERMS and ROUTE_INFO, pilot-gated, added in one pass
+                -- by Beckn.OnDemand.Transformer.MSIL.OnInit.msilOnInitMessageBuild.
+                -- Reuses the isMsilPilotMerchant computed above the fork -- same
+                -- request, same merchant.
+                onInitMessage <-
+                  if isMsilPilotMerchant
+                    then MSILOnInit.msilOnInitMessageBuild dInitRes.booking.transactionId bppConfig onInitMessage'
+                    else pure onInitMessage'
                 pure $
                   Spec.OnInitReq
                     { onInitReqContext = context,

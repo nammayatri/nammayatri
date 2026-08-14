@@ -528,6 +528,7 @@ handler ValidatedDSearchReq {..} sReq = do
             domain = Just $ show Domain.MOBILITY,
             name = "THIRD PARTY BAP",
             logoUrl = Nothing, -- TODO: Parse this from on_search req
+            staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
             createdAt = now,
             updatedAt = now
           }

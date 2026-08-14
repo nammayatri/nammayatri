@@ -392,6 +392,7 @@ data BecknTag
   | COURT_JURISDICTION
   | DELAY_INTEREST
   | STATIC_TERMS
+  | OFFLINE_CONTRACT
   | SETTLEMENT_AMOUNT
   | -- Stripe tags --
     STRIPE_TEST
@@ -628,6 +629,7 @@ instance CompleteTag BecknTag where
     MANDATORY_ARBITRATION -> (Just "Mandatory Arbitration", Nothing)
     COURT_JURISDICTION -> (Just "Court Jurisdiction", Nothing)
     STATIC_TERMS -> (Just "Static Terms", Nothing)
+    OFFLINE_CONTRACT -> (Just "Offline Contract", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
     IS_METER_RIDE_SEARCH -> (Just "Is Meter ride search", Nothing)
@@ -682,6 +684,7 @@ instance CompleteTag BecknTag where
     MANDATORY_ARBITRATION -> BPP_TERMS
     COURT_JURISDICTION -> BPP_TERMS
     STATIC_TERMS -> BPP_TERMS
+    OFFLINE_CONTRACT -> BPP_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     COMMISSION -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO

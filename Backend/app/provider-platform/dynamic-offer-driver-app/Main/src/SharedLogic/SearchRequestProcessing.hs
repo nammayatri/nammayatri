@@ -55,7 +55,6 @@ processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city c
   bppUri <- Utils.mkBppUri transporterId.getId
   dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
   isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
-  let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
-      dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
+  let dSearchRes = dSearchResWithQuotes
   onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
   pure (dSearchRes, onSearchReq)

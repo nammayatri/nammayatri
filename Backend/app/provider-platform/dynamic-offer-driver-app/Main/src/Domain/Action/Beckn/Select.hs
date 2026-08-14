@@ -250,5 +250,5 @@ handleQuoteSelect msgId merchant searchReq quote = do
     CQVST.findByServiceTierTypeAndCityIdInRideFlow quote.vehicleServiceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
       >>= fromMaybeM (VehicleServiceTierNotFound (show quote.vehicleServiceTier))
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
-  let onSelectMsg = MSILOnSelect.mkOnSelectMessageV2FromQuote bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
+  onSelectMsg <- MSILOnSelect.mkOnSelectMessageV2FromQuote bppConfig merchant searchReq quote vehicleServiceTierItem mbFarePolicy now
   CallBAP.callOnSelectV2ForQuote merchant searchReq msgId quote onSelectMsg

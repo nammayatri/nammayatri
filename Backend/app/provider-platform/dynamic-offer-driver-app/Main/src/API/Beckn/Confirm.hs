@@ -19,6 +19,7 @@ import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Transformer.MSIL.OnConfirm as MSILOnConfirm
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -44,6 +45,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -82,6 +84,15 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
       now <- getCurrentTime
       (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+      -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
+      -- against its BapMetadata row, so it's available to echo back on this
+      -- same on_confirm response. Pilot-gated, update-only -- see
+      -- MSIL.Terms/CachedQueries.BapMetadata.
+      scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
+      let isMsilPilotMerchant = transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+      when isMsilPilotMerchant $ do
+        let incomingOrderTags = reqV2.confirmReqMessage.confirmReqMessageOrder.orderTags
+        MSILTerms.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
@@ -124,15 +135,22 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
       bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
       let onConfirmMessage' = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
-      -- Pilot: merchants in scheduledCategorySignalMerchantIds get the NEW ->
-      -- RIDE_CONFIRMED fulfillment-state fix (Beckn.OnDemand.Transformer.MSIL.OnConfirm);
-      -- everyone else's onConfirmMessage is exactly what Layer 1 built, unchanged.
+      -- Pilot: merchants in scheduledCategorySignalMerchantIds get both the NEW ->
+      -- RIDE_CONFIRMED fulfillment-state fix and the BAP_TERMS/BPP_TERMS order-tag
+      -- patch (echoing back the BAP's own declared STATIC_TERMS, if known, plus
+      -- ours from becknConfig), applied in one pass by
+      -- Beckn.OnDemand.Transformer.MSIL.OnConfirm.msilOnConfirmMessageBuild --
+      -- unlike on_search/on_select/on_init, which only get BPP_TERMS. Everyone
+      -- else's onConfirmMessage is exactly what Layer 1 built, unchanged.
       scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
       let isMsilPilotMerchant = dConfirmRes.transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
-          onConfirmMessage =
-            if isMsilPilotMerchant
-              then MSILOnConfirm.fixFulfillmentState onConfirmMessage'
-              else onConfirmMessage'
+      onConfirmMessage <-
+        if isMsilPilotMerchant
+          then do
+            mbBapMetadata <- CQBapMetaData.findBySubscriberIdAndDomain (Id bapId) Domain.MOBILITY
+            let mbBapStaticTermsUrl = mbBapMetadata >>= (.staticTermsUrl)
+            MSILOnConfirm.msilOnConfirmMessageBuild dConfirmRes.booking.isScheduled dConfirmRes.booking.transactionId mbBapStaticTermsUrl becknConfig onConfirmMessage'
+          else pure onConfirmMessage'
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmProcessingLockKey :: Text -> Text
