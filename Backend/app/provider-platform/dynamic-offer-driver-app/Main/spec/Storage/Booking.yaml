@@ -114,6 +114,8 @@ Booking:
     paymentMode: Maybe PaymentMode
     commission: Maybe HighPrecMoney
     cancellationCommission: Maybe HighPrecMoney
+    paymentCharge: Maybe HighPrecMoney
+    paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
     displayBookingId: Maybe Text
     searchTryId: Maybe (Id SearchTry)

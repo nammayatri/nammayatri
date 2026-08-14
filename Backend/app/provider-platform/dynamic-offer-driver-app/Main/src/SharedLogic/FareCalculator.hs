@@ -32,6 +32,7 @@ module SharedLogic.FareCalculator
     calculateFareParameters,
     calculateCommission,
     calculateCancellationCommission,
+    calculatePaymentCharge,
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
@@ -229,6 +230,11 @@ mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
       cardChargesFixedCaption = show Enums.CARD_CHARGES_FIXED
       mbCardChargesFixedItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFixedCaption . mkPrice <$> cardCharge.fixed
 
+      -- Stripe payment charge shown to the customer (only when the rider bears it —
+      -- 'paymentProcessingFee' is populated only in that case by 'calculateFareParameters').
+      paymentChargeCaption = show Enums.PAYMENT_CHARGE
+      mbPaymentChargeItem = mkBreakupItem paymentChargeCaption . mkPrice <$> fareParams.paymentProcessingFee
+
       rideStopChargeCaption = show Enums.RIDE_STOP_CHARGES
       mbRideStopChargeItem = mkBreakupItem rideStopChargeCaption . mkPrice <$> fareParams.stopCharges
 
@@ -272,6 +278,7 @@ mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
       mbCardChargesFixedItem,
+      mbPaymentChargeItem,
       mbRideStopChargeItem,
       mbLuggageChargeItem,
       mbReturnFeeChargeItem,
@@ -1095,25 +1102,21 @@ calculateFareParameters ::
 calculateFareParameters params = do
   -- First, calculate base fare using v1 calculator
   baseFareParams <- calculateFareParametersHandler params
-  -- Check if V2 features are enabled via TransporterConfig
-  isV2Enabled <- case params.merchantOperatingCityId of
-    Just merchantOpCityId -> do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-      let v2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) transporterConfig
-      logDebug $ "FareCalculator: TransporterConfig for merchantOpCityId " <> merchantOpCityId.getId <> " - enableFareCalculatorV2: " <> show (transporterConfig >>= (.enableFareCalculatorV2)) <> ", V2 enabled: " <> show v2Enabled
-      pure v2Enabled
-    Nothing -> do
-      logDebug "FareCalculator: No merchantOperatingCityId provided, using v1 behavior"
-      pure False -- If no merchantOperatingCityId, default to v1 behavior
-      -- Apply configurable charges only if V2 is enabled
+  -- Fetch TransporterConfig once (V2 flag + DriverWalletConfig payment-charge knobs)
+  mbTransporterConfig <- case params.merchantOperatingCityId of
+    Just merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+    Nothing -> pure Nothing
+  let isV2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) mbTransporterConfig
+  -- Apply configurable charges only if V2 is enabled
   fareWithV2 <-
     if isV2Enabled
       then applyConfiguredCharges params.farePolicy baseFareParams
-      else do
-        logDebug "FareCalculator: V2 disabled or not enabled, using v1 behavior (no configurable charges applied)"
-        pure baseFareParams
+      else pure baseFareParams
   -- Apply airport entry fee (if any) to parkingCharge in FareParameters
-  applyAirportEntryFee params fareWithV2
+  fareWithAirport <- applyAirportEntryFee params fareWithV2
+  -- Gross up the fare by the Stripe payment charge when the RIDER bears it.
+  let mbDriverWalletConfig = (.driverWalletConfig) <$> mbTransporterConfig
+  pure $ applyPaymentChargeGrossUp mbDriverWalletConfig fareWithAirport
 
 -- | Apply configurable charges (VAT, commission, toll tax) to fare parameters
 --
@@ -1440,6 +1443,44 @@ calculateCancellationCommission fareParams mbFarePolicy = do
           commAmount <- computeConfiguredCharge "cancellationCommissionCharge" componentMap (Just config)
           pure $ if commAmount > 0 then Just commAmount else Nothing
         Nothing -> pure Nothing
+
+-- | Whether the given bearer means the RIDER pays the Stripe payment charge (so their fare grosses up).
+isCustomerPaymentBearer :: DTC.PaymentChargeBearer -> Bool
+isCustomerPaymentBearer = \case
+  DTC.PAYMENT_CUSTOMER -> True
+  DTC.PAYMENT_CUSTOMER_AND_DRIVER -> True
+  _ -> False
+
+-- | Stripe payment charge P = paymentChargeRate% × base fare, from the per-operating-city
+--   DriverWalletConfig. Returns (P, bearer-as-Text) for ride persistence, driver UI and the
+--   BAP application fee. 'base fare' subtracts any customer gross-up already folded into
+--   paymentProcessingFee, so P is identical across bearers.
+calculatePaymentCharge :: Maybe DTC.DriverWalletConfig -> FareParameters -> (Maybe HighPrecMoney, Maybe Text)
+calculatePaymentCharge mbDwc fareParams =
+  case mbDwc of
+    Just dwc ->
+      case (dwc.paymentChargeRate, dwc.paymentChargeBearer) of
+        (Just rate, Just bearer)
+          | rate > 0 ->
+            let baseFareSum = fareSum fareParams Nothing - fromMaybe 0 fareParams.paymentProcessingFee
+                p = HighPrecMoney (baseFareSum.getHighPrecMoney * (toRational rate / 100))
+             in (if p > 0 then Just p else Nothing, Just (show bearer))
+        _ -> (Nothing, Nothing)
+    Nothing -> (Nothing, Nothing)
+
+-- | Gross up the fare by the payment charge when the RIDER bears it, by populating the
+--   (otherwise-dormant) paymentProcessingFee slot which 'fareSum' already sums.
+applyPaymentChargeGrossUp :: Maybe DTC.DriverWalletConfig -> FareParameters -> FareParameters
+applyPaymentChargeGrossUp mbDwc fareParams =
+  case mbDwc of
+    Just dwc
+      | Just rate <- dwc.paymentChargeRate,
+        Just bearer <- dwc.paymentChargeBearer,
+        rate > 0,
+        isCustomerPaymentBearer bearer ->
+        let p = HighPrecMoney ((fareSum fareParams Nothing).getHighPrecMoney * (toRational rate / 100))
+         in fareParams {paymentProcessingFee = Just p}
+    _ -> fareParams
 
 -- | Hardcoded list of 'FareChargeComponent' values the customer offer
 --   discount is allowed to apply to. Toll (TollChargesComponent +

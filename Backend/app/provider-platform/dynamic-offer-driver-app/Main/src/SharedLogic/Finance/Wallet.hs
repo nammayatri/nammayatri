@@ -86,6 +86,16 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitTax,
     walletReferenceTopup,
     walletReferencePayout,
+    walletReferencePGPaymentCharges,
+    walletReferencePGPayoutCharges,
+    walletReferenceConnectAccountCharges,
+    StripeChargeFunder (..),
+    recordStripeChargeLedger,
+    buildDriverChargeCtx,
+    paymentBearerToFunder,
+    payoutBearerToFunder,
+    connectBearerToFunder,
+    computeStripePayoutFee,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationCharges,
     walletReferenceCustomerCancellationGST,
@@ -210,6 +220,16 @@ walletReferenceTopup = "WalletTopup"
 
 walletReferencePayout :: Text
 walletReferencePayout = "WalletPayout"
+
+-- Stripe charge reference types (payment / payout / connect-account maintenance).
+walletReferencePGPaymentCharges :: Text
+walletReferencePGPaymentCharges = "PGPaymentCharges"
+
+walletReferencePGPayoutCharges :: Text
+walletReferencePGPayoutCharges = "PGPayoutCharges"
+
+walletReferenceConnectAccountCharges :: Text
+walletReferenceConnectAccountCharges = "ConnectAccountCharges"
 
 walletReferenceDriverCancellationCharges :: Text
 walletReferenceDriverCancellationCharges = "DriverCancellationCharges"
@@ -753,6 +773,118 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
               pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
         (Left err, _) -> pure $ Left err
         (_, Left err) -> pure $ Left err
+
+-- Stripe charge ledger (payment / payout / connect-account) --------------------
+
+-- | Which party funds a Stripe charge.
+--   Platform → single entry BuyerAsset → SellerExpense (platform absorbs);
+--   Customer → customer's grossed-up payment funds it (BuyerAsset → SellerRevenue);
+--   Driver   → driver's wallet funds it (OwnerLiability → SellerRevenue).
+data StripeChargeFunder = FundByPlatform | FundByCustomer | FundByDriver
+  deriving (Eq, Show)
+
+-- | Post the ledger legs for a Stripe charge, per the approved bearer model:
+--     Customer/Driver: transfer_ SellerExpense SellerLiability amount  (platform expense + payable to Stripe)
+--                      + funder leg: Customer → transfer BuyerAsset    SellerRevenue amount
+--                                    Driver   → transfer OwnerLiability SellerRevenue amount
+--     Platform:        transfer BuyerAsset SellerExpense amount        (platform absorbs; single entry)
+--   The ctx MUST carry a DRIVER/FLEET_OWNER counterparty so the driver funding leg
+--   hits the driver's OwnerLiability account (Seller*/Buyer* roles are hardwired).
+recordStripeChargeLedger ::
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
+  FinanceCtx ->
+  StripeChargeFunder ->
+  HighPrecMoney ->
+  Text ->
+  m (Either FinanceError ())
+recordStripeChargeLedger ctx funder amount refType
+  | amount <= 0 = pure (Right ())
+  | otherwise = do
+    result <- runFinance ctx $ case funder of
+      FundByPlatform -> void $ transfer BuyerAsset SellerExpense amount refType Nothing
+      FundByCustomer -> do
+        transfer_ SellerExpense SellerLiability amount refType
+        void $ transfer BuyerAsset SellerRevenue amount refType Nothing
+      FundByDriver -> do
+        transfer_ SellerExpense SellerLiability amount refType
+        void $ transfer OwnerLiability SellerRevenue amount refType Nothing
+    pure (void result)
+
+-- | Minimal FinanceCtx for posting a driver-side Stripe charge (payout / connect),
+--   where no booking/ride is in scope. Counterparty is the driver (or fleet owner),
+--   so OwnerLiability resolves to their wallet.
+buildDriverChargeCtx ::
+  CounterpartyType -> -- DRIVER or FLEET_OWNER
+  Text -> -- owner (driver / fleet owner) id
+  Text -> -- merchant id
+  Text -> -- merchant operating city id
+  Currency ->
+  Text -> -- reference id (e.g. payout order id / period key)
+  FinanceCtx
+buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId =
+  FinanceCtx
+    { merchantId = merchantId,
+      merchantOpCityId = merchantOperatingCityId,
+      currency = currency,
+      isOnline = True,
+      counterpartyType = counterpartyType,
+      counterpartyId = ownerId,
+      concernedIndividualId = if counterpartyType == DRIVER then Just ownerId else Nothing,
+      referenceId = referenceId,
+      entityReferenceId = Nothing,
+      entityReferenceType = Nothing,
+      merchantName = Nothing,
+      merchantShortId = Nothing,
+      issuedByAddress = Nothing,
+      supplierName = Nothing,
+      supplierGSTIN = Nothing,
+      supplierVatNumber = Nothing,
+      supplierAddress = Nothing,
+      merchantGstin = Nothing,
+      merchantVatNumber = Nothing,
+      supplierId = Nothing,
+      panOfParty = Nothing,
+      panType = Nothing,
+      tdsRateReason = Nothing,
+      emitLedgerEntries = True,
+      fromLocationAddress = Nothing,
+      issuedToName = Nothing
+    }
+
+-- | Stripe payout charge Q = fixedFee + percentageRate% * amount (new model),
+--   falling back to the legacy single-mode feeType/feeValue when the new fields
+--   are unset. Capped at the payout amount.
+computeStripePayoutFee :: DTC.PayoutFeeConfig -> HighPrecMoney -> HighPrecMoney
+computeStripePayoutFee cfg amount =
+  let usesNewModel = isJust cfg.fixedFee || isJust cfg.percentageRate
+      fee =
+        if usesNewModel
+          then fromMaybe 0 cfg.fixedFee + amount * realToFrac (fromMaybe 0 cfg.percentageRate) / 100
+          else case cfg.feeType of
+            DTC.PERCENTAGE -> amount * cfg.feeValue / 100
+            DTC.FIXED -> cfg.feeValue
+   in min fee amount
+
+-- Bearer → funder mappings (kept here so callers never touch the raw
+-- constructors, which collide across the three bearer enums).
+
+paymentBearerToFunder :: DTC.PaymentChargeBearer -> StripeChargeFunder
+paymentBearerToFunder bearer = case bearer of
+  DTC.PAYMENT_PLATFORM -> FundByPlatform
+  DTC.PAYMENT_CUSTOMER -> FundByCustomer
+  DTC.PAYMENT_DRIVER -> FundByDriver
+  -- Driver funds P here; the full-fare-to-driver gross-up is a BAP-side follow-up.
+  DTC.PAYMENT_CUSTOMER_AND_DRIVER -> FundByDriver
+
+payoutBearerToFunder :: DTC.PayoutChargeBearer -> StripeChargeFunder
+payoutBearerToFunder bearer = case bearer of
+  DTC.PLATFORM_BEARER -> FundByPlatform
+  DTC.DRIVER_BEARER -> FundByDriver
+
+connectBearerToFunder :: DTC.ConnectChargeBearer -> StripeChargeFunder
+connectBearerToFunder bearer = case bearer of
+  DTC.CONNECT_PLATFORM -> FundByPlatform
+  DTC.CONNECT_DRIVER -> FundByDriver
 
 -- | Split a total GST amount into CGST/SGST/IGST proportionally based on GstBreakup percentages.
 --   If the total percentage is 0, returns Nothing.

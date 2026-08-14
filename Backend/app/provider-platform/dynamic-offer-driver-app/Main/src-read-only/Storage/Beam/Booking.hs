@@ -75,6 +75,8 @@ data BookingT f = BookingT
     numberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
+    paymentCharge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    paymentChargeBearer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     paymentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentInstrument :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -124,6 +126,6 @@ instance B.Table BookingT where
 
 type Booking = BookingT Identity
 
-$(enableKVPG ''BookingT ['id] [['quoteId], ['specialZoneOtpCode], ['transactionId]])
+$(enableKVPG (''BookingT) [('id)] [[('quoteId)], [('specialZoneOtpCode)], [('transactionId)]])
 
-$(mkTableInstances ''BookingT "booking")
+$(mkTableInstances (''BookingT) "booking")

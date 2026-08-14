@@ -245,6 +245,8 @@ handler merchantId req validatedReq = do
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback quoteId
       commission <- FC.calculateCommission driverQuote.fareParams mbFarePolicy
       cancellationCommission <- FC.calculateCancellationCommission driverQuote.fareParams mbFarePolicy
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
+      let (mbPaymentCharge, mbPaymentChargeBearer) = FC.calculatePaymentCharge ((.driverWalletConfig) <$> mbTransporterConfig) driverQuote.fareParams
       mbSpecialLocation <- maybe (pure Nothing) (QSpecialLocation.findById . Id) (searchRequest.area >>= SL.pickupSpecialZoneIdFromArea)
       let fareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
       let bapUri = showBaseUrl searchRequest.bapUri
@@ -316,6 +318,8 @@ handler merchantId req validatedReq = do
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
             commission = commission,
             cancellationCommission = cancellationCommission,
+            paymentCharge = mbPaymentCharge,
+            paymentChargeBearer = mbPaymentChargeBearer,
             isInsured = fromMaybe False req.isInsured,
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,

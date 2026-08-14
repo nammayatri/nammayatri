@@ -850,6 +850,15 @@ type MakePaymentIntentConstraints m r c =
     Finance.HasActorInfo m r
   )
 
+-- | The portion of the Stripe payment charge the platform collects via the application
+--   fee: added when the CUSTOMER or DRIVER bears it, zero when the PLATFORM bears it.
+paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+paymentChargeForAppFee mbCharge mbBearer =
+  case mbBearer of
+    Just bearer
+      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER", "PAYMENT_CUSTOMER_AND_DRIVER"] -> fromMaybe 0 mbCharge
+    _ -> 0
+
 makePaymentIntent ::
   MakePaymentIntentConstraints m r c =>
   Id Merchant.Merchant ->
@@ -1301,7 +1310,7 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
     (customerPaymentId, _) <- getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let debtApplicationFeeAmount = fromMaybe 0 ride.commission
+    let debtApplicationFeeAmount = fromMaybe 0 ride.commission + paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,

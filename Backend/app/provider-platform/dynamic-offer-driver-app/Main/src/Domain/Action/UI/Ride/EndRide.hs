@@ -580,6 +580,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
     finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
     finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
+    let (mbPaymentCharge, mbPaymentChargeBearer) = Fare.calculatePaymentCharge (Just thresholdConfig.driverWalletConfig) baseFareParams
     clearEditDestinationWayAndSnappedPointsFork <- awaitableFork "endRide->clearEditDestinationWayAndSnappedPoints" $ withTimeAPI "endRide" "clearEditDestinationWayAndSnappedPoints" $ clearEditDestinationWayAndSnappedPoints driverId
     clearReachedStopLocationsFork <- awaitableFork "endRide->clearReachedStopLocations" $ withTimeAPI "endRide" "clearReachedStopLocations" $ clearReachedStopLocations rideOld.id
     let updRide' =
@@ -598,6 +599,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                hasStops = Just (not $ null ride.stops),
                commission = finalCommission,
                cancellationCommission = finalCancellationCommission,
+               paymentCharge = mbPaymentCharge,
+               paymentChargeBearer = mbPaymentChargeBearer,
                discountAmount = discountAmount
               }
     let mbDriverFromReq = case req of

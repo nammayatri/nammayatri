@@ -68,6 +68,7 @@ data ProjectFareParamsBreakup = ProjectFareParamsBreakup
     cancellationTax :: HighPrecMoney,
     parkingChargeTaxExclusive :: HighPrecMoney,
     parkingChargeTax :: HighPrecMoney
+    -- send payment charges to bap, it will make ledger entries and then make it a part of fare breakup and show it to customer.
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 

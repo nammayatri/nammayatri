@@ -873,6 +873,18 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
 
+    -- Stripe payment charge (card / online rides only; opt-in via paymentChargeBearer).
+    -- P = paymentChargeRate% of the online cash-in total; posts SellerExpense → SellerLiability
+    -- plus the bearer's funding leg (recordStripeChargeLedger). Reuses the ride-settlement ctx,
+    -- whose counterparty is already DRIVER/FLEET_OWNER so the driver funding leg is correct.
+    whenJust transporterConfig.driverWalletConfig.paymentChargeBearer $ \paymentBearer ->
+      when isOnline $ do
+        let paymentRate = fromMaybe 0 transporterConfig.driverWalletConfig.paymentChargeRate
+            onlineCashInTotal = baseFare + taxAmount + tollWithVat + parkingWithVat + customerDiscountAmount + tipAmount
+            paymentChargeAmount = onlineCashInTotal * realToFrac paymentRate / 100
+        recordStripeChargeLedger ctx (paymentBearerToFunder paymentBearer) paymentChargeAmount walletReferencePGPaymentCharges
+          >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
+
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 

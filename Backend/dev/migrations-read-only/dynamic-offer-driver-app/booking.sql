@@ -267,3 +267,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN cancellation_commission do
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_static_duration integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_charge_bearer text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_charge double precision ;

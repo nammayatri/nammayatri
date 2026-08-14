@@ -329,6 +329,7 @@ let AllocatorJobType =
       | SAPSubscriptionPurchaseDispatch
       | ReconciliationScheduler
       | ReconciliationSweep
+      | ConnectAccountChargeDeduction
       >
 
 let jobRetryOnExceptionMapx =
@@ -395,6 +396,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
+      , { mapKey = AllocatorJobType.ConnectAccountChargeDeduction
+        , mapValue = True
+        }
       , { mapKey = AllocatorJobType.SettlementReportIngestion, mapValue = True }
       , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
