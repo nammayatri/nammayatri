@@ -1101,11 +1101,11 @@ buildOverlayNotificationData FCM.FCMOverlayReq {..} =
     }
 
 sendUpdateLocOverlay ::
-  ( ServiceFlow m r,
+  ( -- ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Hedis.HedisFlow m r,
+    -- HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    -- Hedis.HedisFlow m r,
     Hedis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -1116,29 +1116,46 @@ sendUpdateLocOverlay ::
 sendUpdateLocOverlay merchantOpCityId person req@FCM.FCMOverlayReq {..} entityData = do
   let newCityId = cityFallback person.clientBundleVersion merchantOpCityId
   -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  let notifReq =
-        Notification.NotificationReq
-          { category = Notification.DRIVER_NOTIFY_LOCATION_UPDATE,
-            subCategory = Nothing,
-            showNotification = if isJust title then Notification.SHOW else Notification.DO_NOT_SHOW,
-            messagePriority = Just Notification.HIGH,
-            entity = Notification.Entity Notification.Person person.id.getId entityData,
-            dynamicParams = EmptyDynamicParam,
-            body = fromMaybe "Description" description,
-            title = fromMaybe "Title" title,
-            auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
-            ttl = Nothing,
-            sound = Just "driver_trip_update_pop_up.mp3",
-            overlayNotificationData = Just $ buildOverlayNotificationData req
-          }
-  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+  -- let notifReq =
+  --       Notification.NotificationReq
+  --         { category = Notification.DRIVER_NOTIFY_LOCATION_UPDATE,
+  --           subCategory = Nothing,
+  --           showNotification = if isJust title then Notification.SHOW else Notification.DO_NOT_SHOW,
+  --           messagePriority = Just Notification.HIGH,
+  --           entity = Notification.Entity Notification.Person person.id.getId entityData,
+  --           dynamicParams = EmptyDynamicParam,
+  --           body = fromMaybe "Description" description,
+  --           title = fromMaybe "Title" title,
+  --           auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
+  --           ttl = Nothing,
+  --           sound = Just "driver_trip_update_pop_up.mp3",
+  --           overlayNotificationData = Just $ buildOverlayNotificationData req
+  --         }
+  -- runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+  fcmConfig <- findFCMConfigWithFallback newCityId person.id
+  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+  where
+    notifType = FCM.DRIVER_NOTIFY_LOCATION_UPDATE
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = if isJust title then FCM.SHOW else FCM.DO_NOT_SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = person.id.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType (Just "driver_trip_update_pop_up.mp3"),
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" title
+    body = FCMNotificationBody $ fromMaybe "Description" description
 
 sendPickupLocationChangedOverlay ::
-  ( ServiceFlow m r,
+  ( -- ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Hedis.HedisFlow m r,
+    -- HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    -- Hedis.HedisFlow m r,
     Hedis.HedisLTSFlowEnv r
   ) =>
   Person ->
@@ -1147,22 +1164,39 @@ sendPickupLocationChangedOverlay ::
   m ()
 sendPickupLocationChangedOverlay person req entityData = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-  let notifReq =
-        Notification.NotificationReq
-          { category = Notification.EDIT_LOCATION,
-            subCategory = Nothing,
-            showNotification = Notification.SHOW,
-            messagePriority = Just Notification.HIGH,
-            entity = Notification.Entity Notification.EditLocation entityData.rideId.getId entityData,
-            dynamicParams = EmptyDynamicParam,
-            body = fromMaybe "Description" req.description,
-            title = fromMaybe "Title" req.title,
-            auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
-            ttl = Nothing,
-            sound = Nothing,
-            overlayNotificationData = Just $ buildOverlayNotificationData req
-          }
-  runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+  -- let notifReq =
+  --       Notification.NotificationReq
+  --         { category = Notification.EDIT_LOCATION,
+  --           subCategory = Nothing,
+  --           showNotification = Notification.SHOW,
+  --           messagePriority = Just Notification.HIGH,
+  --           entity = Notification.Entity Notification.EditLocation entityData.rideId.getId entityData,
+  --           dynamicParams = EmptyDynamicParam,
+  --           body = fromMaybe "Description" req.description,
+  --           title = fromMaybe "Title" req.title,
+  --           auth = Notification.Auth person.id.getId ((.getFCMRecipientToken) <$> person.deviceToken) Nothing,
+  --           ttl = Nothing,
+  --           sound = Nothing,
+  --           overlayNotificationData = Just $ buildOverlayNotificationData req
+  --         }
+  -- runWithServiceConfigForProviders newCityId person.clientId person.clientDevice notifReq EulerHS.Prelude.id (clearDeviceToken person.id)
+  fcmConfig <- findFCMConfigWithFallback newCityId person.id
+  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+  where
+    notifType = FCM.EDIT_LOCATION
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.EditLocation,
+          fcmEntityIds = entityData.rideId.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body notifType Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
+    body = FCMNotificationBody $ fromMaybe "Description" req.description
 
 sendCancellationRateNudgeOverlay ::
   ( CacheFlow m r,
