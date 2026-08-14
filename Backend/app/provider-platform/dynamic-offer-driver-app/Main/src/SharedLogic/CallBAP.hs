@@ -952,14 +952,16 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
   -- Pilot: merchants in scheduledCategorySignalMerchantIds get this push re-routed
-  -- through on_status (Beckn.OnDemand.Transformer.MSIL.OnStatus.toOnStatusReq),
-  -- spec-correct per ONDC v2.1.0; everyone else keeps getting it via on_update,
-  -- unchanged (doc 25 s11). Do NOT dual-send on both endpoints -- see doc 23 s10's
-  -- idempotency risk: the BAP has no way to dedupe the same event on two APIs.
+  -- through on_status, built in one pass by
+  -- Beckn.OnDemand.Transformer.MSIL.OnStatus.msilOnStatusMessageBuild (relabel +
+  -- fulfillment.type override), spec-correct per ONDC v2.1.0; everyone else keeps
+  -- getting it via on_update, unchanged (doc 25 s11). Do NOT dual-send on both
+  -- endpoints -- see doc 23 s10's idempotency risk: the BAP has no way to dedupe
+  -- the same event on two APIs.
   scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
   let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
   if isMsilPilotMerchant
-    then void $ callOnStatusV2 (MSILOnStatus.toOnStatusReq driverArrivedMsgV2) retryConfig merchant.id
+    then void $ callOnStatusV2 (MSILOnStatus.msilOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
     else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
   fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 

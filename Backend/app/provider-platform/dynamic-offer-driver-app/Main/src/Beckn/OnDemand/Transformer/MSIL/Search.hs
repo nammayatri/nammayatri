@@ -6,16 +6,22 @@
 -- API.Beckn.Search.search) and patches that one field, from the incoming ONDC v2.1.0
 -- category descriptor code -- independent of the pickupTime-vs-now/buffer heuristic
 -- Domain.Action.Beckn.Search.getPossibleTripOption uses for every other merchant.
+-- In the same pass, it also verifies (parses + stores) the BAP's declared
+-- BAP_TERMS.STATIC_TERMS, if any -- see Beckn.OnDemand.Utils.MSIL.Terms.
 module Beckn.OnDemand.Transformer.MSIL.Search
   ( msilParser,
     isScheduledCategoryCode,
   )
 where
 
+import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
 import qualified Beckn.OnDemand.Utils.Search as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Search as DSearch
 import EulerHS.Prelude
+import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Id
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 
 -- | True only when the incoming search's own category explicitly said
 -- SCHEDULED_TRIP/SCHEDULED_RENTAL. Deliberately not the same question
@@ -28,7 +34,10 @@ isScheduledCategoryCode = \case
   _ -> False
 
 -- | Layer 2: takes the DSearchReq Layer 1 already built (isExplicitlyScheduled = Nothing)
--- plus the original wire message, and returns it with isExplicitlyScheduled decided.
-msilParser :: Spec.SearchReqMessage -> DSearch.DSearchReq -> DSearch.DSearchReq
-msilParser req dSearchReq =
-  dSearchReq {DSearch.isExplicitlyScheduled = Just (isScheduledCategoryCode (Utils.getCategoryCode req))}
+-- plus the original wire message, and returns it with isExplicitlyScheduled decided --
+-- and, in the same call, verifies+stores the BAP's declared STATIC_TERMS off the same
+-- wire message.
+msilParser :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Spec.SearchReqMessage -> DSearch.DSearchReq -> m DSearch.DSearchReq
+msilParser req dSearchReq = do
+  MSILTerms.verifyIncomingStaticTerms (Id dSearchReq.bapId) Domain.MOBILITY (req.searchReqMessageIntent >>= (.intentTags))
+  pure dSearchReq {DSearch.isExplicitlyScheduled = Just (isScheduledCategoryCode (Utils.getCategoryCode req))}

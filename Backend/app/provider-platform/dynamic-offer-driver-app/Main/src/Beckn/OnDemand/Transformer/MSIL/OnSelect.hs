@@ -16,6 +16,9 @@ module Beckn.OnDemand.Transformer.MSIL.OnSelect
 where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
+import qualified Beckn.OnDemand.Utils.MSIL.RouteInfo as MSILRouteInfo
+import qualified Beckn.OnDemand.Utils.MSIL.VehicleEnergyType as MSILVehicleEnergyType
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
@@ -36,7 +39,16 @@ import qualified Kernel.Types.Common as Common (mkPrice)
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
+-- | Building: also adds ROUTE_INFO (WAYPOINTS + ENCODED_POLYLINE, from the
+-- fallback route cached at search time) to the fulfillment's tags, overrides
+-- fulfillment.type per the RIDE_OTP->SELF_PICKUP/otherwise->DELIVERY rule
+-- (Beckn.OnDemand.Utils.MSIL.FulfillmentType), and overrides
+-- vehicle.energy_type to a valid ONDC v2.1.0 code
+-- (Beckn.OnDemand.Utils.MSIL.VehicleEnergyType). This whole function only
+-- ever runs for pilot merchants (gated at the API/Beckn/Select.hs dispatch
+-- level), so this applies unconditionally -- no separate gate needed.
 mkOnSelectMessageV2FromQuote ::
+  (CacheFlow m r, MonadFlow m) =>
   DBC.BecknConfig ->
   DM.Merchant ->
   SearchRequest ->
@@ -44,19 +56,21 @@ mkOnSelectMessageV2FromQuote ::
   DVST.VehicleServiceTier ->
   Maybe FarePolicyD.FullFarePolicy ->
   UTCTime ->
-  Spec.OnSelectReqMessage
+  m Spec.OnSelectReqMessage
 mkOnSelectMessageV2FromQuote bppConfig merchant searchRequest quote vehicleServiceTierItem mbFarePolicy now = do
   let fulfillment = mkFulfillmentFromQuote searchRequest quote
       paymentV2 = mkPaymentFromQuote bppConfig merchant quote
-  Spec.OnSelectReqMessage $
-    Just
-      emptyOrder
-        { Spec.orderFulfillments = Just [fulfillment],
-          Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy],
-          Spec.orderQuote = Just $ mkQuoteFromQuote quote now,
-          Spec.orderPayments = Just [paymentV2],
-          Spec.orderProvider = mkProviderFromQuote bppConfig
-        }
+      order =
+        MSILVehicleEnergyType.patchOrderVehicleEnergyType . MSILFulfillmentType.patchOrderFulfillmentTypes $
+          emptyOrder
+            { Spec.orderFulfillments = Just [fulfillment],
+              Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy],
+              Spec.orderQuote = Just $ mkQuoteFromQuote quote now,
+              Spec.orderPayments = Just [paymentV2],
+              Spec.orderProvider = mkProviderFromQuote bppConfig
+            }
+  patchedOrder <- MSILRouteInfo.patchOrderRouteInfo searchRequest.transactionId order
+  pure $ Spec.OnSelectReqMessage (Just patchedOrder)
 
 mkFulfillmentFromQuote :: SearchRequest -> DQuote.Quote -> Spec.Fulfillment
 mkFulfillmentFromQuote searchRequest quote =

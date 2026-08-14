@@ -14,12 +14,15 @@
 -- chain in Beckn.OnDemand.Transformer.OnSearch.
 module Beckn.OnDemand.Transformer.MSIL.OnSearch
   ( msilOnSearchConverter,
+    msilAddBppTerms,
   )
 where
 
+import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
 import qualified Beckn.OnDemand.Utils.OnSearch as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Search as DSearch
+import qualified Domain.Types.BecknConfig as DBC
 import EulerHS.Prelude
 
 -- | ON_DEMAND_TRIP/ON_DEMAND_RENTAL -> SCHEDULED_TRIP/SCHEDULED_RENTAL; anything else
@@ -61,3 +64,12 @@ msilOnSearchConverter dSearchRes onSearchReq
             Spec.descriptorName = Just (Utils.categoryCodeToName (scheduledCategoryCode code))
           }
       Nothing -> descriptor
+
+-- | Building: adds BPP_TERMS (STATIC_TERMS + OFFLINE_CONTRACT) to
+-- message.catalog.tags on the already-built on_search reply, additive
+-- alongside whatever's already there.
+msilAddBppTerms :: DBC.BecknConfig -> Spec.OnSearchReq -> Spec.OnSearchReq
+msilAddBppTerms bppConfig onSearchReq =
+  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> Spec.onSearchReqMessage onSearchReq}
+  where
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = MSILTerms.patchCatalogTags bppConfig (Spec.onSearchReqMessageCatalog msg)}

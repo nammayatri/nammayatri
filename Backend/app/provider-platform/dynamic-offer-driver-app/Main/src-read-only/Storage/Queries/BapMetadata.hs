@@ -40,6 +40,7 @@ updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
     [ Se.Set Beam.domain domain,
       Se.Set Beam.logoUrl (Kernel.Prelude.fmap showBaseUrl logoUrl),
       Se.Set Beam.name name,
+      Se.Set Beam.staticTermsUrl (Kernel.Prelude.fmap showBaseUrl staticTermsUrl),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -47,7 +48,8 @@ updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
 instance FromTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   fromTType' (Beam.BapMetadataT {..}) = do
     logoUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) logoUrl
-    pure $ Just Domain.Types.BapMetadata.BapMetadata {domain = domain, id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, createdAt = createdAt, updatedAt = updatedAt}
+    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
+    pure $ Just Domain.Types.BapMetadata.BapMetadata {domain = domain, id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, staticTermsUrl = staticTermsUrl', createdAt = createdAt, updatedAt = updatedAt}
 
 instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   toTType' (Domain.Types.BapMetadata.BapMetadata {..}) = do
@@ -56,6 +58,7 @@ instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.logoUrl = Kernel.Prelude.fmap showBaseUrl logoUrl,
         Beam.name = name,
+        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
