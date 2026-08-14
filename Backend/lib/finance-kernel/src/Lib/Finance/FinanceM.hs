@@ -8,13 +8,13 @@
 
   Usage:
     runFinance ctx $ do
-      transfer OwnerLiability GovtIndirect gstAmount "GSTCash"
-      transfer OwnerLiability GovtDirect   tdsAmount "TDSDeductionCash"
+      transfer OwnerLiability GovtIndirect gstAmount "GSTCash" Nothing
+      transfer OwnerLiability GovtDirect   tdsAmount "TDSDeductionCash" Nothing
       -- entry IDs are collected automatically
 
     -- or with explicit ID retrieval:
     runFinance ctx $ do
-      transfer OwnerLiability GovtIndirect gstAmount "GSTCash"
+      transfer OwnerLiability GovtIndirect gstAmount "GSTCash" Nothing
       ids <- getEntryIds
       ...
 
@@ -524,8 +524,9 @@ transfer ::
   AccountRole ->
   HighPrecMoney ->
   Text -> -- Reference type
+  Maybe LE.LedgerEntryMetadata -> -- Optional typed ledger metadata (e.g. a reason)
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transfer fromRole toRole amount refType = do
+transfer fromRole toRole amount refType mbMetadata = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -545,7 +546,7 @@ transfer fromRole toRole amount refType = do
                 referenceId = ctx.referenceId,
                 entityReferenceId = ctx.entityReferenceId,
                 entityReferenceType = ctx.entityReferenceType,
-                metadata = Nothing,
+                metadata = mbMetadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
                 settlementStatus = Nothing
@@ -710,8 +711,8 @@ transferAllowZero fromRole toRole amount refType = do
 --   Example:
 --   @
 --     runFinance ctx $ do
---       transfer OwnerLiability GovtIndirect gstAmount "GSTCash"
---       transfer OwnerLiability GovtDirect   tdsAmount "TDSCash"
+--       transfer OwnerLiability GovtIndirect gstAmount "GSTCash" Nothing
+--       transfer OwnerLiability GovtDirect   tdsAmount "TDSCash" Nothing
 --       invoice InvoiceConfig
 --         { invoiceType = Ride
 --         , issuedToType = "CUSTOMER"

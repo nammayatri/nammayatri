@@ -98,8 +98,8 @@ populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ d
             -- the tip legs in EndRide.Internal — the money never passes through the platform.
             tipsResult <- runFinance ctx $ do
               if isOnline
-                then void $ transfer BuyerAsset OwnerLiability tipAmount Wallet.walletReferenceTips
-                else void $ transfer BuyerControl OwnerControl tipAmount Wallet.walletReferenceTips
+                then void $ transfer BuyerAsset OwnerLiability tipAmount Wallet.walletReferenceTips Nothing
+                else void $ transfer BuyerControl OwnerControl tipAmount Wallet.walletReferenceTips Nothing
             case tipsResult of
               Left err -> logError $ "Failed to create Tips ledger entry: " <> show err
               Right (_mbInvId, newEntryIds) -> do

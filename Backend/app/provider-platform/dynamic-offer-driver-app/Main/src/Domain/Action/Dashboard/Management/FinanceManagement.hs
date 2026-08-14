@@ -1511,7 +1511,8 @@ buildWalletLedgerItem walletAccountId entry =
           debitAmount = debitAmount,
           openingBalance = openingBalance,
           closingBalance = closingBalance,
-          subscriptionAllocations = entry.metadataV2 >>= (.subscriptionAllocations)
+          subscriptionAllocations = entry.metadataV2 >>= (.subscriptionAllocations),
+          reason = entry.metadataV2 >>= (.reason)
         }
 
 paginateWalletLedgerEntries :: Int -> Int -> [a] -> [a]

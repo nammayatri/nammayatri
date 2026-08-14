@@ -20,7 +20,7 @@ import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Servant.Client
 
-data AirportCashRechargeRequest = AirportCashRechargeRequest {amount :: Kernel.Types.Common.HighPrecMoney, referenceId :: Kernel.Prelude.Text}
+data AirportCashRechargeRequest = AirportCashRechargeRequest {amount :: Kernel.Types.Common.HighPrecMoney, referenceId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

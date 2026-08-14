@@ -73,6 +73,7 @@ types:
     status: EntryStatus
     paymentOrder: Maybe PaymentOrderInfo
     date: UTCTime
+    reason: Maybe Text
   WalletTransactionHistoryResponse:
     items: "[WalletTransactionHistoryItem]"
 

@@ -234,7 +234,7 @@ recordLoyaltyHistory wallet kind amount domainEntityId = do
       runLoyaltyTransfer
         wallet
         domainEntityId
-        (Finance.transfer source dest amount refType)
+        (Finance.transfer source dest amount refType Nothing)
 
 recordLoyaltyHistoryReversal ::
   (FBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>

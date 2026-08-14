@@ -608,6 +608,7 @@ types:
     - openingBalance: Maybe HighPrecMoney
     - closingBalance: Maybe HighPrecMoney
     - subscriptionAllocations: Maybe [SubscriptionCreditAllocation]
+    - reason: Maybe Text
 
   # ----- Earnings Summary -----
   EarningsSummaryRes:

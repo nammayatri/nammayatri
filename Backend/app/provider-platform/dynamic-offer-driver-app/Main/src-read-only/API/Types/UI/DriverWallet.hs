@@ -101,6 +101,7 @@ data WalletTransactionHistoryItem = WalletTransactionHistoryItem
     itemReference :: Kernel.Prelude.Text,
     itemValue :: Kernel.Types.Common.HighPrecMoney,
     paymentOrder :: Kernel.Prelude.Maybe PaymentOrderInfo,
+    reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
   }
   deriving stock (Generic)

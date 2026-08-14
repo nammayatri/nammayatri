@@ -115,4 +115,5 @@ types:
   AirportCashRechargeRequest:
     - amount: HighPrecMoney
     - referenceId: Text
+    - reason: Maybe Text
     - derive: "'HideSecrets"
