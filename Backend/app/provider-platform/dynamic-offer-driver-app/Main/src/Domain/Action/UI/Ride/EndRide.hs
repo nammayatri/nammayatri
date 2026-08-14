@@ -826,9 +826,18 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     else do
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
-      -- Recompute congestion charge at end ride if config enabled
+      -- Recompute congestion charge at end ride if config enabled.
+      -- Skip the dynamic recompute for OTP (special-zone) bookings when the city has opted out,
+      -- keeping parity with the estimate-time gate in getFullFarePolicy.
+      let disableCongestionForOtpBooking =
+            thresholdConfig.disableDynamicCongestionForOTPBooking == Just True
+              && ( case booking.tripCategory of
+                     DTC.OneWay DTC.OneWayRideOtp -> True
+                     DTC.CrossCity DTC.OneWayRideOtp _ -> True
+                     _ -> False
+                 )
       (farePolicyWithCongestion, endRideCongestionCharge) <-
-        if thresholdConfig.recomputeCongestionChargeOnEndRide == Just True
+        if thresholdConfig.recomputeCongestionChargeOnEndRide == Just True && not disableCongestionForOtpBooking
           then do
             logInfo "Recomputing congestion charge on end ride"
             mbCongestionDetails <-

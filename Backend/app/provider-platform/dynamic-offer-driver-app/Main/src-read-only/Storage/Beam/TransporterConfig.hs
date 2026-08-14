@@ -120,6 +120,7 @@ data TransporterConfigT f = TransporterConfigT
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     digilockerEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     disableDriverWhenUnlinkingVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    disableDynamicCongestionForOTPBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     disableListScheduledBookingAPI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     distanceWeightage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

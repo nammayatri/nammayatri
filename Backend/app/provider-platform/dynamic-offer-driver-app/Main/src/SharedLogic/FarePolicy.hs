@@ -264,11 +264,14 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
   let _bookingStartTime = fromMaybe now mbBookingStartTime
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   congestionChargeStartTime <- getCurrentTime
+  -- OTP (special-zone) bookings map to the 'OneWayRideOtp' sub-mode. Cities can opt out of
+  -- dynamic congestion for these via 'disableDynamicCongestionForOTPBooking' (Just True = disable).
+  let disableCongestionForOtpBooking = transporterConfig.disableDynamicCongestionForOTPBooking == Just True
   congestionChargeMultiplierFromModel <-
     case fareProduct.tripCategory of
-      DTC.OneWay v | v /= MeterRide -> do
+      DTC.OneWay v | v /= MeterRide && not (v == DTC.OneWayRideOtp && disableCongestionForOtpBooking) -> do
         maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
-      DTC.CrossCity v _ | v /= MeterRide -> do
+      DTC.CrossCity v _ | v /= MeterRide && not (v == DTC.OneWayRideOtp && disableCongestionForOtpBooking) -> do
         maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
       _ -> return Nothing
   congestionChargeEndTime <- getCurrentTime

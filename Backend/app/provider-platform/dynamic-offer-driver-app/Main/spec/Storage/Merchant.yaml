@@ -1121,6 +1121,7 @@ TransporterConfig:
     qarCalRadiusInKm: Maybe Double
     isDynamicPricingQARCalEnabled: Maybe Bool
     recomputeCongestionChargeOnEndRide: Maybe Bool
+    disableDynamicCongestionForOTPBooking: Maybe Bool
     enableMobilityBilling: Maybe Bool
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
