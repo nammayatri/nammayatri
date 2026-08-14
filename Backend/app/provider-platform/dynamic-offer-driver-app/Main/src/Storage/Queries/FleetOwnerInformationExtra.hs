@@ -413,3 +413,16 @@ updateBusinessLicenseNumberById businessLicenseNumber fleetOwnerPersonId = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+findByFleetIdOrBusinessLicenseNumberHash ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id DP.Person ->
+  DbHash ->
+  m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+findByFleetIdOrBusinessLicenseNumberHash fleetOwnerPersonId licenseHash =
+  findAllWithKV
+    [ Se.Or
+        [ Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId),
+          Se.Is Beam.businessLicenseNumberHash $ Se.Eq (Just licenseHash)
+        ]
+    ]
