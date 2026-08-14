@@ -55,6 +55,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.LocationUpdates.Internal
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.CallBAP
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
@@ -480,7 +481,28 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
-            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed
+                newEstimatedFare = HighPrecMoney $ toRational $ fareSum fareParameters Nothing
+                currentDiscount = (mbRide >>= (.discountAmount)) <|> booking.discountAmount
+            rawDiscountAmount <-
+              if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare
+                then do
+                  appBackendBapInternal <- asks (.appBackendBapInternal)
+                  let reqBody =
+                        CallBAPInternal.OfferDiscountReq
+                          { fareAmount = Just newEstimatedFare,
+                            projectFareParamsBreakup = FC.projectFareParamsBreakup fareParameters
+                          }
+                  result <-
+                    withTryCatch "getOfferDiscount:softUpdateEditDestination" $
+                      CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId reqBody
+                  case result of
+                    Right resp -> pure resp.discountAmount
+                    Left err -> do
+                      logError $ "Error getting offer discount at SOFT edit destination, falling back to current discount: " <> show err
+                      pure currentDiscount
+                else pure currentDiscount
+            let clampedDiscount = FC.clampDiscountToDiscountable fareParameters rawDiscountAmount
+            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed clampedDiscount
             startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
             dropLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> bookingId.getId)
             startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
@@ -673,8 +695,8 @@ validateStopReq booking isEdit = do
     then unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be edited " <> booking.id.getId) -- should we throw error or just allow?
     else unless (isNothing booking.stopLocationId) $ throwError (InvalidRequest $ "Can't add next stop before reaching previous stop " <> booking.id.getId)
 
-buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> UTCTime -> Text -> Text -> Maybe Bool -> m DBUR.BookingUpdateRequest
-buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed = do
+buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> UTCTime -> Text -> Text -> Maybe Bool -> Maybe HighPrecMoney -> m DBUR.BookingUpdateRequest
+buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed discountAmount = do
   guid <- generateGUID
   now <- getCurrentTime
   return $
@@ -703,5 +725,6 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         distanceUnit = booking.distanceUnit,
         getRouteReq = Just mapsRouteReqInText,
         routeInfoResp = Just routeInfoInText,
+        discountAmount,
         ..
       }

@@ -14,15 +14,16 @@
 
 module SharedLogic.Ride where
 
+import Control.Applicative ((<|>))
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Common as SReqD
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverRidePayoutBankAccount as DDPBA
 import Domain.Types.EmptyDynamicParam
-import Domain.Types.FareParameters (FareParameters)
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
@@ -247,22 +248,22 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 recomputeRideFinancialsForFareUpdate ::
   DBooking.Booking ->
   DRide.Ride ->
-  Id FareParameters ->
-  HighPrecMoney -> -- new estimated fare (for the BAP comparison)
+  DBUR.BookingUpdateRequest ->
   Flow ()
-recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFare = do
-  newFareParams <- QFP.findById newFareParamsId >>= fromMaybeM (FareParametersNotFound newFareParamsId.getId)
+recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq = do
+  newFareParams <- QFP.findById bookingUpdateReq.fareParamsId >>= fromMaybeM (FareParametersNotFound bookingUpdateReq.fareParamsId.getId)
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   newCommission <- FC.calculateCommission newFareParams mbFarePolicy
   newCancellationCommission <- FC.calculateCancellationCommission newFareParams mbFarePolicy
-  let currentDiscount = ride.discountAmount
+  let softStaleAgainstBooking = booking.estimatedFare /= bookingUpdateReq.oldEstimatedFare
+      currentDiscount = if softStaleAgainstBooking then ride.discountAmount else bookingUpdateReq.discountAmount <|> ride.discountAmount
   rawDiscountAmount <-
-    if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare
+    if softStaleAgainstBooking && isJust currentDiscount && bookingUpdateReq.estimatedFare /= booking.estimatedFare
       then do
         appBackendBapInternal <- asks (.appBackendBapInternal)
         let reqBody =
               CallBAPInternal.OfferDiscountReq
-                { fareAmount = Just newEstimatedFare,
+                { fareAmount = Just bookingUpdateReq.estimatedFare,
                   projectFareParamsBreakup = FC.projectFareParamsBreakup newFareParams
                 }
         result <-
@@ -271,11 +272,11 @@ recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFa
         case result of
           Right resp -> pure resp.discountAmount
           Left err -> do
-            logError $ "Error getting offer discount on fare update, falling back to current ride discount: " <> show err
+            logError $ "Error getting offer discount on fare update, falling back to current discount: " <> show err
             pure currentDiscount
       else pure currentDiscount
-  let newDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
-  QRide.updateCommissionAndDiscount newCommission newCancellationCommission newDiscount ride.id
+  let finalDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
+  QRide.updateCommissionAndDiscount newCommission newCancellationCommission finalDiscount ride.id
 
 releaseLien ::
   ( Finance.HasActorInfo m r,
