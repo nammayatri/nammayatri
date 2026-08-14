@@ -165,6 +165,7 @@ transformToSearchReq req subscriptionId =
             verifyBeforeCancellingOldBooking = Just True,
             numberOfLuggages = Nothing, -- Not applicable for NY Regular as of now
             doMultimodalSearch = Just False,
+            shouldCacheRoute = Nothing,
             city = Nothing
           }
 
