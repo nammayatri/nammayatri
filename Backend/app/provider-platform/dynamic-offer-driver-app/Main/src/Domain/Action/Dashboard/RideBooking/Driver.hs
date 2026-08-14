@@ -660,7 +660,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             enabled = (.enabled) <$> mbFoi,
             isActive = maybe False (.isActive) mbFda,
             isAssociated = maybe False (\fda -> maybe False (> now) fda.associatedTill) mbFda,
-            associatedTill = mbFda >>= (.associatedTill)
+            associatedTill = mbFda >>= (.associatedTill),
+            requestReason = mbFda >>= (.requestReason)
           }
 
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs

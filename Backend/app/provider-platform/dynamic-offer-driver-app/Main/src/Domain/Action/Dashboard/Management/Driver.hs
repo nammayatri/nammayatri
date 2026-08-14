@@ -404,7 +404,8 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
                 enabled = (.enabled) <$> mbFoi,
                 isActive = fda.isActive,
                 isAssociated = maybe False (> now) fda.associatedTill,
-                associatedTill = fda.associatedTill
+                associatedTill = fda.associatedTill,
+                requestReason = fda.requestReason
               }
   pure $
     Common.DriverListItem

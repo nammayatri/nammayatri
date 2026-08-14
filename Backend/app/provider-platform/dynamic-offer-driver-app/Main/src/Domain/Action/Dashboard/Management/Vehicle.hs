@@ -127,5 +127,6 @@ mkAssociationInfo (Just person) mbFoi associatedTill = do
           enabled = (.enabled) <$> mbFoi,
           isActive = True,
           isAssociated = True,
-          associatedTill
+          associatedTill,
+          requestReason = Nothing
         }

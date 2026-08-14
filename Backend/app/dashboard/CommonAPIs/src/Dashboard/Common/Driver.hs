@@ -226,7 +226,8 @@ data DriverAssociationInfo = DriverAssociationInfo
     enabled :: Maybe Bool,
     isActive :: Bool,
     isAssociated :: Bool,
-    associatedTill :: Maybe UTCTime
+    associatedTill :: Maybe UTCTime,
+    requestReason :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

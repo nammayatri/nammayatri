@@ -6,6 +6,7 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.InitiatedBy as DIB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
@@ -67,9 +68,10 @@ refreshRateLimitKey driverId = "BPP:Stripe:StatusRefresh:" <> driverId.getId <> 
 getPersonRegisterBankAccountLink ::
   PersonRegisterBankAccountLinkHandle ->
   Maybe DMPM.PaymentMode ->
+  Maybe DIB.InitiatedBy ->
   Domain.Types.Person.Person ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
-getPersonRegisterBankAccountLink h mbPaymentMode person = do
+getPersonRegisterBankAccountLink h mbPaymentMode mbInitiatedBy person = do
   mPersonBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id
   paymentMode <- validatePaymentMode mbPaymentMode mPersonBankAccount
   now <- getCurrentTime
@@ -83,7 +85,12 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
   where
     refreshLink :: DDBA.DriverBankAccount -> DMPM.PaymentMode -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
     refreshLink bankAccount paymentMode = do
-      resp <- TPayment.retryAccountLink person.merchantOperatingCityId (Just paymentMode) bankAccount.accountId
+      resp <-
+        TPayment.retryAccountLink person.merchantOperatingCityId (Just paymentMode) $
+          Payment.RetryAccountLinkReq
+            { accountId = bankAccount.accountId,
+              returnUrlKey = show <$> mbInitiatedBy
+            }
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       QDBA.updateAccountLink (Just accountUrl) (Just resp.accountUrlExpiry) person.id
       return $
@@ -149,7 +156,8 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 idNumber,
                 mobileNumber = mobileE164,
                 businessType = Just businessType,
-                companyDetails = mbCompanyDetails
+                companyDetails = mbCompanyDetails,
+                returnUrlKey = show <$> mbInitiatedBy
               }
       resp <- TPayment.createConnectAccount person.merchantOperatingCityId (Just paymentMode) createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl

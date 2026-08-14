@@ -34,6 +34,7 @@ import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
+import qualified Domain.Types.InitiatedBy as DIB
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -557,9 +558,10 @@ postRegistrationV2RegisterBankAccountLink ::
   City.City ->
   Maybe Text ->
   Maybe DMPM.PaymentMode ->
+  Maybe DIB.InitiatedBy ->
   Text ->
   Flow Common.FleetBankAccountLinkResp
-postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode requestorId = do
+postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode mbInitiatedBy requestorId = do
   let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
   FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
   let fetchPersonStripeInfo = do
@@ -576,7 +578,7 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
               businessRegistrationNumber = fleetOwnerInfo.businessLicenseNumber
             }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode fleetOwner
+  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.FleetDashboard mbInitiatedBy) fleetOwner
 
 castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
 castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}
