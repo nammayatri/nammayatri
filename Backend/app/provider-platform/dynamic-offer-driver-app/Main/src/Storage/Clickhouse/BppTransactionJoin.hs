@@ -16,7 +16,9 @@
 module Storage.Clickhouse.BppTransactionJoin where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
+import qualified Data.Aeson as A
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as TE
 import Domain.Types.DriverReferral
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Merchant
@@ -36,7 +38,9 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Time as Time
 import Kernel.Utils.Time
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Storage.Queries.RideExtra as QRE
+import qualified Text.Read as TR
 
 data BppTransactionJoinT f = BppTransactionJoinT
   { bookingCustomerName :: C f (Maybe Text),
@@ -110,7 +114,8 @@ data BppTransactionJoinT f = BppTransactionJoinT
     fleetMobileNumberEncrypted :: C f (Maybe Text),
     fleetMobileNumberHash :: C f (Maybe Text),
     vehicleManufacturer :: C f (Maybe Text),
-    vehicleModel :: C f (Maybe Text)
+    vehicleModel :: C f (Maybe Text),
+    rideTags :: C f (Maybe [Text])
   }
   deriving (Generic)
 
@@ -190,7 +195,8 @@ bppTransactionJoinTTable =
       fleetMobileNumberEncrypted = "fleet_mobile_number",
       fleetMobileNumberHash = "fleet_mobile_number_hash",
       vehicleManufacturer = "vehicle_manufacturer",
-      vehicleModel = "vehicle_model"
+      vehicleModel = "vehicle_model",
+      rideTags = "ride_tags"
     }
 
 type BppTransactionJoin = BppTransactionJoinT Identity
@@ -208,6 +214,13 @@ instance ClickhouseValue TripCategory
 instance ClickhouseValue DMPM.PaymentInstrument
 
 instance CH.ClickhouseValue PayoutFlagReason
+
+instance ClickhouseValue [Text] where
+  fromClickhouseValue (String str) =
+    case A.eitherDecodeStrict (TE.encodeUtf8 (Text.pack str)) of
+      Right xs -> pure xs
+      Left _ -> Except $ TR.readEither str
+  fromClickhouseValue _ = fail "Unexpected value for [Text]"
 
 $(TH.mkClickhouseInstances ''BppTransactionJoinT 'SELECT_FINAL_MODIFIER)
 
@@ -368,7 +381,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           fleetName = bppTxn.fleetName,
           fleetNumber = EncryptedHashed <$> (Encrypted <$> bppTxn.fleetMobileNumberEncrypted) <*> (DbHash . encodeUtf8 <$> bppTxn.fleetMobileNumberHash),
           vehicleManufacturer = bppTxn.vehicleManufacturer,
-          vehicleModel = bppTxn.vehicleModel
+          vehicleModel = bppTxn.vehicleModel,
+          rideTags = Yudhishthira.tagsNameValueFromTType bppTxn.rideTags
         }
 
 findAllRideItemsV2 ::

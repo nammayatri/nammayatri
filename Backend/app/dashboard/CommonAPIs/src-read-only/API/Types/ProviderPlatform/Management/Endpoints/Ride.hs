@@ -21,6 +21,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PayoutRequest
+import qualified Lib.Yudhishthira.Types
 import Servant
 import Servant.Client
 
@@ -672,7 +673,8 @@ data RideListItem = RideListItem
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
