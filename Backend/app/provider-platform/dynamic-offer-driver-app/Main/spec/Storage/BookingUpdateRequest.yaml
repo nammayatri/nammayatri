@@ -44,6 +44,7 @@ BookingUpdateRequest:
     getRouteReq: Maybe Text
     routeInfoResp: Maybe Text
     snapToRoadFailed: Maybe Bool
+    discountAmount: Maybe HighPrecMoney
 
   beamType:
     distanceUnit: Maybe DistanceUnit

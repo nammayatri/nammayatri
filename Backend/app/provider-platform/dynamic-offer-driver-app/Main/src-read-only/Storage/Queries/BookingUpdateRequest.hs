@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
 findAllByBookingId limit offset bookingId = do findAllWithOptionsKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)] (Se.Asc Beam.createdAt) limit offset
 
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
@@ -89,6 +89,7 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
       Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
       Se.Set Beam.currentPointLat currentPointLat,
       Se.Set Beam.currentPointLon currentPointLon,
+      Se.Set Beam.discountAmount discountAmount,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedFare estimatedFare,
@@ -122,6 +123,7 @@ instance FromTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.
             createdAt = createdAt,
             currentPointLat = currentPointLat,
             currentPointLon = currentPointLon,
+            discountAmount = discountAmount,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             estimatedDistance = estimatedDistance,
             estimatedFare = estimatedFare,
@@ -153,6 +155,7 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.createdAt = createdAt,
         Beam.currentPointLat = currentPointLat,
         Beam.currentPointLon = currentPointLon,
+        Beam.discountAmount = discountAmount,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedFare = estimatedFare,
