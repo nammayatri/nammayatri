@@ -10,6 +10,8 @@ module SharedLogic.DriverOnboarding.Common
     findFleetConfigForRole,
     checkIfDocumentValid,
     checkIfDocumentValid',
+    checkAllDocsValid,
+    vehicleDocCategory,
     checkAllDriverDocsValid',
     checkAllDriverDocsValidForVerified,
     checkAllDriverDocsValidForEnabling,
@@ -186,6 +188,19 @@ checkAllDocsByStage stageOf checkDoc docs =
     groupOn :: Ord b => (DDVC.DocumentType -> b) -> [DocumentStatusItem] -> [[DocumentStatusItem]]
     groupOn f = List.groupBy (\x y -> f x.documentType == f y.documentType) . List.sortOn (f . (.documentType))
 
+checkAllDocsValid ::
+  MandatoryMode ->
+  Maybe Bool ->
+  DocVerificationConfigs ->
+  DP.Role ->
+  [DocumentStatusItem] ->
+  DVC.VehicleCategory ->
+  Maybe Bool ->
+  Bool
+checkAllDocsValid mode mbIsFleetDriver configs role docs category makeSelfieAadhaarPanMandatory = do
+  let isValid doc = checkIfDocumentValid' mode mbIsFleetDriver configs role doc.documentType category doc.verificationStatus makeSelfieAadhaarPanMandatory
+  checkAllDocsByStage (documentOnboardingStageOf configs role (Just category)) (Just . isValid) docs == Just True
+
 checkAllDriverDocsValid' ::
   MandatoryMode ->
   Maybe Bool ->
@@ -195,9 +210,7 @@ checkAllDriverDocsValid' ::
   DVC.VehicleCategory ->
   Maybe Bool ->
   Bool
-checkAllDriverDocsValid' mode mbIsFleetDriver allDocVerificationConfigs role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory = do
-  let isValid doc = checkIfDocumentValid' mode mbIsFleetDriver allDocVerificationConfigs role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory
-  checkAllDocsByStage (documentOnboardingStageOf allDocVerificationConfigs role (Just vehicleCategory)) (Just . isValid) driverDocuments == Just True
+checkAllDriverDocsValid' = checkAllDocsValid
 
 -- | Are all isMandatory driver docs VALID? Excludes isMandatoryForEnabling-only docs. Drives
 --   @verified@. (Sibling checkAllDriverDocsValidForEnabling uses the isMandatoryForEnabling set → @enabled@.)
@@ -226,11 +239,12 @@ checkAllVehicleDocsValid' ::
   VehicleDocumentItem ->
   Maybe Bool ->
   Bool
-checkAllVehicleDocsValid' mode driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory = do
+checkAllVehicleDocsValid' mode driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory =
   -- Vehicle docs are not subject to the fleet-driver/DCO applicableTo split → Nothing.
-  let category = fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
-      isValid doc = checkIfDocumentValid' mode Nothing (Right driverDocConfs) DP.DRIVER doc.documentType category doc.verificationStatus makeSelfieAadhaarPanMandatory
-  checkAllDocsByStage (documentOnboardingStageOf (Right driverDocConfs) DP.DRIVER (Just category)) (Just . isValid) vehicleDoc.documents == Just True
+  checkAllDocsValid mode Nothing (Right driverDocConfs) DP.DRIVER vehicleDoc.documents (vehicleDocCategory vehicleDoc) makeSelfieAadhaarPanMandatory
+
+vehicleDocCategory :: VehicleDocumentItem -> DVC.VehicleCategory
+vehicleDocCategory vehicleDoc = fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
 
 -- | Are all isMandatory vehicle docs VALID? Excludes isMandatoryForEnabling-only docs. Drives
 --   @verified@. (Sibling checkAllVehicleDocsValidForEnabling uses the isMandatoryForEnabling set → @enabled@.)

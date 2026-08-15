@@ -353,7 +353,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       allDriverDocsVerified <-
         if enableBotFlow
           then do
-            (allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
+            (allDocVerificationConfigs, driverDocStatuses, vehicleCategory, _vehicleDocuments) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
             isFleetDriver <- SStatus.hasActiveFleetAssociation person.id
             let driverConfigs = case allDocVerificationConfigs of Right cs -> cs; Left _ -> []
             -- Throws (naming the offending docs) if any DriverInspectionHub dependency doc isn't VALID.

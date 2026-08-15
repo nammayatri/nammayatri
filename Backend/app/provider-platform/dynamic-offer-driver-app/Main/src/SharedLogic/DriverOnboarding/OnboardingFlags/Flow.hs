@@ -22,6 +22,7 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 where
 
 import Control.Applicative ((<|>))
+import Data.List (nub)
 import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -72,7 +73,8 @@ data PersonFlagsCtx = PersonFlagsCtx
     pfcMakeSelfieAadhaarPanMandatory :: Maybe Bool,
     pfcDriverName :: Maybe Text,
     pfcOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
-    pfcIsFleetDriver :: Maybe Bool
+    pfcIsFleetDriver :: Maybe Bool,
+    pfcVehicleDocs :: [VehicleDocumentItem]
   }
 
 data OnboardingFlagsInput = OnboardingFlagsInput
@@ -127,10 +129,27 @@ recomputeOnboardingFlags input useUnifiedOnboardingFlagsRecompute = do
               pfc.pfcOnboardingVehicleCategory
               pfc.pfcTransporterConfig
               pfc.pfcIsFleetDriver
+              pfc.pfcVehicleDocs
               useUnifiedOnboardingFlagsRecompute
   forM_ input.ofiVehicles $ \entry ->
     recomputeVehicleFlagsArm entry.vdeRegistrationNo entry.vdeItem entry.vdeConfigs entry.vdeMakeSelfieAadhaarPanMandatory useUnifiedOnboardingFlagsRecompute
   pure OnboardingFlagsResult {ofrPersonEnabled = personEnabled, ofrVehiclesTouched = length input.ofiVehicles}
+
+mkUnavailableDoc :: DVC.DocumentType -> DocumentStatusItem
+mkUnavailableDoc docType =
+  DocumentStatusItem
+    { documentType = docType,
+      documentId = Nothing,
+      verificationStatus = NO_DOC_AVAILABLE,
+      verificationMessage = Nothing,
+      verificationUrl = Nothing,
+      s3Path = Nothing,
+      imageId = Nothing,
+      imageId2 = Nothing,
+      documentExpiry = Nothing,
+      metadata = Nothing,
+      commonDocumentData = Nothing
+    }
 
 recomputeDriverFlagsArm ::
   OnboardingFlow m r =>
@@ -145,18 +164,35 @@ recomputeDriverFlagsArm ::
   Maybe DVC.VehicleCategory ->
   DTC.TransporterConfig ->
   Maybe Bool ->
+  [VehicleDocumentItem] ->
   Bool ->
   m Bool
-recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver useUnifiedOnboardingFlagsRecompute = do
+recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver vehicleDocuments useUnifiedOnboardingFlagsRecompute = do
   driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   let effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (driverInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
   isFleetDriver <-
     if useUnifiedOnboardingFlagsRecompute
       then pure $ fromMaybe (effectiveOnboardingAs == DI.FLEET_DRIVER) mbIsFleetDriver
       else hasActiveFleetAssociation person.id
-  let allMandatoryDocsValid = checkAllDriverDocsValid' ForVerified (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-      allEnablingDocsValid = checkAllDriverDocsValid' ForEnabling (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-      derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments
+  let driverDocConfigs = case allDocVerificationConfigs of Right configs -> configs; Left _ -> []
+      unavailableVehicleDocs =
+        map mkUnavailableDoc . nub . map (.documentType) $
+          filter (\config -> config.vehicleCategory == vehicleCategory && isVehicleSideDocType config.documentCategory config.documentType) driverDocConfigs
+      checkDriverDocs mode = checkAllDocsValid mode (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+      checkVehicleDocs mode category docs = checkAllDocsValid mode Nothing (Right driverDocConfigs) DP.DRIVER docs category makeSelfieAadhaarPanMandatory
+      vehicleDocsOk mode =
+        not useUnifiedOnboardingFlagsRecompute
+          || ( case vehicleDocuments of
+                 [] -> checkVehicleDocs mode vehicleCategory unavailableVehicleDocs
+                 items -> any (\item -> checkVehicleDocs mode (vehicleDocCategory item) item.documents) items
+             )
+      allMandatoryDocsValid = checkDriverDocs ForVerified && vehicleDocsOk ForVerified
+      allEnablingDocsValid = checkDriverDocs ForEnabling && vehicleDocsOk ForEnabling
+      approvalDocs =
+        if useUnifiedOnboardingFlagsRecompute
+          then driverDocuments <> (case vehicleDocuments of [] -> unavailableVehicleDocs; items -> concatMap (.documents) items)
+          else driverDocuments
+      derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
       newApproved =
         if useUnifiedOnboardingFlagsRecompute
           then
