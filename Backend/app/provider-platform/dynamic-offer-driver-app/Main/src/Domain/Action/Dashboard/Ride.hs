@@ -375,7 +375,8 @@ buildRideListItem QRide.RideItem {..} = do
         fleetName = fleetName,
         fleetNumber = fleetNumber',
         vehicleManufacturer = vehicleManufacturer,
-        vehicleModel = vehicleModel
+        vehicleModel = vehicleModel,
+        rideTags = rideTags
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2

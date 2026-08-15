@@ -12,6 +12,7 @@ imports:
   PaymentInstrument: Beckn.Types.Core.Taxi.Common.PaymentInstrument
   PayoutRequest: Lib.Payment.Domain.Types.PayoutRequest
   Lib.Payment.Domain.Types.PayoutRequest: payment
+  TagNameValue: Lib.Yudhishthira.Types
 
 module: Ride
 
@@ -305,6 +306,7 @@ types:
     - driverArrivalTime: Maybe UTCTime
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
+    - rideTags: Maybe [TagNameValue]
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
