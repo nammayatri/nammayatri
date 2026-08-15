@@ -329,8 +329,8 @@ approvalStatusToFilter Common.ApprovedOnly = Just True
 approvalStatusToFilter Common.RejectedOnly = Just False
 approvalStatusToFilter Common.PendingOnly = Nothing
 
-getDriverList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.DriverListRes
-getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo = do
+getDriverList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow Common.DriverListRes
+getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo mbFleetSeeker = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -350,6 +350,7 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
             QDriverList.dlfApproval = mbApprovalFilter,
             QDriverList.dlfOnboardingAs = mbOnboardingAsDom,
             QDriverList.dlfFleetOwnerId = mbFleetOwnerId,
+            QDriverList.dlfFleetSeeker = mbFleetSeeker,
             QDriverList.dlfFrom = mbFrom,
             QDriverList.dlfTo = mbTo
           }

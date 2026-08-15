@@ -951,6 +951,7 @@ data FleetErrors
   | DriverNotPartOfOperator
   | DriverNotActiveWithFleet
   | UserAlreadyExists Text
+  | FleetSearchParamNotSupported
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -964,6 +965,7 @@ instance IsBaseError FleetErrors where
     DriverNotPartOfOperator -> Just "Driver is not part of the operator"
     DriverNotActiveWithFleet -> Just "Driver is not active with the fleet"
     UserAlreadyExists userId -> Just $ "User with id " <> show userId <> " already exists"
+    FleetSearchParamNotSupported -> Just "Fleet Owner can only search with vehicleNumber, personId, walletId or mobileNumber"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
@@ -974,6 +976,7 @@ instance IsHTTPError FleetErrors where
     DriverNotPartOfOperator -> "DRIVER_NOT_PART_OF_OPERATOR"
     DriverNotActiveWithFleet -> "DRIVER_NOT_ACTIVE_WITH_FLEET"
     UserAlreadyExists _ -> "USER_ALREADY_EXISTS"
+    FleetSearchParamNotSupported -> "FLEET_SEARCH_PARAM_NOT_SUPPORTED"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
@@ -982,6 +985,7 @@ instance IsHTTPError FleetErrors where
     DriverNotPartOfOperator -> E400
     DriverNotActiveWithFleet -> E400
     UserAlreadyExists _ -> E400
+    FleetSearchParamNotSupported -> E400
 
 instance IsAPIError FleetErrors
 

@@ -117,10 +117,10 @@ getDriverAadhaarInfobyMobileNumber merchantShortId opCity apiTokenInfo phoneNo =
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAadhaarInfobyMobileNumber) phoneNo
 
-getDriverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.DriverListRes
-getDriverList merchantShortId opCity apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo = do
+getDriverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow Common.DriverListRes
+getDriverList merchantShortId opCity apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo mbFleetSeeker = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverList) mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverList) mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo mbFleetSeeker
 
 getDriverActivity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.DriverActivityRes
 getDriverActivity merchantShortId opCity apiTokenInfo = do

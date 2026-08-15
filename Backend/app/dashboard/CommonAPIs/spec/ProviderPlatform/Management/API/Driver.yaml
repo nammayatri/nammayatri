@@ -129,6 +129,7 @@ apis:
         - fleetOwnerId: Text
         - from: UTCTime
         - to: UTCTime
+        - fleetSeeker: Bool
       response:
         type: DriverListRes
       migrate:
