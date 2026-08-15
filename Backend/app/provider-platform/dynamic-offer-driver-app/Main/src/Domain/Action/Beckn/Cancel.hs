@@ -63,6 +63,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -85,6 +86,7 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Constants
 import Tools.Error
 import Tools.Event
+import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 
 data CancelReq = CancelSearch CancelSearchReq | CancelRide CancelRideReq
@@ -127,6 +129,8 @@ cancel req merchant booking mbActiveSearchTry = do
     let currentLocation = getCoordinates <$> mbLocation
     bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
+    cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
+    Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source)
     QRB.updateStatus booking.id SRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do

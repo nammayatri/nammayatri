@@ -74,6 +74,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide, isKaaliPeeliBooking)
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -264,7 +265,8 @@ startRideHandler ServiceHandle {..} rideId req = do
 
       fork "Push Start Ride Metric" $ do
         incrementRideStartCounter "startRide"
-        TMetrics.incrementRideStartedCount booking.providerId.getId booking.merchantOperatingCityId.getId (show booking.vehicleServiceTier)
+        (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
+        TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier)
       -- Schedule payout for special zone rides if enabled
       let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
       when

@@ -49,6 +49,7 @@ import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
@@ -230,7 +231,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               <> show searchReq.estimatedDistance
               <> "; estimated base fare:"
               <> show estimatedFare
-          Metrics.incrementSearchTryCount merchant.id.getId searchReq.merchantOperatingCityId.getId (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType)
+          cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
+          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType)
           return searchTry
 
 buildSearchTry ::

@@ -601,6 +601,7 @@ library
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
+      SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
       SharedLogic.OTP
       SharedLogic.Payment

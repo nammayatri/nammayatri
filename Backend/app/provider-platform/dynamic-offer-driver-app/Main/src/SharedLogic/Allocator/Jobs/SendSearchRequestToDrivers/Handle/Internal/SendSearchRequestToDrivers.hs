@@ -71,6 +71,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate
+import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -161,6 +162,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
+  (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
   -- Previous batch's still-active unresponded requests, fetched once: shared by the
   -- special-zone queue-skip fork and the expired-request accounting below. Fetched
   -- before createMany so the new batch's rows can't leak in.
@@ -179,11 +181,11 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ do
     -- these unresponded requests are being retracted here: count them as expired
     forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) unrespondedSRFDs) $ \(serviceTier, expiredCount) ->
-      TM.addSearchRequestExpiredCount searchReq.providerId.getId searchReq.merchantOperatingCityId.getId (show serviceTier) expiredCount
+      TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) expiredCount
     QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
-    TM.addSearchRequestSentToDriverCount searchReq.providerId.getId searchReq.merchantOperatingCityId.getId (show serviceTier) sentCount
+    TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) sentCount
 
   -- Count one "request sent" per driver in this batch for the SRDStats sliding-window counters
   -- and reset each driver's idle clock, both surfaced in the POOLING dynamic-logic data.

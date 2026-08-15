@@ -150,7 +150,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
-import Tools.Metrics (CoreMetrics, HasBPPMetrics, incrementRideCancelledCount)
+import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
@@ -768,7 +768,6 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
-    HasBPPMetrics m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -787,7 +786,6 @@ sendBookingCancelledUpdateToBAP ::
   Maybe DRide.Ride ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFeeBase cancellationFeeTax mbRide = do
-  incrementRideCancelledCount booking.providerId.getId booking.merchantOperatingCityId.getId (show booking.vehicleServiceTier) (show cancellationSource)
   mbBookingCancellationReason <- QBCR.findByBookingId booking.id
   let cancellationReasonCode = mbBookingCancellationReason >>= (.reasonCode) <&> (\(DCR.CancellationReasonCode code) -> code)
       -- base + tax kept separate by callers; total built only here for the CancellationTerm

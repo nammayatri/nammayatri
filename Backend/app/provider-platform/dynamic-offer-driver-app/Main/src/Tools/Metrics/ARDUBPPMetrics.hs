@@ -63,6 +63,12 @@ incrementBookingCreatedCount merchantId merchantOpCityId vehicleServiceTier = do
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.bookingCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) P.incCounter
 
+incrementRideCreatedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> m ()
+incrementRideCreatedCount merchantId merchantOpCityId vehicleServiceTier = do
+  bmContainer <- asks (.bppMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.rideCreatedCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) P.incCounter
+
 incrementRideStartedCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> m ()
 incrementRideStartedCount merchantId merchantOpCityId vehicleServiceTier = do
   bmContainer <- asks (.bppMetrics)

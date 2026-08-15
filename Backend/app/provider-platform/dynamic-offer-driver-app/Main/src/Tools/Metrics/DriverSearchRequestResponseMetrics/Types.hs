@@ -28,7 +28,8 @@ import Prometheus as P
 type HasDriverSearchRequestResponseMetrics m r =
   HasFlowEnv m r ["driverSearchRequestResponseMetrics" ::: DriverSearchRequestResponseMetricsContainer, "version" ::: DeploymentVersion]
 
--- Labels: (merchant_id, merchant_operating_city_id, vehicle_service_tier, version, batch_number, response)
+-- Labels: (merchant, city, vehicle_service_tier, version, batch_number, response)
+-- merchant = merchant shortId, city = operating city name
 type DriverResponseCounterMetric = P.Vector P.Label6 P.Counter
 
 newtype DriverSearchRequestResponseMetricsContainer = DriverSearchRequestResponseMetricsContainer
@@ -42,5 +43,5 @@ registerDriverSearchRequestResponseMetricsContainer = do
 
 registerDriverResponseCounter :: IO DriverResponseCounterMetric
 registerDriverResponseCounter =
-  P.register . P.vector ("merchant_id", "merchant_operating_city_id", "vehicle_service_tier", "version", "batch_number", "response") . P.counter $
-    P.Info "driver_search_request_response_count" "Count of driver responses to a search request, labelled by merchant, operating city, vehicle service tier, deployment version, batch number and response type"
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "version", "batch_number", "response") . P.counter $
+    P.Info "driver_search_request_response_count" "Count of driver responses to a search request, labelled by merchant shortId, city name, vehicle service tier, deployment version, batch number and response type"

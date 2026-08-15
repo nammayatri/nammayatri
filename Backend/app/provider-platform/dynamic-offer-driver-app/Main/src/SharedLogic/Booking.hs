@@ -30,6 +30,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -84,6 +85,8 @@ cancelBooking booking mbDriver transporter = do
     QRB.updateStatus booking.id DRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     QBCR.upsert bookingCancellationReason
+    cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
+    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source)
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       QRide.updateStatus ride.id SRide.CANCELLED
