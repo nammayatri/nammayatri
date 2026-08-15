@@ -321,7 +321,7 @@ fetchAndCheckDriverDocsValidForEnabling ::
   Language ->
   m Bool
 fetchAndCheckDriverDocsValidForEnabling person merchantOperatingCity transporterConfig language = do
-  (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
+  (allDocVerificationConfigs, driverDocuments, vehicleCategory, _vehicleDocuments) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
   pure $ checkAllDriverDocsValidForEnabling allDocVerificationConfigs person.role driverDocuments vehicleCategory Nothing
 
 -- | All mandatory driver docs VALID, over already-fetched statuses (no fetch); applies the fleet filter.
@@ -351,7 +351,7 @@ fetchDriverDocStatusesForPerson ::
   DTC.TransporterConfig ->
   Language ->
   Maybe Bool ->
-  m (DocVerificationConfigs, [DocumentStatusItem], DVC.VehicleCategory)
+  m (DocVerificationConfigs, [DocumentStatusItem], DVC.VehicleCategory, [VehicleDocumentItem])
 fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language onlyMandatoryDocs = do
   let useHVSdkForDL = Just True
   let entity = IQuery.PersonEntity person
@@ -369,7 +369,7 @@ fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig l
   let vehicleCategory = case vehicleDocumentsUnverified of
         (doc : _) -> fromMaybe doc.userSelectedVehicleCategory doc.verifiedVehicleCategory
         [] -> DVC.CAR
-  pure (allDocVerificationConfigs, driverDocuments, vehicleCategory)
+  pure (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocumentsUnverified)
 
 onboardingLockTTLSeconds :: Int
 onboardingLockTTLSeconds = 15
@@ -396,7 +396,7 @@ runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId =
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       then do
         let language = fromMaybe merchantOperatingCity.language statusPerson.language
-        (allDocVerificationConfigs, driverDocuments, vehicleCategory) <-
+        (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocuments) <-
           fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language (Just True)
         res <-
           recomputeOnboardingFlags
@@ -414,7 +414,8 @@ runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId =
                         pfcMakeSelfieAadhaarPanMandatory = Nothing,
                         pfcDriverName = Nothing,
                         pfcOnboardingVehicleCategory = Nothing,
-                        pfcIsFleetDriver = Nothing
+                        pfcIsFleetDriver = Nothing,
+                        pfcVehicleDocs = vehicleDocuments
                       },
                 ofiVehicles = []
               }
@@ -603,7 +604,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                           pfcMakeSelfieAadhaarPanMandatory = makeSelfieAadhaarPanMandatory,
                           pfcDriverName = mDL >>= (.driverName),
                           pfcOnboardingVehicleCategory = onboardingVehicleCategory,
-                          pfcIsFleetDriver = Nothing
+                          pfcIsFleetDriver = Nothing,
+                          pfcVehicleDocs = vehicleDocumentsUnverified
                         },
                   ofiVehicles = []
                 }
@@ -922,7 +924,16 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
               <> show possibleVehicleCategories
               <> "; driverDocumentTypes: "
               <> show driverDocumentTypes
-          pure driverDocumentTypes
+          if null driverDocumentTypes && not (null driverConfigs)
+            then do
+              logError $
+                "getDriverDocTypes: no mandatory driver configs matched for merchantOpCityId="
+                  <> merchantOpCityId.getId
+                  <> "; possibleVehicleCategories="
+                  <> show possibleVehicleCategories
+                  <> "; falling back to defaultDriverDocumentTypes rather than treating the empty set as valid"
+              pure SDO.defaultDriverDocumentTypes
+            else pure driverDocumentTypes
         else pure $ if null allDriverDocumentTypes then SDO.defaultDriverDocumentTypes else allDriverDocumentTypes
 
 -- | All vehicle docs in the enabling set (isMandatoryForEnabling) VALID. Drives @enabled@ / RC activation.
@@ -944,7 +955,7 @@ botApproveAndReconcile ::
   m ()
 botApproveAndReconcile merchantOperatingCity person transporterConfig = do
   let language = fromMaybe merchantOperatingCity.language person.language
-  (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
+  (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocuments) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
   -- BotApproval's dependency docs must be VALID. On the DVC (driver) side a dep counts only if it applies per
   -- `applicableTo` (a fleet driver skips INDIVIDUAL-only deps like OperatorPartnerCode); FleetOwnerDVC has no split.
   isFleetDriver <- case allDocVerificationConfigs of
@@ -981,7 +992,8 @@ botApproveAndReconcile merchantOperatingCity person transporterConfig = do
                         pfcMakeSelfieAadhaarPanMandatory = Nothing,
                         pfcDriverName = Nothing,
                         pfcOnboardingVehicleCategory = Nothing,
-                        pfcIsFleetDriver = Just isFleetDriver
+                        pfcIsFleetDriver = Just isFleetDriver,
+                        pfcVehicleDocs = vehicleDocuments
                       },
                 ofiVehicles = []
               }

@@ -61,7 +61,10 @@ endpoints:
                                      # where BANK DETAILS live. Null without it.
     response:
       enabled:            # Bool. Driver may go online. Under unified flow requires approved == true.
-      verified:           # Bool. All mandatory docs valid.
+      verified:           # Bool. All mandatory docs valid — the driver's OWN mandatory docs AND the
+                          # mandatory vehicle-side docs (RC, permit, fitness, insurance, PUC) of
+                          # their vehicle. A driver with no vehicle is NOT verified whenever the
+                          # configs declare mandatory vehicle-side docs for the category.
       approved:           # Maybe Bool. null = pending, false = rejected. Derived from docs under
                           # unified flow; left null/false in legacy.
       blocked:            # Bool.
@@ -467,9 +470,20 @@ endpoints:
 #
 # So any action that changes something a GATE reads must be followed by a recompute:
 #   consentGateOk  <- active FleetDriverAssociation
-#   vehicleGateOk  <- active DriverRCAssociation
+#   vehicleGateOk  <- active DriverRCAssociation (EXISTENCE only — says nothing about its documents)
 #   approvedGateOk <- documents
 #   explicitlyDisabled <- disabledReasonFlag
+#
+# allMandatoryDocsValid / allEnablingDocsValid have TWO halves, because the driver-side document
+# fetch deliberately excludes vehicle documents (getDriverDocTypes filters on isDriverSideDoc, and
+# partitionDocsBySide drops the vehicle half again):
+#   driver-side  <- checkAllDriverDocsValid'          (DL, PAN, Aadhaar, selfie, …)
+#   vehicle-side <- checkVehicleSideDocsValidForPerson (RC, permit, fitness, insurance, PUC)
+# The vehicle-side half derives its REQUIRED set from DocumentVerificationConfig, not from the
+# documents the driver happens to hold — otherwise "driver has no vehicle" is vacuously valid and
+# the driver verifies and enables with no vehicle document at all. It is scoped to the active
+# DriverRCAssociation's RC when there is one, else any linked vehicle may satisfy it. Distinct from
+# vehicleGateOk, which only checks that such an association row exists.
 #
 # `blocked` is ORTHOGONAL: shouldEnable never reads it, so blocked && enabled is a legal state and
 # block/unblock are idempotent. FleetOwnerInformation.blocked has no writer and no reader — fleet
