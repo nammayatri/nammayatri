@@ -66,6 +66,7 @@ data DriverListFilters = DriverListFilters
     dlfApproval :: Maybe (Maybe Bool),
     dlfOnboardingAs :: Maybe DriverInfo.OnboardingAs,
     dlfFleetOwnerId :: Maybe Text,
+    dlfFleetSeeker :: Maybe Bool,
     dlfFrom :: Maybe UTCTime,
     dlfTo :: Maybe UTCTime
   }
@@ -83,17 +84,22 @@ emptyDriverListFilters =
       dlfApproval = Nothing,
       dlfOnboardingAs = Nothing,
       dlfFleetOwnerId = Nothing,
+      dlfFleetSeeker = Nothing,
       dlfFrom = Nothing,
       dlfTo = Nothing
     }
 
 data DrivingTable = DriveVehicle | DrivePerson | DriveDriverInfo | DriveFleetAssoc
 
+isFleetSeeker :: DriverListFilters -> Bool
+isFleetSeeker f = f.dlfFleetSeeker == Just True
+
 hasDriverInfoFilter :: DriverListFilters -> Bool
 hasDriverInfoFilter f =
   any isJust [f.dlfVerified, f.dlfEnabled, f.dlfBlocked, f.dlfSubscribed]
     || isJust f.dlfApproval
     || isJust f.dlfOnboardingAs
+    || isFleetSeeker f
 
 -- from / to are person.createdAt, so a date window keeps Person in the filter set and therefore
 -- keeps the ordering on the column the grid has always sorted by.
@@ -102,6 +108,7 @@ hasPersonFilter f = isJust f.dlfPhoneHash || isJust f.dlfNameSearch || isJust f.
 
 drivingTable :: DriverListFilters -> DrivingTable
 drivingTable f
+  | isFleetSeeker f = DriveDriverInfo
   | isJust f.dlfVehicleNumber = DriveVehicle
   | hasPersonFilter f = DrivePerson
   | hasDriverInfoFilter f = DriveDriverInfo
@@ -136,6 +143,7 @@ driverInfoMatches f driverInfo =
     B.&&. maybe (B.val_ True) (\blocked -> driverInfo.blocked B.==. B.val_ blocked) f.dlfBlocked
     B.&&. maybe (B.val_ True) (\subscribed -> driverInfo.subscribed B.==. B.val_ subscribed) f.dlfSubscribed
     B.&&. maybe (B.val_ True) (\onboardingAs -> driverInfo.onboardingAs B.==. B.val_ (Just onboardingAs)) f.dlfOnboardingAs
+    B.&&. (if isFleetSeeker f then driverInfo.onboardingAs B.==. B.val_ (Just DriverInfo.FLEET_DRIVER) else B.val_ True)
     B.&&. ( case f.dlfApproval of
               Nothing -> B.val_ True
               Just Nothing -> B.isNothing_ driverInfo.approved
@@ -191,9 +199,11 @@ driverIdsQuery now merchant opCity f = case drivingTable f of
     driverInfo <-
       B.filter_ (\di -> driverInfoScoped merchant opCity di B.&&. driverInfoMatches f di) $
         B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
+    whenFilter (hasPersonFilter f) $ existsPerson driverInfo.driverId
     whenFilter (isJust f.dlfFleetOwnerId) $ existsFleetAssoc driverInfo.driverId
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle driverInfo.driverId
-    pure (driverInfo.driverId, driverInfo.createdAt)
+    whenFilter (isFleetSeeker f) $ B.not_ (existsActiveFleetAssoc driverInfo.driverId)
+    pure (driverInfo.driverId, if isFleetSeeker f then driverInfo.updatedAt else driverInfo.createdAt)
   DriveFleetAssoc -> do
     fda <- B.filter_ (fleetAssocMatches now f) $ B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle fda.driverId
@@ -215,6 +225,14 @@ driverIdsQuery now merchant opCity f = case drivingTable f of
       B.exists_ $
         B.filter_ (\fda -> fda.driverId B.==. driverId B.&&. fleetAssocMatches now f fda) $
           B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+    existsActiveFleetAssoc driverId =
+      B.exists_ $
+        B.filter_ (\fda -> fda.driverId B.==. driverId B.&&. fda.associatedTill B.>. B.val_ (Just now)) $
+          B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+    existsPerson driverId =
+      B.exists_ $
+        B.filter_ (\p -> p.id B.==. driverId B.&&. personMatches merchant opCity f p) $
+          B.all_ (BeamCommon.person BeamCommon.atlasDB)
 
 findDrivers ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

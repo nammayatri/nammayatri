@@ -365,13 +365,12 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
 
   let mbPersonId' = cast @Common.Driver @DP.Person <$> mbPersonId <|> mbPersonIdFromWallet
   when mbFleet $ do
-    case (mbPersonId', mbVehicleNumber, mbMobileNumber) of
-      (Just personId, _, _) -> do
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerIdWithStatus personId fleetOwnerId
-        when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
-      (_, Just vehicleNumber, _) -> do
-        vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNumber fleetOwnerId
-        when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
+    transporterConfig <-
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+    target <- case (mbPersonId', mbVehicleNumber, mbMobileNumber) of
+      (Just personId, _, _) -> pure $ SGuard.TargetDriver personId
+      (_, Just vehicleNumber, _) -> pure $ SGuard.TargetVehicle vehicleNumber
       (_, _, Just mobileNumber) -> do
         mobileNumberDbHash <- getDbHash mobileNumber
         let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
@@ -379,9 +378,9 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
           B.runInReplica $
             QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberDbHash merchant.id DP.DRIVER
               >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerIdWithStatus person.id fleetOwnerId
-        when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
-      _ -> throwError $ InvalidRequest "Fleet Owner can only search with vehicleNumber, personId, walletId or mobileNumber"
+        pure $ SGuard.TargetDriver person.id
+      _ -> throwError FleetSearchParamNotSupported
+    SGuard.guardOnboardingAction transporterConfig (SGuard.ActorFleet (Id fleetOwnerId)) SGuard.View target
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail, mbPersonId') of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
