@@ -21,10 +21,13 @@ module SharedLogic.SearchTryLocker
     tryMarkBookingAssignmentInprogress,
     isBookingAssignmentInprogress,
     markBookingAssignmentCompleted,
+    driverScheduledHoldLockKey,
+    withDriverScheduledHoldLock,
   )
 where
 
 import Domain.Types.Booking (Booking)
+import Domain.Types.Person (Person)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -133,3 +136,29 @@ mkBookingCancelledKey bookingId = "Booking:Cancelled:BookingId-" <> bookingId.ge
 
 mkBookingAssignedKey :: Id Booking -> Text
 mkBookingAssignedKey bookingId = "Booking:Assigned:BookingId-" <> bookingId.getId
+
+-- serializes a driver's concurrent scheduled accepts; the per-booking lock above cannot (two bookings = two keys)
+driverScheduledHoldLockKey :: Id Person -> Text
+driverScheduledHoldLockKey driverId = "Driver:ScheduledHold:DId-" <> driverId.getId
+
+-- | Runs the action under the per-driver hold lock so a release's gate recompute cannot race an accept and lose the min.
+withDriverScheduledHoldLock :: CacheFlow m r => Id Person -> m a -> m a
+withDriverScheduledHoldLock driverId actions = do
+  let key = driverScheduledHoldLockKey driverId
+  acquireLock key
+  exep <- withTryCatch "withDriverScheduledHoldLock" actions
+  Hedis.unlockRedis key
+  case exep of
+    Left e -> someExceptionToAPIErrorThrow e
+    Right a -> pure a
+  where
+    acquireLock key = do
+      gotLock <- Hedis.tryLockRedis key 60
+      unless gotLock $ do
+        threadDelay 50000
+        acquireLock key
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc

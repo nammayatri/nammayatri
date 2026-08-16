@@ -62,6 +62,8 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.checkImageExtractionForDashboard checkImageExtractionForDashboard,
       Se.Set Beam.searchRepeatLimit searchRepeatLimit,
       Se.Set Beam.scheduledRideSearchRepeatLimit (Just scheduledRideSearchRepeatLimit),
+      Se.Set Beam.maxScheduledHoldsPerDriver (Just maxScheduledHoldsPerDriver),
+      Se.Set Beam.scheduledRideAvgSpeedKmph scheduledRideAvgSpeedKmph,
       Se.Set Beam.driverPaymentCycleStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleStartTime),
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.defaultOnboardingAs defaultOnboardingAs,

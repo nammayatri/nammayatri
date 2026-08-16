@@ -90,6 +90,8 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -289,7 +291,11 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy mbCharges
   when isPrepaidSubscriptionAndWalletEnabled $ releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
-  when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId
+  when booking.isScheduled $
+    -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
+    CS.withDriverScheduledHoldLock driverId $ do
+      mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig driverId booking.id
+      QDI.updateLatestScheduledBookingAndPickup (fst <$> mbNextHold) (snd <$> mbNextHold) driverId
   void $ LF.rideDetails ride.id DRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   void $ QRide.updateStatusAndRideEndedBy ride.id DRide.CANCELLED rideEndedBy
   QBCR.upsert bookingCReason

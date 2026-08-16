@@ -619,6 +619,7 @@ library
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
+      SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledNotifications
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
