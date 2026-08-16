@@ -91,6 +91,8 @@ data DDriverArrivedReq = DDriverArrivedReq
 data CurrentSearchInfo = CurrentSearchInfo
   { routeDistance :: Maybe Meters,
     dropLocation :: Maybe LatLong,
+    pickupLocation :: LatLong,
+    estimatedDuration :: Maybe Seconds,
     searchTry :: DST.SearchTry
   }
   deriving (Generic, Show)
