@@ -7,6 +7,7 @@ module SharedLogic.DriverFleetOperatorAssociation
     makeDriverOperatorAssociation,
     isAssociationBetweenTwoPerson,
     checkFleetDriverAssociation,
+    checkFleetDriverAssociationIgnoringActive,
     checkFleetOperatorAssociation,
     checkDriverOperatorAssociation,
     resolveOperatorByCode,
@@ -244,6 +245,11 @@ isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
 checkFleetDriverAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
 checkFleetDriverAssociation fleetId driverId = do
   mbAssoc <- QFDA.findByDriverIdAndFleetOwnerId driverId fleetId.getId True
+  return $ isJust mbAssoc
+
+checkFleetDriverAssociationIgnoringActive :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAssociationIgnoringActive fleetId driverId = do
+  mbAssoc <- QFDA.findByDriverIdAndFleetOwnerIdWithStatus driverId fleetId.getId
   return $ isJust mbAssoc
 
 checkFleetOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
