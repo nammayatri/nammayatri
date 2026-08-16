@@ -120,6 +120,8 @@ library
       SMS.API
       SMS.Domain
       SMS.Types
+      TempAppCode.Flow
+      TempAppCode.Types
       Toll.Domain.Types.TollGate
       Toll.SharedLogic.TollsDetector
       Toll.Storage.BeamFlow

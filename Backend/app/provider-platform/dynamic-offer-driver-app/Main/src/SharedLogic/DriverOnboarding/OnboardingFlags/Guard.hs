@@ -53,6 +53,7 @@ data ActionVerb
   | View
   | ChangeFleetOwner
   | Expire
+  | UnlinkDocument
   deriving (Show, Eq, Generic)
 
 -- | Who the action runs on behalf of. Every post-onboarding action -- one performed on an entity
@@ -189,6 +190,9 @@ checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
   View -> ok
   ChangeFleetOwner -> ok
   Expire -> ok
+  UnlinkDocument
+    | driverInfo.enabled -> violate "DI-10" "driver is enabled; disable before unlinking documents"
+    | otherwise -> ok
 
 checkVehicle :: ActionVerb -> DVRC.VehicleRegistrationCertificate -> Either GuardViolation ()
 checkVehicle verb rc = case verb of
@@ -216,6 +220,7 @@ checkVehicle verb rc = case verb of
   View -> ok
   ChangeFleetOwner -> violate "R-UNSUPPORTED" "vehicles do not change fleet owner by this verb"
   Expire -> ok
+  UnlinkDocument -> violate "R-UNSUPPORTED" "vehicle documents are not unlinked by this verb"
 
 checkFleet :: ActionVerb -> DFOI.FleetOwnerInformation -> Either GuardViolation ()
 checkFleet verb fleetInfo = case verb of
@@ -253,6 +258,7 @@ checkFleet verb fleetInfo = case verb of
   View -> ok
   ChangeFleetOwner -> violate "F-UNSUPPORTED" "fleet owners do not change fleet owner"
   Expire -> ok
+  UnlinkDocument -> ok
 
 -- | The actor is the person performing the action, as opposed to the entity it is performed on.
 --   A fleet owner or driver that is itself disabled or blocked may not mutate the drivers and

@@ -132,6 +132,7 @@ Skipped entirely outside unified cities, and skipped when the entity row is miss
 | `LinkToFleet` (stage 1) | `onboardingAs = FLEET_DRIVER`; and rejected only if the driver has an FDA with `isActive = True` and `associatedTill > now` **and** is enabled — a disabled driver may still be linked | `DRIVER_NOT_FLEET_DRIVER`, `DRIVER_ALREADY_LINKED_WITH_FLEET` |
 | `SetOnboardingAs` | **not** enabled | `DI-8` |
 | `ChangeFleetOwner` (stage 1) | `onboardingAs = FLEET_DRIVER`, and at least one FDA with `associatedTill > now` (`QFDA.findAllByDriverIdWithStatus`). The new owner is not compared against the current one, so re-transferring into the same fleet is a no-op rather than an error | `DRIVER_NOT_FLEET_DRIVER`, `DRIVER_HAS_NO_ACTIVE_FLEET_ASSOCIATION` |
+| `UnlinkDocument` | **not** enabled — invalidate the doc before unlinking documents | `DI-10` |
 | `Block` | not already blocked, no `blockReasonFlag`, **and** verified + approved + enabled | `D-BLOCKED`, `DI-2` |
 | `Unblock` | currently blocked, has a `blockReasonFlag`, **and** verified + approved + enabled | `D-BLOCKED`, `DI-2` |
 | `Unlink`, `Deactivate`, `Add`, `Approve`, `Reject`, `View`, `Expire` | always pass | — |
@@ -160,7 +161,7 @@ requires them to be attached — and for `ChangeFleetOwner` they are the only ch
 |---|---|---|
 | `Link` | `verificationStatus = VALID`, verified, approved | `RI-2`, `RI-1` |
 | `Activate` | `VALID`, approved | `RI-2`, `RI-1` |
-| `Enable`, `Disable`, `Block`, `Unblock`, `SetOnboardingAs`, `LinkToFleet`, `ChangeFleetOwner` | **always rejected** — vehicles have no such flags | `R-UNSUPPORTED` |
+| `Enable`, `Disable`, `Block`, `Unblock`, `SetOnboardingAs`, `LinkToFleet`, `ChangeFleetOwner`, `UnlinkDocument` | **always rejected** — vehicles have no such flags | `R-UNSUPPORTED` |
 | `Unlink`, `Deactivate`, `Add`, `Delete`, `Approve`, `Reject`, `View`, `Expire` | always pass | — |
 
 ### Fleet owner (`checkFleet`)
@@ -229,6 +230,7 @@ see the target column for each.
 | **`Expire`** | `disableDriverForMandatoryReminder` **[job]** | — | turns a driver off when a mandatory document expires | Driver | `None` |
 | | `processDocumentExpiryReminder`, `processReminderByType` **[job]** | — | switches an RC off when a mandatory document expires | VehicleById | `None` |
 | | `processDocumentExpiryReminder` **[job]** | — | invalidates the expired document itself | FleetOwner if `SDO.isFleetRole`, else Driver | `None` |
+| **`UnlinkDocument`** | `postDriverRegistrationUnlinkDocument` | `POST /driver/{personId}/unlink/document/{documentType}` | deletes a driver-domain document, its images and its denormalised field | Driver or FleetOwner by role | `None` |
 | **`Delete`** | `deleteDriverPermanentlyDelete` | `DELETE /driver/{driverId}/permanentlyDelete` | deletes a driver record permanently — driver must be disabled first | Driver | `None` |
 | **`Approve` / `Reject`** | `postDriverFleetApproveDriver` | `POST /driver/fleet/approveDriver` | decides a fleet's join request for a driver — both verbs | Driver | `ActorFleetAndDriver` |
 | | `postDriverUpdateVehicleVariant` | `POST /driver/updateVehicleVariant/{driverId}` | approves a corrected vehicle variant on the RC | Vehicle | `None` |
@@ -255,20 +257,24 @@ of `guardNoLiveRide`, which is why it has not been done as a side effect of a do
 
 ### Releasing a document from a driver
 
-A licence or document already registered to another driver blocks re-registration (`verifyDL` throws
-`DLAlreadyLinked` / `DLLinkedToAnotherFleet`, and `DriverLicenseExtra.upsert` throws on a driver-id
-mismatch). Two existing endpoints delete the record off the current holder:
+`postDriverRegistrationUnlinkDocument` (`Management/DriverRegistration.hs`) is the single API
+responsible for delinking a driver-domain document.
 
-| API | Endpoint | Deletes | Requestor check |
-|---|---|---|---|
-| `postDriverUnlinkDL` — `Management/Driver.hs` | `POST /driver/{driverId}/unlinkDL` | `QDriverLicense.deleteByDriverId` | none — admin-oriented. Guarded `Unlink` / `TargetDriver` / `None` |
-| `postDriverRegistrationUnlinkDocument` — `Management/DriverRegistration.hs` | `POST /driver/{personId}/unlink/document/{documentType}` (helper variant adds `?requestorId=`) | the document row for `DocumentType` — `DriverLicense`, `PanCard`, `AadhaarCard`, `GSTCertificate` — plus its images, then refreshes onboarding flags | `isAssociationBetweenTwoPerson` when `requestorId` is given and that person exists at BPP, so a fleet owner may only unlink for a driver associated with them |
+| | |
+|---|---|
+| Endpoint | `POST /driver/{personId}/unlink/document/{documentType}` (helper variant adds `?requestorId=`) |
+| Document types | `DriverLicense`, `PanCard`, `AadhaarCard`, `GSTCertificate` |
+| Does | clears the denormalised field (PAN / Aadhaar number, or the fleet owner's image ids), deletes the document row, deletes its images via `QImage.deleteByPersonIdAndImageType`, then recomputes onboarding flags |
+| Shared logic | `SDO.unlinkDriverDocument` in `SharedLogic/DriverOnboarding.hs` — the same function the re-registration path calls |
+| Requestor check | `isAssociationBetweenTwoPerson` when `requestorId` is given and that person exists at BPP, so a fleet owner may only unlink for a driver associated with them |
+| Guard | `UnlinkDocument` / `TargetDriver` or `TargetFleetOwner` / `None` |
 
-The second does **not** go through the guard — it is not an `SGuard` call site, so it appears
-nowhere in the call-site map above.
+`postDriverUnlinkDL` (`POST /driver/{driverId}/unlinkDL`, `Management/Driver.hs`) still exists and
+also deletes a DL, but only calls `QDriverLicense.deleteByDriverId` plus analytics — no image
+cleanup, no flag recompute. Prefer the unlink-document API.
 
-Both take the **driverId of the current holder**. A fleet owner holding only the licence number
-cannot resolve it: `getDriverInfo` accepts `dlNumber`, but its fleet branch rejects that with
+Both take the **driverId of the current holder**. A fleet owner holding only a licence number cannot
+resolve it: `getDriverInfo` accepts `dlNumber`, but its fleet branch rejects that with
 `FLEET_SEARCH_PARAM_NOT_SUPPORTED`. So releasing a document is admin-reachable end to end, and
 fleet-reachable only when the holder's driverId is already known.
 

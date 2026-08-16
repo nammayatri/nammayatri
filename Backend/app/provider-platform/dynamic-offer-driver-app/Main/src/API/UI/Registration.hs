@@ -71,6 +71,12 @@ type API =
              :> Header "x-sender-hash" Text
              :> "resend"
              :> Post '[JSON] DRegistration.ResendAuthRes
+           :<|> "generate-temp-app-code"
+             :> TokenAuth
+             :> Post '[JSON] DRegistration.TempCodeRes
+           :<|> "get-token"
+             :> ReqBody '[JSON] DRegistration.GetTokenReq
+             :> Post '[JSON] DRegistration.AuthRes
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
@@ -86,6 +92,8 @@ handler =
     :<|> signatureAuth
     :<|> verify
     :<|> resend
+    :<|> generateTempAppCode
+    :<|> getToken
     :<|> logout
     :<|> marketingEvents
 
@@ -103,6 +111,15 @@ verify tokenId req mbXForwardedFor = withFlowHandlerAPI $ DRegistration.verify t
 
 resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.ResendAuthRes
 resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
+
+generateTempAppCode :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DRegistration.TempCodeRes
+generateTempAppCode (personId, _, _) =
+  withFlowHandlerAPI $
+    DRegistration.TempCodeRes . (.code)
+      <$> DRegistration.generateTempAppCode DRegistration.driverTempAppCodeCfg personId
+
+getToken :: DRegistration.GetTokenReq -> FlowHandler DRegistration.AuthRes
+getToken = withFlowHandlerAPI . DRegistration.getToken
 
 logout :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 logout = withFlowHandlerAPI . DRegistration.logout

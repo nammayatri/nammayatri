@@ -32,6 +32,14 @@ module Domain.Action.UI.Registration
     marketingEventsPreLogin,
     marketingEventsPostLogin,
     signatureAuth,
+    generateTempAppCode,
+    getToken,
+    GetTokenReq (..),
+    TempCodeRes (..),
+    selfServiceTempCodeTtl,
+    operatorLinkTempCodeTtl,
+    driverTempAppCodeCfg,
+    operatorLinkTempAppCodeCfg,
   )
 where
 
@@ -104,6 +112,8 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified System.Environment as SE
+import qualified TempAppCode.Flow as TempAppCode
+import TempAppCode.Types
 import qualified Text.Hex as Hex
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
@@ -148,6 +158,14 @@ data AuthRes = AuthRes
     person :: Maybe SP.PersonAPIEntity
   }
   deriving (Generic, ToJSON, ToSchema)
+
+newtype GetTokenReq = GetTokenReq
+  {appSecretCode :: Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype TempCodeRes = TempCodeRes
+  {tempCode :: Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AuthWithOtpRes = AuthWithOtpRes
   { authId :: Id SR.RegistrationToken,
@@ -985,6 +1003,68 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+
+driverTempAppCodeCfg :: TempAppCodeCfg
+driverTempAppCodeCfg =
+  TempAppCodeCfg
+    { keyPrefix = "driver-offer:temp-app-code:",
+      limitKeyPrefix = "driver-offer:temp-app-code-attempts:",
+      counterKey = "driver-offer:temp-app-code-counter:",
+      codeStrategy = NumericCounter 10000,
+      ttlSeconds = selfServiceTempCodeTtl,
+      consumeOnRead = False,
+      maxAttempts = 3,
+      attemptWindowSeconds = 3600
+    }
+
+operatorLinkTempAppCodeCfg :: TempAppCodeCfg
+operatorLinkTempAppCodeCfg =
+  driverTempAppCodeCfg
+    { codeStrategy = Guid,
+      ttlSeconds = operatorLinkTempCodeTtl,
+      consumeOnRead = True,
+      maxAttempts = 3,
+      attemptWindowSeconds = 300
+    }
+
+selfServiceTempCodeTtl :: Int
+selfServiceTempCodeTtl = 120 -- 2 minutes
+
+operatorLinkTempCodeTtl :: Int
+operatorLinkTempCodeTtl = 24 * 60 * 60 -- 24 hours
+
+generateTempAppCode :: TempAppCodeCfg -> Id SP.Person -> Flow TempAppCodeRes
+generateTempAppCode cfg personId = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  TempAppCode.generateTempAppCode cfg (getId person.id)
+
+getToken :: GetTokenReq -> Flow AuthRes
+getToken req = do
+  mbPersonId <- TempAppCode.redeemTempAppCode operatorLinkTempAppCodeCfg req.appSecretCode
+  personId <- Id <$> mbPersonId & fromMaybeM (InvalidRequest "Invalid or expired code")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbToken <- listToMaybe <$> QR.findAllByPersonId personId.getId
+  case mbToken of
+    Just regToken -> do
+      decPerson <- decrypt person
+      pure $ AuthRes regToken.id regToken.attempts (Just regToken.token) (Just $ SP.makePersonAPIEntity decPerson)
+    Nothing -> mintSessionFor person
+  where
+    mintSessionFor :: SP.Person -> Flow AuthRes
+    mintSessionFor person = do
+      smsCfg <- asks (.smsCfg)
+      merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+      let entityId = getId person.id
+          useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+          scfg = sessionConfig smsCfg
+          mkId = getId merchant.id
+      token <- makeSession scfg entityId mkId SR.USER useFakeOtpM person.merchantOperatingCityId.getId SR.SIGNATURE SR.DIRECT
+      _ <- QR.create token
+      cleanCachedTokens person.id
+      QR.deleteByPersonIdExceptNew person.id token.id
+      _ <- QR.setVerified True token.id
+      decPerson <- decrypt person
+      pure $ AuthRes token.id token.attempts (Just token.token) (Just $ SP.makePersonAPIEntity decPerson)
 
 -- | Redis key for the phone-number-hashed auth sliding-window counter.
 -- The phone number is passed as a hash (never the raw number) so no PII is stored in Redis.

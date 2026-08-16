@@ -17,14 +17,12 @@ import Storage.Queries.OrphanInstances.DriverLicense ()
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
-  mbByNumber <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
-  mbMatchedByNumber <- case mbByNumber of
-    Just existingLicense
-      | existingLicense.driverId == driverId -> pure (Just existingLicense)
-      | otherwise -> throwError $ InternalError $ "Driver ID mismatch for license: existing driver is " <> existingLicense.driverId.getId <> " but trying to update with " <> driverId.getId
-    _ -> pure Nothing
-  mbExistingLicense <- maybe (findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]) (pure . Just) mbMatchedByNumber
-  case mbExistingLicense of
+  mbExistingByDriver <- findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+  mbExistingByNumber <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
+  whenJust mbExistingByNumber $ \existingLicense ->
+    when (existingLicense.driverId /= driverId) $
+      throwError $ InternalError $ "Driver ID mismatch for license: existing driver is " <> existingLicense.driverId.getId <> " but trying to update with " <> driverId.getId
+  case mbExistingByDriver of
     Just existingLicense ->
       updateOneWithKV
         [ Se.Set BeamDL.driverDob driverDob,

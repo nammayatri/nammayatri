@@ -80,10 +80,12 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -1462,6 +1464,72 @@ withDocumentOperationLock docType personId action =
 
 documentOperationLockTTLSeconds :: Int
 documentOperationLockTTLSeconds = 60
+
+unlinkDriverDocument :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> ODC.DocumentType -> Person.Person -> m Bool
+unlinkDriverDocument merchantOpCityId documentType person = do
+  case person.role of
+    role | isFleetRole role -> case documentType of
+      ODC.PanCard -> FOI.updatePanImage Nothing Nothing person.id
+      ODC.GSTCertificate -> FOI.updateGstImage Nothing Nothing person.id
+      ODC.AadhaarCard -> FOI.updateAadhaarImage Nothing Nothing Nothing person.id
+      _ -> pure ()
+    Person.DRIVER -> case documentType of
+      ODC.PanCard -> DIQuery.updatePanNumber Nothing person.id
+      ODC.AadhaarCard -> DIQuery.updateAadhaarNumber Nothing person.id
+      _ -> pure ()
+    _ -> pure ()
+  case documentType of
+    ODC.PanCard -> DPQuery.deleteByDriverId person.id
+    ODC.GSTCertificate -> DGQuery.deleteByDriverId person.id
+    ODC.AadhaarCard -> QAadhaarCard.deleteByPersonId person.id
+    ODC.DriverLicense -> DLQuery.deleteByDriverId person.id
+    _ -> throwError (InvalidRequest "Invalid document type")
+  ImageQuery.deleteByPersonIdAndImageType person.id documentType
+  checkAndUpdateDocEnabledStatus merchantOpCityId documentType person
+
+checkAndUpdateDocEnabledStatus :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> ODC.DocumentType -> Person.Person -> m Bool
+checkAndUpdateDocEnabledStatus merchantOpCityId docType person = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      unifiedRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+  case person.role of
+    role | isFleetRole role -> do
+      mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
+      let blocksVerified = maybe False (.isMandatory) mbCfg
+          blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
+      if unifiedRecompute
+        then pure (blocksEnabled || blocksVerified)
+        else
+          if enableBotFlow
+            then do
+              when (blocksEnabled || blocksVerified) $ FOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
+              pure (blocksEnabled || blocksVerified)
+            else do
+              when blocksVerified $ FOI.updateFleetOwnerEnabledStatus False person.id
+              pure blocksVerified
+    Person.DRIVER -> do
+      mbCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Just DVC.CAR}) Nothing
+      let blocksVerified = maybe False (.isMandatory) mbCfg
+          blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
+      if unifiedRecompute
+        then pure (blocksEnabled || blocksVerified)
+        else
+          if enableBotFlow
+            then do
+              applyDriverDocInvalidation transporterConfig person.id blocksEnabled blocksVerified
+              pure (blocksEnabled || blocksVerified)
+            else do
+              when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
+              pure False
+    _ -> pure False
+
+applyDriverDocInvalidation :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> Bool -> Bool -> m ()
+applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified =
+  case (blocksEnabled, blocksVerified) of
+    (True, True) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False (Just False)
+    (True, False) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False Nothing
+    (False, True) -> DIQuery.updateVerifiedAndApprovedState (cast personId) False (Just False)
+    (False, False) -> pure ()
 
 endFleetRCAssociationIfPossible ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

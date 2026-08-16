@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
+    postDriverRegistrationGenerateTempAppCode,
     mapDocumentType,
     convertValidationStatus,
     sendDocumentRejectionNotification,
@@ -71,6 +72,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
+import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDocumentData as DCommonDocData
@@ -92,7 +94,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
-import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVCat
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
@@ -131,18 +132,18 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
+import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -813,87 +814,17 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
         unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
       pure entity
     Nothing -> runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  res <- unlinkPersonDocument merchantOpCityId person
-  void $
-    withTryCatch "onDriverRegistrationUnlinkDocument:postDriverRegistrationUnlinkDocument" $
-      if DCommon.checkFleetOwnerRole person.role
-        then void $ SStatus.runRefreshOnboardingFlagsFleet (Just person) Nothing person.id
-        else void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) Nothing person.id
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let guardTarget =
+        if DCommon.checkFleetOwnerRole person.role
+          then SGuard.TargetFleetOwner person.id
+          else SGuard.TargetDriver person.id
+  res <- SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkDocument guardTarget $ do
+    SDO.unlinkDriverDocument merchantOpCityId (mapDocumentType documentType) person
   return
     Common.UnlinkDocumentResp
       { mandatoryDocumentRemoved = res
       }
-  where
-    unlinkPersonDocument :: Id DMOC.MerchantOperatingCity -> DP.Person -> Flow Bool
-    unlinkPersonDocument merchantOpCityId person = do
-      case person.role of
-        role | DCommon.checkFleetOwnerRole role -> do
-          case documentType of
-            Common.PanCard -> QFOI.updatePanImage Nothing Nothing person.id
-            Common.GSTCertificate -> QFOI.updateGstImage Nothing Nothing person.id
-            Common.AadhaarCard -> QFOI.updateAadhaarImage Nothing Nothing Nothing person.id
-            _ -> throwError (InvalidRequest "Invalid document type")
-        DP.DRIVER -> do
-          case documentType of
-            Common.PanCard -> QDriverInfo.updatePanNumber Nothing person.id
-            Common.AadhaarCard -> QDriverInfo.updateAadhaarNumber Nothing person.id
-            _ -> throwError (InvalidRequest "Invalid document type")
-        _ -> pure ()
-      case documentType of
-        Common.PanCard -> QPan.deleteByDriverId person.id
-        Common.GSTCertificate -> QGstin.deleteByDriverId person.id
-        Common.AadhaarCard -> QAadhaarCard.deleteByPersonId person.id
-        Common.DriverLicense -> QDL.deleteByDriverId person.id
-        _ -> throwError (InvalidRequest "Invalid document type")
-      QImage.deleteByPersonIdAndImageType person.id (mapDocumentType documentType)
-      checkAndUpdateEnabledStatus merchantOpCityId documentType person
-
-    checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow Bool
-    checkAndUpdateEnabledStatus merchantOpCityId docType person = do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let enableBotFlow = transporterConfig.enableBotFlow == Just True
-          unifiedRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      case person.role of
-        role | DCommon.checkFleetOwnerRole role -> do
-          mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
-          let blocksVerified = maybe False (.isMandatory) mbCfg
-              blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
-          if unifiedRecompute
-            then pure (blocksEnabled || blocksVerified)
-            else
-              if enableBotFlow
-                then do
-                  when (blocksEnabled || blocksVerified) $ QFOI.updateFleetOwnerDowngradeStatus blocksEnabled blocksVerified person.id
-                  pure (blocksEnabled || blocksVerified)
-                else do
-                  when blocksVerified $ QFOI.updateFleetOwnerEnabledStatus False person.id
-                  pure blocksVerified
-        DP.DRIVER -> do
-          mbCfg <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR}) Nothing
-          let blocksVerified = maybe False (.isMandatory) mbCfg
-              blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
-          if unifiedRecompute
-            then pure (blocksEnabled || blocksVerified)
-            else
-              if enableBotFlow
-                then do
-                  applyDriverDocInvalidation transporterConfig person.id blocksEnabled blocksVerified
-                  pure (blocksEnabled || blocksVerified)
-                else do
-                  when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
-                  pure False
-        _ -> pure False
-
--- | BOT doc invalidation: downgrade enabled/verified separately, and revoke approved.
---   enabled cases go through analytics (which also revokes approved under BOT); the verified-only case
---   writes verified+approved in one query (leaving enabled untouched).
-applyDriverDocInvalidation :: DTC.TransporterConfig -> Id DP.Person -> Bool -> Bool -> Flow ()
-applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified =
-  case (blocksEnabled, blocksVerified) of
-    (True, True) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False (Just False)
-    (True, False) -> Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False Nothing
-    (False, True) -> QDriverInfo.updateVerifiedAndApprovedState (cast personId) False (Just False)
-    (False, False) -> pure ()
 
 -- DEPRECATED: Use postDriverRegistrationDocumentRegister with DLData metadata instead.
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
@@ -1785,17 +1716,16 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
   dlImage <- findApproveImage DVC.DriverLicense imageId
   SDO.withDocumentOperationLock "DL" dlImage.personId.getId $ do
     let driverId = dlImage.personId
-    mbDl <- QDL.findByImageId imageId
-    -- Fallback for re-upload-after-reject: the DL row's documentImageId1 still
-    -- points at the prior (rejected) image, so findByImageId misses it. Look up
-    -- by DL number to recover the existing row and re-point it at the new image.
-    mbDlResolved <- case mbDl of
-      Just _ -> pure mbDl
-      Nothing -> case req.driverLicenseNumber of
-        Just dlNum -> QDL.findByDLNumber dlNum
-        Nothing -> pure Nothing
+    mbDlResolved <-
+      QDL.findByImageId imageId
+        |<|>| maybe (pure Nothing) QDL.findByDLNumber req.driverLicenseNumber
+        |<|>| QDL.findByDriverId driverId
     -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
     validateDocumentApprovalChecks DVC.DriverLicense req.driverLicenseNumber driverId (DLApproveData <$> mbDlResolved)
+    whenJust mbDlResolved $ \dl ->
+      when (dl.driverId /= driverId) $ do
+        otherDriver <- QPerson.findById dl.driverId >>= fromMaybeM (PersonDoesNotExist dl.driverId.getId)
+        void $ SDO.unlinkDriverDocument otherDriver.merchantOperatingCityId DVC.DriverLicense otherDriver
     case mbDlResolved of
       Just dl -> do
         licenseNumber <- mapM encrypt req.driverLicenseNumber
@@ -2291,7 +2221,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId personId docType
               then void $ SStatus.runRefreshOnboardingFlagsDriver (Just person) (Just transporterConfig) personId
               else
                 if enableBotFlow
-                  then applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified
+                  then SDO.applyDriverDocInvalidation transporterConfig personId blocksEnabled blocksVerified
                   else when blocksEnabled $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig personId False (Just False)
     if isVehicleDoc
       then do
@@ -3152,3 +3082,29 @@ postDriverRegistrationDeleteBankAccount merchantShortId opCity driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   _ <- BankAccountVerification.deleteBankAccount (personId, merchant.id, merchantOpCityId)
   pure Success
+
+postDriverRegistrationGenerateTempAppCode ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Text ->
+  Flow Common.TempAppCodeRes
+postDriverRegistrationGenerateTempAppCode merchantShortId opCity driverId requestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  entities <- QPerson.findAllByPersonIdsAndMerchantOpsCityId [Id requestorId, personId] merchantOpCityId
+  driver <- find (\e -> e.id == personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
+  whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
+    isValid <- isAssociationWithDriver requestor driver
+    unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
+  res <- DRegistration.generateTempAppCode DRegistration.operatorLinkTempAppCodeCfg personId
+  pure $ Common.TempAppCodeRes {code = res.code, expiresAt = res.expiresAt}
+  where
+    isAssociationWithDriver requestor driver =
+      case (requestor.role, driver.role) of
+        (DP.ADMIN, DP.DRIVER) -> pure True
+        (DP.OPERATOR, DP.DRIVER) -> DFOA.checkDriverOperatorAssociation driver.id requestor.id
+        (DP.FLEET_OWNER, DP.DRIVER) -> DFOA.checkFleetDriverAssociation requestor.id driver.id
+        (DP.FLEET_BUSINESS, DP.DRIVER) -> DFOA.checkFleetDriverAssociation requestor.id driver.id
+        _ -> pure False
