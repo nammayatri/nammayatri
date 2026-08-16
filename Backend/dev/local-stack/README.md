@@ -878,14 +878,82 @@ handed the one you just refused; accepting it then fails with
 `QUOTE_ALREADY_REJECTED`. The simulator remembers what it declined.
 
 **Killing it leaves the drivers online.** `finally` does not run on `SIGTERM`,
-so `timeout`, `docker stop` or a systemd restart used to leave three drivers
+so `timeout`, `docker stop` or a systemd restart used to leave the fleet
 marked online whose positions then went stale — which is the silent
 zero-estimates failure in [Driver freshness](#driver-freshness--drivers-keepalivesh)
 all over again. `SIGTERM` and `SIGHUP` are now turned into the interrupt the
 cleanup already handles.
 
 While it is running it also heartbeats its own drivers' positions every 30 s,
-so for those three it does `drivers-keepalive.sh`'s job.
+so for those six it does `drivers-keepalive.sh`'s job.
+
+## The rider API — what the app uses, and what is sitting there unused
+
+The driver-API section above exists because the source tree lies about the
+backend. This one exists for the opposite reason: the backend can do more than
+anyone remembers, and "what should we build next" kept getting answered from
+what other ride apps have rather than from what this binary can serve.
+
+```bash
+./probe-unused-routes.py     # on the VPS — what exists vs what screens 1-14 call
+./probe-rider-extras.py      # through the public edge — do the good ones work?
+```
+
+**41 rider-facing routes. 20 used. 21 unused.** Four of the unused ones are
+worth real screens, and the results are recorded in each script's header so
+planning does not require re-running them.
+
+| Route | Verdict |
+|---|---|
+| `/v2/frontend/flowStatus` | Works, 0.27 s. Says whether a rider is mid-ride. |
+| `/v2/savedLocation` | Stores Home/Work — but **discards the address text**. |
+| `/v2/serviceability/destination` | Works. We only ever check the origin today. |
+| `/v2/auth/logout` | Works. There is no sign-out in the app. |
+| `/v2/support/sendIssue` | Present but broken. Complaints reach nobody. |
+
+Three of those are traps rather than features:
+
+**`flowStatus` is the fix for the worst hole in the app.** Close the app
+mid-ride today and the ride is gone from the rider's side. That happened to a
+real tester, and the ride had to be cancelled from the server by hand. The
+server knew where he was the whole time — nothing asked it. This is a launch
+check, not a screen.
+
+**`savedLocation` round-trips only `tag`, `lat`, `lon`.** Post an address and
+every address field comes back `null`. Home/Work is storable, but the app has to
+keep its own label or re-geocode the point on the way out. A screen designed
+around the server returning "Alger Centre" will ship broken.
+
+**`serviceability/destination` answers on the national border**, like the origin
+check — so `true` means "inside Algeria", not "a car will come". Tamanrasset is
+`true` and 1,900 km from any driver. Useful for catching a destination abroad,
+useless as a promise.
+
+### The one that does not exist: push
+
+There is no push/notification route on the rider API at all — only an
+`FCMConfigUpdateReq` schema with no endpoint behind it. A rider who backgrounds
+the app during the five-minute wait is **never told a driver accepted.** That
+cannot be closed from this backend; it is work outside it, and it should be
+budgeted as such rather than discovered late.
+
+### Switching off a driver who has not paid
+
+Drivers pay us a monthly subscription; passengers pay drivers cash. So the
+system has to be able to stop an unpaid driver receiving work, and the client
+asked for it to be automatic. `./probe-subscription.sql` asked the database, and
+the two halves have opposite answers:
+
+- **The switch exists.** `driver_information.enabled` / `blocked` — one boolean,
+  and dispatch stops immediately.
+- **The record does not exist at all.** Nothing in the schema is about plans,
+  subscriptions, fees or invoices. Upstream's driver-subscription subsystem is
+  not in this binary; every `%subscri%` hit is the BECKN registry or pg_catalog.
+
+So the automatic half is a nightly job, and the expensive half is the one nobody
+asks about: a `paid_until` per driver, and somewhere to set it. Marking a payment
+stays manual as long as drivers pay in cash or by CIB, outside the app. That
+belongs to the admin website, not to either mobile app.
 
 ## Backups — `./backup.sh`
 
@@ -997,12 +1065,42 @@ rider-app has migrated.
 ## Layout
 
 ```
-setup.sh              one-shot bring-up / verify / algeria / down / clean
-docker-compose.yml    the stack
-Dockerfile.rider      librdkafka fix
-algeria-geofences.sql Algiers / Oran / Annaba service areas
-demo.sh, demo.ps1     scripted end-to-end demo
-demo-map/             the map on :8025 (nginx conf + page)
-  site/areas.geojson  exported from the DB by setup.sh (gitignored)
-2023/                 pinned upstream tree (fetched by setup.sh, gitignored)
+setup.sh               one-shot bring-up / verify / algeria / drivers / down / clean
+docker-compose.yml     the stack
+Dockerfile.rider       librdkafka fix
+Dockerfile.maps-shim   the Google-Maps-shaped shim
+
+  data and config
+algeria-geofences.sql  service area — the national border
+algeria-tariff.sql     the Algerian fares;  apply-tariff.sh applies them
+osrm-config.sql        points the backend's routing at our OSRM
+dedupe-seed.sql        removes the duplicated upstream seed rows
+
+  prepare steps, each run once and slow
+osrm-prepare.sh        builds the routing graph from algeria-latest.osm.pbf
+tiles-prepare.sh       builds the map tiles from the same extract
+geocoder-prepare.sh    builds the 111.5k-row place index (output gitignored)
+
+  keeping it alive
+drivers-keepalive.sh   driver positions go stale silently — this is the fix
+simulate-driver.py     plays a fleet of six, so the app can be finished on one phone
+backup.sh              nightly encrypted backup, offsite;  also restore / list
+
+  measuring, not running — each records its results in its own header
+probe-booking-flow.py     a whole ride from both sides
+probe-booking-timeouts.py how long a search really lives
+probe-unused-routes.py    what the rider API can serve that we don't use
+probe-rider-extras.py     do the useful unused routes actually work?
+probe-subscription.sql    can we switch off a driver who hasn't paid?
+
+  services fronting the stack
+edge/                  nginx + TLS, the public face
+auth-guard/            the OTP brute-force lock, in front of the backend
+maps-shim/             Google Places/geocoding, answered from Postgres
+geocoder/              place-index build;  places.csv gitignored
+demo-map/              the map on :8025 (nginx conf + page)
+  site/areas.geojson   exported from the DB by setup.sh (gitignored)
+
+bin/                   backend binaries (gitignored;  MANIFEST.txt records the build)
+2023/                  pinned upstream tree (fetched by setup.sh, gitignored)
 ```
