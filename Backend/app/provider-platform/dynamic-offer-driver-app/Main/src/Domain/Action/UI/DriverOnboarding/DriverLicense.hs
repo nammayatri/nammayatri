@@ -224,8 +224,6 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
         case mbExistingLicense of
           Just driverLicense -> do
             logTagInfo "verifyDL" $ "found existing DL record | dlNumber=" <> maskText driverLicenseNumber <> " | id=" <> driverLicense.id.getId <> " | verificationStatus=" <> show driverLicense.verificationStatus
-            when (driverLicense.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
-              throwError $ DocumentUnderManualReview "DL"
             when (driverLicense.driverId /= personId) $
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
                 then do
@@ -256,7 +254,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                     then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
                     else throwError DLInvalid
                 verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
             mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
             when (isJust mDriverDL) $ do
@@ -266,9 +264,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
-  if isNameCompareRequired transporterConfig verifyBy
-    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
-    else runBody
+  withDocumentOperationLock "DL" personId.getId runBody
   return Success
   where
     getImage imageId = do

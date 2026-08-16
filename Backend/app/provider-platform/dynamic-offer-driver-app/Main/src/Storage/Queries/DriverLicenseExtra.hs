@@ -17,24 +17,22 @@ import Storage.Queries.OrphanInstances.DriverLicense ()
 -- Extra code goes here --
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
-  res <-
-    findOneWithKV
-      [ Se.And
-          [ Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash)),
-            Se.Or
-              [ Se.Is BeamDL.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
-                Se.Is BeamDL.verificationStatus $ Se.Not $ Se.Eq INVALID
-              ]
-          ]
-      ]
-  case res of
-    Just existingLicense -> do
-      when (existingLicense.driverId /= driverId) $ do
-        throwError $ InternalError $ "Driver ID mismatch for license: existing driver is " <> existingLicense.driverId.getId <> " but trying to update with " <> driverId.getId
+  mbByNumber <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
+  mbMatchedByNumber <- case mbByNumber of
+    Just existingLicense
+      | existingLicense.driverId == driverId -> pure (Just existingLicense)
+      | otherwise -> throwError $ InternalError $ "Driver ID mismatch for license: existing driver is " <> existingLicense.driverId.getId <> " but trying to update with " <> driverId.getId
+    _ -> pure Nothing
+  mbExistingLicense <- maybe (findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]) (pure . Just) mbMatchedByNumber
+  case mbExistingLicense of
+    Just existingLicense ->
       updateOneWithKV
         [ Se.Set BeamDL.driverDob driverDob,
           Se.Set BeamDL.driverName driverName,
           Se.Set BeamDL.documentImageId1 documentImageId1.getId,
+          Se.Set BeamDL.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
+          Se.Set BeamDL.licenseNumberEncrypted (licenseNumber & unEncrypted . encrypted),
+          Se.Set BeamDL.licenseNumberHash (licenseNumber & hash),
           Se.Set BeamDL.rejectReason rejectReason,
           Se.Set BeamDL.licenseExpiry licenseExpiry,
           Se.Set BeamDL.classOfVehicles classOfVehicles,
@@ -43,7 +41,7 @@ upsert a@DriverLicense {..} = do
           Se.Set BeamDL.failedRules failedRules,
           Se.Set BeamDL.updatedAt updatedAt
         ]
-        [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
+        [Se.Is BeamDL.id $ Se.Eq existingLicense.id.getId]
     Nothing -> createWithKV a
 
 deleteByDriverIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> VerificationStatus -> m ()

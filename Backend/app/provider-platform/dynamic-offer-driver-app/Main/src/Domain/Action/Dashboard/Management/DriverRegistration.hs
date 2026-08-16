@@ -1257,151 +1257,152 @@ approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.Merch
 approveAndUpdateRC req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   rcImage <- findApproveImage DVC.VehicleRegistrationCertificate imageId
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  mbRc <- QRC.findByImageId imageId
-  -- Fallback for re-upload-after-reject: the VRC row's documentImageId still
-  -- points at the prior (rejected) image, so findByImageId misses it. Look up
-  -- by certificate-number hash to recover the existing row and re-point it.
-  mbRcResolved <- case mbRc of
-    Just _ -> pure mbRc
-    Nothing -> case req.vehicleNumberPlate of
-      Just plate -> do
-        enc <- encrypt plate
-        QRC.findByCertificateNumberHash (enc & hash)
-      Nothing -> pure Nothing
-  case mbRcResolved of
-    Just rc -> do
-      certificateNumber <- mapM encrypt req.vehicleNumberPlate
-      -- Check for duplicate vehicle number plate if being changed
-      whenJust certificateNumber $ \encNum -> do
-        mbExistingRC <- QRC.findByCertificateNumberHash (encNum & hash)
-        whenJust mbExistingRC $ \existingRC ->
-          when (existingRC.id /= rc.id) $
-            throwError (InvalidRequest "RC with this vehicle number plate already exists")
-      let udpatedRC =
-            rc
-              { DRC.documentImageId = imageId,
-                DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
-                DRC.verificationStatus = VALID,
-                DRC.rejectReason = Nothing,
-                DRC.failedRules = [],
-                DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
-                DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
-                DRC.vehicleModel = req.vehicleModel <|> rc.vehicleModel,
-                DRC.vehicleModelYear = req.vehicleModelYear <|> rc.vehicleModelYear,
-                DRC.vehicleColor = req.vehicleColor <|> rc.vehicleColor,
-                DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
-                DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
-                DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
-                DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry,
-                DRC.docsVerificationStatus =
-                  if transporterConfig.enableManualDocumentStatusCheck == Just True
-                    then Just DDVS.ADMIN_APPROVED
-                    else rc.docsVerificationStatus
-              }
-      QRC.updateByPrimaryKey udpatedRC
-      QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
-      createReminder
-        DVC.VehicleRegistrationCertificate
-        rcImage.personId
-        merchantId
-        merchantOpCityId
-        (Just $ udpatedRC.id.getId)
-        (Just udpatedRC.fitnessExpiry)
-        Nothing
-    Nothing -> do
-      case transporterConfig.createDocumentRequired of
-        Just True -> do
-          vehicleNumberPlate <- req.vehicleNumberPlate & fromMaybeM (InvalidRequest "vehicleNumberPlate is required for creating RC document")
-          fitnessExpiry <- req.fitnessExpiry & fromMaybeM (InvalidRequest "fitnessExpiry is required for creating RC document")
-          encryptedRC <- encrypt vehicleNumberPlate
-          -- Check if RC already exists for this number plate
-          mbExistingRC <- QRC.findByCertificateNumberHash (encryptedRC & hash)
-          whenJust mbExistingRC $ \_ ->
-            throwError (InvalidRequest "RC with this vehicle number plate already exists")
-          now <- getCurrentTime
-          rcId <- generateGUID
-          let newRC =
-                DRC.VehicleRegistrationCertificate
-                  { DRC.id = rcId,
-                    DRC.documentImageId = imageId,
-                    DRC.documentImageId2 = Nothing,
-                    DRC.certificateNumber = encryptedRC,
-                    DRC.fitnessExpiry = fitnessExpiry,
-                    DRC.permitExpiry = req.permitExpiry,
-                    DRC.pucExpiry = Nothing,
-                    DRC.vehicleClass = Nothing,
-                    DRC.vehicleVariant = req.vehicleVariant,
-                    DRC.vehicleManufacturer = req.vehicleManufacturer,
-                    DRC.vehicleCapacity = Nothing,
-                    DRC.vehicleModel = req.vehicleModel,
-                    DRC.vehicleColor = req.vehicleColor,
-                    DRC.vehicleDoors = req.vehicleDoors,
-                    DRC.vehicleSeatBelts = req.vehicleSeatBelts,
-                    DRC.manufacturerModel = Nothing,
-                    DRC.vehicleEnergyType = Nothing,
-                    DRC.reviewedAt = Nothing,
-                    DRC.reviewRequired = Nothing,
-                    DRC.insuranceValidity = Nothing,
-                    DRC.mYManufacturing = Nothing,
-                    DRC.verificationStatus = VALID,
-                    DRC.fleetOwnerId = Nothing,
-                    DRC.userPassedVehicleCategory = Nothing,
-                    DRC.airConditioned = Nothing,
-                    DRC.oxygen = Nothing,
-                    DRC.ventilator = Nothing,
-                    DRC.luggageCapacity = Nothing,
-                    DRC.vehicleRating = Nothing,
-                    DRC.vehicleRatingRemark = Nothing,
-                    DRC.failedRules = [],
-                    DRC.dateOfRegistration = Nothing,
-                    DRC.vehicleModelYear = req.vehicleModelYear,
-                    DRC.rejectReason = Nothing,
-                    DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
-                    DRC.approved = Nothing,
-                    DRC.vehicleImageId = Nothing,
-                    DRC.merchantId = Just merchantId,
-                    DRC.merchantOperatingCityId = Just merchantOpCityId,
-                    DRC.createdAt = now,
-                    DRC.updatedAt = now,
-                    DRC.verified = Nothing,
-                    DRC.docsVerificationStatus =
-                      if transporterConfig.enableManualDocumentStatusCheck == Just True
-                        then Just DDVS.ADMIN_APPROVED
-                        else Nothing,
-                    DRC.pendingChallan = Nothing,
-                    DRC.initiatedBy = Nothing
-                  }
-          QRC.create newRC
-          -- Create driver RC association so the RC is linked to the driver
-          assocId <- generateGUID
-          let driverRCAssoc =
-                DRCA.DriverRCAssociation
-                  { DRCA.id = assocId,
-                    DRCA.driverId = rcImage.personId,
-                    DRCA.rcId = rcId,
-                    DRCA.associatedOn = now,
-                    DRCA.associatedTill = convertTextToUTC (Just "2099-12-12"),
-                    DRCA.errorMessage = Nothing,
-                    DRCA.consent = True,
-                    DRCA.consentTimestamp = now,
-                    DRCA.isRcActive = True,
-                    DRCA.merchantId = Just merchantId,
-                    DRCA.merchantOperatingCityId = Just merchantOpCityId,
-                    DRCA.createdAt = now,
-                    DRCA.updatedAt = now
-                  }
-          QRCAssoc.create driverRCAssoc
-          QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
-          createReminder
-            DVC.VehicleRegistrationCertificate
-            rcImage.personId
-            merchantId
-            merchantOpCityId
-            (Just $ rcId.getId)
-            (Just fitnessExpiry)
-            Nothing
-        _ -> throwError (InternalError "RC not found by image id")
+  SDO.withDocumentOperationLock "RC" rcImage.personId.getId $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    mbRc <- QRC.findByImageId imageId
+    -- Fallback for re-upload-after-reject: the VRC row's documentImageId still
+    -- points at the prior (rejected) image, so findByImageId misses it. Look up
+    -- by certificate-number hash to recover the existing row and re-point it.
+    mbRcResolved <- case mbRc of
+      Just _ -> pure mbRc
+      Nothing -> case req.vehicleNumberPlate of
+        Just plate -> do
+          enc <- encrypt plate
+          QRC.findByCertificateNumberHash (enc & hash)
+        Nothing -> pure Nothing
+    case mbRcResolved of
+      Just rc -> do
+        certificateNumber <- mapM encrypt req.vehicleNumberPlate
+        -- Check for duplicate vehicle number plate if being changed
+        whenJust certificateNumber $ \encNum -> do
+          mbExistingRC <- QRC.findByCertificateNumberHash (encNum & hash)
+          whenJust mbExistingRC $ \existingRC ->
+            when (existingRC.id /= rc.id) $
+              throwError (InvalidRequest "RC with this vehicle number plate already exists")
+        let udpatedRC =
+              rc
+                { DRC.documentImageId = imageId,
+                  DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
+                  DRC.verificationStatus = VALID,
+                  DRC.rejectReason = Nothing,
+                  DRC.failedRules = [],
+                  DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
+                  DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
+                  DRC.vehicleModel = req.vehicleModel <|> rc.vehicleModel,
+                  DRC.vehicleModelYear = req.vehicleModelYear <|> rc.vehicleModelYear,
+                  DRC.vehicleColor = req.vehicleColor <|> rc.vehicleColor,
+                  DRC.vehicleDoors = req.vehicleDoors <|> rc.vehicleDoors,
+                  DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
+                  DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
+                  DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry,
+                  DRC.docsVerificationStatus =
+                    if transporterConfig.enableManualDocumentStatusCheck == Just True
+                      then Just DDVS.ADMIN_APPROVED
+                      else rc.docsVerificationStatus
+                }
+        QRC.updateByPrimaryKey udpatedRC
+        QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
+        createReminder
+          DVC.VehicleRegistrationCertificate
+          rcImage.personId
+          merchantId
+          merchantOpCityId
+          (Just $ udpatedRC.id.getId)
+          (Just udpatedRC.fitnessExpiry)
+          Nothing
+      Nothing -> do
+        case transporterConfig.createDocumentRequired of
+          Just True -> do
+            vehicleNumberPlate <- req.vehicleNumberPlate & fromMaybeM (InvalidRequest "vehicleNumberPlate is required for creating RC document")
+            fitnessExpiry <- req.fitnessExpiry & fromMaybeM (InvalidRequest "fitnessExpiry is required for creating RC document")
+            encryptedRC <- encrypt vehicleNumberPlate
+            -- Check if RC already exists for this number plate
+            mbExistingRC <- QRC.findByCertificateNumberHash (encryptedRC & hash)
+            whenJust mbExistingRC $ \_ ->
+              throwError (InvalidRequest "RC with this vehicle number plate already exists")
+            now <- getCurrentTime
+            rcId <- generateGUID
+            let newRC =
+                  DRC.VehicleRegistrationCertificate
+                    { DRC.id = rcId,
+                      DRC.documentImageId = imageId,
+                      DRC.documentImageId2 = Nothing,
+                      DRC.certificateNumber = encryptedRC,
+                      DRC.fitnessExpiry = fitnessExpiry,
+                      DRC.permitExpiry = req.permitExpiry,
+                      DRC.pucExpiry = Nothing,
+                      DRC.vehicleClass = Nothing,
+                      DRC.vehicleVariant = req.vehicleVariant,
+                      DRC.vehicleManufacturer = req.vehicleManufacturer,
+                      DRC.vehicleCapacity = Nothing,
+                      DRC.vehicleModel = req.vehicleModel,
+                      DRC.vehicleColor = req.vehicleColor,
+                      DRC.vehicleDoors = req.vehicleDoors,
+                      DRC.vehicleSeatBelts = req.vehicleSeatBelts,
+                      DRC.manufacturerModel = Nothing,
+                      DRC.vehicleEnergyType = Nothing,
+                      DRC.reviewedAt = Nothing,
+                      DRC.reviewRequired = Nothing,
+                      DRC.insuranceValidity = Nothing,
+                      DRC.mYManufacturing = Nothing,
+                      DRC.verificationStatus = VALID,
+                      DRC.fleetOwnerId = Nothing,
+                      DRC.userPassedVehicleCategory = Nothing,
+                      DRC.airConditioned = Nothing,
+                      DRC.oxygen = Nothing,
+                      DRC.ventilator = Nothing,
+                      DRC.luggageCapacity = Nothing,
+                      DRC.vehicleRating = Nothing,
+                      DRC.vehicleRatingRemark = Nothing,
+                      DRC.failedRules = [],
+                      DRC.dateOfRegistration = Nothing,
+                      DRC.vehicleModelYear = req.vehicleModelYear,
+                      DRC.rejectReason = Nothing,
+                      DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
+                      DRC.approved = Nothing,
+                      DRC.vehicleImageId = Nothing,
+                      DRC.merchantId = Just merchantId,
+                      DRC.merchantOperatingCityId = Just merchantOpCityId,
+                      DRC.createdAt = now,
+                      DRC.updatedAt = now,
+                      DRC.verified = Nothing,
+                      DRC.docsVerificationStatus =
+                        if transporterConfig.enableManualDocumentStatusCheck == Just True
+                          then Just DDVS.ADMIN_APPROVED
+                          else Nothing,
+                      DRC.pendingChallan = Nothing,
+                      DRC.initiatedBy = Nothing
+                    }
+            QRC.create newRC
+            -- Create driver RC association so the RC is linked to the driver
+            assocId <- generateGUID
+            let driverRCAssoc =
+                  DRCA.DriverRCAssociation
+                    { DRCA.id = assocId,
+                      DRCA.driverId = rcImage.personId,
+                      DRCA.rcId = rcId,
+                      DRCA.associatedOn = now,
+                      DRCA.associatedTill = convertTextToUTC (Just "2099-12-12"),
+                      DRCA.errorMessage = Nothing,
+                      DRCA.consent = True,
+                      DRCA.consentTimestamp = now,
+                      DRCA.isRcActive = True,
+                      DRCA.merchantId = Just merchantId,
+                      DRCA.merchantOperatingCityId = Just merchantOpCityId,
+                      DRCA.createdAt = now,
+                      DRCA.updatedAt = now
+                    }
+            QRCAssoc.create driverRCAssoc
+            QImage.updateVerificationStatusByIdAndType VALID imageId DVC.VehicleRegistrationCertificate
+            createReminder
+              DVC.VehicleRegistrationCertificate
+              rcImage.personId
+              merchantId
+              merchantOpCityId
+              (Just $ rcId.getId)
+              (Just fitnessExpiry)
+              Nothing
+          _ -> throwError (InternalError "RC not found by image id")
 
 approveAndUpdateInsurance :: Common.VInsuranceApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId = do
@@ -1782,85 +1783,86 @@ approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.
 approveAndUpdateDL merchantId merchantOpCityId req = do
   let imageId = Id req.documentImageId.getId
   dlImage <- findApproveImage DVC.DriverLicense imageId
-  let driverId = dlImage.personId
-  mbDl <- QDL.findByImageId imageId
-  -- Fallback for re-upload-after-reject: the DL row's documentImageId1 still
-  -- points at the prior (rejected) image, so findByImageId misses it. Look up
-  -- by DL number to recover the existing row and re-point it at the new image.
-  mbDlResolved <- case mbDl of
-    Just _ -> pure mbDl
-    Nothing -> case req.driverLicenseNumber of
-      Just dlNum -> QDL.findByDLNumber dlNum
-      Nothing -> pure Nothing
-  -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
-  validateDocumentApprovalChecks DVC.DriverLicense req.driverLicenseNumber driverId (DLApproveData <$> mbDlResolved)
-  case mbDlResolved of
-    Just dl -> do
-      licenseNumber <- mapM encrypt req.driverLicenseNumber
-      let updatedDL =
-            dl
-              { DDL.documentImageId1 = imageId,
-                DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
-                DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
-                DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
-                DDL.verificationStatus = VALID,
-                DDL.rejectReason = Nothing,
-                DDL.driverId = driverId
-              }
-      -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
-      deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
-      QDL.upsert updatedDL
-      QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
-      whenJust dl.documentImageId2 $ \img2 ->
-        QImage.updateVerificationStatusByIdAndType VALID img2 DVC.DriverLicense
-      -- Create reminders for DL when it's updated
-      createReminder
-        DVC.DriverLicense
-        updatedDL.driverId
-        merchantId
-        merchantOpCityId
-        (Just $ updatedDL.id.getId)
-        (Just updatedDL.licenseExpiry)
-        Nothing
-    Nothing -> whenCreateDocumentRequired merchantOpCityId (throwError (InternalError "DL not found by image id")) $ do
-      dlNumber <- req.driverLicenseNumber & fromMaybeM (InvalidRequest "driverLicenseNumber is required for creating DL document")
-      dlExpiry <- req.dateOfExpiry & fromMaybeM (InvalidRequest "dateOfExpiry is required for creating DL document")
-      encryptedDLNumber <- encrypt dlNumber
-      now <- getCurrentTime
-      dlId <- generateGUID
-      let newDL =
-            DDL.DriverLicense
-              { DDL.id = dlId,
-                DDL.driverId = driverId,
-                DDL.documentImageId1 = imageId,
-                DDL.documentImageId2 = Nothing,
-                DDL.licenseNumber = encryptedDLNumber,
-                DDL.licenseExpiry = dlExpiry,
-                DDL.driverDob = req.driverDateOfBirth,
-                DDL.driverName = Nothing,
-                DDL.classOfVehicles = [],
-                DDL.verificationStatus = VALID,
-                DDL.failedRules = [],
-                DDL.dateOfIssue = Nothing,
-                DDL.rejectReason = Nothing,
-                DDL.vehicleCategory = Nothing,
-                DDL.consent = True,
-                DDL.consentTimestamp = now,
-                DDL.merchantId = Just merchantId,
-                DDL.createdAt = now,
-                DDL.updatedAt = now
-              }
-      deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
-      QDL.create newDL
-      QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
-      createReminder
-        DVC.DriverLicense
-        driverId
-        merchantId
-        merchantOpCityId
-        (Just $ dlId.getId)
-        (Just dlExpiry)
-        Nothing
+  SDO.withDocumentOperationLock "DL" dlImage.personId.getId $ do
+    let driverId = dlImage.personId
+    mbDl <- QDL.findByImageId imageId
+    -- Fallback for re-upload-after-reject: the DL row's documentImageId1 still
+    -- points at the prior (rejected) image, so findByImageId misses it. Look up
+    -- by DL number to recover the existing row and re-point it at the new image.
+    mbDlResolved <- case mbDl of
+      Just _ -> pure mbDl
+      Nothing -> case req.driverLicenseNumber of
+        Just dlNum -> QDL.findByDLNumber dlNum
+        Nothing -> pure Nothing
+    -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
+    validateDocumentApprovalChecks DVC.DriverLicense req.driverLicenseNumber driverId (DLApproveData <$> mbDlResolved)
+    case mbDlResolved of
+      Just dl -> do
+        licenseNumber <- mapM encrypt req.driverLicenseNumber
+        let updatedDL =
+              dl
+                { DDL.documentImageId1 = imageId,
+                  DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
+                  DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
+                  DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
+                  DDL.verificationStatus = VALID,
+                  DDL.rejectReason = Nothing,
+                  DDL.driverId = driverId
+                }
+        -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
+        deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
+        QDL.upsert updatedDL
+        QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
+        whenJust dl.documentImageId2 $ \img2 ->
+          QImage.updateVerificationStatusByIdAndType VALID img2 DVC.DriverLicense
+        -- Create reminders for DL when it's updated
+        createReminder
+          DVC.DriverLicense
+          updatedDL.driverId
+          merchantId
+          merchantOpCityId
+          (Just $ updatedDL.id.getId)
+          (Just updatedDL.licenseExpiry)
+          Nothing
+      Nothing -> whenCreateDocumentRequired merchantOpCityId (throwError (InternalError "DL not found by image id")) $ do
+        dlNumber <- req.driverLicenseNumber & fromMaybeM (InvalidRequest "driverLicenseNumber is required for creating DL document")
+        dlExpiry <- req.dateOfExpiry & fromMaybeM (InvalidRequest "dateOfExpiry is required for creating DL document")
+        encryptedDLNumber <- encrypt dlNumber
+        now <- getCurrentTime
+        dlId <- generateGUID
+        let newDL =
+              DDL.DriverLicense
+                { DDL.id = dlId,
+                  DDL.driverId = driverId,
+                  DDL.documentImageId1 = imageId,
+                  DDL.documentImageId2 = Nothing,
+                  DDL.licenseNumber = encryptedDLNumber,
+                  DDL.licenseExpiry = dlExpiry,
+                  DDL.driverDob = req.driverDateOfBirth,
+                  DDL.driverName = Nothing,
+                  DDL.classOfVehicles = [],
+                  DDL.verificationStatus = VALID,
+                  DDL.failedRules = [],
+                  DDL.dateOfIssue = Nothing,
+                  DDL.rejectReason = Nothing,
+                  DDL.vehicleCategory = Nothing,
+                  DDL.consent = True,
+                  DDL.consentTimestamp = now,
+                  DDL.merchantId = Just merchantId,
+                  DDL.createdAt = now,
+                  DDL.updatedAt = now
+                }
+        deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
+        QDL.create newDL
+        QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
+        createReminder
+          DVC.DriverLicense
+          driverId
+          merchantId
+          merchantOpCityId
+          (Just $ dlId.getId)
+          (Just dlExpiry)
+          Nothing
 
 approveAndUpdateNOC :: Common.NOCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do

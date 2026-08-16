@@ -295,7 +295,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         deleteVehicleWithAllAssociations personId mbFleetOwnerId prevRcNo
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction && not isTtenCertificate)
-  Redis.whenWithLockRedis (rcVerificationLockKey req.vehicleRegistrationCertNumber) 60 $ do
+  withDocumentOperationLock "RC" personId.getId $ do
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
         vehicleDetails <-
@@ -692,7 +692,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               unless isInvalid $ do
                 mbVehicle <- VQuery.findByRegistrationNo =<< decrypt rc.certificateNumber
                 whenJust mbVehicle $ \vehicle -> do
-                  when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null allFailures) $ do
+                  when (isJust rc.vehicleVariant && null allFailures) $ do
                     driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
@@ -915,9 +915,6 @@ getAllLinkedRCs (driverId, _, _) = do
             isFleetRC = isJust rc.fleetOwnerId,
             isValid = Nothing
           }
-
-rcVerificationLockKey :: Text -> Text
-rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
 
 makeFleetOwnerKey :: Text -> Text
 makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> removeSpaceAndDash vehicleNo

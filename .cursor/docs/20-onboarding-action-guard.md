@@ -253,6 +253,25 @@ operations above: `postDriverLinkToFleet`'s revoke path, `postDriverDeleteRC`,
 `postDriverDeleteAadhaar` and `postDriverDeletePanCard`. Re-verbing them would take those seven out
 of `guardNoLiveRide`, which is why it has not been done as a side effect of a doc change.
 
+### Releasing a document from a driver
+
+A licence or document already registered to another driver blocks re-registration (`verifyDL` throws
+`DLAlreadyLinked` / `DLLinkedToAnotherFleet`, and `DriverLicenseExtra.upsert` throws on a driver-id
+mismatch). Two existing endpoints delete the record off the current holder:
+
+| API | Endpoint | Deletes | Requestor check |
+|---|---|---|---|
+| `postDriverUnlinkDL` — `Management/Driver.hs` | `POST /driver/{driverId}/unlinkDL` | `QDriverLicense.deleteByDriverId` | none — admin-oriented. Guarded `Unlink` / `TargetDriver` / `None` |
+| `postDriverRegistrationUnlinkDocument` — `Management/DriverRegistration.hs` | `POST /driver/{personId}/unlink/document/{documentType}` (helper variant adds `?requestorId=`) | the document row for `DocumentType` — `DriverLicense`, `PanCard`, `AadhaarCard`, `GSTCertificate` — plus its images, then refreshes onboarding flags | `isAssociationBetweenTwoPerson` when `requestorId` is given and that person exists at BPP, so a fleet owner may only unlink for a driver associated with them |
+
+The second does **not** go through the guard — it is not an `SGuard` call site, so it appears
+nowhere in the call-site map above.
+
+Both take the **driverId of the current holder**. A fleet owner holding only the licence number
+cannot resolve it: `getDriverInfo` accepts `dlNumber`, but its fleet branch rejects that with
+`FLEET_SEARCH_PARAM_NOT_SUPPORTED`. So releasing a document is admin-reachable end to end, and
+fleet-reachable only when the holder's driverId is already known.
+
 ### `Activate` / `Deactivate` is the lightweight pair
 
 `postDriverFleetVehicleDriverRcStatus` and `postDriverSetRCStatus` pick `Activate` or `Deactivate` at

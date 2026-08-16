@@ -1452,6 +1452,17 @@ isNameCompareRequired transporterConfig verifyBy =
 makeDocumentVerificationLockKey :: Text -> Text
 makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
 
+makeDocumentOperationLockKey :: Text -> Text -> Text
+makeDocumentOperationLockKey docType personId = "DocumentVerificationLock:" <> docType <> ":" <> personId
+
+withDocumentOperationLock :: OnboardingFlow m r => Text -> Text -> m a -> m a
+withDocumentOperationLock docType personId action =
+  Redis.whenWithLockRedisAndReturnValue (makeDocumentOperationLockKey docType personId) documentOperationLockTTLSeconds action
+    >>= either (\() -> throwError $ DocumentVerificationInProgress docType) pure
+
+documentOperationLockTTLSeconds :: Int
+documentOperationLockTTLSeconds = 60
+
 endFleetRCAssociationIfPossible ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id Person ->
