@@ -27,6 +27,7 @@ data FRFSSearch = FRFSSearch
     fromStationCode :: Kernel.Prelude.Text,
     fromStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationPoint :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    hasApplicablePass :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

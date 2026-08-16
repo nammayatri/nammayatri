@@ -31,6 +31,9 @@ data FRFSRecon = FRFSRecon
     message :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     networkOrderId :: Kernel.Prelude.Text,
+    overriddenAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overrideAppliedEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    overrideType :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
     paymentGateway :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
@@ -55,14 +58,14 @@ data FRFSRecon = FRFSRecon
   }
   deriving (Generic, Show)
 
-data EntityType = BUS_PASS | FRFS_TICKET_BOOKING deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+data EntityType = BUS_PASS | FRFS_TICKET_BOOKING deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data ReconStatus = PENDING | SETTLED | PARTIALLY_SETTLED | REFUNDED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
+data ReconStatus = PENDING | SETTLED | PARTIALLY_SETTLED | REFUNDED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''EntityType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''EntityType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''EntityType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''EntityType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''ReconStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''ReconStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''ReconStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''ReconStatus)

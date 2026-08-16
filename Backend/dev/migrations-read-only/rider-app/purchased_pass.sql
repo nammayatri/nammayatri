@@ -70,3 +70,8 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN pass_photo_media_id character va
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN current_payment_order_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN vehicle_type text ;

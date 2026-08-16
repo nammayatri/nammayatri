@@ -80,6 +80,8 @@ import Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfoExtra as GD
+import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Offer as SOffer
 import SharedLogic.Search
@@ -96,6 +98,7 @@ import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -245,7 +248,8 @@ getAllLegsInfo' ::
 getAllLegsInfo' personId journeyId checkSearch = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegs <- QJourneyLeg.getJourneyLegs journeyId
-    mapMaybeM (\leg -> measureLatency (getLegInfo personId checkSearch allLegs leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
+    mbPassCandidates <- loadJourneyPassCandidates personId journeyId allLegs
+    mapMaybeM (\leg -> measureLatency (getLegInfo personId checkSearch allLegs mbPassCandidates leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
 
 getAllLegsInfoFromLegs ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -254,17 +258,54 @@ getAllLegsInfoFromLegs ::
   [DJourneyLeg.JourneyLeg] ->
   m [JL.LegInfo]
 getAllLegsInfoFromLegs personId journeyId allLegs = do
-  whenJourneyUpdateInProgress journeyId $
-    mapMaybeM (\leg -> measureLatency (getLegInfo personId True allLegs leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
+  whenJourneyUpdateInProgress journeyId $ do
+    mbPassCandidates <- loadJourneyPassCandidates personId journeyId allLegs
+    mapMaybeM (\leg -> measureLatency (getLegInfo personId True allLegs mbPassCandidates leg) ("getLegInfo leg: " <> show leg.sequenceNumber <> " mode: " <> show leg.mode)) allLegs
+
+loadJourneyPassCandidates :: JL.GetStateFlow m r c => Id DPerson.Person -> Id DJourney.Journey -> [DJourneyLeg.JourneyLeg] -> m (Maybe [FRFSPassOverride.PassCandidate])
+loadJourneyPassCandidates personId journeyId legs
+  | not (any (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs) = pure (Just [])
+  | otherwise = do
+    journey <- getJourney journeyId
+    if journey.status >= DJourney.CONFIRMED
+      then pure (Just [])
+      else do
+        enabled <- anyPassOverrideEnabled journey
+        if enabled then loadFor else pure (Just [])
+  where
+    anyPassOverrideEnabled journey = do
+      let categories =
+            foldr
+              (\vc acc -> if vc `elem` acc then acc else vc : acc)
+              []
+              (mapMaybe (multiModalTravelModeToBecknVehicleCategory . (.mode)) legs)
+      configs <- concat <$> mapM (\vc -> SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vc DIBC.MULTIMODAL) categories
+      pure $ any (\config -> config.passOverrideApplicable == Just True) configs
+
+    loadFor = do
+      -- personId comes from the authenticated request, so a missing person is a broken invariant,
+      -- not a case to absorb. Returning Nothing here would also be read downstream as "not
+      -- precomputed, look it up per leg" rather than "no passes" (see mkLegInfoFromFrfsSearchRequest).
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      now <- getCurrentTime
+      -- Clamped to now, like the per-leg derivation in Lib/JourneyModule/Types.hs: fromDepartureTime
+      -- is a timetable value and is the epoch where a stop has no timing, and sort puts that first.
+      -- The window filtering happens per leg later, so an epoch here does not hide passes -- it does
+      -- the opposite, satisfying checkHasPass's `till >= today` for a rider whose pass expired long
+      -- ago and loading candidates for nothing.
+      let journeyStart = maybe now (\departure -> if departure > now then departure else now) (KP.listToMaybe (sort (mapMaybe (.fromDepartureTime) legs)))
+      tripDay <- FRFSPassOverride.localTripDay person journeyStart
+      Just <$> FRFSPassOverride.loadPassCandidates person Nothing tripDay
 
 getLegInfo ::
   JL.GetStateFlow m r c =>
   Id DPerson.Person ->
   Bool ->
   [DJourneyLeg.JourneyLeg] ->
+  Maybe [FRFSPassOverride.PassCandidate] ->
   DJourneyLeg.JourneyLeg ->
   m (Maybe JL.LegInfo)
-getLegInfo personId checkSearch journeyLegs journeyLeg = do
+getLegInfo personId checkSearch journeyLegs mbPassCandidates journeyLeg = do
   case journeyLeg.legSearchId of
     Just legSearchIdText -> do
       let legSearchId = Id legSearchIdText
@@ -278,9 +319,9 @@ getLegInfo personId checkSearch journeyLegs journeyLeg = do
             void $ markJourneyComplete journey legs
           return legInfo
         DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {journeyLeg = journeyLeg, personId}
-        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs}
-        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs}
-        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
     Nothing -> return Nothing
 
 hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool
@@ -479,6 +520,16 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
       DTrip.Walk -> Just MultiModalTypes.Walk
       _ -> Nothing
 
+data LegConfirmPlan = LegConfirmPlan
+  { legInfo :: JL.LegInfo,
+    mbElement :: Maybe APITypes.JourneyConfirmReqElement,
+    categorySelection :: [APITypes.FRFSCategorySelectionReq],
+    ticketQuantityTotal :: Int,
+    isForcedBooking :: Bool,
+    shouldBookLater :: Bool,
+    mbCrisSdkResponse :: Maybe APITypes.CrisSdkResponse
+  }
+
 startJourney ::
   (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DPerson.Person ->
@@ -491,44 +542,144 @@ startJourney ::
 startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer mbIsMockPayment = do
   allLegs <- getAllLegsInfo riderId journey.id
   mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) (Id leg.searchId)) allLegs -- TODO :: Handle the case where isMultiAllowed is False
-  mapM_
-    ( \leg -> do
-        let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
-            ticketQuantity = mElement >>= (.ticketQuantity)
-            childTicketQuantity = mElement >>= (.childTicketQuantity)
-            bookLater = fromMaybe False (mElement <&> (.skipBooking))
-        let forcedBooking = Just leg.order == forcedBookedLegOrder
-        let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
-        categorySelectionReq <- do
-          let categorySelectionReq' = fromMaybe [] $ find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
-          if null categorySelectionReq' && leg.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
-            then
-              maybe
-                (pure categorySelectionReq')
-                ( \pricingId -> do
-                    quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
-                    let selectedQuoteCategories =
-                          map
-                            ( \quoteCategory ->
-                                let quantity =
-                                      fromMaybe quoteCategory.selectedQuantity
-                                        case quoteCategory.category of
-                                          ADULT -> ticketQuantity
-                                          CHILD -> childTicketQuantity
-                                          _ -> Just quoteCategory.selectedQuantity
-                                 in APITypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity, seatIds = quoteCategory.seatIds}
-                            )
-                            quoteCategories
-                    return $ categorySelectionReq' <> selectedQuoteCategories
-                )
-                leg.pricingId
-            else return categorySelectionReq'
-        let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
-            bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
-            updatedLeg = leg {JL.bookingAllowed = bookingAllowed'}
-        JLI.confirm forcedBooking bookLater updatedLeg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer mbIsMockPayment (mElement >>= (.tripId)) (mElement >>= (.vehicleNumber))
-    )
-    allLegs
+  plans <- mapM mkLegConfirmPlan allLegs
+  validatePassSelections plans
+  mapM_ confirmLeg plans
+  let bookablePlans = filter (\plan -> not plan.shouldBookLater && plan.legInfo.bookingAllowed) plans
+  void $
+    withTryCatch "startJourney:confirmPassCoveredLegs" $ do
+      legBookings <- mapMaybeM (QTBooking.findBySearchId . Id . (.searchId) . (.legInfo)) bookablePlans
+      -- Whether a leg is payable has to come from the resulting overriddenAmount, not from whether
+      -- a pass id was supplied: a pass giving only a partial discount still leaves a balance.
+      --
+      -- A deferred leg counts as payable even though it has no booking to inspect yet:
+      -- validatePassSelections rejects a pass on a shouldBookLater leg, so a deferred leg is
+      -- always one the rider still has to pay for. Without this the pass legs would be ticketed --
+      -- and trips spent -- before the rider has committed to the rest of the journey. They are not
+      -- stranded by waiting: FRFSStatus calls confirmPassCoveredLegsOfJourney once that payment
+      -- succeeds.
+      --
+      -- bookingAllowed is part of the test, not decoration: skipBooking is what the client sends
+      -- for a leg it is not booking in this call, and that includes every Walk leg. Keying on
+      -- shouldBookLater alone therefore treats a plain walk-bus-walk journey as having a payable
+      -- leg and never confirms it at all.
+      --
+      -- A non-FRFS payable leg (Taxi) is deliberately NOT counted here, even though its fare is
+      -- invisible to legBookings. Blocking on it would strand the pass leg instead of deferring it:
+      -- confirmPassCoveredLegs has only two triggers, this one and FRFSStatus on FRFS payment
+      -- success, and a taxi leg produces no FRFS payment order -- OnInit skips createPayments when
+      -- payableBookings is empty -- so nothing would ever come back for it. The leg would sit in NEW
+      -- until validTill swept it to FAILED and the rider would get no ticket and no error. Issuing
+      -- the pass ticket early is the lesser fault until there is a trigger that can fire for a
+      -- taxi-funded journey. See the known-limitations note in the PR description.
+      let journeyHasPayableLeg =
+            any (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) legBookings
+              || any (\plan -> plan.shouldBookLater && plan.legInfo.bookingAllowed) plans
+      unless journeyHasPayableLeg $ FRFSPassConfirm.confirmPassCoveredLegs legBookings
+  where
+    mkLegConfirmPlan leg = do
+      let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
+          ticketQuantity = mElement >>= (.ticketQuantity)
+          childTicketQuantity = mElement >>= (.childTicketQuantity)
+          bookLater = fromMaybe False (mElement <&> (.skipBooking))
+          forcedBooking = Just leg.order == forcedBookedLegOrder
+          crisSdkResponse = mElement >>= (.crisSdkResponse)
+      categorySelectionReq <- do
+        let categorySelectionReq' = fromMaybe [] $ mElement >>= (.categorySelectionReq)
+        if null categorySelectionReq' && leg.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
+          then
+            maybe
+              (pure categorySelectionReq')
+              ( \pricingId -> do
+                  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId (Id pricingId)
+                  let selectedQuoteCategories =
+                        map
+                          ( \quoteCategory ->
+                              let quantity =
+                                    fromMaybe quoteCategory.selectedQuantity $
+                                      case quoteCategory.category of
+                                        ADULT -> ticketQuantity
+                                        CHILD -> childTicketQuantity
+                                        _ -> Just quoteCategory.selectedQuantity
+                               in APITypes.FRFSCategorySelectionReq {quoteCategoryId = quoteCategory.id, quantity, seatIds = quoteCategory.seatIds}
+                          )
+                          quoteCategories
+                  return $ categorySelectionReq' <> selectedQuoteCategories
+              )
+              leg.pricingId
+          else return categorySelectionReq'
+      let totalTicketQuantity = sum $ map (.quantity) categorySelectionReq
+          bookingAllowed' = leg.bookingAllowed || ((fromMaybe False leg.hasApplicablePasses) && totalTicketQuantity /= 1)
+      pure
+        LegConfirmPlan
+          { legInfo = leg {JL.bookingAllowed = bookingAllowed'},
+            mbElement = mElement,
+            categorySelection = categorySelectionReq,
+            ticketQuantityTotal = totalTicketQuantity,
+            isForcedBooking = forcedBooking,
+            shouldBookLater = bookLater,
+            mbCrisSdkResponse = crisSdkResponse
+          }
+
+    validatePassSelections plans = do
+      forM_ plans $ \plan ->
+        when (plan.shouldBookLater && isJust (plan.mbElement >>= (.purchasedPassPaymentId))) $
+          throwError . InvalidRequest $
+            "A pass cannot be applied to a leg booked later, journey leg " <> show plan.legInfo.order
+      -- Every non-deferred leg, not just the bookingAllowed ones: confirmLeg forwards
+      -- purchasedPassPaymentId for all plans, so a pass on a non-bookable leg would otherwise skip
+      -- both this check and the trip-count check below and surface later as a vaguer error out of
+      -- FRFSConfirm.
+      --
+      -- Legs that already have a booking are excluded, and that exclusion is load-bearing: their
+      -- LegInfo comes from mkLegInfoFromFrfsBooking, which hardcodes applicablePasses = [], so
+      -- validateOneLeg would reject a pass that was already accepted and stamped. That turns a
+      -- client retrying confirm after a timeout into a hard 400 that aborts before the remaining
+      -- legs are booked. They must also stay out of tripsRequired, which would otherwise
+      -- double-count trips the pass has already been debited for.
+      -- Only legs that actually carry a selection, so a journey with no pass anywhere -- the common
+      -- case -- costs no lookups at all rather than one per leg.
+      let candidates = filter (\plan -> not plan.shouldBookLater && isJust (plan.mbElement >>= (.purchasedPassPaymentId))) plans
+      unbookedCandidates <-
+        mapMaybeM
+          (\plan -> QTBooking.findBySearchId (Id plan.legInfo.searchId) <&> maybe (Just plan) (const Nothing))
+          candidates
+      let selections = [(paymentId, plan) | plan <- unbookedCandidates, Just paymentId <- [plan.mbElement >>= (.purchasedPassPaymentId)]]
+      mapM_ (uncurry validateOneLeg) selections
+      let distinctPaymentIds = foldr (\pid acc -> if pid `elem` acc then acc else pid : acc) [] (map fst selections)
+      forM_ distinctPaymentIds $ \paymentId -> do
+        let legsUsingPass = [plan | (pid, plan) <- selections, pid == paymentId]
+            -- A trip per ticket, not per leg: a two-ticket leg costs the pass two.
+            tripsRequired = sum (map (.ticketQuantityTotal) legsUsingPass)
+            mbOption = KP.listToMaybe [option | plan <- legsUsingPass, option <- plan.legInfo.applicablePasses, option.purchasedPassPaymentId == paymentId]
+        whenJust mbOption $ \option ->
+          unless option.unlimitedTripCount $
+            when (maybe False (< tripsRequired) option.availableTripCount) $
+              throwError . InvalidRequest $
+                "Pass has "
+                  <> show (fromMaybe 0 option.availableTripCount)
+                  <> " trip(s) left but the journey needs "
+                  <> show tripsRequired
+                  <> ", purchasedPassPaymentId="
+                  <> paymentId.getId
+
+    validateOneLeg paymentId plan =
+      case find (\option -> option.purchasedPassPaymentId == paymentId) plan.legInfo.applicablePasses of
+        Nothing ->
+          throwError . InvalidRequest $
+            "Selected pass is not applicable to journey leg " <> show plan.legInfo.order <> ", purchasedPassPaymentId=" <> paymentId.getId
+        Just option ->
+          unless (FRFSPassOverride.withinQuantityCap plan.ticketQuantityTotal option.maxTicketQuantityPerOverride) $
+            throwError . InvalidRequest $
+              "Selected pass covers at most "
+                <> show (fromMaybe 1 option.maxTicketQuantityPerOverride)
+                <> " ticket(s) on journey leg "
+                <> show plan.legInfo.order
+                <> ", requested "
+                <> show plan.ticketQuantityTotal
+
+    confirmLeg plan =
+      JLI.confirm plan.isForcedBooking plan.shouldBookLater plan.legInfo plan.mbCrisSdkResponse plan.categorySelection journey.isSingleMode mbEnableOffer mbIsMockPayment (plan.mbElement >>= (.tripId)) (plan.mbElement >>= (.vehicleNumber)) (plan.mbElement >>= (.purchasedPassPaymentId))
 
 startJourneyLeg ::
   (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => JL.LegInfo -> Maybe Bool -> m ()
@@ -552,7 +703,7 @@ startJourneyLeg legInfo isSingleMode = do
           ( \category -> APITypes.FRFSCategorySelectionReq {quoteCategoryId = category.categoryId, quantity = category.categorySelectedQuantity, seatIds = category.seatIds}
           )
           categories
-  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing Nothing Nothing
+  JLI.confirm True False legInfo crisSdkResponse categorySelectionReq isSingleMode Nothing Nothing Nothing Nothing Nothing
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
@@ -564,8 +715,9 @@ addAllLegs ::
   [DJourneyLeg.JourneyLeg] ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Maybe Bool ->
   m ()
-addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes = do
+addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
   oldLegs <- maybe (QJourneyLeg.getJourneyLegs journey.id) pure mbOldJourneyLegs
   let filteredOldLegs = filter (\leg1 -> all (\leg2 -> leg1.sequenceNumber /= leg2.sequenceNumber) newJourneyLegs) oldLegs
   let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
@@ -580,13 +732,13 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
           let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
           void $ addTaxiLeg journey snappedLeg originAddress destinationAddress (upsertJourneyLegAction journeyLeg)
         DTrip.Metro -> do
-          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
+          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
         DTrip.Subway -> do
-          void $ measureLatency (addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes) ("addSubwayLeg leg: " <> show journeyLeg.sequenceNumber)
+          void $ measureLatency (addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) ("addSubwayLeg leg: " <> show journeyLeg.sequenceNumber)
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
         DTrip.Bus -> do
-          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes
+          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
   where
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
     upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
@@ -746,8 +898,9 @@ addMetroLeg ::
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Maybe Bool ->
   m JL.SearchResponse
-addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes = do
+addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city
   JL.search metroSearchReq
@@ -765,7 +918,8 @@ addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers bl
             isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
+            mbHasPasses
           }
 
 addSubwayLeg ::
@@ -775,8 +929,9 @@ addSubwayLeg ::
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Maybe Bool ->
   m JL.SearchResponse
-addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes = do
+addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let subwaySearchReq = mkSubwayLegReq merchantOperatingCity.city
   JL.search subwaySearchReq
@@ -794,7 +949,8 @@ addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers b
             isSingleMode = fromMaybe False journey.isSingleMode,
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
+            mbHasPasses
           }
 
 addBusLeg ::
@@ -805,8 +961,9 @@ addBusLeg ::
   (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Maybe Bool ->
   m JL.SearchResponse
-addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes = do
+addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let busSearchReq = mkBusLegReq merchantOperatingCity.city
   JL.search busSearchReq
@@ -825,7 +982,8 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
             upsertJourneyLegAction,
             serviceTier = mbServiceTier,
             blacklistedServiceTiers = blacklistedServiceTiers,
-            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes
+            blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
+            mbHasPasses
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
@@ -1059,7 +1217,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes
+        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing
     -- check this code
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.sequenceNumber == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
@@ -1319,7 +1477,7 @@ switchLeg journeyId _ req filterServiceAndJrnyType mbNewServiceTiers = do
     deleteLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
     newJourneyLeg <- updateJourneyLeg journeyLeg req.newMode startLocation newDistance newDuration
     journey <- getJourney journeyId
-    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes
+    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing
   where
     updateJourneyLeg ::
       ( CacheFlow m r,

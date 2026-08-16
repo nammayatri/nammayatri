@@ -297,3 +297,13 @@ CREATE INDEX CONCURRENTLY person_idx_device_id ON atlas_app.person USING btree (
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN has_pass_till date ;
+
+
+------- SQL updates -------
+

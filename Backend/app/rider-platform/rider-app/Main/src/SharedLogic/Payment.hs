@@ -398,7 +398,12 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                     Recon.merchantId = Just purchasedPassPayment.merchantId,
                     Recon.merchantOperatingCityId = Just purchasedPassPayment.merchantOperatingCityId,
                     Recon.createdAt = now,
-                    Recon.updatedAt = now
+                    Recon.updatedAt = now,
+                    -- This is the pass purchase itself, the row a discounted trip points back at.
+                    -- Nothing was overridden to buy it, so the override columns stay empty here.
+                    Recon.overrideType = Nothing,
+                    Recon.overriddenAmount = Nothing,
+                    Recon.overrideAppliedEntityId = Nothing
                   }
           void $ QRecon.create reconEntry
 

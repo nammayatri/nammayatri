@@ -44,6 +44,7 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
       Se.Set Beam.isTicketValidOnMultipleRoutes isTicketValidOnMultipleRoutes,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.passOverrideApplicable passOverrideApplicable,
       Se.Set Beam.platformType platformType,
       Se.Set Beam.configJSON (Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig),
       Se.Set Beam.providerName providerName,

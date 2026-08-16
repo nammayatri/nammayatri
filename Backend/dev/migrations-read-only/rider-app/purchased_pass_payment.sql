@@ -48,3 +48,13 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_photo_media_id char
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN client_sdk_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN available_trip_count integer ;

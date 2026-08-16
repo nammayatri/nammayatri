@@ -47,13 +47,14 @@ data PurchasedPass = PurchasedPass
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
     usedTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BenefitType = FullSaving | FixedSaving | PercentageSaving deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
 data StatusType
   = Pending
@@ -66,14 +67,14 @@ data StatusType
   | Refunded
   | RefundFailed
   | PhotoPending
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (Kernel.Prelude.ToParamSchema))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''StatusType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''StatusType))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''StatusType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''StatusType))
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''StatusType)
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''StatusType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''BenefitType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''BenefitType))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''BenefitType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''BenefitType))
