@@ -210,3 +210,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_spot_booking boolean ;
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN waybill_no text ;
 CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_waybill_no ON atlas_app.frfs_ticket_booking USING btree (waybill_no);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_type text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_applied_entity_id text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN overridden_amount double precision ;

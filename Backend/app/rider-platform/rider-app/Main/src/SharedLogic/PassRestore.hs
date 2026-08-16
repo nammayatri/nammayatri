@@ -28,6 +28,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.Queries.DeletedPerson as QDeletedPerson
@@ -90,3 +91,4 @@ restorePurchasedPassesIfNeeded newPerson mobileNumber = do
       traverse_ (\p -> QPaymentOrder.updatePersonId p.orderId newPersonId.getId) payments
       QPurchasedPassPayment.updatePersonIdByPurchasedPassId newPersonId purchasedPass.id
       QPurchasedPass.updatePersonIdById newPersonId purchasedPass.id
+      void $ withTryCatch "PassRestore:registerHasPass" (FRFSPassOverride.registerHasPass newPersonId purchasedPass.endDate)
