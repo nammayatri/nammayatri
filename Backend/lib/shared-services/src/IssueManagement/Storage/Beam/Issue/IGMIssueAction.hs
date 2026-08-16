@@ -1,6 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
 module IssueManagement.Storage.Beam.Issue.IGMIssueAction where
 
 import qualified Database.Beam as B
