@@ -1,3 +1,12 @@
+-- Fix column name mismatch (Beam field issueRaisedByMerchant maps to issue_raised_by_merchant)
+ALTER TABLE atlas_driver_offer_bpp.igm_issue RENAME COLUMN issue_raised_by_merchant_id TO issue_raised_by_merchant;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN issue_raised_by_merchant TYPE character varying(255);
+-- Fix varchar(36) columns that aren't UUIDs
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN domain TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN respondent_name TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN respondent_email TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.igm_issue ALTER COLUMN respondent_phone TYPE text;
+
 -- R4: Resolution fields
 ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_short_desc text;
 ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN resolution_long_desc text;
@@ -34,7 +43,7 @@ ALTER TABLE atlas_driver_offer_bpp.igm_issue ADD COLUMN issue_rating text;
 -- Action history table (complainant + respondent actions)
 CREATE TABLE atlas_driver_offer_bpp.igm_issue_action (
     id character varying(36) NOT NULL PRIMARY KEY,
-    igm_issue_id character varying(36) NOT NULL,
+    igm_issue_id text NOT NULL,
     action_type text NOT NULL,
     action text NOT NULL,
     short_desc text,

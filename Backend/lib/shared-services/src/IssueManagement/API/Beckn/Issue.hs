@@ -64,6 +64,7 @@ issue merchantId req issueHandle identifier isValueAddNP = do
           dIssueRes <- DIssue.handler validatedIssueReq issueHandle
           let (domainId, domainUri) = if identifier == DRIVER then (bap_id, bap_uri) else (bpp_id, bpp_uri)
           becknOnIssueReq <- IACL.buildOnIssueReq transaction_id message_id domainId domainUri dIssueRes
+          logInfo $ "IGM /on_issue response body: " <> encodeToText becknOnIssueReq
           domainBaseUrl <- parseBaseUrl domainUri
           void $ CallAPI.callOnIssue becknOnIssueReq domainBaseUrl dIssueRes.merchant
   pure Utils.ack
@@ -94,6 +95,7 @@ onIssue _merchantId req _ _identifier = do
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onIssueReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onIssueReq <- OIACL.buildOnIssueReq req
+    logInfo $ "IGM /on_issue parsed: issueId=" <> onIssueReq.id <> " respondentAction=" <> fromMaybe "N/A" onIssueReq.respondentAction
     Redis.whenWithLockRedis (onIssueLockKey message_id) 60 $ do
       issue' <- DOnIssue.validateRequest onIssueReq
       fork "IGM on_issue processing" $ do
@@ -139,6 +141,7 @@ issueStatus _merchantId req issueHandle identifier isValueAddNP = do
           dIssueStatusRes <- DIssueStatus.handler validatedIssueStatusReq isValueAddNP
           let (domainId, domainUri) = if identifier == DRIVER then (bap_id, bap_uri) else (bpp_id, bpp_uri)
           becknOnIssueReq <- ISACL.buildOnIssueStatusReq transaction_id message_id domainId domainUri dIssueStatusRes
+          logInfo $ "IGM /on_issue_status response body: " <> encodeToText becknOnIssueReq
           domainBaseUrl <- parseBaseUrl domainUri
           void $ CallAPI.callOnIssueStatus becknOnIssueReq domainBaseUrl dIssueStatusRes.merchant
   return Utils.ack
