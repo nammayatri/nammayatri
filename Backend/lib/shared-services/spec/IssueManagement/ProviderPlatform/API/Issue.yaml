@@ -72,6 +72,9 @@ imports:
   # Operator-side chat upload — reuses the consumer-side /v2/issue/upload contract.
   IssueMediaUploadReq: IssueManagement.Common.UI.Issue
   IssueMediaUploadRes: IssueManagement.Common.UI.Issue
+  # IGM Dashboard types
+  IgmIssueData: IssueManagement.Common.Dashboard.Issue
+  IgmRespondentActionPayload: IssueManagement.Common.Dashboard.Issue
 
 module: Issue
 
@@ -100,6 +103,7 @@ apis:
         - descriptionSearch: Text
         - fromDate: UTCTime
         - toDate: UTCTime
+        - source: Text
       response:
         type: IssueReportListResponse
       migrate:
@@ -477,6 +481,26 @@ apis:
         issueId: Id IssueReport
       request:
         type: MarkChatReadByUserReq
+      response:
+        type: APISuccess
+
+  # IGM Dashboard APIs
+  - GET: # IGMIssueTrailAPI
+      endpoint: /igm/{issueReportId}/trail
+      name: GetIGMIssueTrail
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      response:
+        type: IgmIssueData
+  - POST: # IGMIssueTriggerActionUpdateAPI
+      endpoint: /igm/{issueReportId}/actionUpdate
+      name: PostIGMIssueTriggerActionUpdate
+      auth: ApiAuthV2
+      params:
+        issueReportId: Id IssueReport
+      request:
+        type: IgmRespondentActionPayload
       response:
         type: APISuccess
 

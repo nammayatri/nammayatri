@@ -66,6 +66,7 @@ library
       IssueManagement.Domain.Types.Issue.IssueTranslation
       IssueManagement.Domain.Types.MediaFile
       IssueManagement.SharedLogic.CallAPI
+      IssueManagement.SharedLogic.IGM
       IssueManagement.Storage.Beam.Issue.ChatMessage
       IssueManagement.Storage.Beam.Issue.Comment
       IssueManagement.Storage.Beam.Issue.IGMConfig

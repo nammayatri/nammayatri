@@ -37,6 +37,9 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     getIssueChatMessages,
     postIssueChatRead,
     postIssueChatUpload,
+    -- IGM Dashboard APIs
+    getIGMIssueTrail,
+    postIGMIssueTriggerActionUpdate,
   )
 where
 
@@ -85,8 +88,9 @@ getIssueList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueReportListResponse
-getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate =
+getIssueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate _mbSource =
   DIssue.issueList (Kernel.Types.Id.ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (Kernel.Types.Id.cast <$> mbCategoryId) mbCategoryName mbAssignee mbCountryCode mbMobileNumber mbRideShortId mbDescriptionSearch mbFromDate mbToDate dashboardIssueHandle Common.DRIVER
 
 getIssueInfo ::
@@ -402,3 +406,20 @@ postIssueChatRead (Kernel.Types.Id.ShortId merchantShortId) city issueReportId r
     (Kernel.Types.Id.cast issueReportId)
     dashboardIssueHandle
     req
+
+getIGMIssueTrail ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IgmIssueData
+getIGMIssueTrail (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId =
+  DIssue.igmIssueGetTrail (Kernel.Types.Id.ShortId merchantShortId) opCity (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle
+
+postIGMIssueTriggerActionUpdate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport ->
+  IssueManagement.Common.Dashboard.Issue.IgmRespondentActionPayload ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIGMIssueTriggerActionUpdate (Kernel.Types.Id.ShortId merchantShortId) opCity issueReportId req =
+  DIssue.igmIssueTriggerActionUpdate (Kernel.Types.Id.ShortId merchantShortId) opCity (Kernel.Types.Id.cast issueReportId) dashboardIssueHandle req
