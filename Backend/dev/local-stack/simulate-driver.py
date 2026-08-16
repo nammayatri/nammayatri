@@ -57,24 +57,39 @@ CC = "+213"
 # previous session.
 RECENT_RIDE_S = 1800
 
-# The three rows the passenger app sells, and the phone number that plays each.
+# The three rows the passenger app sells, and the drivers who play them.
 # AUTO_RICKSHAW is excluded on purpose: it is two thirds of the upstream seed
 # fleet and there are no auto-rickshaws in Algeria, so the app hides it.
 #
-# 0551234567 already exists as a SEDAN and is left that way on purpose: he is
-# the driver every earlier probe was proven against, and setup.sh's smoke test
-# recreates him on login. The other two are new.
+# TWO PER ROW, not one. With a single driver per variant, that whole category
+# went dead the moment he picked up a ride -- a rider choosing Economy got the
+# full 300-second wait and no error. It also meant screen 10 could only ever
+# show a list of one offer, so the screen the client actually chose had never
+# been exercised as designed.
+#
+# 0551234567 keeps his SEDAN on purpose: he is the driver every earlier probe
+# was proven against, and setup.sh's smoke test recreates him on login.
+#
+# The names matter more than they look. The backend calls a driver it created
+# from a phone number "Chauffeur", and three identical Chauffeurs on a demo
+# reads as a test rig rather than a service.
 FLEET = [
-    ("0551234567", "SEDAN",     "Renault", "Symbol", "White", "DZ-PROVE-01"),
-    ("0551234568", "HATCHBACK", "Renault", "Clio",   "Grey",  "16-114-322"),
-    ("0551234569", "SUV",       "Hyundai", "Tucson", "Black", "16-114-323"),
+    ("0551234567", "SEDAN",     "Karim",   "Renault", "Symbol",  "White", "DZ-PROVE-01"),
+    ("0551234568", "HATCHBACK", "Yacine",  "Renault", "Clio",    "Grey",  "16-114-322"),
+    ("0551234569", "SUV",       "Sofiane", "Hyundai", "Tucson",  "Black", "16-114-323"),
+    ("0551234570", "HATCHBACK", "Bilal",   "Peugeot", "208",     "White", "16-114-324"),
+    ("0551234571", "SEDAN",     "Mehdi",   "Skoda",   "Octavia", "Black", "16-114-325"),
+    ("0551234572", "SUV",       "Amine",   "Dacia",   "Duster",  "Grey",  "16-114-326"),
 ]
 
 # Where idle drivers wait: scattered around central Algiers, each several
 # hundred metres from the usual pickup rather than on top of it. Parked exactly
 # on the pickup, the approach leg is zero points and screen 11 has nothing to
 # show -- the driver is simply already there.
-BASE = [(36.7601, 3.0530), (36.7495, 3.0668), (36.7573, 3.0641)]
+BASE = [
+    (36.7601, 3.0530), (36.7495, 3.0668), (36.7573, 3.0641),
+    (36.7548, 3.0498), (36.7629, 3.0612), (36.7472, 3.0575),
+]
 
 _last_ts = {}
 
@@ -192,7 +207,7 @@ def seed():
     """
     say("seeding the Algerian test fleet")
     mid = merchant_uuid()
-    for i, (num, variant, make, model, colour, plate) in enumerate(FLEET):
+    for i, (num, variant, name, make, model, colour, plate) in enumerate(FLEET):
         did = driver_id(num)
         if not did:
             say(f"{num}: creating (unknown number self-registers a driver)", 1)
@@ -228,14 +243,15 @@ def seed():
                           color='{colour}', registration_no='{plate}',
                           updated_at=now()
                     WHERE driver_id='{did}';""")
-        pg(f"""UPDATE atlas_driver_offer_bpp.person SET first_name='Chauffeur'
-                WHERE id='{did}' AND (first_name IS NULL OR first_name='Driver');""")
+        # Named, because "Chauffeur" three times over reads as a test rig.
+        pg(f"""UPDATE atlas_driver_offer_bpp.person SET first_name='{name}'
+                WHERE id='{did}';""")
 
         # Position via the API, never SQL: driver_location also carries a
         # PostGIS `point` and the pool tests THAT, not lat/lon.
         tok, _ = login(num)
         post_position(tok, BASE[i % len(BASE)])
-        say(f"{num}: {variant} {make} {model} {colour} [{plate}]", 2)
+        say(f"{num}: {name} — {variant} {make} {model} {colour} [{plate}]", 2)
 
     say("fleet ready")
     status()
@@ -364,6 +380,9 @@ def my_active_ride(token):
 def accept(token, req):
     """Offer to take this request. Does NOT create a ride -- the rider does."""
     sid = req.get("searchRequestId") or req.get("id")
+    # Recorded before the call, not after: if the offer succeeds and the reply
+    # is lost, offering again is what produces FOUND_ACTIVE_QUOTES.
+    _offered.add((token, sid))
     say(f"offering on {sid[:8]} -- {req.get('distance', 0)/1000:.1f} km, "
         f"base {req.get('baseFare')} DZD", 1)
     # Omitting offeredFare accepts at base fare. It is the EXTRA on top, capped
@@ -430,29 +449,34 @@ def offline(number, token):
     call("POST", f"{DRIVER_API}/ui/driver/setActivity?active=false", None, token)
 
 
+# Requests this driver has already answered, either way. Keyed by token so two
+# drivers can each answer the same request -- which is the point of two per row.
 _declined = set()
+_offered = set()
 
 
 def poll(token):
-    """Next request this driver has not already turned down.
+    """Next request this driver has not already answered.
 
-    A rejected request KEEPS APPEARING in nearbyRideRequest. Without this
-    filter the simulator declines a request and then immediately tries to
-    accept the very same one, which fails with QUOTE_ALREADY_REJECTED.
+    A request KEEPS APPEARING in nearbyRideRequest after it has been answered --
+    both when declined and when offered on. Without this filter the loop
+    declines a request and immediately tries to accept the same one
+    (QUOTE_ALREADY_REJECTED), or offers on it again every two seconds
+    (FOUND_ACTIVE_QUOTES) for the full five minutes of the search.
     """
     r, code, _ = call("GET", f"{DRIVER_API}/ui/driver/nearbyRideRequest", None, token)
     if code != 200 or not r:
         return None
     for req in r.get("searchRequestsForDriver", []):
         sid = req.get("searchRequestId") or req.get("id")
-        if sid not in _declined:
+        if (token, sid) not in _declined and (token, sid) not in _offered:
             return req
     return None
 
 
 def decline(token, req, label):
     sid = req.get("searchRequestId") or req.get("id")
-    _declined.add(sid)
+    _declined.add((token, sid))
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/searchRequest/quote/respond",
                         {"searchRequestId": sid, "response": "Reject"}, token)
     say(f"{label}: declined {sid[:8]} on purpose ({code})", 1)
