@@ -161,3 +161,13 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN client_bundle_version text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN has_applicable_pass boolean ;
+
+
+------- SQL updates -------
+

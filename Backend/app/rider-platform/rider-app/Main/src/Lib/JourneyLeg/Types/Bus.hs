@@ -11,12 +11,14 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RecentLocation as DRecentLocation
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Lib.JourneyModule.Types as JL
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 
 data BusLegRequestSearchData = BusLegRequestSearchData
   { quantity :: Int,
@@ -30,7 +32,8 @@ data BusLegRequestSearchData = BusLegRequestSearchData
     upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m (),
     blacklistedServiceTiers :: [Spec.ServiceTierType],
     blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
-    isSingleMode :: Bool
+    isSingleMode :: Bool,
+    mbHasPasses :: Maybe Bool
   }
 
 data BusLegRequestConfirmData = BusLegRequestConfirmData
@@ -46,7 +49,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     isSingleMode :: Maybe Bool,
     mbIsMockPayment :: Maybe Bool,
     mbTripId :: Maybe Text,
-    mbVehicleNumber :: Maybe Text
+    mbVehicleNumber :: Maybe Text,
+    mbPurchasedPassPaymentId :: Maybe (Id DPPP.PurchasedPassPayment)
   }
 
 data BusLegRequestUpdateData = BusLegRequestUpdateData
@@ -59,7 +63,8 @@ data BusLegRequestCancelData = BusLegRequestCancelData
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
     journeyLeg :: DJourneyLeg.JourneyLeg,
-    journeyLegs :: [DJourneyLeg.JourneyLeg]
+    journeyLegs :: [DJourneyLeg.JourneyLeg],
+    passCandidates :: Maybe [FRFSPassOverride.PassCandidate]
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData

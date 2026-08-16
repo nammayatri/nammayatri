@@ -1,5 +1,7 @@
 module Storage.CachedQueries.Pass
-  ( findAllByPassTypeIdAndEnabled,
+  ( findById,
+    findAllByPassTypeIdAndEnabled,
+    clearCacheById,
     clearCacheByPassTypeIdAndEnabled,
   )
 where
@@ -12,6 +14,22 @@ import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.PassExtra as QPass
+
+findById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DPass.Pass ->
+  m (Maybe DPass.Pass)
+findById passId = do
+  let cacheKey = makePassIdKey passId
+  IM.withInMemCache [cacheKey] 3600 $ do
+    Hedis.safeGet cacheKey >>= \case
+      Just val -> return val
+      Nothing -> do
+        val <- QPass.findById passId
+        whenJust val $ \v -> do
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.setExp cacheKey v expTime
+        return val
 
 findAllByPassTypeIdAndEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -30,9 +48,15 @@ findAllByPassTypeIdAndEnabled passTypeId enabled = do
           Hedis.setExp cacheKey passes expTime
         pure passes
 
+clearCacheById :: (CacheFlow m r) => Id DPass.Pass -> m ()
+clearCacheById passId = Hedis.del (makePassIdKey passId)
+
 clearCacheByPassTypeIdAndEnabled :: (CacheFlow m r) => Id DPassType.PassType -> Bool -> m ()
 clearCacheByPassTypeIdAndEnabled passTypeId enabled =
   Hedis.del (makePassTypeIdAndEnabledKey passTypeId enabled)
+
+makePassIdKey :: Id DPass.Pass -> Text
+makePassIdKey passId = "CachedQueries:Pass:Id-" <> passId.getId
 
 makePassTypeIdAndEnabledKey :: Id DPassType.PassType -> Bool -> Text
 makePassTypeIdAndEnabledKey passTypeId enabled =

@@ -17,11 +17,13 @@ import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.VehicleSeatLayoutMapping
+import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
@@ -79,6 +81,9 @@ data FRFSTicketBooking = FRFSTicketBooking
     ondcOnInitReceivedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     osBuildVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     osType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    overriddenAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overrideAppliedEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    overrideType :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -117,4 +122,10 @@ data FRFSTicketBooking = FRFSTicketBooking
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data OverrideType = PassOverride | OtherOverride deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''OverrideType)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''OverrideType)

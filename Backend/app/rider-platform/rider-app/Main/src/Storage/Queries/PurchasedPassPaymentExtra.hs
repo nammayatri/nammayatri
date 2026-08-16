@@ -127,3 +127,35 @@ updateStatusByPurchasedPassIdAndStatusAndStartDate newStatus purchasedPassId old
           Se.Is Beam.startDate $ Se.Eq startDate
         ]
     ]
+
+-- | Mirror a spend into the DB, but only ever downwards.
+--
+-- Redis is the source of truth for the trip count; this column is a mirror that only matters if
+-- the key is ever lost, at which point seededRemainingTrips reseeds from it. The Redis DECRBY is
+-- atomic, but this write is not part of it, so two concurrent spends can decrement Redis to 10
+-- then 9 and still land these writes in the reverse order, leaving the mirror at 10. A reseed
+-- would then hand back a trip nobody paid for.
+--
+-- The GreaterThan predicate makes the write a no-op unless it lowers the stored value, so a
+-- reordered pair converges on the smaller one. Refunds deliberately raise the count and must keep
+-- using the plain setter.
+--
+-- The null arm is not optional: the column ships nullable with no backfill, and NULL > n is NULL
+-- in SQL, so without it the very first spend on every pass would silently fail to mirror.
+updateAvailableTripCountIfLowerById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Int ->
+  Id DPurchasedPassPayment.PurchasedPassPayment ->
+  m ()
+updateAvailableTripCountIfLowerById availableTripCount id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.availableTripCount (Just availableTripCount), Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq id.getId,
+          Se.Or
+            [ Se.Is Beam.availableTripCount $ Se.Eq Nothing,
+              Se.Is Beam.availableTripCount $ Se.GreaterThan (Just availableTripCount)
+            ]
+        ]
+    ]

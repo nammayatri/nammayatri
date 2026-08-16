@@ -49,6 +49,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -94,6 +95,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
+  -- No trip release here: the trip is debited in OnConfirm once the booking is CONFIRMED, and
+  -- this guard excludes CONFIRMED, so nothing has been spent for anything reaching this line.
   when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
@@ -125,6 +128,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         if addUTCTime 5 booking.validTill < now
           then do
             logInfo $ "booking is expired in confirming: " <> show booking
+            -- Still CONFIRMING, so no trip was ever debited (OnConfirm does that at CONFIRMED).
             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
             buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
@@ -145,6 +149,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         if paymentBookingStatus == FRFSTicketService.FAILURE
           then do
             logInfo $ "payment failed in approved: " <> show booking
+            -- APPROVED, so pre-confirm: nothing debited, nothing to give back.
             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
@@ -235,7 +240,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              Right _ ->
+                              Right _ -> do
+                                void $ withTryCatch "frfsStatus:confirmPassCoveredLegs" (FRFSPassConfirm.confirmPassCoveredLegsOfJourney quoteUpdatedBooking)
                                 case integratedBppConfig.providerConfig of
                                   DIBC.ONDC _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                                   _ -> do
@@ -508,6 +514,9 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,
+        overrideType = booking.overrideType,
+        overriddenTotalPrice = mkPriceAPIEntity . Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
+        appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
         city = merchantOperatingCity.city,
         updatedAt = booking.updatedAt,
         createdAt = booking.createdAt,
