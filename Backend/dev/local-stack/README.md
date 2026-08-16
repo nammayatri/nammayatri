@@ -810,6 +810,83 @@ stands, exposing it lets anyone create a driver and go online. It needs the same
 treatment `auth-guard` gives the rider side, and `auth-guard` currently matches
 the rider's `/v2/auth` shape rather than `/ui/auth`.
 
+## Playing a driver — `./simulate-driver.py`
+
+```bash
+./simulate-driver.py seed      # one Algerian driver per row the app sells
+./simulate-driver.py status    # who exists, who is online, how fresh
+./simulate-driver.py once      # take the next request, drive it, finish
+./simulate-driver.py daemon    # all three online, keep accepting
+```
+
+Runs **on the server** — `/ui/` is loopback-only, for the reason above.
+
+There is no driver app, and screens 10–13 of the passenger app cannot be built
+or demonstrated without something on the other side. This drives the real
+endpoints against the real backend, so what the app sees is what it will see in
+production. It also **drives the actual OSRM route**, which is the part that
+makes a moving car on the passenger's map testable rather than imagined.
+
+```
+11:51:28 HATCHBACK driver taking a request
+11:51:28   accepting 8003ac71 -- 14.0 km, base 641 DZD
+11:51:32     ride h36FJtMGuf assigned
+11:51:32     to the pickup: 35 points, 4.1 min of real driving
+11:51:36     started with the passenger's code 2240
+11:51:36     to the destination: 329 points, 19.3 min of real driving
+11:51:56     finished -- 641 DZD
+```
+
+`--speed` is a multiplier on real driving time: `1` is real time (19 minutes for
+the standard 14 km test trip), `0` teleports, and the default `8` is roughly
+demo pace. `--decline N` turns down the first N requests so that path can be
+built too. `--variant` restricts `once` to one row.
+
+### The one shortcut, kept visible
+
+It reads the ride OTP out of Postgres. A real driver is told the code by the
+passenger, and `/ui/driver/ride/list` deliberately does not carry it. That is
+the entire difference between this and a real driver, and it is better stated
+than hidden behind something that looks complete.
+
+### Why `seed` exists — dispatch matches on vehicle variant
+
+**A search only ever reaches drivers whose vehicle variant matches the estimate
+the rider picked.** Before this, the only Algerian driver was a `SEDAN`, so of
+the three rows the app sells:
+
+| Row | Variant | Before | After `seed` |
+|---|---|---|---|
+| Economy | `HATCHBACK` | nobody | `0551234568` |
+| Comfort | `SEDAN` | `0551234567` | unchanged |
+| Premium | `SUV` | nobody | `0551234569` |
+
+Two of the three rows spun for the full 300 s and returned nothing, **with no
+error on either side** — it presents exactly like broken dispatch. The remaining
+seeded drivers are upstream's, with `+91`/`+94` numbers that driver auth rejects
+outright (`mobileCountryCode matches regex /^\+213$/`), so nothing can log in as
+them.
+
+`0551234567` is left as a `SEDAN` on purpose: he is the driver every earlier
+probe was proven against, and `setup.sh`'s smoke test recreates him on login.
+
+### Two behaviours worth knowing before changing this
+
+**A declined request keeps appearing.** After `respond` with `Reject`, the same
+search stays in `nearbyRideRequest`. Poll, decline, poll again and you will be
+handed the one you just refused; accepting it then fails with
+`QUOTE_ALREADY_REJECTED`. The simulator remembers what it declined.
+
+**Killing it leaves the drivers online.** `finally` does not run on `SIGTERM`,
+so `timeout`, `docker stop` or a systemd restart used to leave three drivers
+marked online whose positions then went stale — which is the silent
+zero-estimates failure in [Driver freshness](#driver-freshness--drivers-keepalivesh)
+all over again. `SIGTERM` and `SIGHUP` are now turned into the interrupt the
+cleanup already handles.
+
+While it is running it also heartbeats its own drivers' positions every 30 s,
+so for those three it does `drivers-keepalive.sh`'s job.
+
 ## Backups — `./backup.sh`
 
 ```bash
