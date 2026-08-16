@@ -119,6 +119,19 @@ updateOndcOnInitReceivedById ondcOnInitReceived ondcOnInitReceivedAt id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePassOverrideById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.OverrideType -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updatePassOverrideById overrideType overriddenAmount overrideAppliedEntityId id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.overrideType overrideType,
+      Se.Set Beam.overriddenAmount overriddenAmount,
+      Se.Set Beam.overrideAppliedEntityId overrideAppliedEntityId,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePayoutOrderId cashbackPayoutOrderId id = do
   _now <- getCurrentTime
@@ -251,6 +264,9 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.ondcOnInitReceivedAt ondcOnInitReceivedAt,
       Se.Set Beam.osBuildVersion osBuildVersion,
       Se.Set Beam.osType osType,
+      Se.Set Beam.overriddenAmount overriddenAmount,
+      Se.Set Beam.overrideAppliedEntityId overrideAppliedEntityId,
+      Se.Set Beam.overrideType overrideType,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.payerVpa payerVpa,

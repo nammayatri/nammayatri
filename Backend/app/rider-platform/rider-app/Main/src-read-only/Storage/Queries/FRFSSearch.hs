@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.fromStationName fromStationName,
       Se.Set Beam.fromStationLat ((.lat) <$> fromStationPoint),
       Se.Set Beam.fromStationLon ((.lon) <$> fromStationPoint),
+      Se.Set Beam.hasApplicablePass hasApplicablePass,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.isSingleMode isSingleMode,

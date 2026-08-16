@@ -48,6 +48,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -93,8 +95,9 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
-  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $ do
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+    void $ withTryCatch "frfsStatus:releaseTripOnExpiry" (FRFSPassOverride.releasePassOverrideTripOnFailure booking')
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
@@ -124,6 +127,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           then do
             logInfo $ "booking is expired in confirming: " <> show booking
             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+            void $ withTryCatch "frfsStatus:releaseTripOnConfirmingExpiry" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
             buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
           else do
@@ -143,6 +147,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         if paymentBookingStatus == FRFSTicketService.FAILURE
           then do
             logInfo $ "payment failed in approved: " <> show booking
+            void $ withTryCatch "frfsStatus:releaseTripOnPaymentFail" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
@@ -231,7 +236,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                 void $ QFRFSTicketBooking.updateFailureReasonById (Just err) booking.id
                                 void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
                                 return $ makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-                              Right _ ->
+                              Right _ -> do
+                                void $ withTryCatch "frfsStatus:confirmPassCoveredLegs" (FRFSPassConfirm.confirmPassCoveredLegsOfJourney quoteUpdatedBooking)
                                 case integratedBppConfig.providerConfig of
                                   DIBC.ONDC _ -> return $ makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                                   _ -> do
@@ -478,6 +484,9 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,
+        overrideType = booking.overrideType,
+        overriddenTotalPrice = mkPriceAPIEntity . Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
+        appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
         city = merchantOperatingCity.city,
         updatedAt = booking.updatedAt,
         createdAt = booking.createdAt,
