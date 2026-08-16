@@ -73,13 +73,19 @@ RECENT_RIDE_S = 1800
 # The names matter more than they look. The backend calls a driver it created
 # from a phone number "Chauffeur", and three identical Chauffeurs on a demo
 # reads as a test rig rather than a service.
+#
+# The plates are the real Algerian format, which the earlier invented ones were
+# not. Three groups, left to right: serial, then category + year of first
+# registration, then the wilaya. `04217 118 16` is a passenger car (1) first
+# registered in 2018, in Alger (16). The wilaya is LAST -- putting it first is
+# what gave the game away on a demo.
 FLEET = [
-    ("0551234567", "SEDAN",     "Karim",   "Renault", "Symbol",  "White", "DZ-PROVE-01"),
-    ("0551234568", "HATCHBACK", "Yacine",  "Renault", "Clio",    "Grey",  "16-114-322"),
-    ("0551234569", "SUV",       "Sofiane", "Hyundai", "Tucson",  "Black", "16-114-323"),
-    ("0551234570", "HATCHBACK", "Bilal",   "Peugeot", "208",     "White", "16-114-324"),
-    ("0551234571", "SEDAN",     "Mehdi",   "Skoda",   "Octavia", "Black", "16-114-325"),
-    ("0551234572", "SUV",       "Amine",   "Dacia",   "Duster",  "Grey",  "16-114-326"),
+    ("0551234567", "SEDAN",     "Karim",   "Renault", "Symbol",  "White", "04217 118 16"),
+    ("0551234568", "HATCHBACK", "Yacine",  "Renault", "Clio",    "Grey",  "00892 121 16"),
+    ("0551234569", "SUV",       "Sofiane", "Hyundai", "Tucson",  "Black", "03145 123 16"),
+    ("0551234570", "HATCHBACK", "Bilal",   "Peugeot", "208",     "White", "01764 120 16"),
+    ("0551234571", "SEDAN",     "Mehdi",   "Skoda",   "Octavia", "Black", "05038 119 16"),
+    ("0551234572", "SUV",       "Amine",   "Dacia",   "Duster",  "Grey",  "02456 122 16"),
 ]
 
 # Where idle drivers wait: scattered around central Algiers, each several
