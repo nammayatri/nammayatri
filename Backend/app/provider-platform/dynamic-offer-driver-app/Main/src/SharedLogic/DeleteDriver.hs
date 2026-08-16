@@ -22,8 +22,10 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarOtpReq as AadhaarReq
 import qualified Storage.Queries.AadhaarOtpVerify as AadhaarOtp
@@ -103,7 +105,8 @@ deleteDriver merchantShortId reqDriverId = do
           QPerson.deleteById person.id
           logTagInfo "deleteFleet : " (show reqDriverId)
         DP.DRIVER -> do
-          driverDeleteCheck <- validateDriver merchant person
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+          driverDeleteCheck <- validateDriver merchant person (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
           when driverDeleteCheck $ throwError $ InvalidRequest "Driver can't be deleted"
           checkDriverActiveAssociations person.id
           -- this function uses tokens from db, so should be called before transaction
@@ -147,9 +150,10 @@ deleteDriver merchantShortId reqDriverId = do
         _ -> pure ()
       return Success
 
-validateDriver :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> DP.Person -> m Bool
-validateDriver merchant driver = do
+validateDriver :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DM.Merchant -> DP.Person -> Bool -> m Bool
+validateDriver merchant driver unifiedRecompute = do
   let personId = driver.id
   ride <- QRide.findOneByDriverId personId
   driverInformation <- QDriverInfo.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  return (merchant.id /= driver.merchantId || driver.role /= DP.DRIVER || isJust ride || driverInformation.enabled)
+  let stillActive = driverInformation.enabled && (not unifiedRecompute || isNothing driverInformation.disabledReasonFlag)
+  return (merchant.id /= driver.merchantId || driver.role /= DP.DRIVER || isJust ride || stillActive)

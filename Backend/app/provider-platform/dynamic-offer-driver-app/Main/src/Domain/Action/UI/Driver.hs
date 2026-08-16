@@ -2473,7 +2473,8 @@ validate (personId, _, merchantOpCityId) phoneNumber = do
     Nothing -> return False
     Just oldPerson -> do
       when (oldPerson.id == person.id) $ throwError $ InvalidRequest "Alternate number already linked"
-      DeleteDriverOnCheck.validateDriver merchant oldPerson
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      DeleteDriverOnCheck.validateDriver merchant oldPerson (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
   logDebug $ "Delete Driver Check" <> show deleteOldPersonCheck
   when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
   smsCfg <- asks (.smsCfg)

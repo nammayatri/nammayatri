@@ -233,9 +233,8 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure driverInfo.disabledReasonFlag
   when (useUnifiedOnboardingFlagsRecompute && effectiveDisabledReasonFlag /= driverInfo.disabledReasonFlag) $
     DIQuery.updateDisabledReasonFlag effectiveDisabledReasonFlag (cast person.id)
-  let explicitlyDisabled = useUnifiedOnboardingFlagsRecompute && isJust effectiveDisabledReasonFlag
-      approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else driverInfo.approved == Just True
-      shouldEnable = not explicitlyDisabled && vehicleGateOk && consentGateOk && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
+  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else driverInfo.approved == Just True
+      shouldEnable = vehicleGateOk && consentGateOk && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
   let justEnabled = shouldEnable && not driverInfo.enabled
   -- The association is read once and reused for both the onboardingAs reconciliation and the
   -- fleet-scoped counter key.
@@ -294,9 +293,8 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
           else if allFleetMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
   when (allFleetMandatoryDocsValid /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= fleetOwnerInfo.approved)) $
     QFOI.updateFleetOwnerVerifiedAndApprovedStatus allFleetMandatoryDocsValid newApproved person.id
-  let explicitlyDisabled = useUnifiedOnboardingFlagsRecompute && isJust fleetOwnerInfo.disabledReasonFlag
-      approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else True
-      newEnabled = not explicitlyDisabled && allFleetEnablingDocsValid && approvedGateOk
+  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else True
+      newEnabled = allFleetEnablingDocsValid && approvedGateOk
   when (newEnabled /= fleetOwnerInfo.enabled) $
     QFOI.updateFleetOwnerEnabledStatus newEnabled person.id
   -- docsVerificationStatus is derived from the same documents as the flags and is written on every

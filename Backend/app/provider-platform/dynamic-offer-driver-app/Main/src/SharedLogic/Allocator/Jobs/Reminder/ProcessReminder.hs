@@ -168,7 +168,7 @@ disableDriverForMandatoryReminder ::
 disableDriverForMandatoryReminder transporterConfig driverId now documentTypeName = do
   driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM (InternalError "DriverInformation not found")
   when driverInfo.enabled $
-    SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Disable (SGuard.TargetDriver driverId) $ do
+    SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire (SGuard.TargetDriver driverId) $ do
       driverPersonForDisable <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       SFlags.markDisabledFlags (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) driverPersonForDisable (SFlags.AdminDisable DDriverInfoDI.DriverDisabled)
       logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
@@ -288,7 +288,7 @@ processReminderByType reminder driver config merchantId merchantOpCityId =
               DMM.VEHICLE_INSPECTION_SMS
               $ do
                 let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
-                SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Deactivate (SGuard.TargetVehicleById rcId) $
+                SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire (SGuard.TargetVehicleById rcId) $
                   invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId "Expired mandatory vehicle inspection reminder"
                 logInfo $ "Invalidated RC " <> reminder.entityId <> " and removed vehicle for driver " <> reminder.driverId.getId <> " due to expired mandatory vehicle inspection reminder"
         DVC.DriverInspectionHub ->
@@ -455,13 +455,13 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
                 then do
                   let rcId = Id @DVRC.VehicleRegistrationCertificate reminder.entityId
                       expiryReason = "Expired mandatory vehicle document reminder"
-                  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Deactivate (SGuard.TargetVehicleById rcId) $ do
+                  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire (SGuard.TargetVehicleById rcId) $ do
                     invalidateRCAndRemoveVehicleForReminder rcId reminder.driverId merchantOpCityId expiryReason
                     invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId expiryReason
                     logInfo $ "Invalidated RC " <> reminder.entityId <> " (type: " <> documentTypeName <> ") for driver " <> reminder.driverId.getId <> " due to expiry"
                 else do
                   let target = if SDO.isFleetRole driver.role then SGuard.TargetFleetOwner reminder.driverId else SGuard.TargetDriver reminder.driverId
-                  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Reject target $ do
+                  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire target $ do
                     invalidateExpiredDocument reminder.documentType reminder.entityId merchantId reminder.driverId "Document expired"
                     logInfo $ "Invalidated document " <> reminder.entityId <> " (type: " <> documentTypeName <> ") due to expiry"
             else do

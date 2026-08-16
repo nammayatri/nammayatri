@@ -4625,15 +4625,11 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverInfo <- QDriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  unless (driverInfo.onboardingAs == Just DI.FLEET_DRIVER) $
-    throwError $ InvalidRequest "Driver is not a FLEET_DRIVER"
-  unless driverInfo.enabled $
-    throwError $ InvalidRequest "Driver is not enabled"
   newFleetOwner <- QPerson.findById (Id req.newFleetOwnerId) >>= fromMaybeM (PersonDoesNotExist req.newFleetOwnerId)
   unless (DCommon.checkFleetOwnerRole newFleetOwner.role) $
     throwError $ InvalidRequest "Target is not a fleet owner"
   DCommon.checkFleetOwnerVerification newFleetOwner.id.getId merchant.fleetOwnerEnabledCheck
-  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver newFleetOwner.id personId) SGuard.Link (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver newFleetOwner.id personId) SGuard.ChangeFleetOwner (SGuard.TargetDriver personId) $ do
     SA.endDriverAssociations moc.id transporterConfig person
     FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) True req.reason (Just merchant.id) (Just moc.id)
   pure Success

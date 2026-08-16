@@ -306,8 +306,9 @@ enableFleetOwnerOnDocsValid :: Id DP.Person -> Flow (Maybe Bool)
 enableFleetOwnerOnDocsValid fleetOwnerId = do
   fleetPersonForEnable <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
   tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
-  SGuard.withOnboardingAction tcForEnable SGuard.None SGuard.Approve (SGuard.TargetFleetOwner fleetOwnerId) $ do
-    SFlags.markDisabledFlags (tcForEnable.unifiedOnboardingFlagsRecompute == Just True) fleetPersonForEnable SFlags.AdminEnable
+  if tcForEnable.unifiedOnboardingFlagsRecompute == Just True
+    then void $ SStatus.runRefreshOnboardingFlagsFleet Nothing (Just tcForEnable) fleetOwnerId
+    else SFlags.markDisabledFlags False fleetPersonForEnable SFlags.AdminEnable
   fmap (.enabled) <$> QFOI.findByPrimaryKey fleetOwnerId
 
 castFleetType :: Common.FleetType -> FOI.FleetType

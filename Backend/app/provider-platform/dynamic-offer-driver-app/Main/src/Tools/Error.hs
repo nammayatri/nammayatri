@@ -952,6 +952,9 @@ data FleetErrors
   | DriverNotActiveWithFleet
   | UserAlreadyExists Text
   | FleetSearchParamNotSupported
+  | DriverNotFleetDriver
+  | DriverHasNoActiveFleetAssociation
+  | DriverAlreadyLinkedWithFleet
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -966,6 +969,9 @@ instance IsBaseError FleetErrors where
     DriverNotActiveWithFleet -> Just "Driver is not active with the fleet"
     UserAlreadyExists userId -> Just $ "User with id " <> show userId <> " already exists"
     FleetSearchParamNotSupported -> Just "Fleet Owner can only search with vehicleNumber, personId, walletId or mobileNumber"
+    DriverNotFleetDriver -> Just "Driver is not onboarded as a FLEET_DRIVER"
+    DriverHasNoActiveFleetAssociation -> Just "Driver has no active fleet association"
+    DriverAlreadyLinkedWithFleet -> Just "Driver is enabled and already linked with an active fleet association"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
@@ -977,6 +983,9 @@ instance IsHTTPError FleetErrors where
     DriverNotActiveWithFleet -> "DRIVER_NOT_ACTIVE_WITH_FLEET"
     UserAlreadyExists _ -> "USER_ALREADY_EXISTS"
     FleetSearchParamNotSupported -> "FLEET_SEARCH_PARAM_NOT_SUPPORTED"
+    DriverNotFleetDriver -> "DRIVER_NOT_FLEET_DRIVER"
+    DriverHasNoActiveFleetAssociation -> "DRIVER_HAS_NO_ACTIVE_FLEET_ASSOCIATION"
+    DriverAlreadyLinkedWithFleet -> "DRIVER_ALREADY_LINKED_WITH_FLEET"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
     VehicleBelongsToAnotherFleet -> E400
@@ -986,6 +995,9 @@ instance IsHTTPError FleetErrors where
     DriverNotActiveWithFleet -> E400
     UserAlreadyExists _ -> E400
     FleetSearchParamNotSupported -> E400
+    DriverNotFleetDriver -> E400
+    DriverHasNoActiveFleetAssociation -> E400
+    DriverAlreadyLinkedWithFleet -> E400
 
 instance IsAPIError FleetErrors
 

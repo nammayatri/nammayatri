@@ -31,6 +31,7 @@ import qualified Storage.Queries.DriverOperatorAssociationExtra as QDOA
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetRCAssociation as FRCA
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
 
@@ -50,6 +51,8 @@ data ActionVerb
   | SetOnboardingAs
   | LinkToFleet
   | View
+  | ChangeFleetOwner
+  | Expire
   deriving (Show, Eq, Generic)
 
 -- | Who the action runs on behalf of. Every post-onboarding action -- one performed on an entity
@@ -128,9 +131,17 @@ checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
       violate "DI-2" "driver is not verified; enablement is derived from documents"
     | driverInfo.approved /= Just True ->
       violate "DI-2" "driver is not approved; enablement is derived from documents"
+    | not driverInfo.enabled ->
+      violate "DI-2" "driver is not enabled; enablement is derived from documents"
     | otherwise -> ok
   Disable
     | isJust driverInfo.disabledReasonFlag -> violate "DI-3" "driver is already disabled"
+    | not driverInfo.verified ->
+      violate "DI-2" "driver is not verified; enablement is derived from documents"
+    | driverInfo.approved /= Just True ->
+      violate "DI-2" "driver is not approved; enablement is derived from documents"
+    | not driverInfo.enabled ->
+      violate "DI-2" "driver is not enabled; enablement is derived from documents"
     | otherwise -> ok
   Link
     | not driverInfo.enabled -> violate "DI-1" "driver is not enabled"
@@ -142,12 +153,28 @@ checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
     | driverInfo.blocked -> violate "D-BLOCKED" "driver is blocked"
     | otherwise -> ok
   Delete
-    | driverInfo.enabled -> violate "D-DELETE" "driver is enabled; disable before deleting"
+    | isNothing driverInfo.disabledReasonFlag -> violate "D-DELETE" "driver is not administratively disabled; disable before deleting"
     | otherwise -> ok
   Unblock
-    | not driverInfo.blocked -> ok
+    | not driverInfo.blocked -> violate "D-BLOCKED" "driver is not blocked"
+    | isNothing driverInfo.blockReasonFlag -> violate "D-BLOCKED" "driver has no block reason flag"
+    | not driverInfo.verified ->
+      violate "DI-2" "driver is not verified; enablement is derived from documents"
+    | driverInfo.approved /= Just True ->
+      violate "DI-2" "driver is not approved; enablement is derived from documents"
+    | not driverInfo.enabled ->
+      violate "DI-2" "driver is not enabled; enablement is derived from documents"
     | otherwise -> ok
-  Block -> ok
+  Block
+    | driverInfo.blocked -> violate "D-BLOCKED" "driver is already blocked"
+    | isJust driverInfo.blockReasonFlag -> violate "D-BLOCKED" "driver already has a block reason flag"
+    | not driverInfo.verified ->
+      violate "DI-2" "driver is not verified; enablement is derived from documents"
+    | driverInfo.approved /= Just True ->
+      violate "DI-2" "driver is not approved; enablement is derived from documents"
+    | not driverInfo.enabled ->
+      violate "DI-2" "driver is not enabled; enablement is derived from documents"
+    | otherwise -> ok
   Unlink -> ok
   Deactivate -> ok
   Add -> ok
@@ -160,6 +187,8 @@ checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
     | driverInfo.enabled -> violate "DI-9" "driver is already enabled; use changeFleetOwner to move an active driver between fleets"
     | otherwise -> ok
   View -> ok
+  ChangeFleetOwner -> ok
+  Expire -> ok
 
 checkVehicle :: ActionVerb -> DVRC.VehicleRegistrationCertificate -> Either GuardViolation ()
 checkVehicle verb rc = case verb of
@@ -185,6 +214,8 @@ checkVehicle verb rc = case verb of
   SetOnboardingAs -> violate "R-UNSUPPORTED" "vehicles have no onboardingAs"
   LinkToFleet -> violate "R-UNSUPPORTED" "vehicles are not linked to fleets by this verb"
   View -> ok
+  ChangeFleetOwner -> violate "R-UNSUPPORTED" "vehicles do not change fleet owner by this verb"
+  Expire -> ok
 
 checkFleet :: ActionVerb -> DFOI.FleetOwnerInformation -> Either GuardViolation ()
 checkFleet verb fleetInfo = case verb of
@@ -195,9 +226,17 @@ checkFleet verb fleetInfo = case verb of
       violate "FI-2" "fleet owner is not verified; enablement is derived from documents"
     | fleetInfo.approved /= Just True ->
       violate "FI-2" "fleet owner is not approved; enablement is derived from documents"
+    | not fleetInfo.enabled ->
+      violate "FI-2" "fleet owner is not enabled; enablement is derived from documents"
     | otherwise -> ok
   Disable
     | isJust fleetInfo.disabledReasonFlag -> violate "FI-1" "fleet owner is already disabled"
+    | not fleetInfo.verified ->
+      violate "FI-2" "fleet owner is not verified; enablement is derived from documents"
+    | fleetInfo.approved /= Just True ->
+      violate "FI-2" "fleet owner is not approved; enablement is derived from documents"
+    | not fleetInfo.enabled ->
+      violate "FI-2" "fleet owner is not enabled; enablement is derived from documents"
     | otherwise -> ok
   Block -> violate "FI-3" "fleet owner block is not supported; use disable"
   Unblock -> violate "FI-3" "fleet owner unblock is not supported; use enable"
@@ -212,6 +251,8 @@ checkFleet verb fleetInfo = case verb of
   SetOnboardingAs -> violate "F-UNSUPPORTED" "fleet owners have no onboardingAs"
   LinkToFleet -> ok
   View -> ok
+  ChangeFleetOwner -> violate "F-UNSUPPORTED" "fleet owners do not change fleet owner"
+  Expire -> ok
 
 -- | The actor is the person performing the action, as opposed to the entity it is performed on.
 --   A fleet owner or driver that is itself disabled or blocked may not mutate the drivers and
@@ -264,7 +305,7 @@ reportViolation verb _target violation =
 --   and a fleet-scoped one across every active driver in the fleet.
 guardNoLiveRide :: OnboardingFlow m r => ActionVerb -> GuardTarget -> m ()
 guardNoLiveRide verb target
-  | verb `notElem` [Unlink, Deactivate, Delete, Disable] = pure ()
+  | verb `notElem` [Unlink, Deactivate, Delete, Disable, Expire] = pure ()
   | otherwise = case target of
     TargetDriver personId -> AC.guardNoLiveRideByDriver personId
     TargetVehicle registrationNo -> do
@@ -328,6 +369,7 @@ driverActorGoverned verb = verb `elem` [Link, Activate, Add]
 
 guardActorAllowed :: OnboardingFlow m r => ActionVerb -> GuardTarget -> Actor -> m ()
 guardActorAllowed verb target actor
+  | verb == ChangeFleetOwner = pure ()
   | not (isActorGovernedTarget target) = pure ()
   | otherwise = case actor of
     None -> pure ()
@@ -369,9 +411,53 @@ guardActorScope verb target actor
       TargetFleetOwner otherFleetOwnerId ->
         unless (otherFleetOwnerId == fleetOwnerId) $ throwError (InvalidFleetOwner otherFleetOwnerId.getId)
 
+guardFleetVehicleRelations :: OnboardingFlow m r => ActionVerb -> GuardTarget -> Actor -> m ()
+guardFleetVehicleRelations verb target actor
+  | verb `notElem` [Link, Unlink] = pure ()
+  | otherwise = case target of
+    TargetVehicleById rcId -> checkVehicleTarget (pure $ Just rcId)
+    TargetVehicle registrationNo -> checkVehicleTarget (fmap (.id) <$> RCQuery.findLastVehicleRCWrapper registrationNo)
+    _ -> pure ()
+  where
+    checkVehicleTarget resolveRcId = case actor of
+      ActorFleetAndDriver fleetOwnerId driverId -> do
+        requireDriverInFleet fleetOwnerId driverId
+        when (verb == Unlink) $ resolveRcId >>= requireRcInFleet fleetOwnerId
+      ActorFleet fleetOwnerId ->
+        when (verb == Unlink) $ resolveRcId >>= requireRcInFleet fleetOwnerId
+      _ -> pure ()
+    requireDriverInFleet fleetOwnerId driverId = do
+      mbAssoc <- QFDA.findByDriverIdAndFleetOwnerId driverId fleetOwnerId.getId True
+      when (isNothing mbAssoc) $ throwError DriverNotPartOfFleet
+    requireRcInFleet fleetOwnerId mbRcId = do
+      now <- getCurrentTime
+      mbAssoc <- maybe (pure Nothing) (\rcId -> FRCA.findLinkedByRCIdAndFleetOwnerId fleetOwnerId rcId now) mbRcId
+      when (isNothing mbAssoc) $ throwError VehicleNotPartOfFleet
+
+guardFleetMembership :: OnboardingFlow m r => ActionVerb -> GuardTarget -> m ()
+guardFleetMembership verb target = case (verb, target) of
+  (ChangeFleetOwner, TargetDriver personId) -> do
+    void $ fleetDriverInfo personId
+    activeAssocs <- QFDA.findAllByDriverIdWithStatus personId
+    when (null activeAssocs) $ throwError DriverHasNoActiveFleetAssociation
+  (ChangeFleetOwner, _) -> throwError $ InvalidRequest "ChangeFleetOwner is only supported for driver targets"
+  (LinkToFleet, TargetDriver personId) -> do
+    driverInfo <- fleetDriverInfo personId
+    mbActiveAssoc <- QFDA.findByDriverId personId True
+    when (isJust mbActiveAssoc && driverInfo.enabled) $ throwError DriverAlreadyLinkedWithFleet
+  _ -> pure ()
+  where
+    fleetDriverInfo personId = do
+      driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      unless (driverInfo.onboardingAs == Just DI.FLEET_DRIVER) $ throwError DriverNotFleetDriver
+      pure driverInfo
+
 guardOnboardingAction :: OnboardingFlow m r => DTC.TransporterConfig -> Actor -> ActionVerb -> GuardTarget -> m ()
 guardOnboardingAction transporterConfig actor verb target = do
-  guardActorScope verb target actor
+  when (isUnified transporterConfig) $ do
+    guardFleetMembership verb target
+    guardFleetVehicleRelations verb target actor
+    guardActorScope verb target actor
   guardNoLiveRide verb target
   guardAssociationAllowed verb target
   guardRcAssociationAllowed transporterConfig verb target
