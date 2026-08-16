@@ -78,7 +78,8 @@ data IssueReportListItem = IssueReportListItem
     assignee :: Maybe Text,
     status :: IssueStatus,
     createdAt :: UTCTime,
-    unreadForOperator :: Maybe Int
+    unreadForOperator :: Maybe Int,
+    becknIssueId :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -90,6 +91,7 @@ data IssueInfoDRes = IssueInfoDRes
   { issueReportId :: Id IssueReport,
     issueReportShortId :: Maybe (ShortId IssueReport),
     personDetail :: Maybe PersonDetail,
+    complainantDetail :: Maybe ComplainantDetail,
     rideId :: Maybe (Id Ride),
     ticketBookingId :: Maybe (Id FRFSTicketBooking),
     chats :: Maybe [ChatDetail],
@@ -101,7 +103,10 @@ data IssueInfoDRes = IssueInfoDRes
     status :: IssueStatus,
     assignee :: Maybe Text,
     createdAt :: UTCTime,
-    unreadForOperator :: Maybe Int
+    unreadForOperator :: Maybe Int,
+    becknIssueId :: Maybe Text,
+    igmIssueDescriptionShort :: Maybe Text,
+    igmIssueDescriptionLong :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -112,6 +117,14 @@ data PersonDetail = PersonDetail
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ComplainantDetail = ComplainantDetail
+  { name :: Maybe Text,
+    phone :: Maybe Text,
+    email :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -830,6 +843,127 @@ data TestApiIntegrationRes = TestApiIntegrationRes
     extractedFields :: Maybe Value,
     rawResponse :: Maybe Value,
     errorMessage :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- IGM Dashboard Types
+
+data IGMIssueDashboardResolveReq = IGMIssueDashboardResolveReq
+  { resolutionShortDesc :: Maybe Text,
+    resolutionLongDesc :: Maybe Text,
+    resolutionActionTriggered :: Maybe Text,
+    resolutionRefundAmount :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets IGMIssueDashboardResolveReq where
+  hideSecrets = identity
+
+data RaiseIssuePayload = RaiseIssuePayload
+  { source :: Text,
+    domain :: Text,
+    category :: Text,
+    subCategory :: Maybe Text,
+    orderId :: Text,
+    shortDesc :: Text,
+    longDesc :: Maybe Text,
+    issueType :: Maybe Text,
+    customerName :: Maybe Text,
+    customerPhone :: Maybe Text,
+    customerEmail :: Maybe Text,
+    transactionId :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets RaiseIssuePayload where
+  hideSecrets = identity
+
+data IgmRespondentActionPayload = IgmRespondentActionPayload
+  { action :: Spec.RespondentActions,
+    shortDesc :: Text,
+    resolution :: Maybe IgmResolutionPayload
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets IgmRespondentActionPayload where
+  hideSecrets = identity
+
+data IgmResolutionPayload = IgmResolutionPayload
+  { shortDesc :: Text,
+    longDesc :: Maybe Text,
+    actionTriggered :: Text,
+    refundAmount :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IgmActionEntry = IgmActionEntry
+  { action :: Text,
+    shortDesc :: Text,
+    updatedAt :: UTCTime,
+    updatedBy :: Maybe IgmActionUpdatedBy,
+    cascadedLevel :: Maybe Int
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IgmActionUpdatedBy = IgmActionUpdatedBy
+  { orgName :: Maybe Text,
+    phone :: Maybe Text,
+    email :: Maybe Text,
+    personName :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IgmResolutionData = IgmResolutionData
+  { shortDesc :: Text,
+    longDesc :: Maybe Text,
+    actionTriggered :: Text,
+    refundAmount :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IgmResolutionProvider = IgmResolutionProvider
+  { resProviderType :: Text,
+    orgName :: Maybe Text,
+    resProviderName :: Maybe Text,
+    resProviderPhone :: Maybe Text,
+    resProviderEmail :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IgmGro = IgmGro
+  { groName :: Text,
+    groPhone :: Text,
+    groEmail :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IgmIssueData = IgmIssueData
+  { igmIssueId :: Maybe Text,
+    source :: Text,
+    igmStatus :: Maybe Text,
+    issueType :: Maybe Text,
+    category :: Maybe Text,
+    subCategory :: Maybe Text,
+    domain :: Maybe Text,
+    complainantActions :: [IgmActionEntry],
+    respondentActions :: [IgmActionEntry],
+    resolution :: Maybe IgmResolutionData,
+    resolutionProvider :: Maybe IgmResolutionProvider,
+    gro :: Maybe IgmGro,
+    expectedResponseTime :: Maybe Text,
+    expectedResolutionTime :: Maybe Text,
+    createdAt :: Maybe UTCTime,
+    updatedAt :: Maybe UTCTime
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -167,7 +167,7 @@ data RespondentActions
   | RESOLVED
   | CASCADED
   | NEED_MORE_INFO
-  deriving (Eq, Generic)
+  deriving (Eq, Generic, ToSchema)
 
 instance Show RespondentActions where
   show PROCESSING = "PROCESSING"
