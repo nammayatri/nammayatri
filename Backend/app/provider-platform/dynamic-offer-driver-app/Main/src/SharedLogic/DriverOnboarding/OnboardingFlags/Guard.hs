@@ -448,7 +448,7 @@ guardFleetMembership verb target = case (verb, target) of
     when (null activeAssocs) $ throwError DriverHasNoActiveFleetAssociation
   (ChangeFleetOwner, _) -> throwError $ InvalidRequest "ChangeFleetOwner is only supported for driver targets"
   (LinkToFleet, TargetDriver personId) -> do
-    driverInfo <- fleetDriverInfo personId
+    driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
     mbActiveAssoc <- QFDA.findByDriverId personId True
     when (isJust mbActiveAssoc && driverInfo.enabled) $ throwError DriverAlreadyLinkedWithFleet
   _ -> pure ()

@@ -129,7 +129,7 @@ Skipped entirely outside unified cities, and skipped when the entity row is miss
 | `Activate` | enabled, not blocked | `DI-1`, `D-BLOCKED` |
 | `Delete` | `disabledReasonFlag` is set — disable first. Uses the flag rather than `enabled`, because in unified cities an admin disable sets only the flag and leaves `enabled` derived | `D-DELETE` |
 | `LinkToFleet` | **not** enabled — use `changeFleetOwner` to move an active driver | `DI-9` |
-| `LinkToFleet` (stage 1) | `onboardingAs = FLEET_DRIVER`; and rejected only if the driver has an FDA with `isActive = True` and `associatedTill > now` **and** is enabled — a disabled driver may still be linked | `DRIVER_NOT_FLEET_DRIVER`, `DRIVER_ALREADY_LINKED_WITH_FLEET` |
+| `LinkToFleet` (stage 1) | rejected only if the driver has an FDA with `isActive = True` and `associatedTill > now` **and** is enabled — a disabled driver may still be linked. No `onboardingAs` requirement: an `INDIVIDUAL` driver can be added to a fleet | `DRIVER_ALREADY_LINKED_WITH_FLEET` |
 | `SetOnboardingAs` | **not** enabled | `DI-8` |
 | `ChangeFleetOwner` (stage 1) | `onboardingAs = FLEET_DRIVER`, and at least one FDA with `associatedTill > now` (`QFDA.findAllByDriverIdWithStatus`). The new owner is not compared against the current one, so re-transferring into the same fleet is a no-op rather than an error | `DRIVER_NOT_FLEET_DRIVER`, `DRIVER_HAS_NO_ACTIVE_FLEET_ASSOCIATION` |
 | `UnlinkDocument` | **not** enabled — invalidate the doc before unlinking documents | `DI-10` |
@@ -146,12 +146,14 @@ The rows marked **(stage 1)** live in `guardFleetMembership`, not `checkDriver`:
 | Source | `guardFleetMembership` | `checkPrecondition` |
 
 The two verbs are mirror images — `LinkToFleet` requires the driver to be free, `ChangeFleetOwner`
-requires them to be attached — and for `ChangeFleetOwner` they are the only checks that run at all.
+requires them to be attached and to already be a `FLEET_DRIVER` — and for `ChangeFleetOwner` they are
+the only checks that run at all.
 
 | Design point | Why |
 |---|---|
 | `LinkToFleet` counts only `isActive = True` rows | keeps consent flows working: `postFleetConsent` fetches its row with `FDV.findByDriverId driverId False`, so the pending association it is about to activate is invisible to the check |
 | `LinkToFleet` skipped for a disabled driver | an unenabled driver can be re-linked without first tearing down a stale association |
+| `LinkToFleet` does not require `onboardingAs = FLEET_DRIVER` | a driver who signed up as `INDIVIDUAL` must still be addable to a fleet; `onboardingAs` is set by the link flow itself, so requiring it beforehand made first-time adds impossible |
 | `ChangeFleetOwner` does not reuse `Link` | `Link` pulls in `guardAssociationAllowed`, which rejects a driver who already has an active fleet association, plus the `Link` preconditions — neither holds for a driver being moved between fleets |
 | Destination validation stays in the handler | new owner must hold a fleet role (`DCommon.checkFleetOwnerRole`) and, when `merchant.fleetOwnerEnabledCheck` is on, be enabled (`DCommon.checkFleetOwnerVerification`) |
 
