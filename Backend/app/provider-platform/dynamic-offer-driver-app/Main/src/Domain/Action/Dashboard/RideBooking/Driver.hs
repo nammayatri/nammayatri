@@ -831,7 +831,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Deactivate (SGuard.TargetDriver personId) $ do
+  SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Unlink (SGuard.TargetDriver personId) $ do
     DomainRC.deactivateCurrentRC transporterConfig personId
     unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
       Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
