@@ -35,6 +35,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationDeleteBankAccount,
     getDriverRegistrationDocumentsCommonList,
     postDriverRegistrationDocumentRegister,
+    postDriverRegistrationGenerateTempAppCode,
   )
 where
 
@@ -96,6 +97,11 @@ getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> City.City -> ApiTok
 getDriverRegistrationDocumentsList merchantShortId opCity apiTokenInfo driverId mbDocType mbRcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationDocumentsList) driverId mbDocType mbRcId
+
+postDriverRegistrationGenerateTempAppCode :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.TempAppCodeRes
+postDriverRegistrationGenerateTempAppCode merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationGenerateTempAppCode) driverId apiTokenInfo.personId.getId
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Common.DocumentType -> Maybe Common.EntityType -> Flow Common.GetDocumentResponse
 getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo entityId mbDocType mbEntityType = do

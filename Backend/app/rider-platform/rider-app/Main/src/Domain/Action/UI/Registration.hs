@@ -127,6 +127,8 @@ import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified System.Environment as SE
+import qualified TempAppCode.Flow as TempAppCode
+import TempAppCode.Types
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.EventTracking as ET
@@ -213,7 +215,7 @@ validateSignatureAuthReq AuthReq {..} =
 
 data GetTokenReq = GetTokenReq
   { appSecretCode :: Text,
-    userMobileNo :: Text
+    userMobileNo :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -613,14 +615,18 @@ mobileSignatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mb
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing Nothing
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
 
-mkUserIdFromTempAppSecretKey :: Text -> Text
-mkUserIdFromTempAppSecretKey appSecretKey = "rider-platform:getUserIdKey:" <> appSecretKey
-
-setUserIdToTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> Id SP.Person -> m ()
-setUserIdToTempAppSecretKey appSecretKey personId = Redis.setExp (mkUserIdFromTempAppSecretKey appSecretKey) (getId personId) 120 -- 2 minutes
-
-getUserIdFromTempAppSecretKey :: (CacheFlow m r, Redis.HedisFlow m r) => Text -> m (Maybe (Id SP.Person))
-getUserIdFromTempAppSecretKey appSecretKey = fmap (\(a :: Text) -> Id a) <$> Redis.safeGet (mkUserIdFromTempAppSecretKey appSecretKey)
+riderTempAppCodeCfg :: TempAppCodeCfg
+riderTempAppCodeCfg =
+  TempAppCodeCfg
+    { keyPrefix = "rider-platform:getUserIdKey:",
+      limitKeyPrefix = "getUserLimitKey:",
+      counterKey = "rider-platform:temp-app-secret-key:",
+      codeStrategy = NumericCounter 10000,
+      ttlSeconds = 120,
+      consumeOnRead = False,
+      maxAttempts = 3,
+      attemptWindowSeconds = 3600
+    }
 
 generateTempAppCode ::
   ( CacheFlow m r,
@@ -630,17 +636,9 @@ generateTempAppCode ::
   Id SP.Person ->
   m TempCodeRes
 generateTempAppCode personId = do
-  tempCode <- show . (`mod` 10000) <$> Redis.incr mkTempAppSecretKey
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
-  case A.toJSON . (.hash) <$> person.mobileNumber of
-    Just (A.String mobileNumberHash) -> do
-      let appSecretKey = mobileNumberHash <> ":" <> tempCode
-      setUserIdToTempAppSecretKey appSecretKey person.id
-      return $ TempCodeRes tempCode
-    _ -> throwError $ InvalidRequest "Mobile number not found"
-  where
-    mkTempAppSecretKey :: Text
-    mkTempAppSecretKey = "rider-platform:temp-app-secret-key:"
+  res <- TempAppCode.generateTempAppCode riderTempAppCodeCfg (getId person.id)
+  return $ TempCodeRes res.code
 
 makeSignature ::
   ( CacheFlow m r,
@@ -685,25 +683,13 @@ getToken ::
   GetTokenReq ->
   m AuthRes
 getToken req = do
-  mobileNumberHashVal <- A.toJSON <$> getDbHash req.userMobileNo
-  case mobileNumberHashVal of
-    A.String mobileNumberHash -> do
-      getTokenAttempts <- Redis.incr $ getUserLimitKey mobileNumberHash
-      when (getTokenAttempts > 3) $ throwError $ InvalidRequest "Too many attempts"
-      Redis.expire (getUserLimitKey mobileNumberHash) 3600 -- 1 hour
-      let appSecretKey = mobileNumberHash <> ":" <> req.appSecretCode
-      mbPersonId <- getUserIdFromTempAppSecretKey appSecretKey
-      case mbPersonId of
-        Just personId -> do
-          person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
-          registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
-          return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked Nothing Nothing
-        Nothing -> do
-          throwError $ GetUserIdError appSecretKey
-    _ -> throwError $ InvalidRequest "Mobile number not found"
-  where
-    getUserLimitKey :: Text -> Text
-    getUserLimitKey userMobileNo = "getUserLimitKey:" <> userMobileNo
+  mbPersonId <- TempAppCode.redeemTempAppCode riderTempAppCodeCfg req.appSecretCode
+  case Id <$> mbPersonId of
+    Just personId -> do
+      person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ personId.getId)
+      registrationToken <- (listToMaybe <$> RegistrationToken.findAllByPersonId personId) >>= fromMaybeM (InternalError $ "Registration token not found for person id: " <> getId personId)
+      return $ AuthRes registrationToken.id 1 SR.PASSWORD (Just registrationToken.token) Nothing person.blocked Nothing Nothing
+    Nothing -> throwError $ GetUserIdError req.appSecretCode
 
 passwordBasedAuth ::
   ( CacheFlow m r,

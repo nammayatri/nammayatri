@@ -90,3 +90,9 @@ INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_
 
 -- {"api":"PostDriverRegistrationDocumentsUpdate","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE' FROM atlas_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'DRIVERS' AND T1.user_action_type = 'UPDATE_DOCUMENT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverRegistrationGenerateTempAppCode","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_GENERATE_TEMP_APP_CODE' ) ON CONFLICT DO NOTHING;

@@ -70,7 +70,6 @@ import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificati
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
@@ -224,22 +223,12 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
         case mbExistingLicense of
           Just driverLicense -> do
             logTagInfo "verifyDL" $ "found existing DL record | dlNumber=" <> maskText driverLicenseNumber <> " | id=" <> driverLicense.id.getId <> " | verificationStatus=" <> show driverLicense.verificationStatus
-            when (driverLicense.driverId /= personId) $
-              if fromMaybe False documentVerificationConfig.allowLicenseTransfer
-                then do
-                  mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
-                  whenJust mDriverDL $ \_ -> throwImageError imageId1 DriverAlreadyLinked
-                else do
-                  -- Fleet-aware duplicate check: single query for both drivers' fleet associations
-                  allAssocs <- QFDA.findAllByDriverIds [personId, driverLicense.driverId]
-                  let existingFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == driverLicense.driverId]
-                      targetFleetIds = [assoc.fleetOwnerId | assoc <- allAssocs, assoc.driverId == personId]
-                      sharedFleets = filter (`elem` existingFleetIds) targetFleetIds
-                  Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-                  unless (null sharedFleets) $ throwError DLAlreadyExistsInFleet
-                  when (driverLicense.verificationStatus == Documents.VALID && not (null existingFleetIds)) $
-                    throwError DLLinkedToAnotherFleet
-                  throwImageError imageId1 DLAlreadyLinked
+            when (driverLicense.driverId /= personId && driverLicense.verificationStatus == Documents.VALID) $ do
+              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+              throwImageError imageId1 DLAlreadyLinked
+            when (driverLicense.driverId /= personId && driverLicense.verificationStatus /= Documents.VALID) $ do
+              otherDriver <- Person.findById driverLicense.driverId >>= fromMaybeM (PersonNotFound driverLicense.driverId.getId)
+              void $ unlinkDriverDocument otherDriver.merchantOperatingCityId DTO.DriverLicense otherDriver
             if fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
               else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated

@@ -51,6 +51,25 @@ apis:
         type: GetDocumentResponse
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DOCUMENT
+  - POST: # GenerateTempAppCodeAPI
+      endpoint: /{driverId}/generateTempAppCode
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: TempAppCodeRes
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/generateTempAppCode
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: TempAppCodeRes
+      migrate:
+        capability: city-operations.onboarding.write
   - POST: # UploadDocumentAPI
       endpoint: /{driverId}/document/upload
       auth: ApiAuthV2
@@ -403,6 +422,9 @@ types:
     - udyamCertificate: [Text]
     - medicalCertificate: [Text]
     - commonDocuments: [CommonDocumentItem]
+  TempAppCodeRes:
+    - code: Text
+    - expiresAt: UTCTime
   GetDocumentResponse:
     - imageBase64: Maybe Text
     - status: Maybe VerificationStatus # TODO(Rupak): status of the document
