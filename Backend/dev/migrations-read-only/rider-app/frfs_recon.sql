@@ -66,3 +66,10 @@ ALTER TABLE atlas_app.frfs_recon ALTER COLUMN destination_station_code DROP NOT 
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN recon_status text ;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN payment_gateway text ;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN entity_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN override_type text ;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN override_applied_entity_id text ;
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN overridden_amount double precision ;

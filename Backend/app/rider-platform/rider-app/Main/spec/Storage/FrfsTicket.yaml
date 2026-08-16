@@ -22,6 +22,7 @@ imports:
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSRoutes: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  OverrideType: Domain.Types.FRFSTicketBooking
   FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
@@ -82,6 +83,7 @@ FRFSSearch:
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     isSingleMode: Maybe Bool
+    hasApplicablePass: Maybe Bool
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
@@ -370,7 +372,15 @@ FRFSQuoteCategory:
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
   derives: "Generic, Show"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <OverrideType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <OverrideType>
+
   fields:
+    overrideType: Maybe OverrideType
+    overriddenAmount: Maybe HighPrecMoney
+    overrideAppliedEntityId: Maybe Text
     id: Id FRFSTicketBooking
     searchId: Id FRFSSearch
     bppOrderId: Maybe Text
@@ -484,6 +494,9 @@ FRFSTicketBooking:
   types:
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
+    OverrideType:
+      enum: "PassOverride, OtherOverride"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
 
   fromTType:
     totalPrice: Kernel.Types.Common.mkPrice currency price|E
@@ -511,6 +524,7 @@ FRFSTicketBooking:
     fromStationLon: double precision
     toStationLat: double precision
     toStationLon: double precision
+    overrideType: text
 
   constraints:
     id: PrimaryKey
@@ -564,6 +578,10 @@ FRFSTicketBooking:
     updateIsFareChangedById:
       kvFunction: updateWithKV
       params: [isFareChanged, updatedAt]
+      where: id
+    updatePassOverrideById:
+      kvFunction: updateWithKV
+      params: [overrideType, overriddenAmount, overrideAppliedEntityId, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV
@@ -862,6 +880,12 @@ FRFSRecon:
     entityType: Maybe EntityType
     reconStatus: Maybe ReconStatus
     paymentGateway: Maybe Text
+    overrideType: Maybe OverrideType
+    overriddenAmount: Maybe HighPrecMoney
+    overrideAppliedEntityId: Maybe Text
+
+  sqlType:
+    overrideType: text
 
   constraints:
     frfsTicketBookingId: SecondaryKey

@@ -39,6 +39,8 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.documentsRequired documentsRequired,
       Se.Set Beam.enable enable,
       Se.Set Beam.formVerificationConfig formVerificationConfig,
+      Se.Set Beam.frfsCancelLimit frfsCancelLimit,
+      Se.Set Beam.frfsPriceOverrideApplicable frfsPriceOverrideApplicable,
       Se.Set Beam.maxFare maxFare,
       Se.Set Beam.maxValidDays maxValidDays,
       Se.Set Beam.maxValidTrips maxValidTrips,
@@ -47,11 +49,13 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.minFare minFare,
       Se.Set Beam.name name,
       Se.Set Beam.order order,
+      Se.Set Beam.overrideBenefitConfigJson overrideBenefitConfigJson,
       Se.Set Beam.maxSwitchCount ((.maxSwitchCount) <$> passConfig),
       Se.Set Beam.passTypeId (Kernel.Types.Id.getId passTypeId),
       Se.Set Beam.pricingTiers pricingTiers,
       Se.Set Beam.purchaseEligibilityJsonLogic purchaseEligibilityJsonLogic,
       Se.Set Beam.redeemEligibilityJsonLogic redeemEligibilityJsonLogic,
+      Se.Set Beam.vehicleType (Kernel.Prelude.Just vehicleType),
       Se.Set Beam.verificationValidity (Kernel.Prelude.Just verificationValidity),
       Se.Set Beam.updatedAt _now
     ]

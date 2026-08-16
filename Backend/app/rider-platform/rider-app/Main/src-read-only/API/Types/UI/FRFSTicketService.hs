@@ -17,7 +17,9 @@ import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.FleetOperatorTripAction
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Pass
 import qualified Domain.Types.Person
+import qualified Domain.Types.PurchasedPassPayment
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RouteDetailsAPI
 import qualified Domain.Types.Seat
@@ -100,7 +102,10 @@ data FRFSBookingPaymentStatusAPI
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
-  { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+  { cancelOverrideEntityId :: Data.Maybe.Maybe Data.Text.Text,
+    cancelOverrideEntityName :: Data.Maybe.Maybe Data.Text.Text,
+    cancelOverrideEntityType :: Data.Maybe.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
+    cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationsUsed :: Data.Maybe.Maybe Kernel.Prelude.Int,
     isCancellable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     maxCancellationCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -183,6 +188,19 @@ data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Mayb
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
+  { availableTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    overriddenTotalPrice :: Kernel.Types.Common.PriceAPIEntity,
+    overriddenUnitPrice :: Kernel.Types.Common.PriceAPIEntity,
+    passId :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
+    passName :: Data.Maybe.Maybe Data.Text.Text,
+    purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
+    unlimitedTripCount :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPaymentAttemptWithRefundsAPI = FRFSPaymentAttemptWithRefundsAPI
   { amount :: Kernel.Types.Common.HighPrecMoney,
     bankErrorCode :: Data.Maybe.Maybe Data.Text.Text,
@@ -214,6 +232,7 @@ data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Tex
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    applicablePasses :: [FRFSPassOptionAPIEntity],
     categories :: [CategoryInfoResponse],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -255,6 +274,7 @@ data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq
     enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
+    purchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int,
     tripId :: Data.Maybe.Maybe Data.Text.Text
   }
@@ -320,6 +340,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     toStationCode :: Data.Text.Text,
+    tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)
@@ -365,6 +386,7 @@ data FRFSTicketAPI = FRFSTicketAPI
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    appliedPurchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     bppOrderId :: Data.Maybe.Maybe Data.Text.Text,
     city :: Kernel.Types.Beckn.Context.City,
@@ -375,6 +397,8 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    overriddenTotalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
+    overrideType :: Data.Maybe.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
