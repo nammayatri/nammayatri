@@ -3105,6 +3105,6 @@ postDriverRegistrationGenerateTempAppCode merchantShortId opCity driverId reques
       case (requestor.role, driver.role) of
         (DP.ADMIN, DP.DRIVER) -> pure True
         (DP.OPERATOR, DP.DRIVER) -> DFOA.checkDriverOperatorAssociation driver.id requestor.id
-        (DP.FLEET_OWNER, DP.DRIVER) -> DFOA.checkFleetDriverAssociation requestor.id driver.id
-        (DP.FLEET_BUSINESS, DP.DRIVER) -> DFOA.checkFleetDriverAssociation requestor.id driver.id
+        (DP.FLEET_OWNER, DP.DRIVER) -> DFOA.checkFleetDriverAssociationIgnoringActive requestor.id driver.id
+        (DP.FLEET_BUSINESS, DP.DRIVER) -> DFOA.checkFleetDriverAssociationIgnoringActive requestor.id driver.id
         _ -> pure False

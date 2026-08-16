@@ -179,7 +179,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
         map mkUnavailableDoc . nub . map (.documentType) $
           filter (\config -> config.vehicleCategory == vehicleCategory && isVehicleSideDocType config.documentCategory config.documentType) driverDocConfigs
       checkDriverDocs mode = checkAllDocsValid mode (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
-      checkVehicleDocs mode category docs = checkAllDocsValid mode Nothing (Right driverDocConfigs) DP.DRIVER docs category makeSelfieAadhaarPanMandatory
+      checkVehicleDocs mode category docs = checkAllDocsValid mode (Just isFleetDriver) (Right driverDocConfigs) DP.DRIVER docs category makeSelfieAadhaarPanMandatory
       vehicleDocsOk mode =
         not useUnifiedOnboardingFlagsRecompute
           || ( case vehicleDocuments of
