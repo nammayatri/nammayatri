@@ -52,6 +52,11 @@ OSRM = "http://localhost:5000"
 OTP = "7891"
 CC = "+213"
 
+# How far back to look for a ride this driver should be driving. Longer than
+# any rider takes to choose an offer; shorter than an abandoned ride from a
+# previous session.
+RECENT_RIDE_S = 1800
+
 # The three rows the passenger app sells, and the phone number that plays each.
 # AUTO_RICKSHAW is excluded on purpose: it is two thirds of the upstream seed
 # fleet and there are no auto-rickshaws in Algeria, so the app hides it.
@@ -154,6 +159,27 @@ def driver_id(number):
     return pg(f"""SELECT id FROM atlas_driver_offer_bpp.person
                    WHERE unencrypted_mobile_number='{number}'
                      AND mobile_country_code='{CC}' AND role='DRIVER';""")
+
+
+def current_position(number):
+    """Where the server believes this driver is, right now.
+
+    Read back rather than remembered: a ride can be picked up on a later pass,
+    minutes after the offer was made, by which point any position this script
+    was holding is stale.
+    """
+    did = driver_id(number)
+    if not did:
+        return None
+    row = pg(f"""SELECT lat || ',' || lon FROM atlas_driver_offer_bpp.driver_location
+                  WHERE driver_id='{did}';""")
+    if not row or "," not in row:
+        return None
+    lat, lon = row.split(",")
+    try:
+        return (float(lat), float(lon))
+    except ValueError:
+        return None
 
 
 def seed():
@@ -305,14 +331,24 @@ def ride_otp(ride_id):
     return pg(f"SELECT otp FROM atlas_driver_offer_bpp.ride WHERE id='{ride_id}';")
 
 
-def my_new_ride(token, since):
-    """The ride we just accepted. Filtered by time because an abandoned ride
-    from a previous session can sit in NEW indefinitely and would be picked up
-    instead."""
+def my_active_ride(token):
+    """A ride this driver is on right now, whenever it was assigned.
+
+    Asked at the top of every loop rather than only just after accepting.
+    **Accepting an offer does not create a ride** -- the rider does that when
+    they tap it, which takes as long as a person takes. Waiting a fixed few
+    seconds after accepting meant walking away from rides that appeared a minute
+    later, leaving a real rider stuck on screen 11 with nobody driving.
+
+    Still time-bounded, because an abandoned ride can sit in NEW indefinitely
+    and there is one from a previous session in this database. Half an hour is
+    far longer than any rider takes to choose and far shorter than a fossil.
+    """
     r, code, _ = call("GET", f"{DRIVER_API}/ui/driver/ride/list?limit=5&offset=0",
                       None, token)
     if code != 200 or not r:
         return None
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=RECENT_RIDE_S)
     for item in r.get("list", []):
         if item.get("status") not in ("NEW", "INPROGRESS"):
             continue
@@ -320,46 +356,39 @@ def my_new_ride(token, since):
             made = datetime.fromisoformat(item["createdAt"].replace("Z", "+00:00"))
         except Exception:
             continue
-        if made >= since - timedelta(seconds=30):
+        if made >= cutoff:
             return item
     return None
 
 
-def run_ride(number, token, req, speed):
-    """Accept through to completion."""
+def accept(token, req):
+    """Offer to take this request. Does NOT create a ride -- the rider does."""
     sid = req.get("searchRequestId") or req.get("id")
-    frm = req.get("fromLocation", {})
-    to = req.get("toLocation", {})
-    say(f"accepting {sid[:8]} -- {req.get('distance', 0)/1000:.1f} km, "
+    say(f"offering on {sid[:8]} -- {req.get('distance', 0)/1000:.1f} km, "
         f"base {req.get('baseFare')} DZD", 1)
-
-    accepted_at = datetime.now(timezone.utc)
     # Omitting offeredFare accepts at base fare. It is the EXTRA on top, capped
     # at driverMaxExtraFee -- sending the total gives EXTRA_FEE_NOT_ALLOWED.
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/searchRequest/quote/respond",
                         {"searchRequestId": sid, "response": "Accept"}, token)
     if code != 200:
-        say(f"accept refused: {raw[:160]}", 2)
+        say(f"offer refused: {raw[:160]}", 2)
         return False
+    say("offered. The ride appears if and when the rider picks it.", 2)
+    return True
 
-    ride = None
-    for _ in range(15):
-        ride = my_new_ride(token, accepted_at)
-        if ride:
-            break
-        time.sleep(1)
-    if not ride:
-        say("accepted, but no ride appeared -- another driver won it", 2)
-        return False
 
+def run_ride(number, token, ride, speed):
+    """Drive a ride that already exists, from wherever the driver is."""
     rid = ride["id"]
     pick = (ride["fromLocation"]["lat"], ride["fromLocation"]["lon"])
     drop = (ride["toLocation"]["lat"], ride["toLocation"]["lon"])
-    say(f"ride {ride.get('shortRideId')} assigned", 2)
+    say(f"driving ride {ride.get('shortRideId')} ({ride.get('status')})", 1)
 
-    here = (req.get("driverLatLong", {}).get("lat", pick[0]),
-            req.get("driverLatLong", {}).get("lon", pick[1]))
-    drive(token, here, pick, speed, "to the pickup")
+    # Where the driver actually is, read back rather than assumed: this ride may
+    # have been picked up on a later pass, long after the offer was made.
+    here = current_position(number) or pick
+    if ride.get("status") == "NEW":
+        drive(token, here, pick, speed, "to the pickup")
 
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/ride/{rid}/arrived/pickup",
                         {"lat": pick[0], "lon": pick[1]}, token)
@@ -449,6 +478,15 @@ def cmd_once(args):
         deadline = time.time() + args.wait
         while time.time() < deadline:
             for num, variant, *_ in wanted:
+                # A ride I already have beats a new request every time. Offering
+                # does not create one -- the rider does, when they tap it -- so
+                # this is the only reliable way to notice it happened.
+                ride = my_active_ride(toks[num])
+                if ride:
+                    say(f"{variant} driver has a ride")
+                    ok = run_ride(num, toks[num], ride, args.speed)
+                    return 0 if ok else 1
+
                 req = poll(toks[num])
                 if not req:
                     continue
@@ -456,12 +494,9 @@ def cmd_once(args):
                     declined += 1
                     decline(toks[num], req, f"{variant} ({declined}/{args.decline})")
                     continue
-                say(f"{variant} driver picked it up")
-                ok = run_ride(num, toks[num], req, args.speed)
-                return 0 if ok else 1
+                accept(toks[num], req)
             time.sleep(2)
-        say("nothing arrived. Was a request published, and did it match "
-            f"{args.variant}?")
+        say("nothing arrived, or nobody chose this driver's offer.")
         return 1
     finally:
         for num in toks:
@@ -481,16 +516,26 @@ def cmd_daemon(args):
     try:
         while True:
             for i, (num, variant, *_) in enumerate(FLEET):
-                req = poll(toks[num])
-                if req:
-                    say(f"{variant} driver taking a request")
-                    if run_ride(num, toks[num], req, args.speed):
+                # Ride first, request second. Offering on a request does not
+                # create a ride: the RIDER creates it by tapping that offer,
+                # which takes as long as a person takes. Anything that assumed
+                # the two happen together walked away from real rides and left
+                # real riders waiting on screen 11.
+                ride = my_active_ride(toks[num])
+                if ride:
+                    say(f"{variant} driver has a ride")
+                    if run_ride(num, toks[num], ride, args.speed):
                         rides += 1
                         say(f"{rides} ride(s) completed")
                     # He may have been left mid-state; put him back on duty.
                     call("POST", f"{DRIVER_API}/ui/driver/setActivity?active=true",
                          None, toks[num])
                     post_position(toks[num], BASE[i % len(BASE)])
+                    continue
+
+                req = poll(toks[num])
+                if req:
+                    accept(toks[num], req)
             # An idle driver whose position goes stale drops out of the pool
             # silently -- searches then return zero estimates with no error.
             if time.time() - last_beat > 30:
