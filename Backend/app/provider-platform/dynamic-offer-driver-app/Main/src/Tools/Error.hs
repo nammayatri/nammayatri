@@ -1340,6 +1340,7 @@ data DriverOnboardingError
   | GstInvalid
   | VehicleServiceTierNotFound Text
   | DocumentUnderManualReview Text
+  | DocumentVerificationInProgress Text
   | SelfieReuploadNotAllowed Text Documents.VerificationStatus
   | DocumentAlreadyValidated Text
   | InvalidWebhookPayload Text Text
@@ -1433,6 +1434,7 @@ instance IsBaseError DriverOnboardingError where
     GstInvalid -> Just "Contact Customer Support, GST certificate has been rejected"
     VehicleServiceTierNotFound serviceTier -> Just $ "Service tier config not found for vehicle service tier \"" <> serviceTier <> "\"."
     DocumentUnderManualReview docName -> Just $ "Your " <> docName <> " is under manual review."
+    DocumentVerificationInProgress docName -> Just $ "Another operation is already in progress for your " <> docName <> ". Please try again."
     SelfieReuploadNotAllowed docName status ->
       let reason = case status of
             Documents.VALID -> "already validated"
@@ -1527,6 +1529,7 @@ instance IsHTTPError DriverOnboardingError where
     GstInvalid -> "GST_INVALID"
     VehicleServiceTierNotFound _ -> "VEHICLE_SERVICE_TIER_NOT_FOUND"
     DocumentUnderManualReview _ -> "DOCUMENT_UNDER_MANUAL_REVIEW"
+    DocumentVerificationInProgress _ -> "DOCUMENT_VERIFICATION_IN_PROGRESS"
     SelfieReuploadNotAllowed _ _ -> "SELFIE_REUPLOAD_NOT_ALLOWED"
     DocumentAlreadyValidated _ -> "DOCUMENT_ALREADY_VALIDATED"
     InvalidWebhookPayload _ _ -> "INVALID_WEBHOOK_PAYLOAD"
@@ -1614,6 +1617,7 @@ instance IsHTTPError DriverOnboardingError where
     GstInvalid -> E400
     VehicleServiceTierNotFound _ -> E500
     DocumentUnderManualReview _ -> E400
+    DocumentVerificationInProgress _ -> E400
     SelfieReuploadNotAllowed _ _ -> E400
     DocumentAlreadyValidated _ -> E400
     InvalidWebhookPayload _ _ -> E400

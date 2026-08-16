@@ -93,6 +93,14 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.luggageCapacity luggageCapacity,
           Se.Set BeamVRC.userPassedVehicleCategory userPassedVehicleCategory,
           Se.Set BeamVRC.mYManufacturing mYManufacturing,
+          Se.Set BeamVRC.documentImageId (documentImageId & (.getId)),
+          Se.Set BeamVRC.documentImageId2 (documentImageId2 & fmap (.getId)),
+          Se.Set BeamVRC.vehicleModelYear vehicleModelYear,
+          Se.Set BeamVRC.dateOfRegistration dateOfRegistration,
+          Se.Set BeamVRC.vehicleDoors vehicleDoors,
+          Se.Set BeamVRC.vehicleSeatBelts vehicleSeatBelts,
+          Se.Set BeamVRC.oxygen oxygen,
+          Se.Set BeamVRC.ventilator ventilator,
           Se.Set BeamVRC.updatedAt updatedAt,
           Se.Set BeamVRC.unencryptedCertificateNumber a.unencryptedCertificateNumber
         ]
