@@ -145,7 +145,10 @@ validateRequest merchantId dIssue@DIssue {..} iHandle = do
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   booking <- iHandle.findByBookingId (Id dIssue.bookingId) >>= fromMaybeM (BookingDoesNotExist dIssue.bookingId)
   merchantOperatingCity <- iHandle.findMOCityById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  issueStatus <- mapStatusAndTypeToStatus issueStatusText issueTypeText
+  issueStatus <-
+    if isValueAddNP
+      then mapStatusAndTypeToStatus issueStatusText issueTypeText
+      else mapOffUsStatus issueStatusText
   issueType <- mapType issueTypeText
   igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
   let bppId = merchant.subscriberId.getShortId
@@ -163,11 +166,18 @@ handler ::
   m IssueRes
 handler ValidatedDIssue {..} iHandle = do
   now <- getCurrentTime
-  case issueStatus of
-    DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
-    DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now iHandle
-    DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
-    DIGM.RESOLVED -> throwError $ InvalidRequest "Issue already resolved"
+  if isValueAddNP
+    then case issueStatus of
+      DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
+      DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now iHandle
+      DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
+      DIGM.RESOLVED -> throwError $ InvalidRequest "Issue already resolved"
+    else case issueStatus of
+      DIGM.OPEN
+        | issueType == DIGM.GRIEVANCE -> escalateBecknIssue ValidatedDIssue {..} now iHandle
+        | otherwise -> openBecknIssue ValidatedDIssue {..} iHandle
+      DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
+      _ -> throwError $ InvalidRequest "Invalid issue status, must be OPEN or CLOSED"
 
 openBecknIssue ::
   ( EsqDBReplicaFlow m r,
@@ -185,6 +195,7 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
     Just existing -> do
       when (existing.issueStatus /= DIGM.OPEN) $
         throwError $ InvalidRequest "Issue already exists with different status"
+      logDebug $ "IGM duplicate issue request (idempotent): id=" <> issueId
       pure $
         IssueRes
           { issueId = issueId,
@@ -276,7 +287,7 @@ openBecknIssueNew dIssue@ValidatedDIssue {..} iHandle = do
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
       description = fromMaybe (maybe "No description provided" (.option) mbOption) descShort
-  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing
+  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just False) Nothing
   void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
   let issueRes =
         IssueRes
@@ -318,7 +329,8 @@ escalateBecknIssue ValidatedDIssue {..} now iHandle = do
     throwError $ InvalidRequest "Issue can only be escalated from OPEN status"
   let updatedIssue =
         igmIssue
-          { DIGM.issueStatus = DIGM.ESCALATED,
+          { DIGM.issueStatus = DIGM.OPEN,
+            DIGM.issueType = DIGM.GRIEVANCE,
             DIGM.updatedAt = fromMaybe now issueUpdatedAt
           }
   QIGM.updateByPrimaryKey updatedIssue
@@ -362,8 +374,8 @@ closeBecknIssue ValidatedDIssue {..} now iHandle = do
   let OffUsIssueDetails {..} = offUsDetails
       (rName, rPhone, rEmail, rpName, rpPhone, rpEmail) = mkResContactFields igmConfig
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
-  when (igmIssue.issueStatus == DIGM.CLOSED || igmIssue.issueStatus == DIGM.RESOLVED) $
-    throwError $ InvalidRequest "Issue is already closed or resolved"
+  when (igmIssue.issueStatus == DIGM.CLOSED) $
+    throwError $ InvalidRequest "Issue is already closed"
   let updatedIssue =
         igmIssue
           { DIGM.issueStatus = DIGM.CLOSED,
@@ -449,6 +461,11 @@ mkResContactFields igmCfg =
     fromMaybe igmCfg.groPhone igmCfg.resolutionProviderPhone,
     fromMaybe igmCfg.groEmail igmCfg.resolutionProviderEmail
   )
+
+mapOffUsStatus :: MonadFlow m => Text -> m DIGM.Status
+mapOffUsStatus "OPEN" = return DIGM.OPEN
+mapOffUsStatus "CLOSED" = return DIGM.CLOSED
+mapOffUsStatus _ = throwError $ InvalidRequest "Invalid issue status, must be OPEN or CLOSED"
 
 mapType :: MonadFlow m => Text -> m DIGM.IssueType
 mapType "ISSUE" = return DIGM.ISSUE

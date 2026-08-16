@@ -84,6 +84,7 @@ validateRequest DIssueStatus {..} iHandle = do
   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   when (issue.issueRaisedByMerchant /= Just bapId) $
     throwError $ InvalidRequest "BAP is not authorized to query this issue"
+  logDebug $ "IGM /issue_status validated: issueId=" <> issueId <> " bapId=" <> bapId
   booking <- iHandle.findByBookingId (Id issue.bookingId) >>= fromMaybeM (BookingDoesNotExist issue.bookingId)
   let merchantId = fromMaybe booking.providerId issue.merchantId
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
