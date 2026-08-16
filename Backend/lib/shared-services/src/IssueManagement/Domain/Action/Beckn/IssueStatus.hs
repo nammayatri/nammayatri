@@ -16,6 +16,7 @@ module IssueManagement.Domain.Action.Beckn.IssueStatus where
 
 import qualified IGM.Enums as Spec
 import IssueManagement.Common
+import IssueManagement.Domain.Action.Beckn.Issue (mkResContactFields)
 import IssueManagement.Domain.Action.UI.Issue
 import IssueManagement.Domain.Types.Issue.IGMConfig
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
@@ -84,6 +85,7 @@ validateRequest DIssueStatus {..} iHandle = do
   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   when (issue.issueRaisedByMerchant /= Just bapId) $
     throwError $ InvalidRequest "BAP is not authorized to query this issue"
+  logDebug $ "IGM /issue_status validated: issueId=" <> issueId <> " bapId=" <> bapId
   booking <- iHandle.findByBookingId (Id issue.bookingId) >>= fromMaybeM (BookingDoesNotExist issue.bookingId)
   let merchantId = fromMaybe booking.providerId issue.merchantId
   merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -106,12 +108,7 @@ handler ValidatedDIssueStatus {..} isValueAddNP = do
       groName = igmConfig.groName
       groPhone = igmConfig.groPhone
       groEmail = igmConfig.groEmail
-      respondentName = fromMaybe igmConfig.groName igmConfig.respondentName
-      respondentPhone = fromMaybe igmConfig.groPhone igmConfig.respondentPhone
-      respondentEmail = fromMaybe igmConfig.groEmail igmConfig.respondentEmail
-      resolutionProviderName = fromMaybe igmConfig.groName igmConfig.resolutionProviderName
-      resolutionProviderPhone = fromMaybe igmConfig.groPhone igmConfig.resolutionProviderPhone
-      resolutionProviderEmail = fromMaybe igmConfig.groEmail igmConfig.resolutionProviderEmail
+      (respondentName, respondentPhone, respondentEmail, resolutionProviderName, resolutionProviderPhone, resolutionProviderEmail) = mkResContactFields igmConfig
       createdAt = UTCTimeRFC3339 issue.createdAt
       updatedAt = UTCTimeRFC3339 issue.updatedAt
       domain = issue.domain
