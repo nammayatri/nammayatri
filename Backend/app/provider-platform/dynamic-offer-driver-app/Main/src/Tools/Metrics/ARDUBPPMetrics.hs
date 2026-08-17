@@ -45,11 +45,11 @@ incrementSearchTryCount merchantId merchantOpCityId vehicleServiceTier searchRep
   version <- asks (.version)
   liftIO $ P.withLabel bmContainer.searchTryCounter (merchantId, merchantOpCityId, vehicleServiceTier, searchRepeatType, version.getDeploymentVersion) P.incCounter
 
-addSearchRequestSentToDriverCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Int -> m ()
-addSearchRequestSentToDriverCount merchantId merchantOpCityId vehicleServiceTier count = do
+addSearchRequestSentToDriverCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Text -> Text -> Int -> m ()
+addSearchRequestSentToDriverCount merchantId merchantOpCityId vehicleServiceTier poolingConfigVersion poolingLogicVersion count = do
   bmContainer <- asks (.bppMetrics)
   version <- asks (.version)
-  liftIO $ P.withLabel bmContainer.searchRequestSentToDriverCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion) (void . (`P.addCounter` fromIntegral count))
+  liftIO $ P.withLabel bmContainer.searchRequestSentToDriverCounter (merchantId, merchantOpCityId, vehicleServiceTier, poolingConfigVersion, poolingLogicVersion, version.getDeploymentVersion) (void . (`P.addCounter` fromIntegral count))
 
 addSearchRequestExpiredCount :: (MonadIO m, HasBPPMetrics m r) => Text -> Text -> Text -> Int -> m ()
 addSearchRequestExpiredCount merchantId merchantOpCityId vehicleServiceTier count = do

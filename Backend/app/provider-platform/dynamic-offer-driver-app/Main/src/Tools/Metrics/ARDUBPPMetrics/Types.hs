@@ -41,6 +41,9 @@ type SearchTryCounterMetric = P.Vector P.Label5 P.Counter
 -- Labels: (merchant, city, vehicle_service_tier, version)
 type RideFunnelCounterMetric = P.Vector P.Label4 P.Counter
 
+-- Labels: (merchant, city, vehicle_service_tier, pooling_config_version, pooling_logic_version, version)
+type SentToDriverCounterMetric = P.Vector P.Label6 P.Counter
+
 -- Labels: (merchant, city, vehicle_service_tier, cancellation_source, version)
 type RideCancelledCounterMetric = P.Vector P.Label5 P.Counter
 
@@ -50,7 +53,7 @@ data BPPMetricsContainer = BPPMetricsContainer
     countingDeviation :: CountingDeviationMetric,
     searchRequestCounter :: SearchRequestCounterMetric,
     searchTryCounter :: SearchTryCounterMetric,
-    searchRequestSentToDriverCounter :: RideFunnelCounterMetric,
+    searchRequestSentToDriverCounter :: SentToDriverCounterMetric,
     searchRequestExpiredCounter :: RideFunnelCounterMetric,
     bookingCreatedCounter :: RideFunnelCounterMetric,
     rideCreatedCounter :: RideFunnelCounterMetric,
@@ -70,7 +73,7 @@ registerBPPMetricsContainer searchDurationTimeout = do
   countingDeviation <- registerCountingDeviationMetric
   searchRequestCounter <- registerSearchRequestCounter
   searchTryCounter <- registerSearchTryCounter
-  searchRequestSentToDriverCounter <- registerRideFunnelCounter "BPP_search_request_sent_to_driver_count" "Count of search requests fanned out to drivers, batched per driver"
+  searchRequestSentToDriverCounter <- registerSentToDriverCounter
   searchRequestExpiredCounter <- registerRideFunnelCounter "BPP_search_request_expired_count" "Count of driver search requests retracted without any driver response"
   bookingCreatedCounter <- registerRideFunnelCounter "BPP_booking_created_count" "Count of bookings confirmed on the BPP"
   rideCreatedCounter <- registerRideFunnelCounter "BPP_ride_created_count" "Count of rides created (driver assigned to booking)"
@@ -83,6 +86,11 @@ registerSearchRequestCounter :: IO SearchRequestCounterMetric
 registerSearchRequestCounter =
   P.register . P.vector ("merchant", "city", "version") . P.counter $
     P.Info "BPP_search_request_count" "Count of search requests received by the BPP"
+
+registerSentToDriverCounter :: IO SentToDriverCounterMetric
+registerSentToDriverCounter =
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "pooling_config_version", "pooling_logic_version", "version") . P.counter $
+    P.Info "BPP_search_request_sent_to_driver_count" "Count of search requests fanned out to drivers, batched per driver, labelled by pooling config/logic version"
 
 registerSearchTryCounter :: IO SearchTryCounterMetric
 registerSearchTryCounter =
