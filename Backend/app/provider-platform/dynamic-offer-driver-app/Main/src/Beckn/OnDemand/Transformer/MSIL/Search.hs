@@ -2,7 +2,7 @@
 -- (Beckn.OnDemand.Transformer.Search.buildSearchReqRaw) always sets
 -- DSearchReq.isExplicitlyScheduled to Nothing and is otherwise unaware this module
 -- exists. This module runs only for merchants on the
--- AppEnv.scheduledCategorySignalMerchantIds allowlist (dispatched from
+-- TransporterConfig.enableScheduledCategorySignal city-level gate (dispatched from
 -- API.Beckn.Search.search) and patches that one field, from the incoming ONDC v2.1.0
 -- category descriptor code -- independent of the pickupTime-vs-now/buffer heuristic
 -- Domain.Action.Beckn.Search.getPossibleTripOption uses for every other merchant.

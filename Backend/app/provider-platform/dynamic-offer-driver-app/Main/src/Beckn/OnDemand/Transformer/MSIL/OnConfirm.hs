@@ -5,7 +5,7 @@
 -- push, also untouched) returns Enums.SCHEDULED_RIDE_ASSIGNED for a scheduled
 -- ride's assignment. Neither code appears in the ONDC v2.1.0 fulfillmentState
 -- vocabulary -- see Beckn.OnDemand.Utils.MSIL.FulfillmentState for the actual
--- overrides and why. Gated behind scheduledCategorySignalMerchantIds initially
+-- overrides and why. Gated behind enableScheduledCategorySignal initially
 -- rather than a direct Layer 1 fix, because unlike the other MSIL modules this
 -- touches a value on a call already live in production for every merchant
 -- today -- see doc 25 s8 for the promotion plan once this is confirmed safe

@@ -42,12 +42,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 
 type API =
@@ -111,7 +113,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         msgId <- Utils.getMessageId context
         country <- Utils.getContextCountry context
 
-        -- Pilot: merchants in scheduledCategorySignalMerchantIds (e.g. MSIL) get
+        -- Pilot: cities with enableScheduledCategorySignal (e.g. MSIL) get
         -- isExplicitlyScheduled decided from the incoming category descriptor code,
         -- and the BAP's declared BAP_TERMS.STATIC_TERMS (if any) verified+stored
         -- against its BapMetadata row (so it can be echoed back later, e.g. at
@@ -119,8 +121,8 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         -- Beckn.OnDemand.Transformer.MSIL.Search.msilParser; everyone else's
         -- dSearchReq is passed on exactly as Layer 1 (ACL.buildSearchReqV2) built
         -- it, unchanged.
-        scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-        let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+        let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
         dSearchReq <-
           if isMsilPilotMerchant
             then MSILSearch.msilParser reqV2.searchReqMessage dSearchReq'

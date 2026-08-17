@@ -1065,3 +1065,20 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_upi_payou
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payout_enabled boolean  default true;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_min_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_max_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_scheduled_category_signal boolean  default false;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

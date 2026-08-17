@@ -555,8 +555,7 @@ buildOnConfirmMessage ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasField "scheduledCategorySignalMerchantIds" r [Text]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -572,9 +571,8 @@ buildOnConfirmMessage booking ride driver veh = do
   -- code, and item.category_ids must agree with on_search's SCHEDULED_TRIP/
   -- SCHEDULED_RENTAL for a scheduled booking -- see
   -- Beckn.OnDemand.Utils.MSIL.FulfillmentState and .Category.
-  merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-  let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
       onConfirmMessage =
         if isMsilPilotMerchant
           then
@@ -600,8 +598,7 @@ sendOnConfirmToBAP ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasField "scheduledCategorySignalMerchantIds" r [Text]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -641,8 +638,7 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Hedis.HedisLTSFlowEnv r,
-    HasField "scheduledCategorySignalMerchantIds" r [Text]
+    Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -664,8 +660,8 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   -- booking.isScheduled, not the isScheduledRideAssignment parameter above --
   -- that one only distinguishes which caller/notification path this is, not
   -- whether the underlying booking itself is a scheduled one.
-  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-  let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
       fixMsg msg = msg {Spec.confirmReqMessageOrder = MSILCategory.overrideOrderCategoryIds booking.isScheduled (MSILFulfillmentState.overrideOrderFulfillmentState (Spec.confirmReqMessageOrder msg))}
       rideAssignedMsgV2 =
         if isMsilPilotMerchant
@@ -957,8 +953,7 @@ sendDriverArrivalUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasField "scheduledCategorySignalMerchantIds" r [Text]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -985,15 +980,15 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
-  -- Pilot: merchants in scheduledCategorySignalMerchantIds get this push re-routed
+  -- Pilot: cities with enableScheduledCategorySignal get this push re-routed
   -- through on_status, built in one pass by
   -- Beckn.OnDemand.Transformer.MSIL.OnStatus.msilOnStatusMessageBuild (relabel +
   -- fulfillment.type override), spec-correct per ONDC v2.1.0; everyone else keeps
   -- getting it via on_update, unchanged (doc 25 s11). Do NOT dual-send on both
   -- endpoints -- see doc 23 s10's idempotency risk: the BAP has no way to dedupe
   -- the same event on two APIs.
-  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-  let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
   if isMsilPilotMerchant
     then void $ callOnStatusV2 (MSILOnStatus.msilOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
     else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id

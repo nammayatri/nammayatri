@@ -32,6 +32,7 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RiderDetails as DRD
@@ -40,8 +41,10 @@ import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -53,6 +56,7 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -76,7 +80,7 @@ data DSelectReq = DSelectReq
     -- | BAP-proposed total fare for the Quote-based /select negotiation flow
     -- (ONDC v2.1.0 Pre-Order Bid). Layer 1 (Beckn.ACL.Select) always sets this
     -- to Nothing; only Beckn.OnDemand.Transformer.MSIL.Select.msilParser fills
-    -- it in, from item.price.value, for scheduledCategorySignalMerchantIds
+    -- it in, from item.price.value, for enableScheduledCategorySignal cities
     -- pilot merchants. Deliberately a separate field from customerExtraFee,
     -- which is an additive tip/extra-fee delta used by the Estimate-based
     -- dynamic-offer flow -- this one is the bid's absolute proposed total.
@@ -199,7 +203,7 @@ addNammaTags tagData sReq = do
   QSR.updateSearchTags tags sReq.id
 
 -- MSIL pilot: /select for the new Quote-based (static/scheduled) capability --
--- Dispatched only for merchants on scheduledCategorySignalMerchantIds,
+-- Dispatched only for cities with enableScheduledCategorySignal,
 -- at the API layer (API.Beckn.Select), when the wire item.id resolves to a Quote
 -- instead of an Estimate.
 
@@ -207,8 +211,8 @@ addNammaTags tagData sReq = do
 -- trigger (unlike 'handler' above, which is the Estimate-based/dynamic-offer path).
 -- Driver search for this flow already starts later, at /confirm
 -- (Domain.Action.Beckn.Confirm.handleStaticOfferFlow).
-validateQuoteSelect :: Id DM.Merchant -> Id DQuote.Quote -> Text -> Maybe HighPrecMoney -> Double -> Flow (DM.Merchant, DSR.SearchRequest, DQuote.Quote)
-validateQuoteSelect merchantId quoteId transactionId mbNegotiatedFare negotiationFareTolerancePct = do
+validateQuoteSelect :: Id DM.Merchant -> Id DQuote.Quote -> Text -> Maybe HighPrecMoney -> Flow (DM.Merchant, DSR.SearchRequest, DQuote.Quote)
+validateQuoteSelect merchantId quoteId transactionId mbNegotiatedFare = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
   now <- getCurrentTime
@@ -219,15 +223,18 @@ validateQuoteSelect merchantId quoteId transactionId mbNegotiatedFare negotiatio
     throwError $ InvalidRequest "select transaction_id does not match the search context this quote belongs to"
   quote' <- case mbNegotiatedFare of
     Nothing -> return quote
-    Just negotiatedFare -> applyNegotiatedFare quoteId quote negotiationFareTolerancePct negotiatedFare
+    Just negotiatedFare -> applyNegotiatedFare searchReq.merchantOperatingCityId quoteId quote negotiatedFare
   return (merchant, searchReq, quote')
 
 -- Validate the negotiated fare and update fare policy and quotes according to that
-applyNegotiatedFare :: Id DQuote.Quote -> DQuote.Quote -> Double -> HighPrecMoney -> Flow DQuote.Quote
-applyNegotiatedFare quoteId quote negotiationFareTolerancePct negotiatedFare = do
-  let currentFare = quote.estimatedFare
-      minAcceptable = currentFare * (1 - realToFrac negotiationFareTolerancePct)
-      maxAcceptable = currentFare * (1 + realToFrac negotiationFareTolerancePct)
+applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DQuote.Quote -> HighPrecMoney -> Flow DQuote.Quote
+applyNegotiatedFare merchantOpCityId quoteId quote negotiatedFare = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  let negotiationFareMinTolerancePct = fromMaybe 0.1 transporterConfig.negotiationFareMinTolerancePct
+      negotiationFareMaxTolerancePct = fromMaybe 0.1 transporterConfig.negotiationFareMaxTolerancePct
+      currentFare = quote.estimatedFare
+      minAcceptable = currentFare * (1 - realToFrac negotiationFareMinTolerancePct)
+      maxAcceptable = currentFare * (1 + realToFrac negotiationFareMaxTolerancePct)
   unless (negotiatedFare >= minAcceptable && negotiatedFare <= maxAcceptable) $ -- We can discuss on this comparisation logic
     throwError $ NegotiatedFareNotAcceptable quoteId.getId
   let negotiationDelta = negotiatedFare - currentFare

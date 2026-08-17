@@ -1,7 +1,7 @@
 -- | MSIL-only pilot: Layer 2 of the select-parsing pipeline. Layer 1
 -- (Beckn.ACL.Select.buildSelectReqV2) always sets DSelectReq.negotiatedFare to
 -- Nothing and is otherwise unaware this module exists. This module runs only
--- for merchants on the AppEnv.scheduledCategorySignalMerchantIds allowlist
+-- for merchants on the TransporterConfig.enableScheduledCategorySignal city-level gate
 -- (dispatched from API.Beckn.Select.select) and patches that one field, from
 -- the incoming ONDC v2.1.0 Pre-Order Bid item.price.value -- independent of
 -- the tag/breakup-based customerExtraFee parsing Layer 1 does for every other

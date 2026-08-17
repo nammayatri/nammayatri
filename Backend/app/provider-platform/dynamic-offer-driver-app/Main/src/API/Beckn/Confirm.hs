@@ -38,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
@@ -47,8 +48,10 @@ import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -88,8 +91,9 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       -- against its BapMetadata row, so it's available to echo back on this
       -- same on_confirm response. Pilot-gated, update-only -- see
       -- MSIL.Terms/CachedQueries.BapMetadata.
-      scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-      let isMsilPilotMerchant = transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+      moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+      let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
       when isMsilPilotMerchant $ do
         let incomingOrderTags = reqV2.confirmReqMessage.confirmReqMessageOrder.orderTags
         MSILTerms.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
@@ -135,15 +139,15 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
       bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
       let onConfirmMessage' = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
-      -- Pilot: merchants in scheduledCategorySignalMerchantIds get both the NEW ->
+      -- Pilot: cities with enableScheduledCategorySignal get both the NEW ->
       -- RIDE_CONFIRMED fulfillment-state fix and the BAP_TERMS/BPP_TERMS order-tag
       -- patch (echoing back the BAP's own declared STATIC_TERMS, if known, plus
       -- ours from becknConfig), applied in one pass by
       -- Beckn.OnDemand.Transformer.MSIL.OnConfirm.msilOnConfirmMessageBuild --
       -- unlike on_search/on_select/on_init, which only get BPP_TERMS. Everyone
       -- else's onConfirmMessage is exactly what Layer 1 built, unchanged.
-      scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-      let isMsilPilotMerchant = dConfirmRes.transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = dConfirmRes.booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist dConfirmRes.booking.merchantOperatingCityId.getId)
+      let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
       onConfirmMessage <-
         if isMsilPilotMerchant
           then do

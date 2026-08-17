@@ -39,14 +39,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.Cancel
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
 
@@ -82,9 +84,9 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
     -- against its BapMetadata row, so it can be echoed back later at
     -- on_confirm. Pilot-gated, update-only -- see MSIL.Terms/CachedQueries.BapMetadata.
-    merchant <- QMerch.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
-    scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-    let isMsilPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+    moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+    let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
     when isMsilPilotMerchant $ do
       let incomingOrderTags = reqV2.initReqMessage.confirmReqMessageOrder.orderTags
       MSILTerms.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
