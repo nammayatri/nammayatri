@@ -65,6 +65,11 @@ type API =
              :> QueryParam "serviceName" DPlan.ServiceNames
              :> TokenAuth
              :> Put '[JSON] APISuccess
+           :<|> Capture "planId" (Id DPlan.Plan)
+             :> "fareCategories"
+             :> QueryParam "name" Text
+             :> TokenAuth
+             :> Get '[JSON] DPlan.FareCategoriesRes
            :<|> "services"
              :> TokenAuth
              :> Get '[JSON] DPlan.ServicesEntity
@@ -84,6 +89,7 @@ handler =
     :<|> currentPlan
     :<|> planSubscribe
     :<|> planSelect
+    :<|> planFareCategories
     :<|> planServiceLists
     :<|> subscriptionPurchases
 
@@ -114,6 +120,9 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = wi
 
 planSelect :: Id DPlan.Plan -> Maybe DPlan.ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 planSelect planId mbServiceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DPlan.planSwitch (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (personId, merchantId, merchantOpCityId)
+
+planFareCategories :: Id DPlan.Plan -> Maybe Text -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.FareCategoriesRes
+planFareCategories planId mbPlanName (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId $ DPlan.fareCategories planId mbPlanName (driverId, merchantId, merchantOpCityId)
 
 planServiceLists :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.ServicesEntity
 planServiceLists (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo driverId . DPlan.planServiceLists $ (driverId, merchantId, merchantOpCityId)

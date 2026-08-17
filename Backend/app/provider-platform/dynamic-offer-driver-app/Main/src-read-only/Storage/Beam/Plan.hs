@@ -48,7 +48,8 @@ data PlanT f = PlanT
     subscribedFlagToggleAllowed :: (B.C f Kernel.Prelude.Bool),
     validityInDays :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
-    vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant))
+    vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)),
+    waivesSpecialRideCharges :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool))
   }
   deriving (Generic, B.Beamable)
 

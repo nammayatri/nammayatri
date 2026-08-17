@@ -1363,6 +1363,7 @@ toApiPlatformFeeMethod = \case
   FarePolicyD.None -> Common.None
   FarePolicyD.SlabBased -> Common.SlabBased
   FarePolicyD.NoCharge -> Common.NoCharge
+  FarePolicyD.PlanBased -> Common.PlanBased
 
 fromApiPlatformFeeMethod :: Common.FPV2PlatformFeeMethod -> FarePolicyD.PlatformFeeMethods
 fromApiPlatformFeeMethod = \case
@@ -1371,6 +1372,7 @@ fromApiPlatformFeeMethod = \case
   Common.None -> FarePolicyD.None
   Common.SlabBased -> FarePolicyD.SlabBased
   Common.NoCharge -> FarePolicyD.NoCharge
+  Common.PlanBased -> FarePolicyD.PlanBased
 
 toApiPlatformFeeInfo :: FarePolicyD.PlatformFeeInfo -> Common.FPV2PlatformFeeInfo
 toApiPlatformFeeInfo p =
@@ -1409,6 +1411,8 @@ toApiChargeCategory = \case
   NO_CHARGES -> Common.NO_CHARGES
   BOOKING_DEPOSIT -> Common.BOOKING_DEPOSIT
   SCHEDULED_RIDE_MIN_WALLET_BALANCE -> Common.SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  PURPLE_RIDE_CHARGE -> Common.PURPLE_RIDE_CHARGE
+  AUTO_INSTANT_CHARGE -> Common.AUTO_INSTANT_CHARGE
 
 fromApiChargeCategory :: Common.FPV2ConditionalChargeCategory -> ConditionalChargesCategories
 fromApiChargeCategory = \case
@@ -1417,6 +1421,8 @@ fromApiChargeCategory = \case
   Common.NO_CHARGES -> NO_CHARGES
   Common.BOOKING_DEPOSIT -> BOOKING_DEPOSIT
   Common.SCHEDULED_RIDE_MIN_WALLET_BALANCE -> SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  Common.PURPLE_RIDE_CHARGE -> PURPLE_RIDE_CHARGE
+  Common.AUTO_INSTANT_CHARGE -> AUTO_INSTANT_CHARGE
 
 toApiSearchSource :: DFareProduct.SearchSource -> Common.FPV2SearchSource
 toApiSearchSource = \case

@@ -16,6 +16,8 @@ data ConditionalChargesCategories
   | NYREGULAR_SUBSCRIPTION_CHARGE
   | BOOKING_DEPOSIT
   | SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  | PURPLE_RIDE_CHARGE
+  | AUTO_INSTANT_CHARGE
   deriving (Eq, Ord, ToJSON, FromJSON, ToSchema, Generic, Show, Read)
   deriving (PrettyShow) via Showable ConditionalChargesCategories
 
@@ -28,3 +30,6 @@ isFareComponent = \case
   NYREGULAR_SUBSCRIPTION_CHARGE -> True
   BOOKING_DEPOSIT -> False
   SCHEDULED_RIDE_MIN_WALLET_BALANCE -> False
+  -- Driver-side plan pricing only (shown on the plan screen), never a rider fare line.
+  PURPLE_RIDE_CHARGE -> False
+  AUTO_INSTANT_CHARGE -> False
