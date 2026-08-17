@@ -521,10 +521,17 @@ createRC ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   m VehicleRegistrationCertificate
-createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
+createRC merchantId merchantOperatingCityId input rcconfigs id now incomingFailedRules certificateNumber expiry = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-  (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
-  logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
+  let restrictedFailures = maybeToList $ restrictedVehicleModelFailure rcconfigs.restrictedVehicleModels input.manufacturer input.manufacturerModel
+      failedRules = restrictedFailures <> incomingFailedRules
+  (verificationStatus, reviewRequired, variant, mbVehicleModel) <-
+    if null restrictedFailures
+      then validateRCStatus input rcconfigs now expiry
+      else do
+        logInfo $ "createRC: blocked restricted vehicle model manufacturer=" <> show input.manufacturer <> ", manufacturerModel=" <> show input.manufacturerModel
+        pure (Documents.INVALID, Nothing, Nothing, Nothing)
+  logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel <> ", failedRules=" <> show failedRules
   let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
@@ -582,6 +589,26 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         pendingChallan = Nothing,
         initiatedBy = Nothing
       }
+
+restrictedVehicleModelFailure :: Maybe [Text] -> Maybe Text -> Maybe Text -> Maybe Text
+restrictedVehicleModelFailure mbRestricted manufacturer manufacturerModel =
+  case filter (not . T.null) . map (T.toLower . T.strip) <$> mbRestricted of
+    Nothing -> Nothing
+    Just [] -> Nothing
+    Just needles ->
+      let haystacks =
+            map (T.toLower . T.strip) $
+              catMaybes
+                [ manufacturer,
+                  manufacturerModel,
+                  case (manufacturer, manufacturerModel) of
+                    (Just mfg, Just model) -> Just (mfg <> " " <> model)
+                    _ -> Nothing
+                ]
+          isBlocked = any (\needle -> any (needle `T.isInfixOf`) haystacks) needles
+       in if isBlocked
+            then Just $ "RestrictedVehicleModel: " <> fromMaybe "" (manufacturerModel <|> manufacturer)
+            else Nothing
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
