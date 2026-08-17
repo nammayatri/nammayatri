@@ -60,6 +60,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), CheckDriverPickupProgressJo
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverSupplyMetrics as DSM
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -184,6 +185,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
+  -- scheduled bookings assign a driver hours before the trip - not on-ride supply
+  when (not booking.isScheduled) $ DSM.recordDriverOnRide booking.merchantOperatingCityId ride.driverId
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier)
   QRideD.create rideDetails

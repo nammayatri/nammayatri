@@ -519,6 +519,33 @@ updateOnlineDurationRefreshedAt (Id driverId) onlineDurationRefreshedAt = do
 findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [DriverInformation]
 findAllByDriverIds driverIds = findAllWithKV [Se.Is BeamDI.driverId $ Se.In driverIds]
 
+-- | Per-city count of currently-active drivers, for the driver-supply metrics
+-- publisher. Runs on the read replica; requires the partial index
+-- idx_driver_information_city_active (ddl-migration 0854).
+-- Assumes driver_information stays KV-DISABLED (Postgres-direct writes, per
+-- kv_configs) — if it is ever KV-enabled this count becomes drainer-stale.
+-- Legacy rows with NULL merchant_operating_city_id (pre-city-column) are
+-- deliberately excluded, matching the plain-equality convention of most
+-- per-city queries in this file. Errors PROPAGATE by design: the metrics
+-- publisher catches per-tick and holds the last good gauge value — coercing
+-- to 0 here would fake a supply collapse during a replica blip.
+countOnlineByCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Int
+countOnlineByCity merchantOpCityId = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              ( \driverInfo ->
+                  driverInfo.active B.==?. B.val_ True
+                    B.&&?. driverInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOpCityId)
+              )
+              $ B.all_ (SBC.driverInformation SBC.atlasDB)
+  rows <- either (\err -> throwError $ InternalError $ "countOnlineByCity failed: " <> show err) pure res
+  pure $ fromMaybe 0 (listToMaybe rows)
+
 countEnabledByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m Int
 countEnabledByDriverIds driverIds =
   if null driverIds
