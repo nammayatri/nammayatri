@@ -127,6 +127,8 @@ data FPV2ConditionalChargeCategory
   | NO_CHARGES
   | BOOKING_DEPOSIT
   | SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  | PURPLE_RIDE_CHARGE
+  | AUTO_INSTANT_CHARGE
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -323,6 +325,7 @@ data FPV2PlatformFeeMethod
   | None
   | SlabBased
   | NoCharge
+  | PlanBased
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -362,6 +365,7 @@ data FPV2Policy = FPV2Policy
     platformFeeCgst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     platformFeeSgst :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     platformFeeChargesBy :: Kernel.Prelude.Maybe FPV2PlatformFeeMethod,
+    platformFeeSlabSetId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     conditionalCharges :: Kernel.Prelude.Maybe [FPV2ConditionalCharge],
     driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     negotiationFareMinTolerancePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
