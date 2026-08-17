@@ -16,6 +16,7 @@
 module Domain.Types.Person.Type where
 
 import Data.Aeson
+import qualified Data.Text as T
 import qualified Domain.Types.Entity as Entity
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
@@ -48,8 +49,9 @@ data PersonE e = Person
     language :: Maybe KET.Language,
     secretKey :: Maybe Text,
     is2faEnabled :: Bool,
-    tokenNoHash :: Maybe DbHash,
-    entityId :: Maybe (Id Entity.Entity)
+    tokenNo :: Maybe (EncryptedHashedField e Text),
+    entityId :: Maybe (Id Entity.Entity),
+    vpa :: Maybe (EncryptedHashedField e Text)
   }
   deriving (Generic)
 
@@ -62,11 +64,21 @@ instance EncryptedItem Person where
   encryptItem (Person {..}, salt) = do
     mobileNumber_ <- encryptItem (mobileNumber, salt)
     email_ <- encryptItem $ (,salt) <$> email
-    return Person {mobileNumber = mobileNumber_, email = email_, ..}
+    tokenNo_ <- encryptItem $ (,salt) <$> tokenNo
+    vpa_ <- encryptItem $ (,salt) <$> vpa
+    return Person {mobileNumber = mobileNumber_, email = email_, tokenNo = tokenNo_, vpa = vpa_, ..}
   decryptItem Person {..} = do
     mobileNumber_ <- fst <$> decryptItem mobileNumber
     email_ <- fmap fst <$> decryptItem email
-    return (Person {mobileNumber = mobileNumber_, email = email_, ..}, "")
+    -- Legacy rows have token_no_hash without token_no_encrypted; the "" sentinel
+    -- reconstructed in FromTType' is returned as-is (decrypting "" would fail).
+    tokenNo_ <- case tokenNo of
+      Just t
+        | T.null (unEncrypted (t.encrypted)) -> pure $ Just ""
+        | otherwise -> Just . fst <$> decryptItem t
+      Nothing -> pure Nothing
+    vpa_ <- fmap fst <$> decryptItem vpa
+    return (Person {mobileNumber = mobileNumber_, email = email_, tokenNo = tokenNo_, vpa = vpa_, ..}, "")
 
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson

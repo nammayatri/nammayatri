@@ -238,6 +238,7 @@ buildPersonCreateReq req role = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        entityId = Nothing,
+        vpa = Nothing
       }

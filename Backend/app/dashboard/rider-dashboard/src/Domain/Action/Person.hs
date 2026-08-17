@@ -16,7 +16,7 @@ import qualified "lib-dashboard" Domain.Types.MerchantAccess as DAccess
 import qualified "lib-dashboard" Domain.Types.Person.Type as PT
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "lib-dashboard" Domain.Types.ServerName as DSN
-import Kernel.External.Encryption (encrypt, getDbHash)
+import Kernel.External.Encryption (DbHash, EncKind (..), EncryptedHashedField, encrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.City as City
@@ -42,7 +42,8 @@ data BulkCreatePerson = BulkCreatePerson
     email :: Maybe Text,
     roleName :: Maybe Text,
     entityId :: Maybe Text,
-    tokenNo :: Maybe Text
+    tokenNo :: Maybe Text,
+    vpa :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -86,7 +87,8 @@ sanitizeBulkPerson p =
       email = p.email >>= nonBlank <&> T.toLower,
       roleName = p.roleName >>= nonBlank,
       entityId = p.entityId >>= nonBlank,
-      tokenNo = p.tokenNo >>= nonBlank
+      tokenNo = p.tokenNo >>= nonBlank,
+      vpa = p.vpa >>= nonBlank
     }
 
 requireBulkPersonFields :: MonadFlow m => Int -> BulkCreatePerson -> m ()
@@ -151,22 +153,29 @@ bulkCreate tokenInfo merchantShortId req = do
   -- HashSet dedup: O(N) vs Data.List.nub's O(N^2).
   let phoneKeys = mapMaybe (\p -> (,) <$> p.mobileCountryCode <*> p.mobileNumber) persons
       emails = mapMaybe (.email) persons
+      tokenNos = mapMaybe (.tokenNo) persons
   when (length phoneKeys /= HS.size (HS.fromList phoneKeys)) $
     throwError (InvalidRequest "Duplicate mobileCountryCode+mobileNumber within the batch")
   when (length emails /= HS.size (HS.fromList emails)) $
     throwError (InvalidRequest "Duplicate email within the batch")
+  when (length tokenNos /= HS.size (HS.fromList tokenNos)) $
+    throwError (InvalidRequest "Duplicate tokenNo within the batch")
   -- Per-merchant cross-app lock: keeps validation+write in one critical section across replicas. TTL sized for a 500-row batch.
   let lockKey = "Person:bulkCreate:merchant:" <> merchantShortId.getShortId
       lockTtl = 300
   gotLock <- Redis.withCrossAppRedis $ Redis.tryLockRedis lockKey lockTtl
   unless gotLock $
     throwError (InvalidRequest "Another bulkCreate for this merchant is in progress; retry shortly")
+  -- Encrypt once per row, outside the lock; the conflict IN-query below consumes these hashes.
+  encryptedTokenNos <- forM persons $ \p -> forM p.tokenNo encrypt
+  encryptedVpas <- forM persons $ \p -> forM p.vpa encrypt
   ops <-
     finally
       ( do
           now <- getCurrentTime
-          builtOps <- forM (zip [0 :: Int ..] persons) $ \(idx, p) ->
-            resolvePersonOp merchant rolesByName req.operatingCity now idx p
+          conflicts <- QP.findTokenNoConflictsForMerchant merchant.id $ mapMaybe (fmap (.hash)) encryptedTokenNos
+          builtOps <- forM (zip3 [0 :: Int ..] persons (zip encryptedTokenNos encryptedVpas)) $ \(idx, p, (mbTokenEnc, mbVpaEnc)) ->
+            resolvePersonOp merchant rolesByName conflicts req.operatingCity now idx p mbTokenEnc mbVpaEnc
           let inserts = [(pers, acc) | InsertNewPerson pers acc <- builtOps]
           QP.createPersonsWithAccessAtomic inserts
           forM_ builtOps $ \case
@@ -204,8 +213,19 @@ buildMerchantAccess merchant city now person = do
         operatingCity = city
       }
 
-resolvePersonOp :: (BeamFlow.BeamFlow m r, EncFlow m r) => DMerchant.Merchant -> M.Map Text DRole.Role -> City.City -> UTCTime -> Int -> BulkCreatePerson -> m PersonOp
-resolvePersonOp merchant rolesByName reqCity now idx p = do
+resolvePersonOp ::
+  (BeamFlow.BeamFlow m r, EncFlow m r) =>
+  DMerchant.Merchant ->
+  M.Map Text DRole.Role ->
+  [(DbHash, Id PT.Person)] ->
+  City.City ->
+  UTCTime ->
+  Int ->
+  BulkCreatePerson ->
+  Maybe (EncryptedHashedField 'AsEncrypted Text) ->
+  Maybe (EncryptedHashedField 'AsEncrypted Text) ->
+  m PersonOp
+resolvePersonOp merchant rolesByName conflicts reqCity now idx p mbTokenEncrypted mbVpaEncrypted = do
   let rowTag = "Row " <> T.pack (show idx) <> ": "
       require label = fromMaybeM (InvalidRequest $ rowTag <> label <> " is missing or blank")
   mobileNumber <- require "mobileNumber" p.mobileNumber
@@ -213,7 +233,6 @@ resolvePersonOp merchant rolesByName reqCity now idx p = do
   roleName <- require "roleName" p.roleName
   role <- M.lookup roleName rolesByName & fromMaybeM (InvalidRequest (rowTag <> "role " <> roleName <> " does not exist"))
   mbEntityIdTyped <- resolveEntity rowTag p.entityId
-  mbTokenHash <- forM p.tokenNo getDbHash
   -- findByMobileNumber is global; tenant check below prevents a caller from silently mutating another merchant's user.
   mbExistingByMobile <- QP.findByMobileNumber mobileNumber mobileCountryCode
   case mbExistingByMobile of
@@ -230,6 +249,8 @@ resolvePersonOp merchant rolesByName reqCity now idx p = do
         whenJust mbEmailOwner $ \owner ->
           when (owner.id /= existing.id) $
             throwError (InvalidRequest (rowTag <> "email " <> email <> " is registered to a different person"))
+      whenJust mbTokenEncrypted $ \tokenEnc ->
+        QP.requireTokenNoFree conflicts tokenEnc.hash (Just existing.id) rowTag
       encryptedEmail <- forM p.email encrypt
       let updated =
             existing
@@ -238,8 +259,9 @@ resolvePersonOp merchant rolesByName reqCity now idx p = do
                 PT.roleId = role.id,
                 PT.email = maybe existing.email Just encryptedEmail,
                 PT.dashboardAccessType = Just role.dashboardAccessType,
-                PT.tokenNoHash = maybe existing.tokenNoHash Just mbTokenHash,
+                PT.tokenNo = maybe existing.tokenNo Just mbTokenEncrypted,
                 PT.entityId = maybe existing.entityId Just mbEntityIdTyped,
+                PT.vpa = maybe existing.vpa Just mbVpaEncrypted,
                 PT.verified = Just True,
                 PT.updatedAt = now
               }
@@ -250,6 +272,8 @@ resolvePersonOp merchant rolesByName reqCity now idx p = do
         mbEmailOwner <- QP.findByEmail email
         whenJust mbEmailOwner $ \_ ->
           throwError (InvalidRequest (rowTag <> "email " <> email <> " is already registered"))
+      whenJust mbTokenEncrypted $ \tokenEnc ->
+        QP.requireTokenNoFree conflicts tokenEnc.hash Nothing rowTag
       personId <- generateGUID
       encryptedMobileNumber <- encrypt mobileNumber
       encryptedEmail <- forM p.email encrypt
@@ -277,8 +301,9 @@ resolvePersonOp merchant rolesByName reqCity now idx p = do
                 language = Nothing,
                 secretKey = Nothing,
                 is2faEnabled = False,
-                tokenNoHash = mbTokenHash,
-                entityId = mbEntityIdTyped
+                tokenNo = mbTokenEncrypted,
+                entityId = mbEntityIdTyped,
+                vpa = mbVpaEncrypted
               }
       access <- buildMerchantAccess merchant reqCity now fresh
       pure (InsertNewPerson fresh access)

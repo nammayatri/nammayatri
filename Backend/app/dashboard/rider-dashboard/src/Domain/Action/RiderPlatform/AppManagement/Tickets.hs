@@ -190,8 +190,9 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        entityId = Nothing,
+        vpa = Nothing
       }
 
 registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) => API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Maybe Text -> m API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp
