@@ -1,5 +1,7 @@
 module Storage.Queries.CommonDriverOnboardingDocumentsExtra
   ( CommonDocumentsFilter (..),
+    CommonDocumentOwner (..),
+    mkCommonDocumentOwner,
     findAllForCommonDocuments,
     countForCommonDocuments,
     findLatestByDriverIdAndRcIdAndDocumentType,
@@ -95,20 +97,35 @@ countForCommonDocuments CommonDocumentsFilter {..} = do
               B.all_ (BeamCommon.commonDriverOnboardingDocuments BeamCommon.atlasDB)
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
+-- | Whom a common document belongs to. The type guarantees at least one identifier is present, so
+--   the lookup can never degrade into an unscoped scan or a @driver_id IS NULL@ filter.
+data CommonDocumentOwner
+  = OwnedByDriver (Id.Id DP.Person)
+  | OwnedByRc (Id.Id DRC.VehicleRegistrationCertificate)
+  | OwnedByDriverAndRc (Id.Id DP.Person) (Id.Id DRC.VehicleRegistrationCertificate)
+
+mkCommonDocumentOwner :: Maybe (Id.Id DP.Person) -> Maybe (Id.Id DRC.VehicleRegistrationCertificate) -> Maybe CommonDocumentOwner
+mkCommonDocumentOwner mbDriverId mbRcId = case (mbDriverId, mbRcId) of
+  (Just driverId, Just rcId) -> Just $ OwnedByDriverAndRc driverId rcId
+  (Just driverId, Nothing) -> Just $ OwnedByDriver driverId
+  (Nothing, Just rcId) -> Just $ OwnedByRc rcId
+  (Nothing, Nothing) -> Nothing
+
 findLatestByDriverIdAndRcIdAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe (Id.Id DP.Person) ->
-  Maybe (Id.Id DRC.VehicleRegistrationCertificate) ->
+  CommonDocumentOwner ->
   DVC.DocumentType ->
   m [DCommonDoc.CommonDriverOnboardingDocuments]
-findLatestByDriverIdAndRcIdAndDocumentType driverId mbRcId documentType =
+findLatestByDriverIdAndRcIdAndDocumentType owner documentType =
   findAllWithOptionsKV
-    [ Se.And $
-        [ Se.Is Beam.driverId $ Se.Eq (Id.getId <$> driverId),
-          Se.Is Beam.documentType $ Se.Eq documentType
-        ]
-          <> maybe [] (\rcId -> [Se.Is Beam.rcId $ Se.Eq (Just $ Id.getId rcId)]) mbRcId
-    ]
+    [Se.And $ Se.Is Beam.documentType (Se.Eq documentType) : ownerClauses]
     (Se.Desc Beam.updatedAt)
     (Just 1)
     (Just 0)
+  where
+    ownerClauses = case owner of
+      OwnedByDriver driverId -> [driverClause driverId]
+      OwnedByRc rcId -> [rcClause rcId]
+      OwnedByDriverAndRc driverId rcId -> [driverClause driverId, rcClause rcId]
+    driverClause driverId = Se.Is Beam.driverId $ Se.Eq (Just $ Id.getId driverId)
+    rcClause rcId = Se.Is Beam.rcId $ Se.Eq (Just $ Id.getId rcId)
