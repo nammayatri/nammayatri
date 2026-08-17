@@ -295,7 +295,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy mbCharges
   void $ QRide.updateStatusAndRideEndedBy ride.id DRide.CANCELLED rideEndedBy
   QBCR.upsert bookingCReason
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-  Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source)
+  Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source) (SML.distanceBucketLabel booking.estimatedDistance)
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
   case (mbChargesOutcome >>= (.fee), booking.riderId) of

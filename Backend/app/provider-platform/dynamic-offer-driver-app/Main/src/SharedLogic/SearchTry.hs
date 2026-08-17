@@ -236,7 +236,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               <> "; estimated base fare:"
               <> show estimatedFare
           cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
-          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType)
+          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType) (SML.distanceBucketLabel searchReq.estimatedDistance)
           return searchTry
 
 buildSearchTry ::
