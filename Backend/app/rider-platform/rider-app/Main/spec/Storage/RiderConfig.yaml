@@ -9,6 +9,7 @@ imports:
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
   SpecialLocationTierOrderConfig: Domain.Types.Extra.RiderConfig
   SyncSearchDispatchConfig: Domain.Types.Extra.RiderConfig
+  TipModuleConfig: Domain.Types.TipModuleConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
@@ -221,6 +222,7 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
+    tipModuleConfig: "Maybe TipModuleConfig"
     busTierSortingConfig: "Maybe [BusTierSortingConfig]"
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int
@@ -333,6 +335,7 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
+    tipModuleConfig: Maybe Value
     busTierSortingConfig: Maybe Value
     specialVehicleNotificationConfigs: Maybe Value
     serviceTierRelationshipCfg: Maybe Value
@@ -407,6 +410,7 @@ RiderConfig:
     nonAllowedOverrideFleetNoServiceTiers: (nonAllowedOverrideFleetNoServiceTiers >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    tipModuleConfig: tipModuleConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Kernel.Utils.JSON.valueToMaybe)|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
@@ -470,6 +474,7 @@ RiderConfig:
     nonAllowedOverrideFleetNoServiceTiers: (nonAllowedOverrideFleetNoServiceTiers >>= Just . Data.Aeson.toJSON)|E
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
+    tipModuleConfig: tipModuleConfig >>= Just . Data.Aeson.toJSON|E
     specialVehicleNotificationConfigs: (specialVehicleNotificationConfigs >>= Just . Data.Aeson.toJSON)|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
@@ -589,6 +594,7 @@ RiderConfig:
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"
+    tipModuleConfig: "json"
     busTierSortingConfig: "json"
     specialVehicleNotificationConfigs: "json"
     serviceTierRelationshipCfg: "json"

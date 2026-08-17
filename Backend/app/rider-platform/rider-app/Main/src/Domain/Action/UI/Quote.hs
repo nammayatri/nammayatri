@@ -497,7 +497,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
       -- reflects VAT redistribution via applyRideDiscount.
       Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
-    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
+    apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP (riderConfig >>= (.tipModuleConfig)) estimate
     serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierShortDesc
     pure apiEntity {UEstimate.serviceTierName = serviceTierName, UEstimate.serviceTierShortDesc = serviceTierShortDesc}

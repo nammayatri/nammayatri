@@ -15,6 +15,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences
 import qualified Domain.Types.RentalsIntercityCache
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.TipModuleConfig
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import qualified IssueManagement.Common
@@ -199,6 +200,7 @@ data RiderConfig = RiderConfig
     ticketAssetDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketingPermissionConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
+    tipModuleConfig :: Kernel.Prelude.Maybe Domain.Types.TipModuleConfig.TipModuleConfig,
     trackVehicleKeyExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
     upcomingBusThresholdSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

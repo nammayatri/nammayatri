@@ -3,6 +3,7 @@
 
 module Storage.Beam.Estimate where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -64,6 +65,7 @@ data EstimateT f = EstimateT
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     supplyDemandRatioFromLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     supplyDemandRatioToLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    tipModuleConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     tipOptions :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     tollIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

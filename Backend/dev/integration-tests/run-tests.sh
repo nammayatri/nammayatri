@@ -61,6 +61,7 @@ PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 GOHOME_DIR="$SCRIPT_DIR/collections/GoHomeSpecialLocationFlow"
 PHONE_CONSENT_DIR="$SCRIPT_DIR/collections/PhoneShareConsentFlow"
+TIP_MODULE_DIR="$SCRIPT_DIR/collections/TipModuleConfigFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -204,7 +205,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR"; do
+    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR" "Tip Module Config:$TIP_MODULE_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -647,6 +648,21 @@ run_phone_consent() {
     run_frfs "$PHONE_CONSENT_DIR" "PHONE SHARE CONSENT" "${1:-}" "${2:-}"
 }
 
+seed_tip_module_config() {
+    local sql="$TIP_MODULE_DIR/setup-tip-module-config.sql"
+    echo "Seeding tip-module-config (tip_module_config columns, NAMMA_YATRI RiderConfig default, transporter_config.is_dynamic_pricing_qar_cal_enabled)..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$sql" >/dev/null 2>&1 \
+        || echo "WARNING: tip-module-config seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql"
+    flush_redis
+    echo "NOTE: ConfigPilot caches transporter_config/rider_config IN-PROCESS for up to 1h; if"
+    echo "      dynamic-offer-driver-app or rider-app already served this city before the seed,"
+    echo "      RESTART them before running the suite."
+}
+run_tip_module() {
+    seed_tip_module_config
+    run_frfs "$TIP_MODULE_DIR" "TIP MODULE CONFIG" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -679,6 +695,7 @@ show_help() {
     echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  gohome              Run Go-Home blocked special location suite (auto-seeds blocked airport special location)"
     echo "  phone-consent       Run rider phone-share consent gate suite (auto-seeds DirectCall + consent flag, flushes Redis)"
+    echo "  tip-module          Run tip module config suite (BPP DYNAMIC-PRICING-UNIFIED tipModuleConfig -> /results, fallback; Local only)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -823,6 +840,9 @@ case "${1:-}" in
         ;;
     phone-consent|consent)
         run_phone_consent "${2:-}" "${3:-}"
+        ;;
+    tip-module|tipmodule|tip)
+        run_tip_module "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

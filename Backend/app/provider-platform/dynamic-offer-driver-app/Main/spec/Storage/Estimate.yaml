@@ -10,6 +10,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Centesimal: Kernel.Types.Common
   DriverExtraFeeBounds: Domain.Types.FarePolicy.DriverExtraFeeBounds
+  TipModuleConfig: Domain.Types.TipModuleConfig
+  Value: Data.Aeson
 
 Estimate:
     tableName: estimate
@@ -48,6 +50,7 @@ Estimate:
       mbCongestionCityPast : Maybe Double
       smartTipSuggestion: Maybe HighPrecMoney
       smartTipReason: Maybe Text
+      tipModuleConfig: Maybe TipModuleConfig
       congestionMultiplier : Maybe Centesimal
       distanceUnit: DistanceUnit
       businessDiscount: Maybe HighPrecMoney
@@ -95,9 +98,11 @@ Estimate:
     sqlType:
       farePolicyId: character varying(36)
       tipOptions: integer[]
+      tipModuleConfig: "json"
 
     beamType:
       updatedAt: Maybe UTCTime
+      tipModuleConfig: Maybe Value
       isScheduled: Maybe Bool
       tripCategory: Maybe TripCategory
       distanceUnit: Maybe DistanceUnit
@@ -109,6 +114,7 @@ Estimate:
 
     fromTType:
       updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+      tipModuleConfig: tipModuleConfig >>= Kernel.Utils.JSON.valueToMaybe|E
       isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
       tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
       farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
@@ -121,6 +127,7 @@ Estimate:
 
     toTType:
       updatedAt: Kernel.Prelude.Just|I
+      tipModuleConfig: tipModuleConfig >>= Just . Data.Aeson.toJSON|E
       isScheduled: Kernel.Prelude.Just|I
       tripCategory: Kernel.Prelude.Just|I
       driverExtraFeeStartDistance: (driverExtraFeeBounds <&> (.startDistance))|E

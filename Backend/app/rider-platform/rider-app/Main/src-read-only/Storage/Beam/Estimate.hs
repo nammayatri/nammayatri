@@ -82,6 +82,7 @@ data EstimateT f = EstimateT
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.EstimateStatus.EstimateStatus,
+    tipModuleConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     tipOptions :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

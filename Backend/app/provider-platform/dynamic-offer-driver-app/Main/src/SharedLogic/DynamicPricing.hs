@@ -19,6 +19,7 @@ import Data.Default.Class
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
 import qualified Domain.Types.ServiceTierType as DServiceTierType
+import qualified Domain.Types.TipModuleConfig as DTMC
 import qualified Domain.Types.VehicleCategory as DVC
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
@@ -68,7 +69,8 @@ data DynamicPricingResult = DynamicPricingResult
     smartTipReason :: Maybe Text,
     version :: Maybe Text,
     congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier,
-    driverExtraFeeBounds :: Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds
+    driverExtraFeeBounds :: Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds,
+    tipModuleConfig :: Maybe DTMC.TipModuleConfig
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

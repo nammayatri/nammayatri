@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Estimate where
 
+import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Estimate
 import Kernel.Beam.Functions
@@ -13,6 +14,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.Estimate as Beam
 import Storage.Queries.Transformers.Estimate
@@ -82,6 +84,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             specialLocationName = specialLocationName,
             specialLocationTag = specialLocationTag,
             status = status,
+            tipModuleConfig = tipModuleConfig >>= Kernel.Utils.JSON.valueToMaybe,
             tipOptions = tipOptions,
             tollChargesInfo = mkTollChargesInfo tollCharges tollNames currency,
             totalFareRange = mkFareRange currency maxTotalFare minTotalFare,
@@ -162,6 +165,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.specialLocationName = specialLocationName,
         Beam.specialLocationTag = specialLocationTag,
         Beam.status = status,
+        Beam.tipModuleConfig = tipModuleConfig >>= Just . Data.Aeson.toJSON,
         Beam.tipOptions = tipOptions,
         Beam.tollCharges = tollChargesInfo <&> ((.amount) . (.tollCharges)),
         Beam.tollNames = tollChargesInfo <&> (.tollNames),

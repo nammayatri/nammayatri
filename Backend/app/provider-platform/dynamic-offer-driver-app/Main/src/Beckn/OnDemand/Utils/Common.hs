@@ -52,6 +52,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TipModuleConfig as DTMC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
@@ -107,6 +108,7 @@ data Pricing = Pricing
     vehicleIconUrl :: Maybe BaseUrl,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    tipModuleConfig :: Maybe DTMC.TipModuleConfig,
     businessDiscount :: Maybe HighPrecMoney,
     personalDiscount :: Maybe HighPrecMoney,
     qar :: Maybe Double,
@@ -1038,6 +1040,7 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
+      tipModuleConfig = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
@@ -1068,6 +1071,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
       smartTipReason = Nothing,
+      tipModuleConfig = Nothing,
       tipOptions = Nothing,
       qar = Nothing,
       businessDiscount = fareParams.businessDiscount,
@@ -1097,6 +1101,7 @@ mkGeneralInfoTagGroup pricing isValueAddNP =
           Tags.DURATION_TO_NEAREST_DRIVER_MINUTES Tags.~=? guardVNP (getDuration pricing.distanceToNearestDriver 25),
           Tags.SMART_TIP_SUGGESTION Tags.~=? guardVNP (show <$> pricing.smartTipSuggestion),
           Tags.SMART_TIP_REASON Tags.~=? (guardVNP pricing.smartTipReason),
+          Tags.TIP_MODULE_CONFIG Tags.~=? guardVNP (encodeToText <$> pricing.tipModuleConfig),
           Tags.QAR Tags.~=? guardVNP (show <$> pricing.qar)
         ]
   where

@@ -4,6 +4,7 @@
 
 module Storage.Queries.Estimate (module Storage.Queries.Estimate, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.EstimateStatus
 import qualified Domain.Types.SearchRequest
@@ -119,6 +120,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.status status,
+      Se.Set Beam.tipModuleConfig (tipModuleConfig >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.tipOptions tipOptions,
       Se.Set Beam.tollCharges (tollChargesInfo <&> ((.amount) . (.tollCharges))),
       Se.Set Beam.tollNames (tollChargesInfo <&> (.tollNames)),

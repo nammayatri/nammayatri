@@ -39,6 +39,7 @@ import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.TipModuleConfig as DTMC
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
@@ -264,6 +265,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     mbSupplyDemandRatioFromLoc :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    tipModuleConfig :: Maybe DTMC.TipModuleConfig,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     vatChargeConfig :: Maybe FareChargeConfig,
@@ -301,6 +303,7 @@ data CongestionChargeDetails = CongestionChargeDetails
     congestionChargePerMin :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    tipModuleConfig :: Maybe DTMC.TipModuleConfig,
     mbActualQARFromLocGeohash :: Maybe Double,
     mbActualQARCity :: Maybe Double
   }

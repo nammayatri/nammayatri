@@ -634,7 +634,20 @@
               "    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
               "}",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });",
+              "if (pm.environment.get('envType') === 'Local') {",
+              "    pm.test('Every estimate carries tipModuleConfig (RiderConfig default {45,60,1} locally; BPP DP rules may override)', function () {",
+              "        d.estimates.forEach(function (e) {",
+              "            pm.expect(e, 'estimate').to.have.property('tipModuleConfig');",
+              "            pm.expect(e.tipModuleConfig, 'tipModuleConfig').to.be.an('object');",
+              "            pm.expect(e.tipModuleConfig.showAfterSec).to.eql(45);",
+              "            pm.expect(e.tipModuleConfig.repeatIntervalSec).to.eql(60);",
+              "            pm.expect(e.tipModuleConfig.maxPrompts).to.eql(1);",
+              "            pm.expect(e, 'estimate').to.have.property('qar');",
+              "        });",
+              "    });",
+              "}",
+              "pm.collectionVariables.set('_test_tip_cfg_first_poll', JSON.stringify((d.estimates || []).map(function (e) { return [e.id, e.tipModuleConfig]; })));"
             ],
             "type": "text/javascript"
           }
@@ -657,6 +670,91 @@
             "rideSearch",
             "{{searchId}}",
             "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Search Results (Again — deterministic tip config)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "if (pm.environment.get('envType') === 'Local') {",
+              "    pm.test('tipModuleConfig is identical across polls of the same search', function () {",
+              "        var first = JSON.parse(pm.collectionVariables.get('_test_tip_cfg_first_poll') || '[]');",
+              "        var second = d.estimates.map(function (e) { return [e.id, e.tipModuleConfig]; });",
+              "        pm.expect(second).to.eql(first);",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Select2 on expired estimate is rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('unknown estimate -> 400 (EstimateDoesNotExist)', function () { pm.response.to.have.status(400); });",
+              "pm.test('errorCode is ESTIMATE_DOES_NOT_EXIST', function () { pm.expect(pm.response.json().errorCode).to.eql('ESTIMATE_DOES_NOT_EXIST'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/00000000-0000-0000-0000-000000000000/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "00000000-0000-0000-0000-000000000000",
+            "select2"
           ]
         }
       }

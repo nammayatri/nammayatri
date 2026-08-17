@@ -28,6 +28,7 @@ import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
 import Domain.Types.SearchRequest
 import Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TipModuleConfig as DTMC
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
@@ -257,6 +258,9 @@ getTipOptions item = do
 
 getSmartTipReason :: Spec.Item -> Maybe Text
 getSmartTipReason item = Utils.getTagV2 Tag.INFO Tag.SMART_TIP_REASON item.itemTags
+
+getTipModuleConfig :: Spec.Item -> Maybe DTMC.TipModuleConfig
+getTipModuleConfig item = Utils.getTagV2 Tag.INFO Tag.TIP_MODULE_CONFIG item.itemTags >>= decodeFromText
 
 getVehicleIconUrl :: Spec.Item -> Maybe BaseUrl
 getVehicleIconUrl item = do

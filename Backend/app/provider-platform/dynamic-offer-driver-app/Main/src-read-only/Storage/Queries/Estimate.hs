@@ -4,6 +4,7 @@
 
 module Storage.Queries.Estimate where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.SearchRequest
@@ -15,6 +16,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Cac.FarePolicy
@@ -112,6 +114,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.supplyDemandRatioFromLoc supplyDemandRatioFromLoc,
       Se.Set Beam.supplyDemandRatioToLoc supplyDemandRatioToLoc,
+      Se.Set Beam.tipModuleConfig (tipModuleConfig >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.tipOptions tipOptions,
       Se.Set Beam.tollIds tollIds,
       Se.Set Beam.tollNames tollNames,
@@ -173,6 +176,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             specialLocationTag = specialLocationTag,
             supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
             supplyDemandRatioToLoc = supplyDemandRatioToLoc,
+            tipModuleConfig = tipModuleConfig >>= Kernel.Utils.JSON.valueToMaybe,
             tipOptions = tipOptions,
             tollIds = tollIds,
             tollNames = tollNames,
@@ -236,6 +240,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.specialLocationTag = specialLocationTag,
         Beam.supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
         Beam.supplyDemandRatioToLoc = supplyDemandRatioToLoc,
+        Beam.tipModuleConfig = tipModuleConfig >>= Just . Data.Aeson.toJSON,
         Beam.tipOptions = tipOptions,
         Beam.tollIds = tollIds,
         Beam.tollNames = tollNames,
