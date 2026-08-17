@@ -75,6 +75,8 @@ dependencies:
   - hspec
   - http-client
   - http-client-tls
+  - http-types
+  - scientific
   - lens
   - network
   - servant

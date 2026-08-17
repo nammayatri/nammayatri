@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified IGM.Enums as Spec
 import IssueManagement.Common as Common
+import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration as DAI
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueConfig (IssueConfig)
 import IssueManagement.Domain.Types.Issue.IssueMessage (IssueMessage)
@@ -365,6 +366,10 @@ data UpsertIssueMessageReq = UpsertIssueMessageReq
     isActive :: Maybe Bool,
     deleteExistingFiles :: Maybe Bool,
     messageType :: Maybe IssueMessage.IssueMessageType,
+    -- | Configures this message as an ApiCall lookup step. Sent as a JSON
+    -- string field in the multipart form. Omitting the field on an edit
+    -- preserves the message's existing lookup config.
+    apiAction :: Maybe IssueMessage.ApiCallAction,
     mediaFiles :: Maybe [IssueMessageMediaFileUploadReq]
   }
   deriving stock (Eq, Show, Generic)
@@ -403,6 +408,7 @@ instance FromMultipart Tmp UpsertIssueMessageReq where
       <*> parseMaybeInput "isActive"
       <*> parseMaybeInput "deleteExistingFiles"
       <*> parseMaybeInput "messageType"
+      <*> parseMaybeJsonInput "apiAction"
       <*> pure (Just mediaFiles)
     where
       extractFile f = pure $ IssueMessageMediaFileUploadReq (fdPayload f) (fdFileCType f)
@@ -444,7 +450,8 @@ instance ToMultipart Tmp UpsertIssueMessageReq where
             fmap (Input "referenceCategoryId") (getId <$> req.referenceCategoryId),
             fmap (Input "isActive" . T.pack . show) req.isActive,
             fmap (Input "deleteExistingFiles" . T.pack . show) req.deleteExistingFiles,
-            fmap (Input "messageType" . T.pack . show) req.messageType
+            fmap (Input "messageType" . T.pack . show) req.messageType,
+            fmap (Input "apiAction" . encodeJson) req.apiAction
           ]
       files = maybe [] (map mkFileData) req.mediaFiles
       mkFileData (IssueMessageMediaFileUploadReq filePath contType) =
@@ -495,6 +502,7 @@ data IssueMessageDetailRes = IssueMessageDetailRes
     label :: Maybe Text,
     priority :: Int,
     messageType :: IssueMessage.IssueMessageType,
+    apiAction :: Maybe IssueMessage.ApiCallAction,
     isActive :: Bool,
     mediaFiles :: [MediaFile],
     translations :: DetailedTranslationRes,
@@ -749,3 +757,79 @@ data MarkChatReadByUserReq = MarkChatReadByUserReq
 
 instance HideSecrets MarkChatReadByUserReq where
   hideSecrets = identity
+
+-----------------------------------------------------------
+-- Api Integration (chat lookups) ---------------------------
+
+data UpsertApiIntegrationReq = UpsertApiIntegrationReq
+  { apiIntegrationId :: Maybe (Id DAI.IssueApiIntegration),
+    name :: Text,
+    description :: Maybe Text,
+    -- | Defaults to External when omitted, so older dashboard clients keep
+    -- working unchanged.
+    kind :: Maybe DAI.IntegrationKind,
+    method :: DAI.ApiMethod,
+    urlTemplate :: Text,
+    headers :: Maybe [DAI.ApiHeaderSpec],
+    bodyTemplate :: Maybe Text,
+    timeoutMs :: Maybe Int,
+    responseFields :: [DAI.ResponseFieldSpec],
+    isActive :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertApiIntegrationReq where
+  hideSecrets = identity
+
+newtype UpsertApiIntegrationRes = UpsertApiIntegrationRes
+  { apiIntegrationId :: Id DAI.IssueApiIntegration
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ApiIntegrationItem = ApiIntegrationItem
+  { apiIntegrationId :: Id DAI.IssueApiIntegration,
+    name :: Text,
+    description :: Maybe Text,
+    kind :: DAI.IntegrationKind,
+    method :: DAI.ApiMethod,
+    urlTemplate :: Text,
+    headers :: [DAI.ApiHeaderSpec],
+    bodyTemplate :: Maybe Text,
+    timeoutMs :: Int,
+    responseFields :: [DAI.ResponseFieldSpec],
+    isActive :: Bool,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype ApiIntegrationListRes = ApiIntegrationListRes
+  { integrations :: [ApiIntegrationItem]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- | Test console: run the (possibly unsaved) integration definition with
+-- sample parameter values and report what came back.
+data TestApiIntegrationReq = TestApiIntegrationReq
+  { definition :: UpsertApiIntegrationReq,
+    sampleParams :: Maybe Value
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets TestApiIntegrationReq where
+  hideSecrets = identity
+
+data TestApiIntegrationRes = TestApiIntegrationRes
+  { success :: Bool,
+    statusCode :: Maybe Int,
+    latencyMs :: Int,
+    extractedFields :: Maybe Value,
+    rawResponse :: Maybe Value,
+    errorMessage :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

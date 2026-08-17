@@ -71,3 +71,21 @@ UPDATE atlas_dashboard.transaction
 
 -- {"api":"PostIssueMessageUpsert","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT ISSUE UPSERT_ISSUE_MESSAGE","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_MESSAGE_UPSERT' FROM atlas_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'ISSUE' AND T1.user_action_type = 'UPSERT_ISSUE_MESSAGE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetIssueApiIntegrationList","migration":"capability","param":"system-config.customer_issue_config.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_API_INTEGRATION_LIST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostIssueApiIntegrationUpsert","migration":"capability","param":"system-config.customer_issue_config.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_API_INTEGRATION_UPSERT' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostIssueApiIntegrationDelete","migration":"capability","param":"system-config.customer_issue_config.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_API_INTEGRATION_DELETE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostIssueApiIntegrationTest","migration":"capability","param":"system-config.customer_issue_config.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.write', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/POST_ISSUE_API_INTEGRATION_TEST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetIssueFlowSimulate","migration":"capability","param":"system-config.customer_issue_config.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.customer_issue_config.read', 'DASHBOARD', 'RIDER_ISSUE_MANAGEMENT/ISSUE/GET_ISSUE_FLOW_SIMULATE' ) ON CONFLICT DO NOTHING;

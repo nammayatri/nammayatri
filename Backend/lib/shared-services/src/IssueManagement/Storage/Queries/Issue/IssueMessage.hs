@@ -35,6 +35,7 @@ updateByPrimaryKey IssueMessage {..} =
       Set BeamIM.isActive isActive,
       Set BeamIM.mediaFiles (getId <$> mediaFiles),
       Set BeamIM.messageType messageType,
+      Set BeamIM.apiAction apiAction,
       Set BeamIM.createdAt createdAt,
       Set BeamIM.updatedAt updatedAt
     ]
@@ -171,6 +172,7 @@ instance ToTType' BeamIM.IssueMessage IssueMessage where
         BeamIM.messageTitle = messageTitle,
         BeamIM.messageAction = messageAction,
         BeamIM.messageType = messageType,
+        BeamIM.apiAction = apiAction,
         BeamIM.isActive = isActive,
         BeamIM.priority = priority,
         BeamIM.merchantId = getId merchantId,
