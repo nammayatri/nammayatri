@@ -993,6 +993,26 @@ collected (35 of 45 riders), and nine message types already exist including
 Turning it on is a free Firebase project, its service-account JSON, and one SQL
 update. No rebuild.
 
+**Approved by the client on 2026-08-17**, with two constraints worth keeping
+here rather than in a chat log:
+
+- The Firebase project belongs to the **company** Google account
+  (`movindz2026@gmail.com`, which already holds the backups). Not a personal
+  one — the same reasoning as the APK signing key: if the account is lost,
+  notifications stop and there is no way back into the project.
+- **Only four of the nine messages are to be sent:** `QUOTE_RECEIVED`,
+  `DRIVER_ASSIGNMENT`, `DRIVER_ON_THE_WAY`, `DRIVER_HAS_REACHED`. The other
+  five — trip started, trip finished, driver cancelled, search expired,
+  registration approved — exist in the binary and are deliberately unwanted.
+  Whatever switches these on has to be selective; sending all nine because the
+  binary can is not the agreed product.
+
+FCM costs nothing: no quota, no card, the free Spark plan is enough. Billing
+only starts if this project adopts *other* Firebase products (database, storage,
+hosting), and this stack has its own.
+
+iOS, when it exists, needs no second integration — FCM delivers to APNs itself.
+
 ### Switching off a driver who has not paid
 
 Drivers pay us a monthly subscription; passengers pay drivers cash. So the
