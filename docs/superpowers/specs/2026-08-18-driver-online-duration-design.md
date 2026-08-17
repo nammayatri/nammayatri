@@ -64,7 +64,7 @@ accrues nothing. This makes the derived number directly comparable to
 `daily_stats.online_duration`, which is the main thing that makes the endpoint useful as
 an audit tool. Any other definition would produce numbers that reconcile with nothing.
 
-### A second ClickHouse binding, not a change to the existing one
+### Per-query `NO_SELECT_MODIFIER` override, not a new module
 
 `Storage/Clickhouse/DriverInformation.hs:38` binds the table as:
 
@@ -77,9 +77,26 @@ exactly one row per driver — the latest. That is correct for its four existing
 which want current state. It is fatal here: a history query through that binding would see
 one row per driver and return approximately zero minutes for everyone, with no error.
 
-So the history query gets its own module binding the same physical table with
-`NO_SELECT_MODIFIER` (the modifier used by `DriverEdaKafka`, `DriverFee`, and rider-app's
-`Person`). The existing module is untouched.
+The obvious fix — a second module binding the same table with `NO_SELECT_MODIFIER` — does
+not work. `mkClickhouseInstances` derives the physical table name from the *type* name
+(`SearchRequestForDriverT` -> `search_request_for_driver`, `FleetRcDailyStatsT` ->
+`fleet_rc_daily_stats`), and no call site in the codebase overrides it. A
+`DriverInformationHistoryT` would query a non-existent `driver_information_history`.
+
+The mechanism that does work is `CH.selectModifierOverride`, which overrides the modifier
+per query. `rider-app/Storage/Clickhouse/Booking.hs:144` is the precedent: `BookingT` is
+bound `SELECT_FINAL_MODIFIER` and individual queries override to `NO_SELECT_MODIFIER`.
+`SearchRequestForDriver.hs:259` does the same in driver-app.
+
+So the history queries are added to the existing `Storage/Clickhouse/DriverInformation.hs`,
+each wrapping its source in `CH.selectModifierOverride CH.NO_SELECT_MODIFIER`, and the
+record gains the two columns they need.
+
+Extending the shared record is safe because every existing query in that module projects
+its columns explicitly through `CH.select_` — the SELECT list is built from the projection,
+not from the record — so no existing query starts requesting `mode` or `updated_at`. This
+does mean a future whole-row select through this record would fail in any environment
+missing those columns; the queries in this module must stay explicitly projected.
 
 ### The fold is in Haskell, not in ClickHouse
 
@@ -168,29 +185,22 @@ which report `0`. Absent keys would be ambiguous between "no data" and "zero min
 
 ### ClickHouse read model
 
-New module `Storage/Clickhouse/DriverInformationHistory.hs`, binding the same physical
-`driver_information` table with history semantics:
+`Storage/Clickhouse/DriverInformation.hs` gains two fields on `DriverInformationT` and the
+matching entries in `driverInformationTTable`:
 
 ```haskell
-data DriverInformationHistoryT f = DriverInformationHistoryT
-  { driverId  :: C f (Id DP.Person),
-    mode      :: C f (Maybe DriverMode),   -- "mode"
-    updatedAt :: C f UTCTime               -- "updated_at"
-  }
-  deriving (Generic)
-
-$(TH.mkClickhouseInstances ''DriverInformationHistoryT 'NO_SELECT_MODIFIER)
+    mode      :: C f (Maybe DriverInfo.DriverMode),   -- "mode"
+    updatedAt :: C f UTCTime                          -- "updated_at"
 ```
 
-Only the three columns the fold needs, to keep the scan narrow.
-
 No orphan instance is required: `instance CH.ClickhouseValue DriverMode` already exists at
-`Domain/Types/Common.hs:45`. Redeclaring it here would be a duplicate-instance error, and
-the project builds with `-Werror`.
+`Domain/Types/Common.hs:45`. Redeclaring it would be a duplicate-instance error, and the
+project builds with `-Werror`.
 
-Two queries, both against `CH.APP_SERVICE_CLICKHOUSE` (the env used by the existing
-`DriverInformation` module and reachable from dashboard handlers — see
-`Domain/Action/Dashboard/Fleet/Driver.hs:5175`):
+Two new queries in the same module, both against `CH.APP_SERVICE_CLICKHOUSE` (the env used
+by the existing queries and reachable from dashboard handlers — see
+`Domain/Action/Dashboard/Fleet/Driver.hs:5175`), and both wrapping their source in
+`CH.selectModifierOverride CH.NO_SELECT_MODIFIER`:
 
 ```
 windowStart = UTCTime(from, 00:00)   - timeDiffFromUtc      -- merchant-local -> UTC
@@ -214,14 +224,24 @@ Pure, in `SharedLogic/DriverOnlineDuration.hs`, with no `Flow` and no ClickHouse
 its signature:
 
 ```haskell
+data OnlineDurationResult = OnlineDurationResult
+  { perDay :: [(Day, Seconds)],
+    dataComplete :: Bool
+  }
+
 foldOnlineIntervals ::
-  Seconds ->                        -- timeDiffFromUtc
-  Day -> Day ->                     -- from, to (merchant-local, inclusive)
-  UTCTime ->                        -- now, to clamp an open interval
-  Maybe DriverMode ->               -- mode at window start (query A)
-  [(Maybe DriverMode, UTCTime)] ->  -- ordered state changes (query B)
-  ([(Day, Seconds)], Bool)          -- per-day totals, dataComplete
+  Seconds ->            -- timeDiffFromUtc
+  Day -> Day ->         -- from, to (merchant-local, inclusive)
+  UTCTime ->            -- now, to clamp an open interval
+  Maybe Bool ->         -- online at window start; Nothing = no lookback row
+  [(Bool, UTCTime)] ->  -- state changes in the window, ascending
+  OnlineDurationResult
 ```
+
+It takes `Bool`, not `DriverMode`: the caller applies `(== Just ONLINE)` before calling.
+That keeps the enum decision in one place at the boundary and leaves the arithmetic with no
+domain dependency at all, which is what makes it cheap to test exhaustively. `Nothing` for
+the initial state encodes "no lookback row" and is what drives `dataComplete`.
 
 It walks the sequence, opening an interval on entry into `ONLINE` and closing it on exit,
 then splits every interval at merchant-local midnight and sums per local day.
@@ -287,7 +307,8 @@ No transaction storing: this is a read.
 | File | Change |
 |---|---|
 | `Backend/app/dashboard/CommonAPIs/spec/ProviderPlatform/Management/API/Driver.yaml` | Endpoint + `DriverOnlineDurationRes` / `DriverOnlineDurationDay` + capability |
-| `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Storage/Clickhouse/DriverInformationHistory.hs` (new) | History binding, queries A and B |
+| `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Storage/Clickhouse/DriverInformation.hs` | Two fields on the record; queries A and B with `selectModifierOverride` |
+| `Backend/dev/clickhouse/sql-seed/atlas-driver-offer-bpp-seed.sql` | Add `mode` and `updated_at` to the dev-local table, queue, and MV |
 | `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/SharedLogic/DriverOnlineDuration.hs` (new) | Pure `foldOnlineIntervals` |
 | `Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action/Dashboard/Management/Driver.hs` | `getDriverOnlineDuration` handler |
 | `Backend/app/dashboard/provider-dashboard/src/Domain/Action/ProviderPlatform/Management/Driver.hs` | Proxy |
