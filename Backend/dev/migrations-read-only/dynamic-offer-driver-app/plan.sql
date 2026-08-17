@@ -118,3 +118,9 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN mahila_shakti_ride_subscripti
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN waives_special_ride_charges boolean  default false;

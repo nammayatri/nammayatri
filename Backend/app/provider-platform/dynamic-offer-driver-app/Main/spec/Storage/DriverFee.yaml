@@ -77,6 +77,9 @@ DriverFee:
     overlaySent : Bool
     specialZoneRideCount : Int
     specialZoneAmount : HighPrecMoney
+    perRideBaseAmount : HighPrecMoney
+    dailyBaseCount : Int
+    dailyBaseAmount : HighPrecMoney
     planId : Maybe (Id Plan)
     planMode : Maybe PaymentMode
     serviceName : ServiceNames
@@ -109,6 +112,9 @@ DriverFee:
     merchantOperatingCityId: Maybe Text
     serviceName: Maybe ServiceNames
     vehicleCategory: Maybe VehicleCategory
+    perRideBaseAmount: Maybe HighPrecMoney
+    dailyBaseCount: Maybe Int
+    dailyBaseAmount: Maybe HighPrecMoney
 
   beamFields:
     platformFee:
@@ -135,6 +141,9 @@ DriverFee:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     vehicleCategory : Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId|EM
+    perRideBaseAmount: Kernel.Prelude.fromMaybe 0 | I
+    dailyBaseCount: Kernel.Prelude.fromMaybe 0 | I
+    dailyBaseAmount: Kernel.Prelude.fromMaybe 0 | I
 
   toTType:
     platformFee: ((.fee) platformFee)|E
@@ -148,6 +157,9 @@ DriverFee:
     govtChargesAmount:  Kernel.Prelude.Just|I
     totalEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
+    perRideBaseAmount: Kernel.Prelude.Just|I
+    dailyBaseCount: Kernel.Prelude.Just|I
+    dailyBaseAmount: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -170,6 +182,9 @@ DriverFee:
     schedulerTryCount: "1"
     specialZoneRideCount: "0"
     specialZoneAmount: "0.0"
+    perRideBaseAmount: "0.0"
+    dailyBaseCount: "0"
+    dailyBaseAmount: "0.0"
     notificationRetryCount: "0"
     feeType: "'RECURRING_INVOICE'"
     merchantId: "'96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'"

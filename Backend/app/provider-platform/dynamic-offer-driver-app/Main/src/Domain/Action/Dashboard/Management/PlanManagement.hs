@@ -68,6 +68,10 @@ postPlanManagementCreate merchantShortId opCity req = do
             subscribedFlagToggleAllowed = req.subscribedFlagToggleAllowed,
             isDeprecated = req.isDeprecated,
             allowStrikeOff = req.allowStrikeOff,
+            -- Not on CreatePlanReq: waiving special ride charges is a billing rule, so it is set
+            -- through the config-upsert path (Merchant.hs UPDATE_CONFIG PLAN) rather than the
+            -- plan-creation form, which has no field for it.
+            waivesSpecialRideCharges = False,
             basedOnEntity = castBasedOnEntity req.basedOnEntity,
             serviceName = read (toString req.serviceName),
             merchantId = merchant.id,

@@ -81,6 +81,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
+import qualified Storage.CachedQueries.IntercityPlatformFeeSlab as CQIntercitySlab
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | Full quotation.breakup for a 'FareParameters': display tags followed by
@@ -465,10 +466,24 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     fareSettlementType :: Maybe SL.FareSettlementType
   }
 
-calculateFareParametersHandler :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
+calculateFareParametersHandler :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CalculateFareParametersParams -> m FareParameters
 calculateFareParametersHandler params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle service tier " +|| params.farePolicy.vehicleServiceTier ||+ ""
   now <- getCurrentTime
+  -- Distance-tiered Intercity platform fee: city-scoped (not fare-policy-scoped, unlike every
+  -- other special-ride charge) because a single Intercity fare policy is one of thousands
+  -- (per vehicle-variant/area combination), and seeding per-fare-policy config at that scale is
+  -- impractical. One set of tiers per city applies uniformly across its Intercity fare policies.
+  -- Nothing (no slab configured for this city, or ride not InterCityDetails) falls back to the
+  -- existing flat fp.platformFee -- this is a no-op until a city actually has slabs seeded.
+  interCityTierFee <- case (params.farePolicy.farePolicyDetails, params.merchantOperatingCityId) of
+    (DFP.InterCityDetails _, Just merchantOpCityId) -> do
+      slabs <- CQIntercitySlab.findAllByMerchantOpCityId merchantOpCityId.getId
+      let dist = maybe 0 (.getMeters) params.actualDistance
+      -- Half-open range [min, max) so adjacent slabs never overlap at the boundary -- a ride at
+      -- exactly minDistanceMeters belongs to the slab starting there, not the one ending there.
+      pure $ KP.find (\s -> s.minDistanceMeters <= dist && maybe True (dist <) s.maxDistanceMeters) slabs
+    _ -> pure Nothing
   let fp = params.farePolicy
       rideEndTime = case (params.actualRideDuration, params.estimatedRideDuration) of
         (Just duration, _) -> addUTCTime (secondsToNominalDiffTime duration) params.rideTime
@@ -598,7 +613,7 @@ calculateFareParametersHandler params = do
                   },
             updatedAt = now,
             currency = params.currency,
-            platformFee = fp.platformFee,
+            platformFee = maybe fp.platformFee (Just . (.platformFee)) interCityTierFee,
             sgst = fp.sgst,
             cgst = fp.cgst,
             platformFeeChargesBy = fp.platformFeeChargesBy,

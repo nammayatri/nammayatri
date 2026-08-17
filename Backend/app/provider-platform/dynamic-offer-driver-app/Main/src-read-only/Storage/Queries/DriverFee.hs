@@ -27,11 +27,11 @@ createMany = traverse_ create
 
 findAllFeeByTypeServiceStatusAndDriver ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> [Domain.Types.DriverFee.FeeType] -> [Domain.Types.DriverFee.DriverFeeStatus] -> m [Domain.Types.DriverFee.DriverFee])
+  (Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> [Domain.Types.DriverFee.FeeType] -> [Domain.Types.DriverFee.DriverFeeStatus] -> m ([Domain.Types.DriverFee.DriverFee]))
 findAllFeeByTypeServiceStatusAndDriver serviceName driverId feeType status = do
   findAllWithKV
     [ Se.And
-        [ Se.Is Beam.serviceName $ Se.Eq (Just serviceName),
+        [ Se.Is Beam.serviceName $ Se.Eq ((Just serviceName)),
           Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
           Se.Is Beam.feeType $ Se.In feeType,
           Se.Is Beam.status $ Se.In status
@@ -103,6 +103,8 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.collectedAtVendorId collectedAtVendorId,
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
+      Se.Set Beam.dailyBaseAmount (Kernel.Prelude.Just dailyBaseAmount),
+      Se.Set Beam.dailyBaseCount (Kernel.Prelude.Just dailyBaseCount),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.endTime endTime,
       Se.Set Beam.feeType feeType,
@@ -111,24 +113,25 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.govtChargesAmount (Kernel.Prelude.Just govtCharges),
       Se.Set Beam.hasSibling hasSibling,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantOperatingCityId (Just (Kernel.Types.Id.getId merchantOperatingCityId)),
+      Se.Set Beam.merchantOperatingCityId ((Just (Kernel.Types.Id.getId merchantOperatingCityId))),
       Se.Set Beam.notificationRetryCount notificationRetryCount,
       Se.Set Beam.numRides numRides,
       Se.Set Beam.offerId offerId,
       Se.Set Beam.overlaySent overlaySent,
       Se.Set Beam.payBy payBy,
+      Se.Set Beam.perRideBaseAmount (Kernel.Prelude.Just perRideBaseAmount),
       Se.Set Beam.planId (Kernel.Types.Id.getId <$> planId),
       Se.Set Beam.planMode planMode,
       Se.Set Beam.planOfferTitle planOfferTitle,
-      Se.Set Beam.cgst ((.cgst) platformFee),
-      Se.Set Beam.platformFee ((.fee) platformFee),
-      Se.Set Beam.sgst ((.sgst) platformFee),
+      Se.Set Beam.cgst (((.cgst) platformFee)),
+      Se.Set Beam.platformFee (((.fee) platformFee)),
+      Se.Set Beam.sgst (((.sgst) platformFee)),
       Se.Set Beam.refundEntityId refundEntityId,
       Se.Set Beam.refundedAmount refundedAmount,
       Se.Set Beam.refundedAt refundedAt,
       Se.Set Beam.refundedBy refundedBy,
       Se.Set Beam.schedulerTryCount schedulerTryCount,
-      Se.Set Beam.serviceName (Just serviceName),
+      Se.Set Beam.serviceName ((Just serviceName)),
       Se.Set Beam.siblingFeeId (Kernel.Types.Id.getId <$> siblingFeeId),
       Se.Set Beam.specialZoneAmount specialZoneAmount,
       Se.Set Beam.specialZoneRideCount specialZoneRideCount,

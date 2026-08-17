@@ -62,6 +62,7 @@ Plan:
     validityInDays : Maybe Int
     isFleetOwnerPlan : Maybe Bool
     allowStrikeOff: Bool
+    waivesSpecialRideCharges : Bool
     productOwnershipAmount : HighPrecMoney
     originalRegistrationAmount : Maybe HighPrecMoney
     airportRideSubscription : Maybe HighPrecMoney
@@ -159,18 +160,22 @@ Plan:
     eligibleForCoinDiscount: "true"
     serviceName: "'YATRI_SUBSCRIPTION'"
     basedOnEntity: "'RIDE'"
+    waivesSpecialRideCharges: "false"
 
   fromTType:
     vehicleCategory: Storage.Queries.Transformers.Plan.getCategoryFromSubscriptionConfig vehicleCategory merchantOpCityId serviceName|EM
     allowStrikeOff: Kernel.Prelude.fromMaybe True | I
+    waivesSpecialRideCharges: Kernel.Prelude.fromMaybe False | I
     productOwnershipAmount: Kernel.Prelude.fromMaybe 0 | I
   toTType:
     vehicleCategory: Kernel.Prelude.Just|I
     allowStrikeOff: Kernel.Prelude.Just|I
+    waivesSpecialRideCharges: Kernel.Prelude.Just|I
     productOwnershipAmount: Kernel.Prelude.Just|I
   beamType:
     vehicleCategory: Maybe VehicleCategory
     allowStrikeOff : Maybe Bool
+    waivesSpecialRideCharges : Maybe Bool
     productOwnershipAmount: Maybe HighPrecMoney
 
   extraOperations:

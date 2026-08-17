@@ -24,9 +24,12 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
+import qualified Domain.Types.Extra.ConditionalCharges as DCCE
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
@@ -48,6 +51,7 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Storage.Clickhouse.Config as CH
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -59,17 +63,25 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
+import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.CachedQueries.FareProduct as CQFareProduct
+import qualified Storage.CachedQueries.IntercityPlatformFeeSlab as CQIntercitySlab
 import qualified Storage.CachedQueries.Plan as QPD
 import qualified Storage.CachedQueries.PlanExtra as QPDE
 import qualified Storage.CachedQueries.PlanTranslation as CQPTD
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.ConditionalCharges as QConditionalCharges
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverPlan as QDPlan
@@ -78,6 +90,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PlanExtra as QPlanExtra
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -1026,6 +1039,9 @@ mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency mbCur
         amountPaidByCoin = Nothing,
         specialZoneRideCount = 0,
         specialZoneAmount = 0,
+        perRideBaseAmount = 0,
+        dailyBaseCount = 0,
+        dailyBaseAmount = 0,
         planId = Just $ plan.id,
         planMode = Just plan.paymentMode,
         notificationRetryCount = 0,
@@ -1705,3 +1721,218 @@ getCancellationPenalties driverId serviceName = do
           gst = if isBilled then (fromMaybe 0.0 driverFee.cancellationPenaltyAmount) * 0.18 / 1.18 else 0.0,
           ..
         }
+
+-- | One special-ride charge as shown on the Yatri Plan screen.
+--
+-- isWaived is true only for fare policies marked PlanBased on a plan that sets
+-- waivesSpecialRideCharges. Airport / Intercity / Rental are configured FixedAmount, which no plan
+-- can waive, so they report False on every plan -- matching the mockup, where those three show the
+-- same price on both the Daily Per Ride and Daily Unlimited screens.
+--
+-- amount is always the charge itself, so the UI can strike it through when waived rather than
+-- losing the number. isEligible is Nothing where eligibility is not yet resolvable (see
+-- fareCategories).
+data FareCategoryEntity = FareCategoryEntity
+  { category :: Text,
+    isWaived :: Bool,
+    isEligible :: Maybe Bool,
+    amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity,
+    tiers :: Maybe [FareTierEntity]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Populated only for INTERCITY, from intercity_platform_fee_slab -- city-scoped (see
+-- Storage.CachedQueries.IntercityPlatformFeeSlab), the same rows SharedLogic.FareCalculator reads
+-- to resolve the actual per-ride charge. Absent when the city has no slabs configured yet, in
+-- which case the category falls back to a single flat amount (farePolicy.platformFee).
+data FareTierEntity = FareTierEntity
+  { minDistanceMeters :: Int,
+    maxDistanceMeters :: Maybe Int,
+    amount :: HighPrecMoney,
+    amountWithCurrency :: PriceAPIEntity
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data FareCategoriesRes = FareCategoriesRes
+  { planId :: Text,
+    planName :: Text,
+    categories :: [FareCategoryEntity]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Computed on read from live fare_policy/conditional_charges rows, the same principle as
+-- PriceBreakup.getPriceBreakup: no stored snapshot, so a displayed price cannot drift from what
+-- actually gets charged.
+--
+-- Scope of the category list is the intersection of what the merchant's operating city configures
+-- (fare_product rows for this city) and what the plan covers (fare products whose service tier maps
+-- to the plan's vehicle category) -- so a Cab plan never shows Auto-only categories, and a city that
+-- does not run Rental shows no Rental row.
+--
+-- A category is charged (FixedAmount, never waivable), plan-dependent (PlanBased, waived per
+-- plan.waivesSpecialRideCharges), or always free (NoCharge -- e.g. Purple ride for Cab, which shows
+-- "Included" on every plan). MAHILA_SHAKTI/RENTAL/INTERCITY/AIRPORT come from fare_product rows;
+-- PURPLE_RIDE/AUTO_INSTANT are conditional_charges on the vehicle category's base OneWay policy,
+-- since neither is a distinct service tier or trip category.
+--
+-- Eligibility resolved: MAHILA_SHAKTI via the Cohort# driver tag, RENTAL and INTERCITY via
+-- DriverInformation switches, PURPLE_RIDE always True (no opt-in gate exists). AIRPORT is Nothing
+-- pending the namma_tag name for the Airport Priority Drivers whitelist; AUTO_INSTANT is Nothing,
+-- blocked on cohort work. Callers that don't want per-driver gating (e.g. the plan-detail screen,
+-- which shows every category uniformly) should ignore this field rather than filter on it.
+-- EsqDBReplicaFlow: the airport check resolves fareProduct.area through
+-- Lib.Queries.SpecialLocation.findById, which runs in replica. This is a read-only display path, so
+-- replica is the right side to read from.
+fareCategories ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  Id Plan ->
+  Maybe Text ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m FareCategoriesRes
+fareCategories planId mbPlanName (driverId, _merchantId, merchantOpCityId) = do
+  planName <- fromMaybeM (InvalidRequest "name is required") mbPlanName
+  plan <- QPlanExtra.findByIdAndName planId planName >>= fromMaybeM (PlanNotFound planId.getId)
+  now <- getCurrentTime
+  mbPerson <- QPerson.findById driverId
+  mbDriverInfo <- DI.findById (cast driverId)
+  fareProducts <- CQFareProduct.findAllFareProductByMerchantOpCityId merchantOpCityId
+  let relevantProducts =
+        filter
+          (\fp -> fp.enabled && Vehicle.castVehicleVariantToVehicleCategory (Vehicle.castServiceTierToVariant fp.vehicleServiceTier) == plan.vehicleCategory)
+          fareProducts
+  entries <- catMaybes <$> mapM (toFareCategory plan now mbPerson mbDriverInfo) relevantProducts
+  conditionalEntries <- conditionalChargeCategories plan now mbPerson mbDriverInfo relevantProducts
+  pure $
+    FareCategoriesRes
+      { planId = planId.getId,
+        planName = plan.name,
+        categories = nubBy (\a b -> a.category == b.category) (entries <> conditionalEntries)
+      }
+  where
+    toFareCategory plan now mbPerson mbDriverInfo fareProduct = do
+      mbCategory <- categoryOf fareProduct
+      case mbCategory of
+        Nothing -> pure Nothing
+        Just categoryName -> do
+          mbFarePolicy <- CQFP.findById Nothing fareProduct.farePolicyId
+          case mbFarePolicy of
+            Nothing -> pure Nothing
+            Just farePolicy -> case waivedFor farePolicy.platformFeeChargesBy plan of
+              Nothing -> pure Nothing
+              Just isWaived -> do
+                mbTiers <- if categoryName == "INTERCITY" then interCityTiers farePolicy.currency else pure Nothing
+                let flatAmt = fromMaybe 0 farePolicy.platformFee + fromMaybe 0 farePolicy.cgst + fromMaybe 0 farePolicy.sgst
+                    amt = maybe flatAmt (DL.minimum . map (.amount)) mbTiers
+                pure $
+                  Just
+                    FareCategoryEntity
+                      { category = categoryName,
+                        isWaived,
+                        isEligible = eligibilityFor categoryName now mbPerson mbDriverInfo,
+                        amount = amt,
+                        amountWithCurrency = PriceAPIEntity amt farePolicy.currency,
+                        tiers = mbTiers
+                      }
+
+    -- City-scoped, not fare-policy-scoped -- see SharedLogic.FareCalculator for why (thousands of
+    -- Intercity fare policies, one config per city instead of per policy).
+    interCityTiers currency = do
+      slabs <- CQIntercitySlab.findAllByMerchantOpCityId merchantOpCityId.getId
+      pure $
+        if null slabs
+          then Nothing
+          else
+            Just $
+              DL.sortOn (.minDistanceMeters) $
+                map
+                  ( \s ->
+                      FareTierEntity
+                        { minDistanceMeters = s.minDistanceMeters,
+                          maxDistanceMeters = s.maxDistanceMeters,
+                          amount = s.platformFee,
+                          amountWithCurrency = PriceAPIEntity s.platformFee currency
+                        }
+                  )
+                  slabs
+
+    -- NoCharge is now emitted, not excluded: it represents a special ride that is always free
+    -- (e.g. Purple ride for Cab), which the mockup shows as a normal "Included" row, not an absent
+    -- one. SlabBased/Subscription/None remain excluded -- they are not "special ride, always- or
+    -- plan-dependently-charged" fees in the sense this endpoint reports on.
+    waivedFor chargesBy plan = case chargesBy of
+      DFP.NoCharge -> Just True
+      DFP.PlanBased -> Just plan.waivesSpecialRideCharges
+      DFP.FixedAmount -> Just False
+      _ -> Nothing
+
+    -- Each category is identified by whatever the config actually keys it on: service tier for
+    -- Mahila Shakti, trip category for Rental/Intercity, and pickup special location for Airport.
+    categoryOf fareProduct
+      | fareProduct.vehicleServiceTier == DTC.MAHILA_SHAKTI = pure $ Just "MAHILA_SHAKTI"
+      | otherwise = case fareProduct.tripCategory of
+        DTC.Rental _ -> pure $ Just "RENTAL"
+        DTC.InterCity _ _ -> pure $ Just "INTERCITY"
+        _ -> case SL.pickupSpecialZoneIdFromArea fareProduct.area of
+          Just specialLocationId -> do
+            mbSpecialLocation <- QSpecialLocation.findById (Id specialLocationId)
+            -- "SureAirport" is the live category string, already relied on by
+            -- SharedLogic.AirportEntryFee.isAirportPickupArea.
+            pure $ if maybe False (\sl -> sl.category == "SureAirport") mbSpecialLocation then Just "AIRPORT" else Nothing
+          Nothing -> pure Nothing
+
+    -- Purple ride and Auto instant are conditional add-ons to an ordinary ride, not distinct
+    -- vehicle service tiers or trip categories, so categoryOf's fare_product scan cannot find
+    -- them. They live on the vehicle category's base OneWay fare policy via conditional_charges
+    -- instead -- the same mechanism SAFETY_PLUS_CHARGES already uses (see Driver.hs:1889).
+    conditionalChargeCategories plan now mbPerson mbDriverInfo relevantProducts =
+      case find isBaseOneWayProduct relevantProducts of
+        Nothing -> pure []
+        Just baseProduct -> do
+          mbBaseFarePolicy <- CQFP.findById Nothing baseProduct.farePolicyId
+          case mbBaseFarePolicy of
+            Nothing -> pure []
+            Just baseFarePolicy -> do
+              charges <- QConditionalCharges.findAllByFp baseFarePolicy.id.getId
+              pure $ mapMaybe (toConditionalEntry plan now mbPerson mbDriverInfo baseFarePolicy.currency) charges
+
+    isBaseOneWayProduct fp = case fp.tripCategory of
+      DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> fp.area == SL.Default
+      _ -> False
+
+    -- Purple ride and Auto instant have no platform_fee_charges_by column of their own (that would
+    -- need a schema change for a distinction this simple) -- their waived/charged rule is fixed in
+    -- code instead: Purple ride is always included, Auto instant follows the plan the same way
+    -- Mahila Shakti does.
+    toConditionalEntry plan now mbPerson mbDriverInfo currency chargeRow = do
+      (categoryName, isWaived) <- case chargeRow.chargeCategory of
+        DCCE.PURPLE_RIDE_CHARGE -> Just ("PURPLE_RIDE", True)
+        DCCE.AUTO_INSTANT_CHARGE -> Just ("AUTO_INSTANT", plan.waivesSpecialRideCharges)
+        _ -> Nothing
+      Just
+        FareCategoryEntity
+          { category = categoryName,
+            isWaived,
+            isEligible = eligibilityFor categoryName now mbPerson mbDriverInfo,
+            amount = chargeRow.charge,
+            amountWithCurrency = PriceAPIEntity chargeRow.charge currency,
+            tiers = Nothing
+          }
+
+    eligibilityFor categoryName now mbPerson mbDriverInfo = case categoryName of
+      "MAHILA_SHAKTI" -> Just $ hasCohortTag DTC.MAHILA_SHAKTI now mbPerson
+      "RENTAL" -> Just $ maybe False (.canSwitchToRental) mbDriverInfo
+      "INTERCITY" -> Just $ maybe False (.canSwitchToInterCity) mbDriverInfo
+      -- Every driver can take purple rides -- there is no opt-in or cohort gating them. Note this
+      -- only takes effect once purple rides are priced as their own fare product: today the concept
+      -- exists solely as booking.disabilityTag (a rider attribute) and the PurpleRideCompleted coin
+      -- reward, neither of which is a chargeable fare category, so categoryOf cannot yet emit it.
+      "PURPLE_RIDE" -> Just True
+      _ -> Nothing
+
+    -- Same gate dispatch uses (Storage.Queries.Person.GetNearestDrivers.isTierEligibleForDriver):
+    -- the cohort tag value is always "Cohort#<tier>", and expired tags do not count.
+    hasCohortTag tier now mbPerson =
+      Yudhishthira.elemTagNameValue
+        (LYT.TagNameValue ("Cohort#" <> show tier))
+        (Yudhishthira.filterExpiredTags' now (fromMaybe [] (mbPerson >>= (.driverTag))))

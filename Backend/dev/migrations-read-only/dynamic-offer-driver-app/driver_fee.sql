@@ -89,3 +89,11 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN added_to_fee_id charact
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN collected_at_vendor_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN per_ride_base_amount double precision  default 0.0;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN daily_base_count integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN daily_base_amount double precision  default 0.0;

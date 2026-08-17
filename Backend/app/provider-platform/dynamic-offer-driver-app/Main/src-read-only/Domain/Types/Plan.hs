@@ -51,7 +51,8 @@ data Plan = Plan
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
     validityInDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
+    waivesSpecialRideCharges :: Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
