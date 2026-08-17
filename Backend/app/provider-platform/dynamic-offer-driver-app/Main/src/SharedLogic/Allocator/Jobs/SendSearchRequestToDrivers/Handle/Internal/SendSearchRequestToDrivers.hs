@@ -85,6 +85,7 @@ import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.DriverSupplyMetrics as DSM
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
@@ -249,6 +250,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
       SDP.incrementBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
       incrementDriverRequestCount dispatchPool searchTry.id
     else SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
+  DSM.recordDriversPinged searchReq.merchantOperatingCityId (map (.driverId) searchRequestsForDrivers)
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
     TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) sentCount
 
