@@ -67,6 +67,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool as SDP
+import qualified SharedLogic.DriverSupplyMetrics as DSM
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
@@ -187,6 +188,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   -- Batch size on record, so the respond API can recognise a *fully* rejected batch
   -- (rejects == sent) and advance the batch chain early instead of idling out the timer.
   SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
+  DSM.recordDriversPinged searchReq.merchantOperatingCityId (map (.driverId) searchRequestsForDrivers)
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
     TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) sentCount
 
