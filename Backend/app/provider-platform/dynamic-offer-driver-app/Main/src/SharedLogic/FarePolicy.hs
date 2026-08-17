@@ -606,12 +606,23 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
     toPercentage x = (x - 1) * 100
 
     processAdditionalCharges conditionalCharges = do
-      List.map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToTag addCharges.chargeCategory) . mkValue $ show addCharges.charge) conditionalCharges
+      -- PURPLE_RIDE_CHARGE/AUTO_INSTANT_CHARGE live on the base OneWay policy for
+      -- Domain.Action.UI.Plan.fareCategories (driver-facing plan pricing info) and are
+      -- conditional on ride-specific attributes this generic breakup can't evaluate (rider
+      -- disability tag, instant-booking flag) -- unlike SAFETY_PLUS_CHARGES/
+      -- NYREGULAR_SUBSCRIPTION_CHARGE, which are unconditional add-ons for every ride on the
+      -- policy. Excluded here so they don't appear as a rider-facing quote line on every ride.
+      let riderFacingCharges = List.filter (\addCharges -> addCharges.chargeCategory `notElem` [DAC.PURPLE_RIDE_CHARGE, DAC.AUTO_INSTANT_CHARGE]) conditionalCharges
+      List.map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToTag addCharges.chargeCategory) . mkValue $ show addCharges.charge) riderFacingCharges
 
     castAdditionalChargeCategoriesToTag = \case
       DAC.SAFETY_PLUS_CHARGES -> Tags.SAFETY_PLUS_CHARGES
       DAC.NO_CHARGES -> Tags.NO_CHARGES
       DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Tags.NYREGULAR_SUBSCRIPTION_CHARGE
+      -- Filtered out by riderFacingCharges above; never actually reached. NO_CHARGES is an inert
+      -- fallback purely to keep this pattern match total.
+      DAC.PURPLE_RIDE_CHARGE -> Tags.NO_CHARGES
+      DAC.AUTO_INSTANT_CHARGE -> Tags.NO_CHARGES
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs

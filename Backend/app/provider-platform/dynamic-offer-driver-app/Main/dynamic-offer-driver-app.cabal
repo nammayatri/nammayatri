@@ -451,6 +451,7 @@ library
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Domain.Types.FarePolicy.PlatformFeeMethods
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
@@ -731,6 +732,7 @@ library
       Storage.CachedQueries.IncentiveJourney
       Storage.CachedQueries.IncentiveJourneyMilestone
       Storage.CachedQueries.IncentiveJourneyStats
+      Storage.CachedQueries.IntercityPlatformFeeSlab
       Storage.CachedQueries.InterCityTravelCities
       Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.KioskLocation
@@ -1342,6 +1344,7 @@ library
       Domain.Types.IncentiveJourneyMilestone
       Domain.Types.IncentiveJourneyStats
       Domain.Types.IntegratedBPPConfig
+      Domain.Types.IntercityPlatformFeeSlab
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
@@ -1534,6 +1537,7 @@ library
       Storage.Beam.IncentiveJourneyMilestone
       Storage.Beam.IncentiveJourneyStats
       Storage.Beam.IntegratedBPPConfig
+      Storage.Beam.IntercityPlatformFeeSlab
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
@@ -1731,6 +1735,7 @@ library
       Storage.Queries.IncentiveJourneyMilestone
       Storage.Queries.IncentiveJourneyStats
       Storage.Queries.IntegratedBPPConfig
+      Storage.Queries.IntercityPlatformFeeSlab
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation

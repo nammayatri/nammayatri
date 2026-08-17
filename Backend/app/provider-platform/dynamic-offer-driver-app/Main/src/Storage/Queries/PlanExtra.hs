@@ -13,6 +13,21 @@ import Storage.Queries.OrphanInstances.Plan ()
 
 -- Extra code goes here --
 
+-- | id alone is not unique: there is one row per PaymentMode (MANUAL/AUTOPAY) for the same plan id
+-- -- see updateByPrimaryKeyP's WHERE clause below. name pins the tier the caller means
+-- ("DAILY PER RIDE" vs "DAILY UNLIMITED"); payment mode does not affect fare-category data, so
+-- either matching row will do.
+findByIdAndName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> Text -> m (Maybe Plan)
+findByIdAndName (Id planId) planName =
+  listToMaybe <$> findAllWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.name $ Se.Eq planName]]
+
+-- | Same id-not-unique caveat as findByIdAndName above -- without a name to pin the row, this just
+-- takes whichever PaymentMode variant comes back first, which is fine for callers (like
+-- fareCategories) that only read fare-category data, since that doesn't vary by payment mode.
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> m (Maybe Plan)
+findById (Id planId) =
+  listToMaybe <$> findAllWithKV [Se.Is BeamP.id $ Se.Eq planId]
+
 findByMerchantOpCityIdAndPaymentModeWithServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -80,6 +95,7 @@ updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
     [ Se.Set BeamP.airportRideSubscription airportRideSubscription,
       Se.Set BeamP.allowStrikeOff (Just allowStrikeOff),
+      Se.Set BeamP.waivesSpecialRideCharges (Just waivesSpecialRideCharges),
       Se.Set BeamP.basedOnEntity basedOnEntity,
       Se.Set BeamP.billingType billingType,
       Se.Set BeamP.isFleetOwnerPlan isFleetOwnerPlan,

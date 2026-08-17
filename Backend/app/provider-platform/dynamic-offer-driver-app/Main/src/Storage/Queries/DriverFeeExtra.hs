@@ -453,8 +453,9 @@ updateFee ::
   Bool ->
   SRB.Booking ->
   Bool ->
+  (HighPrecMoney, Int, HighPrecMoney) ->
   m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _booking isSpecialZoneCharge = do
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _booking isSpecialZoneCharge (perRideAmountInc, dailyCountInc, dailyAmountInc) = do
   now <- getCurrentTime
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
@@ -480,8 +481,17 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _bookin
             Se.Set BeamDF.numRides numRides,
             Se.Set BeamDF.updatedAt now
           ]
+            -- perRideBaseAmount/dailyBaseAmount are written unconditionally (not gated on the
+            -- increment being non-zero, unlike dailyBaseCount below) -- every call here represents
+            -- a ride that actually went through basePlanAccrual, so writing Just <total> (even
+            -- when the increment is 0, e.g. still within free rides) is what lets
+            -- calcFinalOrderAmounts tell "processed, accrued to zero" apart from "never processed"
+            -- (NULL, a legacy row or a non-ride DriverFee) by checking isJust rather than > 0.
             <> [Se.Set BeamDF.specialZoneRideCount $ specialZoneRideCount' + 1 | isSpecialZoneCharge]
             <> [Se.Set BeamDF.specialZoneAmount $ specialZoneAmount' + totalDriverFee | isSpecialZoneCharge]
+            <> [Se.Set BeamDF.perRideBaseAmount $ Just (fromMaybe 0 df.perRideBaseAmount + perRideAmountInc)]
+            <> [Se.Set BeamDF.dailyBaseCount $ Just (df.dailyBaseCount + dailyCountInc) | dailyCountInc /= 0]
+            <> [Se.Set BeamDF.dailyBaseAmount $ Just (fromMaybe 0 df.dailyBaseAmount + dailyAmountInc)]
         )
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
