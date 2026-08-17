@@ -11,8 +11,7 @@ FRFSBookingRating:
   fields:
     id : Id FRFSBookingRating
     bookingId : Text
-    driverId : Id Person
-    operatorBadgeToken : Text
+    driverId : Maybe (Id Person)
     fleetNumber : Maybe Text
     gtfsId : Maybe Text
     driverRatingValue : Maybe Int

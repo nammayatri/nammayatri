@@ -23,8 +23,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSBookingRating.FRFSBookingRating] -> m ())
 createMany = traverse_ create
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.FRFSBookingRating.FRFSBookingRating]))
-findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.FRFSBookingRating.FRFSBookingRating])
+findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
 findByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.FRFSBookingRating.FRFSBookingRating))
 findByBookingId bookingId = do findOneWithKV [Se.Is Beam.bookingId $ Se.Eq bookingId]
@@ -50,7 +50,7 @@ updateByPrimaryKey (Domain.Types.FRFSBookingRating.FRFSBookingRating {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId bookingId,
-      Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
+      Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.driverRatingValue driverRatingValue,
       Se.Set Beam.feedbackDetails feedbackDetails,
       Se.Set Beam.fleetNumber fleetNumber,
@@ -58,7 +58,6 @@ updateByPrimaryKey (Domain.Types.FRFSBookingRating.FRFSBookingRating {..}) = do
       Se.Set Beam.gtfsId gtfsId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.operatorBadgeToken operatorBadgeToken,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -70,7 +69,7 @@ instance FromTType' Beam.FRFSBookingRating Domain.Types.FRFSBookingRating.FRFSBo
         Domain.Types.FRFSBookingRating.FRFSBookingRating
           { bookingId = bookingId,
             createdAt = createdAt,
-            driverId = Kernel.Types.Id.Id driverId,
+            driverId = Kernel.Types.Id.Id <$> driverId,
             driverRatingValue = driverRatingValue,
             feedbackDetails = feedbackDetails,
             fleetNumber = fleetNumber,
@@ -79,7 +78,6 @@ instance FromTType' Beam.FRFSBookingRating Domain.Types.FRFSBookingRating.FRFSBo
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            operatorBadgeToken = operatorBadgeToken,
             updatedAt = updatedAt
           }
 
@@ -88,7 +86,7 @@ instance ToTType' Beam.FRFSBookingRating Domain.Types.FRFSBookingRating.FRFSBook
     Beam.FRFSBookingRatingT
       { Beam.bookingId = bookingId,
         Beam.createdAt = createdAt,
-        Beam.driverId = Kernel.Types.Id.getId driverId,
+        Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.driverRatingValue = driverRatingValue,
         Beam.feedbackDetails = feedbackDetails,
         Beam.fleetNumber = fleetNumber,
@@ -97,6 +95,5 @@ instance ToTType' Beam.FRFSBookingRating Domain.Types.FRFSBookingRating.FRFSBook
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.operatorBadgeToken = operatorBadgeToken,
         Beam.updatedAt = updatedAt
       }

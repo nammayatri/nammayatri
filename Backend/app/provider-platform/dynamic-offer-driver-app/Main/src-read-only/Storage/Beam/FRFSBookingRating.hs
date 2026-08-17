@@ -12,19 +12,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSBookingRatingT f = FRFSBookingRatingT
-  { bookingId :: (B.C f Data.Text.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Data.Text.Text),
-    driverRatingValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    feedbackDetails :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    fleetNumber :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    fleetRatingValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    gtfsId :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    id :: (B.C f Data.Text.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
-    operatorBadgeToken :: (B.C f Data.Text.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bookingId :: B.C f Data.Text.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    driverRatingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    feedbackDetails :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    fleetNumber :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    fleetRatingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    gtfsId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    id :: B.C f Data.Text.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +33,6 @@ instance B.Table FRFSBookingRatingT where
 
 type FRFSBookingRating = FRFSBookingRatingT Identity
 
-$(enableKVPG (''FRFSBookingRatingT) [('id)] [[('bookingId)], [('driverId)]])
+$(enableKVPG ''FRFSBookingRatingT ['id] [['bookingId], ['driverId]])
 
-$(mkTableInstances (''FRFSBookingRatingT) "frfs_booking_rating")
+$(mkTableInstances ''FRFSBookingRatingT "frfs_booking_rating")

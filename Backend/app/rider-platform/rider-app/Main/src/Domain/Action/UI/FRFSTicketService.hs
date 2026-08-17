@@ -1300,27 +1300,27 @@ postFrfsBookingFeedback (mbPersonId, merchantId) bookingId req = do
   return APISuccess.Success
 
 -- | Forward a shuttle driver rating to dynamic-offer-driver-app (BPP) so it can update the
--- driver's DriverStats and the bus/fleet aggregate. Skips (with a log) when the boarded
--- driver is unknown, so the rider's own feedback still persists.
+-- driver's DriverStats and the bus/fleet aggregate. The two are independent: a booking with no
+-- recorded driver still forwards its bus rating, and only the driver half is dropped.
 forwardShuttleRating :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> FRFSTicketService.BookingRatingReq -> Environment.Flow ()
-forwardShuttleRating merchant booking ratingReq =
-  when (isJust ratingReq.driverRating || isJust ratingReq.fleetRating) $
-    case booking.driverId of
-      Nothing -> logWarning $ "FRFS driver rating: booking " <> booking.id.getId <> " has no driverId; skipping BPP forward."
-      Just driverBadge -> do
-        mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
-        let ratingBppReq =
-              CallBPPInternal.FRFSBookingRatingReq
-                { bookingId = booking.id.getId,
-                  driverBadgeToken = driverBadge,
-                  driverRating = ratingReq.driverRating,
-                  fleetRating = ratingReq.fleetRating,
-                  feedbackDetails = ratingReq.feedbackDetails,
-                  fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber,
-                  gtfsId = mbGtfsId,
-                  merchantId = merchant.driverOfferMerchantId
-                }
-        void $ CallBPPInternal.sendFrfsBookingRating merchant.driverOfferApiKey merchant.driverOfferBaseUrl ratingBppReq
+forwardShuttleRating merchant booking ratingReq = do
+  let mbDriverRating = if isJust booking.driverId then ratingReq.driverRating else Nothing
+  when (isJust ratingReq.driverRating && isNothing booking.driverId) $
+    logWarning $ "FRFS driver rating: booking " <> booking.id.getId <> " has no driverId; forwarding the fleet rating only."
+  when (isJust mbDriverRating || isJust ratingReq.fleetRating) $ do
+    mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
+    let ratingBppReq =
+          CallBPPInternal.FRFSBookingRatingReq
+            { bookingId = booking.id.getId,
+              driverBadgeToken = booking.driverId,
+              driverRating = mbDriverRating,
+              fleetRating = ratingReq.fleetRating,
+              feedbackDetails = ratingReq.feedbackDetails,
+              fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber,
+              gtfsId = mbGtfsId,
+              merchantId = merchant.driverOfferMerchantId
+            }
+    void $ CallBPPInternal.sendFrfsBookingRating merchant.driverOfferApiKey merchant.driverOfferBaseUrl ratingBppReq
 
 getFrfsBookingRating ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1333,15 +1333,13 @@ getFrfsBookingRating (mbPersonId, merchantId) bookingId = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  -- Ownership check: without this, any authenticated rider could pass someone else's
-  -- booking id and read the driver/fleet aggregates behind it.
   unless (booking.riderId == personId) $ throwError (InvalidRequest "Booking does not belong to this rider")
-  case booking.driverId of
-    Nothing -> pure emptyBookingRatingAgg
-    Just driverBadge -> do
-      mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
-      let fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber
-      withTryCatch "getFrfsBookingRatingAgg" (CallBPPInternal.getFrfsBookingRatingAgg merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId driverBadge fleetNumber mbGtfsId)
+  mbGtfsId <- fmap (.feedKey) <$> CQIBC.findById booking.integratedBppConfigId
+  let fleetNumber = booking.finalBoardedVehicleNumber <|> booking.vehicleNumber
+  if isNothing booking.driverId && isNothing fleetNumber
+    then pure emptyBookingRatingAgg
+    else
+      withTryCatch "getFrfsBookingRatingAgg" (CallBPPInternal.getFrfsBookingRatingAgg merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId booking.driverId fleetNumber mbGtfsId)
         >>= \case
           Right res ->
             pure

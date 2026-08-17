@@ -38,28 +38,30 @@ postInternalFrfsBookingRating mbApiKey req = do
   validateRatingRange req.fleetRating
   when (isJust req.fleetRating && (isNothing req.gtfsId || isNothing req.fleetNumber)) $
     throwError (InvalidRequest "gtfsId and fleetNumber are required when fleetRating is present")
-  driver <- QPerson.findByOperatorBadgeTokenAndMerchantId (Just req.driverBadgeToken) merchantId >>= fromMaybeM (PersonNotFound req.driverBadgeToken)
-  let driverId = driver.id
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  when (isJust req.driverRating && isNothing req.driverBadgeToken) $
+    throwError (InvalidRequest "driverBadgeToken is required when driverRating is present")
+  mbDriver <- forM req.driverBadgeToken $ \badgeToken ->
+    QPerson.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchantId >>= fromMaybeM (PersonNotFound badgeToken)
   existing <- QFRFSBookingRating.findByBookingId req.bookingId
 
-  -- driver aggregate: only when the rider rated the driver
-  whenJust req.driverRating $ \newDriver ->
-    Redis.withWaitAndLockRedis (mkDriverRatingLockKey driverId) 10 5000 $ do
-      driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
+  -- driver aggregate: only when the rider rated the driver (and a driver was resolved)
+  whenJust ((,) <$> req.driverRating <*> mbDriver) $ \(newDriver, driver) ->
+    Redis.withWaitAndLockRedis (mkDriverRatingLockKey driver.id) 10 5000 $ do
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+      driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       let (delta, shouldIncrement) = ratingDelta (existing >>= (.driverRatingValue)) newDriver
-      void $ BecknRating.calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrement delta driverStats.totalRatings driverStats.totalRatingScore transporterConfig
+      void $ BecknRating.calculateAverageRating driver.id merchant.minimumDriverRatesCount shouldIncrement delta driverStats.totalRatings driverStats.totalRatingScore transporterConfig
 
   -- bus/fleet aggregate: only when the rider rated the bus and we know which bus was boarded
   whenJust ((,,) <$> req.fleetRating <*> req.gtfsId <*> req.fleetNumber) $ \(newFleet, gtfsId, fleetNumber) ->
     Redis.withWaitAndLockRedis (mkFleetRatingLockKey gtfsId fleetNumber) 10 5000 $ do
       let (delta, shouldIncrement) = ratingDelta (existing >>= (.fleetRatingValue)) newFleet
-      updateFleetRating merchantId driver.merchantOperatingCityId gtfsId fleetNumber delta shouldIncrement
+      updateFleetRating merchantId (mbDriver <&> (.merchantOperatingCityId)) gtfsId fleetNumber delta shouldIncrement
 
   -- persist the per-booking record (merge: keep a prior value if this submission omits it)
   case existing of
     Nothing -> do
-      row <- buildFRFSBookingRating merchantId driver req
+      row <- buildFRFSBookingRating merchantId mbDriver req
       QFRFSBookingRating.create row
     Just old -> QFRFSBookingRating.updateRating (req.driverRating <|> old.driverRatingValue) (req.fleetRating <|> old.fleetRatingValue) (req.feedbackDetails <|> old.feedbackDetails) old.id
   pure Success
@@ -73,12 +75,14 @@ getInternalFrfsBookingRating ::
   Environment.Flow API.FRFSBookingRatingAggRes
 getInternalFrfsBookingRating mbMerchantId mbDriverBadgeToken mbFleetNumber mbGtfsId mbApiKey = do
   merchantIdText <- mbMerchantId & fromMaybeM (InvalidRequest "merchantId is required")
-  driverBadgeToken <- mbDriverBadgeToken & fromMaybeM (InvalidRequest "driverBadgeToken is required")
   let merchantId = Id merchantIdText
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantIdText)
   unless (Just merchant.internalApiKey == mbApiKey) $ throwError (InvalidRequest "Invalid internal api key for FRFS driver rating")
-  driver <- QPerson.findByOperatorBadgeTokenAndMerchantId (Just driverBadgeToken) merchantId >>= fromMaybeM (PersonNotFound driverBadgeToken)
-  mbDriverStats <- QDriverStats.findById driver.id
+  mbDriverStats <- case mbDriverBadgeToken of
+    Nothing -> pure Nothing
+    Just badgeToken -> do
+      driver <- QPerson.findByOperatorBadgeTokenAndMerchantId (Just badgeToken) merchantId >>= fromMaybeM (PersonNotFound badgeToken)
+      QDriverStats.findById driver.id
   -- The bus aggregate needs both halves of its key; without them there is simply no bus to report on.
   mbFleet <- case (,) <$> mbGtfsId <*> mbFleetNumber of
     Just (gtfsId, fleetNumber) -> QFRFSFleetStats.findByGtfsIdAndFleetNumber gtfsId fleetNumber
@@ -107,29 +111,28 @@ mkDriverRatingLockKey driverId = "FRFS:DriverRating:DriverId-" <> driverId.getId
 mkFleetRatingLockKey :: Text -> Text -> Text
 mkFleetRatingLockKey gtfsId fleetNumber = "FRFS:FleetRating:" <> gtfsId <> ":" <> fleetNumber
 
-buildFRFSBookingRating :: Id DM.Merchant -> DP.Person -> API.FRFSBookingRatingReq -> Environment.Flow DFRFSBookingRating.FRFSBookingRating
-buildFRFSBookingRating merchantId driver req = do
+buildFRFSBookingRating :: Id DM.Merchant -> Maybe DP.Person -> API.FRFSBookingRatingReq -> Environment.Flow DFRFSBookingRating.FRFSBookingRating
+buildFRFSBookingRating merchantId mbDriver req = do
   ratingId <- generateGUID
   now <- getCurrentTime
   pure
     DFRFSBookingRating.FRFSBookingRating
       { id = ratingId,
         bookingId = req.bookingId,
-        driverId = driver.id,
-        operatorBadgeToken = req.driverBadgeToken,
+        driverId = mbDriver <&> (.id),
         fleetNumber = req.fleetNumber,
         gtfsId = req.gtfsId,
         driverRatingValue = req.driverRating,
         fleetRatingValue = req.fleetRating,
         feedbackDetails = req.feedbackDetails,
         merchantId = Just merchantId,
-        merchantOperatingCityId = Just driver.merchantOperatingCityId,
+        merchantOperatingCityId = mbDriver <&> (.merchantOperatingCityId),
         createdAt = now,
         updatedAt = now
       }
 
-updateFleetRating :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Int -> Bool -> Environment.Flow ()
-updateFleetRating merchantId merchantOperatingCityId gtfsId fleetNumber delta shouldIncrement = do
+updateFleetRating :: Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Int -> Bool -> Environment.Flow ()
+updateFleetRating merchantId mbMerchantOperatingCityId gtfsId fleetNumber delta shouldIncrement = do
   mbFleet <- QFRFSFleetStats.findByGtfsIdAndFleetNumber gtfsId fleetNumber
   case mbFleet of
     Just fleet -> do
@@ -150,7 +153,7 @@ updateFleetRating merchantId merchantOperatingCityId gtfsId fleetNumber delta sh
             totalRatingCount = newCount,
             rating = mkFleetRating newScore newCount,
             merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOperatingCityId,
+            merchantOperatingCityId = mbMerchantOperatingCityId,
             createdAt = now,
             updatedAt = now
           }

@@ -133,11 +133,9 @@ callCustomerFCM apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callCustomerFCMClient bppRideId (Just apiKey)) "CallCustomerFCM" callCustomerFCMApi
 
--- FRFS shuttle driver rating: delivered to dynamic-offer-driver-app so it can update the
--- driver's DriverStats and the bus/fleet aggregate. Field names must match the BPP request type.
 data FRFSBookingRatingReq = FRFSBookingRatingReq
   { bookingId :: Text,
-    driverBadgeToken :: Text,
+    driverBadgeToken :: Maybe Text,
     driverRating :: Maybe Int,
     fleetRating :: Maybe Int,
     feedbackDetails :: Maybe Text,
@@ -211,13 +209,13 @@ getFrfsBookingRatingAgg ::
   Text ->
   BaseUrl ->
   Text ->
-  Text ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   m FRFSBookingRatingAggRes
-getFrfsBookingRatingAgg apiKey internalUrl merchantId driverBadgeToken mbFleetNumber mbGtfsId = do
+getFrfsBookingRatingAgg apiKey internalUrl merchantId mbDriverBadgeToken mbFleetNumber mbGtfsId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsBookingRatingAggClient (Just merchantId) (Just driverBadgeToken) mbFleetNumber mbGtfsId (Just apiKey)) "GetFrfsBookingRatingAgg" frfsBookingRatingAggApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsBookingRatingAggClient (Just merchantId) mbDriverBadgeToken mbFleetNumber mbGtfsId (Just apiKey)) "GetFrfsBookingRatingAgg" frfsBookingRatingAggApi
 
 data FeedbackFormReq = FeedbackFormReq
   { rideId :: Text,

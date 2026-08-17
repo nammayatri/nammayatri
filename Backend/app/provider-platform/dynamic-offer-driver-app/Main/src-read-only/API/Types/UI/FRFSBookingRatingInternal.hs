@@ -21,7 +21,7 @@ data FRFSBookingRatingAggRes = FRFSBookingRatingAggRes
 
 data FRFSBookingRatingReq = FRFSBookingRatingReq
   { bookingId :: Data.Text.Text,
-    driverBadgeToken :: Data.Text.Text,
+    driverBadgeToken :: Kernel.Prelude.Maybe Data.Text.Text,
     driverRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     feedbackDetails :: Kernel.Prelude.Maybe Data.Text.Text,
     fleetNumber :: Kernel.Prelude.Maybe Data.Text.Text,

@@ -8,7 +8,7 @@ module: FRFSBookingRatingInternal
 types:
   FRFSBookingRatingReq:
     merchantId: Text
-    driverBadgeToken: Text
+    driverBadgeToken: Maybe Text
     bookingId: Text
     fleetNumber: Maybe Text
     gtfsId: Maybe Text
