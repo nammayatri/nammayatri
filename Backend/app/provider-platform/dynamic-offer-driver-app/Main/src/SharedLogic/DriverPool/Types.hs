@@ -335,7 +335,14 @@ instance Default IntelligentScores where
 data TaggedDriverPoolInput = TaggedDriverPoolInput
   { drivers :: [DriverPoolWithActualDistResult],
     needOnRideDrivers :: Bool,
-    batchNum :: PoolBatchNum
+    batchNum :: PoolBatchNum,
+    -- | Rejects so far in this search try, across all its batches. Lets a POOLING rule react to
+    -- a pool that keeps refusing instead of only seeing the batch in front of it.
+    --
+    -- Maybe on purpose: this type is also how the ruleset's *output* is parsed, and a live
+    -- ruleset that rebuilds the object without this key would otherwise fail to decode and
+    -- silently drop the whole ranking back to the unsorted pool.
+    cumulativeRejectCount :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -344,7 +351,8 @@ instance Default TaggedDriverPoolInput where
     TaggedDriverPoolInput
       { drivers = [],
         needOnRideDrivers = False,
-        batchNum = 0
+        batchNum = 0,
+        cumulativeRejectCount = Just 0
       }
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags

@@ -57,6 +57,14 @@ module SharedLogic.DriverPool
     SearchTryBatchData (..),
     SearchTryBatchPoolData (..),
     FilterStage (..),
+    incrementSearchTryRejectCount,
+    getSearchTryRejectCount,
+    setBatchSentCount,
+    getBatchSentCount,
+    incrementBatchRejectCount,
+    getBatchRejectCount,
+    getBatchEpoch,
+    bumpBatchEpoch,
   )
 where
 
@@ -83,6 +91,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
+import qualified Domain.Types.SearchTry as DSTry
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (find, id, length)
@@ -153,6 +162,78 @@ mkSrdSentCountKey driverId = "driver-offer:SRDStats:sent:DriverId-" <> driverId
 
 srdStatsWindow :: SWC.SlidingWindowOptions
 srdStatsWindow = SWC.SlidingWindowOptions 7 SWC.Days
+
+-- Per-search-try dispatch counters. All Redis-only and short-lived (a search try dies within
+-- minutes), they carry the cross-batch feedback a single batch can't see on its own:
+--   * rejects for the whole try  -> surfaced to the POOLING ruleset as `cumulativeRejectCount`
+--   * sent/rejects per batch     -> lets the respond API spot a *fully* rejected batch
+--   * batch epoch                -> generation token keeping exactly one live rescheduling
+--                                   chain when a batch is advanced early
+mkSearchTryRejectCountKey :: Text -> Text
+mkSearchTryRejectCountKey searchTryId = "Driver-Offer:SearchTry:RejectCount:" <> searchTryId
+
+mkBatchSentCountKey :: Text -> Int -> Text
+mkBatchSentCountKey searchTryId batchNum = "Driver-Offer:SearchTry:BatchSentCount:" <> searchTryId <> ":" <> show batchNum
+
+mkBatchRejectCountKey :: Text -> Int -> Text
+mkBatchRejectCountKey searchTryId batchNum = "Driver-Offer:SearchTry:BatchRejectCount:" <> searchTryId <> ":" <> show batchNum
+
+mkBatchEpochKey :: Text -> Text
+mkBatchEpochKey searchTryId = "Driver-Offer:SearchTry:BatchEpoch:" <> searchTryId
+
+-- Matches poolBatchNumKey's TTL: a search try never outlives it.
+searchTryDispatchCounterTtl :: Redis.ExpirationTime
+searchTryDispatchCounterTtl = 600
+
+-- | Cumulative rejects across every batch of this search try. Returns the post-increment
+-- value so the caller can act on it without a second read.
+incrementSearchTryRejectCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m Int
+incrementSearchTryRejectCount searchTryId = Redis.withCrossAppRedis $ do
+  let key = mkSearchTryRejectCountKey searchTryId.getId
+  rejectCount <- Redis.incr key
+  Redis.expire key searchTryDispatchCounterTtl
+  pure $ fromIntegral rejectCount
+
+getSearchTryRejectCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m Int
+getSearchTryRejectCount searchTryId =
+  Redis.withCrossAppRedis $ fromMaybe 0 <$> Redis.get (mkSearchTryRejectCountKey searchTryId.getId)
+
+-- | Recorded when a batch goes out, so the respond API can tell a fully rejected batch
+-- (rejects == sent) from a partly answered one without touching Postgres.
+setBatchSentCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> Int -> m ()
+setBatchSentCount searchTryId batchNum sentCount =
+  Redis.withCrossAppRedis $ Redis.setExp (mkBatchSentCountKey searchTryId.getId batchNum) sentCount searchTryDispatchCounterTtl
+
+getBatchSentCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m (Maybe Int)
+getBatchSentCount searchTryId batchNum =
+  Redis.withCrossAppRedis $ Redis.get (mkBatchSentCountKey searchTryId.getId batchNum)
+
+-- | Returns the post-increment count. The INCR is atomic, so of several drivers rejecting at
+-- once exactly one observes `rejects == sent` — that one owns the early advance.
+incrementBatchRejectCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m Int
+incrementBatchRejectCount searchTryId batchNum = Redis.withCrossAppRedis $ do
+  let key = mkBatchRejectCountKey searchTryId.getId batchNum
+  rejectCount <- Redis.incr key
+  Redis.expire key searchTryDispatchCounterTtl
+  pure $ fromIntegral rejectCount
+
+getBatchRejectCount :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> Int -> m Int
+getBatchRejectCount searchTryId batchNum =
+  Redis.withCrossAppRedis $ fromMaybe 0 <$> Redis.get (mkBatchRejectCountKey searchTryId.getId batchNum)
+
+getBatchEpoch :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m Int
+getBatchEpoch searchTryId =
+  Redis.withCrossAppRedis $ fromMaybe 0 <$> Redis.get (mkBatchEpochKey searchTryId.getId)
+
+-- | Bumps the generation token and returns the new epoch. The job created with this epoch
+-- becomes the only live chain; a job carrying an older epoch terminates without rescheduling,
+-- which is what stops an early advance from double-sending a batch.
+bumpBatchEpoch :: (Redis.HedisFlow m r) => Id DSTry.SearchTry -> m Int
+bumpBatchEpoch searchTryId = Redis.withCrossAppRedis $ do
+  let key = mkBatchEpochKey searchTryId.getId
+  epoch <- Redis.incr key
+  Redis.expire key searchTryDispatchCounterTtl
+  pure $ fromIntegral epoch
 
 windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> (DIPC.DriverIntelligentPoolConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
 windowFromIntelligentPoolConfig _merchantOpCityId _windowKey = pure $ SWC.SlidingWindowOptions 7 SWC.Days

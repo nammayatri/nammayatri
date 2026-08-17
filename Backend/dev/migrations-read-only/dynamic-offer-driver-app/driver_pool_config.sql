@@ -140,3 +140,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_priority
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN radius_step_size SET DEFAULT 500;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN radius_step_size DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN soft_max_parallel_search_requests integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_early_batch_advance_on_full_reject boolean ;

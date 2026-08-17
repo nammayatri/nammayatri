@@ -214,53 +214,59 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-  goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
-  tripQuoteDetailsWithoutUpgrades <- do
-    let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
-    estimateIds `forM` \estimateId -> do
-      if DTC.isDynamicOfferTrip searchTry.tripCategory
-        then do
-          estimate <- B.runInReplica $ QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
-          buildEstimateTripQuoteDetails searchTry searchReq estimate
-        else do
-          quote <- B.runInReplica $ QQuote.findById (Id estimateId) >>= fromMaybeM (QuoteNotFound estimateId)
-          let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
-              driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
-              driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
-              businessDiscount = if searchTry.billingCategory == SLT.BUSINESS then fromMaybe 0.0 quote.fareParams.businessDiscount else 0.0
-              personalDiscount = if searchTry.billingCategory == SLT.PERSONAL then fromMaybe 0.0 quote.fareParams.personalDiscount else 0.0
-          SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False quote.fareParams.congestionCharge searchTry.petCharges quote.fareParams.priorityCharges Nothing quote.fareParams.tollCharges quote.fareParams.govtCharges quote.fareParams.driverCancellationNotAllowed
+  -- An early batch advance orphans the job that was already scheduled. Terminate the orphan here
+  -- (Complete, so it does *not* reschedule) to keep exactly one live batch chain per search try.
+  superseded <- I.isBatchChainSuperseded driverPoolConfig searchTryId jobData.batchEpoch
+  if superseded
+    then return Complete
+    else do
+      goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
+      tripQuoteDetailsWithoutUpgrades <- do
+        let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
+        estimateIds `forM` \estimateId -> do
+          if DTC.isDynamicOfferTrip searchTry.tripCategory
+            then do
+              estimate <- B.runInReplica $ QEst.findById (Id estimateId) >>= fromMaybeM (EstimateNotFound estimateId)
+              buildEstimateTripQuoteDetails searchTry searchReq estimate
+            else do
+              quote <- B.runInReplica $ QQuote.findById (Id estimateId) >>= fromMaybeM (QuoteNotFound estimateId)
+              let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
+                  driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
+                  driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
+                  businessDiscount = if searchTry.billingCategory == SLT.BUSINESS then fromMaybe 0.0 quote.fareParams.businessDiscount else 0.0
+                  personalDiscount = if searchTry.billingCategory == SLT.PERSONAL then fromMaybe 0.0 quote.fareParams.personalDiscount else 0.0
+              SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False quote.fareParams.congestionCharge searchTry.petCharges quote.fareParams.priorityCharges Nothing quote.fareParams.tollCharges quote.fareParams.govtCharges quote.fareParams.driverCancellationNotAllowed
 
-  tripQuoteDetails <-
-    case tripQuoteDetailsWithoutUpgrades of
-      [tripQuoteDetail] ->
-        -- allow upgrade for one way regular rides only if Auto is selected and rider is eligible for upgrade
-        case (tripQuoteDetail.tripCategory, tripQuoteDetail.vehicleServiceTier, isRiderEligibleForCabUpgrade searchReq) of
-          (OneWay OneWayOnDemandDynamicOffer, AUTO_RICKSHAW, True) -> do
-            upgradeEstimates <- QEst.findEligibleForCabUpgrade searchReq.id True
-            upgradeTripQuoteDetails <- upgradeEstimates `forM` buildEstimateTripQuoteDetails searchTry searchReq
-            return $ tripQuoteDetailsWithoutUpgrades <> upgradeTripQuoteDetails
+      tripQuoteDetails <-
+        case tripQuoteDetailsWithoutUpgrades of
+          [tripQuoteDetail] ->
+            -- allow upgrade for one way regular rides only if Auto is selected and rider is eligible for upgrade
+            case (tripQuoteDetail.tripCategory, tripQuoteDetail.vehicleServiceTier, isRiderEligibleForCabUpgrade searchReq) of
+              (OneWay OneWayOnDemandDynamicOffer, AUTO_RICKSHAW, True) -> do
+                upgradeEstimates <- QEst.findEligibleForCabUpgrade searchReq.id True
+                upgradeTripQuoteDetails <- upgradeEstimates `forM` buildEstimateTripQuoteDetails searchTry searchReq
+                return $ tripQuoteDetailsWithoutUpgrades <> upgradeTripQuoteDetails
+              _ -> return tripQuoteDetailsWithoutUpgrades
           _ -> return tripQuoteDetailsWithoutUpgrades
-      _ -> return tripQuoteDetailsWithoutUpgrades
 
-  let driverSearchBatchInput =
-        DriverSearchBatchInput
-          { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
-            merchant,
-            searchReq,
-            tripQuoteDetails,
-            customerExtraFee = searchTry.customerExtraFee,
-            messageId = searchTry.messageId,
-            isRepeatSearch = False,
-            isAllocatorBatch = True,
-            billingCategory = searchTry.billingCategory,
-            paymentMethodInfo = Nothing,
-            emailDomain = searchTry.emailDomain,
-            businessEmailDomain = searchTry.businessEmailDomain,
-            driverPreference = searchTry.driverPreference
-          }
-  (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
-  return res
+      let driverSearchBatchInput =
+            DriverSearchBatchInput
+              { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
+                merchant,
+                searchReq,
+                tripQuoteDetails,
+                customerExtraFee = searchTry.customerExtraFee,
+                messageId = searchTry.messageId,
+                isRepeatSearch = False,
+                isAllocatorBatch = True,
+                billingCategory = searchTry.billingCategory,
+                paymentMethodInfo = Nothing,
+                emailDomain = searchTry.emailDomain,
+                businessEmailDomain = searchTry.businessEmailDomain,
+                driverPreference = searchTry.driverPreference
+              }
+      (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
+      return res
   where
     buildEstimateTripQuoteDetails ::
       ( CacheFlow m r,

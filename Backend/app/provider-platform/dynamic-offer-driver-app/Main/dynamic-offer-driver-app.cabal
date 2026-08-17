@@ -80,6 +80,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
       API.Internal.SpecialLocationList
@@ -265,6 +266,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SpecialLocationUpsert
