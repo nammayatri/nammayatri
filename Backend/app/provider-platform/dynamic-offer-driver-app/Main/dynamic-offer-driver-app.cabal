@@ -614,6 +614,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
+      SharedLogic.OndcCancellationReason
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person

@@ -241,7 +241,7 @@ data CancellationReasonId
   | DRIVER_ASKED_TO_CANCEL -- 003
   | INCORRECT_PICKUP_LOCATION -- 004
   | BOOKED_BY_MISTAKE -- 005 (v2.1.0)
-  deriving (Eq, Generic, ToJSON, FromJSON)
+  deriving (Eq, Generic, ToJSON, FromJSON, Bounded, Enum)
 
 instance Show CancellationReasonId where
   show TECHNICAL_CANCELLATION = "000"

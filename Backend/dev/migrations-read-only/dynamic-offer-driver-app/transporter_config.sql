@@ -1088,3 +1088,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enforce_upload_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prefer_ondc_cancellation_reason_id boolean ;

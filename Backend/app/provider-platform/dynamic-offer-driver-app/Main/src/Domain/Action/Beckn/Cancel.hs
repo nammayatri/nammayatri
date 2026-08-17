@@ -63,6 +63,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Wallet (splitCancellationGross)
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.OndcCancellationReason as SOCR
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -128,7 +129,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
-    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
+    bookingCR <- buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
     Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
@@ -287,10 +288,15 @@ cancel req merchant booking mbActiveSearchTry = do
         [] -> Nothing
         parts -> Just $ Text.intercalate "; " parts
 
-    buildBookingCancellationReason disToPickup currentLocation mbRide = do
+    buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide = do
       when (isNothing req.cancellationReason && isNothing req.ondcCancellationReasonId) $
         logError $
           "No cancellation reason received for bookingId-" <> req.bookingId.getId
+      resolvedReasonCode <-
+        SOCR.resolveCancellationReasonCode
+          (fromMaybe False transporterConfig.preferOndcCancellationReasonId)
+          req.ondcCancellationReasonId
+          req.cancellationReason
       now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
@@ -298,7 +304,7 @@ cancel req merchant booking mbActiveSearchTry = do
             rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
-            reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
+            reasonCode = DTCR.CancellationReasonCode <$> resolvedReasonCode,
             driverId = (.driverId) <$> mbRide,
             additionalInfo = buildAdditionalInfo,
             ondcCancellationReasonId = req.ondcCancellationReasonId,

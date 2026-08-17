@@ -278,6 +278,7 @@ data TransporterConfigT f = TransporterConfigT
     pickupStallMonitoringConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    preferOndcCancellationReasonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     qarCalRadiusInKm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcChangeThresholdDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

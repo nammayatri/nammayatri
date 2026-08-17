@@ -44,13 +44,16 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Types as DCT
 import Servant hiding (throwError)
+import qualified SharedLogic.OndcCancellationReason as SOCR
 import qualified SharedLogic.SearchTryLocker as STL
 import SharedLogic.SyncRide (rideSync)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
@@ -129,7 +132,13 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                         pure buildOnCancelMessageV2
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
-              (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer (DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) Nothing True) mbRide
+              mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+              resolvedReasonCode <-
+                SOCR.resolveCancellationReasonCode
+                  (fromMaybe False (mbTransporterConfig >>= (.preferOndcCancellationReasonId)))
+                  cancelRideReq.ondcCancellationReasonId
+                  cancelRideReq.cancellationReason
+              (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer (DTCR.CancellationReasonCode <$> resolvedReasonCode) Nothing True) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
               let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               void $ case (cancellationCharges, mbRide) of

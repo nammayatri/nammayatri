@@ -270,9 +270,11 @@ mkReason mbCode mbShortDesc =
 -- | Translate an internal cancellation reason code into what ONDC puts on the wire.
 --
 -- ONDC's seller enum is closed: 011 NO_DRIVERS_AVAILABLE, 012 COULD_NOT_FIND_CUSTOMER,
--- 013 RIDE_ACCEPTED_MISTAKENLY, 014 UNABLE_TO_CONTACT_RIDER. Only three of our reasons have an
--- honest equivalent. The rest omit the code rather than assert something false — a buyer app may
--- surface it to the rider, and @cancellationCancelledBy = PROVIDER@ already conveys who cancelled.
+-- 013 RIDE_ACCEPTED_MISTAKENLY, 014 UNABLE_TO_CONTACT_RIDER, 015 STOPPED_BY_TRAFFIC_OFFICIALS,
+-- 016 VEHICLE_ISSUE. Four of our eight reasons have an honest equivalent; 015 has none — no MSIL
+-- reason means "stopped by traffic officials". The rest omit the code rather than assert something
+-- false — a buyer app may surface it to the rider, and @cancellationCancelledBy = PROVIDER@ already
+-- conveys who cancelled.
 --
 -- The short_desc is restricted to reasons we recognise, so unvalidated values cannot reach the
 -- wire (production has carried `aliquip` and `string` in this field). English by design: the
@@ -285,7 +287,7 @@ ondcCancellationReason = \case
   "DRIVER_CANCEL_SAFETY_OR_MISCONDUCT" -> (Nothing, Just "Safety concern or passenger misconduct")
   "DRIVER_CANCEL_UNSAFE_RIDE_REQUEST" -> (Nothing, Just "Unsafe or non-compliant ride request")
   "DRIVER_CANCEL_EMERGENCY_OR_UNFORESEEN" -> (Nothing, Just "Accident, medical emergency or unforeseen event")
-  "DRIVER_CANCEL_VEHICLE_BREAKDOWN" -> (Nothing, Just "Vehicle breakdown or mechanical issue")
+  "DRIVER_CANCEL_VEHICLE_BREAKDOWN" -> (Just "016", Just "Vehicle breakdown or mechanical issue")
   "DRIVER_CANCEL_LOCATION_INACCESSIBLE" -> (Nothing, Just "Pickup or drop location inaccessible")
   _ -> (Nothing, Nothing)
 
