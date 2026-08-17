@@ -501,3 +501,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN parent_search_request_id charact
 ALTER TABLE atlas_app.search_request ADD COLUMN better_point_walk_to_pickup integer ;
 ALTER TABLE atlas_app.search_request ADD COLUMN better_point_walk_from_drop integer ;
 ALTER TABLE atlas_app.search_request ADD COLUMN better_point_ride_distance_saved integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN route_cache_used boolean ;
