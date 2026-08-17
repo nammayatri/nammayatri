@@ -95,6 +95,7 @@ module SharedLogic.Finance.Wallet
     getControlAccountByOwner,
     getWalletAndControlAccountsByOwner,
     getWalletBalanceByOwner,
+    hasMinWalletBalance,
     getControlBalanceByOwner,
     createWalletEntryDelta,
     utcToLocalDay,
@@ -492,6 +493,17 @@ getWalletBalanceByOwner ::
 getWalletBalanceByOwner counterpartyType ownerId = do
   mbAcc <- getWalletAccountByOwner counterpartyType ownerId
   pure $ mbAcc <&> (.balance)
+
+hasMinWalletBalance ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  Maybe HighPrecMoney ->
+  Text ->
+  m Bool
+hasMinWalletBalance counterpartyType mbMinBalance ownerId =
+  case mbMinBalance of
+    Nothing -> pure True
+    Just minBalance -> maybe False (>= minBalance) <$> getWalletBalanceByOwner counterpartyType ownerId
 
 -- | Balance of the Control (cash-earnings memo) account.
 getControlBalanceByOwner ::

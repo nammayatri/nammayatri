@@ -3160,18 +3160,21 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               let mbScheduleBookingListEligibilityTags = listToMaybe availableServiceTierItems >>= (.scheduleBookingListEligibilityTags)
               let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
-              if scheduleEnabled
-                then do
-                  let vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
-                      tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-                      limit = fromMaybe 10 mbLimit
-                      offset = fromMaybe 0 mbOffset
-                      safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
-                  scheduledBookings <- getScheduledBookings from cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
-                  bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
-                  let sortedBookings = sortBookingsByDistance (catMaybes bookings)
-                  return $ ScheduledBookingRes sortedBookings
-                else return $ ScheduledBookingRes []
+              walletOk <- FWallet.hasMinWalletBalance counterpartyDriver transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides personId.getId
+              nowT <- getCurrentTime
+              let driverEligible = scheduleEnabled && walletOk
+                  vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
+                  tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
+                  limit = fromMaybe 10 mbLimit
+                  offset = fromMaybe 0 mbOffset
+                  safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
+                  -- R4: still-unassigned scheduled bookings within the open-to-all threshold are shown to everyone.
+                  openToAll sb = maybe False (\n -> diffUTCTime sb.bookingDetails.startTime nowT <= fromIntegral (n * 60 :: Int)) transporterConfig.scheduledRideOpenToAllThresholdMinutes
+              scheduledBookings <- getScheduledBookings from cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
+              bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
+              let visible sb = driverEligible || openToAll sb
+                  sortedBookings = sortBookingsByDistance (filter visible (catMaybes bookings))
+              return $ ScheduledBookingRes sortedBookings
         _ -> pure $ ScheduledBookingRes []
   where
     getCurrentDriverLocUsingLTS person = do
@@ -3303,6 +3306,13 @@ acceptScheduledBookingWithPreFetched ::
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking = do
   upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
   unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
+  -- R2 safety net: enforce the scheduled-ride minimum wallet balance on accept, unless the booking
+  -- is within the R4 open-to-all threshold (eligibility dropped for everyone near pickup).
+  nowT <- getCurrentTime
+  let scheduledOpenToAll = maybe False (\n -> diffUTCTime booking.startTime nowT <= fromIntegral (n * 60 :: Int)) transporterConfig.scheduledRideOpenToAllThresholdMinutes
+  unless scheduledOpenToAll $ do
+    walletOk <- FWallet.hasMinWalletBalance counterpartyDriver transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides driver.id.getId
+    unless walletOk $ throwError (InvalidRequest "Insufficient wallet balance to accept scheduled ride")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking
   pure Success

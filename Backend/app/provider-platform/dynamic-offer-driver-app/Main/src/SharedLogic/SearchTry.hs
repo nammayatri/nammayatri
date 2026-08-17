@@ -188,11 +188,14 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       Right _ -> return searchTry
   where
     scheduleBatching searchTry inTime = do
-      JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
-        SendSearchRequestToDriverJobData
-          { searchTryId = searchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance
-          }
+      let jobData =
+            SendSearchRequestToDriverJobData
+              { searchTryId = searchTry.id,
+                estimatedRideDistance = searchReq.estimatedDistance
+              }
+      if searchTry.isScheduled
+        then JC.createJobIn @_ @'SendScheduledSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime jobData
+        else JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime jobData
 
     createNewSearchTry = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id

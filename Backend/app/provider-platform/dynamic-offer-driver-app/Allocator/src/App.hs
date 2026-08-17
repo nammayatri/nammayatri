@@ -71,7 +71,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyB
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
 import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearchRequestToDrivers, sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runSettlementReportIngestionJob)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival (checkPickupZoneArrival)
@@ -136,6 +136,7 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInListWrapper flowRt env sendSearchRequestToDrivers
+          & putJobHandlerInListWrapper flowRt env sendScheduledSearchRequestToDrivers
           & putJobHandlerInListWrapper flowRt env unblockDriver
           & putJobHandlerInListWrapper flowRt env unblockAirportDriver
           & putJobHandlerInListWrapper flowRt env softBlockNotifyDriver
