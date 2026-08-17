@@ -870,6 +870,35 @@ them.
 `0551234567` is left as a `SEDAN` on purpose: he is the driver every earlier
 probe was proven against, and `setup.sh`'s smoke test recreates him on login.
 
+### Keep it running — `./fleet-service.sh`
+
+```bash
+./fleet-service.sh install     # run the fleet, and keep it running
+./fleet-service.sh status      # up? and what has it done lately
+./fleet-service.sh uninstall   # stop and remove
+```
+
+**Cars on the map and no offers is this, every time.** The two are produced by
+completely different things and only one of them was ever automated:
+
+| The rider sees | Needs |
+|---|---|
+| Estimates, and cars drawn on screen 10 | fresh rows in `driver_location` — the `movin-drivers` timer does this every 2 min |
+| An actual **offer** | a *process* polling the driver API and answering — `simulate-driver.py daemon` |
+
+So with the timer running and the simulator not, a search succeeds, prices come
+back, screen 10 draws three cars near the rider — and then nobody ever bids. It
+looks exactly like broken dispatch, and it is not: there is simply no driver.
+
+That state persisted for hours at a time because the simulator had only ever
+been started by hand, usually wrapped in `timeout`, so it always died later.
+`fleet-service.sh install` makes it a systemd unit with `Restart=always`, so it
+survives a reboot, a crash, and a stack restart.
+
+Stopping it is clean: the script turns `SIGTERM` into the interrupt its own
+cleanup handles, so the drivers go **offline** rather than being left online
+with positions that then go stale.
+
 ### Two behaviours worth knowing before changing this
 
 **A declined request keeps appearing.** After `respond` with `Reject`, the same
@@ -1124,6 +1153,7 @@ geocoder-prepare.sh    builds the 111.5k-row place index (output gitignored)
   keeping it alive
 drivers-keepalive.sh   driver positions go stale silently — this is the fix
 simulate-driver.py     plays a fleet of six, so the app can be finished on one phone
+fleet-service.sh       keeps that fleet running;  without it: cars but no offers
 backup.sh              nightly encrypted backup, offsite;  also restore / list
 ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
 
