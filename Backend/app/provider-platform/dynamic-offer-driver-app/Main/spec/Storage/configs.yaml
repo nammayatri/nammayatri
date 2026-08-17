@@ -61,6 +61,8 @@ DriverPoolConfig:
     dynamicBatchSize: Vector Int
     selfRequestIfRiderIsDriver: Bool
     enablePriorityTagSplit: Maybe Bool
+    softMaxParallelSearchRequests: Maybe Int
+    enableEarlyBatchAdvanceOnFullReject: Maybe Bool
 
   beamFields:
     dynamicBatchSize:

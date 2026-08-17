@@ -253,7 +253,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
-import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
+import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..), SendSearchRequestToDriverJobData (..))
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -1981,6 +1981,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
+      -- Cross-batch reject accounting: the cumulative count reaches the POOLING ruleset on the
+      -- next batch, the per-batch count tells us when a batch has been turned down outright.
+      void $ DP.incrementSearchTryRejectCount searchTry.id
+      batchRejectCount <- DP.incrementBatchRejectCount searchTry.id sReqFD.batchNumber
+      -- Forked for the same reason as the queue-skip below: nothing here should add latency to
+      -- the driver-respond hot path, and an early advance is fire-and-forget.
+      fork "earlyBatchAdvanceOnFullReject" $ tryAdvanceBatchEarly searchTry sReqFD batchRejectCount
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
@@ -2004,6 +2011,56 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     unlockRedisQuoteKeys = do
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown driverId)
       Redis.unlockRedis (editDestinationLockKey driverId)
+
+    -- Every driver in the batch has now rejected, so waiting out singleBatchProcessTime before
+    -- the next batch is pure dead time. Bump the search try's batch epoch — which orphans the
+    -- job already scheduled, see isBatchChainSuperseded — and enqueue an immediate one in its
+    -- place, so exactly one chain stays live and no batch is sent twice.
+    --
+    -- Only a *full* rejection qualifies: a batch still holding an unanswered offer may yet be
+    -- accepted, and pulling that offer early would waste it.
+    tryAdvanceBatchEarly searchTry sReqFD batchRejectCount = do
+      mbSentCount <- DP.getBatchSentCount searchTry.id sReqFD.batchNumber
+      case mbSentCount of
+        Just sentCount | sentCount > 0 && batchRejectCount >= sentCount -> do
+          searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+          driverPoolConfig <-
+            SCDPC.getDriverPoolConfig
+              searchReq.merchantOperatingCityId
+              searchTry.vehicleServiceTier
+              searchTry.tripCategory
+              (fromMaybe SL.Default searchReq.area)
+              searchReq.estimatedDistance
+              searchTry.searchRepeatType
+              searchTry.searchRepeatCounter
+              (Just (TransactionId (Id searchReq.transactionId)))
+              searchReq
+          singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
+          now <- getCurrentTime
+          let isEnabled = fromMaybe False driverPoolConfig.enableEarlyBatchAdvanceOnFullReject
+              -- Never advance into the final batch: that one ends in the terminal cancel path,
+              -- and pulling it in would change when the customer is told the search failed.
+              hasBatchesLeft = sReqFD.batchNumber + 1 < driverPoolConfig.maxNumberOfBatches
+              -- The same delay the normal reschedule carries: a second FCM arriving before the
+              -- first has rendered costs more than the wait it saves.
+              batchOldEnough = addUTCTime singleBatchProcessingTempDelay sReqFD.startTime <= now
+          when (isEnabled && hasBatchesLeft && batchOldEnough) $ do
+            epoch <- DP.bumpBatchEpoch searchTry.id
+            logInfo $
+              "EarlyBatchAdvance: searchTryId=" <> searchTry.id.getId
+                <> " batchNum="
+                <> show sReqFD.batchNumber
+                <> " sent="
+                <> show sentCount
+                <> " epoch="
+                <> show epoch
+            createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) 0 $
+              SendSearchRequestToDriverJobData
+                { searchTryId = searchTry.id,
+                  estimatedRideDistance = searchReq.estimatedDistance,
+                  batchEpoch = Just epoch
+                }
+        _ -> pure ()
     callWithErrorHandling func = do
       exep <- withTryCatch "callWithErrorHandling:respondQuote" func
       case exep of

@@ -693,6 +693,9 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         minRadiusOfSearch = maybe minRadiusOfSearch distanceToMeters minRadiusOfSearchWithUnit,
         maxRadiusOfSearch = maybe maxRadiusOfSearch distanceToMeters maxRadiusOfSearchWithUnit,
         radiusStepSize = Nothing,
+        -- Not settable from the dashboard yet; both are opt-in dispatch tuning driven from config.
+        softMaxParallelSearchRequests = Nothing,
+        enableEarlyBatchAdvanceOnFullReject = Nothing,
         actualDistanceThreshold = distanceToMeters <$> actualDistanceThresholdWithUnit <|> actualDistanceThreshold,
         radiusShrinkValueForDriversOnRide = maybe radiusShrinkValueForDriversOnRide distanceToMeters radiusShrinkValueForDriversOnRideWithUnit,
         driverToDestinationDistanceThreshold = maybe driverToDestinationDistanceThreshold distanceToMeters driverToDestinationDistanceThresholdWithUnit,
@@ -795,6 +798,9 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             maxNumberOfBatches,
             maxParallelSearchRequests,
             maxParallelSearchRequestsOnRide,
+            -- Not part of the CSV upload yet; both are opt-in dispatch tuning driven from config.
+            softMaxParallelSearchRequests = Nothing,
+            enableEarlyBatchAdvanceOnFullReject = Nothing,
             singleBatchProcessTime,
             radiusShrinkValueForDriversOnRide,
             driverToDestinationDistanceThreshold,

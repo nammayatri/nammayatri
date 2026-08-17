@@ -191,7 +191,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance
+            estimatedRideDistance = searchReq.estimatedDistance,
+            batchEpoch = Nothing -- start of the chain; early advances bump it from here
           }
 
     createNewSearchTry = do
