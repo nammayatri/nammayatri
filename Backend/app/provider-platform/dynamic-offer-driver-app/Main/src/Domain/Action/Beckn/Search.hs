@@ -99,6 +99,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.Type as SLT
@@ -278,7 +279,7 @@ handler ValidatedDSearchReq {..} sReq = do
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId' = merchant.id
-  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity)
+  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity) (SML.distanceBucketLabel sReq.routeDistance)
   sessiontoken <- generateGUIDText
   let fromLocGeohashh = T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (sReq.pickupLocation.lat, sReq.pickupLocation.lon)
   let toLocGeohash = join $ fmap (\(LatLong lat lng) -> T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (lat, lng)) sReq.dropLocation

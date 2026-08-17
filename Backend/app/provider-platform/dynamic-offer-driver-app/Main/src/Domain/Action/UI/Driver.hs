@@ -1968,7 +1968,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             cityLabel <- SML.getCityLabel merchantOpCityId
-            Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+            Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.searchReqFunnelLabels searchReq)
             DP.recordQuoteResponseCounters merchantOpCityId driverId Accept
             -- accept counting happens in driverScoreEventHandler's Accept case (bt: QUOTE_RESPONSE_ACCEPT)
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
@@ -1984,8 +1984,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       -- bt: QUOTE_RESPONSE_REJECT, anchored to the committed response (same series the
       -- POOLING ruleset reads via getSrdStatsCountersBulk).
       DP.recordQuoteResponseCounters merchantOpCityId driverId Reject
-      (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
-      Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+      -- Forked off the respond hot path (same idiom as the special-zone hop below): the
+      -- label lookup adds a KV read that must not cost the driver any latency, and metrics
+      -- must never alter the respond flow (a lookup miss degrades labels to "unknown").
+      fork "driver-response-metrics" $ do
+        (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
+        mbSearchReqForMetrics <- QSR.findById searchTry.requestId
+        Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (maybe ("unknown", "unknown", "unknown") SML.searchReqFunnelLabels mbSearchReqForMetrics)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
       -- Cross-batch reject accounting: the cumulative count reaches the POOLING ruleset on the
       -- next batch, the per-batch count tells us when a batch has been turned down outright.
@@ -2003,8 +2008,13 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     Pulled -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
-      (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
-      Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+      -- Forked off the respond hot path (same idiom as the special-zone hop below): the
+      -- label lookup adds a KV read that must not cost the driver any latency, and metrics
+      -- must never alter the respond flow (a lookup miss degrades labels to "unknown").
+      fork "driver-response-metrics" $ do
+        (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
+        mbSearchReqForMetrics <- QSR.findById searchTry.requestId
+        Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (maybe ("unknown", "unknown", "unknown") SML.searchReqFunnelLabels mbSearchReqForMetrics)
       throwError UnexpectedResponseValue
   pure Success
   where
