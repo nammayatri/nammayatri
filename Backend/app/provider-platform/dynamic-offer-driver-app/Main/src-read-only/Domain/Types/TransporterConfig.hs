@@ -343,6 +343,7 @@ data TransporterConfig = TransporterConfig
     validNameComparePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
     vehicleCategoryExcludedFromVerification :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
+    verifyPanDuringOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     videoFileSizeUpperLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
     weeklyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

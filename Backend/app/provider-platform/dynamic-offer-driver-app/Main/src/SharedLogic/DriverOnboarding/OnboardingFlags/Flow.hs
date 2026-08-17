@@ -174,11 +174,17 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
     if useUnifiedOnboardingFlagsRecompute
       then pure $ fromMaybe (effectiveOnboardingAs == DI.FLEET_DRIVER) mbIsFleetDriver
       else hasActiveFleetAssociation person.id
-  let driverDocConfigs = case allDocVerificationConfigs of Right configs -> configs; Left _ -> []
+  let panVerificationDeferred = fromMaybe True transporterConfig.verifyPanDuringOnboarding == False
+      docsForEnabling =
+        if panVerificationDeferred
+          then map (\doc -> if doc.documentType == DVC.PanCard && doc.verificationStatus == PENDING then doc {verificationStatus = VALID} else doc) driverDocuments
+          else driverDocuments
+      driverDocConfigs = case allDocVerificationConfigs of Right configs -> configs; Left _ -> []
       unavailableVehicleDocs =
         map mkUnavailableDoc . nub . map (.documentType) $
           filter (\config -> config.vehicleCategory == vehicleCategory && isVehicleSideDocType config.documentCategory config.documentType) driverDocConfigs
       checkDriverDocs mode = checkAllDocsValid mode (Just isFleetDriver) allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+      checkDriverDocsForEnabling = checkAllDocsValid ForEnabling (Just isFleetDriver) allDocVerificationConfigs person.role docsForEnabling vehicleCategory makeSelfieAadhaarPanMandatory
       checkVehicleDocs mode category docs = checkAllDocsValid mode (Just isFleetDriver) (Right driverDocConfigs) DP.DRIVER docs category makeSelfieAadhaarPanMandatory
       vehicleDocsOk mode =
         not useUnifiedOnboardingFlagsRecompute
@@ -187,7 +193,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
                  items -> any (\item -> checkVehicleDocs mode (vehicleDocCategory item) item.documents) items
              )
       allMandatoryDocsValid = checkDriverDocs ForVerified && vehicleDocsOk ForVerified
-      allEnablingDocsValid = checkDriverDocs ForEnabling && vehicleDocsOk ForEnabling
+      allEnablingDocsValid = checkDriverDocsForEnabling && vehicleDocsOk ForEnabling
       approvalDocs =
         if useUnifiedOnboardingFlagsRecompute
           then driverDocuments <> (case vehicleDocuments of [] -> unavailableVehicleDocs; items -> concatMap (.documents) items)

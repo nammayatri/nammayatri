@@ -1173,6 +1173,7 @@ TransporterConfig:
     updateOrderStatusBatchSize: Int
     mandateValidity: Int
     aadhaarVerificationRequired: Bool
+    verifyPanDuringOnboarding: Maybe Bool
     enableDashboardSms: Bool
     driverLocationAccuracyBuffer: Meters
     routeDeviationThreshold: Meters
@@ -1829,6 +1830,7 @@ TransporterConfig:
     timeDiffFromUtc: "19800"
     subscription: "false"
     aadhaarVerificationRequired: "false"
+    verifyPanDuringOnboarding: "false"
     rcLimit: "3"
     driverAutoPayNotificationTime: "32400"
     driverAutoPayExecutionTime: "104400"
