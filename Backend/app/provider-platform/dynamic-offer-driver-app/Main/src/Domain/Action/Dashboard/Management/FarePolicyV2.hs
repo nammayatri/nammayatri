@@ -829,6 +829,7 @@ validatePolicy transporterConfig p =
       nonNegativeMaybe "tollCharges" p.tollCharges,
       nonNegativeMaybe "petCharges" p.petCharges,
       nonNegativeMaybe "platformFee" p.platformFee,
+      slabSetWithSlabBasedIssue,
       percentageIssue "schedulingCharge" (schedulingChargePercent =<< p.schedulingCharge),
       nonNegativeMaybe "schedulingCharge" (schedulingChargeAmount =<< p.schedulingCharge)
     ]
@@ -840,6 +841,11 @@ validatePolicy transporterConfig p =
     schedulingChargePercent = \case Common.ProgressiveSchedulingCharge percent -> Just percent; _ -> Nothing
     schedulingChargeAmount = \case Common.ConstantSchedulingCharge amount -> Just amount; _ -> Nothing
     nonNegativeMaybe field = maybe [] (\v -> if v < 0 then issue field "must not be negative" else [])
+    -- SlabBased charges the per-slab platformFeeInfo of a Slabs policy and never reads the
+    -- top-level platformFee a slab set resolves into, so the slab set would be silently ignored.
+    slabSetWithSlabBasedIssue = case (p.platformFeeSlabSetId, p.platformFeeChargesBy) of
+      (Just _, Just Common.SlabBased) -> issue "platformFeeSlabSetId" "cannot be used with platformFeeChargesBy SlabBased"
+      _ -> []
     minBaseFareIssue baseFare =
       case transporterConfig.minBaseFare of
         Just minBase
@@ -995,6 +1001,7 @@ toApiPolicy policy mbCancellation =
       platformFeeCgst = policy.cgst,
       platformFeeSgst = policy.sgst,
       platformFeeChargesBy = Just (toApiPlatformFeeMethod policy.platformFeeChargesBy),
+      platformFeeSlabSetId = policy.platformFeeSlabSetId,
       conditionalCharges = if null policy.conditionalCharges then Nothing else Just (map toApiConditionalCharge policy.conditionalCharges),
       driverCancellationNotAllowed = policy.driverCancellationNotAllowed,
       negotiationFareMinTolerancePct = policy.negotiationFareMinTolerancePct,
@@ -1172,6 +1179,7 @@ fromApiPolicy ctx mbCancellationId now p = do
         sgst = p.platformFeeSgst,
         cgst = p.platformFeeCgst,
         platformFeeChargesBy = maybe FarePolicyD.None fromApiPlatformFeeMethod p.platformFeeChargesBy,
+        platformFeeSlabSetId = p.platformFeeSlabSetId,
         createdAt,
         updatedAt = now,
         merchantId = mbMerchantId,
@@ -1381,6 +1389,7 @@ toApiPlatformFeeMethod = \case
   FarePolicyD.None -> Common.None
   FarePolicyD.SlabBased -> Common.SlabBased
   FarePolicyD.NoCharge -> Common.NoCharge
+  FarePolicyD.PlanBased -> Common.PlanBased
 
 fromApiPlatformFeeMethod :: Common.FPV2PlatformFeeMethod -> FarePolicyD.PlatformFeeMethods
 fromApiPlatformFeeMethod = \case
@@ -1389,6 +1398,7 @@ fromApiPlatformFeeMethod = \case
   Common.None -> FarePolicyD.None
   Common.SlabBased -> FarePolicyD.SlabBased
   Common.NoCharge -> FarePolicyD.NoCharge
+  Common.PlanBased -> FarePolicyD.PlanBased
 
 toApiPlatformFeeInfo :: FarePolicyD.PlatformFeeInfo -> Common.FPV2PlatformFeeInfo
 toApiPlatformFeeInfo p =
@@ -1427,6 +1437,8 @@ toApiChargeCategory = \case
   NO_CHARGES -> Common.NO_CHARGES
   BOOKING_DEPOSIT -> Common.BOOKING_DEPOSIT
   SCHEDULED_RIDE_MIN_WALLET_BALANCE -> Common.SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  PURPLE_RIDE_CHARGE -> Common.PURPLE_RIDE_CHARGE
+  AUTO_INSTANT_CHARGE -> Common.AUTO_INSTANT_CHARGE
 
 fromApiChargeCategory :: Common.FPV2ConditionalChargeCategory -> ConditionalChargesCategories
 fromApiChargeCategory = \case
@@ -1435,6 +1447,8 @@ fromApiChargeCategory = \case
   Common.NO_CHARGES -> NO_CHARGES
   Common.BOOKING_DEPOSIT -> BOOKING_DEPOSIT
   Common.SCHEDULED_RIDE_MIN_WALLET_BALANCE -> SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  Common.PURPLE_RIDE_CHARGE -> PURPLE_RIDE_CHARGE
+  Common.AUTO_INSTANT_CHARGE -> AUTO_INSTANT_CHARGE
 
 toApiSearchSource :: DFareProduct.SearchSource -> Common.FPV2SearchSource
 toApiSearchSource = \case

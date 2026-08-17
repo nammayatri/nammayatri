@@ -89,6 +89,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SpecialZone ()
+import qualified Storage.CachedQueries.PlatformFeeSlab as CQPlatformFeeSlab
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | Full quotation.breakup for a 'FareParameters': display tags followed by
@@ -576,10 +577,18 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     mbEstimateFareParams :: Maybe FareParameters
   }
 
-calculateFareParametersHandler :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
+calculateFareParametersHandler :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => CalculateFareParametersParams -> m FareParameters
 calculateFareParametersHandler params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle service tier " +|| params.farePolicy.vehicleServiceTier ||+ ""
   now <- getCurrentTime
+  -- Distance-tiered platform fee: any fare policy opts in by pointing platformFeeSlabSetId at a
+  -- slab set. Sets are shared rather than per fare policy, because one category (e.g. Intercity)
+  -- spans thousands of fare policies (per vehicle-variant/area combination), and seeding
+  -- per-fare-policy rows at that scale is impractical. Nothing (no slab set on the policy, or no
+  -- slab covering this distance) falls back to the existing flat fp.platformFee.
+  slabPlatformFee <- case params.farePolicy.platformFeeSlabSetId of
+    Just slabSetId -> CQPlatformFeeSlab.findMatchingSlab slabSetId (maybe 0 (.getMeters) params.actualDistance)
+    Nothing -> pure Nothing
   let fp = params.farePolicy
       rideEndTime = case (params.actualRideDuration, params.estimatedRideDuration) of
         (Just duration, _) -> addUTCTime (secondsToNominalDiffTime duration) params.rideTime
@@ -735,9 +744,9 @@ calculateFareParametersHandler params = do
                   },
             updatedAt = now,
             currency = params.currency,
-            platformFee = fp.platformFee,
-            sgst = fp.sgst,
-            cgst = fp.cgst,
+            platformFee = maybe fp.platformFee (Just . (.platformFee)) slabPlatformFee,
+            sgst = maybe fp.sgst (\t -> Just (t.platformFee * t.sgstPercentage)) slabPlatformFee,
+            cgst = maybe fp.cgst (\t -> Just (t.platformFee * t.cgstPercentage)) slabPlatformFee,
             tdsAmount = Nothing,
             tdsRate = Nothing,
             tdsProcessedAt = Nothing,
