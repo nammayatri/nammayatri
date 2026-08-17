@@ -28,6 +28,7 @@ module SharedLogic.DriverPool
     incrementCancellationCount,
     incrementSrdRejectedCount,
     incrementSrdSentCount,
+    decrementSrdSentCount,
     getSrdStatsCountersBulk,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
@@ -413,6 +414,16 @@ incrementSrdSentCount ::
   m ()
 incrementSrdSentCount driverId = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkSrdSentCountKey driverId.getId) srdStatsWindow
 
+decrementSrdSentCount ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  UTCTime ->
+  Id DP.Person ->
+  m ()
+decrementSrdSentCount sentAt driverId = Redis.withCrossAppRedis $ SWC.decrementByValueInTimeBucket sentAt 1 (mkSrdSentCountKey driverId.getId) srdStatsWindow
+
 -- Fetch all 8 per-driver sliding-window counts (today = last 1 day-bucket, weekly = last 7
 -- day-buckets) for use in the POOLING dynamic-logic data. Acceptance reuses the existing
 -- mkQuotesAcceptedKey counter and cancellation reuses mkRideCancelledKey (to avoid
@@ -771,6 +782,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           previousDropGeoHash = Nothing,
           specialLocWarriorPreferredSpecialLocId = mbPreferredSpecialLocId,
           score = driverGoHomePoolWithActualDistance.score,
+          poolingLogicVersion = driverGoHomePoolWithActualDistance.poolingLogicVersion,
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing
         }
@@ -1054,6 +1066,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           isForwardRequest = False,
           previousDropGeoHash = Nothing,
           score = dpr.score,
+          poolingLogicVersion = Nothing,
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing
         }
@@ -1289,6 +1302,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score,
+          poolingLogicVersion = Nothing,
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing
         }
@@ -1350,6 +1364,7 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           isForwardRequest = False,
           previousDropGeoHash = prevRideDropGeoHash,
           score = distDur.origin.score,
+          poolingLogicVersion = Nothing,
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing
         }
