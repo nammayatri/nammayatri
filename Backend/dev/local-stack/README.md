@@ -948,23 +948,50 @@ real tester, and the ride had to be cancelled from the server by hand. The
 server knew where he was the whole time — nothing asked it. This is a launch
 check, not a screen.
 
-**`savedLocation` round-trips only `tag`, `lat`, `lon`.** Post an address and
-every address field comes back `null`. Home/Work is storable, but the app has to
-keep its own label or re-geocode the point on the way out. A screen designed
-around the server returning "Alger Centre" will ship broken.
+**`savedLocation` keeps the address — but only if it is sent FLAT.**
+`CreateSavedReqLocationReq` declares `area`, `city`, `street`, `building`,
+`door`, `state` and `country` at the **top level**. Sent nested inside an
+`address` object — the shape `rideSearch` uses — Servant drops the unknown key,
+answers `200`, and the place saves with no address and no complaint.
+
+This page previously said the backend discarded them. **It does not**; the probe
+that produced that finding was sending them in the wrong shape. Measured
+2026-08-17: all seven come back exactly as they went in, and the same is true of
+`fromLocation`/`toLocation` on a booking when the search actually sends an
+address (both of the app's searches already do).
+
+The tag is free text and is the identity: saving an existing one is refused with
+`400 · Location with this tag already exists`, so an edit is delete-then-create.
 
 **`serviceability/destination` answers on the national border**, like the origin
 check — so `true` means "inside Algeria", not "a car will come". Tamanrasset is
 `true` and 1,900 km from any driver. Useful for catching a destination abroad,
 useless as a promise.
 
-### The one that does not exist: push
+### Push: no route, because none is needed
 
-There is no push/notification route on the rider API at all — only an
-`FCMConfigUpdateReq` schema with no endpoint behind it. A rider who backgrounds
-the app during the five-minute wait is **never told a driver accepted.** That
-cannot be closed from this backend; it is work outside it, and it should be
-budgeted as such rather than discovered late.
+There is no push/notification route on the rider API — only an
+`FCMConfigUpdateReq` schema with no endpoint behind it. **That was read as "this
+backend cannot send push", and that was wrong.**
+
+Push is **fully implemented in the running binary and has been failing silently
+since deployment.** `Kernel.External.FCM.Flow` is compiled in, with JWT
+service-account auth and the `firebase.messaging` scope, and the rider log says
+so on every ride:
+
+```
+ERROR [FCM] |> error while sending message to person with id 851790f2… : "Bad RSA key!"
+```
+
+The configuration is a **row on `atlas_app.merchant`** — `fcm_url`,
+`fcm_service_account`, `fcm_redis_token_key_prefix` — exactly like
+`Maps_Google`'s `googleMapsUrl`. Ours points at `http://localhost:4545/`, the
+upstream *mock*, with a placeholder service account. Device tokens are already
+collected (35 of 45 riders), and nine message types already exist including
+`QUOTE_RECEIVED` and `DRIVER_HAS_REACHED`.
+
+Turning it on is a free Firebase project, its service-account JSON, and one SQL
+update. No rebuild.
 
 ### Switching off a driver who has not paid
 
@@ -1119,8 +1146,11 @@ rider-app has migrated.
 
 - **This is the 2023 baseline, not current `main`.** Running today's backend
   would need a full Haskell build *and* merchant config we don't have.
-- `GET /v2/profile` returns 500 — it needs a WhatsApp provider and another
-  service that aren't configured. Optional integrations; core flows are fine.
+- ~~`GET /v2/profile` returns 500~~ — **no longer true, and probably has not
+  been for a while.** Measured 2026-08-17: it answers `200` with the name and a
+  *masked* number (`055...188`). Screen 16 reads it. Left here struck through
+  rather than deleted, because this line was believed for weeks and nearly had a
+  screen designed around its absence.
 - Kafka connection warnings in the logs are harmless.
 - The gateway logs a 404 against `localhost:8014/v1/e1f37274-…` and a refused
   connection to `localhost:8000` on every search. Both are stale fixture rows in

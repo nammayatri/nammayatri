@@ -27,9 +27,15 @@ The five that changed the roadmap:
   * /v2/support/sendIssue        present but broken; complaints reach nobody.
 
 And the one that is NOT there: **no push route exists on the rider API at all.**
-There is an `FCMConfigUpdateReq` schema with no endpoint behind it. A rider who
-backgrounds the app during the five-minute wait is never told a driver accepted.
-That gap cannot be closed from this backend -- it is work outside it.
+There is an `FCMConfigUpdateReq` schema with no endpoint behind it.
+
+**Do not read that as "this backend cannot send push" -- that conclusion was
+drawn here and it was wrong.** There is no route because the app does not need
+one: `Kernel.External.FCM.Flow` is compiled into the running binary and has been
+*trying* on every ride, failing on a placeholder key ("Bad RSA key!" in the rider
+log). The config is a row on `atlas_app.merchant`, device tokens are already
+collected, and nine message types already exist. See the push section of the
+local-stack README.
 """
 import json
 import subprocess
