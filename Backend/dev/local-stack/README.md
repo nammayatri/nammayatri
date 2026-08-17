@@ -1212,6 +1212,7 @@ probe-booking-flow.py     a whole ride from both sides
 probe-booking-timeouts.py how long a search really lives
 probe-unused-routes.py    what the rider API can serve that we don't use
 probe-rider-extras.py     do the useful unused routes actually work?
+probe-trip-history.py     what a past-trips list can show — and one wrong finding
 probe-subscription.sql    can we switch off a driver who hasn't paid?
 
   services fronting the stack
