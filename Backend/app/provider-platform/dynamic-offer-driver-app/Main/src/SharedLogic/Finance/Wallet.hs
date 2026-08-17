@@ -151,6 +151,8 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefund,
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
+    splitGrossByGstBreakup,
+    splitCancellationGross,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -186,6 +188,7 @@ import Lib.Finance
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -431,6 +434,25 @@ splitGrossByVatPct mbPct gross = case mbPct of
       let vat = HighPrecMoney (gross.getHighPrecMoney * (toRational pct / toRational (100 + pct)))
        in (gross - vat, vat)
   _ -> (gross, 0)
+
+-- | Split a GST-inclusive gross into (base, gst). Unlike 'splitGrossByVatPct', @rideGst@ is
+--   stored as a FRACTION, not a percentage — 0.025 means 2.5% — so the inclusive split is
+--   @r/(1+r)@, and the rate comes from 'computeTotalGstRate', the same helper the ride-fare
+--   path uses. Nothing / non-positive rate ⇒ (gross, 0).
+splitGrossByGstBreakup :: DTC.GstBreakup -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitGrossByGstBreakup breakup gross =
+  case FareCalculator.computeTotalGstRate breakup of
+    Just rate
+      | rate > 0 ->
+        let r = toRational rate
+            gst = HighPrecMoney (gross.getHighPrecMoney * (r / (1 + r)))
+         in (gross - gst, gst)
+    _ -> (gross, 0)
+
+splitCancellationGross :: Bool -> DTC.TaxConfig -> HighPrecMoney -> (HighPrecMoney, HighPrecMoney)
+splitCancellationGross isVat taxCfg gross
+  | isVat = splitGrossByVatPct taxCfg.serviceVatPercentage gross
+  | otherwise = splitGrossByGstBreakup taxCfg.rideGst gross
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
 

@@ -61,6 +61,7 @@ import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.Wallet (splitCancellationGross)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
@@ -200,11 +201,14 @@ cancel req merchant booking mbActiveSearchTry = do
                       QRD.updateValidCancellationsCount riderId.getId
                       mbExistingCancellationDuesDetails <- QCDD.findByRideId ride.id
                       chargesOutcome <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges ->
+                        Just cancelCharges -> do
+                          let (derivedBase, derivedTax) = splitCancellationGross (fromMaybe False booking.fareParams.isVatTaxType) transporterConfig.taxConfig cancelCharges
+                              mbStoredTax = mbExistingCancellationDuesDetails >>= (.cancellationFeeTax)
+                              mbStoredFee = mbExistingCancellationDuesDetails >>= (.cancellationFee)
                           return
                             CancellationChargesOutcome
-                              { fee = Just cancelCharges,
-                                tax = mbExistingCancellationDuesDetails >>= (.cancellationFeeTax),
+                              { fee = Just $ fromMaybe derivedBase mbStoredFee,
+                                tax = Just $ fromMaybe derivedTax mbStoredTax,
                                 overdueFee = mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge),
                                 overdueTax = mbExistingCancellationDuesDetails >>= (.overdueCancellationTax),
                                 commission = mbExistingCancellationDuesDetails >>= (.cancellationCommission),

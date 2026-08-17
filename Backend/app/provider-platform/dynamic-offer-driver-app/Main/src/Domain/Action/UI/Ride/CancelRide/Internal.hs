@@ -554,12 +554,20 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
           case (A.fromJSON resp.result :: Result UserCancellationDues.UserCancellationDuesResult) of
             A.Success result -> do
               logTagInfo ("bookingId-" <> getId booking.id) ("result.cancellationCharges: " <> show result.cancellationCharges <> " tax: " <> show result.cancellationChargesTax <> " overdue: " <> show result.overdueCancellationCharge <> " overdueTax: " <> show result.overdueCancellationTax <> " commission: " <> show result.cancellationCommission <> " overdueCommission: " <> show result.overdueCancellationCommission)
+              let splitGross = splitCancellationGross (fromMaybe False booking.fareParams.isVatTaxType) transporterConfig.taxConfig
+                  (feeBase, feeTax) = case result.cancellationChargesTax of
+                    Just ruleTax -> (result.cancellationCharges, ruleTax)
+                    Nothing -> splitGross result.cancellationCharges
+                  (mbOverdueBase, mbOverdueTax) = case (result.overdueCancellationCharge, result.overdueCancellationTax) of
+                    (Just overdueGross, Nothing) ->
+                      let (b, t) = splitGross overdueGross in (Just b, Just t)
+                    (mbCharge, mbTax) -> (mbCharge, mbTax)
               return
                 CancellationChargesOutcome
-                  { fee = Just result.cancellationCharges,
-                    tax = result.cancellationChargesTax,
-                    overdueFee = result.overdueCancellationCharge,
-                    overdueTax = result.overdueCancellationTax,
+                  { fee = Just feeBase,
+                    tax = Just feeTax,
+                    overdueFee = mbOverdueBase,
+                    overdueTax = mbOverdueTax,
                     commission = result.cancellationCommission,
                     overdueCommission = result.overdueCancellationCommission
                   }
