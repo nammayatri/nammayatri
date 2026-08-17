@@ -32,12 +32,13 @@ data NearbyBus = NearbyBus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NearbyBusesRequest = NearbyBusesRequest
-  { platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
+  { fetchAll :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     requireNearbyBuses :: Kernel.Prelude.Bool,
     requireRecentRide :: Kernel.Prelude.Bool,
     userLat :: Kernel.Prelude.Double,
     userLon :: Kernel.Prelude.Double,
-    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+    vehicleType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -46,7 +47,15 @@ data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [NearbyBus], rece
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RecentRide = RecentRide {fare :: Kernel.Types.Price.Price, fromStopCode :: Data.Text.Text, routeCode :: Kernel.Prelude.Maybe Data.Text.Text, toStopCode :: Data.Text.Text}
+data RecentRide = RecentRide
+  { fare :: Kernel.Types.Price.Price,
+    frequency :: Kernel.Prelude.Int,
+    fromStopCode :: Data.Text.Text,
+    routeCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    toStopCode :: Data.Text.Text,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
