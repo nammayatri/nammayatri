@@ -47,7 +47,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
-import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJobData)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..), MetricsHandle (..), handler)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
@@ -171,7 +171,7 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         driverCancellationNotAllowed = Nothing
       }
 
-sendSearchRequestToDrivers ::
+type SendSearchRequestJobFlow m r c =
   ( EncFlow m r,
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
@@ -208,11 +208,27 @@ sendSearchRequestToDrivers ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     HasField "cloudType" r (Maybe CloudType),
     Finance.HasActorInfo m r
-  ) =>
+  )
+
+-- Immediate dispatch (Redis-backed). Scheduled dispatch uses the sibling handler below.
+sendSearchRequestToDrivers ::
+  SendSearchRequestJobFlow m r c =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
-sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
-  let jobData = jobInfo.jobData
+sendSearchRequestToDrivers Job {id, jobInfo} = processSendSearchRequestJob id.getId jobInfo.jobData
+
+sendScheduledSearchRequestToDrivers ::
+  SendSearchRequestJobFlow m r c =>
+  Job 'SendScheduledSearchRequestToDriver ->
+  m ExecutionResult
+sendScheduledSearchRequestToDrivers Job {id, jobInfo} = processSendSearchRequestJob id.getId jobInfo.jobData
+
+processSendSearchRequestJob ::
+  SendSearchRequestJobFlow m r c =>
+  Text ->
+  SendSearchRequestToDriverJobData ->
+  m ExecutionResult
+processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
   let searchTryId = jobData.searchTryId
   searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
