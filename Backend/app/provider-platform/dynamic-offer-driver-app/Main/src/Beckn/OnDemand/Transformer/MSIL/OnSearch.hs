@@ -3,7 +3,7 @@
 -- whole Beckn.OnDemand.Transformer.OnSearch chain) builds the on_search reply exactly as
 -- it does for every merchant today -- plain ON_DEMAND_TRIP/ON_DEMAND_RENTAL categories,
 -- no awareness this module exists. This module runs only for merchants on the
--- AppEnv.scheduledCategorySignalMerchantIds allowlist (dispatched from
+-- TransporterConfig.enableScheduledCategorySignal city-level gate (dispatched from
 -- API.Beckn.Search.search) and rewrites the already-built response's provider-level
 -- categories to SCHEDULED_TRIP/SCHEDULED_RENTAL when the search was scheduled.
 --

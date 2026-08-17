@@ -94,8 +94,7 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r,
-    Finance.HasActorInfo m r,
-    HasField "scheduledCategorySignalMerchantIds" r [Text]
+    Finance.HasActorInfo m r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult

@@ -31,9 +31,12 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.ActorInfo as ActorInfo
@@ -60,8 +63,10 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
     logTagInfo "SelectV2 API Flow" "Reached"
     dSelectReq' <- ACL.buildSelectReqV2 subscriber reqV2
     merchant <- QMerch.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
-    scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-    let isPilotMerchant = merchant.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+    city <- Utils.getContextCity reqV2.selectReqContext
+    moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+    let isPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
 
     if isPilotMerchant
       then do
@@ -82,8 +87,7 @@ select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
         case mbQuote of
           Just quote ->
             Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-              negotiationFareTolerancePct <- asks (.negotiationFareTolerancePct)
-              (validatedMerchant, searchRequest, validatedQuote) <- DSelect.validateQuoteSelect transporterId quote.id dSelectReq.transactionId dSelectReq.negotiatedFare negotiationFareTolerancePct
+              (validatedMerchant, searchRequest, validatedQuote) <- DSelect.validateQuoteSelect transporterId quote.id dSelectReq.transactionId dSelectReq.negotiatedFare
               fork "select-quote request processing" $
                 Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
                   DSelect.handleQuoteSelect dSelectReq.messageId validatedMerchant searchRequest validatedQuote

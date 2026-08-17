@@ -52,6 +52,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -69,6 +70,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Metrics as Metrics
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
@@ -291,8 +293,7 @@ validateRequest ::
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r,
-    HasFlowEnv m r '["scheduledCategorySignalMerchantIds" ::: [Text]]
+    Finance.HasActorInfo m r
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
@@ -317,8 +318,8 @@ validateRequest subscriber transporterId req now = do
   -- /confirm -- so the isValueAddNP-gated restriction above is bypassed for
   -- them specifically, instead of registering them as value-add NPs just to
   -- satisfy this unrelated check.
-  scheduledCategorySignalMerchantIds <- asks (.scheduledCategorySignalMerchantIds)
-  let isMsilPilotMerchant = transporter.shortId.getShortId `elem` scheduledCategorySignalMerchantIds
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
   when (not isMsilPilotMerchant && not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of

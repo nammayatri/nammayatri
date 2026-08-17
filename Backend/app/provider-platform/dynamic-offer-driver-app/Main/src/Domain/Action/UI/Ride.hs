@@ -263,7 +263,7 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   let goHomeReqId = ride.driverGoHomeRequestId
   RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, HasField "scheduledCategorySignalMerchantIds" r [Text]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))

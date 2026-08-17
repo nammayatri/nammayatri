@@ -1088,3 +1088,20 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enforce_upload_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_min_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN negotiation_fare_max_tolerance_pct double precision  default 0.1;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_scheduled_category_signal boolean  default false;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
