@@ -55,7 +55,8 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
             validityInDays = validityInDays,
             vehicleCategory = vehicleCategory',
-            vehicleVariant = vehicleVariant
+            vehicleVariant = vehicleVariant,
+            waivesSpecialRideCharges = Kernel.Prelude.fromMaybe False waivesSpecialRideCharges
           }
 
 instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
@@ -94,5 +95,6 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
         Beam.validityInDays = validityInDays,
         Beam.vehicleCategory = Kernel.Prelude.Just vehicleCategory,
-        Beam.vehicleVariant = vehicleVariant
+        Beam.vehicleVariant = vehicleVariant,
+        Beam.waivesSpecialRideCharges = Kernel.Prelude.Just waivesSpecialRideCharges
       }

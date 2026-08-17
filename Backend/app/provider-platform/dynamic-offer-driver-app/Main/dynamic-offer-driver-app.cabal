@@ -559,6 +559,7 @@ library
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Domain.Types.FarePolicy.PlatformFeeMethods
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
       Domain.Types.FleetOperatorIncidentType
@@ -912,6 +913,7 @@ library
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
       Storage.CachedQueries.GeohashArea
       Storage.CachedQueries.GoHomeConfig
+      Storage.CachedQueries.IntercityPlatformFeeSlab
       Storage.CachedQueries.InterCityTravelCities
       Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.KioskLocation
@@ -1685,6 +1687,7 @@ library
       Domain.Types.IffcoTokioInsurance
       Domain.Types.Image
       Domain.Types.IntegratedBPPConfig
+      Domain.Types.IntercityPlatformFeeSlab
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
@@ -1891,6 +1894,7 @@ library
       Storage.Beam.IffcoTokioInsurance
       Storage.Beam.Image
       Storage.Beam.IntegratedBPPConfig
+      Storage.Beam.IntercityPlatformFeeSlab
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
@@ -2102,6 +2106,7 @@ library
       Storage.Queries.IffcoTokioInsurance
       Storage.Queries.Image
       Storage.Queries.IntegratedBPPConfig
+      Storage.Queries.IntercityPlatformFeeSlab
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation

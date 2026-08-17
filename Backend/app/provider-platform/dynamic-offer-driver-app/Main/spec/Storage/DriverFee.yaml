@@ -83,6 +83,9 @@ DriverFee:
     specialZoneRideCount : Int
     specialZoneAmount : HighPrecMoney
     specialZoneRideCharges : Maybe [SpecialZoneRideCharge]
+    perRideBaseAmount : Maybe HighPrecMoney
+    dailyBaseCount : Int
+    dailyBaseAmount : Maybe HighPrecMoney
     planId : Maybe (Id Plan)
     planMode : Maybe PaymentMode
     serviceName : ServiceNames
@@ -116,6 +119,9 @@ DriverFee:
     serviceName: Maybe ServiceNames
     vehicleCategory: Maybe VehicleCategory
     specialZoneRideCharges: Maybe Value
+    perRideBaseAmount: Maybe HighPrecMoney
+    dailyBaseCount: Maybe Int
+    dailyBaseAmount: Maybe HighPrecMoney
 
   beamFields:
     platformFee:
@@ -143,6 +149,7 @@ DriverFee:
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     vehicleCategory : Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId|EM
     specialZoneRideCharges: Kernel.Utils.JSON.valueToMaybe =<< specialZoneRideCharges|E
+    dailyBaseCount: Kernel.Prelude.fromMaybe 0 | I
 
   toTType:
     platformFee: ((.fee) platformFee)|E
@@ -157,6 +164,7 @@ DriverFee:
     totalEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
     specialZoneRideCharges: Data.Aeson.toJSON <$> specialZoneRideCharges|E
+    dailyBaseCount: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -180,6 +188,11 @@ DriverFee:
     schedulerTryCount: "1"
     specialZoneRideCount: "0"
     specialZoneAmount: "0.0"
+    # perRideBaseAmount/dailyBaseAmount deliberately have no default -- NULL means "never touched
+    # by the ride-time accrual logic" (a legacy row, or a non-ride DriverFee like a cancellation
+    # penalty), distinct from Just 0 ("touched, accrued to zero" -- e.g. still within free rides).
+    # calcFinalOrderAmounts in DriverFeeUpdates/DriverFee.hs relies on this distinction.
+    dailyBaseCount: "0"
     notificationRetryCount: "0"
     feeType: "'RECURRING_INVOICE'"
     merchantId: "'96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'"
