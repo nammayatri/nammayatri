@@ -36,6 +36,7 @@ data IssueMessageT f = IssueMessageT
     messageTitle :: B.C f (Maybe Text),
     messageAction :: B.C f (Maybe Text),
     messageType :: B.C f DIM.IssueMessageType,
+    apiAction :: B.C f (Maybe Text),
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
