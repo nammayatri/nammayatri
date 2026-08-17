@@ -955,6 +955,46 @@ asks about: a `paid_until` per driver, and somewhere to set it. Marking a paymen
 stays manual as long as drivers pay in cash or by CIB, outside the app. That
 belongs to the admin website, not to either mobile app.
 
+## Ratings — `./apply-ratings.sh`
+
+Run once per server. After that there is nothing to schedule.
+
+```bash
+./apply-ratings.sh      # install the trigger, backfill, and prove it fires
+```
+
+**Riders could rate from the day screen 14 shipped, and nobody ever saw a
+star.** Every rating landed correctly in `atlas_driver_offer_bpp.rating`.
+Nothing read them back: `person.rating` — the column the driver's offer carries
+to the rider over Beckn — was written by no one, so `driverRatings` and the
+offer's `rating` arrived `null` on every ride and the app could not draw
+anything. Upstream has a subsystem that maintains it; our binary predates that,
+the same story as [subscriptions](#switching-off-a-driver-who-has-not-paid).
+
+So `ratings-average.sql` keeps the column correct with a **trigger**, not a
+timer. `backup.sh` runs on a systemd timer because a backup is a periodic thing;
+this is not. `person.rating` is *derived*, and the only moment it can change is
+when a row in `rating` changes — so a trigger is immediate, cannot drift, and
+needs no service enabling on a rebuilt server.
+
+Measured on the way in, and worth keeping:
+
+- **The averages that existed were wrong.** Karim carried 3.67 from hand-testing
+  while his three real ratings (2, 2, 5) average 3.00. The backfill corrects
+  values as well as filling empty ones, and clears any rating with no ratings
+  behind it.
+- **There is no `Person` cache to bust.** The obvious fear is that this has
+  `apply-tariff.sh`'s trap, where SQL alone changes nothing because Redis holds
+  the old value. Scanned: there is a `CachedQueries:DriverInformation`, a
+  `Merchant`, a `TransporterConfig` and a `FarePolicy`, and **no
+  `CachedQueries:Person`**. The rating is read from Postgres when the offer is
+  built.
+- **A driver nobody has rated stays `null`**, never `0` — the API's own scale is
+  1–5, so zero is not a rating, and the app shows "Nouveau" instead of no stars.
+
+Proven end to end afterwards: a booking made through the rider API came back
+with `driverRatings=3` on the ride, which is the number the app draws.
+
 ## Backups — `./backup.sh`
 
 ```bash
@@ -1085,6 +1125,7 @@ geocoder-prepare.sh    builds the 111.5k-row place index (output gitignored)
 drivers-keepalive.sh   driver positions go stale silently — this is the fix
 simulate-driver.py     plays a fleet of six, so the app can be finished on one phone
 backup.sh              nightly encrypted backup, offsite;  also restore / list
+ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
 
   measuring, not running — each records its results in its own header
 probe-booking-flow.py     a whole ride from both sides
