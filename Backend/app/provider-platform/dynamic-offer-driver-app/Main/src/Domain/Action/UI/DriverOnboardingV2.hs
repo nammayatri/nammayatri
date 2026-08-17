@@ -1150,10 +1150,10 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) mbInitiatedBy paymentMode = 
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let fetchPersonStripeInfo = do
-        driverLicense <- runInReplica $ QDL.findByDriverId person.id >>= fromMaybeM (DriverDLNotFound person.id.getId)
+        mbDriverLicense <- runInReplica $ QDL.findByDriverId person.id
         pure
           SPBA.PersonStripeInfo
-            { personDob = driverLicense.driverDob,
+            { personDob = mbDriverLicense >>= (.driverDob),
               address = Nothing, -- will add later
               idNumber = Nothing, -- will add later
               companyName = Nothing,
