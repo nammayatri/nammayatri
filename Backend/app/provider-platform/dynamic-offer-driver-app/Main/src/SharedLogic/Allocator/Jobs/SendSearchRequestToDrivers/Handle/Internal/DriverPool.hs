@@ -160,6 +160,20 @@ makeTaggedDriverPool ::
 makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTryId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
+  updateVersionInSearchReq mbVersion
+  -- A rollout toss happens here whenever mbPoolingLogicVersion is Nothing, so the version applied to
+  -- this pool can differ from the one already pinned on the SearchRequest. That divergence used to be
+  -- invisible and mislabelled scores with the wrong experiment arm; make it greppable.
+  when (isJust mbPoolingLogicVersion && mbVersion /= mbPoolingLogicVersion) $
+    logError $
+      "POOLING version mismatch: ran " <> show mbVersion <> " but SearchRequest is pinned to "
+        <> show mbPoolingLogicVersion
+        <> " (searchTryId="
+        <> searchTryId.getId
+        <> ", isOnRidePool="
+        <> show isOnRidePool
+        <> ")"
+  logInfo $ "POOLING version applied: " <> show mbVersion <> " batchNum=" <> show batchNum <> " isOnRidePool=" <> show isOnRidePool
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
@@ -193,8 +207,12 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
         )
       <> "]"
   resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING (Just searchReq.transactionId) allLogics taggedDriverPoolInput
+  -- Stamp the version we actually ran onto every driver, after decoding, so it travels with the
+  -- `score` that version produced. Callers must read the version from here rather than from
+  -- SearchRequest.poolingLogicVersion: that field is a pre-pool snapshot and, when the version is
+  -- chosen by rollout toss on this very call, it does not yet hold the version being applied.
   sortedPool' <-
-    case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
+    map (\d -> d {poolingLogicVersion = mbVersion}) <$> case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
       A.Success sortedPoolData -> pure sortedPoolData.drivers
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
@@ -213,6 +231,10 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   pushTaggedPoolToKafka sortedPool
   return (mbVersion, take batchSize sortedPool)
   where
+    updateVersionInSearchReq mbVersion =
+      when (isNothing searchReq.poolingLogicVersion && isJust mbVersion) $
+        QSR.updatePoolingLogicVersion mbVersion searchReq.id
+
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 

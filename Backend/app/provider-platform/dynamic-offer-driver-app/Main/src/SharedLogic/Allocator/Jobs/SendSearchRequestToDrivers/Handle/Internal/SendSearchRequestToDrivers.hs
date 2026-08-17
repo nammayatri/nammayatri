@@ -392,7 +392,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 previousDropGeoHash = dpwRes.previousDropGeoHash,
                 driverTags = Just $ addSpecialLocWarriorPreferredSpecialLocId dpwRes.specialLocWarriorPreferredSpecialLocId dpRes.driverTags,
                 customerTags = dpRes.customerTags,
-                poolingLogicVersion = searchReq.poolingLogicVersion,
+                poolingLogicVersion = dpwRes.poolingLogicVersion <|> searchReq.poolingLogicVersion,
                 poolingConfigVersion = searchReq.poolingConfigVersion,
                 notificationSource = Nothing,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),

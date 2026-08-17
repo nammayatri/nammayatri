@@ -632,6 +632,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.requestId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
+      DP.decrementSrdSentCount driverReq.createdAt driverId
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

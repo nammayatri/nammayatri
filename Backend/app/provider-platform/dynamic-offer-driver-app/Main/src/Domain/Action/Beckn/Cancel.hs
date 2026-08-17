@@ -366,6 +366,7 @@ cancelSearch merchantId searchTry = do
       -- free the driver's parallel-request slot; it otherwise stays consumed
       -- against maxParallelSearchRequests until the entry's validTill passes
       DP.removeSearchReqIdFromMap merchantId driverReq.driverId driverReq.requestId
+      DP.decrementSrdSentCount driverReq.createdAt driverReq.driverId
       whenJust mbTransporterConfig $ \transporterConfig ->
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverReq.driverId transporterConfig False False False True
