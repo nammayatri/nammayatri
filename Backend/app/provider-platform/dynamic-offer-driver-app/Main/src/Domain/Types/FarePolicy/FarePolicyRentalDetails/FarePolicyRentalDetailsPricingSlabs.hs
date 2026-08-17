@@ -34,6 +34,13 @@ instance FromJSON (FPRentalDetailsPricingSlabsD 'Safe)
 
 instance ToJSON (FPRentalDetailsPricingSlabsD 'Safe)
 
+isBasePricingSlab :: FPRentalDetailsPricingSlabsD s -> Bool
+isBasePricingSlab slab = slab.timePercentage == 0 && slab.distancePercentage == 0
+
+isFullFarePricingSlab :: FPRentalDetailsPricingSlabsD s -> Bool
+isFullFarePricingSlab slab =
+  slab.farePercentage >= 100 || slab.includeActualTimePercentage || slab.includeActualDistPercentage
+
 findFPRentalDetailsByTimeAndDistancePercentage :: Int -> Int -> NonEmpty (FPRentalDetailsPricingSlabsD s) -> FPRentalDetailsPricingSlabsD s
 findFPRentalDetailsByTimeAndDistancePercentage timePercent distPercent slabList = do
   case NE.filter (\slab -> slab.distancePercentage <= distPercent && slab.timePercentage <= timePercent) $ NE.sortBy (comparing (.timePercentage) <> comparing (.distancePercentage)) slabList of
