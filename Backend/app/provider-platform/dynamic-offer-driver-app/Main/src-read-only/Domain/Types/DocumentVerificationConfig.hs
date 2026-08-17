@@ -47,6 +47,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     onlyImageVerificationStatusLookupRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     order :: Kernel.Prelude.Int,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
+    restrictedVehicleModels :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     supportedVehicleClasses :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses,
     title :: Kernel.Prelude.Text,

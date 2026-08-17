@@ -76,6 +76,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
       Se.Set Beam.order order,
       Se.Set Beam.rcNumberPrefixList rcNumberPrefixList,
+      Se.Set Beam.restrictedVehicleModels restrictedVehicleModels,
       Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
       Se.Set Beam.supportedVehicleClassesJSON (getConfigJSON supportedVehicleClasses),
       Se.Set Beam.title title,

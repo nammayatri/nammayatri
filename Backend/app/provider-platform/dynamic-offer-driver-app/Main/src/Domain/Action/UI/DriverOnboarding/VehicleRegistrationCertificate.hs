@@ -556,16 +556,22 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     readFromJson (Number val) = Just $ T.pack $ show (floor val :: Int)
     readFromJson _ = Nothing
 
-    createVehicleRC :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => DTC.TransporterConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
-    createVehicleRC transporterConfig merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
+    createVehicleRC :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => DTC.TransporterConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
+    createVehicleRC transporterConfig merchantId merchantOperatingCityId input vehicleVariant incomingFailedRules certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
+      mbRCConfigs <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just ODC.VehicleRegistrationCertificate, vehicleCategory = Just (fromMaybe DVC.CAR input.vehicleCategory)}) Nothing
+      let restrictedFailures = maybeToList $ mbRCConfigs >>= \cfg -> restrictedVehicleModelFailure cfg.restrictedVehicleModels input.manufacturer input.manufacturerModel
+          failedRules = restrictedFailures <> incomingFailedRules
+      unless (null restrictedFailures) $
+        logInfo $ "createVehicleRC: blocked restricted vehicle model manufacturer=" <> show input.manufacturer <> ", manufacturerModel=" <> show input.manufacturerModel
       let updatedVehicleVariant = case input.vehicleCategory of
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
             Just DVC.TOTO -> DV.E_RICKSHAW
             _ -> vehicleVariant
           verificationStatus = if null failedRules then Documents.MANUAL_VERIFICATION_REQUIRED else Documents.INVALID
-      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatus <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+          rcVehicleVariant = if null restrictedFailures then Just updatedVehicleVariant else Nothing
+      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatus <> ", vehicleVariant=" <> show rcVehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
@@ -576,7 +582,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             permitExpiry = input.permitValidityUpto,
             pucExpiry = input.pucValidityUpto,
             vehicleClass = input.vehicleClass,
-            vehicleVariant = Just updatedVehicleVariant,
+            vehicleVariant = rcVehicleVariant,
             vehicleManufacturer = input.manufacturer <|> input.manufacturerModel,
             vehicleCapacity = input.seatingCapacity,
             vehicleModel = input.manufacturerModel,

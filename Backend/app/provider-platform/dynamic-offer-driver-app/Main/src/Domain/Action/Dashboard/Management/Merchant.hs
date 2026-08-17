@@ -1289,6 +1289,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         markImageValidOnValidationSkip = Nothing,
         documentOnboardingStage = SDO.castDocumentOnboardingStageFromCommon <$> documentOnboardingStage,
         isDefaultVerifiedOnManualVerification = Nothing,
+        restrictedVehicleModels = Nothing,
         ..
       }
   where
