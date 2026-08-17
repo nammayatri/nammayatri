@@ -39,6 +39,12 @@ type API =
            API.Types.UI.RiderPreferences.RiderPreferencesResp
       :<|> TokenAuth
       :> "riderPreference"
+      :> "rideConfig"
+      :> Get
+           ('[JSON])
+           API.Types.UI.RiderPreferences.RideConfigData
+      :<|> TokenAuth
+      :> "riderPreference"
       :> "all"
       :> Get
            ('[JSON])
@@ -54,7 +60,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postRiderPreference :<|> getRiderPreference :<|> getAllRiderPreferences :<|> deleteRiderPreference
+handler = postRiderPreference :<|> getRiderPreference :<|> getRiderPreferenceRideConfig :<|> getRiderPreferenceAll :<|> deleteRiderPreference
 
 postRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -75,13 +81,21 @@ getRiderPreference ::
   )
 getRiderPreference a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-getAllRiderPreferences ::
+getRiderPreferenceRideConfig ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Environment.FlowHandler API.Types.UI.RiderPreferences.RideConfigData
+  )
+getRiderPreferenceRideConfig a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceRideConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+getRiderPreferenceAll ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Environment.FlowHandler API.Types.UI.RiderPreferences.AllRiderPreferencesResp
   )
-getAllRiderPreferences a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getAllRiderPreferences (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getRiderPreferenceAll a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceAll (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 deleteRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

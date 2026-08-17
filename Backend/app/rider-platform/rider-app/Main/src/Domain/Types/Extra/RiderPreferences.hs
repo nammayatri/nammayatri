@@ -12,6 +12,7 @@ import Tools.Beam.UtilsTH
 -- mkHttpInstancesForEnum generates the Servant query-param / path-param instances.
 data PreferenceType
   = LOCATION_PICKUP
+  | RIDE_CONFIG
   deriving (Show, Read, Eq, Ord, Generic, ToSchema)
 
 instance ToJSON PreferenceType where
@@ -32,6 +33,7 @@ $(mkHttpInstancesForEnum ''PreferenceType)
 -- lets us decode the right constructor without a separate type column.
 data PreferenceData
   = LocationPickupPreference LocationPickupData
+  | RideConfigPreference RideConfigData
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- Holds everything needed to auto-fill a pickup point for a given source location.
@@ -46,5 +48,13 @@ data LocationPickupData = LocationPickupData
     pickupLon :: Double,
     pickupAddress :: Maybe Text,
     pickupAddressSubtitle :: Maybe Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data RideConfigData = RideConfigData
+  { isPetRide :: Maybe Bool,
+    isBusiness :: Maybe Bool,
+    isTransitEnabled :: Maybe Bool,
+    isAutoAssign :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

@@ -3,6 +3,7 @@
 
 module Storage.Queries.RiderPreferencesExtra where
 
+import Data.Aeson (toJSON)
 import Domain.Types.Extra.RiderPreferences
 import Domain.Types.Person (Person)
 import Domain.Types.RiderPreferences (RiderPreferences)
@@ -36,3 +37,21 @@ findLocationPickupByGeohash riderId geohash = do
   where
     matchesGeohash rp = case rp.preferenceData of
       LocationPickupPreference d -> d.sourceGeohash == geohash
+      RideConfigPreference _ -> False
+
+updateRideConfigByRiderId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person ->
+  RideConfigData ->
+  m ()
+updateRideConfigByRiderId riderId cfg = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.preferenceData (toJSON (RideConfigPreference cfg)),
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (getId riderId),
+          Se.Is Beam.preferenceType $ Se.Eq RIDE_CONFIG
+        ]
+    ]

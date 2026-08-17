@@ -1,0 +1,733 @@
+{
+  "info": {
+    "name": "NY Rider Preferences Flow",
+    "description": "E2E for rider RIDE_CONFIG preferences on /riderPreference: unset read, round-trip, partial payload, upsert, and non-interference with saved LOCATION_PICKUP rows. Rider-app only; no driver/BPP setup needed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_rider_number')) {",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    console.log('Test rider:', rNum);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider-prefs\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Ride Config (Never Saved)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/rideConfig",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "rideConfig"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('unset: isPetRide is null', function () { pm.expect(d.isPetRide === null, 'got: ' + JSON.stringify(d.isPetRide)).to.be.true; });",
+              "pm.test('unset: isBusiness is null', function () { pm.expect(d.isBusiness === null, 'got: ' + JSON.stringify(d.isBusiness)).to.be.true; });",
+              "pm.test('unset: isTransitEnabled is null', function () { pm.expect(d.isTransitEnabled === null, 'got: ' + JSON.stringify(d.isTransitEnabled)).to.be.true; });",
+              "pm.test('unset: isAutoAssign is null', function () { pm.expect(d.isAutoAssign === null, 'got: ' + JSON.stringify(d.isAutoAssign)).to.be.true; });",
+              "console.log('rideConfig =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Save Ride Config",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"preferenceType\": \"RIDE_CONFIG\",\n    \"rideConfigData\": {\n        \"isPetRide\": true,\n        \"isBusiness\": false,\n        \"isTransitEnabled\": false,\n        \"isAutoAssign\": true\n    }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Ride Config (After Save)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/rideConfig",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "rideConfig"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('round-trip: isPetRide is true', function () { pm.expect(d.isPetRide === true, 'got: ' + JSON.stringify(d.isPetRide)).to.be.true; });",
+              "pm.test('round-trip: isBusiness is false', function () { pm.expect(d.isBusiness === false, 'got: ' + JSON.stringify(d.isBusiness)).to.be.true; });",
+              "pm.test('round-trip: isTransitEnabled is false', function () { pm.expect(d.isTransitEnabled === false, 'got: ' + JSON.stringify(d.isTransitEnabled)).to.be.true; });",
+              "pm.test('round-trip: isAutoAssign is true', function () { pm.expect(d.isAutoAssign === true, 'got: ' + JSON.stringify(d.isAutoAssign)).to.be.true; });",
+              "console.log('rideConfig =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Save Ride Config (Partial Payload \u2014 Only isPetRide)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"preferenceType\": \"RIDE_CONFIG\",\n    \"rideConfigData\": {\n        \"isPetRide\": true\n    }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Ride Config (Partial Merge Preserves Others)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/rideConfig",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "rideConfig"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('merge: isPetRide takes the newly sent value', function () {",
+              "    pm.expect(d.isPetRide, 'got: ' + JSON.stringify(d.isPetRide)).to.eql(true);",
+              "});",
+              "pm.test('merge: isBusiness keeps its previous value (false), not nulled', function () {",
+              "    pm.expect(d.isBusiness, 'omitted field was wiped \u2014 merge regressed. got: ' + JSON.stringify(d.isBusiness)).to.eql(false);",
+              "});",
+              "pm.test('merge: isTransitEnabled keeps its previous value (false), not nulled', function () {",
+              "    pm.expect(d.isTransitEnabled, 'omitted field was wiped \u2014 merge regressed. got: ' + JSON.stringify(d.isTransitEnabled)).to.eql(false);",
+              "});",
+              "pm.test('merge: isAutoAssign keeps its previous value (true), not nulled', function () {",
+              "    pm.expect(d.isAutoAssign, 'omitted field was wiped \u2014 merge regressed. got: ' + JSON.stringify(d.isAutoAssign)).to.eql(true);",
+              "});",
+              "console.log('rideConfig =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Save Ride Config (Partial Payload \u2014 Only isAutoAssign=false)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"preferenceType\": \"RIDE_CONFIG\",\n    \"rideConfigData\": {\n        \"isAutoAssign\": false\n    }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Ride Config (Partial false Applies, Others Preserved)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/rideConfig",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "rideConfig"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('a partial false is applied, not treated as absent', function () {",
+              "    pm.expect(d.isAutoAssign, 'true->false via partial payload was dropped; Nothing/false likely conflated. got: ' + JSON.stringify(d.isAutoAssign)).to.eql(false);",
+              "});",
+              "pm.test('isPetRide still preserved alongside the false write', function () {",
+              "    pm.expect(d.isPetRide, 'got: ' + JSON.stringify(d.isPetRide)).to.eql(true);",
+              "});",
+              "pm.test('isBusiness still preserved', function () {",
+              "    pm.expect(d.isBusiness, 'got: ' + JSON.stringify(d.isBusiness)).to.eql(false);",
+              "});",
+              "console.log('rideConfig =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Ride Config",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"preferenceType\": \"RIDE_CONFIG\",\n    \"rideConfigData\": {\n        \"isPetRide\": false,\n        \"isBusiness\": true,\n        \"isTransitEnabled\": false,\n        \"isAutoAssign\": false\n    }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Ride Config (After Update)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/rideConfig",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "rideConfig"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('updated: isPetRide is false', function () { pm.expect(d.isPetRide === false, 'got: ' + JSON.stringify(d.isPetRide)).to.be.true; });",
+              "pm.test('updated: isBusiness is true', function () { pm.expect(d.isBusiness === true, 'got: ' + JSON.stringify(d.isBusiness)).to.be.true; });",
+              "pm.test('updated: isTransitEnabled is false', function () { pm.expect(d.isTransitEnabled === false, 'got: ' + JSON.stringify(d.isTransitEnabled)).to.be.true; });",
+              "pm.test('updated: isAutoAssign is false', function () { pm.expect(d.isAutoAssign === false, 'got: ' + JSON.stringify(d.isAutoAssign)).to.be.true; });",
+              "console.log('rideConfig =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Save Ride Config Without Data (Negative)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"preferenceType\": \"RIDE_CONFIG\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('rejects RIDE_CONFIG with no rideConfigData', function () {",
+              "    pm.expect(pm.response.code, 'expected a 4xx, got ' + pm.response.code).to.be.at.least(400);",
+              "    pm.expect(pm.response.code).to.be.below(500);",
+              "});",
+              "console.log('negative case status =', pm.response.code, pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Save Pickup Location",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"preferenceType\": \"LOCATION_PICKUP\",\n    \"locationData\": {\n        \"sourceLat\": {{origin_lat}},\n        \"sourceLon\": {{origin_lon}},\n        \"sourceAddress\": \"integration-test source\",\n        \"pickupLat\": {{origin_lat}},\n        \"pickupLon\": {{origin_lon}},\n        \"pickupAddress\": \"integration-test pickup\"\n    }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Ride Config (Pickup Row Present)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/rideConfig",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "rideConfig"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('unaffected by pickup row: isPetRide is false', function () { pm.expect(d.isPetRide === false, 'got: ' + JSON.stringify(d.isPetRide)).to.be.true; });",
+              "pm.test('unaffected by pickup row: isBusiness is true', function () { pm.expect(d.isBusiness === true, 'got: ' + JSON.stringify(d.isBusiness)).to.be.true; });",
+              "console.log('rideConfig =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Pickup Location (Ride Config Present)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference?sourceLat={{origin_lat}}&sourceLon={{origin_lon}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference"
+          ],
+          "query": [
+            {
+              "key": "sourceLat",
+              "value": "{{origin_lat}}"
+            },
+            {
+              "key": "sourceLon",
+              "value": "{{origin_lon}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('returns exactly one saved pickup', function () {",
+              "    pm.expect(d.locationPickups.length, 'got: ' + JSON.stringify(d.locationPickups)).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get All Preferences (Both Types Grouped)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/riderPreference/all",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "riderPreference",
+            "all"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('ride config row is not listed as a pickup', function () {",
+              "    pm.expect(d.locationPickups.length, 'got: ' + JSON.stringify(d.locationPickups)).to.eql(1);",
+              "});",
+              "pm.test('ride config is returned in its own field', function () {",
+              "    pm.expect(d.rideConfig, 'got: ' + JSON.stringify(d)).to.not.eql(null);",
+              "});",
+              "pm.test('all: isPetRide is false', function () { pm.expect(d.rideConfig.isPetRide === false, 'got: ' + JSON.stringify(d.rideConfig)).to.be.true; });",
+              "pm.test('all: isBusiness is true', function () { pm.expect(d.rideConfig.isBusiness === true, 'got: ' + JSON.stringify(d.rideConfig)).to.be.true; });",
+              "pm.test('all: isTransitEnabled is false', function () { pm.expect(d.rideConfig.isTransitEnabled === false, 'got: ' + JSON.stringify(d.rideConfig)).to.be.true; });",
+              "pm.test('all: isAutoAssign is false', function () { pm.expect(d.rideConfig.isAutoAssign === false, 'got: ' + JSON.stringify(d.rideConfig)).to.be.true; });",
+              "console.log('all =', JSON.stringify(d));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    }
+  ]
+}

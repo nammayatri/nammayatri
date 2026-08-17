@@ -61,6 +61,7 @@ PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 GOHOME_DIR="$SCRIPT_DIR/collections/GoHomeSpecialLocationFlow"
 PHONE_CONSENT_DIR="$SCRIPT_DIR/collections/PhoneShareConsentFlow"
+RIDER_PREFS_DIR="$SCRIPT_DIR/collections/RiderPreferencesFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -647,6 +648,10 @@ run_phone_consent() {
     run_frfs "$PHONE_CONSENT_DIR" "PHONE SHARE CONSENT" "${1:-}" "${2:-}"
 }
 
+run_rider_prefs() {
+    run_frfs "$RIDER_PREFS_DIR" "RIDER PREFERENCES" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -679,6 +684,7 @@ show_help() {
     echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  gohome              Run Go-Home blocked special location suite (auto-seeds blocked airport special location)"
     echo "  phone-consent       Run rider phone-share consent gate suite (auto-seeds DirectCall + consent flag, flushes Redis)"
+    echo "  rider-prefs         Run rider ride-config preferences suite (no seeding required)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -823,6 +829,9 @@ case "${1:-}" in
         ;;
     phone-consent|consent)
         run_phone_consent "${2:-}" "${3:-}"
+        ;;
+    rider-prefs|prefs)
+        run_rider_prefs "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
