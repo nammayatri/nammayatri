@@ -474,7 +474,9 @@ data Catalog = Catalog
   { -- |
     catalogDescriptor :: Maybe Descriptor,
     -- |
-    catalogProviders :: Maybe [Provider]
+    catalogProviders :: Maybe [Provider],
+    -- | ONDC v2.1.0: Catalog-level tags (BPP_TERMS for e.g. STATIC_TERMS)
+    catalogTags :: Maybe [TagGroup]
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -493,7 +495,8 @@ optionsCatalog =
   where
     table =
       [ ("catalogDescriptor", "descriptor"),
-        ("catalogProviders", "providers")
+        ("catalogProviders", "providers"),
+        ("catalogTags", "tags")
       ]
 
 -- | Describes a city

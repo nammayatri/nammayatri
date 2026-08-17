@@ -460,6 +460,10 @@ let driverFleetLocationListAPIRateLimitOptions =
 let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
 
+let scheduledCategorySignalMerchantIds = [] : List Text
+
+let negotiationFareTolerancePct = 0.1
+
 let bapHostRedirectMap =
       [ { mapKey = "staging.localhost"
         , mapValue = Some "http://localhost:8010"
@@ -605,6 +609,8 @@ in  { esqDBCfg
     , inMemConfig
     , driverFleetLocationListAPIRateLimitOptions
     , noSignatureSubscribers
+    , scheduledCategorySignalMerchantIds
+    , negotiationFareTolerancePct
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
     , emailServiceConfig

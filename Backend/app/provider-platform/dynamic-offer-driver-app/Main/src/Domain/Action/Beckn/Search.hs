@@ -173,6 +173,10 @@ data DSearchReq = DSearchReq
     userSdkVersion :: Maybe Version,
     userBackendAppVersion :: Maybe Text,
     riderPreferredOption :: DRPO.RiderPreferredOption,
+    -- | Nothing from the base parser -- only the MSIL layer (Beckn.OnDemand.Transformer.MSIL.Search.msilParser)
+    -- ever sets this, from the incoming category descriptor code. Everyone else's search
+    -- carries Nothing all the way through, unread.
+    isExplicitlyScheduled :: Maybe Bool,
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
     -- | Set only by the internal sync_search endpoint when the BAP is pricing a
@@ -525,6 +529,7 @@ handler ValidatedDSearchReq {..} sReq = do
             domain = Just $ show Domain.MOBILITY,
             name = "THIRD PARTY BAP",
             logoUrl = Nothing, -- TODO: Parse this from on_search req
+            staticTermsUrl = Nothing, -- populated later, if at all, by Beckn.OnDemand.Utils.MSIL.Terms (MSIL pilot only)
             createdAt = now,
             updatedAt = now
           }
@@ -1033,9 +1038,18 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation mbToSpecialLocatio
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
-        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
-          then (dsReq.pickupTime, True)
-          else (now, False)
+        -- MSIL pilot: isExplicitlyScheduled is only ever Just _ when the MSIL layer
+        -- (Beckn.OnDemand.Transformer.MSIL.Search.msilParser) ran and the incoming
+        -- category descriptor explicitly said SCHEDULED_TRIP/SCHEDULED_RENTAL --
+        -- honour that directly, no timestamp/buffer check at all. Nothing (every
+        -- non-pilot merchant) and Just False both fall through to today's unchanged
+        -- pickupTime-vs-now/buffer check.
+        case dsReq.isExplicitlyScheduled of
+          Just True -> (dsReq.pickupTime, True)
+          _ ->
+            if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+              then (dsReq.pickupTime, True)
+              else (now, False)
       -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
       -- Cuts wasted DB/ML work for categories the rider didn't pick.
       localBundleForPreference = case dsReq.riderPreferredOption of
