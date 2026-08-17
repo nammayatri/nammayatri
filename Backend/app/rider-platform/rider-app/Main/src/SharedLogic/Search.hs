@@ -214,7 +214,8 @@ data RouteDetails = RouteDetails
     shortestRouteDuration :: Maybe Seconds,
     shortestRouteStaticDuration :: Maybe Seconds,
     shortestRouteInfo :: Maybe Maps.RouteInfo,
-    multipleRoutes :: Maybe [Maps.RouteInfo]
+    multipleRoutes :: Maybe [Maps.RouteInfo],
+    routeCacheUsed :: Bool
   }
 
 data SearchDetails = SearchDetails

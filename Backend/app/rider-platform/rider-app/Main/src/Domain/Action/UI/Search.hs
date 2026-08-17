@@ -464,6 +464,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       toSpecialLocationId
       mbDiscoveredSpecialLocId
       mbEnableSyncSearch
+      (Just routeCacheUsed)
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -625,7 +626,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 shortestRouteDuration = Nothing,
                 shortestRouteStaticDuration = Nothing,
                 shortestRouteInfo = Nothing,
-                multipleRoutes = Nothing
+                multipleRoutes = Nothing,
+                routeCacheUsed = False
               },
             Nothing
           )
@@ -637,7 +639,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 shortestRouteDuration = Just 0,
                 shortestRouteStaticDuration = Just 0,
                 shortestRouteInfo = Nothing,
-                multipleRoutes = Nothing
+                multipleRoutes = Nothing,
+                routeCacheUsed = False
               },
             Nothing
           )
@@ -673,11 +676,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m (RouteDetails, Maybe Text)
     processRentalSearch person rentalReq stopsLatLong originCity = do
       case stopsLatLong of
-        [] -> return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing, Nothing)
+        [] -> return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing)
         (stop : _) -> do
           stopCity <- Serviceability.validateServiceability stop [] person
           unless (stopCity == originCity) $ throwError RideNotServiceable
-          return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing, Nothing)
+          return (RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [] Nothing Nothing)) Nothing False, Nothing)
 
     -- No destination, no rider-given distance/duration estimate at all — the quote shown
     -- will just be the base fare from the regular (Progressive) fare policy; the real fare
@@ -691,7 +694,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
               shortestRouteDuration = Nothing,
               shortestRouteStaticDuration = Nothing,
               shortestRouteInfo = Nothing,
-              multipleRoutes = Nothing
+              multipleRoutes = Nothing,
+              routeCacheUsed = False
             },
           Nothing
         )
@@ -757,8 +761,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId mbEnableSyncSearch mbRouteCacheUsed = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -829,6 +834,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         betterPointWalkToPickup = Nothing,
         betterPointWalkFromDrop = Nothing,
         betterPointRideDistanceSaved = Nothing,
+        routeCacheUsed = mbRouteCacheUsed,
         ..
       }
   where
@@ -867,9 +873,10 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
       cacheEnabled = mbShouldCacheRoute == Just True
       cacheReadEnabled = riderConfig.enableRouteCacheRead == Just True
       hourOfDay = getLocalHourOfDay riderConfig.timeDiffFromUtc now
+      isPointToPointTrip = length latLongs == 2
       mbPickupGeohash = T.pack <$> Geohash.encode routeCacheGeohashPrecision (sourceLatLong.lat, sourceLatLong.lon)
       mbDropGeohash = T.pack <$> Geohash.encode routeCacheGeohashPrecision (destLatLong.lat, destLatLong.lon)
-      mbCacheKey = (,) <$> mbPickupGeohash <*> mbDropGeohash
+      mbCacheKey = if isPointToPointTrip then (,) <$> mbPickupGeohash <*> mbDropGeohash else Nothing
 
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
 
@@ -917,6 +924,7 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
       shortestRouteDuration = (.duration) =<< shortestRouteInfo
       shortestRouteStaticDuration = (.staticDuration) =<< shortestRouteInfo
       mbDiscoveredSpecialLocId = fmap (.id.getId) mbSpecialLocation
+      routeCacheUsed = isJust mbCachedRawRoutes
   return (RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition finalRoutes shortestRouteIndex, ..}, mbDiscoveredSpecialLocId)
 
 upsertCachedRouteResponse ::

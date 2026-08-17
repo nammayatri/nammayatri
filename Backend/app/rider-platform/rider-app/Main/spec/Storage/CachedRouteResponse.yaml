@@ -4,7 +4,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Meters: Kernel.Types.Common
   Seconds: Kernel.Types.Common
-  RouteInfo: Kernel.External.Maps.Types
+  RouteInfo: Kernel.External.Maps.Interface.Types
   Value: Data.Aeson
 
 CachedRouteResponse:
