@@ -45,6 +45,15 @@ _CONFIG = {
     "gstNumber": "29ABCDE1234F1Z5",
     "aadhaarNumber": "123456789012",
     "dlNumber": "KA0120200012345",
+    # WHY: RC image extraction compares the extracted number against the plate being registered,
+    #      so a test must be able to pin it. Callers set it via /idfy/configure.
+    # COMPAT: the default is the exact literal _rc_extract used to hardcode, so a caller that
+    #      never sets it gets identical output.
+    "rcNumber": "registration_number",
+    # WHY: without a callback, GST verification stays MANUAL_VERIFICATION_REQUIRED forever and a
+    #      business fleet can never be verified.
+    # COMPAT: default False — gridline then falls through to the old plain ack.
+    "gstCallback": False,
 }
 _WEBHOOK_URL = os.environ.get("IDFY_WEBHOOK_URL", "")
 _WEBHOOK_SECRET = os.environ.get("IDFY_WEBHOOK_SECRET", "test-secret")
@@ -117,6 +126,9 @@ def _dl_extract():
 
 
 def _rc_extract():
+    # Snapshot under the lock — /idfy/configure mutates _CONFIG from another thread.
+    with _LOCK:
+        cfg = dict(_CONFIG)
     return _dual({
         "address": "address", "body": "body", "chassis_number": "chassis_number",
         "class": "_class", "colour": "colour", "cubic_capacity": "cubic_capacity",
@@ -125,7 +137,7 @@ def _rc_extract():
         "fuel": "fuel", "manufacturer": "manufacturer",
         "manufacturing_date": "manufacturing_date", "model": "model",
         "owner_name": "owner_name", "registration_date": "registration_date",
-        "registration_number": "registration_number", "rto_district": "rto_district",
+        "registration_number": cfg["rcNumber"], "rto_district": "rto_district",
         "state": "state", "wheel_base": "wheel_base", "status": "status",
     })
 
@@ -233,7 +245,9 @@ def handle(handler, path, body):
     if path.endswith("/configure"):
         if handler.command == "POST" and isinstance(body_json, dict):
             with _LOCK:
-                for k in ("panNumber", "gstNumber", "aadhaarNumber"):
+                # Additive whitelist: rcNumber + gstCallback are new; unknown keys were ignored
+                # before and still are, so older callers are unaffected.
+                for k in ("panNumber", "gstNumber", "aadhaarNumber", "rcNumber", "gstCallback"):
                     if k in body_json:
                         _CONFIG[k] = body_json[k]
                 return handler._json(dict(_CONFIG))

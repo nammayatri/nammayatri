@@ -16,6 +16,20 @@ FROM atlas_dashboard.merchant m
 WHERE m.short_id = 'NAMMA_YATRI_PARTNER'
 ON CONFLICT DO NOTHING;
 
+-- Same JUSPAY_ADMIN person, token scoped to MSIL_PARTNER / Delhi (BOT onboarding testing).
+INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
+SELECT
+    'local-admin-token-delhi-id-000000000',
+    'local-admin-token-delhi-msil-partner',
+    '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+    m.id,
+    'Delhi',
+    true,
+    now()
+FROM atlas_bpp_dashboard.merchant m
+WHERE m.short_id = 'MSIL_PARTNER'
+ON CONFLICT DO NOTHING;
+
 -- unencrypted: email: fleet@dashboard.com, password: fleet
 INSERT INTO atlas_dashboard.person (id, first_name, last_name, role_id, email_encrypted, email_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, password_hash, created_at, updated_at) VALUES
 	('f1eef1ee-f1ee-f1ee-f1ee-f1eef1eef1ee', 'fleet', 'admin', 'e5a69a26-d165-455a-a711-33a41e0d4812', '0.1.0|0|FmlWDEUp8Ya8cKLaAFVOcynY2DOa+evTh51LvGcot0vVuFSDcG4NfiIUH8rGDi3ZS8BWIl83heEUhatu3d8yXXmc0+ARWQ==', '\x4d383194f7abb5422eed9d10feb4b30ac2ba06f88ff0e0aa35262d487db86d4a', '0.1.0|1|pxBx5cEmeWjlvXC9tbqoZLzcHMyQ4uQuVMXenbfVljWalGKeBsJKzcu8XFbi3BvdxX/moxwToQ7IhN9owA==', '\x0e0369d00c4209c0bdffeb830cbee1c56d57b3ad2794c5616c585e650de2653a', '+91', '\xec75c6cc9bee0b826ae77393d7e91558cc71ac943b7b37656bf057172eb791c5', '2022-09-06 11:25:42.609155+00', '2022-09-06 11:25:42.609155+00')
