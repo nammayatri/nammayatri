@@ -32,6 +32,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
+import qualified Domain.Types.FRFSBookingGroup as DFRFSBookingGroup
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
@@ -843,6 +844,33 @@ getAllJourneyFrfsBookings booking = do
       bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])
+
+-- | Which grouping mechanism, if any, ties this booking's payment to sibling bookings'.
+-- A cart's bookingGroupId always takes priority over the trivial per-booking Journey every
+-- FRFS booking still gets wrapped in (see buildJourneyAndLeg) -- that Journey exists for
+-- history/live-tracking, not for payment grouping, once a bookingGroupId is present.
+data BookingPaymentGroup
+  = JourneyPaymentGroup (Id DJourney.Journey)
+  | BookingGroupPaymentGroup (Id DFRFSBookingGroup.FRFSBookingGroup)
+  | NoPaymentGroup
+
+getBookingPaymentSiblings ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m (BookingPaymentGroup, [DFRFSTicketBooking.FRFSTicketBooking])
+getBookingPaymentSiblings booking = case booking.bookingGroupId of
+  Just bookingGroupId -> do
+    bookings <- QFRFSTicketBooking.findAllByBookingGroupId (Just bookingGroupId)
+    return (BookingGroupPaymentGroup bookingGroupId, bookings)
+  Nothing -> do
+    (mbJourneyId, bookings) <- getAllJourneyFrfsBookings booking
+    return (maybe NoPaymentGroup JourneyPaymentGroup mbJourneyId, bookings)
 
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,

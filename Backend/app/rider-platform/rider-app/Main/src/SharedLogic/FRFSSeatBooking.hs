@@ -7,6 +7,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Database.Redis as RawRedis
+import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Seat as Seat
 import qualified Domain.Types.SeatLayout as SeatLayout
 import Kernel.Prelude
@@ -208,6 +209,15 @@ releaseConfirmedSeats tripId seatIds fromIdx toIdx = do
             RawRedis.Redis (Either RawRedis.Reply Integer)
         )
   logInfo $ "SeatBooking:releaseConfirmedSeats completed tripId=" <> tripId
+
+-- | Release every seat hold still attached to a group's bookings (each booking already carries
+-- its own tripId/holdId, so this is just a loop over the existing per-booking releaseHold).
+-- Bookings with no hold (unreserved seating, or the hold already converted/expired) are skipped.
+releaseGroupHolds :: (MonadFlow m, Redis.HedisFlow m r) => [Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ()
+releaseGroupHolds bookings =
+  forM_ bookings $ \booking ->
+    whenJust ((,) <$> booking.tripId <*> booking.holdId) $ \(tripId, holdId) ->
+      releaseHold tripId holdId
 
 -- | Standard functions (Availability check doesn't need hold hashtags)
 getTripAvailability :: (MonadFlow m, Redis.HedisFlow m r) => Text -> Int -> Int -> [Seat.Seat] -> m [SeatWithStatus]

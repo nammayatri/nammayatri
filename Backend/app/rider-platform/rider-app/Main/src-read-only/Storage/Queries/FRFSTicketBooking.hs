@@ -5,6 +5,7 @@
 module Storage.Queries.FRFSTicketBooking (module Storage.Queries.FRFSTicketBooking, module ReExport) where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Domain.Types.FRFSBookingGroup
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
@@ -27,6 +28,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
+
+findAllByBookingGroupId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSBookingGroup.FRFSBookingGroup) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByBookingGroupId bookingGroupId = do findAllWithKV [Se.Is Beam.bookingGroupId $ Se.Eq (Kernel.Types.Id.getId <$> bookingGroupId)]
 
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
@@ -199,6 +205,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
   updateWithKV
     [ Se.Set Beam._type _type,
       Se.Set Beam.bookingAuthCode bookingAuthCode,
+      Se.Set Beam.bookingGroupId (Kernel.Types.Id.getId <$> bookingGroupId),
       Se.Set Beam.bppBankAccountNumber bppBankAccountNumber,
       Se.Set Beam.bppBankCode bppBankCode,
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,

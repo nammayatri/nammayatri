@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.FRFSBookingGroup
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
@@ -73,6 +74,30 @@ data FRFSBookingFeedbackReq
   = BookingFareAccepted BookingFareAcceptedReq
   | BookingFeedback BookingFeedbackReq
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingGroupCheckoutReq = FRFSBookingGroupCheckoutReq {slots :: [FRFSBookingGroupSlotReq]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingGroupSlotReq = FRFSBookingGroupSlotReq
+  { crisSdkResponse :: Data.Maybe.Maybe CrisSdkResponse,
+    enableOffer :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq],
+    quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    tripId :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSBookingGroupStatusAPIRes = FRFSBookingGroupStatusAPIRes
+  { bookingGroupId :: Kernel.Types.Id.Id Domain.Types.FRFSBookingGroup.FRFSBookingGroup,
+    bookings :: [FRFSTicketBookingStatusAPIRes],
+    status :: Domain.Types.FRFSBookingGroup.FRFSBookingGroupStatus,
+    totalPrice :: Kernel.Types.Common.PriceAPIEntity
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
@@ -326,6 +351,14 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSearchGroupReq = FRFSSearchGroupReq {searches :: [FRFSSearchAPIReq]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSSearchGroupRes = FRFSSearchGroupRes {results :: [FRFSSearchAPIRes]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
