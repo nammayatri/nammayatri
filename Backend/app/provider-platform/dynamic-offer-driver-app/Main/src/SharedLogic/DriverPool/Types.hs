@@ -284,6 +284,10 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest),
     specialLocWarriorPreferredSpecialLocId :: Maybe (Id SL.SpecialLocation),
     score :: Maybe A.Value,
+    -- The POOLING logic version that produced `score`. Stamped by makeTaggedDriverPool from the
+    -- version it actually ran, never read back from the SearchRequest -- the two used to be
+    -- sourced independently and could disagree, which silently mislabelled experiment arms.
+    poolingLogicVersion :: Maybe Int,
     searchReqDriverStatsCounters :: Maybe SearchReqDriverStatsCounters,
     idleTimeSeconds :: Maybe Double
   }
@@ -308,6 +312,7 @@ instance Default DriverPoolWithActualDistResult where
         goHomeReqId = Nothing,
         specialLocWarriorPreferredSpecialLocId = Nothing,
         score = Nothing,
+        poolingLogicVersion = Nothing,
         searchReqDriverStatsCounters = Nothing,
         idleTimeSeconds = Nothing
       }

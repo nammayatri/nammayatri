@@ -248,27 +248,31 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         calculateNormalBatch mOCityId transporterConfig onlyNewNormalDrivers txnId' onRidePoolResults airportEntryFee isAirportRequest = do
           logDebug $ "calculateNormalBatch txnId " <> show txnId'
-          (normalBatchNotOnRide, _, _) <- withTimeAPI "driverPooling" "getDriverPoolNotOnRide" $ getDriverPoolNotOnRide mOCityId transporterConfig onlyNewNormalDrivers
+          -- Resolve the POOLING version once, on the first pool, then reuse it for the on-ride pool.
+          -- Both pools used to read searchReq.poolingLogicVersion independently; while that snapshot
+          -- is Nothing (the batch that pins it) each call re-tossed the rollout, so the two halves of
+          -- a single batch could be scored by different versions and then sorted against each other
+          -- on incomparable scales.
+          (mbPoolingVersion, normalBatchNotOnRide) <- withTimeAPI "driverPooling" "getDriverPoolNotOnRide" $ getDriverPoolNotOnRide mOCityId transporterConfig onlyNewNormalDrivers
           logDebug $ "NormalBatchNotOnRide-" <> show normalBatchNotOnRide <> " and txnId " <> show txnId'
-          normalBatchOnRide <- getDriverPoolOnRide mOCityId transporterConfig NormalPool onRidePoolResults airportEntryFee isAirportRequest
+          normalBatchOnRide <- getDriverPoolOnRide mOCityId transporterConfig NormalPool onRidePoolResults airportEntryFee isAirportRequest mbPoolingVersion
           pure (normalBatchNotOnRide, normalBatchOnRide)
 
-        getDriverPoolNotOnRide mOCityId transporterConfig onlyNewNormalDrivers = do
-          (_, normalDriverPoolBatch) <- withTimeAPI "driverPooling" "mkDriverPoolBatch" $ mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False
-          pure (normalDriverPoolBatch, [], Nothing)
+        getDriverPoolNotOnRide mOCityId transporterConfig onlyNewNormalDrivers =
+          withTimeAPI "driverPooling" "mkDriverPoolBatch" $ mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False searchReq.poolingLogicVersion
 
         filtersForNormalBatch mOCityId transporterConfig normalDriverPool = do
           allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId mOCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) normalDriverPool
           pure $ bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers
 
-        getDriverPoolOnRide mOCityId transporterConfig poolType allDriverPoolResults airportEntryFee isAirportRequest = do
+        getDriverPoolOnRide mOCityId transporterConfig poolType allDriverPoolResults airportEntryFee isAirportRequest mbPoolingVersion = do
           if poolType == NormalPool && driverPoolCfg.enableForwardBatching && searchTry.isAdvancedBookingEnabled
             then do
               previousDriverOnRide <- getPreviousBatchesDrivers (Just True)
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType transporterConfig batchNum allDriverPoolResults airportEntryFee isAirportRequest
               logDebug $ "NormalDriverPoolBatchOnRideCurrentlyOnRide-" <> show allNearbyDriversCurrentlyOnRide
               onlyNewNormalDriversOnRide <- filtersForNormalBatch mOCityId transporterConfig allNearbyDriversCurrentlyOnRide
-              (_, normalDriverPoolBatchOnRide) <- withTimeAPI "driverPooling" "mkDriverPoolBatchOnRide" $ mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True
+              (_, normalDriverPoolBatchOnRide) <- withTimeAPI "driverPooling" "mkDriverPoolBatchOnRide" $ mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True mbPoolingVersion
               validDriversFromPreviousBatch <-
                 filterM
                   ( \dpr -> do
@@ -306,7 +310,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
-        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum driverPoolCfg searchTry.id
+        mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool mbPoolingVersion = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags mbPoolingVersion batchNum driverPoolCfg searchTry.id
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch =
           addDelaysWithPrioritySplit driverPoolCfg.distanceBasedBatchSplit
