@@ -299,6 +299,7 @@ data TransporterConfigT f = TransporterConfigT
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
     scheduledRideFilterExclusionThresholdHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     scheduledRideJobRescheduleTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    scheduledRideOpenToAllThresholdMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     scheduledRideSearchRepeatLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     searchRepeatLimit :: B.C f Kernel.Prelude.Int,
     sendMembershipIdInProfile :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

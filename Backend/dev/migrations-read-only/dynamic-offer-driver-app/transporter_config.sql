@@ -1065,3 +1065,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_upi_payou
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fleet_bank_payout_enabled boolean  default true;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_monitoring_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_open_to_all_threshold_minutes integer ;

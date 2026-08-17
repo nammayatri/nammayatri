@@ -93,6 +93,8 @@ data NearestDriversReq = NearestDriversReq
     driverPositionInfoExpiry :: Maybe Seconds,
     isRental :: Bool,
     isInterCity :: Bool,
+    isScheduled :: Bool,
+    scheduledOpenToAll :: Bool,
     currentRideTripCategoryValidForForwardBatching :: [Text],
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
@@ -101,6 +103,7 @@ data NearestDriversReq = NearestDriversReq
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
     minWalletAmountForCashRides :: Maybe HighPrecMoney,
+    minWalletAmountForScheduledRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     taxConfig :: DTC.TaxConfig,
     isValueAddNP :: Bool,
@@ -184,7 +187,8 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
   let poolDataMap = HashMap.fromList $ (\dpd -> (dpd.driverId, dpd)) <$> poolDataList
       cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       results = concat $ mapMaybe (buildDriverResult req poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
-  filterByWalletBalance req isPrepaidEnabled results
+  walletFiltered <- filterByWalletBalance req isPrepaidEnabled results
+  filterByScheduledWalletBalance req walletFiltered
 
 -- | Wrapper for non-chunked callers (Estimate stage): fetch then process all as one chunk.
 getNearestDrivers ::
@@ -255,10 +259,18 @@ buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap loc
   let availableCityTiers = (.serviceTierType) <$> filter (\vst -> dpd.variant `elem` vst.allowedVehicleVariant) cityServiceTiers
   let selectedDriverServiceTiers = removeSoftBlockedTiers $ DL.intersect dpd.selectedServiceTiers availableCityTiers
   let selectedDriverServiceTiers' = filter (isTierEligibleForDriver now dpd.driverTag cityServiceTiersHashMap) selectedDriverServiceTiers
+  let driverTagTexts = LYT.getTagNameValue . Yudhishthira.removeTagExpiry <$> fromMaybe [] dpd.driverTag
+      scheduledTierEligible tier =
+        not isScheduled
+          || scheduledOpenToAll -- R4: within open-to-all threshold, eligibility is dropped
+          || case HashMap.lookup tier cityServiceTiersHashMap >>= (.scheduleBookingListEligibilityTags) of
+            Just reqTags@(_ : _) -> not . null $ DL.intersect driverTagTexts reqTags
+            _ -> True
   let matchingTiers =
-        if null serviceTiers
-          then selectedDriverServiceTiers'
-          else filter (`elem` selectedDriverServiceTiers') serviceTiers
+        filter scheduledTierEligible $
+          if null serviceTiers
+            then selectedDriverServiceTiers'
+            else filter (`elem` selectedDriverServiceTiers') serviceTiers
   guard $ not $ null matchingTiers
   Just $ mapMaybe (mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination) matchingTiers
 
@@ -334,6 +346,18 @@ isTripTypeEligibleHelper isRental isInterCity dpd
   | isRental = dpd.canSwitchToRental
   | isInterCity = dpd.canSwitchToInterCity
   | otherwise = dpd.canSwitchToIntraCity
+
+filterByScheduledWalletBalance ::
+  (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) =>
+  NearestDriversReq ->
+  [NearestDriversResult] ->
+  m [NearestDriversResult]
+filterByScheduledWalletBalance NearestDriversReq {..} results
+  | not isScheduled || scheduledOpenToAll = pure results
+  | otherwise =
+    case minWalletAmountForScheduledRides of
+      Nothing -> pure results
+      Just _ -> filterM (\r -> hasMinWalletBalance counterpartyDriver minWalletAmountForScheduledRides r.driverId.getId) results
 
 filterByWalletBalance ::
   (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) =>

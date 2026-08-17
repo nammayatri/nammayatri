@@ -1038,6 +1038,7 @@ TransporterConfig:
       maxWalletPayoutsPerDay: Maybe Int
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
+      minWalletAmountForScheduledRides: Maybe HighPrecMoney
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
@@ -1279,6 +1280,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: NominalDiffTime
     minmRentalAndScheduledBookingLeadTimeHours: Hours
     scheduledRideFilterExclusionThresholdHours: Hours
+    scheduledRideOpenToAllThresholdMinutes: Maybe Int
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
     variantsToEnableForSubscription: "[Domain.Types.VehicleVariant.VehicleVariant]"
