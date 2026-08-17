@@ -753,6 +753,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 }
               (entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
         mbVehicle <- QVehicle.findById personId
+        let unifiedRecompute = entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER) $ do
+          void $ withTryCatch "activateRCAutomatically:statusHandler:unifiedRecompute" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && (isActive || not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver))) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
           -- Enable driver when RC is activated (only when flow is NOT separated)
