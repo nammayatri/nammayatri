@@ -31,6 +31,7 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 | `17-testing-framework.md` | Test-stack index → `Backend/dev/test-tool/README.md` | Running / extending the integration test stack |
 | `18-finance-module-guide.md` | Double-entry ledger, account types, driver wallet flow | Working on earnings, payouts, invoices, cancellation/refund accounting |
 | `20-onboarding-action-guard.md` | Actor/verb/target guard, admin-vs-fleet matrix, API map | Adding a guarded onboarding action, or debugging a `<Verb> not allowed` error |
+| `21-driver-pool-debugging.md` | Driver pool filter gates, table/column reference, ready-to-run SQL | Debugging why a specific driver never got a `NEW_RIDE_AVAILABLE` notification |
 
 ## Cross-Reference Guide
 
@@ -42,3 +43,4 @@ This directory contains chunked documentation for the Nammayatri backend. Each d
 - **Multi-cloud bug**: Read `12-multi-cloud.md` → `08-database-patterns.md`
 - **Driver earnings / wallet / ledger**: Read `18-finance-module-guide.md` → `06-ride-flow.md`
 - **Driver / vehicle / fleet onboarding permissions**: Read `20-onboarding-action-guard.md` → `09-dashboards.md`
+- **Driver not receiving ride requests**: Read `21-driver-pool-debugging.md` → `06-ride-flow.md`
