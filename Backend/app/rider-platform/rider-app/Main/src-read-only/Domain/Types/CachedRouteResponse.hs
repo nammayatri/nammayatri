@@ -7,7 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.Maps.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -25,7 +25,7 @@ data CachedRouteResponse = CachedRouteResponse
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     pickupGeohash :: Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    routes :: [Kernel.External.Maps.Types.RouteInfo],
+    routes :: [Kernel.External.Maps.Interface.Types.RouteInfo],
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

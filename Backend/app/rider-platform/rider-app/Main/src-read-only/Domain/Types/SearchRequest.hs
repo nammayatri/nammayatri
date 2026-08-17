@@ -84,6 +84,7 @@ data SearchRequest = SearchRequest
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.RiderPreferredOption.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    routeCacheUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchMode :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode,
     selectedPaymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,

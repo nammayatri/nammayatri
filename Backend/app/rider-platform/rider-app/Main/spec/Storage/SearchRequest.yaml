@@ -120,6 +120,7 @@ SearchRequest:
     betterPointWalkToPickup: Maybe Meters
     betterPointWalkFromDrop: Maybe Meters
     betterPointRideDistanceSaved: Maybe Meters
+    routeCacheUsed: Maybe Bool
 
 
   default:
