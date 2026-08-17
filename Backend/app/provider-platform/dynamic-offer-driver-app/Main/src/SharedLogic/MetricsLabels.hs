@@ -12,10 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.MetricsLabels (getMetricsLabels, getCityLabel) where
+module SharedLogic.MetricsLabels (getMetricsLabels, getCityLabel, distanceBucketLabel, poolingVersionLabel, searchReqFunnelLabels) where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -37,3 +38,35 @@ getCityLabel :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity 
 getCityLabel merchantOpCityId = do
   mbCity <- CQMOC.findById merchantOpCityId
   pure $ maybe merchantOpCityId.getId (show . (.city)) mbCity
+
+-- | Distance bucket label for funnel counters. Edges deliberately match the analytics
+-- stack's trip_distance_bin (ClickHouse) so Grafana and warehouse views agree by
+-- construction. "unknown" when no estimate exists — never drop a metric over a label.
+-- NOT the same as SharedLogic.Pricing.getDistanceBin (fine-grained 2km bins for
+-- dynamic-pricing Redis keys) — that granularity would blow up metric cardinality.
+distanceBucketLabel :: Maybe Meters -> Text
+distanceBucketLabel Nothing = "unknown"
+distanceBucketLabel (Just d)
+  | m < 5000 = "0-5km"
+  | m < 12000 = "5-12km"
+  | m < 30000 = "12-30km"
+  | otherwise = ">30km"
+  where
+    m = d.getMeters
+
+poolingVersionLabel :: Maybe Int -> Text
+poolingVersionLabel = maybe "unknown" show
+
+-- | The three allocation-funnel label values rendered from the search request, so every
+-- call site emits identical values for the same journey:
+-- (distance_bucket, pooling_logic_version, pooling_config_version).
+-- NOTE: pooling versions are assigned during the first driver-pool computation
+-- (ensurePoolingLogicVersion / getDriverPoolConfig) — only pass search requests read
+-- AFTER that point (allocator batch flow, driver respond flow); earlier reads
+-- legitimately carry Nothing and would label everything "unknown".
+searchReqFunnelLabels :: DSR.SearchRequest -> (Text, Text, Text)
+searchReqFunnelLabels searchReq =
+  ( distanceBucketLabel searchReq.estimatedDistance,
+    poolingVersionLabel searchReq.poolingLogicVersion,
+    poolingVersionLabel searchReq.poolingConfigVersion
+  )

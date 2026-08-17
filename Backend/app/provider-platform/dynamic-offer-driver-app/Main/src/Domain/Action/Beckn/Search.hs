@@ -100,6 +100,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.Type as SLT
@@ -283,7 +284,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId' = merchant.id
-  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity)
+  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity) (SML.distanceBucketLabel sReq.routeDistance)
   sessiontoken <- generateGUIDText
   -- A shadow reuses what the customer's own search published, so the suggestion is not
   -- charged congestion that search escaped. The customer's search only publishes -- it

@@ -86,7 +86,7 @@ cancelBooking booking mbDriver transporter = do
     when booking.isScheduled $ removeBookingFromRedis booking
     QBCR.upsert bookingCancellationReason
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source)
+    Metrics.incrementRideCancelledCount transporter.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCancellationReason.source) (SML.distanceBucketLabel booking.estimatedDistance)
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       QRide.updateStatus ride.id SRide.CANCELLED

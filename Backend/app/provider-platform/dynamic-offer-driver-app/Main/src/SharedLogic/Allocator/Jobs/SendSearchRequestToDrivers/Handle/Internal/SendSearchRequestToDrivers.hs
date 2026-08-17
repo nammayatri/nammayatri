@@ -181,14 +181,14 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ do
     -- these unresponded requests are being retracted here: count them as expired
     forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) unrespondedSRFDs) $ \(serviceTier, expiredCount) ->
-      TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) expiredCount
+      TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels searchReq) expiredCount
     QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
   -- Batch size on record, so the respond API can recognise a *fully* rejected batch
   -- (rejects == sent) and advance the batch chain early instead of idling out the timer.
   SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
-    TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) sentCount
+    TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels searchReq) sentCount
 
   -- Count one "request sent" per driver in this batch for the SRDStats sliding-window counters
   -- and reset each driver's idle clock, both surfaced in the POOLING dynamic-logic data.
