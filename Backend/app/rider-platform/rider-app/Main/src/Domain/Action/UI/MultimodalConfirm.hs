@@ -2022,19 +2022,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             JMU.measureLatency (handleSingleVehicleRoute routeServiceabilityContext vno routeId) ("handleSingleVehicleRoute vno=" <> vno <> " routeId=" <> routeId)
           Nothing -> do
             (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-            directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-            if not (null directRouteCodes)
-              then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
-              else do
-                mbClusterRoutes <-
-                  if fromMaybe False req.allowClusteredStops
-                    then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                    else pure Nothing
-                case mbClusterRoutes of
-                  Just clusterRoutes@(_ : _) ->
-                    JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
-                  _ ->
-                    JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+            mbClusterRoutes <-
+              if fromMaybe False req.allowClusteredStops
+                then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                else pure Nothing
+            case mbClusterRoutes of
+              Just clusterRoutes@(_ : _) ->
+                JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
+              _ -> do
+                directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                if not (null directRouteCodes)
+                  then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+                  else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
