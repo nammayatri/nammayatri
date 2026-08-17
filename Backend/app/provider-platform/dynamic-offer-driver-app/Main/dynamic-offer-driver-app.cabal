@@ -560,6 +560,7 @@ library
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
@@ -1015,6 +1016,7 @@ library
       Tools.Metrics.ARDUBPPMetrics.Types
       Tools.Metrics.DriverSearchRequestResponseMetrics
       Tools.Metrics.DriverSearchRequestResponseMetrics.Types
+      Tools.Metrics.DriverSupplyMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications

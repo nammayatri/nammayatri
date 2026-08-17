@@ -274,6 +274,7 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverSupplyMetrics as DSM
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -1972,6 +1973,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
+            DSM.recordDriverAccepted merchantOpCityId driverId
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
             DP.recordQuoteResponseCounters merchantOpCityId driverId Accept
