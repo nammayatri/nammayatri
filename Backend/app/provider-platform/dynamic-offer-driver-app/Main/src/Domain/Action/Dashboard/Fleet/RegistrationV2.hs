@@ -72,6 +72,7 @@ import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwn
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as QGST
+import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -562,24 +563,40 @@ postRegistrationV2RegisterBankAccountLink ::
   Maybe DIB.InitiatedBy ->
   Text ->
   Flow Common.FleetBankAccountLinkResp
+-- NOTE: `fleetOwnerId` in this API can also be used as a driverId when the requestor is an Admin.
 postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerId paymentMode mbInitiatedBy requestorId = do
-  let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
-  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
-  let fetchPersonStripeInfo = do
-        fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey fleetOwner.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
-        stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
-        pure
-          SPBA.PersonStripeInfo
-            { personDob = fleetOwnerInfo.fleetDob,
-              address = Just stripeAddress,
-              idNumber = fleetOwnerInfo.stripeIdNumber,
-              companyName = fleetOwnerInfo.fleetName,
-              fleetType = Just fleetOwnerInfo.fleetType,
-              vatNumber = fleetOwnerInfo.vatNumber,
-              businessRegistrationNumber = fleetOwnerInfo.businessLicenseNumber
-            }
+  let personId = fromMaybe requestorId mbFleetOwnerId
+  person <-
+    FleetAccess.checkRequestorAccessToBankAccountPerson (Just requestorId) personId
+      >>= fromMaybeM (PersonDoesNotExist personId)
+  let fetchPersonStripeInfo
+        | person.role == DP.DRIVER = do
+          mbDriverLicense <- runInReplica (QDL.findByDriverId person.id)
+          pure
+            SPBA.PersonStripeInfo
+              { personDob = mbDriverLicense >>= (.driverDob),
+                address = Nothing,
+                idNumber = Nothing,
+                companyName = Nothing,
+                fleetType = Nothing,
+                vatNumber = Nothing,
+                businessRegistrationNumber = Nothing
+              }
+        | otherwise = do
+          fleetOwnerInfo <- runInReplica (QFOI.findByPrimaryKey person.id) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
+          stripeAddress <- fleetOwnerInfo.stripeAddress & fromMaybeM (InvalidRequest "Stripe address is required for opening a bank account")
+          pure
+            SPBA.PersonStripeInfo
+              { personDob = fleetOwnerInfo.fleetDob,
+                address = Just stripeAddress,
+                idNumber = fleetOwnerInfo.stripeIdNumber,
+                companyName = fleetOwnerInfo.fleetName,
+                fleetType = Just fleetOwnerInfo.fleetType,
+                vatNumber = fleetOwnerInfo.vatNumber,
+                businessRegistrationNumber = fleetOwnerInfo.businessLicenseNumber
+              }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
-  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.FleetDashboard mbInitiatedBy) fleetOwner
+  castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode (Just $ fromMaybe DIB.FleetDashboard mbInitiatedBy) person
 
 castFleetBankAccountLinkResp :: Onboarding.BankAccountLinkResp -> Common.FleetBankAccountLinkResp
 castFleetBankAccountLinkResp Onboarding.BankAccountLinkResp {..} = Common.FleetBankAccountLinkResp {..}
@@ -591,10 +608,16 @@ getRegistrationV2RegisterBankAccountStatus ::
   Maybe Bool ->
   Text ->
   Flow Common.FleetBankAccountResp
-getRegistrationV2RegisterBankAccountStatus _merchantShortId _opCity mbFleetOwnerId mbForceRefresh requestorId = do
-  let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
-  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
-  castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus mbForceRefresh fleetOwner.id fleetOwner.merchantOperatingCityId
+-- NOTE: `fleetOwnerId` in this API can also be used as a driverId when the requestor is an Admin.
+getRegistrationV2RegisterBankAccountStatus merchantShortId opCity mbFleetOwnerId mbForceRefresh requestorId = do
+  let personId = fromMaybe requestorId mbFleetOwnerId
+  mbPerson <- FleetAccess.checkRequestorAccessToBankAccountPerson (Just requestorId) personId
+  merchantOpCityId <- case mbPerson of
+    Just person -> pure person.merchantOperatingCityId
+    Nothing -> do
+      merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+      CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  castFleetBankAccountResp <$> SPBA.getPersonRegisterBankAccountStatus mbForceRefresh (maybe (Id personId) (.id) mbPerson) merchantOpCityId
 
 castFleetBankAccountResp :: Onboarding.BankAccountResp -> Common.FleetBankAccountResp
 castFleetBankAccountResp Onboarding.BankAccountResp {..} = Common.FleetBankAccountResp {..}

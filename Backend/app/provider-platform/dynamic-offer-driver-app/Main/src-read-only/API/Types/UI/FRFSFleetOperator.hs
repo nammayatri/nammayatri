@@ -120,7 +120,7 @@ data OperatorTripInfo = OperatorTripInfo
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassengerInfo = PassengerInfo {bookingId :: Data.Text.Text, checkedIn :: Kernel.Prelude.Bool, name :: Data.Text.Text, personId :: Data.Text.Text, phone :: Data.Text.Text}
+data PassengerInfo = PassengerInfo {bookingId :: Data.Text.Text, checkedIn :: Kernel.Prelude.Bool, name :: Data.Text.Text, personId :: Data.Text.Text, phone :: Data.Text.Text, quantity :: Kernel.Prelude.Int}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

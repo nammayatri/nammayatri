@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Fleet.Access
   ( FleetOwnerInfo (..),
     checkRequestorAccessToFleet,
+    checkRequestorAccessToBankAccountPerson,
   )
 where
 
@@ -67,3 +68,16 @@ checkRequestorAccessToFleet allowOtherRoles mbRequestorId fleetOwnerId = do
               pure $ FleetOwnerInfo {fleetOwner, mbOperator = Just requestor}
             DP.ADMIN -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
             _ -> if allowOtherRoles then pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing} else throwError AccessDenied
+
+checkRequestorAccessToBankAccountPerson :: Maybe Text -> Text -> Flow (Maybe DP.Person)
+checkRequestorAccessToBankAccountPerson mbRequestorId targetId = do
+  mbTarget <- B.runInReplica $ QP.findById (Id targetId :: Id DP.Person)
+  mbRequestor <- maybe (pure Nothing) (\requestorId -> B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)) mbRequestorId
+  case mbRequestor of
+    Nothing -> pure mbTarget
+    Just requestor -> case requestor.role of
+      DP.ADMIN -> pure mbTarget
+      DP.DRIVER -> do
+        unless (Just targetId == mbRequestorId) $ throwError AccessDenied
+        pure mbTarget
+      _ -> Just . (.fleetOwner) <$> checkRequestorAccessToFleet False mbRequestorId targetId

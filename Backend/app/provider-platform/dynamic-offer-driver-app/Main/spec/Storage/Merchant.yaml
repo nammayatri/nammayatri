@@ -1420,6 +1420,7 @@ TransporterConfig:
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
+    favouriteDriverDailyCoinRideThreshold: Int
     communicationChannelCharLimits: Maybe CommunicationChannelCharLimits
     allowPanReupload: Maybe Bool
     allowAadhaarReupload: Maybe Bool
@@ -1509,6 +1510,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
     sameRiderDriverRideCountLookbackDays: Maybe Int
     sameRiderDriverRideCountThreshold: Maybe Int
+    favouriteDriverDailyCoinRideThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
     stclConfig: Maybe Value
 
@@ -1616,6 +1618,7 @@ TransporterConfig:
       <$>) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
+    favouriteDriverDailyCoinRideThreshold: Just favouriteDriverDailyCoinRideThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
 
@@ -1744,6 +1747,7 @@ TransporterConfig:
       Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: fromMaybe 2 sameRiderDriverRideCountThreshold|E
+    favouriteDriverDailyCoinRideThreshold: fromMaybe 4 favouriteDriverDailyCoinRideThreshold|E
     communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       communicationChannelCharLimits|E
