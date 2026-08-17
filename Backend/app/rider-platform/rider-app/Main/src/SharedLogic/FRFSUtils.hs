@@ -38,6 +38,7 @@ import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSRecon as Recon
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
@@ -48,6 +49,7 @@ import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJourney
@@ -1218,6 +1220,71 @@ updateTotalOrderValueAndSettlementAmount booking _quoteCategories bapConfig = do
   let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational reconRows)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
+
+-- | Books a counter-cancellation refund as one negative offsetting recon row per ticket, leaving the original rows' settlement untouched.
+-- These rows enter the daily settlement/order book like any other recon entry (PENDING), so the clawback settles in the run of the day the on_cancel arrived, not the original booking's day.
+createCounterCancelReconEntries ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  BecknConfig ->
+  HighPrecMoney ->
+  Maybe Text ->
+  FRFSFareParameters ->
+  m ()
+createCounterCancelReconEntries booking bapConfig refundAmount mRiderNumber fareParameters = do
+  tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
+  unless (null tickets) $ do
+    now <- getCurrentTime
+    -- Negative, as `receiver_recon` expects a refund to read as a debit against the original order.
+    let negatedRefundAmount = negate (abs refundAmount.getHighPrecMoney)
+        orderRefundAmount = mkPrice Nothing $ HighPrecMoney negatedRefundAmount
+        perTicketRefundAmount = mkPrice Nothing $ HighPrecMoney $ negatedRefundAmount / toRational (length tickets)
+        finderFeeReturned = mkPrice Nothing $ HighPrecMoney 0
+    reconEntries <- forM tickets $ \ticket -> do
+      reconId <- generateGUID
+      pure
+        Recon.FRFSRecon
+          { Recon.id = reconId,
+            Recon.frfsTicketBookingId = booking.id,
+            Recon.networkOrderId = fromMaybe "" booking.bppOrderId,
+            Recon.collectorSubscriberId = bapConfig.subscriberId,
+            Recon.receiverSubscriberId = booking.bppSubscriberId,
+            Recon.date = show now,
+            Recon.time = show now,
+            Recon.mobileNumber = mRiderNumber,
+            Recon.sourceStationCode = Just booking.fromStationCode,
+            Recon.destinationStationCode = Just booking.toStationCode,
+            Recon.ticketQty = Just fareParameters.totalQuantity,
+            Recon.ticketNumber = Just ticket.ticketNumber,
+            Recon.transactionRefNumber = booking.paymentTxnId,
+            Recon.transactionUUID = Nothing,
+            Recon.txnId = booking.paymentTxnId,
+            Recon.fare = orderRefundAmount,
+            Recon.buyerFinderFee = finderFeeReturned,
+            Recon.totalOrderValue = perTicketRefundAmount,
+            Recon.settlementAmount = perTicketRefundAmount,
+            Recon.beneficiaryIFSC = booking.bppBankCode,
+            Recon.beneficiaryBankAccount = booking.bppBankAccountNumber,
+            Recon.collectorIFSC = bapConfig.bapIFSC,
+            Recon.settlementReferenceNumber = Nothing,
+            Recon.settlementDate = Nothing,
+            Recon.differenceAmount = Nothing,
+            Recon.message = Just "COUNTER_CANCELLATION_REFUND",
+            Recon.ticketStatus = Just DFRFSTicketStatus.COUNTER_CANCELLED,
+            Recon.providerId = booking.providerId,
+            Recon.providerName = booking.providerName,
+            Recon.entityType = Just Recon.FRFS_TICKET_BOOKING,
+            Recon.reconStatus = Just Recon.PENDING,
+            Recon.paymentGateway = Nothing,
+            Recon.merchantId = Just booking.merchantId,
+            Recon.merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            Recon.overrideType = booking.overrideType,
+            Recon.overriddenAmount = booking.overriddenAmount,
+            Recon.overrideAppliedEntityId = booking.overrideAppliedEntityId,
+            Recon.createdAt = now,
+            Recon.updatedAt = now
+          }
+    QFRFSRecon.createMany reconEntries
 
 isOutsideBusinessHours :: Maybe Time.TimeOfDay -> Maybe Time.TimeOfDay -> UTCTime -> Seconds -> Bool
 isOutsideBusinessHours startTime endTime now timeDiffFromUtc =
