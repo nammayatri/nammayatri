@@ -22,3 +22,10 @@ ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ALTER COLU
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.common_driver_onboarding_documents ADD COLUMN rc_id character varying(36) ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY common_driver_onboarding_documents_idx_document_image_id ON atlas_driver_offer_bpp.common_driver_onboarding_documents USING btree (document_image_id);
+CREATE INDEX CONCURRENTLY common_driver_onboarding_documents_idx_driver_id ON atlas_driver_offer_bpp.common_driver_onboarding_documents USING btree (driver_id);
+CREATE INDEX CONCURRENTLY common_driver_onboarding_documents_idx_rc_id ON atlas_driver_offer_bpp.common_driver_onboarding_documents USING btree (rc_id);

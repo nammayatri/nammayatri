@@ -1682,6 +1682,10 @@ CommonDriverOnboardingDocuments:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
       where: id
+  extraIndexes:
+    - columns: [rcId]
+  extraOperations:
+    - GENERATE_INDEXES
 
 MorthVerification:
   tableName: morth_verification

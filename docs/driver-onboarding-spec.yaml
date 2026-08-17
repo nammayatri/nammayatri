@@ -465,12 +465,11 @@ endpoints:
 #   disabledReasonFlag / blocked / onboardingAs are INPUTS. A handler may write these, and must
 #     then let the recompute settle everything downstream.
 #
-#   shouldEnable = not explicitlyDisabled && vehicleGateOk && consentGateOk
+#   shouldEnable = consentGateOk
 #                    && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
 #
 # So any action that changes something a GATE reads must be followed by a recompute:
 #   consentGateOk  <- active FleetDriverAssociation
-#   vehicleGateOk  <- active DriverRCAssociation (EXISTENCE only — says nothing about its documents)
 #   approvedGateOk <- documents
 #   explicitlyDisabled <- disabledReasonFlag
 #
@@ -482,8 +481,7 @@ endpoints:
 # The vehicle-side half derives its REQUIRED set from DocumentVerificationConfig, not from the
 # documents the driver happens to hold — otherwise "driver has no vehicle" is vacuously valid and
 # the driver verifies and enables with no vehicle document at all. It is scoped to the active
-# DriverRCAssociation's RC when there is one, else any linked vehicle may satisfy it. Distinct from
-# vehicleGateOk, which only checks that such an association row exists.
+# DriverRCAssociation's RC when there is one, else any linked vehicle may satisfy it.
 #
 # `blocked` is ORTHOGONAL: shouldEnable never reads it, so blocked && enabled is a legal state and
 # block/unblock are idempotent. FleetOwnerInformation.blocked has no writer and no reader — fleet
@@ -617,7 +615,7 @@ actions:
       post_validation: driver
       note: |
         The guard verb is chosen from the request (Activate vs Deactivate), because the two
-        directions have different preconditions. Changes vehicleGateOk either way.
+        directions have different preconditions.
 
     - name: unlinkVehicle
       method: POST

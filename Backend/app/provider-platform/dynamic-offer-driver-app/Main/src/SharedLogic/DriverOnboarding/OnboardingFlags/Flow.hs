@@ -45,7 +45,6 @@ import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
-import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -203,13 +202,6 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           else if allMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
   when (allMandatoryDocsValid /= driverInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= driverInfo.approved)) $
     DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) allMandatoryDocsValid newApproved
-  vehicleGateOk <-
-    if not useUnifiedOnboardingFlagsRecompute || transporterConfig.disableDriverWhenUnlinkingVehicle == Just False
-      then pure True
-      else
-        if isFleetDriver || transporterConfig.disableDriverWhenUnlinkingVehicle == Just True
-          then isJust <$> DRAQuery.findActiveAssociationByDriver (cast person.id) True
-          else pure True
   consentGateOk <-
     if useUnifiedOnboardingFlagsRecompute && effectiveOnboardingAs == DI.FLEET_DRIVER
       then hasActiveFleetAssociation person.id
@@ -234,7 +226,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   when (useUnifiedOnboardingFlagsRecompute && effectiveDisabledReasonFlag /= driverInfo.disabledReasonFlag) $
     DIQuery.updateDisabledReasonFlag effectiveDisabledReasonFlag (cast person.id)
   let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else driverInfo.approved == Just True
-      shouldEnable = vehicleGateOk && consentGateOk && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
+      shouldEnable = consentGateOk && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
   let justEnabled = shouldEnable && not driverInfo.enabled
   -- The association is read once and reused for both the onboardingAs reconciliation and the
   -- fleet-scoped counter key.

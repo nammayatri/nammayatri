@@ -844,7 +844,7 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
     mbCommonDoc <-
       if docType `Set.member` SDO.domainTableDocumentTypes
         then pure Nothing
-        else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType (Just driverId) Nothing docType
+        else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType (QCommonDocExtra.OwnedByDriver driverId) docType
     let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
 
     (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata
