@@ -194,6 +194,7 @@ data TransporterConfig = TransporterConfig
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fareRecomputeWeeklyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
+    favouriteDriverDailyCoinRideThreshold :: Kernel.Prelude.Int,
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     feedbackNotificationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FeedbackNotificationConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
