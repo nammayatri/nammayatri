@@ -190,7 +190,7 @@ endRideTransaction ::
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
   (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
-  Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier)
+  Metrics.incrementRideCompletedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel booking.estimatedDistance)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active

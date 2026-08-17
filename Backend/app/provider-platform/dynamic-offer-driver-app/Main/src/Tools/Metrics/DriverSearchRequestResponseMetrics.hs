@@ -25,17 +25,20 @@ import Prometheus as P
 import Tools.Metrics.DriverSearchRequestResponseMetrics.Types as Reexport
 
 -- | Increment the driver-respond counter for a single response to a search request.
--- Labels emitted: (merchant id, merchant operating city id, vehicle service tier,
--- deployment version, batch number, response type e.g. "Accept"/"Reject"/"Pulled").
+-- Labels emitted: (merchant shortId, city name, vehicle service tier, batch number,
+-- response type e.g. "Accept"/"Reject"/"Pulled", distance bucket, pooling logic version,
+-- pooling config version, deployment version). The (distance, pooling, pooling-config)
+-- triple comes from SharedLogic.MetricsLabels.searchReqFunnelLabels on a search request
+-- read AFTER pool computation, so pooling versions are populated.
 -- All labels are passed pre-rendered as Text by the caller so this module stays
 -- decoupled from domain types.
-incrementDriverResponseCounter :: HasDriverSearchRequestResponseMetrics m r => Text -> Text -> Text -> Text -> Text -> m ()
-incrementDriverResponseCounter merchantId merchantOpCityId vehicleServiceTier batchNumber response = do
+incrementDriverResponseCounter :: HasDriverSearchRequestResponseMetrics m r => Text -> Text -> Text -> Text -> Text -> (Text, Text, Text) -> m ()
+incrementDriverResponseCounter merchantId merchantOpCityId vehicleServiceTier batchNumber response funnelLabels = do
   metricsContainer <- asks (.driverSearchRequestResponseMetrics)
   version <- asks (.version)
-  incrementDriverResponseCounter' metricsContainer merchantId merchantOpCityId vehicleServiceTier batchNumber response version
+  incrementDriverResponseCounter' metricsContainer merchantId merchantOpCityId vehicleServiceTier batchNumber response funnelLabels version
 
-incrementDriverResponseCounter' :: L.MonadFlow m => DriverSearchRequestResponseMetricsContainer -> Text -> Text -> Text -> Text -> Text -> DeploymentVersion -> m ()
-incrementDriverResponseCounter' metricsContainer merchantId merchantOpCityId vehicleServiceTier batchNumber response version = do
+incrementDriverResponseCounter' :: L.MonadFlow m => DriverSearchRequestResponseMetricsContainer -> Text -> Text -> Text -> Text -> Text -> (Text, Text, Text) -> DeploymentVersion -> m ()
+incrementDriverResponseCounter' metricsContainer merchantId merchantOpCityId vehicleServiceTier batchNumber response (distanceBucket, poolingLogicV, poolingConfigV) version = do
   let driverResponseCounter = metricsContainer.driverResponseCounter
-  L.runIO $ P.withLabel driverResponseCounter (merchantId, merchantOpCityId, vehicleServiceTier, version.getDeploymentVersion, batchNumber, response) P.incCounter
+  L.runIO $ P.withLabel driverResponseCounter (merchantId, merchantOpCityId, vehicleServiceTier, batchNumber, response, distanceBucket, poolingLogicV, poolingConfigV, version.getDeploymentVersion) P.incCounter
