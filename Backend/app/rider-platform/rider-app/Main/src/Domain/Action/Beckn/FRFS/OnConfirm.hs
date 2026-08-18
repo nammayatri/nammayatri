@@ -261,9 +261,7 @@ onConfirm merchant booking' quoteCategories dOrder = do
     void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  -- Reschedule staging bookings (parentBookingId set) reuse the old recon set + event count, so skip both here.
-  unless (isJust booking.parentBookingId) $
-    buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
+  buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
   unless (isJust booking.parentBookingId) $
     void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
