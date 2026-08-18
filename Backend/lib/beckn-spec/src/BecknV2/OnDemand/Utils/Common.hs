@@ -266,3 +266,13 @@ fulfillmentTypeToTripCategory fulfillmentType =
         Just Enums.METER_RIDE -> OneWay MeterRide
         Just Enums.SCHEDULED_TRIP -> OneWay OneWayOnDemandStaticOffer
         _ -> OneWay OneWayOnDemandDynamicOffer
+
+-- | ONDC @order.documents@ entry for an invoice PDF (pre-signed URL). The single
+--   document shape shared by on_cancel and on_status.
+mkInvoiceDocuments :: Text -> [Spec.Document]
+mkInvoiceDocuments docUrl =
+  [ Spec.Document
+      { documentUrl = Just docUrl,
+        documentLabel = Just "Invoice"
+      }
+  ]

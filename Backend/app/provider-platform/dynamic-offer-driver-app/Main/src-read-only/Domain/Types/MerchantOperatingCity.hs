@@ -33,4 +33,4 @@ data MerchantOperatingCity = MerchantOperatingCity
     supportEmails :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     supportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
+  deriving (Generic, (FromJSON), (ToJSON), (Show), (Eq), (ToSchema))

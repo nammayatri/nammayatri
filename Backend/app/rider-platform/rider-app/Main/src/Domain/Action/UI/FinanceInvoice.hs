@@ -138,7 +138,17 @@ renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
               mbCardLastFour = chosenPdfData.mbCardLastFour,
               mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
               mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
-              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber
+              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
+              -- ECO/GST-compliance fields are BPP-side (driver-app) config; not applicable to rider-app.
+              reverseCharge = Nothing,
+              ecoName = Nothing,
+              ecoAddress = Nothing,
+              ecoGstin = Nothing,
+              hsnSacCode = Nothing,
+              categoryOfServices = Nothing,
+              signatureImageUrl = Nothing,
+              cityState = Nothing,
+              qrImageDataUri = Nothing
             }
       mbInvType = case chosenInv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission
