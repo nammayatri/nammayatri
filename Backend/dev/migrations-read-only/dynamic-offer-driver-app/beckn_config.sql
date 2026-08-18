@@ -68,3 +68,8 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN beckn_protocol text  
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN offline_contract boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_support_ttl_sec integer ;

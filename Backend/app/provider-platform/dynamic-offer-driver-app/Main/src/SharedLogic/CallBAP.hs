@@ -50,6 +50,7 @@ import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
+import qualified Beckn.ACL.OnSupport as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Transformer.MSIL.OnStatus as MSILOnStatus
 import qualified Beckn.OnDemand.Utils.MSIL.Category as MSILCategory
@@ -60,6 +61,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
+import qualified Beckn.Types.Core.Taxi.API.OnSupport as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -293,6 +295,29 @@ callOnUpdateV2 req retryConfig merchantId = do
       (\url mappedAction jsonBody -> withRetryConfig retryConfig $ callBecknAPIUnsigned mappedAction url jsonBody)
   fork ("Logging Internal API Call") $ do
     ApiCallLogger.pushInternalApiCallDataToKafka "callOnUpdateV2" "BPP" (req.onUpdateReqContext.contextTransactionId <&> UUID.toText) (Just req) res
+
+callOnSupportV2 ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    MonadFlow m,
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
+  ) =>
+  Spec.OnSupportReq ->
+  RetryCfg ->
+  Id Merchant.Merchant ->
+  m ()
+callOnSupportV2 req retryConfig merchantId = do
+  bapUri' <- req.onSupportReqContext.contextBapUri & fromMaybeM (InternalError "BAP URI is not present in Support request context.")
+  bapUri <- parseBaseUrl bapUri'
+  bppSubscriberId <- req.onSupportReqContext.contextBppId & fromMaybeM (InternalError "BPP ID is not present in Support request context.")
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  res <- withRetryConfig retryConfig $ callBecknAPIWithSignature' merchantId bppSubscriberId (show Context.ON_SUPPORT) API.onSupportAPIV2 bapUri internalEndPointHashMap req
+  fork ("Logging Internal API Call") $ do
+    ApiCallLogger.pushInternalApiCallDataToKafka "callOnSupportV2" "BPP" (req.onSupportReqContext.contextTransactionId <&> UUID.toText) (Just req) res
 
 callOnStatusV2 ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -1080,7 +1105,17 @@ sendPhoneCallRequestUpdateToBAP booking ride = do
     let phoneCallRequestReq = ACL.PhoneCallRequestBuildReq ACL.DPhoneCallRequestReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     phoneCallRequestMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallRequestReq
-    void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig bookingDetails.merchant.id
+    -- Pilot: cities with enableScheduledCategorySignal get this push re-routed
+    -- through on_support instead of on_update; everyone else keeps the on_update
+    -- push, unchanged.
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
+    if isMsilPilotMerchant
+      then do
+        let descriptor = Spec.Descriptor {descriptorCode = Just "PHONE_CALL_REQUEST", descriptorLongDesc = Nothing, descriptorName = Nothing, descriptorShortDesc = Nothing}
+        onSupportMsgV2 <- ACL.buildOnSupportMessageV2 bookingDetails.merchant booking Nothing (Just descriptor)
+        void $ callOnSupportV2 onSupportMsgV2 retryConfig bookingDetails.merchant.id
+      else void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig bookingDetails.merchant.id
 
 sendPhoneCallCompletedUpdateToBAP ::
   ( CacheFlow m r,
@@ -1102,8 +1137,15 @@ sendPhoneCallCompletedUpdateToBAP booking ride = do
   whenJust mbBookingDetails $ \bookingDetails -> do
     let phoneCallCompletedReq = ACL.PhoneCallCompletedBuildReq ACL.DPhoneCallCompletedReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
-    phoneCallRequestMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallCompletedReq
-    void $ callOnUpdateV2 phoneCallRequestMsgV2 retryConfig bookingDetails.merchant.id
+    phoneCallCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 bookingDetails.merchant booking Nothing phoneCallCompletedReq
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
+    if isMsilPilotMerchant
+      then do
+        let descriptor = Spec.Descriptor {descriptorCode = Just "PHONE_CALL_COMPLETED", descriptorLongDesc = Nothing, descriptorName = Nothing, descriptorShortDesc = Nothing}
+        onSupportMsgV2 <- ACL.buildOnSupportMessageV2 bookingDetails.merchant booking Nothing (Just descriptor)
+        void $ callOnSupportV2 onSupportMsgV2 retryConfig bookingDetails.merchant.id
+      else void $ callOnUpdateV2 phoneCallCompletedMsgV2 retryConfig bookingDetails.merchant.id
 
 buildBookingDetails ::
   ( CacheFlow m r,
@@ -1326,7 +1368,27 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
 
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
-    void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
+    -- Pilot: cities with enableScheduledCategorySignal get this push re-routed
+    -- through on_support instead of on_update; everyone else keeps the on_update
+    -- push, unchanged.
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
+    if isMsilPilotMerchant
+      then do
+        onSupportMsgV2 <- ACL.buildOnSupportMessageV2 merchant booking Nothing (Just $ safetyReasonDescriptor reason)
+        void $ callOnSupportV2 onSupportMsgV2 retryConfig merchant.id
+      else void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
+
+safetyReasonDescriptor :: Enums.SafetyReasonCode -> Spec.Descriptor
+safetyReasonDescriptor reason =
+  Spec.Descriptor
+    { descriptorCode = Just "SOS",
+      descriptorName = Just "sos emergency",
+      descriptorShortDesc = Just $ case reason of
+        Enums.DEVIATION -> "Driver has deviated from the planned route."
+        Enums.RIDE_STOPPAGE -> "Ride has stopped unexpectedly.",
+      descriptorLongDesc = Nothing
+    }
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
