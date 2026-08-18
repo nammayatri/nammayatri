@@ -16,18 +16,15 @@
 module Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
   ( findAllByMerchantOpCityId,
     findByMerchantOpCityIdAndDocumentType,
-    findAllByMerchantOpCityIdAndRole,
     findByDimensions,
     clearCache,
     create,
-    findAllMandatoryByMerchantOpCityIdAndRole,
   )
 where
 
 import Domain.Types.DocumentVerificationConfig
 import Domain.Types.FleetOwnerDocumentVerificationConfig as FODTO
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.Person
 import Kernel.Beam.Functions (findAllWithKV)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -55,25 +52,17 @@ findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id Me
 findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType mbConfigVersionMap =
   find (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
-findAllByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> Maybe [LYT.ConfigVersionMap] -> m [FODTO.FleetOwnerDocumentVerificationConfig]
-findAllByMerchantOpCityIdAndRole merchantOpCityId role mbConfigVersionMap = filter (\config -> config.role == role) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
-
 findByDimensions ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe DocumentType ->
-  Maybe Role ->
   m [FODTO.FleetOwnerDocumentVerificationConfig]
-findByDimensions merchantOpCityId mbDocumentType mbRole =
+findByDimensions merchantOpCityId mbDocumentType =
   findAllWithKV
     [ Se.And $
         [Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOpCityId)]
           <> [Se.Is Beam.documentType $ Se.Eq dt | Just dt <- [mbDocumentType]]
-          <> [Se.Is Beam.role $ Se.Eq r | Just r <- [mbRole]]
     ]
-
-findAllMandatoryByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> Maybe [LYT.ConfigVersionMap] -> m [FODTO.FleetOwnerDocumentVerificationConfig]
-findAllMandatoryByMerchantOpCityIdAndRole merchantOpCityId role mbConfigVersionMap = filter (\config -> config.role == role && config.isMandatory) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()

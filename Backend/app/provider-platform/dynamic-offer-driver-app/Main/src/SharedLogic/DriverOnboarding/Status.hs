@@ -94,7 +94,6 @@ import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -165,8 +164,8 @@ findFleetDocVerificationConfig :: OnboardingFlow m r => Id DMOC.MerchantOperatin
 findFleetDocVerificationConfig merchantOpCityId docType role = do
   configs <-
     getConfig
-      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just role})
-      (Just (filter (\c -> c.documentType == docType) <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just [role]})
+      Nothing
   pure $ findFleetConfigForRole docType role configs
 
 -- | Throwing variant of 'findFleetDocVerificationConfig' — errors if the city has no such config.
@@ -878,8 +877,8 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
       -- can drift apart (e.g. role=FLEET_OWNER but fleet_type=BUSINESS_FLEET, so
       -- configs are seeded for FLEET_BUSINESS). For any fleet role, if no configs
       -- match the exact role, fall back to configs for any fleet role in the city.
-      let exactRoleConfigs = filter (\config -> config.role == role) fleetConfigs
-          anyFleetRoleConfigs = filter (\config -> SDO.isFleetRole config.role) fleetConfigs
+      let exactRoleConfigs = filter (\config -> role `elem` config.role) fleetConfigs
+          anyFleetRoleConfigs = filter (any SDO.isFleetRole . (.role)) fleetConfigs
           effectiveConfigs =
             if SDO.isFleetRole role && null exactRoleConfigs
               then anyFleetRoleConfigs
@@ -1415,7 +1414,7 @@ checkIfImageUploadedOrInvalidated role entityImagesInfo docType onlyImageLookup 
         case allDocVerificationConfigs of
           Left fleetConfigs ->
             -- Per-docType role match for fleet roles; fall back to any config row for this docType (old behavior).
-            let exactRoleConfigs = filter (\c -> c.documentType == docType && c.role == role) fleetConfigs
+            let exactRoleConfigs = filter (\c -> c.documentType == docType && role `elem` c.role) fleetConfigs
                 fallbackConfigs = filter (\c -> c.documentType == docType) fleetConfigs
                 effectiveConfigs = if SDO.isFleetRole role && not (null exactRoleConfigs) then exactRoleConfigs else fallbackConfigs
              in any

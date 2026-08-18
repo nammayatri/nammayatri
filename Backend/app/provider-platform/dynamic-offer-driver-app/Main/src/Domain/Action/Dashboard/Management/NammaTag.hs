@@ -1017,7 +1017,7 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
       cfgs <- getConfig (TagActionNotificationConfigDimensions {merchantOperatingCityId = mocId, notificationKey = dimLookup "notificationKey" dims}) (Just (SQTANC.findAllByMerchantOperatingCityId (cast merchantOpCityId)))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.FleetOwnerDocumentVerificationConfig -> do
-      cfgs <- getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, role = dimLookup "role" dims}) (Just (SQFODVC.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId))
+      cfgs <- getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, role = dimLookup "role" dims}) Nothing
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.CoinsConfig -> do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
@@ -1128,6 +1128,7 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity req = do
       cfg :: DDVC.DocumentVerificationConfig <- parseConfigData req.configData
       SQDVC.create cfg
       invalidateConfigInMem LYT.DocumentVerificationConfig
+      invalidateConfigInMem LYT.FleetOwnerDocumentVerificationConfig
     LYT.GoHomeConfig -> do
       cfg :: DGHC.GoHomeConfig <- parseConfigData req.configData
       existing <- SQGHC.findByMerchantOpCityId merchantOpCityId

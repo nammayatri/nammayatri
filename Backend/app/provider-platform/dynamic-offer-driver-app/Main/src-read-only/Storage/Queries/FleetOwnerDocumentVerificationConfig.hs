@@ -28,29 +28,18 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
-
-findAllByMerchantOpCityIdAndRole ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
-findAllByMerchantOpCityIdAndRole merchantOperatingCityId role = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.role $ Se.Eq role
-        ]
-    ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m (Maybe Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig))
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> [Domain.Types.Person.Role] -> m (Maybe Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig))
 findByPrimaryKey documentType merchantOperatingCityId role = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.role $ Se.Eq role
+          Se.Is Beam.role $ Se.Eq (fromMaybe Domain.Types.Person.FLEET_OWNER (listToMaybe role))
         ]
     ]
 
@@ -80,14 +69,14 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
       Se.Set Beam.order order,
-      Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
+      Se.Set Beam.rolesAllowedToUploadDocumentText (((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument)),
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.documentType $ Se.Eq documentType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.role $ Se.Eq role
+          Se.Is Beam.role $ Se.Eq (fromMaybe Domain.Types.Person.FLEET_OWNER (listToMaybe role))
         ]
     ]
 
@@ -120,8 +109,8 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             onlyImageVerificationStatusLookupRequired = onlyImageVerificationStatusLookupRequired,
             order = order,
-            role = role,
-            rolesAllowedToUploadDocument = rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack),
+            role = [role],
+            rolesAllowedToUploadDocument = (rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)),
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -154,8 +143,8 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.onlyImageVerificationStatusLookupRequired = onlyImageVerificationStatusLookupRequired,
         Beam.order = order,
-        Beam.role = role,
-        Beam.rolesAllowedToUploadDocumentText = Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument,
+        Beam.role = fromMaybe Domain.Types.Person.FLEET_OWNER (listToMaybe role),
+        Beam.rolesAllowedToUploadDocumentText = ((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

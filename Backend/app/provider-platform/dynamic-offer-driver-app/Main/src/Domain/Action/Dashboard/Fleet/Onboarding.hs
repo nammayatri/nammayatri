@@ -72,8 +72,8 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
   let personLanguage = maybe ENGLISH (fromMaybe ENGLISH . language) mbPerson
 
   fleetConfigsRaw <- case role of
-    Just CommonOnboarding.NORMAL_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just FLEET_OWNER}) Nothing
-    Just CommonOnboarding.BUSINESS_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just FLEET_BUSINESS}) Nothing
+    Just CommonOnboarding.NORMAL_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just [FLEET_OWNER]}) Nothing
+    Just CommonOnboarding.BUSINESS_FLEET -> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Just [FLEET_BUSINESS]}) Nothing
     _ -> pure []
 
   fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw

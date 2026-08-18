@@ -312,6 +312,7 @@ isDriverSideDocType category docType = case category of
   Just DDVC.Training -> True
   Just DDVC.Vehicle -> False
   Just DDVC.Permission -> False
+  Just DDVC.Fleet -> False
   Nothing -> docType `elem` SDO.defaultDriverDocumentTypes
 
 -- | Does this document contribute to the vehicle-side flags? Same rule, vehicle fallback list.
