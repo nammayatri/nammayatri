@@ -776,7 +776,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         numberType = DUIRideCommon.ANONYMOUS
                       }
                 }
-        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling
+        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling Nothing
 
   return $
     EndRideResp

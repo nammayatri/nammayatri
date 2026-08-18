@@ -58,6 +58,10 @@ Invoice:
     irn : Maybe Text # SENSITIVE
     signedQRCode : Maybe Text # SENSITIVE
     paymentMode: Maybe Text
+    renderedInvoiceJson: Maybe Value # frozen invoice JSON snapshot (system-comms / ONDC / audit); populated synchronously after creation
+    pdfS3Path: Maybe Text # S3 object path of the rendered PDF; NULL until the async render job completes
+    placeOfSupply: Maybe Text # GST place of supply (invoice field 16) — ride pickup address + state, combined
+    unsignedQRCode: Maybe Text # B2C dynamic QR payload (self-generated, no IRN): GSTIN/UPI/bank/invoice-no/date/total/IGST-CGST-SGST
 
     # --- Audit ---
     createdBy: Maybe ActorType                     # Who created this record
@@ -67,6 +71,7 @@ Invoice:
 
   sqlType:
     lineItems: jsonb
+    renderedInvoiceJson: jsonb
 
   constraints:
     id: PrimaryKey
@@ -98,6 +103,26 @@ Invoice:
     updateIrnAndSignedQRByInvoiceId:
       kvFunction: updateWithKV
       params: [irn, signedQRCode, updatedBy, updatedById]
+      where: id
+
+    updateRenderedInvoiceJson:
+      kvFunction: updateWithKV
+      params: [renderedInvoiceJson, updatedBy, updatedById]
+      where: id
+
+    updatePdfS3Path:
+      kvFunction: updateWithKV
+      params: [pdfS3Path, updatedBy, updatedById]
+      where: id
+
+    updatePlaceOfSupply:
+      kvFunction: updateWithKV
+      params: [placeOfSupply, updatedBy, updatedById]
+      where: id
+
+    updateUnsignedQRCode:
+      kvFunction: updateWithKV
+      params: [unsignedQRCode, updatedBy, updatedById]
       where: id
 
     findByReferenceId:

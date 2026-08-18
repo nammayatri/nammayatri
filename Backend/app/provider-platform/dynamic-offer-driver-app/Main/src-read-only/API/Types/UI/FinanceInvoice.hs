@@ -31,6 +31,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
     lineItems :: Kernel.Prelude.Maybe Data.Aeson.Value,
     merchantGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pdfUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sacCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     sgstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

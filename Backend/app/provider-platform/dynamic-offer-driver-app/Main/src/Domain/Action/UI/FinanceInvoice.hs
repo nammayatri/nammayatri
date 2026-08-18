@@ -5,34 +5,30 @@ module Domain.Action.UI.FinanceInvoice
 where
 
 import qualified API.Types.UI.FinanceInvoice as API
-import qualified Data.Time as DT
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
+import qualified AWS.S3 as S3
+import qualified Data.Text as T
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Types (Language (ENGLISH))
-import Kernel.Prelude (head, listToMaybe, showBaseUrl)
+import Kernel.Prelude (head, listToMaybe)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
-import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
-import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
+import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Error
-import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
 -- | List finance invoices for the authenticated driver/fleet owner.
 getSubscriptionInvoices ::
@@ -106,6 +102,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
 
       let taxAmount = invoice.totalAmount - invoice.subtotal
 
+      mbPdfUrl <- InvoiceDocument.mkInvoicePdfUrl invoice
+
       pure $
         API.FinanceInvoiceItem
           { invoiceNumber = invoice.invoiceNumber,
@@ -138,7 +136,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             totalCredit = mbTotalCredit,
             taxRate = mbTaxTxn >>= (.taxRate),
             issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),
-            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo)
+            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo),
+            pdfUrl = mbPdfUrl -- pre-signed S3 URL; Nothing until the PDF is materialised
           }
 
     mkComponentRate getAmount txn = do
@@ -161,7 +160,6 @@ getFinanceInvoicePdf ::
   Flow API.FinanceInvoicePdfResp
 getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset _mbReferenceId mbTo = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  mbDriver <- QPerson.findById driverId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
 
   let fromTime = toUTCTimeFrom <$> mbFrom
@@ -189,55 +187,16 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
   let inv = head invoices
-      items = parseLineItems inv.lineItems
-
-  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just inv.invoiceNumber)
-  let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-
-  (mbPayType, mbBrand, mbLast4) <- case inv.entityReferenceId of
-    Just orderId -> do
-      txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-      let mbTxn = Kernel.Prelude.listToMaybe txns
-      pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
-    Nothing -> pure (Nothing, Nothing, Nothing)
-
-  -- Live-fetch AggregatedCommission party metadata (Y-tunnus + merchant VAT)
-  -- since these aren't persisted on the Invoice row.
-  (mbRecipientBid, mbSellerBid, mbSellerVat) <- case inv.invoiceType of
-    AggregatedCommission -> do
-      mbRecipientBid' <- case inv.issuedToType of
-        FLEET_OWNER -> do
-          mbFleet <- QFOI.findByPrimaryKey (Id inv.issuedToId)
-          pure $ mbFleet >>= (.businessLicenseNumberDec)
-        _ -> pure Nothing
-      mbMerchant <- CQM.findById (Id inv.merchantId)
-      pure (mbRecipientBid', mbMerchant >>= (.businessId), mbMerchant >>= (.vatNumber))
-    _ -> pure (Nothing, Nothing, Nothing)
-
-  let lang = fromMaybe ENGLISH (mbDriver >>= (.language))
-      tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
-      ctx =
-        FRT.buildInvoiceContext
-          FRT.BuildInvoiceContextInput
-            { language = lang,
-              logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
-              sellerTradeName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceSellerTradeName),
-              appName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceAppName),
-              invoice = inv,
-              lineItems = items,
-              mbTaxTxn = mbTaxTxn,
-              mbPaymentMode = mbPayType,
-              mbCardBrand = mbBrand,
-              mbCardLastFour = mbLast4,
-              mbRecipientBusinessId = mbRecipientBid,
-              mbSellerBusinessId = mbSellerBid,
-              mbSellerVatNumber = mbSellerVat
-            }
-      mbInvType = case inv.invoiceType of
-        AggregatedCommission -> Just AggregatedCommission
-        _ -> Nothing
-  html <- RIFT.renderHtml (Id inv.merchantOperatingCityId) mbInvType lang tz ctx
-  pdfBase64 <- generateFinanceInvoicePdf inv.invoiceNumber html
+  -- Read path: return the stored artifact if present, else render on demand.
+  -- Write-through: when the merchant opts into PDF storage, persist the freshly
+  -- rendered PDF so subsequent reads (and ONDC sharing) are served from S3.
+  pdfBase64 <- case inv.pdfS3Path of
+    Just path -> S3.get (T.unpack path)
+    Nothing -> do
+      pdf <- InvoiceDocument.renderInvoicePdfBase64 inv
+      when (fromMaybe False (mbTransporterConfig >>= (.invoiceConfig) >>= (.enableInvoicePdfS3Storage))) $
+        InvoiceDocument.storeInvoicePdf inv pdf
+      pure pdf
 
   pure $
     API.FinanceInvoicePdfResp

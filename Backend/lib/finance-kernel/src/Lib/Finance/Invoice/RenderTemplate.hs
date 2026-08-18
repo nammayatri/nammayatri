@@ -69,6 +69,30 @@ data InvoiceContext = InvoiceContext
     taxTxnGstRate :: Maybe Double,
     cardBrand :: Maybe Text,
     cardLastFour :: Maybe Text,
+    -- Totals block: taxable value of service supplied + grand total.
+    subtotal :: HighPrecMoney,
+    totalAmount :: HighPrecMoney,
+    -- GST split totals (from the linked IndirectTaxTransaction). IGST is set for
+    -- inter-state supply; CGST+SGST for intra-state. Rates: IGST carries the full
+    -- GST rate, CGST/SGST each carry half.
+    igstAmount :: Maybe HighPrecMoney,
+    cgstAmount :: Maybe HighPrecMoney,
+    sgstAmount :: Maybe HighPrecMoney,
+    igstRate :: Maybe Double,
+    cgstRate :: Maybe Double,
+    sgstRate :: Maybe Double,
+    -- Base64 data: URI of the invoice QR (signed IRP QR for B2B, else self-generated B2C QR).
+    qrImageDataUri :: Maybe Text,
+    -- GST-compliant tax-invoice fields (from merchant invoice config; rendered when set)
+    reverseCharge :: Maybe Bool,
+    ecoName :: Maybe Text,
+    ecoAddress :: Maybe Text,
+    ecoGstin :: Maybe Text,
+    hsnSacCode :: Maybe Text,
+    placeOfSupply :: Maybe Text,
+    categoryOfServices :: Maybe Text,
+    signatureImageUrl :: Maybe Text,
+    cityState :: Maybe Text,
     lineItems :: [RenderLineItem]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
@@ -197,7 +221,16 @@ data BuildInvoiceContextInput = BuildInvoiceContextInput
     mbCardLastFour :: Maybe Text,
     mbRecipientBusinessId :: Maybe Text,
     mbSellerBusinessId :: Maybe Text,
-    mbSellerVatNumber :: Maybe Text
+    mbSellerVatNumber :: Maybe Text,
+    reverseCharge :: Maybe Bool,
+    ecoName :: Maybe Text,
+    ecoAddress :: Maybe Text,
+    ecoGstin :: Maybe Text,
+    hsnSacCode :: Maybe Text,
+    categoryOfServices :: Maybe Text,
+    signatureImageUrl :: Maybe Text,
+    cityState :: Maybe Text,
+    qrImageDataUri :: Maybe Text
   }
 
 buildInvoiceContext :: BuildInvoiceContextInput -> InvoiceContext
@@ -236,6 +269,24 @@ buildInvoiceContext BuildInvoiceContextInput {..} =
       taxTxnGstRate = (.gstRate) <$> mbTaxTxn,
       cardBrand = mbCardBrand,
       cardLastFour = mbCardLastFour,
+      subtotal = invoice.subtotal,
+      totalAmount = invoice.totalAmount,
+      igstAmount = (.igstAmount) <$> mbTaxTxn,
+      cgstAmount = (.cgstAmount) <$> mbTaxTxn,
+      sgstAmount = (.sgstAmount) <$> mbTaxTxn,
+      igstRate = (\txn -> if txn.igstAmount > 0 then txn.taxRate else Nothing) =<< mbTaxTxn,
+      cgstRate = (\txn -> if txn.cgstAmount > 0 then (/ 2) <$> txn.taxRate else Nothing) =<< mbTaxTxn,
+      sgstRate = (\txn -> if txn.sgstAmount > 0 then (/ 2) <$> txn.taxRate else Nothing) =<< mbTaxTxn,
+      qrImageDataUri = qrImageDataUri,
+      reverseCharge = reverseCharge,
+      ecoName = ecoName,
+      ecoAddress = ecoAddress,
+      ecoGstin = ecoGstin,
+      hsnSacCode = hsnSacCode,
+      placeOfSupply = invoice.placeOfSupply,
+      categoryOfServices = categoryOfServices,
+      signatureImageUrl = signatureImageUrl,
+      cityState = cityState,
       lineItems = stampLanguage language (attachTaxToFares lineItems)
     }
   where

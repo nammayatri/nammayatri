@@ -215,6 +215,7 @@
           gdal
           postgis
           zbar
+          qrencode # QR-code PNG generation for invoice documents (Utils.QRCode.Encoder)
           newman
           config.mission-control.wrapper
           gtfstidy
