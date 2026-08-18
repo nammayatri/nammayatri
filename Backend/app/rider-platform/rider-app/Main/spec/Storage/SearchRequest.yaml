@@ -284,8 +284,13 @@ SearchRequest:
     # forced form is required for the KV secondary-key list to include it.
     parentSearchRequestId: "!SecondaryKey"
 
+  extraIndexes:
+    - columns: [parentSearchRequestId]
+
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+    - NO_DEFAULT_INDEXES
 
 SearchRequestPartiesLink:
   fields:
