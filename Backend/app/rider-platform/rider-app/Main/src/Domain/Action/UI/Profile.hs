@@ -923,7 +923,7 @@ verifyUpdateAuthDataOtp ::
   (Id Person.Person, Id Merchant.Merchant) ->
   VerifyUpdateAuthOTPReq ->
   m APISuccess.APISuccess
-verifyUpdateAuthDataOtp (personId, _merchantId) req = do
+verifyUpdateAuthDataOtp (personId, merchantId) req = do
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
 
   let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
@@ -945,11 +945,17 @@ verifyUpdateAuthDataOtp (personId, _merchantId) req = do
         _ -> throwError $ InvalidRequest "AUTH_COUNTRY_CODE_NOT_FOUND: Country code not found in auth data"
       encMobileNumber <- encrypt storedMobileNumber
       mobileNumberHash <- getDbHash storedMobileNumber
+      mobileNumberExists <- QPerson.findByMobileNumberAndMerchantId storedCountryCode mobileNumberHash merchantId
+      whenJust mobileNumberExists $ \existing ->
+        when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
       QPersonExtra.updateMobileNumberByPersonId personId encMobileNumber mobileNumberHash storedCountryCode
     SP.EMAIL -> do
       storedEmail <- case storedAuthData of
         AuthData {email = Just em} -> pure em
         _ -> throwError $ InvalidRequest "AUTH_EMAIL_NOT_FOUND: Email not found in auth data"
+      existingPerson <- QPerson.findByEmailAndMerchantId merchantId storedEmail
+      whenJust existingPerson $ \existing ->
+        when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       encryptedValue <- encrypt storedEmail
       QPersonExtra.updateEmailByPersonId personId encryptedValue
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"

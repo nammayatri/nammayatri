@@ -1071,3 +1071,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pickup_stall_mo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_daily_coin_ride_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN force_enabled_bypassing_docs_upon_disable_takes_to_onboarding boolean ;

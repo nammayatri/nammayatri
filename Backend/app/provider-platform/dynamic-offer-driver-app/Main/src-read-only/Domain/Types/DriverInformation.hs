@@ -66,6 +66,7 @@ data DriverInformationE e = DriverInformation
     enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    enabledReasonFlag :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.EnabledReasonFlag,
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     firstVerifiedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
@@ -189,6 +190,7 @@ instance EncryptedItem DriverInformation where
           enableForAirport = enableForAirport entity,
           enabled = enabled entity,
           enabledAt = enabledAt entity,
+          enabledReasonFlag = enabledReasonFlag entity,
           extraFareMitigationFlag = extraFareMitigationFlag entity,
           firstVerifiedAt = firstVerifiedAt entity,
           forwardBatchingEnabled = forwardBatchingEnabled entity,
@@ -304,6 +306,7 @@ instance EncryptedItem DriverInformation where
             enableForAirport = enableForAirport entity,
             enabled = enabled entity,
             enabledAt = enabledAt entity,
+            enabledReasonFlag = enabledReasonFlag entity,
             extraFareMitigationFlag = extraFareMitigationFlag entity,
             firstVerifiedAt = firstVerifiedAt entity,
             forwardBatchingEnabled = forwardBatchingEnabled entity,
@@ -427,6 +430,8 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data EnabledReasonFlag = AdminEnabled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data MapProvider = GOOGLE_MAPS | WAZE | APPLE_MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -446,6 +451,10 @@ $(mkHttpInstancesForEnum ''DisabledReasonFlag)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EnabledReasonFlag)
+
+$(mkHttpInstancesForEnum ''EnabledReasonFlag)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MapProvider)
 

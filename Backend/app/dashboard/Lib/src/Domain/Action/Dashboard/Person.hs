@@ -579,6 +579,10 @@ changeEmailByAdmin ::
   m APISuccess
 changeEmailByAdmin _ personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbExistingPerson <- QP.findByEmail (T.toLower req.newEmail)
+  whenJust mbExistingPerson $ \existingPerson ->
+    when (existingPerson.id /= personId) $
+      throwError (InvalidRequest $ "Email already registered with another user: " <> req.newEmail)
   encEmail <- encrypt $ T.toLower req.newEmail
   QP.updatePersonEmail personId encEmail
   pure Success

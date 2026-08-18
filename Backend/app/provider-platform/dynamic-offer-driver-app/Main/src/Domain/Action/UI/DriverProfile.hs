@@ -78,7 +78,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
       let mobileNumber = req.value
 
       mobileNumberDbHash <- getDbHash mobileNumber
-      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole countryCode mobileNumberDbHash person.merchantId SP.DRIVER
+      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole countryCode mobileNumberDbHash person.merchantId person.role
       whenJust mobileNumberExists $ \existing ->
         when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
 
@@ -86,7 +86,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
     SP.EMAIL -> do
       let receiverEmail = req.value
       when (T.null receiverEmail) $ throwError $ InvalidRequest "Email is required for EMAIL identifier"
-      existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just receiverEmail) person.merchantId SP.DRIVER
+      existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just receiverEmail) person.merchantId person.role
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId Nothing Nothing (Just receiverEmail)
@@ -150,6 +150,7 @@ postDriverProfileUpdateAuthDataVerifyOTP ::
   m APISuccess.APISuccess
 postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "Person ID not found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
 
   let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
@@ -170,7 +171,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
         Just code -> pure code
         _ -> throwError $ InvalidRequest "Country code not found. Please try again."
       mobileNumberHash <- getDbHash storedMobileNumber
-      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole storedCountryCode mobileNumberHash merchantId SP.DRIVER
+      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole storedCountryCode mobileNumberHash merchantId person.role
       whenJust mobileNumberExists $ \existing ->
         when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
       encMobileNumber <- encrypt storedMobileNumber
@@ -179,7 +180,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
       storedEmail <- case storedAuthData of
         AuthData {email = Just em} -> pure em
         _ -> throwError $ InvalidRequest "Email not found. Please try again."
-      existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just storedEmail) merchantId SP.DRIVER
+      existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just storedEmail) merchantId person.role
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       QPersonExtra.updateEmailByPersonId personId storedEmail

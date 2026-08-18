@@ -148,6 +148,7 @@ import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociatio
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
@@ -496,10 +497,15 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
+  let isFleetOwner = SDO.isFleetRole driver.role
+  alreadyBlocked <-
+    if isFleetOwner
+      then (.blocked) <$> (QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId))
+      else (.blocked) <$> (QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound)
+  when alreadyBlocked $ throwError DriverAccountAlreadyBlocked
   tcForBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block (SGuard.TargetDriver personId) $ do
+  let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
+  SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block blockTarget $ do
     void $
       SFlags.markBlockFlags personId $
         SFlags.Block
@@ -540,10 +546,15 @@ postDriverBlock merchantShortId opCity reqDriverId = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && driver.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  let isFleetOwner = SDO.isFleetRole driver.role
+  alreadyBlocked <-
+    if isFleetOwner
+      then (.blocked) <$> (QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId))
+      else (.blocked) <$> (QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound)
   tcForSimpleBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForSimpleBlock SGuard.None SGuard.Block (SGuard.TargetDriver personId) $
-    when (not driverInf.blocked) $
+  let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
+  SGuard.withOnboardingAction tcForSimpleBlock SGuard.None SGuard.Block blockTarget $
+    unless alreadyBlocked $
       void $
         SFlags.markBlockFlags personId $
           SFlags.SimpleBlock
@@ -586,31 +597,37 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   tcForUnblock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetDriver personId) $ do
-    when driverInf.blocked $ do
-      void $
-        SFlags.markBlockFlags personId $
-          SFlags.Unblock
-            SFlags.SimplePayload
-              { SFlags.spModifier = Just dashboardUserName,
-                SFlags.spMerchantId = merchantId,
-                SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
-                SFlags.spBlockedBy = DTDBT.Dashboard
-              }
-      now <- getCurrentTime
-      void $ LF.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
-      case (preventDailyCancellationRateBlockingTill, preventWeeklyCancellationRateBlockingTill) of
-        (Just _, Just _) -> do
-          QDriverInfo.updateDailyAndWeeklyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill preventWeeklyCancellationRateBlockingTill driver.id
-        (Just _, Nothing) -> do
-          QDriverInfo.updateDailyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill driver.id
-        (Nothing, Just _) -> do
-          QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
-        _ -> pure ()
-    when (isJust driverInf.softBlockStiers) $ do
-      QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
+  let unblockPayload =
+        SFlags.SimplePayload
+          { SFlags.spModifier = Just dashboardUserName,
+            SFlags.spMerchantId = merchantId,
+            SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+            SFlags.spBlockedBy = DTDBT.Dashboard
+          }
+  if SDO.isFleetRole driver.role
+    then do
+      fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetFleetOwner personId) $
+        when fleetOwnerInfo.blocked $
+          void $ SFlags.markBlockFlags personId (SFlags.Unblock unblockPayload)
+    else do
+      driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+      SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetDriver personId) $ do
+        when driverInf.blocked $ do
+          void $ SFlags.markBlockFlags personId (SFlags.Unblock unblockPayload)
+          now <- getCurrentTime
+          void $ LF.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
+          case (preventDailyCancellationRateBlockingTill, preventWeeklyCancellationRateBlockingTill) of
+            (Just _, Just _) -> do
+              QDriverInfo.updateDailyAndWeeklyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill preventWeeklyCancellationRateBlockingTill driver.id
+            (Just _, Nothing) -> do
+              QDriverInfo.updateDailyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill driver.id
+            (Nothing, Just _) -> do
+              QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
+            _ -> pure ()
+        when (isJust driverInf.softBlockStiers) $ do
+          QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
