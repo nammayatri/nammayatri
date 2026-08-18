@@ -12,6 +12,7 @@ import qualified Domain.Types.FRFSTicketBookingPaymentCategory as DTBPC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -40,9 +41,12 @@ validateRescheduleEligibility ::
   (ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   Text ->
+  Text -> -- new boarding stop code (defaults upstream to the old one)
+  Text -> -- new destination stop code (defaults upstream to the old one)
+  Text -> -- new route code (defaults upstream to the old one)
   DIBC.IntegratedBPPConfig ->
   m ()
-validateRescheduleEligibility oldBooking newTripId integratedBppConfig = do
+validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRouteCode integratedBppConfig = do
   unless (oldBooking.status == DFRFSTicketBookingStatus.CONFIRMED) $
     throwError $ InvalidRequest "Booking is not confirmed, cannot be rescheduled"
   frfsConfig <-
@@ -62,8 +66,19 @@ validateRescheduleEligibility oldBooking newTripId integratedBppConfig = do
     throwError $ InvalidRequest "Maximum number of reschedules exceeded for this booking"
   pastWindow <- isPastRescheduleWindow oldBooking (fromMaybe (Seconds 1800) vst.maxRescheduleTimeAfterStart)
   when pastWindow $ throwError $ InvalidRequest "Reschedule window has passed for this booking"
-  routeCode <- oldBooking.routeCode & fromMaybeM (InvalidRequest "Cannot determine route for this booking, reschedule not supported")
-  newTripStart <- getNewTripStartTime newTripId routeCode oldBooking.fromStationCode integratedBppConfig
+  -- When the rider moves to a different boarding/alighting stop, it must stay within the same cluster as the
+  -- original (nearby-equivalent stop). Same-stop reschedules (trip-only) skip this. Fare is enforced separately.
+  let stopsChanged = newFromCode /= oldBooking.fromStationCode || newToCode /= oldBooking.toStationCode
+  when stopsChanged $ do
+    oldFromStation <- OTPRest.getStationByGtfsIdAndStopCode oldBooking.fromStationCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid original from station: " <> oldBooking.fromStationCode)
+    newFromStation <- OTPRest.getStationByGtfsIdAndStopCode newFromCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station: " <> newFromCode)
+    oldToStation <- OTPRest.getStationByGtfsIdAndStopCode oldBooking.toStationCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid original to station: " <> oldBooking.toStationCode)
+    newToStation <- OTPRest.getStationByGtfsIdAndStopCode newToCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station: " <> newToCode)
+    unless (isJust newFromStation.clusterId && newFromStation.clusterId == oldFromStation.clusterId) $
+      throwError $ InvalidRequest "New boarding stop must be in the same cluster as the original boarding stop"
+    unless (isJust newToStation.clusterId && newToStation.clusterId == oldToStation.clusterId) $
+      throwError $ InvalidRequest "New destination stop must be in the same cluster as the original destination stop"
+  newTripStart <- getNewTripStartTime newTripId newRouteCode newFromCode newToCode integratedBppConfig
   now <- getCurrentTime
   riderConfig <-
     getConfig (RiderConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId}) Nothing
@@ -80,9 +95,10 @@ getNewTripStartTime ::
   Text ->
   Text ->
   Text ->
+  Text ->
   DIBC.IntegratedBPPConfig ->
   m UTCTime
-getNewTripStartTime tripId routeCode boardingStopCode integratedBppConfig = do
+getNewTripStartTime tripId routeCode boardingStopCode alightingStopCode integratedBppConfig = do
   let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
   eSchedule <- withTryCatch "FRFSReschedule:getNewTripStartTime" (OTPRest.getBusTripSchedule waybillNo tripNo routeCode integratedBppConfig)
   schedule <- case eSchedule of
@@ -90,9 +106,15 @@ getNewTripStartTime tripId routeCode boardingStopCode integratedBppConfig = do
       logError $ "FRFSReschedule:getNewTripStartTime failed to fetch bus trip schedule for tripId=" <> tripId <> ": " <> show err
       throwError $ InvalidRequest "Could not verify the selected trip schedule, please try again"
     Right s -> pure s
+  let allEtas = concatMap (.eta) schedule
   boardingEta <-
-    find (\e -> e.stopCode == boardingStopCode) (concatMap (.eta) schedule)
+    find (\e -> e.stopCode == boardingStopCode) allEtas
       & fromMaybeM (InvalidRequest "Selected trip does not stop at the boarding station")
+  alightingEta <-
+    find (\e -> e.stopCode == alightingStopCode) allEtas
+      & fromMaybeM (InvalidRequest "Selected trip does not stop at the destination station")
+  when (alightingEta.arrivalTimeUnix <= boardingEta.arrivalTimeUnix) $
+    throwError $ InvalidRequest "Selected trip does not serve the boarding and destination stations in travel order"
   pure $ FRFSUtils.unixToUTC boardingEta.arrivalTimeUnix
 
 isPastRescheduleWindow ::
@@ -196,6 +218,77 @@ mkFreshSearchAndFreshQuote oldBooking oldQuote newTripId integratedBppConfig mbS
   QFRFSQuoteCategory.createMany freshCategories
   logInfo $ "FRFSReschedule:mkFreshSearchAndFreshQuote oldBookingId=" <> oldBooking.id.getId <> " freshSearchId=" <> freshSearchId.getId <> " freshQuoteId=" <> freshQuoteId.getId
   pure (freshSearchId, freshQuote, freshCategories)
+
+-- | Mint (and persist) a fresh internal search for the staging booking when the rider is moving to a
+-- DIFFERENT boarding/alighting stop. Unlike 'mkFreshSearchAndFreshQuote' this does NOT copy the old quote:
+-- the caller runs the real Direct search over this fresh search (which produces a genuine quote for the new
+-- stops via on_search). Fields are derived from the old booking except the stations/route/point/name/address
+-- (resolved for the new stops) and the vehicle number (from the selected trip's waybill). Returns the search.
+mkFreshSearchForNewStops ::
+  (ServiceFlow m r, HasShortDurationRetryCfg r c) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  DFRFSQuote.FRFSQuote ->
+  Text -> -- new trip id (for vehicle + validTill)
+  Text -> -- new boarding stop code
+  Text -> -- new destination stop code
+  Text -> -- new route code
+  DIBC.IntegratedBPPConfig ->
+  Maybe Int ->
+  m DFRFSSearch.FRFSSearch
+mkFreshSearchForNewStops oldBooking oldQuote newTripId newFromCode newToCode newRouteCode integratedBppConfig mbSearchTtlSec = do
+  now <- getCurrentTime
+  freshSearchId <- generateGUID
+  oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldQuote.id
+  let totalQty = sum (map (.selectedQuantity) oldQuoteCategories)
+      validTill' = addUTCTime (maybe 30 intToNominalDiffTime mbSearchTtlSec) now
+  newFromStation <- OTPRest.getStationByGtfsIdAndStopCode newFromCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station: " <> newFromCode)
+  newToStation <- OTPRest.getStationByGtfsIdAndStopCode newToCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station: " <> newToCode)
+  let (waybillNo, _tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId newTripId
+  eMeta <- withTryCatch "FRFSReschedule:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
+  newVehicleNo <- case eMeta of
+    Left err -> do
+      logError $ "FRFSReschedule:mkFreshSearchForNewStops failed to fetch waybill metadata for tripId=" <> newTripId <> ": " <> show err
+      throwError $ InvalidRequest "Could not determine the vehicle for the selected trip, please try again"
+    Right meta -> pure meta.vehicle_no
+  let freshSearch =
+        DFRFSSearch.FRFSSearch
+          { busLocationData = [],
+            clientBundleVersion = Nothing,
+            clientSdkVersion = Nothing,
+            cloudType = oldBooking.cloudType,
+            fromStationAddress = newFromStation.address,
+            fromStationCode = newFromStation.code,
+            fromStationName = Just newFromStation.name,
+            fromStationPoint = LatLong <$> newFromStation.lat <*> newFromStation.lon,
+            hasApplicablePass = Nothing,
+            id = freshSearchId,
+            integratedBppConfigId = oldBooking.integratedBppConfigId,
+            isOnSearchReceived = Nothing,
+            isSingleMode = oldBooking.isSingleMode,
+            merchantId = oldBooking.merchantId,
+            merchantOperatingCityId = oldBooking.merchantOperatingCityId,
+            multimodalSearchRequestId = Nothing,
+            onSearchFailed = Nothing,
+            partnerOrgId = oldBooking.partnerOrgId,
+            partnerOrgTransactionId = oldBooking.partnerOrgTransactionId,
+            quantity = totalQty,
+            recentLocationId = oldBooking.recentLocationId,
+            riderId = oldBooking.riderId,
+            routeCode = Just newRouteCode,
+            searchAsParentStops = Nothing,
+            toStationAddress = newToStation.address,
+            toStationCode = newToStation.code,
+            toStationName = Just newToStation.name,
+            toStationPoint = LatLong <$> newToStation.lat <*> newToStation.lon,
+            validTill = Just validTill',
+            vehicleNumber = Just newVehicleNo,
+            vehicleType = oldBooking.vehicleType,
+            createdAt = now,
+            updatedAt = now
+          }
+  QFRFSSearch.create freshSearch
+  logInfo $ "FRFSReschedule:mkFreshSearchForNewStops oldBookingId=" <> oldBooking.id.getId <> " freshSearchId=" <> freshSearchId.getId <> " newFrom=" <> newFromCode <> " newTo=" <> newToCode <> " newRoute=" <> newRouteCode
+  pure freshSearch
 
 -- | Load-bearing: copy the new seats onto the reused payment's payment-category rows BEFORE the staging
 -- confirm reads them (confirm resolves seats from findAllByPaymentId first). Matched 1:1 by category.

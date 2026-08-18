@@ -46,7 +46,7 @@ import Domain.Types.StationType
 import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Domain.Utils (mapConcurrently)
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, hoistMaybe, id, length, map, mapM_, maximum, minimumBy, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI.Cancel as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
@@ -1166,7 +1166,7 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
   return APISuccess.Success
 
 postFrfsBookingReschedule ::
-  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
+  (CallExternalBPP.FRFSConfirmFlow m r c, CallExternalBPP.FRFSSearchFlow m r, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Id DFRFSTicketBooking.FRFSTicketBooking ->
   API.Types.UI.FRFSTicketService.FRFSRescheduleReq ->
@@ -1184,7 +1184,21 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
   case integratedBppConfig.providerConfig of
     DIBC.ONDC _ -> throwError $ InvalidRequest "Reschedule is not supported for ONDC-integrated operators"
     _ -> do
-      FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId integratedBppConfig
+      -- Resolve the reschedule target stops/route. Absent request fields default to the old booking's, so a
+      -- trip-only reschedule (no from/to/route in the request) behaves exactly as before. Providing a
+      -- different from/to moves the boarding/alighting stop (validated to stay within the same cluster + same fare).
+      let newFromCode = fromMaybe oldBooking.fromStationCode req.fromStationCode
+          newToCode = fromMaybe oldBooking.toStationCode req.toStationCode
+          stopsChanged = newFromCode /= oldBooking.fromStationCode || newToCode /= oldBooking.toStationCode
+      newRouteCode <- (req.routeCode <|> oldBooking.routeCode) & fromMaybeM (InvalidRequest "Cannot determine route for this booking, reschedule not supported")
+      -- A different route between the same stops still needs a genuine quote for that route (the copy path
+      -- would clone the OLD route's stations); so the fresh search runs when the STOPS or the ROUTE changed.
+      let routeChanged = oldBooking.routeCode /= Just newRouteCode
+          needsFreshSearch = stopsChanged || routeChanged
+      serviceTierType <-
+        FRFSUtils.getServiceTierTypeFromRouteStationsJson oldBooking.routeStationsJson
+          & fromMaybeM (InvalidRequest "Cannot determine service tier for this booking, reschedule not supported")
+      FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId newFromCode newToCode newRouteCode integratedBppConfig
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId, merchantId = oldBooking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback oldBooking.merchantOperatingCityId oldBooking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
       FRFSReschedule.withRescheduleLock oldBooking.id $ do
         freshOldBooking <- QFRFSTicketBooking.findById oldBooking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")
@@ -1194,7 +1208,34 @@ postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
           QJourneyLeg.findByLegSearchId (Just oldBooking.searchId.getId)
             >>= fromMaybeM (InvalidRequest "Journey leg not found for booking being rescheduled")
         -- Fresh internal search + quote/quote-categories for the staging booking (old quote untouched).
-        (freshSearchId, stagingQuote, freshCategories) <- FRFSReschedule.mkFreshSearchAndFreshQuote oldBooking quote req.tripId integratedBppConfig bapConfig.searchTTLSec
+        -- Same stops AND same route (trip-only reschedule): copy the old quote. Different stops (same cluster)
+        -- or a different route: run the real Direct search so the new stops/route get a genuine quote, then
+        -- enforce same base fare.
+        (freshSearchId, stagingQuote, freshCategories) <-
+          if needsFreshSearch
+            then do
+              merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+              merchantOperatingCity <- CQMOC.findById oldBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound oldBooking.merchantOperatingCityId.getId)
+              freshSearch <- FRFSReschedule.mkFreshSearchForNewStops oldBooking quote req.tripId newFromCode newToCode newRouteCode integratedBppConfig bapConfig.searchTTLSec
+              -- Keep the old booking's service tier; blacklist nothing else that would drop it. The real
+              -- Direct search (Flow.search + onSearch) persists the quote+categories synchronously.
+              let (blSt, blFqt) = JMU.getBlacklistedFilters (Just False) (Just [serviceTierType])
+                  routeDetails = [FRFSRouteDetails {startStationCode = newFromCode, endStationCode = newToCode, routeCode = Just newRouteCode, serviceTier = Just serviceTierType}]
+              CallExternalBPP.search merchant merchantOperatingCity bapConfig freshSearch Nothing routeDetails integratedBppConfig blSt blFqt (fromMaybe True oldBooking.isSingleMode) Nothing
+              newQuotes <- QFRFSQuote.findAllBySearchId freshSearch.id
+              newQuote <-
+                find (\q -> FRFSUtils.getServiceTierTypeFromRouteStationsJson q.routeStationsJson == Just serviceTierType) newQuotes
+                  & fromMaybeM (InvalidRequest "No serviceable quote found for the new stops/route at the same service tier")
+              newCategories <- QFRFSQuoteCategory.findAllByQuoteId newQuote.id
+              -- Same-fare only: the reused payment fixes the charged amount, so a fare change is not supported.
+              -- Compare BASE prices (confirm passes enableOffer=False, so offers are frozen and irrelevant here).
+              oldCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+              let newBaseFare = sum (map (\c -> c.price.amount * fromIntegral c.selectedQuantity) newCategories)
+                  oldBaseFare = sum (map (\c -> c.price.amount * fromIntegral c.selectedQuantity) oldCategories)
+              unless (newBaseFare == oldBaseFare) $
+                throwError $ InvalidRequest "Reschedule to a different stop or route is only allowed when the fare is unchanged"
+              pure (freshSearch.id, newQuote, newCategories)
+            else FRFSReschedule.mkFreshSearchAndFreshQuote oldBooking quote req.tripId integratedBppConfig bapConfig.searchTTLSec
         -- Reject a malformed seat selection: duplicate categories, or categories absent from the fresh quote.
         let offeredCategories = maybe [] (map (.category)) req.offered
             validCategories = map (.category) freshCategories
