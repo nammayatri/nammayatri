@@ -1627,6 +1627,20 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber mbPassVerifyReq = do
       return Nothing
     Right result -> return result
 
+-- | A dispatcher fleet override is valid only while the covered vehicle is still
+-- running the waybill it had when the override was recorded.
+--
+-- Matching on waybill number alone is not enough: a bus that stays off-road never
+-- gets a new waybill, its existing one just moves online -> closed/audited. The
+-- number is unchanged, so the override would survive its full TTL and keep serving
+-- a finished duty. Any status other than online therefore invalidates it.
+-- A missing status means the feed does not report one (CHALO cities), so there we
+-- fall back to the waybill-number check alone.
+isFleetOverrideStale :: Text -> VehicleLiveRouteInfo -> Bool
+isFleetOverrideStale overrideWaybillNo info =
+  Just overrideWaybillNo /= info.waybillId
+    || maybe False (/= NandiTypes.WaybillOnline) info.waybillStatus
+
 getVehicleServiceTypeFromInMem ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
@@ -1924,7 +1938,7 @@ getLiveRouteInfo' integratedBPPConfig userPassedVehicleNumber userPassedRouteCod
     case mbVehicleOverrideInfo of
       Just (updatedVehicleNumber, newDeviceWaybillNo) -> do
         mbUpdatedVehicleRouteInfo <- getVehicleLiveRouteInfo [integratedBPPConfig] updatedVehicleNumber Nothing
-        if Just newDeviceWaybillNo /= ((.waybillId) . snd =<< mbUpdatedVehicleRouteInfo)
+        if maybe True (isFleetOverrideStale newDeviceWaybillNo . snd) mbUpdatedVehicleRouteInfo
           then do
             Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
             getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
