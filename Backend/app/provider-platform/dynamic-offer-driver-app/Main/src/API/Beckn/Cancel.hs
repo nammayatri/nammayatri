@@ -46,6 +46,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.OndcCancellationReason as SOCR
 import qualified SharedLogic.SearchTryLocker as STL
 import SharedLogic.SyncRide (rideSync)
@@ -116,13 +117,19 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
                 mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
                 fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
                   (isReallocated, cancellationCharge, mbUpdatedRide, resolvedReasonCode) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+                  -- Re-read the booking so finance_invoice_id (set by the cancellation ledger
+                  -- flow) is visible, then materialise + presign the cancellation invoice PDF
+                  -- so on_cancel's order.documents can carry it. Runs inside this fork, off the ACK path.
+                  mbUpdatedBooking <- QRB.findById booking.id
+                  mbInvoiceDocumentUrl <- maybe (pure Nothing) InvoiceDocument.getInvoiceDocumentUrl mbUpdatedBooking
                   let onCancelBuildReq =
                         OC.DBookingCancelledReqV2
                           { booking = booking,
                             cancellationSource = DBCR.ByUser,
                             cancellationFee = cancellationCharge,
                             cancellationReasonCode = resolvedReasonCode,
-                            mbRide = mbUpdatedRide
+                            mbRide = mbUpdatedRide,
+                            mbInvoiceDocumentUrl = mbInvoiceDocumentUrl
                           }
                   unless isReallocated $ do
                     buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
@@ -150,7 +157,9 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subsc
                         cancellationSource = DBCR.ByUser,
                         cancellationFee = cancellationCharges,
                         cancellationReasonCode = resolvedReasonCode,
-                        mbRide = mbRide
+                        mbRide = mbRide,
+                        -- soft-cancel is a pre-cancel fee preview; no invoice exists yet
+                        mbInvoiceDocumentUrl = Nothing
                       }
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
               void $

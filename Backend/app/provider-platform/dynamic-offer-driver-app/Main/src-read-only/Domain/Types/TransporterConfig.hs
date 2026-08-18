@@ -528,17 +528,28 @@ data GstBreakup = GstBreakup
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Read), (Eq))
 
 data InvoiceConfig = InvoiceConfig
-  { commissionAggregationBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { categoryOfServices :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cityState :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    commissionAggregationBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     commissionAggregationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     commissionAggregationFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommissionAggregationFrequency,
     driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
+    ecoAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ecoGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ecoName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     emitLedgerEntries :: Kernel.Prelude.Bool,
+    enableB2CUnsignedQR :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableDriverInvoice :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableInvoicePdfS3Storage :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    hsnSacCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceAppName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerTradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
-    showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    reverseCharge :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    signatureImageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
   }
   deriving (Generic, (Show), (ToJSON), (FromJSON), (Eq))
 

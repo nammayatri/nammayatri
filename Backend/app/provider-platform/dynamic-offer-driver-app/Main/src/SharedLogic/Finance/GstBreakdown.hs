@@ -1,11 +1,13 @@
 module SharedLogic.Finance.GstBreakdown
   ( computeGstBreakdownForRideOwner,
+    gstPlaceOfSupply,
     computeGstBreakdownForPerson,
     computeGstBreakdownGSTIN,
   )
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Text as T
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Location as DLocation
@@ -162,3 +164,11 @@ toGstRateBreakup Finance.InterState gstBreakup =
     Finance.GstRateInterStateBreakup
       { igstRate = gstBreakup.igstPercentage <|> ((+) <$> gstBreakup.cgstPercentage <*> gstBreakup.sgstPercentage)
       }
+
+-- | GST place of supply (invoice field 16) for a ride: the State where the passenger
+--   embarks, i.e. the pickup location's state. Nothing when the state is unknown —
+--   never a street address in its place.
+gstPlaceOfSupply :: DLocation.Location -> Maybe Text
+gstPlaceOfSupply pickup = do
+  st <- T.strip <$> pickup.address.state
+  if T.null st then Nothing else Just st

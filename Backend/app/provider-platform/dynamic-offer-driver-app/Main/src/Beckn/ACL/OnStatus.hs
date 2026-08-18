@@ -215,7 +215,8 @@ tfOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => DStatus.O
 tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig =
   pure
     Spec.Order
-      { orderId = Just bookingId.getId,
+      { orderDocuments = Nothing,
+        orderId = Just bookingId.getId,
         orderTags = Nothing,
         orderStatus = Just $ show NewBookingOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
         orderFulfillments = Nothing,
@@ -241,7 +242,8 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing Nothing isValueAddNP Nothing False 0
   pure
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderTags = Nothing,
         orderStatus = Just $ show BookingReallocationOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
         orderFulfillments = Just [fulfillment],

@@ -101,6 +101,7 @@ data S3Env m = S3Env
     getH :: String -> m Text,
     putH :: String -> Text -> m (),
     putRawH :: String -> BS.ByteString -> String -> m (),
+    getRawH :: String -> m BS.ByteString,
     deleteH :: String -> m (),
     generateUploadUrlH :: String -> Seconds -> m Text,
     generateDownloadUrlH :: String -> Seconds -> m Text,
@@ -207,3 +208,10 @@ putRaw :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> BS.ByteSt
 putRaw path file_ contentType_ = do
   s3env <- asks (.s3Env)
   putRawH s3env path file_ contentType_
+
+-- | Read an object from the private bucket as raw bytes. Counterpart of 'putRaw':
+-- 'get' decodes the body as text, which corrupts binary objects.
+getRaw :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m BS.ByteString
+getRaw path = do
+  s3env <- asks (.s3Env)
+  getRawH s3env path

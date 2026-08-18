@@ -80,6 +80,17 @@ apis:
       response:
         type: FinanceInvoicePdfResp
 
+  # ----- Invoice PDF presigned URL (by invoiceId) -----
+  - GET: # InvoicePdfUrlAPI
+      endpoint: /finance/invoice/pdfUrl
+      mandatoryQuery:
+        invoiceId: Text
+      auth: ApiAuthV2
+      response:
+        type: FinanceInvoicePdfUrlResp
+      migrate:
+        capability: finance.invoice.read
+
   # ----- Invoice -----
   - GET: # InvoiceListAPI
       endpoint: /finance/invoice/list
@@ -493,6 +504,11 @@ types:
   FinanceInvoicePdfResp:
     - pdfBase64: Text
     - invoiceNumber: Text
+
+  # ----- Invoice PDF presigned URL -----
+  FinanceInvoicePdfUrlResp:
+    - invoiceId: Text
+    - pdfUrl: Maybe Text
 
   # ----- Invoice -----
   InvoiceListRes:

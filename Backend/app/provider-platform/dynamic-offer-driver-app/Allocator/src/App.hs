@@ -59,6 +59,7 @@ import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
 import SharedLogic.Allocator.Jobs.FleetEngine.Retry (fleetEngineRetryHandler)
 import SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload (runBulkUserCohortMappingUploadJob)
 import SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance (triggerIffcoTokioInsuranceForOnRideDrivers)
+import SharedLogic.Allocator.Jobs.Invoice.InvoicePdfMaterialisation (runGenerateInvoicePdfJob)
 import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
 import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
@@ -201,6 +202,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendConnectAccountCharge
           & putJobHandlerInListWrapper flowRt env runBulkUserCohortMappingUploadJob
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
+          & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
     }
 
 runDriverOfferAllocator ::

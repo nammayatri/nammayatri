@@ -29,5 +29,8 @@ data DBookingCancelledReqV2 = DBookingCancelledReqV2
     cancellationSource :: SBCR.CancellationSource,
     cancellationFee :: Maybe Common.PriceAPIEntity,
     cancellationReasonCode :: Maybe Text,
-    mbRide :: Maybe DRide.Ride
+    mbRide :: Maybe DRide.Ride,
+    -- | Pre-signed URL of the cancellation tax-invoice PDF, attached to on_cancel
+    --   order.documents. Computed via InvoiceDocument.getInvoiceDocumentUrl at dispatch.
+    mbInvoiceDocumentUrl :: Maybe Text
   }

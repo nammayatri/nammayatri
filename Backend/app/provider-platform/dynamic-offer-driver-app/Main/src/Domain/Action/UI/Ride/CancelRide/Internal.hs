@@ -65,8 +65,11 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Lib.Scheduler (SchedulerType)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Allocator (AllocatorJobType (..), GenerateInvoicePdfJobData (..))
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
@@ -77,6 +80,7 @@ import qualified SharedLogic.DriverFyEarnings as SDFE
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
@@ -394,11 +398,15 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
           mbDriverInfo
           gstOnCancellation
       result <- runFinance ctx $ do
-        mapM_
-          (\(amt, ref, dest) -> void $ transferPending BuyerAsset dest amt ref)
-          cancellationComponents
-        whenJust mbTdsAmount $ \tdsAmount ->
-          void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+        -- Post ledger entries only when there is an actual charge. For a ₹0 valid buyer
+        -- cancellation we skip the transfers and still create a standalone ₹0 invoice below
+        -- (no linked entries → no GST tax transaction).
+        when (baseCancellation + gstOnCancellation > 0) $ do
+          mapM_
+            (\(amt, ref, dest) -> void $ transferPending BuyerAsset dest amt ref)
+            cancellationComponents
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
         invoice
           InvoiceConfig
             { invoiceType = RideCancellation,
@@ -447,7 +455,20 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             }
       case result of
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
-        Right _ -> pure ()
+        Right (mbInvoiceId, _) ->
+          whenJust mbInvoiceId $ \invId -> do
+            -- GST place of supply = the pickup State.
+            QFInvoice.updatePlaceOfSupply (gstPlaceOfSupply booking.fromLocation) Nothing Nothing invId
+            -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
+            B2CQRCode.generateB2CQRForInvoice transporterConfig invId
+            -- Link the cancellation invoice to the booking so the ONDC on_status
+            -- documents[] (and the invoice-PDF read paths) can resolve + attach it.
+            QRB.updateFinanceInvoiceId booking.id (Just invId.getId)
+            -- Render + store the PDF off the cancel path, after the place-of-supply and
+            -- QR stamps above (a stored PDF is final), so ONDC on_status can attach it.
+            when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enableInvoicePdfS3Storage))) $
+              createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
+                GenerateInvoicePdfJobData {invoiceId = invId.getId}
       logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
       whenJust mbRideCreditDebit $ \creditDebit ->
         SubscriptionConsumption.consumeCancellationRideCredit booking ride creditDebit transporterConfig

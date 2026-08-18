@@ -248,7 +248,8 @@ data DriverRideRes = DriverRideRes
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
     driverCancellationNotAllowed :: Maybe Bool,
-    isAutoAccepted :: Maybe Bool
+    isAutoAccepted :: Maybe Bool,
+    invoiceId :: Maybe Text -- finance invoice id (booking.financeInvoiceId); the client fetches the PDF on demand via /finance/invoice/pdf (kept out of the hot list path — no per-row presign)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -738,7 +739,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
         customerLanguage = booking.customerLanguage,
-        isAutoAccepted = booking.isAutoAccepted
+        isAutoAccepted = booking.isAutoAccepted,
+        invoiceId = booking.financeInvoiceId
       }
 
 -- calculateLocations moved from UI.Ride

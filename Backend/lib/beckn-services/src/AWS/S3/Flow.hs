@@ -24,6 +24,8 @@ module AWS.S3.Flow
     mockDelete,
     putRaw'',
     mockPutRaw,
+    getRaw'',
+    mockGetRaw,
     generateUploadUrl',
     generateDownloadUrl',
     mockGenerateUploadUrl,
@@ -170,6 +172,23 @@ get'' bucketName path = withLogTag "S3" $ do
   liftIO $ removeFile tmpPath
   return result
 
+-- | Like 'get''' but returns the object body as raw bytes (no text decoding), for
+-- binary objects stored with 'putRaw'''.
+getRaw'' ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  Text ->
+  String ->
+  m BS.ByteString
+getRaw'' bucketName path = withLogTag "S3" $ do
+  let tmpPath = getTmpPath path
+  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
+  liftIO $ callCommand cmd
+  result <- liftIO $ BS.readFile tmpPath
+  liftIO $ removeFile tmpPath
+  return result
+
 put'' ::
   ( CoreMetrics m,
     MonadFlow m
@@ -262,6 +281,16 @@ mockGet baseDirectory bucketName path =
     liftIO $ do
       let fullPath'Name = getFullPathMock baseDirectory bucketName path
       T.readFile fullPath'Name
+
+mockGetRaw ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  m ByteString
+mockGetRaw baseDirectory bucketName path =
+  withLogTag "S3" $
+    liftIO $ BS.readFile (getFullPathMock baseDirectory bucketName path)
 
 mockDelete ::
   (MonadIO m, Log m) =>
