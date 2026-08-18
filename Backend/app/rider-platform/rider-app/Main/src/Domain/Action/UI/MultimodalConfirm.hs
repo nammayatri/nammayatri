@@ -265,6 +265,7 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
       JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
       fork "Analytics - Journey Skip Without Booking Update" $ QJourney.updateHasStartedTrackingWithoutBooking (Just True) journeyId
     else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
+  fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
   updatedJourney <- JM.getJourney journeyId
   paymentGateWayId <- Payment.fetchGatewayReferenceId journey.merchantId journey.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   sdkPayload <-
@@ -348,13 +349,6 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
                 }
           _ -> Nothing
       allPaymentOrders = all (isJust . fst) bookingsPaymentOrders
-      allLegsPaymentTerminal = not (null bookingsPaymentOrders) && all (isTerminalBookingPaymentStatus . snd) bookingsPaymentOrders
-  when allLegsPaymentTerminal $ do
-    -- Write once per journey, after all legs resolve -- not per-leg.
-    isLockAcquired <- Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.tryLockRedis (mkRecentLocationJourneyLockKey journeyId) 300
-    when isLockAcquired $ do
-      journey <- JM.getJourney journeyId
-      fork "Caching recent location for multimodal journey" $ JLU.createRecentLocationForMultimodal journey
   if allPaymentOrders
     then do
       return $
@@ -371,15 +365,6 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
             gatewayReferenceId = paymentGateWayId
           }
   where
-    isTerminalBookingPaymentStatus :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> Bool
-    isTerminalBookingPaymentStatus = \case
-      Just DFRFSTicketBookingPayment.SUCCESS -> True
-      Just DFRFSTicketBookingPayment.FAILED -> True
-      _ -> False
-
-    mkRecentLocationJourneyLockKey :: Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Text
-    mkRecentLocationJourneyLockKey journeyId' = "multimodalRecentLocation:" <> journeyId'.getId
-
     mkDomainPaymentStatusToAPIStatus :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> FRFSTicketServiceAPI.FRFSBookingPaymentStatusAPI
     mkDomainPaymentStatusToAPIStatus = \case
       DFRFSTicketBookingPayment.PENDING -> FRFSTicketServiceAPI.PENDING
