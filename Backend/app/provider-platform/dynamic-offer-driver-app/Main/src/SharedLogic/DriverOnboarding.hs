@@ -80,7 +80,6 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -885,6 +884,7 @@ castDocumentCategory = \case
   Domain.Types.DocumentVerificationConfig.Vehicle -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle
   Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
   Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
+  Domain.Types.DocumentVerificationConfig.Fleet -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Fleet
 
 castLegalStructure :: Domain.Types.DocumentOnboardingStage.LegalStructure -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.LegalStructure
 castLegalStructure = \case
@@ -1494,7 +1494,7 @@ checkAndUpdateDocEnabledStatus merchantOpCityId docType person = do
       unifiedRecompute = transporterConfig.unifiedOnboardingFlagsRecompute == Just True
   case person.role of
     role | isFleetRole role -> do
-      mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just person.role}) (Just (CQFODVC.findAllByMerchantOpCityId merchantOpCityId (Just [])))
+      mbCfg <- getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just [person.role]}) Nothing
       let blocksVerified = maybe False (.isMandatory) mbCfg
           blocksEnabled = maybe False (\c -> fromMaybe c.isMandatory c.isMandatoryForEnabling) mbCfg
       if unifiedRecompute

@@ -38,7 +38,7 @@ data FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     onlyImageVerificationStatusLookupRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     order :: Kernel.Prelude.Int,
-    role :: Domain.Types.Person.Role,
+    role :: [Domain.Types.Person.Role],
     rolesAllowedToUploadDocument :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     title :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,

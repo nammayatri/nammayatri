@@ -1163,8 +1163,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             -- Role-aware: match this fleet owner's role, falling back to any fleet-role row on drift.
             let isFleetRoleCfg r = r `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
                 mbConfig =
-                  (mbFleetOwnerRole >>= \role -> find (\c -> c.documentType == domainDocType && c.role == role) allFODVC)
-                    <|> find (\c -> c.documentType == domainDocType && isFleetRoleCfg c.role) allFODVC
+                  (mbFleetOwnerRole >>= \role -> find (\c -> c.documentType == domainDocType && role `elem` c.role) allFODVC)
+                    <|> find (\c -> c.documentType == domainDocType && any isFleetRoleCfg c.role) allFODVC
             config <- mbConfig & fromMaybeM (InvalidRequest "Document Verification Config not found")
             pure config.isMandatory
           _ -> do

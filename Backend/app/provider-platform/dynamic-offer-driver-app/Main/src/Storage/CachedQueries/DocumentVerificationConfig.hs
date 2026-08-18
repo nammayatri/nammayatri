@@ -37,6 +37,7 @@ import qualified Domain.Types.VehicleCategory as DTV
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.DocumentVerificationConfig as Queries
@@ -77,11 +78,16 @@ findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification merch
 
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
-clearCache merchantOpCityId =
+clearCache merchantOpCityId = do
   DynamicLogic.clearConfigCache
     (cast merchantOpCityId)
     (LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig)
     Nothing
+  DynamicLogic.clearConfigCache
+    (cast merchantOpCityId)
+    (LYT.DRIVER_CONFIG LYT.FleetOwnerDocumentVerificationConfig)
+    Nothing
+  invalidateConfigInMem LYT.FleetOwnerDocumentVerificationConfig
 
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DocumentVerificationConfig -> m ()
 update = Queries.update

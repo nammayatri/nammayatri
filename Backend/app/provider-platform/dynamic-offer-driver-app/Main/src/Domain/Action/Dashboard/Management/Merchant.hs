@@ -1304,6 +1304,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle -> DVC.Vehicle
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Fleet -> DVC.Fleet
 
 castDocumentFlowGroupingFromReq :: Common.DocumentFlowGrouping -> DVC.DocumentFlowGrouping
 castDocumentFlowGroupingFromReq = \case

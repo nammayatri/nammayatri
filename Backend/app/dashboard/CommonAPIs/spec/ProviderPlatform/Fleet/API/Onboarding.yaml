@@ -185,7 +185,7 @@ types:
     isApprovalSupported: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [DashboardAccessType]
   DocumentCategory:
-    enum: "Driver,Vehicle,Permission,Training"
+    enum: "Driver,Vehicle,Permission,Training,Fleet"
   DocumentFlowGrouping:
     enum: "COMMON,STANDARD"
   # FieldObject: children in `fields` become a nested object under `requestKey`.
