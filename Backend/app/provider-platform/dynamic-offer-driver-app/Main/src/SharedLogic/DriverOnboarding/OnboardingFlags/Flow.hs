@@ -15,7 +15,7 @@ module SharedLogic.DriverOnboarding.OnboardingFlags.Flow
     SimplePayload (..),
     markBlockFlags,
     DisabledChange (..),
-    markDisabledFlags,
+    markEnableDisableReasonFlags,
     PersonFlagsCtx (..),
     VehicleDocsEntry (..),
   )
@@ -509,8 +509,8 @@ data DisabledChange
 -- | Write an entity's disabled state. Under unified only `disabledReasonFlag` is written --
 --   `enabled` is derived from documents plus that flag by recomputeOnboardingFlags, so the caller
 --   refreshes afterwards. The legacy branch keeps the historical direct writes.
-markDisabledFlags :: OnboardingFlow m r => Bool -> DP.Person -> DisabledChange -> m ()
-markDisabledFlags unified person change = case change of
+markEnableDisableReasonFlags :: OnboardingFlow m r => Bool -> DP.Person -> DisabledChange -> m ()
+markEnableDisableReasonFlags unified person change = case change of
   AdminDisable reason ->
     if SDO.isFleetRole person.role
       then do
@@ -522,7 +522,9 @@ markDisabledFlags unified person change = case change of
   AdminEnable ->
     if SDO.isFleetRole person.role
       then QFOI.updateFleetOwnerDisabledReasonFlag Nothing person.id
-      else DIQuery.updateDisabledReasonFlag Nothing (cast person.id)
+      else do
+        when unified $ DIQueryExtra.updateEnabledReasonFlag (Just DI.AdminEnabled) (cast person.id)
+        DIQuery.updateDisabledReasonFlag Nothing (cast person.id)
   FleetRejectionDisable -> do
     fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
     when fleetOwnerInfo.enabled $ do

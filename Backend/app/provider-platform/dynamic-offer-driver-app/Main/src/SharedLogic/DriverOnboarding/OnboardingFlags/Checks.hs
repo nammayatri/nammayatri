@@ -116,8 +116,8 @@ checkDriver :: ActionVerb -> DI.DriverInformation -> Bool -> Bool -> Either Guar
 checkDriver verb driverInfo _hasFleetAssoc _hasRcAssoc = case verb of
   Enable
     | driverInfo.blocked -> violate "D-BLOCKED" "driver is blocked, unblock before enabling"
-    | driverInfo.enabled -> violate "DI-1" "driver is already enabled"
-    | otherwise -> ok
+    | isJust driverInfo.disabledReasonFlag || not driverInfo.enabled -> ok
+    | otherwise -> violate "D-UNSUPPORTED" "driver is already in enabled state"
   Disable
     | not driverInfo.enabled -> violate "DI-2" "driver is not enabled; enablement is derived from documents or admin enablement"
     | isJust driverInfo.disabledReasonFlag -> violate "DI-3" "driver is already disabled"
@@ -187,8 +187,8 @@ checkFleet :: ActionVerb -> DFOI.FleetOwnerInformation -> Either GuardViolation 
 checkFleet verb fleetInfo = case verb of
   Enable
     | fleetInfo.blocked -> violate "F-BLOCKED" "fleet owner is blocked, unblock before enabling"
-    | fleetInfo.enabled -> violate "FI-2" "fleet owner is already enabled"
-    | otherwise -> ok
+    | isJust fleetInfo.disabledReasonFlag || not fleetInfo.enabled -> ok
+    | otherwise -> violate "F-UNSUPPORTED" "fleet owner is already in enabled state"
   Disable
     | not fleetInfo.enabled -> violate "FI-2" "fleet owner is not enabled; enablement is derived from documents or admin enablement"
     | isJust fleetInfo.disabledReasonFlag -> violate "FI-1" "fleet owner is already disabled"

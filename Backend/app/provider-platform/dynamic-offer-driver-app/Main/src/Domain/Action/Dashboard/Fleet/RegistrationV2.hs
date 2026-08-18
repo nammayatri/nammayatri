@@ -309,7 +309,7 @@ enableFleetOwnerOnDocsValid fleetOwnerId = do
   tcForEnable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = fleetPersonForEnable.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound fleetPersonForEnable.merchantOperatingCityId.getId)
   if tcForEnable.unifiedOnboardingFlagsRecompute == Just True
     then void $ SStatus.runRefreshOnboardingFlagsFleet Nothing (Just tcForEnable) fleetOwnerId
-    else SFlags.markDisabledFlags False fleetPersonForEnable SFlags.AdminEnable
+    else SFlags.markEnableDisableReasonFlags False fleetPersonForEnable SFlags.AdminEnable
   fmap (.enabled) <$> QFOI.findByPrimaryKey fleetOwnerId
 
 castFleetType :: Common.FleetType -> FOI.FleetType

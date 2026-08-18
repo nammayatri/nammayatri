@@ -396,7 +396,7 @@ runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId =
       then do
         let language = fromMaybe merchantOperatingCity.language statusPerson.language
         (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocuments) <-
-          fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language (Just True)
+          fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language Nothing
         res <-
           recomputeOnboardingFlags
             OnboardingFlagsInput
@@ -624,7 +624,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                       && not (checkIfDocumentValid allDocVerificationConfigs person.role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory)
               -- First check if fleet should be disabled (has rejected mandatory docs)
               when (any isRejectedMandatoryFleetDoc driverDocuments && transporterConfig.allowDisableFleetOnRejectionDoc == Just True) $
-                markDisabledFlags False person FleetRejectionDisable
+                markEnableDisableReasonFlags False person FleetRejectionDisable
               -- Then check if fleet should be enabled (all mandatory docs valid)
               when allFleetDocsVerified $
                 enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId True

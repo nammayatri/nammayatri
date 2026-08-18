@@ -64,12 +64,12 @@ postAccountVerifyAccount merchantShortId opCity Common.VerifyAccountReq {..} = d
   if enabled
     then do
       SGuard.withOnboardingAction tc SGuard.None SGuard.Enable (SGuard.TargetFleetOwner fleetOwnerId') $
-        SFlags.markDisabledFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson SFlags.AdminEnable
+        SFlags.markEnableDisableReasonFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson SFlags.AdminEnable
       when wasDisabled $ do
         DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' merchantOpCityId
     else
       SGuard.withOnboardingAction tc SGuard.None SGuard.Disable (SGuard.TargetFleetOwner fleetOwnerId') $
-        SFlags.markDisabledFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson (SFlags.AdminDisable DI.AdminDisabled)
+        SFlags.markEnableDisableReasonFlags (tc.unifiedOnboardingFlagsRecompute == Just True) fleetOwnerPerson (SFlags.AdminDisable DI.AdminDisabled)
   pure Kernel.Types.APISuccess.Success
 
 putAccountUpdateRole ::
