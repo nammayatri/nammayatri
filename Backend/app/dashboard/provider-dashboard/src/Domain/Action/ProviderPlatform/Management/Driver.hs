@@ -16,6 +16,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
   ( getDriverDocumentsInfo,
     getDriverAadhaarInfo,
     getDriverAadhaarInfobyMobileNumber,
+    getDriverLoginOtp,
     getDriverList,
     getDriverActivity,
     postDriverDisable,
@@ -116,6 +117,11 @@ getDriverAadhaarInfobyMobileNumber :: ShortId DM.Merchant -> City.City -> ApiTok
 getDriverAadhaarInfobyMobileNumber merchantShortId opCity apiTokenInfo phoneNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAadhaarInfobyMobileNumber) phoneNo
+
+getDriverLoginOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverLoginOtpRes
+getDriverLoginOtp merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCode mbDriverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverLoginOtp) mbMobileNumber mbMobileCountryCode mbDriverId
 
 getDriverList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Common.ApprovalStatusFilter -> Maybe Common.OnboardingAs -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Flow Common.DriverListRes
 getDriverList merchantShortId opCity apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString mbNameSearchString mbApprovalStatus mbOnboardingAs mbFleetOwnerId mbFrom mbTo mbFleetSeeker = do

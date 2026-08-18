@@ -354,3 +354,6 @@ INSERT INTO atlas_dashboard.access_matrix (id, role_id, api_entity, user_access_
 
 ------- SQL updates -------
 
+
+-- {"api":"GetDriverLoginOtp","migration":"capability","param":"city-operations.pii.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_LOGIN_OTP' ) ON CONFLICT DO NOTHING;

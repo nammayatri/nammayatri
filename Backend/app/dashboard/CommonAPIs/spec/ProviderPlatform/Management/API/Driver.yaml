@@ -111,6 +111,17 @@ apis:
         type: DriverAadhaarInfoByPhoneReq
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO_PHONE
+  - GET: # DriverLoginOtpAPI
+      endpoint: /loginOtp
+      query:
+        - mobileNumber: Text
+        - mobileCountryCode: Text
+        - driverId: Text
+      auth: ApiAuthV2
+      response:
+        type: DriverLoginOtpRes
+      migrate:
+        capability: city-operations.pii.read
   - GET: # DriverListAPI
       endpoint: /list
       auth: ApiAuthV2
@@ -760,6 +771,13 @@ types:
     - totalItems: Int # for backward compatibility
     - summary: Summary
     - drivers: [DriverListItem]
+  DriverLoginOtpRes:
+    - driverId: Id Driver
+    - otp: Text
+    - attemptsLeft: Int
+    - generatedAt: UTCTime
+    - authExpiryMinutes: Int
+    - derive: "'HideSecrets"
   DummyRideRequestRes:
     - result: Text
     - reason: Maybe Text
