@@ -1376,6 +1376,7 @@ probe-unused-routes.py    what the rider API can serve that we don't use
 probe-rider-extras.py     do the useful unused routes actually work?
 probe-trip-history.py     what a past-trips list can show — and one wrong finding
 probe-subscription.sql    can we switch off a driver who hasn't paid?
+probe-push.py             one push to a real phone, no ride needed;  isolates app vs server
 
   services fronting the stack
 edge/                  nginx + TLS, the public face
