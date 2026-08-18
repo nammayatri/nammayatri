@@ -295,7 +295,13 @@ data FRFSRefundAttemptAPI = FRFSRefundAttemptAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSRescheduleReq = FRFSRescheduleReq {offered :: Data.Maybe.Maybe [FRFSRescheduleSeatReq], tripId :: Data.Text.Text}
+data FRFSRescheduleReq = FRFSRescheduleReq
+  { fromStationCode :: Data.Maybe.Maybe Data.Text.Text,
+    offered :: Data.Maybe.Maybe [FRFSRescheduleSeatReq],
+    routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    toStationCode :: Data.Maybe.Maybe Data.Text.Text,
+    tripId :: Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -166,6 +166,9 @@ types:
   FRFSRescheduleReq:
     tripId: Text
     offered: Maybe [FRFSRescheduleSeatReq]
+    fromStationCode: Maybe Text
+    toStationCode: Maybe Text
+    routeCode: Maybe Text
 
   FRFSTicketCategoryMetadataAPIEntity:
     title: Text
