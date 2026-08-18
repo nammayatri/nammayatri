@@ -20,6 +20,7 @@ imports:
   Benefit: Domain.Types.Pass
   PassDocumentType: Domain.Types.Pass
   ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
   HighPrecMoney: Kernel.Types.Common
   Seconds: Kernel.Types.Common
   Value: Data.Aeson
@@ -58,6 +59,7 @@ types:
     benefitDescription: Text
     benefit: Maybe Benefit
     applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: VehicleCategory
     documentsRequired: "[PassDocumentType]"
     pricingTiers: Maybe Value
     maxValidTrips: Maybe Int
@@ -82,6 +84,7 @@ types:
     benefitDescription: Maybe Text
     benefit: Maybe Benefit
     applicableVehicleServiceTiers: "Maybe [ServiceTierType]"
+    vehicleType: Maybe VehicleCategory
     documentsRequired: "Maybe [PassDocumentType]"
     pricingTiers: Maybe Value
     maxValidTrips: Maybe Int
@@ -108,6 +111,7 @@ types:
     benefitDescription: Text
     benefit: Maybe Benefit
     applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: VehicleCategory
     documentsRequired: "[PassDocumentType]"
     pricingTiers: Maybe Value
     maxValidTrips: Maybe Int
