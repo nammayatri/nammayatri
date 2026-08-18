@@ -20,7 +20,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPassPayment = PurchasedPassPayment
-  { amount :: Kernel.Types.Common.HighPrecMoney,
+  { activatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    amount :: Kernel.Types.Common.HighPrecMoney,
     availableTripCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
@@ -36,6 +37,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
     passId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
     passName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passPhotoChangeCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passPhotoMediaId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

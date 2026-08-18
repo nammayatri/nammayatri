@@ -75,3 +75,9 @@ ALTER TABLE atlas_app.purchased_pass ADD COLUMN current_payment_order_id charact
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN vehicle_type text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass ADD COLUMN activated_at timestamp with time zone ;

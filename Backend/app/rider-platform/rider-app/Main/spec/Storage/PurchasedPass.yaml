@@ -63,6 +63,7 @@ PurchasedPass:
     preferredSource: Maybe Text
     preferredDestination: Maybe Text
     currentPaymentOrderId: Maybe (Id PaymentOrder)
+    activatedAt: Maybe UTCTime
 
   beamType:
     vehicleType: Maybe VehicleCategory
@@ -123,6 +124,11 @@ PurchasedPass:
           - in: [personId]
           - status
 
+    updateActivatedAt:
+      kvFunction: updateOneWithKV
+      params: [activatedAt]
+      where: id
+
 PurchasedPassPayment:
   tableName: purchased_pass_payment
 
@@ -149,6 +155,8 @@ PurchasedPassPayment:
     clientSdkVersion: Maybe Version
     passId: Maybe (Id Pass)
     availableTripCount: Maybe Int
+    passPhotoChangeCount: Maybe Int
+    activatedAt: Maybe UTCTime
 
   beamType:
     benefitDescription: Maybe Text
@@ -273,6 +281,15 @@ PurchasedPassPayment:
           - in:
             - status
 
+    updatePhotoChangeCountByPurchasedPassIdAndStatus:
+      kvFunction: updateWithKV
+      params: [passPhotoChangeCount]
+      where:
+        and:
+          - purchasedPassId
+          - in:
+            - status
+
     findAllByPersonIdWithFilters:
       kvFunction: findAllWithOptionsKV
       where:
@@ -286,6 +303,11 @@ PurchasedPassPayment:
     updateAvailableTripCountById:
       kvFunction: updateOneWithKV
       params: [availableTripCount]
+      where: id
+
+    updateActivatedAt:
+      kvFunction: updateOneWithKV
+      params: [activatedAt]
       where: id
 
   extraOperations:
