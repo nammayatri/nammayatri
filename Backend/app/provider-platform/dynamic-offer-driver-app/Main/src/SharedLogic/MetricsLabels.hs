@@ -12,11 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.MetricsLabels (getMetricsLabels, getCityLabel, distanceBucketLabel, poolingVersionLabel, searchReqFunnelLabels) where
+module SharedLogic.MetricsLabels
+  ( getMetricsLabels,
+    getCityLabel,
+    distanceBucketLabel,
+    poolingVersionLabel,
+    funnelLabels,
+    searchReqFunnelLabels,
+    driverSearchReqFunnelLabels,
+  )
+where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -57,16 +67,27 @@ distanceBucketLabel (Just d)
 poolingVersionLabel :: Maybe Int -> Text
 poolingVersionLabel = maybe "unknown" show
 
--- | The three allocation-funnel label values rendered from the search request, so every
--- call site emits identical values for the same journey:
+-- | The three allocation-funnel label values, in the order every counter expects:
 -- (distance_bucket, pooling_logic_version, pooling_config_version).
+funnelLabels :: Maybe Meters -> Maybe Int -> Maybe Int -> (Text, Text, Text)
+funnelLabels mbDistance mbPoolingLogicV mbPoolingConfigV =
+  ( distanceBucketLabel mbDistance,
+    poolingVersionLabel mbPoolingLogicV,
+    poolingVersionLabel mbPoolingConfigV
+  )
+
+-- | From the search request — for the allocator, which already has it in scope.
 -- NOTE: pooling versions are assigned during the first driver-pool computation
--- (ensurePoolingLogicVersion / getDriverPoolConfig) — only pass search requests read
--- AFTER that point (allocator batch flow, driver respond flow); earlier reads
--- legitimately carry Nothing and would label everything "unknown".
+-- (ensurePoolingLogicVersion / getDriverPoolConfig), so only pass search requests read
+-- AFTER that point; earlier reads legitimately carry Nothing and label "unknown".
 searchReqFunnelLabels :: DSR.SearchRequest -> (Text, Text, Text)
 searchReqFunnelLabels searchReq =
-  ( distanceBucketLabel searchReq.estimatedDistance,
-    poolingVersionLabel searchReq.poolingLogicVersion,
-    poolingVersionLabel searchReq.poolingConfigVersion
-  )
+  funnelLabels searchReq.estimatedDistance searchReq.poolingLogicVersion searchReq.poolingConfigVersion
+
+-- | From the driver's ping row — preferred wherever a SearchRequestForDriver is in scope.
+-- Needs no extra fetch, and its poolingLogicVersion is the one the pool actually ran with
+-- (stamped at fan-out as dpwRes.poolingLogicVersion <|> searchReq.poolingLogicVersion),
+-- whereas the search request carries only the pre-pool snapshot.
+driverSearchReqFunnelLabels :: DSRD.SearchRequestForDriver -> (Text, Text, Text)
+driverSearchReqFunnelLabels sReqFD =
+  funnelLabels sReqFD.tripEstimatedDistance sReqFD.poolingLogicVersion sReqFD.poolingConfigVersion
