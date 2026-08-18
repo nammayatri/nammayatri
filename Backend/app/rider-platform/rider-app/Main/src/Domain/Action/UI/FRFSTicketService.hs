@@ -95,6 +95,7 @@ import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
@@ -900,11 +901,11 @@ postFrfsQuoteV2ConfirmWithActor (mbPersonId, merchantId) quoteId mbIsMockPayment
       merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
       merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
-      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing req.purchasedPassPaymentId
+      (_, booking, _, _, _) <- confirmAndUpsertBooking personId quote selectedQuoteCategories req.crisSdkResponse (Just True) mbIsMockPayment integratedBppConfig Nothing req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId
       select merchant merchantOperatingCity bapConfig quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer
       getFrfsBookingStatusWithActor (Just personId, merchantId) booking.id
     _ -> do
-      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing req.purchasedPassPaymentId
+      postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selectedQuoteCategories req.crisSdkResponse (Just True) req.enableOffer mbIsMockPayment integratedBppConfig req.tripId req.isSpotBooking Nothing Nothing req.purchasedPassPaymentId
   where
     rateLimitKey :: Text -> Text -> Text
     rateLimitKey personId' tripId' = "BAP:FRFS_CONFIRM_RATE_LIMIT:" <> personId' <> ":" <> tripId'
@@ -1163,6 +1164,92 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
     FRFSCancel.handleCancelledSideEffects updatedBooking mRiderNumber mRiderMobileCountryCode fareParameters
     FRFSCancelJourney.cancelJourney updatedBooking
   return APISuccess.Success
+
+postFrfsBookingReschedule ::
+  (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Id DFRFSTicketBooking.FRFSTicketBooking ->
+  API.Types.UI.FRFSTicketService.FRFSRescheduleReq ->
+  m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsBookingReschedule (mbPersonId, merchantId) oldBookingId req = do
+  personId <- fromMaybeM (InvalidRequest "personId not found") mbPersonId
+  oldBooking <- B.runInReplica $ QFRFSTicketBooking.findById oldBookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  unless (personId == oldBooking.riderId) $ throwError AccessDenied
+  -- Optional: a fully pass-covered booking has no payment row. Paid/partial reschedules reuse it; a fully
+  -- pass-covered one confirms the staging via the pass-covered path (no reused payment).
+  mbOldPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment oldBooking
+  -- Lean atomic-swap: reuse the OLD booking's own quote in place (the request no longer carries a client quoteId).
+  quote <- B.runInReplica $ QFRFSQuote.findById oldBooking.quoteId >>= fromMaybeM (InvalidRequest "Quote not found for booking being rescheduled")
+  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity oldBooking
+  case integratedBppConfig.providerConfig of
+    DIBC.ONDC _ -> throwError $ InvalidRequest "Reschedule is not supported for ONDC-integrated operators"
+    _ -> do
+      FRFSReschedule.validateRescheduleEligibility oldBooking req.tripId integratedBppConfig
+      bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = oldBooking.merchantOperatingCityId.getId, merchantId = oldBooking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback oldBooking.merchantOperatingCityId oldBooking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory oldBooking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+      FRFSReschedule.withRescheduleLock oldBooking.id $ do
+        freshOldBooking <- QFRFSTicketBooking.findById oldBooking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")
+        unless (freshOldBooking.status == DFRFSTicketBooking.CONFIRMED) $
+          throwError $ InvalidRequest "Booking is no longer confirmed, cannot be rescheduled"
+        oldLeg <-
+          QJourneyLeg.findByLegSearchId (Just oldBooking.searchId.getId)
+            >>= fromMaybeM (InvalidRequest "Journey leg not found for booking being rescheduled")
+        -- Fresh internal search + quote/quote-categories for the staging booking (old quote untouched).
+        (freshSearchId, stagingQuote, freshCategories) <- FRFSReschedule.mkFreshSearchAndFreshQuote oldBooking quote req.tripId integratedBppConfig bapConfig.searchTTLSec
+        -- Reject a malformed seat selection: duplicate categories, or categories absent from the fresh quote.
+        let offeredCategories = maybe [] (map (.category)) req.offered
+            validCategories = map (.category) freshCategories
+        unless (length offeredCategories == length (nub offeredCategories)) $
+          throwError $ InvalidRequest "Duplicate category in reschedule seat selection"
+        unless (all (`elem` validCategories) offeredCategories) $
+          throwError $ InvalidRequest "Unknown category in reschedule seat selection"
+        let selectedQuoteCategories =
+              map
+                ( \c ->
+                    FRFSTicketService.FRFSCategorySelectionReq
+                      { quoteCategoryId = c.id,
+                        quantity = c.selectedQuantity,
+                        seatIds = (.seatIds) <$> find (\s -> s.category == c.category) (fromMaybe [] req.offered)
+                      }
+                )
+                freshCategories
+        -- Staging booking is created + confirmed; if confirmation fails the old booking is left untouched.
+        eStatusRes <- withTryCatch "FRFSReschedule:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) stagingQuote selectedQuoteCategories Nothing (Just True) (Just False) Nothing integratedBppConfig (Just req.tripId) Nothing Nothing (Just (RescheduleCtx oldBooking.id (mbOldPayment <&> (.id)))) Nothing)
+        statusRes <- case eStatusRes of
+          Right r -> pure r
+          Left err -> do
+            -- Confirmation threw. If a staging booking was already created, roll it back (release its held
+            -- seats, restore the old payment's categories, mark it FAILED) -- rollbackFailedReschedule does
+            -- all three. If it threw before the staging booking existed, restore the old payment's categories
+            -- directly (a fully pass-covered booking has none, so there is nothing to restore).
+            mbStaging <- QFRFSTicketBooking.findBySearchId freshSearchId
+            case mbStaging of
+              Just staging -> do
+                eRollback <- withTryCatch "FRFSReschedule:rollbackFailedRescheduleOnConfirmThrow" (FRFSReschedule.rollbackFailedReschedule staging.id)
+                case eRollback of
+                  Left rbErr -> logError $ "FRFSReschedule: rollbackFailedReschedule failed after confirm threw (manual cleanup needed) stagingBookingId=" <> staging.id.getId <> ": " <> show rbErr
+                  Right () -> pure ()
+              Nothing -> whenJust mbOldPayment $ \oldPayment -> do
+                oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldBooking.quoteId
+                eRestore <- withTryCatch "FRFSReschedule:restorePaymentCategoriesOnConfirmThrow" (FRFSReschedule.syncPaymentCategories oldPayment.id oldQuoteCategories)
+                case eRestore of
+                  Left restoreErr -> logError $ "FRFSReschedule: failed to restore old payment categories after confirm threw (manual cleanup needed) oldBookingId=" <> oldBooking.id.getId <> ": " <> show restoreErr
+                  Right () -> pure ()
+            throwM err
+        finalStatus <- getFrfsBookingStatusWithActor (Just personId, merchantId) statusRes.bookingId
+        if finalStatus.status == DFRFSTicketBooking.CONFIRMED
+          then do
+            QJourneyLeg.updateLegSearchId (Just freshSearchId.getId) oldLeg.id
+            eCleanup <- withTryCatch "FRFSReschedule:completeReschedule" (FRFSReschedule.completeReschedule oldBooking.id statusRes.bookingId)
+            case eCleanup of
+              Left err -> logError $ "FRFSReschedule: completeReschedule failed after leg switch (manual cleanup needed) oldBookingId=" <> oldBooking.id.getId <> ": " <> show err
+              Right () -> pure ()
+            pure finalStatus
+          else do
+            res <- withTryCatch "FRFSReschedule:rollbackFailedReschedule" (FRFSReschedule.rollbackFailedReschedule statusRes.bookingId)
+            case res of
+              Left err -> logError $ "FRFSReschedule: rollbackFailedReschedule failed for staging booking " <> statusRes.bookingId.getId <> ": " <> show err
+              Right () -> pure ()
+            throwError $ InvalidRequest "Reschedule failed: the selected trip could not be confirmed. Your original booking is unchanged."
 
 getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus
 getFrfsBookingCancelStatus _ bookingId = do

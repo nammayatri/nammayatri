@@ -527,6 +527,7 @@ library
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSPassConfirm
       SharedLogic.FRFSPassOverride
+      SharedLogic.FRFSReschedule
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
       SharedLogic.FRFSStatus

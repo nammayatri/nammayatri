@@ -255,13 +255,18 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- Guarded on the PRE-update status: validateRequest does not reject an already-CONFIRMED
   -- booking, so a replayed on_confirm re-runs this handler, and the TripConsumed marker only
   -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
-  unless (booking.status == Booking.CONFIRMED) $
+  -- Reschedule staging bookings (parentBookingId set) carry the parent's already-spent trip over, so skip
+  -- the debit here (completeReschedule migrates the parent's TripConsumed marker onto the staging search).
+  unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $
     void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
+  -- Reschedule staging bookings (parentBookingId set) reuse the old recon set + event count, so skip both here.
+  unless (isJust booking.parentBookingId) $
+    buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
+  unless (isJust booking.parentBookingId) $
+    void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
   void $ CQP.clearPSCache booking.riderId
   whenJust booking.partnerOrgId $ \pOrgId -> do
     walletPOCfg <- do
