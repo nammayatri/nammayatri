@@ -250,7 +250,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
       SDP.incrementBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
       incrementDriverRequestCount dispatchPool searchTry.id
     else SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
-  DSM.recordDriversPinged searchReq.merchantOperatingCityId (map (.driverId) searchRequestsForDrivers)
+  DSM.recordDriversPinged searchReq.merchantOperatingCityId (map (\srfd -> (show srfd.vehicleServiceTier, srfd.driverId)) searchRequestsForDrivers)
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) searchRequestsForDrivers) $ \(serviceTier, sentCount) ->
     TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) sentCount
 
