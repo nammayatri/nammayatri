@@ -1092,6 +1092,18 @@ TransporterConfig:
       invoiceSellerAddress: Maybe Text
       invoiceSellerTradeName: Maybe Text
       invoiceAppName: Maybe Text
+      enableInvoicePdfS3Storage: Maybe Bool # Nothing/False = render PDF on demand per request; True = eagerly render + store in S3 after invoice creation
+      # GST-compliant tax-invoice fields (rendered by the invoice template when set).
+      # ECO = e-commerce operator (MSIL) issuing the invoice on behalf of the driver/FO supplier.
+      ecoName: Maybe Text # Name of ECO under GST (e.g. MSIL)
+      ecoAddress: Maybe Text # Address of ECO under GST
+      ecoGstin: Maybe Text # GSTIN of ECO under GST
+      reverseCharge: Maybe Bool # Whether tax is payable on reverse-charge basis (invoice field 17); default No
+      hsnSacCode: Maybe Text # HSN/SAC code for the service (invoice field 9); overrides the per-txn default
+      categoryOfServices: Maybe Text # GST category of services rendered on the invoice
+      signatureImageUrl: Maybe BaseUrl # Authorised-signatory digital-signature image shown in the invoice footer
+      cityState: Maybe Text # City, State line shown in the invoice footer (place of issue)
+      enableDriverInvoice: Maybe Bool # Nothing/True = also emit the standalone driver/FO copy of the ride invoice (default); False = skip it (e.g. MSIL — the compliant invoice is rider-facing, driver is the supplier not a recipient)
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

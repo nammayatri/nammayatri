@@ -553,7 +553,8 @@ data RideItem = RideItem
     fleetNumber :: Maybe (EncryptedHashed Text),
     vehicleManufacturer :: Maybe Text,
     vehicleModel :: Maybe Text,
-    rideTags :: Maybe [LYT.TagNameValue]
+    rideTags :: Maybe [LYT.TagNameValue],
+    financeInvoiceId :: Maybe Text
   }
 
 data RideItemV2 = RideItemV2
@@ -880,6 +881,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
               vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
               vehicleModel = mbVrc >>= (.vehicleModel),
               rideTags = ride.rideTags,
+              financeInvoiceId = booking.financeInvoiceId,
               ..
             }
 

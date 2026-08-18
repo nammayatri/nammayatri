@@ -33,6 +33,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common as Common
+import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
@@ -73,6 +74,8 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           SyncRide.RideCompletedInfo {..} <- SyncRide.fetchRideCompletedInfo ride booking
           let tripEndLocation = bookingDetails.ride.tripEndPos
+          -- ONDC on_status: attach the invoice as a short-lived pre-signed PDF URL in documents[].
+          mbInvoiceDocumentUrl <- InvoiceDocument.getInvoiceDocumentUrl booking
           pure $ RideCompletedReq DRideCompletedReq {..}
         DRide.CANCELLED -> do
           case booking.status of
@@ -83,6 +86,8 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
             _ -> do
               bookingDetails <- SyncRide.fetchBookingDetails ride booking
               SyncRide.BookingCancelledInfo {..} <- SyncRide.fetchBookingCancelledInfo (Just ride)
+              -- ONDC on_status: attach the cancellation invoice as a short-lived pre-signed PDF URL in documents[].
+              mbInvoiceDocumentUrl <- InvoiceDocument.getInvoiceDocumentUrl booking
               pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Just bookingDetails, cancellationFee = Nothing, ..}
     Nothing -> do
       case booking.status of
@@ -96,6 +101,7 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.CANCELLED -> do
           bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing
+          mbInvoiceDocumentUrl <- InvoiceDocument.getInvoiceDocumentUrl booking
           pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationFee = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, cancellationReasonCode = bookingCancelledInfo.cancellationReasonCode, ..}
         DBooking.REALLOCATED -> do
           logDebug $ "BPP_STATUS_DEBUG: ERROR: REALLOCATED booking without ride record: " <> booking.id.getId

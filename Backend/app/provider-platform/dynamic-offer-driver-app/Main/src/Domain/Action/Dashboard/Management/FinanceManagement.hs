@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
     getFinanceManagementFinanceInvoicePdf,
+    getFinanceManagementFinanceInvoicePdfUrl,
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
     postFinanceManagementTdsReimbursementRequestSubmit,
@@ -102,6 +103,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
+import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
@@ -1831,7 +1833,8 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-      ctx =
+  mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
+  let ctx =
         FRT.buildInvoiceContext
           FRT.BuildInvoiceContextInput
             { language = lang,
@@ -1846,7 +1849,16 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
               mbCardLastFour = chosenPdfData.mbCardLastFour,
               mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
               mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
-              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber
+              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
+              reverseCharge = transporterConfig.invoiceConfig >>= (.reverseCharge),
+              ecoName = transporterConfig.invoiceConfig >>= (.ecoName),
+              ecoAddress = transporterConfig.invoiceConfig >>= (.ecoAddress),
+              ecoGstin = transporterConfig.invoiceConfig >>= (.ecoGstin),
+              hsnSacCode = transporterConfig.invoiceConfig >>= (.hsnSacCode),
+              categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
+              signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
+              cityState = transporterConfig.invoiceConfig >>= (.cityState),
+              qrImageDataUri = mbQrDataUri
             }
       mbInvType = case chosenInv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission
@@ -1859,6 +1871,24 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       { pdfBase64 = pdfBase64,
         invoiceNumber = chosenInv.invoiceNumber
       }
+
+-- | Resolve a short-lived presigned S3 GET URL for a single invoice's PDF, keyed by
+--   invoice id. Verifies the invoice belongs to the caller's merchant before handing
+--   back a link. When the merchant opted into PDF storage and the object is not yet
+--   materialised, it is rendered + stored on demand (write-through) so later calls are
+--   cheap presigns. @pdfUrl@ is Nothing when storage is disabled (fall back to the
+--   base64 /finance/invoice/pdf endpoint).
+getFinanceManagementFinanceInvoicePdfUrl ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow API.FinanceInvoicePdfUrlResp
+getFinanceManagementFinanceInvoicePdfUrl merchantShortId _opCity invoiceId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  inv <- QFinanceInvoice.findById (Id invoiceId) >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> invoiceId)
+  unless (inv.merchantId == merchant.id.getId) $ throwError AccessDenied
+  mbPdfUrl <- InvoiceDocument.getInvoicePdfPresignedUrl (Id invoiceId)
+  pure $ API.FinanceInvoicePdfUrlResp {invoiceId = invoiceId, pdfUrl = mbPdfUrl}
 
 getFinanceManagementFinanceSapJournals ::
   ShortId DM.Merchant ->
