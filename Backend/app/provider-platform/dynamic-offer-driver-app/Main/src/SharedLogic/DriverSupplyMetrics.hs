@@ -37,6 +37,10 @@ module SharedLogic.DriverSupplyMetrics
   )
 where
 
+import Data.Bifunctor (second)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -64,25 +68,38 @@ supplyKey kind cityId bucket = "driverSupply:" <> kind <> ":" <> cityId <> ":" <
 currentBucket :: UTCTime -> Int
 currentBucket now = floor (utcTimeToPOSIXSeconds now) `div` windowSecs
 
-recordSupplyEvent :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> [Id DP.Person] -> m ()
-recordSupplyEvent kind cityId driverIds =
-  unless (null driverIds) $ do
-    now <- getCurrentTime
-    Redis.sAddExp (supplyKey kind cityId.getId (currentBucket now)) (map (.getId) driverIds) windowTtlSecs
+-- Members are "&lt;tier&gt;|&lt;driverId&gt;" so one set per (city, window) still yields per-tier
+-- distinct counts — no extra Redis reads, and no need to enumerate service tiers.
+supplyMember :: (Text, Id DP.Person) -> Text
+supplyMember (tier, driverId) = tier <> "|" <> driverId.getId
 
-recordDriversPinged :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> [Id DP.Person] -> m ()
+recordSupplyEvent :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> [(Text, Id DP.Person)] -> m ()
+recordSupplyEvent kind cityId entries =
+  unless (null entries) $ do
+    now <- getCurrentTime
+    Redis.sAddExp (supplyKey kind cityId.getId (currentBucket now)) (map supplyMember entries) windowTtlSecs
+
+recordDriversPinged :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> [(Text, Id DP.Person)] -> m ()
 recordDriversPinged = recordSupplyEvent "pinged"
 
-recordDriverAccepted :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> m ()
-recordDriverAccepted cityId driverId = recordSupplyEvent "accepted" cityId [driverId]
+recordDriverAccepted :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> Id DP.Person -> m ()
+recordDriverAccepted cityId tier driverId = recordSupplyEvent "accepted" cityId [(tier, driverId)]
 
-recordDriverOnRide :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> m ()
-recordDriverOnRide cityId driverId = recordSupplyEvent "onride" cityId [driverId]
+recordDriverOnRide :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> Id DP.Person -> m ()
+recordDriverOnRide cityId tier driverId = recordSupplyEvent "onride" cityId [(tier, driverId)]
 
-countWindow :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> Int -> m Int
-countWindow kind cityId bucket = do
+-- | Distinct drivers per tier for one window. Malformed members (no separator) are
+-- dropped rather than counted under a bogus tier.
+countWindowByTier :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> Int -> m [(Text, Int)]
+countWindowByTier kind cityId bucket = do
   (members :: [Text]) <- Redis.sMembers (supplyKey kind cityId.getId bucket)
-  pure $ length members
+  let parsed = mapMaybe parseMember members
+      byTier = Map.fromListWith Set.union [(tier, Set.singleton driverId) | (tier, driverId) <- parsed]
+  pure $ map (second Set.size) (Map.toList byTier)
+  where
+    parseMember m =
+      let (tier, rest) = T.breakOn "|" m
+       in if T.null rest then Nothing else Just (tier, T.drop 1 rest)
 
 -- | Forked once at app boot; must never die, so each tick is exception-guarded.
 runDriverSupplyMetricsPublisher ::
@@ -127,10 +144,11 @@ runDriverSupplyMetricsPublisher = withLogTag "DriverSupplyMetrics" $ go (-1)
           online <- QDI.countOnlineByCity city.id
           setDriverSupplyGauge supplyMetrics.driversOnlineGauge merchantLabel cityLabel online
           forM_ bucketsToPublish $ \bucket -> do
-            pinged <- countWindow "pinged" city.id bucket
-            accepted <- countWindow "accepted" city.id bucket
-            onRide <- countWindow "onride" city.id bucket
-            setDriverSupplyGauge supplyMetrics.driversReceivingGauge merchantLabel cityLabel pinged
-            setDriverSupplyGauge supplyMetrics.driversAcceptingGauge merchantLabel cityLabel accepted
-            setDriverSupplyGauge supplyMetrics.driversOnRideGauge merchantLabel cityLabel onRide
+            publishTierGauge supplyMetrics.driversReceivingGauge "pinged" merchantLabel cityLabel city.id bucket
+            publishTierGauge supplyMetrics.driversAcceptingGauge "accepted" merchantLabel cityLabel city.id bucket
+            publishTierGauge supplyMetrics.driversOnRideGauge "onride" merchantLabel cityLabel city.id bucket
       pure $ max lastPublishedBucket prevBucket
+
+    publishTierGauge gaugeVec kind merchantLabel cityLabel cityId bucket = do
+      perTier <- countWindowByTier kind cityId bucket
+      forM_ perTier $ \(tier, n) -> setDriverSupplyTierGauge gaugeVec merchantLabel cityLabel tier n

@@ -17,6 +17,7 @@ module Tools.Metrics.DriverSupplyMetrics.Types
     DriverSupplyMetricsContainer (..),
     registerDriverSupplyMetricsContainer,
     setDriverSupplyGauge,
+    setDriverSupplyTierGauge,
   )
 where
 
@@ -38,28 +39,46 @@ type HasDriverSupplyMetrics m r =
 -- label are benign (last-writer-wins on identical numbers).
 -- merchant = merchant shortId, city = operating city name.
 -- DASHBOARDS: every pod exports its own series — always aggregate with
--- max by (merchant, city), NEVER sum across instances.
+-- max by (...), NEVER sum across instances.
 type DriverSupplyGauge = P.Vector P.Label2 P.Gauge
+
+-- The windowed metrics additionally carry vehicle_service_tier, matching every other
+-- BPP funnel counter — supply shortages are tier-specific, and a city total blends
+-- auto/cab/bike so a collapse in one tier can hide behind a flat line.
+-- NOTE: summing across tiers OVER-counts a driver who serves several tiers; each
+-- series is "distinct drivers for that (city, tier)". Use a specific tier, or
+-- BPP_drivers_online for the city-wide figure.
+type DriverSupplyTierGauge = P.Vector P.Label3 P.Gauge
 
 data DriverSupplyMetricsContainer = DriverSupplyMetricsContainer
   { driversOnlineGauge :: DriverSupplyGauge,
-    driversReceivingGauge :: DriverSupplyGauge,
-    driversAcceptingGauge :: DriverSupplyGauge,
-    driversOnRideGauge :: DriverSupplyGauge
+    driversReceivingGauge :: DriverSupplyTierGauge,
+    driversAcceptingGauge :: DriverSupplyTierGauge,
+    driversOnRideGauge :: DriverSupplyTierGauge
   }
 
 registerDriverSupplyMetricsContainer :: IO DriverSupplyMetricsContainer
 registerDriverSupplyMetricsContainer = do
-  driversOnlineGauge <- reg "BPP_drivers_online" "Current on-duty drivers (active: ONLINE or SILENT mode, including on-ride) per driver_information, refreshed periodically from the read replica"
-  driversReceivingGauge <- reg "BPP_drivers_receiving_searches" "Distinct drivers sent at least one search request in the last completed 10-minute window"
-  driversAcceptingGauge <- reg "BPP_drivers_accepting_searches" "Distinct drivers who accepted at least one search request in the last completed 10-minute window"
-  driversOnRideGauge <- reg "BPP_drivers_on_ride" "Distinct drivers assigned to at least one ride in the last completed 10-minute window"
+  -- No vehicle_service_tier here: driver_information carries no tier (a driver's tiers
+  -- come from their vehicle and preferences), so this gauge is city-wide by necessity.
+  -- "active" is the same predicate the dispatch filter uses — dispatch-eligible drivers,
+  -- which spans ONLINE and SILENT mode and includes drivers currently on a ride.
+  -- Subtract BPP_drivers_on_ride for a free-supply view.
+  driversOnlineGauge <- reg "BPP_drivers_online" "Current dispatch-eligible drivers (driver_information.active, spans ONLINE/SILENT and includes on-ride), refreshed periodically from the read replica"
+  driversReceivingGauge <- regTier "BPP_drivers_receiving_searches" "Distinct drivers sent at least one search request in the last completed 10-minute window, per vehicle service tier"
+  driversAcceptingGauge <- regTier "BPP_drivers_accepting_searches" "Distinct drivers who accepted at least one search request in the last completed 10-minute window, per vehicle service tier"
+  driversOnRideGauge <- regTier "BPP_drivers_on_ride" "Distinct drivers assigned to at least one ride in the last completed 10-minute window, per vehicle service tier"
   return $ DriverSupplyMetricsContainer {..}
   where
     reg name description = P.register . P.vector ("merchant", "city") . P.gauge $ P.Info name description
+    regTier name description = P.register . P.vector ("merchant", "city", "vehicle_service_tier") . P.gauge $ P.Info name description
 
 -- (param is gaugeVec, not "gauge": Prometheus is imported unqualified too, and a
 -- local named gauge shadows P.gauge — fatal under this package's -Wall -Werror)
 setDriverSupplyGauge :: MonadIO m => DriverSupplyGauge -> Text -> Text -> Int -> m ()
 setDriverSupplyGauge gaugeVec merchantLabel cityLabel value =
   liftIO $ P.withLabel gaugeVec (merchantLabel, cityLabel) (`P.setGauge` fromIntegral value)
+
+setDriverSupplyTierGauge :: MonadIO m => DriverSupplyTierGauge -> Text -> Text -> Text -> Int -> m ()
+setDriverSupplyTierGauge gaugeVec merchantLabel cityLabel tierLabel value =
+  liftIO $ P.withLabel gaugeVec (merchantLabel, cityLabel, tierLabel) (`P.setGauge` fromIntegral value)
