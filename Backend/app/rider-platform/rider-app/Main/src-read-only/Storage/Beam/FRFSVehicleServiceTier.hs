@@ -9,6 +9,7 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
@@ -19,8 +20,12 @@ data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isRescheduleAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     longName :: B.C f Kernel.Prelude.Text,
     maxCancellationCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRescheduleCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRescheduleDaysAhead :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRescheduleTimeAfterStart :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     providerCode :: B.C f Kernel.Prelude.Text,

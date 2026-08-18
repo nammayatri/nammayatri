@@ -214,6 +214,12 @@ CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_waybill_no ON atlas_app.frfs_t
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN reschedule_count integer ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN parent_booking_id character varying(36) ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_applied_entity_id text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN overridden_amount double precision ;
