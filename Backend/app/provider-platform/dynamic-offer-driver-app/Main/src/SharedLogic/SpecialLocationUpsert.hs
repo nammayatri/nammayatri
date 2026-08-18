@@ -100,6 +100,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     render :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
+    gateInfoGateConfig :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text,
     boothSpecificFleet :: Maybe Text
@@ -149,6 +150,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     render <- optional (r .: "render")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
+    gateInfoGateConfig <- optional (r .: "gate_info_gate_config")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
     boothSpecificFleet <- optional (r .: "booth_specific_fleet")
@@ -192,6 +194,15 @@ parseBoolMap :: Maybe Text -> Maybe (Map.Map Text Bool)
 parseBoolMap mbT = do
   t <- mbT >>= cleanField
   Aeson.decodeStrict (TE.encodeUtf8 t)
+
+resolveGateConfig :: Int -> Maybe Text -> Flow (Maybe DGI.GateConfig)
+resolveGateConfig idx mbFieldValue =
+  case mbFieldValue >>= cleanField of
+    Nothing -> pure Nothing
+    Just t ->
+      fmap Just $
+        Aeson.decodeStrict (TE.encodeUtf8 t)
+          & fromMaybeM (InvalidRequest $ "Invalid Gate Info (config): " <> t <> " at row: " <> show idx)
 
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
@@ -306,6 +317,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
         return $ Just gateGeom
       else return Nothing
   resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
+  resolvedGateConfig <- resolveGateConfig idx row.gateInfoGateConfig
   let specialLocation =
         DSL.SpecialLocation
           { id = Id locationName,
@@ -362,7 +374,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
             pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
             notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
-            enableQueueFilter = parseBoolMap row.enableQueueFilter
+            enableQueueFilter = parseBoolMap row.enableQueueFilter,
+            gateConfig = resolvedGateConfig
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
 
@@ -492,5 +505,6 @@ mergeGateInfoWithExisting new (Just old) =
       DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec,
       -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
       DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
-      DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter
+      DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter,
+      DGI.gateConfig = new.gateConfig <|> old.gateConfig
      }

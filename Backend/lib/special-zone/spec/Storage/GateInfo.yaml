@@ -12,6 +12,10 @@ GateInfo:
   types:
     GateType:
       enum: "Pickup,Drop,Parking"
+    GateConfig:
+      enablePerKmFare: Maybe Bool
+      enableIsDemandHigh: Maybe Bool
+      derive': Generic,Show,Eq,ToJSON,FromJSON,Data.OpenApi.ToSchema
 
   fields:
     id: Id GateInfo
@@ -41,6 +45,7 @@ GateInfo:
     pickupRequestResponseTimeoutInSec: Maybe Int
     notificationActiveTillInSec: Maybe Int
     enableQueueFilter: Maybe (Map Text Bool)
+    gateConfig: Maybe GateConfig
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -57,6 +62,7 @@ GateInfo:
   beamType:
     point: Text
     enableQueueFilter: Maybe Text
+    gateConfig: Maybe Text
 
   sqlType:
     id: character varying(36)
@@ -70,10 +76,12 @@ GateInfo:
     demandThresholdsJson: text
     navigationInstructionsJson: text
     enableQueueFilter: text
+    gateConfig: text
 
   fromTType:
     point: Lib.Queries.Transformers.GateInfo.mkLatLongFromText point|E
     enableQueueFilter: Lib.Queries.Transformers.GateInfo.decodeBoolMap enableQueueFilter|E
+    gateConfig: Lib.Queries.Transformers.GateInfo.decodeGateConfig gateConfig|E
     minDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap minDriverThresholdsJson|E
     maxDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap maxDriverThresholdsJson|E
     demandThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap demandThresholdsJson|E
@@ -82,6 +90,7 @@ GateInfo:
   toTType:
     point: Lib.Queries.Transformers.GateInfo.latLongToText point|E
     enableQueueFilter: Lib.Queries.Transformers.GateInfo.encodeBoolMap enableQueueFilter|E
+    gateConfig: Lib.Queries.Transformers.GateInfo.encodeGateConfig gateConfig|E
     minDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
     maxDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
     demandThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I

@@ -3500,6 +3500,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            gateConfig = mbGate >>= (.gateConfig),
             navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
           }

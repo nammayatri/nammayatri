@@ -35,3 +35,8 @@ ALTER TABLE atlas_driver_offer_bpp.gate_info ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN navigation_instructions_json text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN gate_config text ;
