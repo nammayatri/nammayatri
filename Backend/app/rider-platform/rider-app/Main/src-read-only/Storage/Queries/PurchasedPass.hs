@@ -32,6 +32,9 @@ findAllByPersonIdsAndStatus personId status = do findAllWithKV [Se.And [Se.Is Be
 findByPassNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
 findByPassNumber passNumber = do findOneWithKV [Se.Is Beam.passNumber $ Se.Eq passNumber]
 
+updateActivatedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
+updateActivatedAt activatedAt id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.activatedAt activatedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDeviceSwitchCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ())
 updateDeviceSwitchCount deviceSwitchCount id = do
   _now <- getCurrentTime
@@ -63,7 +66,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
+    [ Se.Set Beam.activatedAt activatedAt,
+      Se.Set Beam.applicableVehicleServiceTiers applicableVehicleServiceTiers,
       Se.Set Beam.benefitDescription benefitDescription,
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,

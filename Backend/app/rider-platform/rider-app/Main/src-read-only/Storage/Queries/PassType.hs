@@ -30,12 +30,14 @@ updateByPrimaryKey (Domain.Types.PassType.PassType {..}) = do
   updateWithKV
     [ Se.Set Beam.catchline catchline,
       Se.Set Beam.description description,
+      Se.Set Beam.maxPhotoChangeLimit maxPhotoChangeLimit,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.passCategoryId (Kernel.Types.Id.getId passCategoryId),
       Se.Set Beam.passEnum passEnum,
+      Se.Set Beam.photoReUploadTimeLimit photoReUploadTimeLimit,
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]

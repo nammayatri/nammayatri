@@ -108,6 +108,9 @@ types:
     status: StatusType
     purchaseDate: Day
     daysToExpire: Int
+    photoUploadTimeLimit: Maybe UTCTime
+    photoChangedCount: Maybe Int
+    maxPhotoChangeConfigCount: Maybe Int
     startDate: Day
     expiryDate: Day
     deviceMismatch: Bool
@@ -250,6 +253,7 @@ apis:
         purchasedPassId: Id PurchasedPass
       query:
         imeiNumber: Text
+        reupload: Bool
       multipart:
         type: IssueMediaUploadReq
       response:

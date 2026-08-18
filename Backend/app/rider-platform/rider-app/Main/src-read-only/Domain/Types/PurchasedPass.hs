@@ -20,7 +20,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data PurchasedPass = PurchasedPass
-  { applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
+  { activatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
     benefitDescription :: Kernel.Prelude.Text,
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

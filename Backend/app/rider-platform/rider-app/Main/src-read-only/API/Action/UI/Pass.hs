@@ -161,6 +161,9 @@ type API =
       :> QueryParam
            "imeiNumber"
            Data.Text.Text
+      :> QueryParam
+           "reupload"
+           Kernel.Prelude.Bool
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
            IssueManagement.Common.UI.Issue.IssueMediaUploadReq
@@ -299,10 +302,11 @@ postMultimodalPassUploadProfilePicture ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass ->
     Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
     Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes
   )
-postMultimodalPassUploadProfilePicture a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalPassUploadProfilePicture a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalPassUploadProfilePictureV1 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

@@ -21,7 +21,8 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
     pure $
       Just
         Domain.Types.PurchasedPassPayment.PurchasedPassPayment
-          { amount = amount,
+          { activatedAt = activatedAt,
+            amount = amount,
             availableTripCount = availableTripCount,
             benefitDescription = Kernel.Prelude.fromMaybe "" benefitDescription,
             benefitType = benefitType,
@@ -37,6 +38,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             passEnum = passEnum,
             passId = Kernel.Types.Id.Id <$> passId,
             passName = passName,
+            passPhotoChangeCount = passPhotoChangeCount,
             passPhotoMediaId = Kernel.Types.Id.Id <$> passPhotoMediaId,
             personId = Kernel.Types.Id.Id personId,
             profilePicture = profilePicture,
@@ -50,7 +52,8 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
 instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.PurchasedPassPayment where
   toTType' (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
     Beam.PurchasedPassPaymentT
-      { Beam.amount = amount,
+      { Beam.activatedAt = activatedAt,
+        Beam.amount = amount,
         Beam.availableTripCount = availableTripCount,
         Beam.benefitDescription = Kernel.Prelude.Just benefitDescription,
         Beam.benefitType = benefitType,
@@ -66,6 +69,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.passEnum = passEnum,
         Beam.passId = Kernel.Types.Id.getId <$> passId,
         Beam.passName = passName,
+        Beam.passPhotoChangeCount = passPhotoChangeCount,
         Beam.passPhotoMediaId = Kernel.Types.Id.getId <$> passPhotoMediaId,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.profilePicture = profilePicture,

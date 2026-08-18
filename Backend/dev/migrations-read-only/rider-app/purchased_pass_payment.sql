@@ -58,3 +58,14 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_id character varyin
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN available_trip_count integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_photo_change_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN activated_at timestamp with time zone ;

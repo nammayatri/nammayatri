@@ -118,6 +118,9 @@ findOneByPaymentOrderId ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.PurchasedPassPayment.PurchasedPassPayment))
 findOneByPaymentOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
+updateActivatedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
+updateActivatedAt activatedAt id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.activatedAt activatedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateAvailableTripCountById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> m ())
@@ -140,6 +143,19 @@ updatePersonIdByPurchasedPassId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =
 updatePersonIdByPurchasedPassId personId purchasedPassId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.personId (Kernel.Types.Id.getId personId), Se.Set Beam.updatedAt _now] [Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId)]
+
+updatePhotoChangeCountByPurchasedPassIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> [Domain.Types.PurchasedPass.StatusType] -> m ())
+updatePhotoChangeCountByPurchasedPassIdAndStatus passPhotoChangeCount purchasedPassId status = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.passPhotoChangeCount passPhotoChangeCount, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.Eq (Kernel.Types.Id.getId purchasedPassId),
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
 
 updateProfilePictureByPurchasedPassIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -194,7 +210,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount amount,
+    [ Se.Set Beam.activatedAt activatedAt,
+      Se.Set Beam.amount amount,
       Se.Set Beam.availableTripCount availableTripCount,
       Se.Set Beam.benefitDescription (Kernel.Prelude.Just benefitDescription),
       Se.Set Beam.benefitType benefitType,
@@ -209,6 +226,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.passEnum passEnum,
       Se.Set Beam.passId (Kernel.Types.Id.getId <$> passId),
       Se.Set Beam.passName passName,
+      Se.Set Beam.passPhotoChangeCount passPhotoChangeCount,
       Se.Set Beam.passPhotoMediaId (Kernel.Types.Id.getId <$> passPhotoMediaId),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.profilePicture profilePicture,
