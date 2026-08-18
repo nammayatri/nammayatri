@@ -864,6 +864,77 @@ driver sign-in screen must not offer the button. (The passenger app *does* offer
 it; it fails honestly with "Impossible d'envoyer le code pour le moment", which is
 accurate, and it has never once succeeded.)
 
+## Driver documents — why `register/*` is deliberately never called
+
+**`POST /ui/driver/register/validateImage` sends the photo to India.** Not
+figuratively: the route stores nothing itself, it forwards the image to
+**Idfy**, an Indian document-verification service, and returns Idfy's verdict.
+The only document types the binary knows are `ind_driving_license` and `ind_rc`
+— *ind* as in India — so it could not read an Algerian licence even if we paid
+for it.
+
+Measured 2026-08-18. Left alone it answers:
+
+```
+500 IDFY_ERROR: ConnectionError … Connection refused
+```
+
+because `idfyCfg.url` is `http://localhost:6235` — a mock upstream expects for
+local development and this stack has never run. So **nothing has ever left the
+country**, and that is luck rather than design: real Idfy credentials in that
+config would send every driver's licence to a third party abroad.
+
+### The decision, 2026-08-19
+
+The client's rule is that driver documents, vehicle model, colour and the rest
+go to **our own admin website**, and that nothing touches an Indian service.
+
+So the app does **not** call these routes at all:
+
+| Route | Why not |
+|---|---|
+| `POST /ui/driver/register/validateImage` | forwards the image to Idfy |
+| `POST /ui/driver/register/dl` | needs an `imageId` only Idfy can issue |
+| `POST /ui/driver/register/rc` | same |
+| `GET /ui/driver/register/status` | reports Idfy's verdict, so it will read `NO_DOC_AVAILABLE` for ever |
+
+Documents will go to a service of ours, into our own storage, read by the admin
+site when it exists. Until then the agency collects papers the way it already
+does, and enables the driver from the office side — which it has to do anyway,
+because **attaching a vehicle is an office operation** (`POST /ui/org/vehicle/…`
+answers `403 ACCESS_DENIED` to a driver's own token).
+
+The consequence to hold on to: **D7 must read our store, never
+`register/status`.** The backend's verification fields stay empty by design, and
+a screen that trusted them would tell every driver his file had not arrived.
+
+### The contract, if it is ever needed again
+
+Mapped from the binary rather than from Idfy's public documentation, which
+describes a newer service. Kept because rediscovering it cost an evening.
+
+```
+POST /v3/tasks/sync/validate/document
+headers   api-key, account-id
+body      { task_id, group_id, data: { doc_type, document1: <base64> } }
+
+reply     decodes as Idfy.Types.Response.IdfyResponse:
+          action, task_id, group_id, request_id, status, type,
+          created_at, completed_at,
+          result: { detected_doc_type, readability { is_readable, confidence },
+                    source_output, extraction_output }
+```
+
+`action` and `created_at` are the two whose absence produces
+`DecodeFailure … key "…" not found` and a 500 that reads, from the app, as *the
+service is unreachable* rather than *a field is missing*. The readability
+verdict was never made to come back positive: `true`, `"yes"` and `1` all
+produced `400 IMAGE_NOT_READABLE`, so the value it wants is still unknown. It
+does not matter now, and it is written down in case it ever does.
+
+There is also a webhook, `POST /service/idfy/verification`, for the asynchronous
+path. Unused for the same reason.
+
 ## Playing a driver — `./simulate-driver.py`
 
 ```bash
