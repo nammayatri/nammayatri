@@ -1983,7 +1983,7 @@ createRecentLocationForTaxi booking = do
     case mbExistingLocation of
       Just existingLocation -> do
         -- If found, increase frequency
-        SQRL.increaceFrequencyById existingLocation.id booking.estimatedTotalFare.amount
+        SQRL.increaceFrequencyById existingLocation.id
       Nothing -> do
         -- If not found, create new recent location
         uuid <- generateGUID

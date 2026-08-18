@@ -247,11 +247,10 @@ getNearbyBusesAsBuckets merchantOperatingCityId riderConfig location = do
         NB.NearbyBusesRequest
           { userLat = location.lat,
             userLon = location.lon,
-            vehicleType = Just Spe.BUS,
+            vehicleType = Spe.BUS,
             platformType = DIBC.MULTIMODAL,
             requireNearbyBuses = True,
-            requireRecentRide = False,
-            fetchAll = Nothing
+            requireRecentRide = False
           }
 
   nearbyBuses <- getSimpleNearbyBuses merchantOperatingCityId riderConfig nearbyBusesReq

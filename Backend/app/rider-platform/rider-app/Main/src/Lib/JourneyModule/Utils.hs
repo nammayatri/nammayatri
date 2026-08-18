@@ -1375,7 +1375,7 @@ createRecentLocationForMultimodal journey = do
       let toGeohash = T.pack <$> Geohash.encode 6 (endLocation.latitude, endLocation.longitude)
       mbRecentLocation <- SQRL.findByRiderIdAndGeohashAndEntityType journey.riderId toGeohash fromGeohash (if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode)
       case mbRecentLocation of
-        Just recentLocation -> SQRL.increaceFrequencyById recentLocation.id fare
+        Just recentLocation -> SQRL.increaceFrequencyById recentLocation.id
         Nothing -> do
           let recentLocation =
                 DTRL.RecentLocation
@@ -1427,13 +1427,9 @@ createRecentLocationForFRFSBooking booking = do
       case (fromGeohash, toGeohash) of
         (Just fg, Just tg) -> do
           now <- getCurrentTime
-          quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
-          let ticketFare =
-                fromMaybe booking.totalPrice.amount $
-                  (find ((== ADULT) . (.category)) quoteCategories <|> listToMaybe quoteCategories) <&> (.price.amount)
           mbRecentLocation <- SQRL.findByRiderIdAndGeohashAndEntityType booking.riderId (Just tg) (Just fg) entityType
           case mbRecentLocation of
-            Just recentLocation -> SQRL.increaceFrequencyById recentLocation.id ticketFare
+            Just recentLocation -> SQRL.increaceFrequencyById recentLocation.id
             Nothing -> do
               uuid <- generateGUID
               let recentLocation =
@@ -1451,7 +1447,7 @@ createRecentLocationForFRFSBooking booking = do
                         merchantOperatingCityId = booking.merchantOperatingCityId,
                         createdAt = now,
                         updatedAt = now,
-                        fare = Just ticketFare,
+                        fare = Just booking.totalPrice.amount,
                         fromGeohash = Just fg,
                         toGeohash = Just tg
                       }

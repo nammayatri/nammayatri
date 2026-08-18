@@ -36,18 +36,14 @@ types:
       toStopCode: Text
       fare: Price
       routeCode: Maybe Text
-      vehicleType: VehicleCategory
-      frequency: Int
-      updatedAt: UTCTime
 
   NearbyBusesRequest:
       userLat: Double
       userLon: Double
       platformType: PlatformType
-      vehicleType: Maybe VehicleCategory
+      vehicleType: VehicleCategory
       requireRecentRide: Bool
       requireNearbyBuses: Bool
-      fetchAll: Maybe Bool
 
   NearbyBusesResponse:
       nearbyBuses: [NearbyBus]

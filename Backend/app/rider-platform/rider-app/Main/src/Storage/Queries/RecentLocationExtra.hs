@@ -11,7 +11,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
-import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -40,21 +39,6 @@ findRecentLocationsByEntityType entityType personId mocId = do
     (Just 10)
     Nothing
 
--- Full, uncapped recent-location history across public-transport entity types (BUS/METRO/SUBWAY),
--- used to seed the frontend's local cache on login/periodic sync (fetchAll), not for per-screen quick suggestions.
-findAllPublicTransportRecentLocations :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Id.Id MerchantOperatingCity -> m [RecentLocation]
-findAllPublicTransportRecentLocations personId mocId = do
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.riderId $ Se.Eq (Id.getId personId),
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Id.getId mocId),
-          Se.Is Beam.entityType $ Se.In [DRecentLocation.BUS, DRecentLocation.METRO, DRecentLocation.SUBWAY]
-        ]
-    ]
-    (Se.Desc Beam.frequency)
-    Nothing
-    Nothing
-
 findRecentLocations :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Id.Id MerchantOperatingCity -> m [RecentLocation]
 findRecentLocations personId mocId = do
   findAllWithOptionsKV
@@ -67,18 +51,14 @@ findRecentLocations personId mocId = do
     (Just 10)
     Nothing
 
-increaceFrequencyById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id RecentLocation -> Kernel.Types.Common.HighPrecMoney -> m ()
-increaceFrequencyById id newFare = do
+increaceFrequencyById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id RecentLocation -> m ()
+increaceFrequencyById id = do
   recentLoc <- findOneWithKV [Se.Is Beam.id $ Se.Eq (Id.getId id)]
   case recentLoc of
     Nothing -> pure ()
-    Just rl -> do
-      now <- getCurrentTime
+    Just rl ->
       updateOneWithKV
-        [ Se.Set Beam.frequency ((rl.frequency :: Int) + 1),
-          Se.Set Beam.updatedAt now,
-          Se.Set Beam.fare (Just newFare)
-        ]
+        [Se.Set Beam.frequency ((rl.frequency :: Int) + 1)]
         [Se.Is Beam.id $ Se.Eq (Id.getId id)]
 
 findByRiderIdAndGeohashAndEntityType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id Person.Person -> Maybe Text -> Maybe Text -> DRecentLocation.EntityType -> m (Maybe RecentLocation)
