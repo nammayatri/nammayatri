@@ -38,6 +38,7 @@ module BecknV2.OnDemand.Types
     Contact (..),
     Context (..),
     Country (..),
+    Cred (..),
     Customer (..),
     Descriptor (..),
     Domain (..),
@@ -1584,9 +1585,38 @@ optionsPaymentParams =
         ("paymentParamsVirtualPaymentAddress", "virtual_payment_address")
       ]
 
+-- | Describes a credential held by a person, e.g. a driver's membership tier or trip count
+data Cred = Cred
+  { -- | The type of credential, e.g. MEMBERSHIP_TIER, ACTIVE_SINCE, TOTAL_NUMBER_OF_TRIPS
+    credType :: Maybe Text,
+    -- | The value of the credential
+    credId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Cred where
+  parseJSON = genericParseJSON optionsCred
+
+instance ToJSON Cred where
+  toJSON = genericToJSON optionsCred
+
+optionsCred :: Options
+optionsCred =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("credType", "type"),
+        ("credId", "id")
+      ]
+
 -- | Describes a person as any individual
 data Person = Person
-  { -- | Gender of the person
+  { -- |
+    personCreds :: Maybe [Cred],
+    -- | Gender of the person
     personGender :: Maybe Text,
     -- | Describes the identity of the person
     personId :: Maybe Text,
@@ -1613,7 +1643,8 @@ optionsPerson =
     }
   where
     table =
-      [ ("personGender", "gender"),
+      [ ("personCreds", "creds"),
+        ("personGender", "gender"),
         ("personId", "id"),
         ("personImage", "image"),
         ("personName", "name"),
