@@ -246,7 +246,7 @@ mkRideCompletedPayment currency paymentMethodInfo paymentUrl = do
       uri = paymentUrl
     }
 
-tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideAssignedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> EventEnum.FulfillmentState -> m Spec.Order
+tfAssignedReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Common.DRideAssignedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> EventEnum.FulfillmentState -> m Spec.Order
 tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfillmentState = do
   let Common.BookingDetails {..} = bookingDetails
       arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
@@ -279,7 +279,7 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
         orderUpdatedAt = Just booking.updatedAt
       }
 
-tfStartReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideStartedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfStartReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Common.DRideStartedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
       personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripStartLocation else Nothing
@@ -309,7 +309,7 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
         orderUpdatedAt = Just booking.updatedAt
       }
 
-tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DRideCompletedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfCompleteReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Common.DRideCompletedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let Common.BookingDetails {..} = bookingDetails
   let personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 tripEndLocation else Nothing
@@ -357,7 +357,7 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
         orderUpdatedAt = Just booking.updatedAt
       }
 
-tfCancelReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DBookingCancelledReq -> DBC.BecknConfig -> m Spec.Order
+tfCancelReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Common.DBookingCancelledReq -> DBC.BecknConfig -> m Spec.Order
 tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
   let quote = Utils.tfQuotation booking
   fulfillment <- forM bookingDetails $ \bookingDetails' -> do
@@ -388,7 +388,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
         orderUpdatedAt = Just booking.updatedAt
       }
 
-tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r) => Common.DDriverArrivedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
+tfArrivedReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Common.DDriverArrivedReq -> Maybe FarePolicyD.FullFarePolicy -> DBC.BecknConfig -> m Spec.Order
 tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
   let BookingDetails {..} = bookingDetails
       quote = Utils.tfQuotation booking
@@ -415,7 +415,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
         orderUpdatedAt = Just booking.updatedAt
       }
 
-tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
+tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
 tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   let BookingDetails {..} = bookingDetails
       driverReachedDestinationTags = if isValueAddNP then Utils.mkDestinationReachedTimeTagGroupV2 destinationArrivalTime else Nothing
