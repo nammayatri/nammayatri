@@ -740,8 +740,10 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
       logInfo $ "CSV parse error: " <> show err
       return [Dashboard.Common.UpdateTagBulkRes "parse-error" False (Just $ T.pack err)]
     Right (_, v) -> do
+      merchant <- findMerchantByShortId merchantShortId
+      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
       results <- forM (V.toList v) $ \row -> do
-        res <- withTryCatch "processDriverTagUpdate" (processDriverTagUpdate merchantShortId opCity row)
+        res <- withTryCatch "processDriverTagUpdate" (processDriverTagUpdate merchant merchantOpCityId row)
         case res of
           Left err -> do
             let errorMsg = show err
@@ -752,11 +754,8 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
             return $ Dashboard.Common.UpdateTagBulkRes row.driverId True Nothing
       return results
   where
-    processDriverTagUpdate :: ShortId DM.Merchant -> Context.City -> Dashboard.Common.DriverTagBulkCSVRow -> Flow ()
-    processDriverTagUpdate merchantShortId' opCity' row = do
-      merchant <- findMerchantByShortId merchantShortId'
-      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity')
-
+    processDriverTagUpdate :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Dashboard.Common.DriverTagBulkCSVRow -> Flow ()
+    processDriverTagUpdate merchant merchantOpCityId row = do
       -- Convert driverId to Person ID
       let personId = Id row.driverId
       driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
