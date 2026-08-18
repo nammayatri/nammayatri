@@ -17,6 +17,7 @@ import EulerHS.Prelude
 import qualified IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue
 import qualified IssueManagement.Common.UI.Issue
+import qualified IssueManagement.Domain.Types.Issue.IssueApiIntegration
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
@@ -31,10 +32,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("issueV2" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdate :<|> PostIssueChatUpload :<|> PostIssueComment :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueKaptureCreate :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueCategoryAllCopy :<|> PostIssueChatMessage :<|> GetIssueChatMessages :<|> PostIssueChatRead))
+type API = ("issueV2" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdate :<|> PostIssueChatUpload :<|> PostIssueComment :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueKaptureCreate :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueCategoryAllCopy :<|> PostIssueChatMessage :<|> GetIssueChatMessages :<|> PostIssueChatRead :<|> GetIssueApiIntegrationList :<|> PostIssueApiIntegrationUpsert :<|> PostIssueApiIntegrationDelete :<|> PostIssueApiIntegrationTest :<|> GetIssueFlowSimulate))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueChatUpload merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city :<|> postIssueKaptureCreate merchantId city :<|> getIssueCategoryDetail merchantId city :<|> getIssueOptionDetail merchantId city :<|> getIssueMessageDetail merchantId city :<|> getIssueMessageList merchantId city :<|> getIssueOptionList merchantId city :<|> deleteIssueCategory merchantId city :<|> deleteIssueOption merchantId city :<|> deleteIssueMessage merchantId city :<|> getIssueCategoryFlowPreview merchantId city :<|> getIssueTranslations merchantId city :<|> postIssueBulkUpsertTranslations merchantId city :<|> getIssueConfig merchantId city :<|> postIssueConfigUpdate merchantId city :<|> postIssueCategoryReorder merchantId city :<|> postIssueOptionReorder merchantId city :<|> postIssueMessageReorder merchantId city :<|> postIssueCategoryCopy merchantId city :<|> postIssueCategoryDefaultCopy merchantId city :<|> postIssueCategoryAllCopy merchantId city :<|> postIssueChatMessage merchantId city :<|> getIssueChatMessages merchantId city :<|> postIssueChatRead merchantId city
+handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueChatUpload merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city :<|> postIssueKaptureCreate merchantId city :<|> getIssueCategoryDetail merchantId city :<|> getIssueOptionDetail merchantId city :<|> getIssueMessageDetail merchantId city :<|> getIssueMessageList merchantId city :<|> getIssueOptionList merchantId city :<|> deleteIssueCategory merchantId city :<|> deleteIssueOption merchantId city :<|> deleteIssueMessage merchantId city :<|> getIssueCategoryFlowPreview merchantId city :<|> getIssueTranslations merchantId city :<|> postIssueBulkUpsertTranslations merchantId city :<|> getIssueConfig merchantId city :<|> postIssueConfigUpdate merchantId city :<|> postIssueCategoryReorder merchantId city :<|> postIssueOptionReorder merchantId city :<|> postIssueMessageReorder merchantId city :<|> postIssueCategoryCopy merchantId city :<|> postIssueCategoryDefaultCopy merchantId city :<|> postIssueCategoryAllCopy merchantId city :<|> postIssueChatMessage merchantId city :<|> getIssueChatMessages merchantId city :<|> postIssueChatRead merchantId city :<|> getIssueApiIntegrationList merchantId city :<|> postIssueApiIntegrationUpsert merchantId city :<|> postIssueApiIntegrationDelete merchantId city :<|> postIssueApiIntegrationTest merchantId city :<|> getIssueFlowSimulate merchantId city
 
 type GetIssueCategoryList =
   ( ApiAuth
@@ -332,6 +333,46 @@ type PostIssueChatRead =
       :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueChatRead
   )
 
+type GetIssueApiIntegrationList =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_API_INTEGRATION_LIST)
+      :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueApiIntegrationList
+  )
+
+type PostIssueApiIntegrationUpsert =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_API_INTEGRATION_UPSERT)
+      :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueApiIntegrationUpsert
+  )
+
+type PostIssueApiIntegrationDelete =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_API_INTEGRATION_DELETE)
+      :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueApiIntegrationDelete
+  )
+
+type PostIssueApiIntegrationTest =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.POST_ISSUE_API_INTEGRATION_TEST)
+      :> API.Types.RiderPlatform.IssueManagement.Issue.PostIssueApiIntegrationTest
+  )
+
+type GetIssueFlowSimulate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_ISSUE_MANAGEMENT / 'API.Types.RiderPlatform.IssueManagement.ISSUE / 'API.Types.RiderPlatform.IssueManagement.Issue.GET_ISSUE_FLOW_SIMULATE)
+      :> API.Types.RiderPlatform.IssueManagement.Issue.GetIssueFlowSimulate
+  )
+
 getIssueCategoryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 getIssueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueCategoryList merchantShortId opCity apiTokenInfo
 
@@ -442,3 +483,18 @@ getIssueChatMessages merchantShortId opCity apiTokenInfo issueId since limit = w
 
 postIssueChatRead :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueChatRead merchantShortId opCity apiTokenInfo issueId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.postIssueChatRead merchantShortId opCity apiTokenInfo issueId req
+
+getIssueApiIntegrationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.ApiIntegrationListRes)
+getIssueApiIntegrationList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueApiIntegrationList merchantShortId opCity apiTokenInfo
+
+postIssueApiIntegrationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationReq -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.UpsertApiIntegrationRes)
+postIssueApiIntegrationUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.postIssueApiIntegrationUpsert merchantShortId opCity apiTokenInfo req
+
+postIssueApiIntegrationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueApiIntegration.IssueApiIntegration -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueApiIntegrationDelete merchantShortId opCity apiTokenInfo apiIntegrationId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.postIssueApiIntegrationDelete merchantShortId opCity apiTokenInfo apiIntegrationId
+
+postIssueApiIntegrationTest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.TestApiIntegrationReq -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.TestApiIntegrationRes)
+postIssueApiIntegrationTest merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.postIssueApiIntegrationTest merchantShortId opCity apiTokenInfo req
+
+getIssueFlowSimulate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueOptionListRes)
+getIssueFlowSimulate merchantShortId opCity apiTokenInfo optionId rideId sessionId categoryId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueFlowSimulate merchantShortId opCity apiTokenInfo optionId rideId sessionId categoryId
