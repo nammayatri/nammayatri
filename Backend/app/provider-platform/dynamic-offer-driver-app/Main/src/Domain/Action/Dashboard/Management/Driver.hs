@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Management.Driver
   ( getDriverDocumentsInfo,
     getDriverAadhaarInfo,
     getDriverAadhaarInfobyMobileNumber,
+    getDriverLoginOtp,
     getDriverList,
     getDriverActivity,
     postDriverDisable,
@@ -319,6 +320,34 @@ getDriverAadhaarInfobyMobileNumber merchantShortId _ phoneNumber = do
             driverImage = aadhaarData.driverImage
           }
     Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
+
+---------------------------------------------------------------------
+getDriverLoginOtp :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverLoginOtpRes
+getDriverLoginOtp merchantShortId _ mbMobileNumber mbCountryCode mbDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  driver <- case mbDriverId of
+    Just driverId -> do
+      person <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonDoesNotExist driverId)
+      unless (person.merchantId == merchant.id && person.role == DP.DRIVER) $ throwError (PersonDoesNotExist driverId)
+      pure person
+    Nothing -> do
+      mobileNumber <- fromMaybeM (InvalidRequest "Provide driverId or mobileNumber") mbMobileNumber
+      let countryCode = fromMaybe "+91" mbCountryCode
+      mobileNumberHash <- getDbHash mobileNumber
+      QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Driver not found")
+  tokens <- QR.findUnverifiedOtpByPersonId driver.id.getId
+  now <- getCurrentTime
+  let notExpired t = addUTCTime (fromIntegral (t.authExpiry * 60)) t.updatedAt > now
+      mbToken = listToMaybe . sortOn (Down . (.updatedAt)) $ filter notExpired tokens
+  token <- fromMaybeM (InvalidRequest "No active login OTP for this driver") mbToken
+  pure
+    Common.DriverLoginOtpRes
+      { driverId = cast driver.id,
+        otp = token.authValueHash,
+        attemptsLeft = token.attempts,
+        generatedAt = token.updatedAt,
+        authExpiryMinutes = token.authExpiry
+      }
 
 ---------------------------------------------------------------------
 castCommonOnboardingAsToDomain :: Common.OnboardingAs -> DrInfo.OnboardingAs

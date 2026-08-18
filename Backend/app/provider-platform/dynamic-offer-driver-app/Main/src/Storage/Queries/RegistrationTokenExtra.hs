@@ -17,3 +17,13 @@ getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId 
 
 deleteByPersonIdExceptNew :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
+
+findUnverifiedOtpByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [RegistrationToken]
+findUnverifiedOtpByPersonId entityId =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamRT.entityId $ Se.Eq entityId,
+          Se.Is BeamRT.authType $ Se.Eq DRT.OTP,
+          Se.Is BeamRT.verified $ Se.Eq False
+        ]
+    ]
