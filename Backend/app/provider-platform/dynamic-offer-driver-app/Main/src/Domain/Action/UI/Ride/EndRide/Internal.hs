@@ -96,6 +96,7 @@ import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), 
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
@@ -116,6 +117,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
@@ -506,7 +508,12 @@ createDriverWalletTransaction ::
     Finance.HasActorInfo m r,
     BeamFlow m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
   ) =>
   Ride.Ride ->
   SRB.Booking ->
@@ -766,6 +773,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   if issuedToType /= CUSTOMER && driverBearsPayment then mkAdjustment "Payment Charge VAT" PaymentChargeTax (negate paymentChargeVatAmt) else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
+        -- GST place of supply = the pickup State.
+        mbPlaceOfSupply = gstPlaceOfSupply booking.fromLocation
         -- CUSTOMER invoice: never club VAT into the ride/toll/parking lines —
         -- riders get the itemised view regardless of transporter config.
         customerInvoiceConfig =
@@ -873,14 +882,25 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       Right (mbInvoiceId, _entryIds) -> do
         let mbInvoiceIdText = (.getId) <$> mbInvoiceId
         QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
+        whenJust mbInvoiceId $ \invId -> do
+          QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
+          -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
+          B2CQRCode.generateB2CQRForInvoice transporterConfig invId
+          -- Render + store the PDF off the ride-end path, after the place-of-supply and
+          -- QR stamps above (a stored PDF is final), so ONDC on_status can attach it.
+          when (fromMaybe False (transporterConfig.invoiceConfig >>= (.enableInvoicePdfS3Storage))) $
+            createJobIn @_ @'GenerateInvoicePdf (Just booking.providerId) (Just booking.merchantOperatingCityId) 0 $
+              GenerateInvoicePdfJobData {invoiceId = invId.getId}
 
     -- Standalone driver / fleet-owner Ride invoice mirroring the customer
     -- invoice. No transfers in this block → no ledger entries are linked,
     -- so no duplicate IndirectTaxTransaction is emitted.
-    driverInvoiceResult <- runFinance ctx $ invoice driverInvoiceConfig
-    case driverInvoiceResult of
-      Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
-      Right _ -> pure ()
+    let generateDriverInvoice = maybe True (fromMaybe True . (.enableDriverInvoice)) transporterConfig.invoiceConfig
+    when generateDriverInvoice $ do
+      driverInvoiceResult <- runFinance ctx $ invoice driverInvoiceConfig
+      case driverInvoiceResult of
+        Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
+        Right (mbDriverInvoiceId, _) -> whenJust mbDriverInvoiceId $ \invId -> QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
 
     let commissionAlreadyCollectedAtBooth = SL.commissionCollectedAtBooth booking.fareSettlementType
     when (commissionAmount + cancellationCommissionAmount > 0) $ do

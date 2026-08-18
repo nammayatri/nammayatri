@@ -564,6 +564,7 @@ library
       SharedLogic.Allocator.Jobs.FleetEngine.Retry
       SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload
       SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance
+      SharedLogic.Allocator.Jobs.Invoice.InvoicePdfMaterialisation
       SharedLogic.Allocator.Jobs.Mandate.Execution
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
@@ -684,8 +685,10 @@ library
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
+      SharedLogic.Finance.B2CQRCode
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.GstBreakdown
+      SharedLogic.Finance.InvoiceDocument
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.LedgerAdjustment
       SharedLogic.Finance.LedgerAdjustmentCast

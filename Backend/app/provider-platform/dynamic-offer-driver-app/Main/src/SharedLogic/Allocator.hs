@@ -117,6 +117,7 @@ data AllocatorJobType
   | BulkUserCohortMappingUpload
   | FleetEngineRetry
   | DeleteUnreferencedFarePolicies
+  | GenerateInvoicePdf
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -196,6 +197,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
   restoreAnyJobInfo SFleetEngineRetry jobData = AnyJobInfo <$> restoreJobInfo SFleetEngineRetry jobData
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
+  restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -878,3 +880,14 @@ newtype DeleteUnreferencedFarePoliciesJobData = DeleteUnreferencedFarePoliciesJo
 instance JobInfoProcessor 'DeleteUnreferencedFarePolicies
 
 type instance JobContent 'DeleteUnreferencedFarePolicies = DeleteUnreferencedFarePoliciesJobData
+
+-- | Render + store a finance invoice's PDF in S3 off the ride-end / cancel path,
+--   so ONDC on_status can attach a presigned link to it.
+newtype GenerateInvoicePdfJobData = GenerateInvoicePdfJobData
+  { invoiceId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'GenerateInvoicePdf
+
+type instance JobContent 'GenerateInvoicePdf = GenerateInvoicePdfJobData

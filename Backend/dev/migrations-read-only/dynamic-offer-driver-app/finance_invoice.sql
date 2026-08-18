@@ -81,3 +81,29 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN reference_invoice_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN entity_reference_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN rendered_invoice_json jsonb ;
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN pdf_s3_path text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN place_of_supply text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN unsigned_qr_code text ;
+
+
+------- SQL updates -------
+
