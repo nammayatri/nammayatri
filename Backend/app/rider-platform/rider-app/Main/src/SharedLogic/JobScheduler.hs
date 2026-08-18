@@ -76,6 +76,7 @@ data RiderJobType
   | PassExpiryReminderMaster
   | SettlementReportIngestion
   | ReconcileRewardInflight
+  | FRFSCCAvenueSplitPayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -122,6 +123,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SDailyPassStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SDailyPassStatusUpdate jobData
   restoreAnyJobInfo SPassExpiryReminderMaster jobData = AnyJobInfo <$> restoreJobInfo SPassExpiryReminderMaster jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
+  restoreAnyJobInfo SFRFSCCAvenueSplitPayout jobData = AnyJobInfo <$> restoreJobInfo SFRFSCCAvenueSplitPayout jobData
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
 
 instance JobInfoProcessor 'Daily
@@ -476,6 +478,18 @@ data ReconcileRewardInflightJobData = ReconcileRewardInflightJobData
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+-- | One nightly CCAvenue split-payout run for a city. The job reschedules itself, so it
+-- only needs seeding once per city.
+data FRFSCCAvenueSplitPayoutJobData = FRFSCCAvenueSplitPayoutJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FRFSCCAvenueSplitPayout
+
+type instance JobContent 'FRFSCCAvenueSplitPayout = FRFSCCAvenueSplitPayoutJobData
 
 instance JobInfoProcessor 'ReconcileRewardInflight
 

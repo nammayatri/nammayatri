@@ -130,7 +130,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster))
+import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), FRFSCCAvenueSplitPayoutJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, FRFSCCAvenueSplitPayout, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster))
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.TollDashboard
 import qualified SharedLogic.TollUpsert as TU
@@ -1977,6 +1977,16 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
         Just Common.PassExpiryReminderMasterTrigger -> do
           let jobData = PassExpiryReminderMasterJobData {cursor = Just 0}
           createJobIn @_ @'PassExpiryReminderMaster (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
+          pure Success
+        -- Seeds the nightly CCAvenue split-payout cron for a city. Only needed once: the
+        -- job reschedules itself for the next night from then on.
+        Just Common.FRFSCCAvenueSplitPayoutTrigger -> do
+          let jobData =
+                FRFSCCAvenueSplitPayoutJobData
+                  { merchantId = merchant.id,
+                    merchantOperatingCityId = merchantOpCity.id
+                  }
+          createJobIn @_ @'FRFSCCAvenueSplitPayout (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Nothing -> throwError $ InternalError "invalid job name"
 

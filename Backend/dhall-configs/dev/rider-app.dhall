@@ -297,6 +297,7 @@ let RiderJobType =
       | PassExpiryReminderMaster
       | SettlementReportIngestion
       | ReconcileRewardInflight
+      | FRFSCCAvenueSplitPayout
       >
 
 let jobRetryOnExceptionMapx =
@@ -347,6 +348,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
       , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
       , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }
+      , { mapKey = RiderJobType.FRFSCCAvenueSplitPayout, mapValue = True }
       ]
 
 let cacConfig =
