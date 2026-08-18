@@ -156,9 +156,9 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                               Just stage | stallDuration >= fromIntegral stage.afterStallSec -> do
                                 let situation = rideSituation booking
                                 sendStallOverlay ride.merchantOperatingCityId driverId (stage.overlayKey <> "_" <> situation)
-                                -- REALLOCATE_RIDE acts only on non-cancellable rides; for cancellable
-                                -- situations the driver always had the cancel exit, so we only record.
-                                let shouldReallocate = stage.terminalAction == Just DTC.REALLOCATE_RIDE && situation == situationNonCancellable
+                                -- REALLOCATE_RIDE is controlled purely by pickupStallMonitoringConfig's
+                                -- terminalAction; the ride's cancellation situation no longer gates it.
+                                let shouldReallocate = stage.terminalAction == Just DTC.REALLOCATE_RIDE
                                 if isJust stage.terminalAction
                                   then do
                                     stampPickupStallTag ride activeCase'
