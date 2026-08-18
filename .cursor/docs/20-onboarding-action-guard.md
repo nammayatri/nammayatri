@@ -123,19 +123,16 @@ Skipped entirely outside unified cities, and skipped when the entity row is miss
 
 | Verb | Requires | Code |
 |---|---|---|
-| `Enable` | is admin-disabled, **not** `FleetDisabled`, **and** verified + approved + enabled | `DI-3`, `DI-6`, `DI-2` |
-| `Disable` | not already disabled, **and** verified + approved + enabled | `DI-3`, `DI-2` |
-| `Link` | enabled, not blocked, approved | `DI-1`, `D-BLOCKED` |
+| `Enable` | not blocked — unblock first. Doc state is deliberately **not** checked: an admin enable is allowed to override verified / approved, and is recorded as `enabledReasonFlag = AdminEnabled` | `D-BLOCKED` |
+| `Disable` | not already disabled, **and** currently enabled | `DI-3`, `DI-2` |
+| `Link` | enabled, not blocked | `DI-1`, `D-BLOCKED` |
 | `Activate` | enabled, not blocked | `DI-1`, `D-BLOCKED` |
-| `Delete` | `disabledReasonFlag` is set — disable first. Uses the flag rather than `enabled`, because in unified cities an admin disable sets only the flag and leaves `enabled` derived | `D-DELETE` |
 | `LinkToFleet` | **not** enabled — use `changeFleetOwner` to move an active driver | `DI-9` |
 | `LinkToFleet` (stage 1) | rejected only if the driver has an FDA with `isActive = True` and `associatedTill > now` **and** is enabled — a disabled driver may still be linked. No `onboardingAs` requirement: an `INDIVIDUAL` driver can be added to a fleet | `DRIVER_ALREADY_LINKED_WITH_FLEET` |
-| `SetOnboardingAs` | **not** enabled | `DI-8` |
 | `ChangeFleetOwner` (stage 1) | `onboardingAs = FLEET_DRIVER`, and at least one FDA with `associatedTill > now` (`QFDA.findAllByDriverIdWithStatus`). The new owner is not compared against the current one, so re-transferring into the same fleet is a no-op rather than an error | `DRIVER_NOT_FLEET_DRIVER`, `DRIVER_HAS_NO_ACTIVE_FLEET_ASSOCIATION` |
-| `UnlinkDocument` | **not** enabled — invalidate the doc before unlinking documents | `DI-10` |
-| `Block` | not already blocked, no `blockReasonFlag`, **and** verified + approved + enabled | `D-BLOCKED`, `DI-2` |
-| `Unblock` | currently blocked, has a `blockReasonFlag`, **and** verified + approved + enabled | `D-BLOCKED`, `DI-2` |
-| `Unlink`, `Deactivate`, `Add`, `Approve`, `Reject`, `View`, `Expire` | always pass | — |
+| `Block` | not already blocked | `D-BLOCKED` |
+| `Unblock` | currently blocked | `D-BLOCKED` |
+| `Delete`, `SetOnboardingAs`, `UnlinkDocument`, `Unlink`, `Deactivate`, `Add`, `Approve`, `Reject`, `View`, `Expire` | always pass | — |
 
 The rows marked **(stage 1)** live in `guardFleetMembership`, not `checkDriver`:
 
@@ -170,9 +167,10 @@ the only checks that run at all.
 
 | Verb | Requires | Code |
 |---|---|---|
-| `Enable` | is admin-disabled, **and** verified + approved + enabled | `FI-1`, `FI-2` |
-| `Disable` | not already disabled, **and** verified + approved + enabled | `FI-1`, `FI-2` |
-| `Block`, `Unblock` | **always rejected** — use disable/enable | `FI-3` |
+| `Enable` | not blocked — unblock first. Doc state is deliberately **not** checked, mirroring `checkDriver` | `F-BLOCKED` |
+| `Disable` | not already disabled, **and** currently enabled | `FI-1`, `FI-2` |
+| `Block` | not already blocked | `F-BLOCKED` |
+| `Unblock` | currently blocked | `F-BLOCKED` |
 | `SetOnboardingAs`, `ChangeFleetOwner` | **always rejected** | `F-UNSUPPORTED` |
 | everything else | always pass | — |
 

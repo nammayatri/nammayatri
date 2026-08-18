@@ -198,6 +198,7 @@ data TransporterConfigT f = TransporterConfigT
     fleetBankPayoutEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fleetUpiPayoutEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     forceDirectCalling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    forceEnabledBypassingDocsUponDisableTakesToOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fraudAuthCountThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     fraudAuthCountWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions),
     freeTrialDays :: B.C f Kernel.Prelude.Int,

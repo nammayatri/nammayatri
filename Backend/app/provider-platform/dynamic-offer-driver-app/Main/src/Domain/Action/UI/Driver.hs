@@ -266,7 +266,9 @@ import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -862,7 +864,8 @@ data ClearManualSelectedDues = ClearManualSelectedDues
   deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)
 
 getInformationV2 ::
-  ( BeamFlow m r,
+  ( OnboardingFlow m r,
+    BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -897,7 +900,8 @@ getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant
   getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo) mbFleetInfo
 
 getInformation ::
-  ( BeamFlow m r,
+  ( OnboardingFlow m r,
+    BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -922,6 +926,10 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   let driverId = cast personId
       serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION mbServiceName
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbTransporterConfigForFlags <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  when (maybe False (\tc -> tc.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfigForFlags) $
+    fork "refreshOnboardingFlags:getInformation" . void $
+      SStatus.runRefreshOnboardingFlagsDriver (Just person) mbTransporterConfigForFlags personId
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
   cloudType <- asks (.cloudType)
   when (person.cloudType /= cloudType) $ QPerson.updateCloudType cloudType person.id

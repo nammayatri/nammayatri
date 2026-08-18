@@ -40,6 +40,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.Common
+import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Checks as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified Storage.Queries.DriverInformation as DIQuery
@@ -47,6 +48,8 @@ import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCEQuery
 import Tools.Error (BlockReasonFlag (..))
@@ -168,6 +171,12 @@ recomputeDriverFlagsArm ::
   m Bool
 recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationConfigs driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory driverName onboardingVehicleCategory transporterConfig mbIsFleetDriver vehicleDocuments useUnifiedOnboardingFlagsRecompute = do
   driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  mutationAllowed <-
+    withTryCatch "onboardingFlags:mutation" (SGuard.guardOnboardingAction transporterConfig SGuard.None SGuard.OnboardingFlagMutation (SGuard.TargetDriver person.id)) >>= \case
+      Right () -> pure True
+      Left err -> do
+        logError $ "onboardingFlags: mutation blocked for " <> person.id.getId <> ": " <> show err
+        pure False
   let effectiveOnboardingAs = fromMaybe DI.INDIVIDUAL (driverInfo.onboardingAs <|> transporterConfig.defaultOnboardingAs)
   isFleetDriver <-
     if useUnifiedOnboardingFlagsRecompute
@@ -200,8 +209,10 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
                 other -> other
             )
           else if allMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
-  when (allMandatoryDocsValid /= driverInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= driverInfo.approved)) $
-    DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) allMandatoryDocsValid newApproved
+      verifiedToWrite = if driverInfo.verified && not allMandatoryDocsValid && not mutationAllowed then driverInfo.verified else allMandatoryDocsValid
+      approvedToWrite = if driverInfo.approved == Just True && newApproved /= Just True && not mutationAllowed then driverInfo.approved else newApproved
+  when (verifiedToWrite /= driverInfo.verified || (useUnifiedOnboardingFlagsRecompute && approvedToWrite /= driverInfo.approved)) $
+    DIQueryExtra.updateVerifiedAndApprovedState (cast person.id) verifiedToWrite approvedToWrite
   consentGateOk <-
     if useUnifiedOnboardingFlagsRecompute && effectiveOnboardingAs == DI.FLEET_DRIVER
       then hasActiveFleetAssociation person.id
@@ -225,8 +236,22 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure driverInfo.disabledReasonFlag
   when (useUnifiedOnboardingFlagsRecompute && effectiveDisabledReasonFlag /= driverInfo.disabledReasonFlag) $
     DIQuery.updateDisabledReasonFlag effectiveDisabledReasonFlag (cast person.id)
-  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then newApproved == Just True else driverInfo.approved == Just True
-      shouldEnable = consentGateOk && allMandatoryDocsValid && allEnablingDocsValid && approvedGateOk
+  -- A disabled driver keeps its force-enable marker unless the city wants the disable to send them
+  -- back to onboarding; clearing it is what makes `enabled` derive from documents again.
+  effectiveEnabledReasonFlag <-
+    if useUnifiedOnboardingFlagsRecompute
+      && mutationAllowed
+      && isJust effectiveDisabledReasonFlag
+      && driverInfo.enabledReasonFlag == Just DI.AdminEnabled
+      && transporterConfig.forceEnabledBypassingDocsUponDisableTakesToOnboarding == Just True
+      then do
+        DIQueryExtra.updateEnabledReasonFlag Nothing (cast person.id)
+        pure Nothing
+      else pure driverInfo.enabledReasonFlag
+  let approvedGateOk = if useUnifiedOnboardingFlagsRecompute then approvedToWrite == Just True else driverInfo.approved == Just True
+      bypassDocGates = effectiveEnabledReasonFlag == Just DI.AdminEnabled
+      derivedShouldEnable = consentGateOk && (bypassDocGates || (verifiedToWrite && allEnablingDocsValid && approvedGateOk))
+      shouldEnable = derivedShouldEnable || (driverInfo.enabled && not mutationAllowed)
   let justEnabled = shouldEnable && not driverInfo.enabled
   -- The association is read once and reused for both the onboardingAs reconciliation and the
   -- fleet-scoped counter key.
@@ -236,7 +261,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       else pure Nothing
   if justEnabled
     then do
-      enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId allMandatoryDocsValid
+      enableDriver merchantOpCityId person.id person.role driverName transporterConfig merchantId verifiedToWrite
       whenJust onboardingVehicleCategory $ \category ->
         DIIQuery.updateOnboardingVehicleCategory (Just category) person.id
     else
@@ -256,7 +281,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
     merchantOpCityId
     mbFleetOwnerId
     (bucketsOfFlags' driverInfo.verified driverInfo.approved driverInfo.enabled driverInfo.blocked (isJust driverInfo.disabledReasonFlag))
-    (bucketsOfFlags' allMandatoryDocsValid newApproved shouldEnable driverInfo.blocked (isJust effectiveDisabledReasonFlag))
+    (bucketsOfFlags' verifiedToWrite approvedToWrite shouldEnable driverInfo.blocked (isJust effectiveDisabledReasonFlag))
   pure shouldEnable
 
 -- | Fleet owner (not fleet drivers — they go through recomputeDriverVerifiedAndEnabled). Recompute
@@ -459,13 +484,20 @@ markBlockFlags ::
   Id DP.Person ->
   BlockChange ->
   m ()
-markBlockFlags personId = \case
-  Block p ->
-    DIQueryExtra.updateDynamicBlockedStateWithActivity (cast personId) p.bpReason p.bpExpiryHours p.bpDashboardUserName p.bpMerchantId p.bpReasonCode p.bpMerchantOperatingCityId p.bpBlockedBy True p.bpActive p.bpMode p.bpFlag
-  Unblock p ->
-    DIQueryExtra.updateBlockedState (cast personId) False p.spModifier p.spMerchantId p.spMerchantOperatingCityId p.spBlockedBy
-  SimpleBlock p ->
-    DIQueryExtra.updateBlockedState (cast personId) True p.spModifier p.spMerchantId p.spMerchantOperatingCityId p.spBlockedBy
+markBlockFlags personId change = do
+  mbPerson <- QPerson.findById personId
+  if maybe False (SDO.isFleetRole . (.role)) mbPerson
+    then case change of
+      Block p -> QFOIExtra.updateFleetOwnerBlockedStatus True (Just p.bpFlag) personId
+      SimpleBlock _ -> QFOIExtra.updateFleetOwnerBlockedStatus True Nothing personId
+      Unblock _ -> QFOIExtra.updateFleetOwnerBlockedStatus False Nothing personId
+    else case change of
+      Block p ->
+        DIQueryExtra.updateDynamicBlockedStateWithActivity (cast personId) p.bpReason p.bpExpiryHours p.bpDashboardUserName p.bpMerchantId p.bpReasonCode p.bpMerchantOperatingCityId p.bpBlockedBy True p.bpActive p.bpMode p.bpFlag
+      Unblock p ->
+        DIQueryExtra.updateBlockedState (cast personId) False p.spModifier p.spMerchantId p.spMerchantOperatingCityId p.spBlockedBy
+      SimpleBlock p ->
+        DIQueryExtra.updateBlockedState (cast personId) True p.spModifier p.spMerchantId p.spMerchantOperatingCityId p.spBlockedBy
 
 -- | A change to an entity's disabled state. Separate from the block path because deriving
 --   `enabled` needs the full onboarding effect set, while blocking does not.

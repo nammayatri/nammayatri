@@ -151,6 +151,15 @@ updateDisabledReasonFlag mbReason driverId = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
 
+updateEnabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.EnabledReasonFlag -> Id Person.Driver -> m ()
+updateEnabledReasonFlag mbReason driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.enabledReasonFlag mbReason,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
+
 getEnabledAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe UTCTime)
 getEnabledAt driverId = do
   dInfo <- findById driverId

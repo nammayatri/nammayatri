@@ -16,6 +16,14 @@ import Storage.Queries.OrphanInstances.FleetOwnerInformation ()
 import Storage.Queries.OrphanInstances.Person ()
 import qualified Storage.Queries.Transformers.FleetOwnerInformation
 import Tools.Encryption (encryptWithDefault)
+import qualified Tools.Error
+
+updateFleetOwnerBlockedStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag -> Id DP.Person -> m ()
+updateFleetOwnerBlockedStatus blocked blockReasonFlag fleetOwnerPersonId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.blocked blocked, Se.Set Beam.blockReasonFlag blockReasonFlag, Se.Set Beam.updatedAt now]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (getId fleetOwnerPersonId)]
 
 findByVerifiedAndEnabled ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
