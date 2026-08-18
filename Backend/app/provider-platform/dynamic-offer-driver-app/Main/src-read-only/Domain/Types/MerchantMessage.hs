@@ -90,6 +90,7 @@ data MessageKey
   | FLEET_COMMUNICATION_SMS
   | FLEET_COMMUNICATION_WHATSAPP
   | SEND_TOTP
+  | DOCUMENT_VALID
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 type MerchantMessage = MerchantMessageD ('Safe)
