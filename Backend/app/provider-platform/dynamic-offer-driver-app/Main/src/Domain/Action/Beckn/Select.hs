@@ -56,10 +56,10 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.Type as SLT
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFareParams

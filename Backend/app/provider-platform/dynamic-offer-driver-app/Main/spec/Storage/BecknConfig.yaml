@@ -34,6 +34,7 @@ BecknConfig:
     onUpdateTTLSec: Maybe Int
     onTrackTTLSec: Maybe Int
     onCancelTTLSec: Maybe Int
+    onSupportTTLSec: Maybe Int
 
   types:
     PaymentCollectedBy:

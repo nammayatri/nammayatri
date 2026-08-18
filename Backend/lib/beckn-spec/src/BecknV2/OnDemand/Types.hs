@@ -61,6 +61,8 @@ module BecknV2.OnDemand.Types
     OnSelectReq (..),
     OnSelectReqMessage (..),
     OnStatusReq (..),
+    OnSupportReq (..),
+    OnSupportReqMessage (..),
     OnTrackReq (..),
     OnTrackReqMessage (..),
     OnUpdateReq (..),
@@ -84,6 +86,7 @@ module BecknV2.OnDemand.Types
     StatusReq (..),
     StatusReqMessage (..),
     Stop (..),
+    Support (..),
     Tag (..),
     TagGroup (..),
     Time (..),
@@ -1337,6 +1340,60 @@ optionsOnStatusReq =
       ]
 
 -- |
+data OnSupportReq = OnSupportReq
+  { -- |
+    onSupportReqContext :: Context,
+    -- |
+    onSupportReqError :: Maybe Error,
+    -- |
+    onSupportReqMessage :: Maybe OnSupportReqMessage
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON OnSupportReq where
+  parseJSON = genericParseJSON optionsOnSupportReq
+
+instance ToJSON OnSupportReq where
+  toJSON = genericToJSON optionsOnSupportReq
+
+optionsOnSupportReq :: Options
+optionsOnSupportReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onSupportReqContext", "context"),
+        ("onSupportReqError", "error"),
+        ("onSupportReqMessage", "message")
+      ]
+
+-- |
+newtype OnSupportReqMessage = OnSupportReqMessage
+  { -- |
+    onSupportReqMessageSupport :: Support
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON OnSupportReqMessage where
+  parseJSON = genericParseJSON optionsOnSupportReqMessage
+
+instance ToJSON OnSupportReqMessage where
+  toJSON = genericToJSON optionsOnSupportReqMessage
+
+optionsOnSupportReqMessage :: Options
+optionsOnSupportReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onSupportReqMessageSupport", "support")
+      ]
+
+-- |
 -- |
 data OnTrackReq = OnTrackReq
   { -- |
@@ -2096,6 +2153,48 @@ optionsStop =
         ("stopParentStopId", "parent_stop_id"),
         ("stopTime", "time"),
         ("stopType", "type")
+      ]
+
+-- |
+data Support = Support
+  { -- |
+    supportDescriptor :: Maybe Descriptor,
+    -- |
+    supportRefType :: Maybe Text,
+    -- |
+    supportRefId :: Maybe Text,
+    -- |
+    supportCallbackPhone :: Maybe Text,
+    -- |
+    supportPhone :: Maybe Text,
+    -- |
+    supportEmail :: Maybe Text,
+    -- |
+    supportUrl :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Support where
+  parseJSON = genericParseJSON optionsSupport
+
+instance ToJSON Support where
+  toJSON = genericToJSON optionsSupport
+
+optionsSupport :: Options
+optionsSupport =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("supportDescriptor", "descriptor"),
+        ("supportRefType", "ref_type"),
+        ("supportRefId", "ref_id"),
+        ("supportCallbackPhone", "callback_phone"),
+        ("supportPhone", "phone"),
+        ("supportEmail", "email"),
+        ("supportUrl", "url")
       ]
 
 -- | Describes a tag. This is used to contain extended metadata. This object can be added as a property to any schema to describe extended attributes. For BAPs, tags can be sent during search to optimize and filter search results. BPPs can use tags to index their catalog to allow better search functionality. Tags are sent by the BPP as part of the catalog response in the &#x60;on_search&#x60; callback. Tags are also meant for display purposes. Upon receiving a tag, BAPs are meant to render them as name-value pairs. This is particularly useful when rendering tabular information about a product or service.
