@@ -64,6 +64,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -80,6 +81,7 @@ import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.B2CQRCode as B2CQRCode
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -384,15 +386,19 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                 _ -> pure True
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
       result <- runFinance ctx $ do
-        mapM_
-          ( \(amt, ref, dest) -> do
-              -- Two legs through BuyerExternal (nets to 0), mirroring the online ride-payment ledger.
-              void $ transferPending BuyerAsset BuyerExternal amt ref
-              void $ transferPending BuyerExternal dest amt ref
-          )
-          cancellationComponents
-        whenJust mbTdsAmount $ \tdsAmount ->
-          void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
+        -- Post ledger entries only when there is an actual charge. For a ₹0 valid buyer
+        -- cancellation we skip the transfers and still create a standalone ₹0 invoice below
+        -- (no linked entries → no GST tax transaction).
+        when (baseCancellation + gstOnCancellation > 0) $ do
+          mapM_
+            ( \(amt, ref, dest) -> do
+                -- Two legs through BuyerExternal (nets to 0), mirroring the online ride-payment ledger.
+                void $ transferPending BuyerAsset BuyerExternal amt ref
+                void $ transferPending BuyerExternal dest amt ref
+            )
+            cancellationComponents
+          whenJust mbTdsAmount $ \tdsAmount ->
+            void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
         invoice
           InvoiceConfig
             { invoiceType = RideCancellation,
@@ -448,7 +454,20 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             }
       case result of
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
-        Right _ -> pure ()
+        Right (mbInvoiceId, _) ->
+          whenJust mbInvoiceId $ \invId -> do
+            -- GST place of supply = ride pickup address + state, combined in one field.
+            let mbPlaceOfSupply =
+                  case (booking.fromLocation.address.fullAddress, booking.fromLocation.address.state) of
+                    (Just addr, Just st) -> Just (addr <> ", " <> st)
+                    (Just addr, Nothing) -> Just addr
+                    (Nothing, st) -> st
+            QFInvoice.updatePlaceOfSupply mbPlaceOfSupply Nothing Nothing invId
+            -- B2C self-generated unsigned QR (no IRN) on the customer tax invoice.
+            B2CQRCode.generateB2CQRForInvoice transporterConfig invId
+            -- Link the cancellation invoice to the booking so the ONDC on_status
+            -- documents[] (and the invoice-PDF read paths) can resolve + attach it.
+            QRB.updateFinanceInvoiceId booking.id (Just invId.getId)
       logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
 
 buildCancellationFinanceCtx ::

@@ -4,6 +4,7 @@
 
 module Lib.Finance.Storage.Queries.Invoice (module Lib.Finance.Storage.Queries.Invoice, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Invoice
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -51,12 +52,58 @@ updateIrnAndSignedQRByInvoiceId irn signedQRCode updatedBy updatedById id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePdfS3Path ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updatePdfS3Path pdfS3Path updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.pdfS3Path pdfS3Path, Se.Set Beam.updatedBy updatedBy, Se.Set Beam.updatedById updatedById, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePlaceOfSupply ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updatePlaceOfSupply placeOfSupply updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.placeOfSupply placeOfSupply,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateRenderedInvoiceJson ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Data.Aeson.Value -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updateRenderedInvoiceJson renderedInvoiceJson updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.renderedInvoiceJson renderedInvoiceJson,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
 updateStatus status updatedBy updatedById id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedBy updatedBy, Se.Set Beam.updatedById updatedById, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateUnsignedQRCode ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Core.Types.ActorType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updateUnsignedQRCode unsignedQRCode updatedBy updatedById id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.unsignedQRCode unsignedQRCode,
+      Se.Set Beam.updatedBy updatedBy,
+      Se.Set Beam.updatedById updatedById,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -87,10 +134,13 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.paymentMode paymentMode,
+      Se.Set Beam.pdfS3Path pdfS3Path,
       Se.Set Beam.periodEnd periodEnd,
       Se.Set Beam.periodStart periodStart,
+      Se.Set Beam.placeOfSupply placeOfSupply,
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.referenceInvoiceNumber referenceInvoiceNumber,
+      Se.Set Beam.renderedInvoiceJson renderedInvoiceJson,
       Se.Set Beam.signedQRCode signedQRCode,
       Se.Set Beam.status status,
       Se.Set Beam.subtotal subtotal,
@@ -101,6 +151,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.supplierTaxNo supplierTaxNo,
       Se.Set Beam.taxBreakdown taxBreakdown,
       Se.Set Beam.totalAmount totalAmount,
+      Se.Set Beam.unsignedQRCode unsignedQRCode,
       Se.Set Beam.updatedBy updatedBy,
       Se.Set Beam.updatedById updatedById,
       Se.Set Beam.updatedAt _now

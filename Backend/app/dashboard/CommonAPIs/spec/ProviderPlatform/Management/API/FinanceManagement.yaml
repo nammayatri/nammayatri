@@ -76,6 +76,20 @@ apis:
       response:
         type: FinanceInvoicePdfResp
 
+  # ----- Invoice PDF presigned URL (by invoiceId) -----
+  - GET: # InvoicePdfUrlAPI
+      endpoint: /finance/invoice/pdfUrl
+      mandatoryQuery:
+        invoiceId: Text
+      auth: ApiAuthV2
+      response:
+        type: FinanceInvoicePdfUrlResp
+      # Same access model as its invoice-family neighbours (list / pdf), which are
+      # ungated for authenticated dashboard users. Tighten alongside them if finance
+      # later introduces an invoice-level capability.
+      migrate:
+        capability: PUBLIC
+
   # ----- Invoice -----
   - GET: # InvoiceListAPI
       endpoint: /finance/invoice/list
@@ -394,6 +408,11 @@ types:
   FinanceInvoicePdfResp:
     - pdfBase64: Text
     - invoiceNumber: Text
+
+  # ----- Invoice PDF presigned URL -----
+  FinanceInvoicePdfUrlResp:
+    - invoiceId: Text
+    - pdfUrl: Maybe Text
 
   # ----- Invoice -----
   InvoiceListRes:

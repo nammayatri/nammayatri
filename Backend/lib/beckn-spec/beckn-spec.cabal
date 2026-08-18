@@ -87,6 +87,7 @@ library
       Beckn.Types.Core.Taxi.Common.Customer
       Beckn.Types.Core.Taxi.Common.DecimalValue
       Beckn.Types.Core.Taxi.Common.Descriptor
+      Beckn.Types.Core.Taxi.Common.Document
       Beckn.Types.Core.Taxi.Common.FareProductType
       Beckn.Types.Core.Taxi.Common.FulfillmentInfo
       Beckn.Types.Core.Taxi.Common.Gps

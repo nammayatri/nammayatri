@@ -821,6 +821,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   let bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
+      mbInvoiceDocumentUrl = Nothing -- invoice shared via on_status documents[], not this on_update push
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
