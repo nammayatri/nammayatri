@@ -42,7 +42,8 @@ tfOrder res becknConfig mbFarePolicy = do
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
   Spec.Order
-    { orderBilling = Nothing,
+    { orderDocuments = Nothing,
+      orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms res.cancellationFee,
       orderFulfillments = tfFulfillments res,

@@ -102,6 +102,7 @@ emptyOrder =
       orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,
+      orderDocuments = Nothing,
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = Nothing,

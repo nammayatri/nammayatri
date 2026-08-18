@@ -993,7 +993,8 @@ minimalIntent =
 minimalOrder :: Spec.Order
 minimalOrder =
   Spec.Order
-    { orderBilling = Nothing,
+    { orderDocuments = Nothing,
+      orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,

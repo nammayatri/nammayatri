@@ -33,7 +33,7 @@ type API =
       :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam "toDate" Data.Time.UTCTime
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FinanceInvoice.FinanceInvoiceListRes
       :<|> TokenAuth
       :> "finance"
@@ -58,23 +58,33 @@ type API =
            "to"
            Lib.Finance.Invoice.PdfService.DateOrTime
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
+      :<|> TokenAuth
+      :> "finance"
+      :> "invoice"
+      :> "pdfUrl"
+      :> MandatoryQueryParam
+           "invoiceId"
+           Kernel.Prelude.Text
+      :> Get
+           ('[JSON])
+           API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
   )
 
 handler :: Environment.FlowServer API
-handler = getSubscriptionInvoices :<|> getFinanceInvoicePdf
+handler = getSubscriptionInvoices :<|> getFinanceInvoicePdf :<|> getFinanceInvoicePdfUrl
 
 getSubscriptionInvoices ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
-    Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
+    Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Data.Time.UTCTime) ->
     Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoiceListRes
   )
 getSubscriptionInvoices a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FinanceInvoice.getSubscriptionInvoices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
@@ -84,12 +94,22 @@ getFinanceInvoicePdf ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime ->
-    Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime ->
+    Kernel.Prelude.Maybe (Lib.Finance.Invoice.PdfService.DateOrTime) ->
+    Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (Lib.Finance.Invoice.PdfService.DateOrTime) ->
     Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
   )
 getFinanceInvoicePdf a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdf (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+
+getFinanceInvoicePdfUrl ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
+  )
+getFinanceInvoicePdfUrl a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdfUrl (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

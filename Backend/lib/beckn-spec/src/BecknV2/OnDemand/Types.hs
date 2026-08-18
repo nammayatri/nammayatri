@@ -28,6 +28,7 @@ module BecknV2.OnDemand.Types
     CancelReqMessage (..),
     Cancellation (..),
     CancellationTerm (..),
+    Document (..),
     Catalog (..),
     Category (..),
     City (..),
@@ -1444,6 +1445,33 @@ optionsOption =
       ]
 
 -- | Describes a legal purchase order. It contains the complete details of the legal contract created between the buyer and the seller.
+-- | ONDC order-level document (e.g. a tax-invoice PDF). Carried in @order.documents@.
+data Document = Document
+  { -- | Publicly fetchable URL of the document (e.g. a pre-signed invoice PDF link)
+    documentUrl :: Maybe Text,
+    -- | Human-readable label for the document (e.g. "Invoice")
+    documentLabel :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Document where
+  parseJSON = genericParseJSON optionsDocument
+
+instance ToJSON Document where
+  toJSON = genericToJSON optionsDocument
+
+optionsDocument :: Options
+optionsDocument =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("documentUrl", "url"),
+        ("documentLabel", "label")
+      ]
+
 data Order = Order
   { -- |
     orderBilling :: Maybe Billing,
@@ -1453,6 +1481,8 @@ data Order = Order
     orderCancellationTerms :: Maybe [CancellationTerm],
     -- | The date-time of creation of this order
     orderCreatedAt :: Maybe UTCTime,
+    -- | ONDC order-level documents (e.g. the ride / cancellation tax-invoice PDF)
+    orderDocuments :: Maybe [Document],
     -- | The fulfillments involved in completing this order
     orderFulfillments :: Maybe [Fulfillment],
     -- | Human-readable ID of the order. This is generated at the BPP layer. The BPP can either generate order id within its system or forward the order ID created at the provider level.
@@ -1492,6 +1522,7 @@ optionsOrder =
         ("orderCancellation", "cancellation"),
         ("orderCancellationTerms", "cancellation_terms"),
         ("orderCreatedAt", "created_at"),
+        ("orderDocuments", "documents"),
         ("orderFulfillments", "fulfillments"),
         ("orderId", "id"),
         ("orderItems", "items"),

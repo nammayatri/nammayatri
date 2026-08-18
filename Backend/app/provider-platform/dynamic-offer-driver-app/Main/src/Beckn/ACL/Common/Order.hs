@@ -264,7 +264,8 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image tagGroups Nothing isDriverBirthDay isFreeRide driverAccountId (Just $ show fulfillmentState) isValueAddNP riderPhone isAlreadyFav favCount
   pure
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
@@ -294,7 +295,8 @@ tfStartReqToOrder Common.DRideStartedReq {..} mbFarePolicy becknConfig = do
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing (arrivalTimeTagGroup <> odometerTag <> estimatedEndTimeRangeTagGroup) personTag False False Nothing (Just $ show EventEnum.RIDE_STARTED) isValueAddNP riderPhone False 0
   pure
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
@@ -342,7 +344,8 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
   pure $
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderTags = Just orderSettlementTags,
         orderStatus = Just $ show EventEnum.COMPLETE, -- Keep COMPLETE for backward compat until all BAPs upgraded
         orderFulfillments = Just [fulfillment],
@@ -368,7 +371,8 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
   let payment = fmap (\bd -> L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bd.merchant becknConfig booking) bookingDetails
   pure
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderTags = Nothing,
         orderStatus = Just $ show EventEnum.CANCELLED,
         orderFulfillments = Just $ maybeToList fulfillment,
@@ -400,7 +404,8 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing driverArrivedInfoTags Nothing False False Nothing (Just $ show EventEnum.RIDE_ARRIVED_PICKUP) isValueAddNP riderPhone False 0
   pure $
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
         orderCancellation = Nothing,
@@ -422,7 +427,8 @@ tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing driverReachedDestinationTags Nothing False False Nothing (Just $ show EventEnum.DRIVER_REACHED_DESTINATION) isValueAddNP Nothing False 0
   pure $
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
         orderCancellation = Nothing,

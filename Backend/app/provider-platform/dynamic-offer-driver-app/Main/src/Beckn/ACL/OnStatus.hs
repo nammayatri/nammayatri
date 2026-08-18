@@ -112,7 +112,8 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
                 state = RideCompletedOS.orderState,
                 quote,
                 payment = Just $ Common.mkRideCompletedPayment ride.currency paymentMethodInfo paymentUrl,
-                fulfillment = fulfillment
+                fulfillment = fulfillment,
+                documents = RideCompletedOS.mkInvoiceDocuments <$> mbInvoiceDocumentUrl
               }
       }
 buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {..}) = do
@@ -129,7 +130,8 @@ buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {.
               { id = booking.id.getId,
                 state = BookingCancelledOS.orderState,
                 cancellation_reason = Common.castCancellationSource cancellationSource,
-                fulfillment
+                fulfillment,
+                documents = BookingCancelledOS.mkInvoiceDocuments <$> mbInvoiceDocumentUrl
               }
       }
 buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
@@ -215,7 +217,8 @@ tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> Maybe FareP
 tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConfig =
   pure
     Spec.Order
-      { orderId = Just bookingId.getId,
+      { orderDocuments = Nothing,
+        orderId = Just bookingId.getId,
         orderTags = Nothing,
         orderStatus = Just $ show NewBookingOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
         orderFulfillments = Nothing,
@@ -241,7 +244,8 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing Nothing isValueAddNP Nothing False 0
   pure
     Spec.Order
-      { orderId = Just $ booking.id.getId,
+      { orderDocuments = Nothing,
+        orderId = Just $ booking.id.getId,
         orderTags = Nothing,
         orderStatus = Just $ show BookingReallocationOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
         orderFulfillments = Just [fulfillment],

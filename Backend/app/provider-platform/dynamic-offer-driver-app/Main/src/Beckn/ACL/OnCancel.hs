@@ -125,20 +125,32 @@ buildOnCancelReq action domain messageId bppSubscriberId bppUri city country can
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbInvoiceDocumentUrl
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbInvoiceDocumentUrl = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails'
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbInvoiceDocumentUrl
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Spec.Order
-tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' = do
+-- | ONDC @order.documents@ entry for a cancellation invoice PDF (pre-signed URL).
+mkInvoiceDocumentsV2 :: Text -> [Spec.Document]
+mkInvoiceDocumentsV2 docUrl =
+  [ Spec.Document
+      { documentUrl = Just docUrl,
+        documentLabel = Just "Invoice"
+      }
+  ]
+
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Spec.Order
+tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbInvoiceDocumentUrl = do
   Spec.Order
     { orderId = Just booking.id.getId,
+      -- ONDC on_cancel: attach the cancellation tax-invoice PDF (pre-signed URL) so
+      -- the BAP receives it in the cancellation response, mirroring on_status.
+      orderDocuments = mkInvoiceDocumentsV2 <$> mbInvoiceDocumentUrl,
       orderTags = Nothing,
       orderStatus = Just cancelStatus,
       orderFulfillments = tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone,

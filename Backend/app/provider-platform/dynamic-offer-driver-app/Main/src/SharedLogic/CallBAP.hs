@@ -821,6 +821,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
   let bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
+      mbInvoiceDocumentUrl = Nothing -- invoice shared via on_status documents[], not this on_update push
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
@@ -853,7 +854,9 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellat
   let cancellationReasonCode = mbBookingCancellationReason >>= (.reasonCode) <&> (\(DCR.CancellationReasonCode code) -> code)
       -- base + tax kept separate by callers; total built only here for the CancellationTerm
       cancellationFee = cancellationFeeBase <&> \base -> PriceAPIEntity {amount = base + fromMaybe 0 cancellationFeeTax, currency = booking.currency}
-  let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {cancellationReasonCode, ..}
+  -- Driver-initiated cancel path is polymorphic m, so it can't render the (Flow-typed)
+  -- invoice PDF here; the customer hard-cancel path (API.Beckn.Cancel) carries it instead.
+  let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {cancellationReasonCode, mbInvoiceDocumentUrl = Nothing, ..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
   void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id

@@ -130,7 +130,8 @@ tfOrder res pricing bppConfig mbFarePolicy bppInvoiceInfo = do
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
   Spec.Order
-    { orderBilling = Nothing,
+    { orderDocuments = Nothing,
+      orderBilling = Nothing,
       orderCancellation = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms res,
       orderFulfillments = tfFulfillments res,
