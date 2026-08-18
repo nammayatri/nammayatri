@@ -40,9 +40,17 @@ worth keeping visible rather than hiding behind an API that looks complete.
     `E400 INVALID_REQUEST: ACTIVE_BOOKING_PRESENT`, so one abandoned test ride
     ends every future booking for that account. `finish` exists for this, and
     it is worth running after any session that was interrupted.
+  * Signing in as a driver is RATE-LIMITED, and this daemon holds a session per
+    driver. A probe that logs in as one of the six numbers below revokes that
+    session, the daemon signs back in, and the pair can trip
+    `HITS_LIMIT_EXCEED` -- ten minutes with no fleet. **Probes must use a
+    driver this script does not own.** `login` now waits out the limit instead
+    of exiting, because exiting made it worse: systemd restarted into another
+    attempt against a limit that counts attempts.
 """
 import argparse
 import json
+import re
 import signal
 import subprocess
 import sys
@@ -168,12 +176,50 @@ def merchant_uuid():
     return m
 
 
-def login(number):
+def login(number, patience=900):
+    """Sign a driver in, waiting out the auth rate limit rather than dying on it.
+
+    ── Why this cannot simply die ──────────────────────────────────────────
+    The driver API rate-limits sign-ins. Exceed it and `/ui/auth` answers
+
+        HITS_LIMIT_EXCEED -- "Hits limit reached. Try again in 600 sec."
+
+    This used to `die()`, which exits 1, which systemd answers by restarting
+    ten seconds later -- into another sign-in attempt, against a limit that is
+    counting attempts. **The retry was feeding the thing it was recovering
+    from.** Measured 2026-08-18: fifteen crash-restarts in four minutes, and
+    because the daemon's `finally` puts drivers offline on the way out, the
+    fleet was offline for all of it. A rider watched "3 chauffeurs près de
+    vous" and got no offer at all.
+
+    What tripped it was a probe signing in as 0551234567 -- a FLEET driver.
+    Each probe login revoked the daemon's session, the daemon signed back in,
+    and the two of them raced into the limit. Probes should use a driver the
+    daemon does not own; this backoff is the belt to that braces.
+
+    So: wait, out loud, and come back. A daemon that pauses for ten minutes is
+    fixed by itself; a daemon that exits is fixed by a person.
+    """
     mid = merchant_uuid()
-    a, code, raw = call("POST", f"{DRIVER_API}/ui/auth", {
-        "mobileNumber": number, "mobileCountryCode": CC, "merchantId": mid})
-    if code != 200 or not a or "authId" not in a:
+    waited = 0
+    while True:
+        a, code, raw = call("POST", f"{DRIVER_API}/ui/auth", {
+            "mobileNumber": number, "mobileCountryCode": CC, "merchantId": mid})
+        if code == 200 and a and "authId" in a:
+            break
+        if "HITS_LIMIT_EXCEED" in (raw or "") and waited < patience:
+            # The server states its own cooldown; trust it rather than guess,
+            # and add a little so the retry is not on the exact boundary.
+            hold = 60
+            found = re.search(r"(\d+)\s*sec", raw or "")
+            if found:
+                hold = min(int(found.group(1)) + 5, patience - waited)
+            say(f"{number}: rate-limited, waiting {hold}s rather than exiting")
+            time.sleep(hold)
+            waited += hold
+            continue
         die(f"auth failed for {number}: {raw[:200]}")
+
     v, code, raw = call("POST", f"{DRIVER_API}/ui/auth/{a['authId']}/verify",
                         {"otp": OTP, "deviceToken": f"sim-{number}"})
     if code != 200 or not v or "token" not in v:
