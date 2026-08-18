@@ -1,10 +1,8 @@
 module SharedLogic.FRFSReschedule where
 
-import Data.List (sortOn)
 import qualified Data.Time as Time
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
-import qualified Domain.Types.FRFSRecon as DFRFSRecon
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -331,19 +329,9 @@ completeReschedule oldBookingId stagingBookingId = do
           { DFRFSTicketBookingPayment.frfsTicketBookingId = stagingBookingId,
             DFRFSTicketBookingPayment.updatedAt = now
           }
-    oldRecons <- sortOn (\r -> (r.createdAt, r.id.getId)) <$> QFRFSRecon.findAllByFrfsTicketBookingId oldBookingId
-    newTickets <- sortOn (\t -> (t.createdAt, t.id.getId)) <$> QTicket.findAllByTicketBookingId stagingBookingId
-    when (length oldRecons /= length newTickets) $
-      logWarning $ "FRFSReschedule:completeReschedule recon/ticket count mismatch oldBookingId=" <> oldBookingId.getId
-    forM_ (zip oldRecons newTickets) $ \(recon, ticket) ->
-      QFRFSRecon.updateByPrimaryKey
-        recon
-          { DFRFSRecon.frfsTicketBookingId = stagingBookingId,
-            DFRFSRecon.ticketNumber = Just ticket.ticketNumber,
-            DFRFSRecon.networkOrderId = fromMaybe recon.networkOrderId stagingBooking.bppOrderId,
-            DFRFSRecon.ticketStatus = Just ticket.status,
-            DFRFSRecon.updatedAt = now
-          }
+    let zeroPrice = mkPrice (Just oldBooking.totalPrice.currency) 0
+    void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicketStatus.RESCHEDULED) oldBookingId
+    void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById zeroPrice zeroPrice oldBookingId
     void $ CQP.clearPSCache oldBooking.riderId
     oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldBooking.quoteId
     let oldSeatIds = concat (mapMaybe (.seatIds) oldQuoteCategories)
