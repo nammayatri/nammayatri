@@ -5,6 +5,7 @@
     ./simulate-driver.py status     # who exists, who is online, how fresh
     ./simulate-driver.py once       # take the next request, drive it, finish
     ./simulate-driver.py daemon     # all drivers online, keep accepting
+    ./simulate-driver.py finish     # close out any ride left hanging
 
 Runs ON THE SERVER. The driver API is loopback-only (`/ui/` is not published,
 and publishing it would let anyone become a driver, because driver auth
@@ -35,6 +36,10 @@ worth keeping visible rather than hiding behind an API that looks complete.
     drivers it owns.
   * `offeredFare` is the EXTRA fee on top of baseFare, not the total. Sending
     the total gives EXTRA_FEE_NOT_ALLOWED.
+  * A ride left unfinished LOCKS THAT RIDER OUT. Any later confirm answers
+    `E400 INVALID_REQUEST: ACTIVE_BOOKING_PRESENT`, so one abandoned test ride
+    ends every future booking for that account. `finish` exists for this, and
+    it is worth running after any session that was interrupted.
 """
 import argparse
 import json
@@ -353,6 +358,32 @@ def ride_otp(ride_id):
     return pg(f"SELECT otp FROM atlas_driver_offer_bpp.ride WHERE id='{ride_id}';")
 
 
+class _Expired:
+    """This driver's session is gone; whatever was asked, ask again after login.
+
+    ── Why a sentinel and not just None ────────────────────────────────────
+    This backend allows ONE SESSION PER USER, drivers included. Anything that
+    logs in as a driver -- `finish`, `seed`, a probe, a second copy of this
+    script -- silently revokes the token the daemon has been holding, and from
+    then on every call it makes returns 401.
+
+    `poll` used to fold that into `return None`, which is exactly what it also
+    returns when there is simply nothing to do. So the daemon carried on looping
+    forever, answering nothing, while `systemctl status` said `active` and the
+    journal stayed silent -- and searches came back with cars on the map and no
+    offers, which reads as broken dispatch on the rider's phone.
+
+    Measured 2026-08-18: running `finish` cut the daemon's legs out from under
+    it and neither one noticed for sixteen minutes.
+    """
+    def __bool__(self):
+        # Falsy, so `if ride:` and `if req:` keep meaning "there is work".
+        return False
+
+
+EXPIRED = _Expired()
+
+
 def my_active_ride(token):
     """A ride this driver is on right now, whenever it was assigned.
 
@@ -368,6 +399,8 @@ def my_active_ride(token):
     """
     r, code, _ = call("GET", f"{DRIVER_API}/ui/driver/ride/list?limit=5&offset=0",
                       None, token)
+    if code == 401:
+        return EXPIRED
     if code != 200 or not r:
         return None
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=RECENT_RIDE_S)
@@ -412,23 +445,30 @@ def run_ride(number, token, ride, speed):
     # Where the driver actually is, read back rather than assumed: this ride may
     # have been picked up on a later pass, long after the offer was made.
     here = current_position(number) or pick
+
+    # An INPROGRESS ride is already past both of these, and calling them again
+    # fails -- `start` on a started ride is not 200, which used to abandon the
+    # ride here and return False. That is what a daemon restart mid-trip does,
+    # so the ride it was driving became a ghost nobody would ever finish.
     if ride.get("status") == "NEW":
         drive(token, here, pick, speed, "to the pickup")
 
-    _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/ride/{rid}/arrived/pickup",
-                        {"lat": pick[0], "lon": pick[1]}, token)
-    say(f"arrived at pickup ({code})", 2)
+        _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/ride/{rid}/arrived/pickup",
+                            {"lat": pick[0], "lon": pick[1]}, token)
+        say(f"arrived at pickup ({code})", 2)
 
-    code_otp = ride_otp(rid)
-    _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/ride/{rid}/start",
-                        {"rideOtp": code_otp,
-                         "point": {"lat": pick[0], "lon": pick[1]}}, token)
-    if code != 200:
-        say(f"could not start: {raw[:160]}", 2)
-        return False
-    say(f"started with the passenger's code {code_otp}", 2)
-
-    drive(token, pick, drop, speed, "to the destination")
+        code_otp = ride_otp(rid)
+        _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/ride/{rid}/start",
+                            {"rideOtp": code_otp,
+                             "point": {"lat": pick[0], "lon": pick[1]}}, token)
+        if code != 200:
+            say(f"could not start: {raw[:160]}", 2)
+            return False
+        say(f"started with the passenger's code {code_otp}", 2)
+        drive(token, pick, drop, speed, "to the destination")
+    else:
+        say("already in progress -- resuming from here", 2)
+        drive(token, here, drop, speed, "to the destination")
 
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/ride/{rid}/end",
                         {"point": {"lat": drop[0], "lon": drop[1]}}, token)
@@ -471,6 +511,8 @@ def poll(token):
     (FOUND_ACTIVE_QUOTES) for the full five minutes of the search.
     """
     r, code, _ = call("GET", f"{DRIVER_API}/ui/driver/nearbyRideRequest", None, token)
+    if code == 401:
+        return EXPIRED
     if code != 200 or not r:
         return None
     for req in r.get("searchRequestsForDriver", []):
@@ -486,6 +528,62 @@ def decline(token, req, label):
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/searchRequest/quote/respond",
                         {"searchRequestId": sid, "response": "Reject"}, token)
     say(f"{label}: declined {sid[:8]} on purpose ({code})", 1)
+
+
+def cmd_finish(args):
+    """Drive every unfinished ride to COMPLETED, however old it is.
+
+    ── Why this had to exist ───────────────────────────────────────────────
+    A booking that is still open BLOCKS THE RIDER ENTIRELY. Confirming any new
+    quote while one is active answers `E400 INVALID_REQUEST: ACTIVE_BOOKING_
+    PRESENT`, so a single ride nobody finished takes that account out of the
+    product until someone clears it by hand.
+
+    That is not hypothetical. A test booking from 10 August sat in TRIP_ASSIGNED
+    for eight days; the rider tapped five different drivers on 18 August and
+    every tap was refused. Screen 10 swallowed the error, so it looked exactly
+    like a dead button and cost most of a morning to trace to the server.
+
+    The daemon will never clear these: `my_active_ride` deliberately ignores
+    anything older than RECENT_RIDE_S so a fossil cannot hijack a live session.
+    That is the right call there and the reason this mode is separate.
+
+    Completing rather than cancelling, deliberately -- it exercises the real
+    end-of-ride path, leaves a finished trip in the rider's history, and gives
+    screen 14 something to rate. `--speed 0` teleports, so it costs seconds.
+
+    ── This STEALS the daemon's sessions ───────────────────────────────────
+    Logging in as a driver revokes that driver's other token, and `movin-fleet`
+    is holding one. Running this used to leave the daemon alive, `active`, and
+    answering nothing at all -- for sixteen minutes, before anyone noticed.
+    The daemon now recognises a revoked session and signs back in, so this is
+    survivable; it is still the reason that recovery exists.
+    """
+    cleared = failed = 0
+    for num, variant, name, *_ in FLEET:
+        if not driver_id(num):
+            continue
+        tok, _ = login(num)
+        # Deliberately NOT my_active_ride: its age cutoff is what hides these.
+        r, code, _ = call("GET", f"{DRIVER_API}/ui/driver/ride/list?limit=20&offset=0",
+                          None, tok)
+        if code != 200 or not r:
+            continue
+        stuck = [x for x in r.get("list", []) if x.get("status") in ("NEW", "INPROGRESS")]
+        if not stuck:
+            continue
+        for ride in stuck:
+            say(f"{name} ({variant}) is holding {ride.get('shortRideId')} "
+                f"[{ride.get('status')}] from {str(ride.get('createdAt'))[:16]}")
+            if run_ride(num, tok, ride, args.speed):
+                cleared += 1
+            else:
+                failed += 1
+
+    say(f"\n{cleared} ride(s) finished, {failed} could not be")
+    if cleared:
+        say("those riders can book again -- ACTIVE_BOOKING_PRESENT is gone")
+    return 0 if failed == 0 else 1
 
 
 def cmd_once(args):
@@ -552,6 +650,15 @@ def cmd_daemon(args):
                 # the two happen together walked away from real rides and left
                 # real riders waiting on screen 11.
                 ride = my_active_ride(toks[num])
+
+                # Someone else logged in as this driver and took the session
+                # with them. Silently answering nothing forever is the one
+                # outcome worth any amount of code to avoid, so take it back.
+                if ride is EXPIRED:
+                    say(f"{variant} driver's session was revoked -- signing in again")
+                    toks[num] = online(num)
+                    continue
+
                 if ride:
                     say(f"{variant} driver has a ride")
                     if run_ride(num, toks[num], ride, args.speed):
@@ -564,6 +671,10 @@ def cmd_daemon(args):
                     continue
 
                 req = poll(toks[num])
+                if req is EXPIRED:
+                    say(f"{variant} driver's session was revoked -- signing in again")
+                    toks[num] = online(num)
+                    continue
                 if req:
                     accept(toks[num], req)
             # An idle driver whose position goes stale drops out of the pool
@@ -598,7 +709,7 @@ def main():
         description="Play a driver against the live backend.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Run this on the server: the driver API is loopback-only.")
-    p.add_argument("mode", choices=["seed", "status", "once", "daemon"],
+    p.add_argument("mode", choices=["seed", "status", "once", "daemon", "finish"],
                    nargs="?", default="once")
     p.add_argument("--speed", type=float, default=8.0,
                    help="multiplier on real driving time; 1 = real time, "
@@ -618,6 +729,8 @@ def main():
             seed(); return 0
         if args.mode == "status":
             status(); return 0
+        if args.mode == "finish":
+            return cmd_finish(args)
         if args.mode == "once":
             return cmd_once(args)
         return cmd_daemon(args)

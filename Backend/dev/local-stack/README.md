@@ -916,6 +916,60 @@ cleanup already handles.
 While it is running it also heartbeats its own drivers' positions every 30 s,
 so for those six it does `drivers-keepalive.sh`'s job.
 
+### An unfinished ride locks that rider out — `./simulate-driver.py finish`
+
+This is the most expensive trap in the whole stack, because the symptom points
+squarely at the wrong thing.
+
+**One ride left open ends every future booking for that account.** Confirming
+any new quote while a booking is still open answers
+
+```
+E400 INVALID_REQUEST: ACTIVE_BOOKING_PRESENT
+```
+
+and nothing else about the flow changes. The search runs. Estimates come back.
+Drivers offer. Cars appear on the map. Every single tap is refused.
+
+Measured 2026-08-18: a test booking from **10 August** sat in `TRIP_ASSIGNED`
+for eight days. On the 18th a tester tapped five different drivers, watched
+nothing happen five times, and reported the app's button as dead. The server had
+said exactly what was wrong on all five, in the log, at the time.
+
+```bash
+./simulate-driver.py finish --speed 0     # close out everything hanging
+```
+
+It completes rather than cancels: the real end-of-ride path runs, the rider gets
+a finished trip in their history, and screen 14 has something to rate. `--speed 0`
+teleports, so a fossil costs about two seconds.
+
+The daemon will never do this for you. `my_active_ride` ignores anything older
+than 30 minutes, deliberately, so a fossil cannot hijack a live session — which
+is correct there and the reason `finish` is separate.
+
+**Two things this trap taught, both now fixed in the script:**
+
+*Logging in as a driver revokes that driver's other session.* One session per
+user applies to drivers exactly as it does to riders. So running `finish` while
+`movin-fleet` is up used to pull the daemon's tokens out from under it — and the
+daemon could not tell, because a 401 made `poll()` return `None`, which is what
+it also returns when there is simply no work. It looped silently for sixteen
+minutes, `systemctl status` said `active` the whole time, and searches came back
+with cars on the map and no offers. It now recognises a revoked session and
+signs back in.
+
+*`run_ride` could not resume an `INPROGRESS` ride.* It called `arrived/pickup`
+and `start` unconditionally, and `start` on an already-started ride is not a 200
+— so it gave up and returned `False`. That is exactly what a daemon restart
+mid-trip produces, which means the fix for ghost rides was also quietly creating
+them.
+
+**The daemon is single-threaded.** `run_ride` blocks the entire loop, so while
+one driver is driving, *no* driver answers anything. At `--speed 3` a 16-minute
+trip is five and a half real minutes of a fleet that offers nothing. On one
+phone that is invisible; it is worth knowing before blaming dispatch again.
+
 ## The rider API — what the app uses, and what is sitting there unused
 
 The driver-API section above exists because the source tree lies about the
@@ -1171,6 +1225,23 @@ rider-app has migrated.
   *masked* number (`055...188`). Screen 16 reads it. Left here struck through
   rather than deleted, because this line was believed for weeks and nearly had a
   screen designed around its absence.
+- **A rider cannot change their phone number, and has no profile photo.** Not a
+  policy choice — there is nowhere to put either. Read from the server's own
+  OpenAPI on 2026-08-18, so this is the schema and not an inference from
+  behaviour:
+
+  | | |
+  |---|---|
+  | `POST /v2/profile` accepts | `firstName`, `middleName`, `lastName`, `email`, `deviceToken` |
+  | `GET /v2/profile` returns | those, plus `id`, `maskedEmail`, `maskedMobileNumber`, `maskedDeviceToken`, `whatsappNotificationEnrollStatus` |
+
+  There is **no `mobileNumber` field to write to** and **no image field
+  anywhere**, in either direction. Nor is there an upload route: all 60 rider
+  routes were listed and `/v2/profile` is the only one that touches a profile.
+  The number is also the identity — auth is by phone — so "changing" it means a
+  different account, not an edited field. Screen 16's `Non modifiable` is the
+  honest rendering of this, and the endpoint answers `200` to anything it is
+  sent, so a number field would show a tick and change nothing.
 - Kafka connection warnings in the logs are harmless.
 - The gateway logs a 404 against `localhost:8014/v1/e1f37274-…` and a refused
   connection to `localhost:8000` on every search. Both are stale fixture rows in
