@@ -12,6 +12,7 @@ import Data.Int
 import Data.List (zip6)
 import Data.List.Extra (notNull)
 import Data.Maybe
+import Data.Ord (Down (..))
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
@@ -660,8 +661,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 findAllFromKvRedis
                   [ Se.And
                       ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
-                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
-                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq mbFrom]
+                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq mbTo]
                           <> [Se.Is BeamRD.vehicleNumber $ Se.Eq (fromJust mbVehicleNo) | isJust mbVehicleNo]
                           <> [Se.Is BeamRD.driverCountryCode $ Se.Eq mbDriverMobileCountryCode | isJust mbDriverMobileCountryCode]
                       )
@@ -677,8 +678,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 findAllFromKvRedis
                   [ Se.And
                       ( [Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
-                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
-                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
+                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq mbFrom]
+                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq mbTo]
                           <> [Se.Is BeamRD.vehicleNumber $ Se.Eq vehicleNo]
                       )
                   ]
@@ -701,8 +702,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 findAllFromKvRedis
                   [ Se.And
                       ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
-                          <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
-                          <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                          <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+                          <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
                           <> [Se.Is BeamB.isDashboardRequest $ Se.Eq isDashboardRequest | isJust isDashboardRequest]
                       )
                   ]
@@ -719,33 +720,34 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           B.select $
             B.limit_ (fromIntegral limitVal) $
               B.offset_ (fromIntegral offsetVal) $
-                B.filter_'
-                  ( \(booking, ride, rideDetails, riderDetails) ->
-                      booking.providerId B.==?. B.val_ (getId merchant.id)
-                        B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dr -> booking.isDashboardRequest B.==?. B.val_ (Just dr)) isDashboardRequest
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> riderDetails.mobileCountryCode B.==?. B.val_ cc) mbCustomerMobileCountryCode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> rideDetails.driverCountryCode B.==?. B.val_ (Just cc)) mbDriverMobileCountryCode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerId -> ride.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)) mbFleetOwnerId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
-                  )
-                  do
-                    booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-                    ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
-                    rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
-                    riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
-                    pure (booking', ride', rideDetails', riderDetails')
+                B.orderBy_ (\(_, ride, _, _) -> B.desc_ ride.createdAt) $
+                  B.filter_'
+                    ( \(booking, ride, rideDetails, riderDetails) ->
+                        booking.providerId B.==?. B.val_ (getId merchant.id)
+                          B.&&?. (booking.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ booking.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\dr -> booking.isDashboardRequest B.==?. B.val_ (Just dr)) isDashboardRequest
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> riderDetails.mobileCountryCode B.==?. B.val_ cc) mbCustomerMobileCountryCode
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> rideDetails.driverCountryCode B.==?. B.val_ (Just cc)) mbDriverMobileCountryCode
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerId -> ride.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)) mbFleetOwnerId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
+                          B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
+                    )
+                    do
+                      booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+                      ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+                      rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
+                      riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
+                      pure (booking', ride', rideDetails', riderDetails')
       res' <- case res of
         Right x -> do
           let bookings = fst' <$> x
@@ -809,7 +811,9 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       payoutRequests <- QPR.findManyByEntityIds (map (getId . getRideId) allRides)
       let payoutRequestMap = HMS.fromList [(pr.entityId, pr.id) | pr <- payoutRequests]
 
-      pure $ map (\item -> item {payoutRequestId = HMS.lookup (getId $ getRideId item) payoutRequestMap}) allRides
+      -- The KV/Redis half and the Postgres half are concatenated, so the DB-side
+      -- ORDER BY alone leaves the merged page interleaved. Sort once at the end.
+      pure $ sortOn (Down . (.rideCreatedAt)) $ map (\item -> item {payoutRequestId = HMS.lookup (getId $ getRideId item) payoutRequestMap}) allRides
   where
     mkBookingStatusVal ride =
       B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
@@ -945,8 +949,8 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
               findAllWithOptionsKV
                 [ Se.And
                     ( [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
-                        <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
-                        <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
+                        <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+                        <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
                         <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
                     )
                 ]
@@ -962,8 +966,8 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                   findAllFromKvRedis
                     [ Se.And
                         ( [Se.Is BeamB.riderId $ Se.In (Just . getId . RiderDetails.id <$> riderDetails)]
-                            <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC $ fromJust mbFrom | isJust mbFrom]
-                            <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate $ fromJust mbTo | isJust mbTo]
+                            <> [Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+                            <> [Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
                         )
                     ]
                     Nothing
@@ -989,28 +993,29 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
               B.select $
                 B.limit_ (fromIntegral limitVal) $
                   B.offset_ (fromIntegral offsetVal) $
-                    B.filter_'
-                      ( \(ride, rideDetails, booking, riderDetails) ->
-                          booking.providerId B.==?. B.val_ (getId merchant.id)
-                            B.&&?. (ride.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ ride.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
-                      )
-                      do
-                        booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-                        ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
-                        rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
-                        riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
-                        pure (ride', rideDetails', booking', riderDetails')
+                    B.orderBy_ (\(ride, _, _, _) -> B.desc_ ride.createdAt) $
+                      B.filter_'
+                        ( \(ride, rideDetails, booking, riderDetails) ->
+                            booking.providerId B.==?. B.val_ (getId merchant.id)
+                              B.&&?. (ride.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ ride.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ defaultFrom) mbFrom
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ defaultTo) mbTo
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
+                              B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
+                        )
+                        do
+                          booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+                          ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+                          rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
+                          riderDetails' <- B.join_' (BeamCommon.rDetails BeamCommon.atlasDB) (\riderDetails'' -> B.just_ (BeamRDR.id riderDetails'') B.==?. BeamB.riderId booking')
+                          pure (ride', rideDetails', booking', riderDetails')
           case res of
             Right x -> do
               let rides = fst' <$> x
@@ -1029,7 +1034,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
       let rideIds = HS.fromList $ map (\item -> item.rideId) zippedRides
           uniqueResults = filter (\item -> not $ HS.member (item.rideId) rideIds) results
 
-      pure $ zippedRides <> uniqueResults
+      pure $ sortOn (Down . (.rideCreatedAt)) (zippedRides <> uniqueResults)
   where
     mkRideItemV2 :: (ShortId Ride, Id Ride, UTCTime, Text, Maybe (EncryptedHashed Text), DRide.RideStatus) -> RideItemV2
     mkRideItemV2 (rideShortId, rideId, rideCreatedAt, driverName, driverPhoneNo, rideStatus) = do
