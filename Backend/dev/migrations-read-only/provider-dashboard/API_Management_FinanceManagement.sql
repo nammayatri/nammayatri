@@ -35,3 +35,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostFinanceManagementTdsReimbursementReject","migration":"capability","param":"finance.tds_reimbursement.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'finance.tds_reimbursement.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/FINANCE_MANAGEMENT/POST_FINANCE_MANAGEMENT_TDS_REIMBURSEMENT_REJECT' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetFinanceManagementFinanceInvoicePdfUrl","migration":"capability","param":"PUBLIC","schema":"atlas_dashboard"}
+-- capability: PUBLIC - no capability_endpoint row; every authenticated caller may call this endpoint.

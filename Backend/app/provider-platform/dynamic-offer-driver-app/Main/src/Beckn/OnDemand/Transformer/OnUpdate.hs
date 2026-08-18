@@ -105,7 +105,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
-        { orderId = Just booking.id.getId,
+        { orderDocuments = Nothing,
+          orderId = Just booking.id.getId,
           orderFulfillments = Just [fulfillment],
           orderItems =
             Just . List.singleton $
@@ -138,7 +139,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing newMessageTags Nothing False False Nothing (Just $ show Event.NEW_MESSAGE) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -158,7 +160,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False Nothing (Just $ show Event.SAFETY_ALERT) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -177,7 +180,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.PHONE_CALL_REQUEST) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -196,7 +200,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.PHONE_CALL_COMPLETED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -215,7 +220,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.STOP_ARRIVED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -258,7 +264,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           OU.CONFIRM_UPDATE -> Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing Nothing Nothing False False Nothing Nothing isValueAddNP Nothing False 0
         pure $
           Spec.Order
-            { orderId = Just $ booking.id.getId,
+            { orderDocuments = Nothing,
+              orderId = Just $ booking.id.getId,
               orderTags = Nothing,
               orderStatus = Just statusCode,
               orderFulfillments = Just [fulfillment],
@@ -302,7 +309,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
                 }
         pure $
           Spec.Order
-            { orderId = Just $ booking.id.getId,
+            { orderDocuments = Nothing,
+              orderId = Just $ booking.id.getId,
               orderTags = Nothing,
               orderStatus = Just statusCode,
               orderFulfillments = Just [fulfillment],
@@ -322,7 +330,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.QUOTE_REPETITION) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just booking.id.getId,
+        { orderDocuments = Nothing,
+          orderId = Just booking.id.getId,
           orderFulfillments = Just [fulfillment],
           orderItems =
             Just . List.singleton $
@@ -354,7 +363,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.TOLL_CROSSED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -374,7 +384,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing estimatedEndTimeRangeTagGroup Nothing False False Nothing (Just $ show Event.ESTIMATED_END_TIME_RANGE_UPDATED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -394,7 +405,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing parcelImageUploadedTag Nothing False False Nothing (Just $ show Event.PARCEL_IMAGE_UPLOADED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
-        { orderId = Just ride.bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just ride.bookingId.getId,
           orderFulfillments = Just [fulfillment],
           orderBilling = Nothing,
           orderCancellation = Nothing,
@@ -417,7 +429,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           ]
     pure $
       Spec.Order
-        { orderId = Just bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just bookingId.getId,
           orderItems =
             Just
               [ Spec.Item
@@ -493,7 +506,8 @@ buildOnUpdateReqOrderV2 outerBooking req' mbFarePolicy becknConfig = case req' o
           ]
     pure $
       Spec.Order
-        { orderId = Just bookingId.getId,
+        { orderDocuments = Nothing,
+          orderId = Just bookingId.getId,
           orderItems = Nothing,
           orderFulfillments =
             Just

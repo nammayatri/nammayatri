@@ -586,7 +586,8 @@ data RideListItem = RideListItem
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue]
+    rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
+    invoiceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

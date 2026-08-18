@@ -49,6 +49,9 @@ types:
   FinanceInvoicePdfResp:
     pdfBase64: Text
     invoiceNumber: Text
+  FinanceInvoicePdfUrlResp:
+    invoiceId: Text
+    pdfUrl: Maybe Text
 apis:
   - GET:
       endpoint: /subscription/invoices
@@ -73,3 +76,10 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: FinanceInvoicePdfResp
+  - GET:
+      endpoint: /finance/invoice/pdfUrl
+      mandatoryQuery:
+        invoiceId: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: FinanceInvoicePdfUrlResp

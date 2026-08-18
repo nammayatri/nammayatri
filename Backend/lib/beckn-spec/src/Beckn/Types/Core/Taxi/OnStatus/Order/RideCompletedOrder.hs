@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
 where
 
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.Document as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Reexport
@@ -27,15 +28,32 @@ import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data RideCompletedOrder = RideCompletedOrder
   { id :: Text,
     state :: RideCompletedOrderCode,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
-    payment :: Maybe Payment
+    payment :: Maybe Payment,
+    documents :: Maybe [Document] -- ONDC order.documents[] (e.g. INVOICE); omitted (not null) when Nothing via omitNothingFields
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show)
+
+-- Omit (not null) absent optionals — a strict ONDC schema check rejects null on
+-- an array-typed property like documents[]. Only affects the Maybe fields
+-- (payment, documents), which become absent rather than "null".
+rideCompletedOrderJSONOptions :: A.Options
+rideCompletedOrderJSONOptions = defaultOptions {omitNothingFields = True}
+
+instance ToJSON RideCompletedOrder where
+  toJSON = genericToJSON rideCompletedOrderJSONOptions
+
+instance FromJSON RideCompletedOrder where
+  parseJSON = genericParseJSON rideCompletedOrderJSONOptions
+
+instance ToSchema RideCompletedOrder where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions rideCompletedOrderJSONOptions
 
 orderState :: RideCompletedOrderCode
 orderState = RIDE_COMPLETED

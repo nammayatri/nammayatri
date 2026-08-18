@@ -9,6 +9,7 @@ module Domain.Action.ProviderPlatform.Management.FinanceManagement
     getFinanceManagementFinanceReconciliation,
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceInvoicePdf,
+    getFinanceManagementFinanceInvoicePdfUrl,
     getFinanceManagementFinanceAuditList,
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
@@ -235,3 +236,8 @@ postFinanceManagementTdsReimbursementReject merchantShortId opCity apiTokenInfo 
       requestorName = apiTokenInfo.person.firstName <> " " <> apiTokenInfo.person.lastName
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.postFinanceManagementTdsReimbursementReject) requestId requestorId requestorName req)
+
+getFinanceManagementFinanceInvoicePdfUrl :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.FinanceManagement.FinanceInvoicePdfUrlResp)
+getFinanceManagementFinanceInvoicePdfUrl merchantShortId opCity apiTokenInfo invoiceId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.financeManagementDSL.getFinanceManagementFinanceInvoicePdfUrl) invoiceId

@@ -15,7 +15,6 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQ
-import qualified Storage.Queries.PayoutConfig as QPC
 
 data PayoutConfigDimensions = PayoutConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -43,4 +42,3 @@ instance ConfigDimensions PayoutConfigDimensions where
         LCP.DimMatcher (.isPayoutEnabled) (Just . (.isPayoutEnabled)) (==)
       ]
       Nothing
-  configFallback a = Just (QPC.findByDimensions (Id a.merchantOperatingCityId) a.vehicleCategory a.isPayoutEnabled)

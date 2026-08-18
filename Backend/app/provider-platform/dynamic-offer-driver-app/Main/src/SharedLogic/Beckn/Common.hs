@@ -70,7 +70,8 @@ data DRideCompletedReq = DRideCompletedReq
   { bookingDetails :: BookingDetails,
     fareParams :: Fare.FareParameters,
     tripEndLocation :: Maybe Maps.LatLong,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    mbInvoiceDocumentUrl :: Maybe Text -- pre-signed invoice PDF URL for ONDC on_status documents[]
   }
 
 data DBookingCancelledReq = DBookingCancelledReq
@@ -79,7 +80,8 @@ data DBookingCancelledReq = DBookingCancelledReq
     cancellationSource :: SBCR.CancellationSource,
     cancellationFee :: Maybe Common.PriceAPIEntity,
     estimateId :: Maybe Text,
-    cancellationReasonCode :: Maybe Text
+    cancellationReasonCode :: Maybe Text,
+    mbInvoiceDocumentUrl :: Maybe Text -- pre-signed cancellation-invoice PDF URL for ONDC on_status documents[]
   }
 
 data DDriverArrivedReq = DDriverArrivedReq
