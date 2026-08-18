@@ -128,6 +128,35 @@ findAllByIds ::
   m [Person]
 findAllByIds personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
 
+-- Master read: runs once per bulkCreate (inside the per-merchant lock) with the
+-- whole batch's tokenNo hashes, so a 500-row CSV costs one round-trip instead of
+-- 500. Reads master so replica lag can't hide a just-committed tokenNo from a prior
+-- batch in the same lock section.
+findTokenNoConflictsForMerchant ::
+  BeamFlow m r =>
+  Id Merchant.Merchant ->
+  [DbHash] ->
+  m [(DbHash, Id Person)]
+findTokenNoConflictsForMerchant _ [] = pure []
+findTokenNoConflictsForMerchant merchantId tokenHashes = do
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        access <- B.all_ (SBC.merchantAccess SBC.atlasDB)
+        person <- B.join_' (SBC.person SBC.atlasDB) (\person -> BeamMA.personId access B.==?. BeamP.id person)
+        B.guard_' (BeamMA.merchantId access B.==?. B.val_ (getId merchantId) B.&&?. B.sqlBool_ (BeamP.tokenNoHash person `B.in_` (B.val_ . Just <$> tokenHashes)))
+        pure (BeamP.tokenNoHash person, BeamP.id person)
+  pure $ case res of
+    Right rows -> [(h, Id pid) | (Just h, pid) <- rows]
+    _ -> []
+
+requireTokenNoFree :: MonadFlow m => [(DbHash, Id Person)] -> DbHash -> Maybe (Id Person) -> Text -> m ()
+requireTokenNoFree conflicts tokenHash mbSelfId rowTag =
+  whenJust (lookup tokenHash conflicts) $ \conflictId ->
+    when (mbSelfId /= Just conflictId) $
+      throwError (InvalidRequest (rowTag <> "tokenNo is already in use for this merchant"))
+
 findAllByIdsAndReceiveNotification ::
   BeamFlow m r =>
   [Id Person] ->
@@ -265,8 +294,11 @@ updatePersonUpsertableFields p =
       Se.Set BeamP.emailEncrypted (p.email <&> (unEncrypted . (.encrypted))),
       Se.Set BeamP.emailHash (p.email <&> (.hash)),
       Se.Set BeamP.dashboardAccessType p.dashboardAccessType,
-      Se.Set BeamP.tokenNoHash p.tokenNoHash,
+      Se.Set BeamP.tokenNoEncrypted (p.tokenNo <&> (unEncrypted . (.encrypted))),
+      Se.Set BeamP.tokenNoHash (p.tokenNo <&> (.hash)),
       Se.Set BeamP.entityId (p.entityId <&> getId),
+      Se.Set BeamP.vpaEncrypted (p.vpa <&> (unEncrypted . (.encrypted))),
+      Se.Set BeamP.vpaHash (p.vpa <&> (.hash)),
       Se.Set BeamP.verified p.verified,
       Se.Set BeamP.updatedAt p.updatedAt
     ]
@@ -462,6 +494,12 @@ instance FromTType' BeamP.Person Person.Person where
               (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
               _ -> Nothing,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            tokenNo = case tokenNoHash of
+              Just hash -> Just $ EncryptedHashed (Encrypted (fromMaybe "" tokenNoEncrypted)) hash
+              Nothing -> Nothing,
+            vpa = case (vpaEncrypted, vpaHash) of
+              (Just vpa, Just hash) -> Just $ EncryptedHashed (Encrypted vpa) hash
+              _ -> Nothing,
             dashboardType = dashboardType,
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
@@ -479,6 +517,10 @@ instance ToTType' BeamP.Person Person.Person where
         emailHash = email <&> (.hash),
         mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber.hash,
+        tokenNoEncrypted = tokenNo <&> (unEncrypted . (.encrypted)),
+        tokenNoHash = tokenNo <&> (.hash),
+        vpaEncrypted = vpa <&> (unEncrypted . (.encrypted)),
+        vpaHash = vpa <&> (.hash),
         dashboardType = dashboardType,
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,

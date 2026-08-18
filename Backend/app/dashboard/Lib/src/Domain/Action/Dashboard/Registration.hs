@@ -203,9 +203,9 @@ login rawReq = do
         mbPerson <- QP.findByMobileNumber mob cc
         case mbPerson of
           -- Defense in depth: require DASHBOARD_USER tier so a mistakenly-set
-          -- tokenNoHash on any admin never becomes a login credential.
+          -- tokenNo on any admin never becomes a login credential.
           Just p
-            | p.tokenNoHash == Just tokenDbHash,
+            | (p.tokenNo <&> (.hash)) == Just tokenDbHash,
               p.dashboardAccessType == Just DRole.DASHBOARD_USER ->
               pure p
           _ -> throwError (InvalidRequest "Invalid mobile number or token")
@@ -816,8 +816,9 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
-        tokenNoHash = Nothing,
-        entityId = Nothing
+        tokenNo = Nothing,
+        entityId = Nothing,
+        vpa = Nothing
       }
 
 validateFleetOwner :: Validate FleetRegisterReq
