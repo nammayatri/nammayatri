@@ -42,7 +42,6 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common hiding (mkPrice)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
-import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -115,7 +114,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
           let mPrice = Common.mkPrice (Just booking'.totalPrice.currency) (HighPrecMoney $ toRational (0 :: Int))
           void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
-          cacheRecentLocationOnFailure booking
         when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
           void $ markJourneyPaymentSuccess booking paymentOrder paymentBooking
         when (paymentBookingStatus == FRFSTicketService.PENDING) do
@@ -153,7 +151,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
             let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-            cacheRecentLocationOnFailure updatedBooking
             buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
           else
             if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
@@ -188,7 +185,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
               QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
               QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED paymentBooking.id
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
-              cacheRecentLocationOnFailure updatedBooking
               buildFRFSTicketBookingStatusAPIRes updatedBooking quoteCategories (buildPaymentObject updatedBooking paymentBooking paymentBookingStatus)
             else
               if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
@@ -314,40 +310,16 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
 
     markJourneyPaymentSuccess booking paymentOrder paymentBooking = do
       mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId)
-      case mbJourneyLeg of
-        -- Single mode booking cached here; multimodal legs are cached in getMultimodalBookingPaymentStatus instead.
-        Nothing -> cacheRecentLocationOnSuccess booking
-        Just journeyLeg -> do
-          let journeyId = journeyLeg.journeyId
-          whenJust paymentBooking.frfsQuoteId $ \paymentBookingQuoteId -> do
-            when (booking.quoteId /= paymentBookingQuoteId) $ do
-              switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
-          isTestTransaction <- asks (.isMetroTestTransaction)
-          let updatedOrderShortId = DPayment.updateShortId paymentOrder.paymentServiceType isTestTransaction paymentOrder.shortId.getShortId
-          void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
-          void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
+      whenJust mbJourneyLeg $ \journeyLeg -> do
+        let journeyId = journeyLeg.journeyId
+        whenJust paymentBooking.frfsQuoteId $ \paymentBookingQuoteId -> do
+          when (booking.quoteId /= paymentBookingQuoteId) $ do
+            switchFRFSQuoteTier journeyLeg paymentBookingQuoteId
+        isTestTransaction <- asks (.isMetroTestTransaction)
+        let updatedOrderShortId = DPayment.updateShortId paymentOrder.paymentServiceType isTestTransaction paymentOrder.shortId.getShortId
+        void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
+        void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
       pure mbJourneyLeg
-
-    -- Prevents duplicate recent-location writes if this success path fires more than once for the same booking.
-    cacheRecentLocationOnSuccess successBooking = do
-      isLockAcquired <- Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.tryLockRedis (mkRecentLocationSuccessLockKey successBooking.id) 300
-      when isLockAcquired $
-        fork "Caching recent location for FRFS booking" $ JourneyUtils.createRecentLocationForFRFSBooking successBooking
-
-    -- The FAILED branch above re-runs on every poll of an already-failed booking, so this needs
-    -- its own lock to avoid re-incrementing `frequency` on each check.
-    cacheRecentLocationOnFailure failedBooking = do
-      mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just failedBooking.searchId.getId)
-      when (isNothing mbJourneyLeg) $ do
-        isLockAcquired <- Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.tryLockRedis (mkRecentLocationFailLockKey failedBooking.id) 300
-        when isLockAcquired $
-          fork "Caching recent location for FRFS booking failure" $ JourneyUtils.createRecentLocationForFRFSBooking failedBooking
-
-    mkRecentLocationSuccessLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
-    mkRecentLocationSuccessLockKey bookingId = "frfsRecentLocationSuccess:" <> bookingId.getId
-
-    mkRecentLocationFailLockKey :: Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Text
-    mkRecentLocationFailLockKey bookingId = "frfsRecentLocationFail:" <> bookingId.getId
 
     buildPaymentObject booking paymentBooking paymentBookingStatus =
       let paymentStatusAPI =
