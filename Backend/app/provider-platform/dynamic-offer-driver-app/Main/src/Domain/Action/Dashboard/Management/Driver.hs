@@ -460,7 +460,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   driverPerson <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   tcForDisable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driverPerson.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driverPerson.merchantOperatingCityId.getId)
   SGuard.withOnboardingAction tcForDisable SGuard.None SGuard.Disable (SGuard.TargetDriver personId) $
-    SFlags.markDisabledFlags (tcForDisable.unifiedOnboardingFlagsRecompute == Just True) driverPerson (SFlags.AdminDisable DrInfo.DriverDisabled)
+    SFlags.markEnableDisableReasonFlags (tcForDisable.unifiedOnboardingFlagsRecompute == Just True) driverPerson (SFlags.AdminDisable DrInfo.DriverDisabled)
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 

@@ -123,7 +123,7 @@ Skipped entirely outside unified cities, and skipped when the entity row is miss
 
 | Verb | Requires | Code |
 |---|---|---|
-| `Enable` | not blocked — unblock first. Doc state is deliberately **not** checked: an admin enable is allowed to override verified / approved, and is recorded as `enabledReasonFlag = AdminEnabled` | `D-BLOCKED` |
+| `Enable` | not blocked, **and** admin-disabled or not currently enabled. Doc state is deliberately **not** checked — an admin enable may override verified / approved. Any other state falls through to the generic error | `D-BLOCKED`, `D-UNSUPPORTED` |
 | `Disable` | not already disabled, **and** currently enabled | `DI-3`, `DI-2` |
 | `Link` | enabled, not blocked | `DI-1`, `D-BLOCKED` |
 | `Activate` | enabled, not blocked | `DI-1`, `D-BLOCKED` |
@@ -167,7 +167,7 @@ the only checks that run at all.
 
 | Verb | Requires | Code |
 |---|---|---|
-| `Enable` | not blocked — unblock first. Doc state is deliberately **not** checked, mirroring `checkDriver` | `F-BLOCKED` |
+| `Enable` | not blocked, **and** admin-disabled or not currently enabled — mirroring `checkDriver`. Any other state falls through to the generic error | `F-BLOCKED`, `F-UNSUPPORTED` |
 | `Disable` | not already disabled, **and** currently enabled | `FI-1`, `FI-2` |
 | `Block` | not already blocked | `F-BLOCKED` |
 | `Unblock` | currently blocked | `F-BLOCKED` |
