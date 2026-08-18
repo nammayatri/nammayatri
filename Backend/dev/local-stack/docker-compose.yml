@@ -343,8 +343,16 @@ services:
   #
   # Harmless while every port but SSH is shut; not harmless the moment the API
   # is published on 443. It is deployed and verified *before* the edge, and the
-  # edge sends the whole of /v2/ through it -- a guard you can route around is
-  # not a guard.
+  # edge sends the whole of /v2/ and /ui/ through it -- a guard you can route
+  # around is not a guard.
+  #
+  # On /ui/ it does one thing more. The backend's code is not merely guessable,
+  # it is fixed at 7891 for everyone, and there is no SMS gateway to turn that
+  # off with. So the guard keeps a personal code per approved driver, checks it
+  # here, and substitutes 7891 before forwarding -- the fixed code never works
+  # from the internet, and an unlisted number is refused before the backend can
+  # create a driver record for it. `./enrol-driver.sh` manages that list; the
+  # file it writes is a secret and is not in git.
   #
   # Belongs in the backend, where the counter already exists. It is here because
   # this stack runs prebuilt binaries from a CI job with a 350-minute budget,
@@ -358,18 +366,28 @@ services:
     environment:
       PORT: "8031"
       UPSTREAM_URL: "http://127.0.0.1:8013"
+      DRIVER_UPSTREAM_URL: "http://127.0.0.1:8016"
+      DRIVER_CODES: "/app/driver-codes.json"
+      # What the backend accepts today, from dhall-configs/dev/
+      # dynamic-offer-driver-app.dhall: `useFakeSms = Some 7891`. The guard
+      # substitutes this once the driver's own code checks out. When a real
+      # gateway replaces the fake one, this and DRIVER_CODES both go.
+      DRIVER_FIXED_OTP: "7891"
       MAX_ATTEMPTS: "3"
       AUTH_TTL_MS: "600000"
       LOCK_MS: "900000"
+      # Document photos arrive base64 in JSON; nginx has the matching limit.
+      MAX_BODY: "8388608"
     volumes:
       - ./auth-guard:/app:ro
     restart: unless-stopped
 
   # ── The only thing the internet can reach, besides SSH ────────────────────
   #
-  # TLS on 443, publishing exactly one thing: the rider API, and only through
-  # the auth guard. Postgres, Redis, the tile server, the driver API, the demo
-  # pages, mock-google, OSRM and Swagger all stay on loopback. See
+  # TLS on 443, publishing two things and only through the auth guard: the rider
+  # API on /v2/ and the driver API on /ui/. Postgres, Redis, the demo pages,
+  # mock-google, OSRM, Swagger and -- the one that matters -- the driver
+  # binary's 41 /dashboard/ office routes all stay unreachable. See
   # edge/nginx.conf.
   #
   # network_mode: host on purpose. A bridged container with published ports

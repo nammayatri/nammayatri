@@ -21,3 +21,9 @@ geocoder/places.csv
 # a private key in history is a key that has to be revoked.
 edge-certs/
 edge-webroot/
+
+# Per-driver sign-in codes for the auth guard. Salted hashes, not codes -- but
+# it is still a list of every driver's phone number, and it is the thing that
+# decides who may sign in at all. Written by ./enrol-driver.sh, lives only on
+# the VPS, and belongs in the backup set.
+auth-guard/driver-codes.json

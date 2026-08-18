@@ -136,6 +136,32 @@ take() {
     || die "pg_dump of $PASSETTO_DB failed"
   ok "passetto: $(du -h "$work/passetto.sql" | cut -f1)"
 
+  # The only piece of live state on this box that is not in a database: the
+  # per-driver sign-in codes the auth guard checks. Restoring the databases
+  # without this brings every driver back and leaves none of them able to sign
+  # in, which would look like the backup worked.
+  #
+  # Found rather than assumed, because this script is *copied* to wherever the
+  # systemd unit points -- today /root/backup.sh -- and a relative path would
+  # then resolve to /root/auth-guard/ and silently find nothing. A backup that
+  # quietly leaves something out is the failure this whole file is written
+  # against, so the lookup is explicit and the miss is logged.
+  local codes_note="absent — no driver is enrolled"
+  local codes=""
+  for candidate in \
+      "${DRIVER_CODES:-}" \
+      "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/auth-guard/driver-codes.json" \
+      "/opt/ny/local-stack/auth-guard/driver-codes.json"; do
+    if [ -n "$candidate" ] && [ -f "$candidate" ]; then codes="$candidate"; break; fi
+  done
+  if [ -n "$codes" ]; then
+    cp "$codes" "$work/driver-codes.json"
+    codes_note="$(grep -c '"salt"' "$work/driver-codes.json" || echo 0) enrolled driver(s)"
+    ok "driver codes: $codes_note"
+  else
+    info "no driver-codes.json to include"
+  fi
+
   # A restore months from now is done by someone who was not here today.
   cat > "$work/MANIFEST.txt" <<EOF
 Movin DZ backup
@@ -143,6 +169,9 @@ taken            $stamp (UTC)
 host             $(hostname)
 atlas database   $DB_NAME, schemas: $DATA_SCHEMAS
 passetto         $PASSETTO_DB
+driver codes     $codes_note
+                 restore by hand to local-stack/auth-guard/driver-codes.json;
+                 without it no driver can sign in, whatever the database says
 postgres         $(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -At -c 'SHOW server_version;' 2>/dev/null)
 
 NOT included, because it is rebuilt rather than restored:
@@ -161,7 +190,12 @@ to restore
 EOF
 
   say "packing and encrypting"
-  tar -czf "$work/bundle.tar.gz" -C "$work" atlas.sql passetto.sql MANIFEST.txt \
+  # An `[ -f … ] && members+=(…)` here would abort the whole backup under
+  # `set -e` on the day nobody is enrolled: the test is the last command of the
+  # list, so its failure is the line's exit status.
+  local members=(atlas.sql passetto.sql MANIFEST.txt)
+  if [ -f "$work/driver-codes.json" ]; then members+=(driver-codes.json); fi
+  tar -czf "$work/bundle.tar.gz" -C "$work" "${members[@]}" \
     || die "tar failed"
   gpg --batch --yes --symmetric --cipher-algo AES256 \
       --passphrase-file "$PASS_FILE" \

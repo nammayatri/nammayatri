@@ -384,14 +384,20 @@ Verified by scanning from outside, not by reading the config:
 
 | Open | Closed |
 |---|---|
-| 22 SSH · 80 redirect + ACME · **443 rider API** | Postgres, Redis, tile server, driver API, demo pages, mock-google, OSRM, auth-guard, **Swagger** |
+| 22 SSH · 80 redirect + ACME · **443 rider API `/v2/`, driver API `/ui/`, tiles** | Postgres, Redis, demo pages, mock-google, OSRM, auth-guard, **Swagger**, and the driver binary's **`/dashboard/` office routes** |
 
 Swagger in particular is a complete, executable description of the API, and
 there is no reason to publish it.
 
-**Every `/v2/` request goes through the guard.** That is not a detail: an nginx
-`location` that reached rider-app directly would quietly undo the whole thing,
-so no such location exists.
+The driver binary serves 96 routes: 47 under `/ui/`, which is the driver's own
+app, and **41 under `/dashboard/`**, which is the office — the API that enables a
+driver, attaches his vehicle and reads his documents. Publishing `/ui/` must not
+carry `/dashboard/` with it. Two independent things refuse it: nginx's catch-all
+404, and the guard, which routes only prefixes it knows and 404s the rest.
+
+**Every `/v2/` and every `/ui/` request goes through the guard.** That is not a
+detail: an nginx `location` that reached either backend directly would quietly
+undo the whole thing, so no such location exists.
 
 `edge` runs with `network_mode: host` **on purpose**. A bridged container with
 published ports bypasses ufw entirely — the trap that makes `ufw default deny`
@@ -799,16 +805,64 @@ reports healthily forever and never moves. Nothing distinguishes this from
 working correctly except watching the row. Count fixes and successful posts
 separately in any client; the two agreeing proves nothing.
 
-### Not reachable from a phone yet
+### Reachable from a phone — `./enrol-driver.sh`
 
-`edge/nginx.conf` publishes the rider API and the tiles and nothing else, on
-purpose. `/ui/` is loopback-only.
+`/ui/` is published on 443 since 2026-08-18. It was not, for a long time, and the
+two reasons are worth keeping because they are what the enrolment script exists
+to answer.
 
-Publishing it is not just an nginx `location` block: driver auth **creates a
-driver for any unknown number**, and the OTP is still the fixed `7891`. As it
-stands, exposing it lets anyone create a driver and go online. It needs the same
-treatment `auth-guard` gives the rider side, and `auth-guard` currently matches
-the rider's `/v2/auth` shape rather than `/ui/auth`.
+Driver auth **creates a driver for any unknown number** — measured, not assumed:
+one `POST /ui/auth` with a number nobody had ever seen produced a `person` row.
+And the code is not merely guessable, it is *fixed*: `useFakeSms = Some 7891`, so
+`0000` and `1234` are refused and `7891` is accepted, for everyone. Published as
+it stood, anyone who knew a driver's phone number owned his shift and his
+earnings.
+
+There is no SMS gateway to turn the fake one off with, so the guard supplies the
+missing half instead:
+
+- **A number not enrolled is refused at `POST /ui/auth`**, before the backend
+  hears about it, so no record is created for a stranger.
+- **Each enrolled number has its own six-digit code.** The guard checks it
+  against a salted hash and only then rewrites the body to `7891` before
+  forwarding. The fixed code is dead from the internet — it spends an attempt
+  and never reaches the backend.
+- Three wrong codes lock the session for fifteen minutes; five sign-in starts per
+  number per hour.
+
+```bash
+./enrol-driver.sh 0551234567 "Karim Benali"   # enrol, print a code once
+./enrol-driver.sh --set 0551234567 482913     # set a chosen code
+./enrol-driver.sh --list                      # who may sign in
+./enrol-driver.sh --revoke 0551234567
+```
+
+The code is printed once and stored hashed — it cannot be read back. That fits
+how the pilot onboards: the agency enrols a driver face to face and hands him the
+number. When a real gateway exists, the guard generates and sends a code per
+sign-in through the *same* substitution; only where the code comes from changes.
+
+Three things that bite:
+
+- **The trunk zero is part of the key.** The guard keys on
+  `mobileCountryCode + mobileNumber` — `+2130551234567`, not `+213551234567`.
+  The script normalises for you; hand-editing the file does not.
+- **Enrolling is not enabling.** A freshly enrolled driver signs in and sees that
+  he is waiting for approval. Enabling him and attaching a vehicle are
+  `/dashboard/` operations, and `/dashboard/` is not published.
+- **Six digits, not four.** The guard allows three attempts, so six digits makes
+  guessing pointless rather than merely slow — but the driver sign-in screen must
+  accept six where the passenger one accepts four. They are different screens.
+
+`auth-guard/driver-codes.json` is **not in git** and is in the backup set. Losing
+it means re-enrolling every driver.
+
+**There is no working "resend".** `POST /ui/auth/otp/{id}/resend` answers 500 on
+this stack — there is nothing to resend through. The guard refuses it outright on
+`/ui/` rather than forwarding, because a personal code does not change. The
+driver sign-in screen must not offer the button. (The passenger app *does* offer
+it; it fails honestly with "Impossible d'envoyer le code pour le moment", which is
+accurate, and it has never once succeeded.)
 
 ## Playing a driver — `./simulate-driver.py`
 
@@ -1368,6 +1422,8 @@ fleet-service.sh       keeps that fleet running;  without it: cars but no offers
 backup.sh              nightly encrypted backup, offsite;  also restore / list
 ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
 apply-fcm.sh           installs a real Firebase key — push, rider AND driver, no rebuild
+enrol-driver.sh        who may sign in on /ui/, and with which code;  the code is
+                       printed once and cannot be read back
 
   measuring, not running — each records its results in its own header
 probe-booking-flow.py     a whole ride from both sides
@@ -1380,7 +1436,9 @@ probe-push.py             one push to a real phone, no ride needed;  isolates ap
 
   services fronting the stack
 edge/                  nginx + TLS, the public face
-auth-guard/            the OTP brute-force lock, in front of the backend
+auth-guard/            the OTP lock, in front of both backends: brute-force limits
+                       on /v2/, and on /ui/ the per-driver code that retires 7891
+  driver-codes.json    salted hashes, gitignored, in the backup set
 maps-shim/             Google Places/geocoding, answered from Postgres
 geocoder/              place-index build;  places.csv gitignored
 demo-map/              the map on :8025 (nginx conf + page)
