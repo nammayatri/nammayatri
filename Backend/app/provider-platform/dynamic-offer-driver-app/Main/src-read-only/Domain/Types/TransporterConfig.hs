@@ -87,6 +87,7 @@ data TransporterConfig = TransporterConfig
     canSuvDowngradeToTaxi :: Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
+    cancellationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationConfig,
     cancellationDistDiff :: Kernel.Prelude.Int,
     cancellationFee :: Kernel.Types.Common.HighPrecMoney,
     cancellationFeeCycle :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -281,7 +282,6 @@ data TransporterConfig = TransporterConfig
     pickupStallMonitoringConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallMonitoringConfig,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    preferOndcCancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcChangeThresholdDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -400,6 +400,9 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data CallingOption = AnonymousCall | DirectCall | DualCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationConfig = CancellationConfig {carryForwardEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, preferOndcCancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+  deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,

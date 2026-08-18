@@ -56,6 +56,7 @@ import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.Booking
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationConfig as SCC
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.DriverPool as DP
@@ -235,7 +236,8 @@ cancel req merchant booking mbActiveSearchTry = do
                             overdueCancellationCharge = chargesOutcome.overdueFee,
                             overdueCancellationTax = chargesOutcome.overdueTax,
                             cancellationCommission = chargesOutcome.commission,
-                            overdueCancellationCommission = chargesOutcome.overdueCommission
+                            overdueCancellationCommission = chargesOutcome.overdueCommission,
+                            carryForwardEnabled = SCC.carryForwardEnabled transporterConfig
                           }
                       when (totalCharges > 0) $
                         QRD.updateCancellationDueRidesCount riderId.getId
@@ -294,7 +296,7 @@ cancel req merchant booking mbActiveSearchTry = do
           "No cancellation reason received for bookingId-" <> req.bookingId.getId
       resolvedReasonCode <-
         SOCR.resolveCancellationReasonCode
-          (fromMaybe False transporterConfig.preferOndcCancellationReasonId)
+          (Just transporterConfig)
           req.ondcCancellationReasonId
           req.cancellationReason
       now <- getCurrentTime

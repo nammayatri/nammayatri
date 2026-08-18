@@ -534,6 +534,7 @@ library
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
+      SharedLogic.CancellationConfig
       SharedLogic.CancellationDues
       SharedLogic.CancellationFault
       SharedLogic.CancellationSignals

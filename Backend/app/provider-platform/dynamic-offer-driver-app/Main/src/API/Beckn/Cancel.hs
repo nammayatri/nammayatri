@@ -135,7 +135,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
               mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
               resolvedReasonCode <-
                 SOCR.resolveCancellationReasonCode
-                  (fromMaybe False (mbTransporterConfig >>= (.preferOndcCancellationReasonId)))
+                  mbTransporterConfig
                   cancelRideReq.ondcCancellationReasonId
                   cancelRideReq.cancellationReason
               (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer (DTCR.CancellationReasonCode <$> resolvedReasonCode) Nothing True) mbRide

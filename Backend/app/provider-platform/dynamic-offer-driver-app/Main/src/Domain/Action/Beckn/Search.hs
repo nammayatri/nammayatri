@@ -91,6 +91,7 @@ import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.BlockedRouteDetector
+import qualified SharedLogic.CancellationConfig as SCC
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
@@ -342,7 +343,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
       specialLocationSupportNumber = allFarePoliciesProduct.specialLocationSupportNumber
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   customerCancellationDue <-
-    if transporterConfig.canAddCancellationFee && sReq.isMultimodalSearch == Just False
+    if SCC.carryForwardEnabled transporterConfig && sReq.isMultimodalSearch == Just False
       then do
         case sReq.customerPhoneNum of
           Just number -> do

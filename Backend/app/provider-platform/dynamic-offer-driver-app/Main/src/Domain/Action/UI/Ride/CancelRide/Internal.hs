@@ -16,6 +16,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   ( cancelRideImpl,
     cancelRideTransaction,
     createCancellationLedgerEntries,
+    carryForwardCancellationDues,
     applyCancellationLedgerAction,
     updateNammaTagsForCancelledRide,
     driverDistanceToPickup,
@@ -83,6 +84,7 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationConfig as SCC
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
@@ -321,7 +323,8 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy mbCharges
             overdueCancellationCharge = mbChargesOutcome >>= (.overdueFee),
             overdueCancellationTax = mbChargesOutcome >>= (.overdueTax),
             cancellationCommission = mbChargesOutcome >>= (.commission),
-            overdueCancellationCommission = mbChargesOutcome >>= (.overdueCommission)
+            overdueCancellationCommission = mbChargesOutcome >>= (.overdueCommission),
+            carryForwardEnabled = SCC.carryForwardEnabled transporterConfig
           }
       -- Customer cancellation ledger entries (wallet path)
       when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && totalCancellation > 0) $
@@ -647,9 +650,19 @@ getCancellationCharges booking ride cancellationType reasonCode mbContext legacy
             else return (Nothing, Nothing)
         else return (Nothing, Nothing)
 
--- | Create BPP-side finance ledger entries + invoice for a customer cancellation charge.
--- Extracted so it can be called from both cancelRideTransaction (driver-cancel path)
--- and Domain.Action.Beckn.Cancel (rider-cancel via Beckn path).
+carryForwardCancellationDues ::
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  DTC.TransporterConfig ->
+  Id RiderDetails.RiderDetails ->
+  HighPrecMoney ->
+  m ()
+carryForwardCancellationDues transporterConfig riderId totalCharges =
+  when (SCC.carryForwardEnabled transporterConfig) $ do
+    riderDetails <- QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+    void $ QRiderDetails.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
+
 createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,

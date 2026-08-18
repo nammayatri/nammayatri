@@ -44,7 +44,12 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
     overdueCancellationCharge :: Maybe HighPrecMoney,
     overdueCancellationTax :: Maybe HighPrecMoney,
     cancellationCommission :: Maybe HighPrecMoney,
-    overdueCancellationCommission :: Maybe HighPrecMoney
+    overdueCancellationCommission :: Maybe HighPrecMoney,
+    -- whether the charge should also accrue on the rider's running balance. False for a
+    -- seller app whose Buyer App collects at cancellation: a balance accrued here could
+    -- never be cleared, and would charge the rider a second time on their next quote.
+    -- The per-ride breakdown row is written either way.
+    carryForwardEnabled :: Bool
   }
 
 -- | Add a cancellation charge to the rider's running balance and record the per-ride
@@ -52,7 +57,8 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
 -- (valid-cancellation counts, due-ride counts) stay with the callers.
 applyCancellationCharge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ApplyCancellationChargeReq -> m ()
 applyCancellationCharge req = do
-  void $ QRD.updateCancellationDues (req.totalCharges + req.currentDues) req.riderId
+  when req.carryForwardEnabled $
+    void $ QRD.updateCancellationDues (req.totalCharges + req.currentDues) req.riderId
   when (req.totalCharges > 0) $ do
     duesDetailsId <- generateGUID
     now <- getCurrentTime

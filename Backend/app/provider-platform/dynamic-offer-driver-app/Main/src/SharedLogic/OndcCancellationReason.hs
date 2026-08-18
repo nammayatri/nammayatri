@@ -24,8 +24,10 @@ where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Char as C
 import qualified Data.Text as T
+import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude
 import Kernel.Utils.Common
+import qualified SharedLogic.CancellationConfig as SCC
 
 -- | Parse @message.cancellation_reason_id@ into the buyer-side enum.
 --
@@ -74,11 +76,11 @@ ondcUnspecifiedCode = "ONDC_UNSPECIFIED"
 -- so an unmapped code loses no information.
 resolveCancellationReasonCode ::
   (Monad m, Log m) =>
-  Bool ->
+  Maybe DTC.TransporterConfig ->
   Maybe Text ->
   Maybe Text ->
   m (Maybe Text)
-resolveCancellationReasonCode preferOndcReasonId mbOndcReasonId mbShortDesc
+resolveCancellationReasonCode mbTransporterConfig mbOndcReasonId mbShortDesc
   | not preferOndcReasonId = pure mbShortDesc
   | otherwise = case mbOndcReasonId of
     Just rawId -> case parseOndcCancellationReasonId rawId of
@@ -91,6 +93,8 @@ resolveCancellationReasonCode preferOndcReasonId mbOndcReasonId mbShortDesc
       Nothing -> do
         logError "Buyer cancellation carried neither cancellation_reason_id nor short_desc"
         pure $ Just ondcUnspecifiedCode
+  where
+    preferOndcReasonId = SCC.preferOndcCancellationReasonId mbTransporterConfig
 
 -- | An unmapped id is third-party input that becomes a rule-engine key, so it is reduced to a
 -- bounded alphanumeric token. The unsanitised value survives on @additionalInfo@.

@@ -175,7 +175,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
           then fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate
           else fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate
       let (additions, deductions, nonRedeemableBalance, netEarningsBalance) =
-            aggregateWalletRows accountIds cutoff rows
+            aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
           redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
       pure $
@@ -250,11 +250,12 @@ fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
 --   per-reference additions/deductions groups, top-level non-redeemable
 --   balance, and net earnings (additions - deductions).
 aggregateWalletRows ::
+  Bool -> -- merchant charges VAT rather than GST
   [Id Account] ->
   UTCTime -> -- payout cutoff time
   [CHLE.WalletEntryRow] ->
   (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney, HighPrecMoney)
-aggregateWalletRows accountIds cutoff entries =
+aggregateWalletRows isVat accountIds cutoff entries =
   let (addEntries, dedEntries) = partition (\e -> e.walletToAccountId `elem` accountIds) entries
 
       addRefMap = foldl' (\acc e -> Map.insertWith (\(a1, b1) (a2, b2) -> (a1 + a2, b1 + b2)) e.walletReferenceType (e.walletAmount, if e.walletTimestamp >= cutoff then e.walletAmount else 0) acc) Map.empty addEntries
@@ -263,7 +264,7 @@ aggregateWalletRows accountIds cutoff entries =
           ( \(ref, (total, nonRedeem)) ->
               DriverWallet.WalletItem
                 { itemReference = ref,
-                  itemName = referenceTypeToItemName ref,
+                  itemName = referenceTypeToItemName isVat ref,
                   itemValue = total,
                   redeemableBalance = max 0 (total - nonRedeem),
                   nonRedeemableBalance = nonRedeem
@@ -279,7 +280,7 @@ aggregateWalletRows accountIds cutoff entries =
           ( \(ref, val) ->
               DriverWallet.WalletItem
                 { itemReference = ref,
-                  itemName = referenceTypeToItemName ref,
+                  itemName = referenceTypeToItemName isVat ref,
                   itemValue = val,
                   redeemableBalance = val,
                   nonRedeemableBalance = 0
@@ -384,8 +385,8 @@ generateMonthBuckets startDay endDay =
            in (firstDay, lastDay) : step next
    in step (sy, sm)
 
-referenceTypeToItemName :: Text -> Text
-referenceTypeToItemName ref
+referenceTypeToItemName :: Bool -> Text -> Text
+referenceTypeToItemName isVat ref
   | ref == walletReferenceBaseRide = "Ride Earnings"
   | ref == walletReferenceTollCharges = "Toll Charges"
   | ref == walletReferenceParkingCharges = "Parking Charges"
@@ -396,21 +397,30 @@ referenceTypeToItemName ref
   | ref == walletReferenceVATCash = "VAT (Cash)"
   | ref == walletReferenceTDSDeductionOnline = "TDS (Online)"
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
+  | ref == walletReferenceTDSDeductionCancellation = "TDS (Cancellation)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
   | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
-  | ref == walletReferenceDiscountsOnline = "Discounts Incl. Vat (Online)"
-  | ref == walletReferenceDiscountsCash = "Discounts Incl. Vat (Cash)"
+  | ref == walletReferenceDiscountsOnline = "Discounts Incl. " <> taxLabel <> " (Online)"
+  | ref == walletReferenceDiscountsCash = "Discounts Incl. " <> taxLabel <> " (Cash)"
   | ref == walletReferenceCustomerCancellationCharges = "Cancellation Fee"
-  | ref == walletReferenceCustomerCancellationGST = "Cancellation Fee VAT"
+  | ref == walletReferenceCustomerCancellationGST = "Cancellation Fee " <> taxLabel
   | ref == walletReferenceCommissionOnline = "Commission (Online)"
   | ref == walletReferenceCommissionCash = "Commission (Cash)"
-  | ref == walletReferenceCommissionVATOnline = "Commission VAT (Online)"
-  | ref == walletReferenceCommissionVATCash = "Commission VAT (Cash)"
+  | ref == walletReferenceCommissionVATOnline = "Commission " <> taxLabel <> " (Online)"
+  | ref == walletReferenceCommissionVATCash = "Commission " <> taxLabel <> " (Cash)"
   | ref == walletReferenceCancellationCommission = "Cancellation Commission"
-  | ref == walletReferenceCancellationCommissionVAT = "Cancellation Commission VAT"
+  | ref == walletReferenceCancellationCommissionVAT = "Cancellation Commission " <> taxLabel
   | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
   | otherwise = ref
+  where
+    taxLabel = if isVat then "VAT" else "GST"
+
+-- | Merchant-level VAT test. The per-ride signal (@fareParams.isVatTaxType@, derived from
+-- @farePolicy.vatChargeConfig@) is not reachable from a per-driver wallet aggregation, and
+-- only VAT merchants configure a service VAT rate.
+isVatMerchant :: DTConf.TransporterConfig -> Bool
+isVatMerchant transporterConfig = isJust transporterConfig.taxConfig.serviceVatPercentage
 
 --------------------------------------------------------------------------------
 -- getWalletTransactionHistory (paginated per-row ledger entries)
@@ -427,10 +437,12 @@ getWalletTransactionHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow DriverWallet.WalletTransactionHistoryResponse
   )
-getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDate mbLimit mbOffset = do
+getWalletTransactionHistory (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbLimit mbOffset = do
   validateInput
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  let isVat = isVatMerchant transporterConfig
   let counterParty = counterpartyFromRole person.role
   mbWalletAcc <- getWalletAccountByOwner counterParty driverId.getId
   case mbWalletAcc of
@@ -453,7 +465,7 @@ getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDat
                     else Nothing
              in DriverWallet.WalletTransactionHistoryItem
                   { itemReference = e.referenceType,
-                    itemName = referenceTypeToItemName e.referenceType,
+                    itemName = referenceTypeToItemName isVat e.referenceType,
                     itemValue = e.amount,
                     isCredit = e.toAccountId == walletAcc.id,
                     status = e.status,
