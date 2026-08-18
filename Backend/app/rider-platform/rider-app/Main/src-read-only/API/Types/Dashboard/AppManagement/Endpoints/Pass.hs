@@ -55,6 +55,7 @@ data PassCatalogItem = PassCatalogItem
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     passTypeTitle :: Kernel.Prelude.Text,
     pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
@@ -80,6 +81,7 @@ data PassCreateReq = PassCreateReq
     order :: Kernel.Prelude.Int,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
@@ -112,6 +114,7 @@ data PassUpdateReq = PassUpdateReq
     order :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passTypeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType),
     pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    vehicleType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving stock (Generic)
