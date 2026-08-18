@@ -970,6 +970,96 @@ one driver is driving, *no* driver answers anything. At `--speed 3` a 16-minute
 trip is five and a half real minutes of a fleet that offers nothing. On one
 phone that is invisible; it is worth knowing before blaming dispatch again.
 
+## Push notifications — `./apply-fcm.sh`
+
+Live since 2026-08-18, Firebase project **`movin-dz`**. Worth reading before
+touching, because almost everything written down about this was wrong.
+
+**Push was never missing.** `Kernel.External.FCM.Flow` is compiled into both
+binaries, eleven message types exist, and the rider app has been collecting
+device tokens since it shipped. The only broken thing was the key: upstream's
+placeholder ships with `project_id: jp-beckn-dev` and a private key that is
+literally `xxxxxxx`, so every send died at JWT signing with
+
+```
+[FCM] |> error while sending message to person with id … : "Bad RSA key!"
+```
+
+Three columns and a restart fixed it. **No rebuild, no new container** — the same
+trick as maps and routing.
+
+```bash
+./apply-fcm.sh /path/to/service-account.json
+```
+
+It writes **both** sides: `atlas_app.merchant` for the rider and
+`atlas_driver_offer_bpp.transporter_config` for the driver, which carried the
+same dead placeholder under different column names. One Firebase service account
+is scoped to the *project*, not to an app, so the key installed today already
+serves the driver app the day it exists.
+
+### `fcm_url` must be the whole endpoint
+
+Neither binary contains a `projects` or `messages:send` string, so nothing is
+assembled at runtime — the column holds the complete URL, project id included:
+
+```
+https://fcm.googleapis.com/v1/projects/movin-dz/messages:send
+```
+
+That was a guess until the first real send put the path in the log. Override with
+`FCM_URL=` if it ever changes.
+
+### Reading the result
+
+The three outcomes are easy to tell apart and only one is a problem:
+
+| In the log | Means |
+|---|---|
+| `Bad RSA key!` | the key did not take |
+| `404` on the URL | `fcm_url` is wrong |
+| `INVALID_ARGUMENT` on `message.token` | **everything is right** — that device token is not a real FCM token |
+
+The last one is what a probe will always produce, because probes invent their
+device tokens. It is a pass, not a failure.
+
+### The text is English in the binary, and it does not matter
+
+The notification wording is compiled in — `"Driver assigned!"`, `"Karim will be
+your driver for this trip."` — with **no template table and no merchant column**
+to override it. Checked by searching the executable and by listing every table in
+both schemas. The client wants French only, which looks like a rebuild.
+
+It is not, because of one detail in the payload:
+
+```json
+{"message":{"token":"…","apns":{…},"android":{"data":{…}}}}
+```
+
+The Android half carries **`data` and no `notification` block**. Android renders
+a `notification` message itself, with the server's words, and cannot be stopped.
+A **data-only** message it does not render at all — it wakes the app and hands
+the payload over. So the server says *what happened* (`notification_type`) and
+the app chooses every word. The French text lives in the app, in
+`src/lib/notifications.ts`.
+
+### The eleven types
+
+`QUOTE_RECEIVED`, `DRIVER_QUOTE_INCOMING`, `DRIVER_ASSIGNMENT`,
+`DRIVER_ON_THE_WAY`, `DRIVER_HAS_REACHED`, `TRIP_STARTED`, `TRIP_FINISHED`,
+`CANCELLED_PRODUCT`, `REALLOCATE_PRODUCT`, `EXPIRED_CASE`,
+`REGISTRATION_APPROVED`.
+
+Four are shown, on the client's instruction: a driver answered, ride confirmed,
+driver on the way, driver arrived. The rest are translated and silent.
+
+### The device tokens already in the table are useless
+
+44 of 55 riders have a `device_token` and **not one is an FCM token** — the app
+minted them with `Math.random` as a stand-in while push was believed impossible.
+Firebase rejects every one. No existing rider receives anything until they open a
+build that registers a real token and posts it to `/v2/profile`.
+
 ## The rider API — what the app uses, and what is sitting there unused
 
 The driver-API section above exists because the source tree lies about the
@@ -1277,6 +1367,7 @@ simulate-driver.py     plays a fleet of six, so the app can be finished on one p
 fleet-service.sh       keeps that fleet running;  without it: cars but no offers
 backup.sh              nightly encrypted backup, offsite;  also restore / list
 ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
+apply-fcm.sh           installs a real Firebase key — push, rider AND driver, no rebuild
 
   measuring, not running — each records its results in its own header
 probe-booking-flow.py     a whole ride from both sides
