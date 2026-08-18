@@ -596,6 +596,7 @@ in  { esqDBCfg
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
+    , fabricGatewayBaseUrl = common.fabricGatewayBaseUrl
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , urlShortnerConfig = common.urlShortnerConfig
     , vocalyticsCnfg = VocaliticsConfig

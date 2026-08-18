@@ -101,6 +101,7 @@ type SearchRequestFlow m r =
     HasBAPMetrics m r,
     HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl, "cloudType" ::: Maybe CloudType],
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds
@@ -491,6 +492,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       else return []
   gatewayUrl <-
     case merchant.gatewayAndRegistryPriorityList of
+      (Fabric : _) -> do
+        baseUrl <- asks (.fabricGatewayBaseUrl)
+        pure $ baseUrl {baseUrlPath = baseUrlPath baseUrl <> "/bap/caller/" <> T.unpack merchant.bapId}
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
   return $

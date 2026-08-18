@@ -69,6 +69,8 @@ let nyRegistryUrl = "http://localhost:${mockRegistryPort}/"
 
 let nyGatewayUrl = "http://localhost:${becknGatewayPort}/v1"
 
+let fabricGatewayBaseUrl = "http://localhost:${becknGatewayPort}/v1"
+
 let nammayatriRegistryConfig =
       { apiKey = sec.nammayatriRegistryApiKey, url = nyRegistryUrl }
 
@@ -108,4 +110,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , ondcGatewayUrl
     , nyRegistryUrl
     , nyGatewayUrl
+    , fabricGatewayBaseUrl
     }

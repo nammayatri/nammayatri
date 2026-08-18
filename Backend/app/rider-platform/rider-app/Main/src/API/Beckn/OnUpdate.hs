@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnUpdate (API, handler) where
+module API.Beckn.OnUpdate (API, handler, onUpdateWebhook) where
 
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -36,6 +36,9 @@ type API = OnUpdate.OnUpdateAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onUpdate
+
+onUpdateWebhook :: OnUpdate.OnUpdateReqV2 -> FlowHandler AckResponse
+onUpdateWebhook = onUpdate undefined
 
 onUpdate ::
   SignatureAuthResult ->

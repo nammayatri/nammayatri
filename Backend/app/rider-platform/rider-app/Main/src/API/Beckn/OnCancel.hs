@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnCancel (API, handler) where
+module API.Beckn.OnCancel (API, handler, onCancelWebhook) where
 
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -37,6 +37,11 @@ type API = OnCancel.OnCancelAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onCancel
+
+-- Onix-webhook entrypoint (auth verified upstream by DeDi; `onCancel _ req`
+-- discards the auth arg, so `undefined` is safe).
+onCancelWebhook :: OnCancel.OnCancelReqV2 -> FlowHandler AckResponse
+onCancelWebhook = onCancel undefined
 
 onCancel ::
   SignatureAuthResult ->

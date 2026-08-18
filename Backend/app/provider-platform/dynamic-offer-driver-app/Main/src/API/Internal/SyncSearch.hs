@@ -69,9 +69,21 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch reqV2 = withFlowHandlerAPI $ d
 
     -- A shadow search arrives under its own transaction id (the BAP creates a separate
     -- search request for it), so it never collides with the search it shadows here.
-    isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
-    unless isFirst $
-      throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
-    (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
-    logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-    pure onSearchReq
+    -- Fan-out over `gatewayDispatchGroups` (fabric + NY) sends the same txn twice; we
+    -- dedup here and return the cached on_search body so the second gateway sees a
+    -- clean signed response instead of an error.
+    isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 30 True
+    if isFirst
+      then do
+        (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
+        Redis.withCrossAppRedis $ Redis.setExp (DSearch.searchTxnResponseCacheKey transactionId transporterId.getId) onSearchReq 30
+        logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+        pure onSearchReq
+      else do
+        mbCached <- Redis.withCrossAppRedis $ Redis.get (DSearch.searchTxnResponseCacheKey transactionId transporterId.getId)
+        case mbCached of
+          Just cached -> do
+            logTagInfo "SyncSearchV2 Internal Flow" $ "Returning cached OnSearch for duplicate txn " <> transactionId
+            pure cached
+          Nothing ->
+            throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId

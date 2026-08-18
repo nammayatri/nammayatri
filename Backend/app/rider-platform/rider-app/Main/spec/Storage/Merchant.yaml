@@ -88,6 +88,7 @@ Merchant:
     driverOnTheWayNotifyExpiry: Seconds
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    gatewayDispatchGroups: "Maybe [[GatewayAndRegistryService]]"
     stuckRideAutoCancellationBuffer: Maybe Seconds
     cloudType: Maybe CloudType
     cloudBaseUrl: Maybe BaseUrl

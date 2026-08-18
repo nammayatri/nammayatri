@@ -94,3 +94,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN business_id text ;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cloud_type text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cloud_base_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN gateway_dispatch_groups text ;

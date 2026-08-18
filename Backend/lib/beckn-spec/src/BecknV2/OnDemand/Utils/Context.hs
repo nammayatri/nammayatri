@@ -17,7 +17,9 @@ module BecknV2.OnDemand.Utils.Context
     buildContextV2',
     buildContextV2_1,
     buildContextV2_1',
+    fabricActionName,
     mapToCbAction,
+    mutateFabricContext,
     validateContext,
   )
 where
@@ -25,6 +27,7 @@ where
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.UUID as UUID
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, (%~))
@@ -148,6 +151,43 @@ mapToCbAction = \case
   "RATING" -> Just "ON_RATING"
   "SUPPORT" -> Just "ON_SUPPORT"
   _ -> Nothing
+
+-- | Fabric peers speak the V2 action names for search-family calls
+-- (`discover`/`on_discover`). Onix's `reqmapper` translates the message body
+-- V1<->V2, but only when the routing key is the V2 action — otherwise the
+-- `search`/`on_search` mapping is pass-through. Other actions keep the same
+-- name in both dialects, so this is a two-entry lookup, not a full table.
+fabricActionName :: Text -> Text
+fabricActionName = \case
+  "search" -> "discover"
+  "on_search" -> "on_discover"
+  other -> other
+
+-- | Overrides the context fields that differ for fabric traffic:
+--   * `context.domain`  -> the fabric networkId (e.g. `finomad.eu/OMN_Registry`)
+--   * `context.action`  -> the fabric action name (e.g. `search` -> `discover`)
+--   * `context.bap_uri` -> onix's BAP receiver URL (`<base>/bap/receiver/<bapId>`)
+--     so peer BPP's `on_*` returns through the fabric wire and satisfies onix's
+--     DeDi-registered bap_uri check.
+-- Everything else in the request body is preserved (txn_id, message_id,
+-- order/fulfillment IDs, all payload shape) so onix's reqmapper can translate
+-- V1 -> V2 for the wire.
+mutateFabricContext :: Text -> Text -> A.Value -> A.Value
+mutateFabricContext networkId bapReceiverUri (A.Object o) =
+  case AKM.lookup "context" o of
+    Just (A.Object ctx) ->
+      let ctx' =
+            AKM.insert "domain" (A.String networkId)
+              . AKM.insert "bap_uri" (A.String bapReceiverUri)
+              . renameAction
+              $ ctx
+       in A.Object $ AKM.insert "context" (A.Object ctx') o
+    _ -> A.Object o
+  where
+    renameAction ctx = case AKM.lookup "action" ctx of
+      Just (A.String a) -> AKM.insert "action" (A.String (fabricActionName a)) ctx
+      _ -> ctx
+mutateFabricContext _ _ v = v
 
 validateContext :: (HasFlowEnv m r '["_version" ::: Text]) => Context.Action -> Spec.Context -> m ()
 validateContext action context = do

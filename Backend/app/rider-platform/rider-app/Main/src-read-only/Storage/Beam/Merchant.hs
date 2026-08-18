@@ -43,6 +43,7 @@ data MerchantT f = MerchantT
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
     fallbackShortId :: B.C f Kernel.Prelude.Text,
     gatewayAndRegistryPriorityList :: B.C f (Kernel.Prelude.Maybe [Domain.Types.GatewayAndRegistryService]),
+    gatewayDispatchGroups :: B.C f (Kernel.Prelude.Maybe [[Domain.Types.GatewayAndRegistryService]]),
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     geoHashPrecisionValue :: B.C f Kernel.Prelude.Int,
     destinationRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,

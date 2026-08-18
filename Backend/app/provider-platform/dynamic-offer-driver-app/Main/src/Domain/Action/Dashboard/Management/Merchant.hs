@@ -4595,6 +4595,7 @@ reorderList (x : xs) = xs ++ [x]
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
 castNetworkEnums Common.NY = Domain.Types.NY
+castNetworkEnums Common.Fabric = Domain.Types.Fabric
 
 postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.PayoutConfigReq -> Flow APISuccess
 postMerchantPayoutConfigUpdate merchantShortId city req = do

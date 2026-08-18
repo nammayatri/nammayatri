@@ -17,7 +17,7 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   fromTType' (Beam.BecknConfigT {..}) = do
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
-    staticTermsUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) staticTermsUrl
+    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
     subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
     pure $
       Just
@@ -32,6 +32,7 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
             initTTLSec = initTTLSec,
+            networkId = networkId,
             paymentParamsJson = paymentParamsJson,
             ratingTTLSec = ratingTTLSec,
             registryUrl = registryUrl',
@@ -65,6 +66,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.initTTLSec = initTTLSec,
+        Beam.networkId = networkId,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.ratingTTLSec = ratingTTLSec,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
@@ -72,7 +74,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.selectTTLSec = selectTTLSec,
         Beam.settlementType = settlementType,
         Beam.settlementWindow = settlementWindow,
-        Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
+        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
         Beam.statusTTLSec = statusTTLSec,
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,

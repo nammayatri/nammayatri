@@ -27,6 +27,7 @@ import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
+import qualified API.OnixBapWebhook as OnixBapWebhook
 import qualified API.UI as UI
 import qualified API.UnifiedDashboard as UnifiedDashboard
 import qualified Data.ByteString as BS
@@ -57,6 +58,7 @@ type API =
     :<|> FRFS.APIM
     :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> Beckn.APIV2 -- TODO : Revert after 2.x release
+    :<|> OnixBapWebhook.API
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
@@ -106,6 +108,7 @@ handler =
     :<|> FRFS.handlerM
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> const Beckn.handler -- TODO : Revert after 2.x release
+    :<|> OnixBapWebhook.handler
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"

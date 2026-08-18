@@ -33,9 +33,11 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Ride as DRide
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
+import qualified Data.Text as T
 import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -419,3 +421,26 @@ callBecknAPIWithSignatureMetro a b c d e = do
     c
     d
     e
+
+-- Fabric outbound: onix signs on our behalf, so we POST unsigned raw JSON.
+-- Servant API is `ReqBody :> Post` (no Capture) — action segment is appended
+-- to the URL by the caller before dispatch, so `IsBecknAPI` matches.
+type FabricUnsignedAPI = ReqBody '[JSON] Aeson.Value :> Post '[JSON] AckResponse
+
+fabricUnsignedAPI :: Proxy FabricUnsignedAPI
+fabricUnsignedAPI = Proxy
+
+callBecknAPIUnsigned ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Aeson.Value ->
+  m AckResponse
+callBecknAPIUnsigned action baseUrl body = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  let urlWithAction = baseUrl {baseUrlPath = baseUrlPath baseUrl <> "/" <> T.unpack action}
+  callBecknAPI Nothing Nothing action fabricUnsignedAPI urlWithAction internalEndPointHashMap body

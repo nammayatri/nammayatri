@@ -102,7 +102,9 @@ import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
 import qualified SharedLogic.BetterRoutePointSearch as BRPS
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.GatewayLookup as GatewayLookup
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.Queries.BecknConfig as QBC
 import SharedLogic.Search as DSearch
 import qualified SharedLogic.SyncSearchDispatch as SSD
 import Storage.Beam.SystemConfigs ()
@@ -305,12 +307,20 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           pure Nothing
     Nothing -> pure Nothing
   suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedRes
+  mbBapConfig <- listToMaybe <$> QBC.findByMerchantIdDomainandMerchantOperatingCityId (Just dSearchRes.merchant.id) "MOBILITY" (Just dSearchRes.merchantOperatingCityId)
+  let dispatch req =
+        GatewayLookup.dispatchToGateways
+          dSearchRes.merchant
+          mbBapConfig
+          "search"
+          req
+          (\url r -> void $ CallBPP.searchV2 url r merchantId)
+          (\url mappedAction jsonBody -> void $ CallBPP.callBecknAPIUnsigned mappedAction url jsonBody)
   if shouldSync
     then do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
-      fork "search cabs" $
-        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+      fork "search cabs" $ dispatch becknTaxiReqV2
       mbQuotesRes <- awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
       -- Both searches were dispatched together; only now do we join on the suggestion, so
       -- its latency overlaps the real search's instead of adding to it.
@@ -324,7 +334,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
         becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
         let generatedJson = encode becknTaxiReqV2
         logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+        dispatch becknTaxiReqV2
       -- Async path: nothing to join on. The shadow's estimates are persisted by its inline
       -- on_search, and /rideSearch/results picks them up via parentSearchRequestId.
       pure Nothing

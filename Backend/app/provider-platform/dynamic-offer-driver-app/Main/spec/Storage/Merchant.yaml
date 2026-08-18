@@ -106,6 +106,7 @@ Merchant:
     registryUrl: BaseUrl
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
+    gatewayDispatchGroups: "Maybe [[GatewayAndRegistryService]]"
     fleetOwnerEnabledCheck: Maybe Bool
     prepaidSubscriptionAndWalletEnabled: Maybe Bool
     overwriteAssociation: Maybe Bool

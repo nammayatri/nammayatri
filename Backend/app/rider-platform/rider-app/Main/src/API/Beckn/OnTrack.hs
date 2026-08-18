@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnTrack (API, handler) where
+module API.Beckn.OnTrack (API, handler, onTrackWebhook) where
 
 import qualified Beckn.ACL.OnTrack as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -36,6 +36,9 @@ type API = OnTrack.OnTrackAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onTrack
+
+onTrackWebhook :: OnTrack.OnTrackReqV2 -> FlowHandler AckResponse
+onTrackWebhook = onTrack undefined
 
 onTrack ::
   SignatureAuthResult ->

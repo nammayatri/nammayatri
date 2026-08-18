@@ -40,6 +40,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fallbackShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     gatewayAndRegistryPriorityList :: [Domain.Types.GatewayAndRegistryService],
+    gatewayDispatchGroups :: Kernel.Prelude.Maybe [[Domain.Types.GatewayAndRegistryService]],
     gatewayUrl :: Kernel.Types.Common.BaseUrl,
     geoHashPrecisionValue :: Kernel.Prelude.Int,
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,
@@ -66,7 +67,7 @@ data MerchantD (s :: UsageSafety) = Merchant
   }
   deriving (Generic, Show)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 

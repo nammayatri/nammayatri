@@ -1039,6 +1039,7 @@ reorderList (x : xs) = xs ++ [x]
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC
 castNetworkEnums Common.NY = Domain.Types.NY
+castNetworkEnums Common.Fabric = Domain.Types.Fabric
 
 ---------------------------------------------------------------------
 data TicketConfigCSVRow = TicketConfigCSVRow
