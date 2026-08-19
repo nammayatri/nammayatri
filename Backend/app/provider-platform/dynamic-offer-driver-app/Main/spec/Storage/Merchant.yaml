@@ -1082,6 +1082,7 @@ TransporterConfig:
       enum: "DAILY, WEEKLY, MONTHLY"
     CancellationConfig:
       carryForwardEnabled: Maybe Bool
+      consumeRideCreditOnCancellation: Maybe Bool
       preferOndcCancellationReasonId: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Eq
     InvoiceConfig:

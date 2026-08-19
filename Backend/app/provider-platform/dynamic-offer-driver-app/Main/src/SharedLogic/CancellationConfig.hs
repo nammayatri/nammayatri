@@ -20,6 +20,7 @@
 module SharedLogic.CancellationConfig
   ( carryForwardEnabled,
     preferOndcCancellationReasonId,
+    consumeRideCreditOnCancellation,
   )
 where
 
@@ -45,3 +46,8 @@ preferOndcCancellationReasonId :: Maybe DTC.TransporterConfig -> Bool
 preferOndcCancellationReasonId mbTransporterConfig =
   fromMaybe False $
     mbTransporterConfig >>= (.cancellationConfig) >>= (.preferOndcCancellationReasonId)
+
+consumeRideCreditOnCancellation :: DTC.TransporterConfig -> Bool
+consumeRideCreditOnCancellation transporterConfig =
+  fromMaybe False $
+    transporterConfig.cancellationConfig >>= (.consumeRideCreditOnCancellation)

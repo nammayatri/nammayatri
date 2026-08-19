@@ -74,6 +74,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -91,6 +92,7 @@ import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -273,7 +275,16 @@ cancelRideTransaction ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     EncFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
     Metrics.HasBPPMetrics m r,
     Finance.HasActorInfo m r
   ) =>
@@ -667,6 +678,15 @@ createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
     Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
@@ -794,6 +814,9 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
         Right _ -> pure ()
       logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+      -- Consume the driver's prepaid ride credit: the rider was charged, so the slot is used.
+      when (SCC.consumeRideCreditOnCancellation transporterConfig) $
+        SubscriptionConsumption.consumeCancellationRideCredit booking ride baseCancellation transporterConfig
 
 buildCancellationFinanceCtx ::
   ( EsqDBFlow m r,
