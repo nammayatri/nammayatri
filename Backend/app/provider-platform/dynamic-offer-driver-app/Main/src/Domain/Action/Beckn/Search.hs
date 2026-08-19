@@ -284,7 +284,7 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name
   let merchantId' = merchant.id
-  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity) (SML.distanceBucketLabel sReq.routeDistance)
+  Metrics.incrementSearchRequestCount merchant.shortId.getShortId (show bapCity) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) sReq.routeDistance)
   sessiontoken <- generateGUIDText
   -- A shadow reuses what the customer's own search published, so the suggestion is not
   -- charged congestion that search escaped. The customer's search only publishes -- it

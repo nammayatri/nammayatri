@@ -1443,6 +1443,7 @@ TransporterConfig:
     forceDirectCalling: Maybe Bool
     allowNonFleetDriverLiveMap: Maybe Bool
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
+    metricsDistanceBucketsKm: "Maybe [Int]" # BPP funnel distance buckets: upper edges in KILOMETRES, ascending, max 4, e.g. {5,12,30}. Nothing = defaults (5/12/30 km, matching ClickHouse trip_distance_bin). See SharedLogic.MetricsLabels.distanceBucketEdges for how a config is validated and when it is rejected.
 
   beamType:
     currency: Maybe Currency
@@ -1840,6 +1841,7 @@ TransporterConfig:
     validCancellationPenaltyReasons: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
+    metricsDistanceBucketsKm: "integer[]"
 
   default:
     mediaFileUrlPattern: |-
@@ -2085,6 +2087,7 @@ TransporterConfig:
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - driverRiderBlacklistDurationSeconds
+        - metricsDistanceBucketsKm
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

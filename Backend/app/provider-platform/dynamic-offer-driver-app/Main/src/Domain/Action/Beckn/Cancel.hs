@@ -128,7 +128,7 @@ cancel req merchant booking mbActiveSearchTry = do
     bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-    Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel booking.estimatedDistance)
+    Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
     QRB.updateStatus booking.id SRB.CANCELLED
     when booking.isScheduled $ removeBookingFromRedis booking
     fork "DriverRideCancelledCoin" $ do

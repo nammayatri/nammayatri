@@ -269,7 +269,7 @@ startRideHandler ServiceHandle {..} rideId req = do
       fork "Push Start Ride Metric" $ do
         incrementRideStartCounter "startRide"
         (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
-        TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel booking.estimatedDistance)
+        TMetrics.incrementRideStartedCount merchantLabel cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
       -- Schedule payout for special zone rides if enabled
       let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
       when
