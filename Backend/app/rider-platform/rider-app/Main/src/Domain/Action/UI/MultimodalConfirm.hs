@@ -919,9 +919,11 @@ postPublicTransportVehicleDataBlock ::
 postPublicTransportVehicleDataBlock (mbPersonId, _merchantId) vehicleNumber isBlock = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- Authorization: only depot managers explicitly allowed may block/unblock buses
-  depotManager <- QDepotManager.findByPersonId personId >>= fromMaybeM (BusBlockNotAllowed personId.getId)
-  unless (depotManager.isBlockAllowed == Just True) $ throwError (BusBlockNotAllowed personId.getId)
+  -- Authorization: a person may manage multiple depots — allow if ANY active
+  -- row has isBlockAllowed=True. Empty list (not a depot manager) → deny.
+  depotRows <- QDepotManager.findAllByPersonId personId
+  let allowed = any (\dm -> dm.enabled && dm.isBlockAllowed == Just True) depotRows
+  unless allowed $ throwError (BusBlockNotAllowed personId.getId)
   configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   blockedVehicleNumbers <-
     if isBlock
@@ -970,9 +972,11 @@ getPublicTransportBlockedVehicles ::
 getPublicTransportBlockedVehicles (mbPersonId, _merchantId) = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- Authorization: only depot managers explicitly allowed may view blocked buses
-  depotManager <- QDepotManager.findByPersonId personId >>= fromMaybeM (BusBlockNotAllowed personId.getId)
-  unless (depotManager.isBlockAllowed == Just True) $ throwError (BusBlockNotAllowed personId.getId)
+  -- Same permissive rule as the block/unblock endpoint: allow if ANY active
+  -- depot row grants isBlockAllowed.
+  depotRows <- QDepotManager.findAllByPersonId personId
+  let allowed = any (\dm -> dm.enabled && dm.isBlockAllowed == Just True) depotRows
+  unless allowed $ throwError (BusBlockNotAllowed personId.getId)
   configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   blockedVehicleNumbers <- reconcileCheckerBlockedList personId configs
   pure $ API.Types.UI.MultimodalConfirm.BlockedVehiclesResp blockedVehicleNumbers

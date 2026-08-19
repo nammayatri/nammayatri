@@ -1,0 +1,122 @@
+imports:
+  Person: Domain.Types.Person
+  Depot: Domain.Types.Depot
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.Depot: "rider-app"
+
+module: DepotManager
+apiPrefix: depotManager
+
+apis:
+  - POST:
+      endpoint: /upsertOne
+      name: PostDepotManagerUpsertOne
+      auth: ApiAuthV2
+      request:
+        type: DepotManagerDetail
+      response:
+        type: UpsertDepotManagerResp
+      migrate:
+        capability: city-operations.depot-manager.write
+
+  - POST:
+      endpoint: /upsertMany
+      name: PostDepotManagerUpsertMany
+      auth: ApiAuthV2
+      request:
+        type: DepotManagerDetails
+      response:
+        type: UpsertDepotManagerResp
+      migrate:
+        capability: city-operations.depot-manager.write
+
+  - GET:
+      endpoint: /list
+      name: GetDepotManagerList
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: DepotManagerListResp
+      migrate:
+        capability: city-operations.depot-manager.read
+
+  - POST:
+      endpoint: /delete
+      name: DeleteDepotManager
+      auth: ApiAuthV2
+      request:
+        type: DeleteDepotManagerReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.depot-manager.write
+
+  - GET:
+      endpoint: /findByMobileNumber
+      name: GetDepotManagerByMobileNumber
+      auth: ApiAuthV2
+      query:
+        - mobileNumber: Text
+        - countryCode: Text
+      response:
+        type: DepotManagerInfo
+      migrate:
+        capability: city-operations.depot-manager.read
+
+  - GET:
+      endpoint: /findByDepotCode
+      name: GetDepotManagerByDepotCode
+      auth: ApiAuthV2
+      query:
+        - depotCode: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: DepotManagerListResp
+      migrate:
+        capability: city-operations.depot-manager.read
+
+types:
+  DepotManagerDetail:
+    countryCode: Text
+    mobileNumber: Text
+    depotCode: Text
+    isAdmin: Maybe Bool
+    enabled: Maybe Bool
+    isBlockAllowed: Maybe Bool
+
+  DepotManagerDetails:
+    items: "[DepotManagerDetail]"
+
+  UpsertDepotManagerResp:
+    success: Text
+    succeededCount: Int
+    failedCount: Int
+    succeededPhoneNumbers: "[Text]"
+    failedPhoneNumbers: "[Text]"
+
+  DepotManagerListResp:
+    items: "[DepotManagerInfo]"
+
+  DepotManagerInfo:
+    depotCode: Text
+    personId: Id Person
+    countryCode: Text
+    mobileNumber: Text
+    isAdmin: Bool
+    enabled: Bool
+    isBlockAllowed: Maybe Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  DeleteDepotManagerReq:
+    personId: Id Person
+    depotCode: Text
+    derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
