@@ -3,7 +3,6 @@
 module Lib.ConfigPilot.Interface.Getter
   ( DimMatcher (..),
     resolveConfigList,
-    TxnIdKey (..),
     PersonIdKey (..),
     invalidateConfigInMem,
   )
@@ -16,7 +15,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Logging (logDebug)
-import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), TxnIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem, selectActiveElementVersions)
+import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem, selectActiveElementVersions)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Types as LYT

@@ -36,6 +36,7 @@ import qualified Domain.Types.OnCancel as OC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
@@ -43,7 +44,6 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Lib.DriverCoins.Types as DCT
 import Servant hiding (throwError)
 import qualified SharedLogic.SearchTryLocker as STL

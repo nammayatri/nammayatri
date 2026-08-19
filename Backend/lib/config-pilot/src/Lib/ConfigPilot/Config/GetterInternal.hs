@@ -5,7 +5,6 @@ module Lib.ConfigPilot.Config.GetterInternal
     invalidateConfigInMem,
     configPilotInMemKey,
     PersonIdKey (..),
-    TxnIdKey (..),
   )
 where
 
@@ -14,6 +13,7 @@ import qualified Data.Aeson as A
 import Data.Time (timeToTimeOfDay, utctDayTime)
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
@@ -27,7 +27,7 @@ import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra as CADLE
-import Lib.Yudhishthira.Tools.DynamicLogicGroup (TxnIdKey (..), chooseWithGroups)
+import Lib.Yudhishthira.Tools.DynamicLogicGroup (chooseWithGroups)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)

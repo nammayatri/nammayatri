@@ -7,6 +7,7 @@ import Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
 import Data.List (nub)
 import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
@@ -186,7 +187,7 @@ selectWithTxnStickiness ::
   m (Maybe Int) ->
   m (Maybe Int)
 selectWithTxnStickiness domain selectFresh = do
-  mbTxnId <- L.getOptionLocal LYG.TxnIdKey
+  mbTxnId <- L.getOptionLocal TxnIdKey
   case mbTxnId of
     Nothing -> selectFresh
     Just txnId -> do
@@ -256,7 +257,7 @@ chooseLogic logics mbToss = do
   return $ findLogic toss cumulative
 
 -- | Group-aware version of 'chooseLogic': delegates to the shared per-transaction
--- experiment-group resolver (reads 'LYG.TxnIdKey' via option-local), using this
+-- experiment-group resolver (reads 'TxnIdKey' via option-local), using this
 -- engine's cumulative-percentage 'chooseLogic' as the candidate selector.
 chooseLogicWithGroups :: (BeamFlow m r) => [AppDynamicLogicRollout] -> Maybe Int -> m (Maybe AppDynamicLogicRollout)
 chooseLogicWithGroups applicable mbToss = LYG.chooseWithGroups applicable (\cands -> chooseLogic cands mbToss)

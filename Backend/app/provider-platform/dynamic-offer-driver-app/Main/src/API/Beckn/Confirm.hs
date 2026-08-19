@@ -26,6 +26,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -37,7 +38,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking

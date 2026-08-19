@@ -27,6 +27,7 @@ import qualified Domain.Action.Beckn.Track as DTrack
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
@@ -35,7 +36,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
