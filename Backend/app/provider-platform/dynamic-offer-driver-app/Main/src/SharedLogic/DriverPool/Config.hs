@@ -155,7 +155,9 @@ instance Default DriverPoolConfig where
         vehicleVariant = Nothing,
         dynamicBatchSize = V.singleton 1,
         selfRequestIfRiderIsDriver = False,
-        enablePriorityTagSplit = Nothing
+        enablePriorityTagSplit = Nothing,
+        srdCountersBulkChunkSize = Nothing,
+        idleBulkChunkSize = Nothing
       }
 
 getDriverPoolConfigFromDB ::

@@ -146,3 +146,13 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN radius_step_s
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN soft_max_parallel_search_requests integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_early_batch_advance_on_full_reject boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN srd_counters_bulk_chunk_size integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN idle_bulk_chunk_size integer ;
+
+
+------- SQL updates -------
+

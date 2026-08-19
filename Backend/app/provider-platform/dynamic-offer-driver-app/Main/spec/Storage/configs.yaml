@@ -61,6 +61,8 @@ DriverPoolConfig:
     dynamicBatchSize: Vector Int
     selfRequestIfRiderIsDriver: Bool
     enablePriorityTagSplit: Maybe Bool
+    srdCountersBulkChunkSize: Maybe Int
+    idleBulkChunkSize: Maybe Int
     softMaxParallelSearchRequests: Maybe Int
     enableEarlyBatchAdvanceOnFullReject: Maybe Bool
 
