@@ -5,6 +5,7 @@ import qualified Dashboard.Common as Common
 import qualified Dashboard.Common.Driver as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Types.DriverRCAssociation as DDRCA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.FleetRCAssociation as DFRCA
@@ -104,6 +105,7 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         vehicleModel = rc.vehicleModel,
         vehicleColor = rc.vehicleColor,
         vehicleClass = rc.vehicleClass,
+        vehicleVariant = DCommon.castVehicleVariantDashboard rc.vehicleVariant,
         verified = rc.verified,
         approved = rc.approved,
         createdAt = rc.createdAt,

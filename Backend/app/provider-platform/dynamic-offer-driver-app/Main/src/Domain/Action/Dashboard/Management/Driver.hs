@@ -424,6 +424,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
         lastName = person.lastName,
         vehicleNo = mbVehicle <&> (.registrationNo),
         phoneNo,
+        mobileCountryCode = person.mobileCountryCode,
         enabled = driverInformation.enabled,
         blocked = driverInformation.blocked,
         verified = driverInformation.verified,

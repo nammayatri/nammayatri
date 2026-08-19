@@ -193,6 +193,7 @@ data DriverListItem = DriverListItem
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     phoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
     subscribed :: Kernel.Prelude.Bool,

@@ -770,6 +770,7 @@ types:
     - lastName: Maybe Text
     - vehicleNo: Maybe Text
     - phoneNo: Maybe Text
+    - mobileCountryCode: Maybe Text
     - enabled: Bool
     - blocked: Bool
     - subscribed: Bool
