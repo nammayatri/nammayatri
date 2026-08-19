@@ -153,7 +153,7 @@ processWalletPayouts config jobData = do
       merchantOpCityId = jobData.merchantOperatingCityId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout -- TODO :: This also can be (||), but not changing it for now.
+  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableWalletPayout
   if not walletEnabled
     then do
       logInfo "Wallet payouts disabled at transporter level"
