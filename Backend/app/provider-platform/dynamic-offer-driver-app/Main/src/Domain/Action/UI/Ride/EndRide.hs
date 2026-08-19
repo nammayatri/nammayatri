@@ -41,6 +41,7 @@ import qualified Data.Text as Text
 import Data.Time (utctDay)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
@@ -118,6 +119,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -561,7 +563,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let baseFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     rawDiscountAmount <-
-      if (isJust booking.discountAmount && finalFare /= booking.estimatedFare)
+      if isJust booking.discountAmount && finalFare /= booking.estimatedFare
         then do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           let reqBody =
@@ -747,6 +749,14 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         _ -> pure ()
 
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
+
+    fork "PAN verification on first ride" $ do
+      transporterCfg <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      let verifyDuringOnboarding = maybe False (fromMaybe False . (.verifyPanDuringOnboarding)) transporterCfg
+      unless verifyDuringOnboarding $ do
+        mbStats <- QDriverStats.findByPrimaryKey (cast driverId)
+        when (maybe False ((>= 1) . (.totalRides)) mbStats) $
+          PanVerification.triggerPendingPanVerification driverId booking.merchantOperatingCityId
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
 

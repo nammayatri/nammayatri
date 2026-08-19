@@ -342,6 +342,7 @@ data TransporterConfigT f = TransporterConfigT
     validNameComparePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
     vehicleCategoryExcludedFromVerification :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    verifyPanDuringOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     videoFileSizeUpperLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     weeklyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

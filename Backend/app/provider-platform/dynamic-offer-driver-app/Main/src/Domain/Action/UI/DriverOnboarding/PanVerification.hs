@@ -21,6 +21,7 @@ module Domain.Action.UI.DriverOnboarding.PanVerification
     verifyPanAadhaarLinkageIfAadhaarExists,
     verifyPanAadhaarLinkageIfPanExists,
     triggerPanAadhaarLinkageWhenPanAndAadhaarExist,
+    triggerPendingPanVerification,
   )
 where
 
@@ -555,3 +556,70 @@ onVerifyPanAadhaarLink verificationReq output serviceName = do
   -- has been updated. No-op unless PAN-Aadhaar-link TDS is enabled.
   materializeTdsRateFor person
   pure Ack
+
+-- | Trigger 3rd party PAN verification for a driver whose PAN was stored as PENDING
+-- during onboarding (deferred-verification flow). No-op if no PAN on file or already processed.
+triggerPendingPanVerification ::
+  (MonadFlow m, ServiceFlow m r) =>
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+triggerPendingPanVerification personId merchantOpCityId = do
+  mbPanCard <- DPQuery.findByDriverId personId
+  case mbPanCard of
+    Nothing ->
+      logInfo $ "triggerPendingPanVerification: no PAN on file, driverId=" <> personId.getId
+    Just panCard ->
+      when (panCard.verificationStatus == Documents.PENDING) $ do
+        person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        panNumber <- decrypt panCard.panCardNumber
+        now <- getCurrentTime
+        encryptedPan <- encrypt panNumber
+        verifyRes <-
+          Verification.verifyPanAsync person.merchantId merchantOpCityId $
+            Verification.VerifyPanAsyncReq
+              { panNumber,
+                driverId = person.id.getId,
+                dateOfBirth = fromMaybe now panCard.driverDob,
+                fullName = fromMaybe "" panCard.driverName
+              }
+        logInfo $
+          "triggerPendingPanVerification: verifyPanAsync requestor="
+            <> show verifyRes.requestor
+            <> " driverId="
+            <> personId.getId
+        case verifyRes.requestor of
+          VT.Idfy -> do
+            entityId <- generateGUID
+            let ivEntity =
+                  Domain.IdfyVerification
+                    { id = Id entityId,
+                      driverId = person.id,
+                      documentImageId1 = panCard.documentImageId1,
+                      documentImageId2 = Nothing,
+                      requestId = verifyRes.requestId,
+                      imageExtractionValidation = Domain.Skipped,
+                      documentNumber = encryptedPan,
+                      issueDateOnDoc = Nothing,
+                      driverDateOfBirth = panCard.driverDob,
+                      docType = docTypeToText DTO.PanCard,
+                      status = "pending",
+                      idfyResponse = Nothing,
+                      retryCount = Just 0,
+                      nameOnCard = panCard.driverName,
+                      vehicleCategory = Nothing,
+                      merchantId = Just person.merchantId,
+                      merchantOperatingCityId = Just person.merchantOperatingCityId,
+                      airConditioned = Nothing,
+                      oxygen = Nothing,
+                      ventilator = Nothing,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            IVQuery.create ivEntity
+          _ ->
+            logError $
+              "triggerPendingPanVerification: unsupported provider "
+                <> show verifyRes.requestor
+                <> " for deferred PAN verification, driverId="
+                <> personId.getId
