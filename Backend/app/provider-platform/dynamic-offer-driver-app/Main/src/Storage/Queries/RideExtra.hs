@@ -250,11 +250,11 @@ getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
 
 getLatestActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getLatestActiveByDriverId (Id personId) =
-  findAllWithOptionsKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+  findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
 
 getCurrentActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getCurrentActiveByDriverId (Id personId) =
-  findAllWithOptionsKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] (Se.Asc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+  findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] (Just (Se.Asc BeamR.createdAt)) <&> listToMaybe
 
 getUpcomingOrActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getUpcomingOrActiveByDriverId (Id personId) =
