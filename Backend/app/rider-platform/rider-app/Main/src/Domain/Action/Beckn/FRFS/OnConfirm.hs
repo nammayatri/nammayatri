@@ -84,6 +84,7 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
@@ -276,6 +277,11 @@ onConfirm merchant booking' quoteCategories dOrder = do
         transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
         url <- mkGoogleWalletLink serviceAccount transitObjects'
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+  -- Last, after everything that can throw: a throw above returns Left to the direct confirm flow,
+  -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
+  when (FRFSPassOverride.fullyCoveredByPass booking) $
+    whenJust mbJourneyId $ \journeyId ->
+      void $ withTryCatch "onConfirm:markJourneyPaid" (QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing)
   return ()
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =

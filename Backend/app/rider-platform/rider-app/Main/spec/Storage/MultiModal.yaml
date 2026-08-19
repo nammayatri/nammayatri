@@ -113,6 +113,11 @@ Journey:
         kvFunction: updateOneWithKV
         params: [paymentOrderShortId, isPaymentSuccess]
         where: id
+    updateIsPaymentSuccessIfNoOrder:
+        kvFunction: updateOneWithKV
+        params: [isPaymentSuccess]
+        where:
+          and: [id, paymentOrderShortId]
     updateHasStartedTrackingWithoutBooking:
         kvFunction: updateOneWithKV
         params: [hasStartedTrackingWithoutBooking]

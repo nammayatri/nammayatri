@@ -21,6 +21,7 @@ module SharedLogic.FRFSPassOverride
     passForOverrideAppliedEntity,
     parseOverrideBenefitConfig,
     isFullyPassCovered,
+    fullyCoveredByPass,
     PassCandidate (..),
     loadPassCandidates,
     filterCandidatesForLeg,
@@ -115,6 +116,12 @@ instance ToJSON FixedSaving where
 
 isFullyPassCovered :: Maybe HighPrecMoney -> Bool
 isFullyPassCovered = maybe False (<= 0)
+
+fullyCoveredByPass :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
+fullyCoveredByPass booking =
+  booking.overrideType == Just DFRFSTicketBooking.PassOverride
+    && isJust booking.overrideAppliedEntityId
+    && isFullyPassCovered booking.overriddenAmount
 
 withinQuantityCap :: Int -> Maybe Int -> Bool
 withinQuantityCap totalQuantity mbCap = totalQuantity <= fromMaybe 1 mbCap
