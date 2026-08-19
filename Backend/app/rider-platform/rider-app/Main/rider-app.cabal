@@ -266,6 +266,8 @@ library
       Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
+      Domain.Action.UI.AssetManifest
+      Domain.Action.UI.AssetReleaseInternal
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
       Domain.Action.UI.Booking
@@ -378,6 +380,7 @@ library
       Domain.Types.DeliveryDetails
       Domain.Types.EventManagement
       Domain.Types.EventManagement.Permissions
+      Domain.Types.Extra.AssetRelease
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
@@ -619,6 +622,7 @@ library
       Storage.Beam.SystemConfigs
       Storage.Beam.Toll
       Storage.Beam.Yudhishthira
+      Storage.CachedQueries.AssetReleaseExtra
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
@@ -917,6 +921,8 @@ library
       API.Action.Dashboard.RideBooking.Search
       API.Action.Dashboard.RideBooking.Select
       API.Action.UI.AlertWebhook
+      API.Action.UI.AssetManifest
+      API.Action.UI.AssetReleaseInternal
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
       API.Action.UI.Cac
@@ -1032,6 +1038,8 @@ library
       API.Types.Dashboard.RideBooking.Search
       API.Types.Dashboard.RideBooking.Select
       API.Types.UI.AlertWebhook
+      API.Types.UI.AssetManifest
+      API.Types.UI.AssetReleaseInternal
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
       API.Types.UI.CancellationChargesWaiveOff
@@ -1088,6 +1096,7 @@ library
       Domain.Types.AadhaarVerification
       Domain.Types.AlertIncident
       Domain.Types.AppInstalls
+      Domain.Types.AssetRelease
       Domain.Types.BBPS
       Domain.Types.BBPSConfig
       Domain.Types.BecknConfig
@@ -1259,6 +1268,7 @@ library
       Storage.Beam.AlertIncident
       Storage.Beam.AmbulanceDetails
       Storage.Beam.AppInstalls
+      Storage.Beam.AssetRelease
       Storage.Beam.BBPS
       Storage.Beam.BBPSConfig
       Storage.Beam.BecknConfig
@@ -1423,6 +1433,7 @@ library
       Storage.Beam.VehicleSeatLayoutMapping
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.AssetRelease
       Storage.CachedQueries.DeviceVehicleMapping
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FRFSVehicleServiceTier
@@ -1434,6 +1445,7 @@ library
       Storage.Queries.AadhaarVerification
       Storage.Queries.AlertIncident
       Storage.Queries.AppInstalls
+      Storage.Queries.AssetRelease
       Storage.Queries.BBPS
       Storage.Queries.BBPSConfig
       Storage.Queries.BecknConfig

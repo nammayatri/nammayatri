@@ -5,6 +5,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AssetManifest as AssetManifest
 import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.CRIS as CRIS
@@ -162,6 +163,7 @@ type API =
            :<|> PartnerOrgFRFS.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
+           :<|> AssetManifest.API
            :<|> TrackRoute.API
            :<|> BBPS.API
            :<|> RentalsIntercityCache.API
@@ -296,6 +298,7 @@ handler =
     :<|> PartnerOrgFRFS.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
+    :<|> AssetManifest.handler
     :<|> TrackRoute.handler
     :<|> BBPS.handler
     :<|> RentalsIntercityCache.handler
