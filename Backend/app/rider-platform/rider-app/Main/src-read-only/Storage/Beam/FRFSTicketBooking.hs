@@ -22,6 +22,7 @@ import Tools.Beam.UtilsTH
 data FRFSTicketBookingT f = FRFSTicketBookingT
   { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
     bookingAuthCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bookingGroupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBankAccountNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBankCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppDelayedInterest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -122,6 +123,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bookingGroupId], ['bppOrderId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")

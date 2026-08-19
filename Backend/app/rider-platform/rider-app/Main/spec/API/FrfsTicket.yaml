@@ -43,6 +43,8 @@ imports:
   Person: Domain.Types.Person
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
   CumulativeOfferResp: SharedLogic.OfferTypes
+  FRFSBookingGroup: Domain.Types.FRFSBookingGroup
+  FRFSBookingGroupStatus: Domain.Types.FRFSBookingGroup
 
 module: FRFSTicketService
 types:
@@ -67,6 +69,12 @@ types:
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
     quotes: [FRFSQuoteAPIRes] # For Sync Search API, we return the quotes for the search.
+
+  FRFSSearchGroupReq:
+    searches: "[FRFSSearchAPIReq]"
+
+  FRFSSearchGroupRes:
+    results: "[FRFSSearchAPIRes]"
 
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
@@ -205,6 +213,58 @@ types:
     # Whole booking: this is what the payment order was created for.
     overriddenTotalPrice: Maybe PriceAPIEntity
     appliedPurchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
+    nudge: Maybe FRFSNudgeAPI
+    derive: "Show"
+
+  FRFSBookingGroupSlotReq:
+    quoteId: Id FRFSQuote
+    offered: Maybe [FRFSCategorySelectionReq]
+    crisSdkResponse: Maybe CrisSdkResponse
+    enableOffer: Maybe Bool
+    tripId: Maybe Text
+    isSpotBooking: Maybe Bool
+
+  FRFSBookingGroupCheckoutReq:
+    slots: "[FRFSBookingGroupSlotReq]"
+
+  FRFSBookingGroupStatusAPIRes:
+    bookingGroupId: Id FRFSBookingGroup
+    status: FRFSBookingGroupStatus
+    totalPrice: PriceAPIEntity
+    bookings: "[FRFSTicketBookingStatusAPIRes]"
+    derive: "Show"
+
+  FRFSRepeatSlotCandidate:
+    date: Text # ISO-8601 calendar date (YYYY-MM-DD) this candidate applies to
+    tripId: Maybe Text
+    routeCode: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    eta: Maybe UTCTime
+    availableSeats: Maybe Int
+    derive: "Show"
+
+  FRFSRepeatSlotsRes:
+    originalBookingId: Id FRFSTicketBooking
+    originalFromStationCode: Text
+    originalToStationCode: Text
+    candidates: "[FRFSRepeatSlotCandidate]"
+    derive: "Show"
+
+  FRFSNudgeType:
+    enum: "RETURN_TRIP, MULTI_SELECT_REPEAT"
+
+  FRFSNudgeTimeWindow:
+    enum: "MORNING, AFTERNOON, EVENING, NIGHT"
+
+  FRFSNudgeAPI:
+    nudgeType: FRFSNudgeType
+    fromStationCode: Text
+    toStationCode: Text
+    # RETURN_TRIP only: default time-window suggestion (opposite bucket of the original booking).
+    timeWindowHint: Maybe FRFSNudgeTimeWindow
+    # MULTI_SELECT_REPEAT only: an existing CONFIRMED booking in the direction being suggested,
+    # to feed into the existing GET /frfs/booking/{bookingId}/repeatSlots.
+    seedBookingId: Maybe (Id FRFSTicketBooking)
     derive: "Show"
 
   FRFSRefundAttemptAPI:
@@ -600,6 +660,22 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 
+  # Same as /frfs/search, but for a multiselect: N independent searches (e.g. several departure
+  # times on one route), run concurrently, one result per input in the same order.
+  - POST:
+      endpoint: /frfs/searchGroup
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        integratedBppConfigId: Id IntegratedBPPConfig
+        newServiceTiers: [ServiceTierType]
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSSearchGroupReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSSearchGroupRes
+
   # Discovery Search for finding metro/bus providers for a given city
   - POST:
       endpoint: /frfs/discovery/search
@@ -647,6 +723,25 @@ apis:
         type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
+  # Checkout a cart of multiple booked slots (e.g. shuttle/premium bus departures) with one combined payment
+  - POST:
+      endpoint: /frfs/bookingGroup/checkout
+      query:
+        isMockPayment: Bool
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingGroupCheckoutReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
+
+  - GET:
+      endpoint: /frfs/bookingGroup/{bookingGroupId}/status
+      params:
+        bookingGroupId: Id FRFSBookingGroup
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSBookingGroupStatusAPIRes
 
   # Retry payment
   - POST:
@@ -804,3 +899,11 @@ apis:
         type: FleetOperatorCurrentOperationReq
       response:
         type: FleetOperatorCurrentOperationResp
+
+  - GET:
+      endpoint: /frfs/booking/{bookingId}/repeatSlots
+      auth: TokenAuth
+      params:
+        bookingId: Id FRFSTicketBooking
+      response:
+        type: FRFSRepeatSlotsRes

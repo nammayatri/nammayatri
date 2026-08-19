@@ -36,7 +36,9 @@ data DIRECTConfig = DIRECTConfig
     qrRefreshTtl :: Maybe Seconds,
     redisPrefix :: Maybe Text,
     busBlockExpiryTime :: Maybe Seconds,
-    busBlockMaxLimit :: Maybe Int
+    busBlockMaxLimit :: Maybe Int,
+    repeatSlotTimeToleranceSec :: Maybe Seconds,
+    repeatSlotLookaheadDays :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

@@ -48,6 +48,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FRFSNudge
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
@@ -269,7 +270,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                       transactionId = Nothing
                                     }
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
-        when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
+        -- Also sweep abandoned booking-group carts the same way an abandoned multimodal journey
+        -- is swept -- a cart's combined payment can succeed while a sibling slot's post-payment
+        -- BPP confirm never comes back, exactly the failure mode this job already detects.
+        when ((isMultiModalBooking || isJust booking.bookingGroupId) && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
           riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
           allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
           let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
@@ -483,6 +487,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
           Nothing -> do
             let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
             return (routeStations, Nothing)
+  nudge <- SharedLogic.FRFSNudge.computeShuttleNudge booking
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,

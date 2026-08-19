@@ -217,3 +217,10 @@ CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_waybill_no ON atlas_app.frfs_t
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_applied_entity_id text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN overridden_amount double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN booking_group_id character varying(36) ;
+CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_booking_group_id ON atlas_app.frfs_ticket_booking USING btree (booking_group_id);
