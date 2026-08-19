@@ -16,6 +16,7 @@ module Beckn.OnDemand.Transformer.MSIL.OnSelect
 where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
 import Beckn.OnDemand.Utils.MSIL.Category (scheduledCategoryCode)
 import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
 import qualified Beckn.OnDemand.Utils.MSIL.RouteInfo as MSILRouteInfo
@@ -106,7 +107,7 @@ mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy = do
       Spec.itemFulfillmentIds = Just [fulfillmentId],
       Spec.itemPrice = Just $ mkPriceFromQuote quote,
       Spec.itemTags = mkItemTagsFromQuote quote mbFarePolicy,
-      Spec.itemDescriptor = mkItemDescriptorFromQuote vehicleServiceTierItem,
+      Spec.itemDescriptor = mkItemDescriptorFromQuote quote vehicleServiceTierItem,
       -- Must agree with the provider-level category id on_search declared for
       -- this catalog (Beckn.OnDemand.Transformer.MSIL.OnSearch): scheduled
       -- quotes get SCHEDULED_TRIP/SCHEDULED_RENTAL, same as there; quotes from
@@ -119,15 +120,23 @@ mkQuoteCategoryId quote =
   let baseCode = Utils.tripCategoryToCategoryCode quote.tripCategory
    in if quote.isScheduled then scheduledCategoryCode baseCode else baseCode
 
-mkItemDescriptorFromQuote :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor
-mkItemDescriptorFromQuote vehicleServiceTierItem =
+-- | ONDC v2.1.0's TRV10 schema restricts items[*].descriptor.code to "RIDE" or
+-- "RENTAL" -- the vehicle service tier (e.g. "COMFY") that used to be here
+-- doesn't validate; the tier itself is still conveyed via descriptorName/
+-- descriptorShortDesc, only the code changes. Same RIDE/RENTAL derivation as
+-- on_search's Beckn.OnDemand.Transformer.MSIL.OnSearch.msilPatchCatalogCompliance.
+mkItemDescriptorFromQuote :: DQuote.Quote -> DVST.VehicleServiceTier -> Maybe Spec.Descriptor
+mkItemDescriptorFromQuote quote vehicleServiceTierItem =
   Just
     Spec.Descriptor
       { descriptorLongDesc = Nothing,
-        descriptorCode = Just $ show vehicleServiceTierItem.serviceTierType,
+        descriptorCode = Just (if isRentalQuote quote then "RENTAL" else "RIDE"),
         descriptorShortDesc = vehicleServiceTierItem.shortDescription,
         descriptorName = Just vehicleServiceTierItem.name
       }
+
+isRentalQuote :: DQuote.Quote -> Bool
+isRentalQuote quote = "RENTAL" `T.isInfixOf` Utils.tripCategoryToCategoryCode quote.tripCategory
 
 mkPriceFromQuote :: DQuote.Quote -> Spec.Price
 mkPriceFromQuote quote =
@@ -152,7 +161,7 @@ mkQuoteFromQuote quote now = do
 mkQuoteBreakupFromQuote :: DQuote.Quote -> [Spec.QuotationBreakupInner]
 mkQuoteBreakupFromQuote quote = do
   let fareParams = mkFareParamsBreakups mkBreakupPrice mkQuotationBreakupInner quote.fareParams
-   in filter filterRequiredBreakups fareParams
+   in mapMaybe remapBreakup fareParams
   where
     mkBreakupPrice money =
       Just
@@ -165,21 +174,12 @@ mkQuoteBreakupFromQuote quote = do
         { quotationBreakupInnerPrice = price,
           quotationBreakupInnerTitle = Just title
         }
-    filterRequiredBreakups breakup =
-      breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.DEAD_KILOMETER_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.DISTANCE_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOTAL_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_VAT)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX_EXCLUSIVE)
-        || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_FARE_TAX)
+    -- ONDC v2.1.0's TRV10 schema restricts quote.breakup[*].title to a fixed
+    -- allowed vocabulary -- see Beckn.OnDemand.Utils.MSIL.Breakup for the
+    -- actual remap table and why.
+    remapBreakup breakup = case breakup.quotationBreakupInnerTitle >>= MSILBreakup.remapBreakupTitle of
+      Nothing -> Nothing
+      Just newTitle -> Just breakup {Spec.quotationBreakupInnerTitle = Just newTitle}
 
 mkProviderFromQuote :: DBC.BecknConfig -> Maybe Spec.Provider
 mkProviderFromQuote becknConfig =

@@ -23,6 +23,7 @@ module Beckn.OnDemand.Transformer.MSIL.OnConfirm
   )
 where
 
+import Beckn.OnDemand.Utils.MSIL.Breakup (overrideOrderBreakupTitles)
 import Beckn.OnDemand.Utils.MSIL.Category (overrideOrderCategoryIds)
 import Beckn.OnDemand.Utils.MSIL.FulfillmentState (overrideOrderFulfillmentState)
 import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
@@ -46,7 +47,8 @@ import Kernel.Utils.Common (CacheFlow, MonadFlow)
 -- vehicle.energy_type. Every other field is passed through untouched.
 msilOnConfirmMessageBuild :: (CacheFlow m r, MonadFlow m) => Bool -> Text -> Maybe BaseUrl -> DBC.BecknConfig -> Spec.ConfirmReqMessage -> m Spec.ConfirmReqMessage
 msilOnConfirmMessageBuild isScheduled transactionId mbBapStaticTermsUrl bppConfig msg = do
-  let orderWithCategoryIds = overrideOrderCategoryIds isScheduled (overrideOrderFulfillmentState (Spec.confirmReqMessageOrder msg))
+  let orderWithBreakupTitles = overrideOrderBreakupTitles (Spec.confirmReqMessageOrder msg)
+      orderWithCategoryIds = overrideOrderCategoryIds isScheduled (overrideOrderFulfillmentState orderWithBreakupTitles)
       orderWithTerms = MSILTerms.patchOrderTags True mbBapStaticTermsUrl bppConfig orderWithCategoryIds
       orderWithFulfillmentType = MSILFulfillmentType.patchOrderFulfillmentTypes orderWithTerms
       orderWithEnergyType = MSILVehicleEnergyType.patchOrderVehicleEnergyType orderWithFulfillmentType

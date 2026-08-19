@@ -6,14 +6,16 @@
 -- ENCODED_POLYLINE, from the fallback route cached at search time) to every
 -- fulfillment's tags (Beckn.OnDemand.Utils.MSIL.RouteInfo.patchOrderRouteInfo),
 -- overrides fulfillment.type per the RIDE_OTP->SELF_PICKUP/otherwise->DELIVERY
--- rule (Beckn.OnDemand.Utils.MSIL.FulfillmentType), and overrides
+-- rule (Beckn.OnDemand.Utils.MSIL.FulfillmentType), overrides
 -- vehicle.energy_type to a valid ONDC v2.1.0 code
--- (Beckn.OnDemand.Utils.MSIL.VehicleEnergyType).
+-- (Beckn.OnDemand.Utils.MSIL.VehicleEnergyType), and remaps quote.breakup[*].title
+-- to ONDC's allowed vocabulary (Beckn.OnDemand.Utils.MSIL.Breakup).
 module Beckn.OnDemand.Transformer.MSIL.OnInit
   ( msilOnInitMessageBuild,
   )
 where
 
+import Beckn.OnDemand.Utils.MSIL.Breakup (overrideOrderBreakupTitles)
 import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
 import qualified Beckn.OnDemand.Utils.MSIL.RouteInfo as MSILRouteInfo
 import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
@@ -24,13 +26,15 @@ import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, MonadFlow)
 
 -- | Layer 2: takes the already-built on_init message from Layer 1 and, in one
--- pass over the order, adds BPP_TERMS to order.tags, ROUTE_INFO to every
--- fulfillment's tags, overrides every fulfillment's type code, and overrides
--- every fulfillment's vehicle.energy_type. Every other field is passed
--- through untouched.
+-- pass over the order, remaps quote.breakup[*].title to ONDC's allowed
+-- vocabulary, adds BPP_TERMS to order.tags, ROUTE_INFO to every fulfillment's
+-- tags, overrides every fulfillment's type code, and overrides every
+-- fulfillment's vehicle.energy_type. Every other field is passed through
+-- untouched.
 msilOnInitMessageBuild :: (CacheFlow m r, MonadFlow m) => Text -> DBC.BecknConfig -> Spec.ConfirmReqMessage -> m Spec.ConfirmReqMessage
 msilOnInitMessageBuild transactionId bppConfig msg = do
-  let orderWithTerms = MSILTerms.patchOrderTags False Nothing bppConfig msg.confirmReqMessageOrder
+  let orderWithBreakupTitles = overrideOrderBreakupTitles msg.confirmReqMessageOrder
+      orderWithTerms = MSILTerms.patchOrderTags False Nothing bppConfig orderWithBreakupTitles
       orderWithFulfillmentType = MSILFulfillmentType.patchOrderFulfillmentTypes orderWithTerms
       orderWithEnergyType = MSILVehicleEnergyType.patchOrderVehicleEnergyType orderWithFulfillmentType
   orderWithRouteInfo <- MSILRouteInfo.patchOrderRouteInfo transactionId orderWithEnergyType
