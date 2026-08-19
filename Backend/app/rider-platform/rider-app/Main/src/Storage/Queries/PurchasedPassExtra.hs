@@ -147,9 +147,28 @@ updateStatusByIds status purchasedPassIds = do
     ( [ Se.Set Beam.status status,
         Se.Set Beam.updatedAt now
       ]
-        <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0)] else [])
+        <> (if status == DPurchasedPass.Active then [Se.Set Beam.deviceSwitchCount (Just 0), Se.Set Beam.activatedAt (Just now)] else [])
     )
     [Se.Is Beam.id $ Se.In (map getId purchasedPassIds)]
+
+updateStatusToPhotoPendingByIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id DPurchasedPass.PurchasedPass] ->
+  Day ->
+  m ()
+updateStatusToPhotoPendingByIds [] _ = pure ()
+updateStatusToPhotoPendingByIds purchasedPassIds today = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status DPurchasedPass.PhotoPending, Se.Set Beam.updatedAt now]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.In (map getId purchasedPassIds),
+          Se.Is Beam.startDate $ Se.LessThanOrEq today,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq today,
+          Se.Is Beam.passPhotoMediaId $ Se.Eq Nothing,
+          Se.Is Beam.profilePicture $ Se.Eq Nothing
+        ]
+    ]
 
 updateDeviceIdById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

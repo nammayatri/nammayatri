@@ -50,6 +50,26 @@ expireOlderPaymentsByPurchasedPassIds purchasedPassIds endDate = do
         ]
     ]
 
+updateStatusToPhotoPendingByPurchasedPassIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id DPurchasedPass.PurchasedPass] ->
+  Day ->
+  m ()
+updateStatusToPhotoPendingByPurchasedPassIds [] _ = pure ()
+updateStatusToPhotoPendingByPurchasedPassIds purchasedPassIds today = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.status DPurchasedPass.PhotoPending, Se.Set Beam.updatedAt now]
+    [ Se.And
+        [ Se.Is Beam.purchasedPassId $ Se.In (map getId purchasedPassIds),
+          Se.Is Beam.status $ Se.In [DPurchasedPass.PreBooked, DPurchasedPass.Active],
+          Se.Is Beam.startDate $ Se.LessThanOrEq today,
+          Se.Is Beam.endDate $ Se.GreaterThanOrEq today,
+          Se.Is Beam.passPhotoMediaId $ Se.Eq Nothing,
+          Se.Is Beam.profilePicture $ Se.Eq Nothing
+        ]
+    ]
+
 activatePreBookedPaymentsByPurchasedPassIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [Id DPurchasedPass.PurchasedPass] ->
@@ -59,7 +79,7 @@ activatePreBookedPaymentsByPurchasedPassIds [] _ = pure ()
 activatePreBookedPaymentsByPurchasedPassIds purchasedPassIds today = do
   now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.status DPurchasedPass.Active, Se.Set Beam.updatedAt now]
+    [Se.Set Beam.status DPurchasedPass.Active, Se.Set Beam.updatedAt now, Se.Set Beam.activatedAt (Just now)]
     [ Se.And
         [ Se.Is Beam.purchasedPassId $ Se.In (map getId purchasedPassIds),
           Se.Is Beam.status $ Se.Eq DPurchasedPass.PreBooked,

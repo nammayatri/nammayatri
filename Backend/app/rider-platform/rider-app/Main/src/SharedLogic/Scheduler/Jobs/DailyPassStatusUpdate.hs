@@ -104,6 +104,8 @@ activateBatch merchantOpCityId today budget = do
   let passIds = map (.id) passes
   QPurchasedPass.updateStatusByIds DPurchasedPass.Active passIds
   QPurchasedPassPayment.activatePreBookedPaymentsByPurchasedPassIds passIds today
+  QPurchasedPass.updateStatusToPhotoPendingByIds passIds today
+  QPurchasedPassPayment.updateStatusToPhotoPendingByPurchasedPassIds passIds today
   pure (length passes)
 
 scheduleTomorrow ::
