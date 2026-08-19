@@ -300,8 +300,9 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = d
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
       amountPaidByCustomer = fare - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare} = labels
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee} = labels
       cancellationDues = fromMaybe 0 (finalFareParam >>= (.customerCancellationDues))
+      airportConvenienceFee = fromMaybe 0 (finalFareParam >>= (.airportConvenienceFee))
   let mkComp sec key mbLabel value applicable =
         if applicable
           then
@@ -319,7 +320,8 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = d
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0)
+            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
+            mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0)
           ]
   footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam
 
@@ -421,7 +423,8 @@ data EarningsLabels = EarningsLabels
     lblTips :: Maybe Text,
     lblCommission :: Maybe Text,
     lblNetEarnings :: Maybe Text,
-    lblFare :: Maybe Text
+    lblFare :: Maybe Text,
+    lblAirportConvenienceFee :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -436,6 +439,7 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "COMMISSION"
     <*> resolveLabel lang "NET_DRIVER_EARNINGS"
     <*> resolveLabel lang "FARE"
+    <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
