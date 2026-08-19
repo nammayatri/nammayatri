@@ -920,10 +920,10 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
       notificationDuration = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
       notificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
       notificationValidTill = addUTCTime (fromIntegral notificationActiveTillInSec) now
-      isDemandHigh = fromMaybe True mbIsDemandHigh
-  mbPerKmFare <- case mbServiceTier of
-    Nothing -> pure Nothing
-    Just serviceTier -> getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId serviceTier
+      isDemandHigh = fromMaybe False (gate.gateConfig >>= (.enableIsDemandHigh)) && fromMaybe True mbIsDemandHigh
+  mbPerKmFare <- case (fromMaybe False (gate.gateConfig >>= (.enablePerKmFare)), mbServiceTier) of
+    (True, Just serviceTier) -> getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId serviceTier
+    _ -> pure Nothing
   mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
   let demandCount = fromMaybe 0 mbDemandCount
   -- Callers funnel through 'filterEligibleDrivers' which has already done the

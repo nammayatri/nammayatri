@@ -494,6 +494,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            gateConfig = mbGate >>= (.gateConfig),
             navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
           }
@@ -1520,6 +1521,15 @@ parseBoolMap mbT = do
   t <- mbT >>= cleanField
   JSON.decodeStrict (TE.encodeUtf8 t)
 
+resolveGateConfig :: Int -> Maybe Text -> Flow (Maybe DGI.GateConfig)
+resolveGateConfig idx mbFieldValue =
+  case mbFieldValue >>= cleanField of
+    Nothing -> pure Nothing
+    Just t ->
+      fmap Just $
+        JSON.decodeStrict (TE.encodeUtf8 t)
+          & fromMaybeM (InvalidRequest $ "Invalid Gate Info (config): " <> t <> " at row: " <> show idx)
+
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
   case cleanField fieldValue of
@@ -1581,6 +1591,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     render :: Maybe Text,
     fetchAllGateFareProduct :: Maybe Text,
     enableQueueFilter :: Maybe Text,
+    gateInfoGateConfig :: Maybe Text,
     paymentModes :: Maybe Text,
     fareSettlementType :: Maybe Text
   }
@@ -1631,6 +1642,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
     render <- optional (r .: "render")
     fetchAllGateFareProduct <- optional (r .: "fetch_all_gate_fare_product")
     enableQueueFilter <- optional (r .: "enable_queue_filter")
+    gateInfoGateConfig <- optional (r .: "gate_info_gate_config")
     paymentModes <- optional (r .: "payment_modes")
     fareSettlementType <- optional (r .: "fare_settlement_type")
     pure SpecialLocationCSVRow {..}
@@ -1691,6 +1703,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbFetchAllGateFareProduct :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.fetchAllGateFareProduct) "Fetch All Gate Fare Product"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       resolvedPaymentModes <- resolvePaymentModes idx row.paymentModes
+      resolvedGateConfig <- resolveGateConfig idx row.gateInfoGateConfig
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
       gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
@@ -1767,7 +1780,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
                 pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
                 notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
-                enableQueueFilter = parseBoolMap row.enableQueueFilter
+                enableQueueFilter = parseBoolMap row.enableQueueFilter,
+                gateConfig = resolvedGateConfig
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
@@ -1849,7 +1863,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec,
           -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
           DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
-          DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter
+          DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter,
+          DGI.gateConfig = new.gateConfig <|> old.gateConfig
          }
 
 postMerchantConfigTollUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTollCsvReq -> Flow Common.APISuccessWithUnprocessedEntities

@@ -55,7 +55,8 @@ data GateInfoFull = GateInfoFull
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
     pickupRequestResponseTimeoutInSec :: Maybe Int,
     notificationActiveTillInSec :: Maybe Int,
-    enableQueueFilter :: Maybe (Map.Map Text Bool)
+    enableQueueFilter :: Maybe (Map.Map Text Bool),
+    gateConfig :: Maybe GateConfig
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
