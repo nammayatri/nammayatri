@@ -127,7 +127,10 @@ data FinanceCtx = FinanceCtx
     tdsRateReason :: Maybe TdsRateReason,
     emitLedgerEntries :: Bool,
     fromLocationAddress :: Maybe Text,
-    issuedToName :: Maybe Text
+    issuedToName :: Maybe Text,
+    -- | Identifies the buying counterparty on @Buyer*@ accounts. Nothing falls back to the
+    --   merchant, which is the historical behaviour from when the buyer side was always us.
+    buyerCounterpartyId :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -263,7 +266,7 @@ roleToInput ctx = \case
     AccountInput
       { accountType = Asset,
         counterpartyType = Just BUYER,
-        counterpartyId = Just ctx.merchantId,
+        counterpartyId = Just (fromMaybe ctx.merchantId ctx.buyerCounterpartyId),
         subLedger = Nothing,
         currency = ctx.currency,
         merchantId = ctx.merchantId,
@@ -273,7 +276,7 @@ roleToInput ctx = \case
     AccountInput
       { accountType = External,
         counterpartyType = Just BUYER,
-        counterpartyId = Just ctx.merchantId,
+        counterpartyId = Just (fromMaybe ctx.merchantId ctx.buyerCounterpartyId),
         subLedger = Nothing,
         currency = ctx.currency,
         merchantId = ctx.merchantId,
@@ -283,7 +286,7 @@ roleToInput ctx = \case
     AccountInput
       { accountType = Expense,
         counterpartyType = Just BUYER,
-        counterpartyId = Just ctx.merchantId,
+        counterpartyId = Just (fromMaybe ctx.merchantId ctx.buyerCounterpartyId),
         subLedger = Nothing,
         currency = ctx.currency,
         merchantId = ctx.merchantId,
@@ -293,7 +296,7 @@ roleToInput ctx = \case
     AccountInput
       { accountType = Control,
         counterpartyType = Just BUYER,
-        counterpartyId = Just ctx.merchantId,
+        counterpartyId = Just (fromMaybe ctx.merchantId ctx.buyerCounterpartyId),
         subLedger = Nothing,
         currency = ctx.currency,
         merchantId = ctx.merchantId,
