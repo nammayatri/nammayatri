@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DriverPoolConfig.DriverPoolConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DriverPoolConfig.DriverPoolConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.tripDistance) limit offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe Domain.Types.DriverPoolConfig.DriverPoolConfig))
@@ -53,6 +53,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.dynamicBatchSize (Kernel.Prelude.Just $ Data.Vector.toList dynamicBatchSize),
       Se.Set Beam.enableForwardBatching enableForwardBatching,
       Se.Set Beam.enablePriorityTagSplit enablePriorityTagSplit,
+      Se.Set Beam.idleBulkChunkSize idleBulkChunkSize,
       Se.Set Beam.maxDriverQuotesRequired maxDriverQuotesRequired,
       Se.Set Beam.maxNumberOfBatches maxNumberOfBatches,
       Se.Set Beam.maxParallelSearchRequests maxParallelSearchRequests,
@@ -68,6 +69,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.scheduleTryTimes scheduleTryTimes,
       Se.Set Beam.selfRequestIfRiderIsDriver selfRequestIfRiderIsDriver,
       Se.Set Beam.singleBatchProcessTime singleBatchProcessTime,
+      Se.Set Beam.srdCountersBulkChunkSize srdCountersBulkChunkSize,
       Se.Set Beam.thresholdToIgnoreActualDistanceThreshold thresholdToIgnoreActualDistanceThreshold,
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.tripCategory tripCategory,
@@ -102,6 +104,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             enableForwardBatching = enableForwardBatching,
             enablePriorityTagSplit = enablePriorityTagSplit,
             id = Kernel.Types.Id.Id id,
+            idleBulkChunkSize = idleBulkChunkSize,
             maxDriverQuotesRequired = maxDriverQuotesRequired,
             maxNumberOfBatches = maxNumberOfBatches,
             maxParallelSearchRequests = maxParallelSearchRequests,
@@ -117,6 +120,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             scheduleTryTimes = scheduleTryTimes,
             selfRequestIfRiderIsDriver = selfRequestIfRiderIsDriver,
             singleBatchProcessTime = singleBatchProcessTime,
+            srdCountersBulkChunkSize = srdCountersBulkChunkSize,
             thresholdToIgnoreActualDistanceThreshold = thresholdToIgnoreActualDistanceThreshold,
             timeBounds = timeBounds,
             tripCategory = tripCategory,
@@ -148,6 +152,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.enableForwardBatching = enableForwardBatching,
         Beam.enablePriorityTagSplit = enablePriorityTagSplit,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.idleBulkChunkSize = idleBulkChunkSize,
         Beam.maxDriverQuotesRequired = maxDriverQuotesRequired,
         Beam.maxNumberOfBatches = maxNumberOfBatches,
         Beam.maxParallelSearchRequests = maxParallelSearchRequests,
@@ -163,6 +168,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.scheduleTryTimes = scheduleTryTimes,
         Beam.selfRequestIfRiderIsDriver = selfRequestIfRiderIsDriver,
         Beam.singleBatchProcessTime = singleBatchProcessTime,
+        Beam.srdCountersBulkChunkSize = srdCountersBulkChunkSize,
         Beam.thresholdToIgnoreActualDistanceThreshold = thresholdToIgnoreActualDistanceThreshold,
         Beam.timeBounds = timeBounds,
         Beam.tripCategory = tripCategory,

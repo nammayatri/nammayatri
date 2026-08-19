@@ -166,8 +166,8 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   -- (counters + idle) instead of a Redis read pass per driver.
   enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
     let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
-    countersMap <- getSrdStatsCountersBulk personIds
-    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk personIds
+    countersMap <- getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds
+    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
     return $
       map
         ( \driver ->

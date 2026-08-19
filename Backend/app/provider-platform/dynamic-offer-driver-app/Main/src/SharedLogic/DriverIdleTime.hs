@@ -64,10 +64,10 @@ resumeIdleOnOnline driverId = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   Redis.setExp (mkIdleLastRequestAtKey driverId.getId) now idleKeyExpiry
 
--- Cap on drivers per pipelined MGET so a big pool never issues one unboundedly large multi-key
--- Redis read in a single I/O.
-idleBulkDriverChunkSize :: Int
-idleBulkDriverChunkSize = 50
+-- Fallback cap on drivers per pipelined MGET so a big pool never issues one unboundedly large
+-- multi-key Redis read in a single I/O. Overridable per pool via DriverPoolConfig.idleBulkChunkSize.
+defaultIdleBulkDriverChunkSize :: Int
+defaultIdleBulkDriverChunkSize = 50
 
 chunksOfList :: Int -> [a] -> [[a]]
 chunksOfList _ [] = []
@@ -76,11 +76,12 @@ chunksOfList n xs
   | otherwise = let (a, rest) = splitAt n xs in a : chunksOfList n rest
 
 -- Current idle time in seconds for a whole batch of drivers = banked + running (running is 0 while
--- paused/offline), in pipelined cross-slot MGETs of at most 'idleBulkDriverChunkSize' drivers each
--- (banked keys + last-request keys), instead of two Redis reads per driver.
-getIdleTimeSecondsBulk :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> m (Map.Map (Id DP.Person) Double)
-getIdleTimeSecondsBulk driverIds =
-  Map.unions <$> mapM readChunk (chunksOfList idleBulkDriverChunkSize driverIds)
+-- paused/offline), in pipelined cross-slot MGETs of at most
+-- @fromMaybe defaultIdleBulkDriverChunkSize mbChunkSize@ drivers each (banked keys + last-request
+-- keys), instead of two Redis reads per driver.
+getIdleTimeSecondsBulk :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Int -> [Id DP.Person] -> m (Map.Map (Id DP.Person) Double)
+getIdleTimeSecondsBulk mbChunkSize driverIds =
+  Map.unions <$> mapM readChunk (chunksOfList (fromMaybe defaultIdleBulkDriverChunkSize mbChunkSize) driverIds)
   where
     readChunk [] = pure Map.empty
     readChunk chunk = do
