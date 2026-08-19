@@ -50,11 +50,18 @@ CREATE TABLE atlas_driver_offer_bpp.daily_stats (
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (merchant_local_date, driver_id, id);
 
+-- NOTE: ReplacingMergeTree ORDER BY (driver_id) keeps only the latest row per driver once
+-- merges run, so this dev-local table cannot serve the changelog history that
+-- Storage/Clickhouse/DriverInformation.hs findModeChanges reads. The mode and updated_at
+-- columns below exist so those queries are executable locally; retaining real history is a
+-- schema decision for the production table, not for this seed.
 CREATE TABLE atlas_driver_offer_bpp.driver_information (
     `driver_id` String,
     `driver_flow_status` Nullable(String),
+    `mode` Nullable(String),
     `enabled` Boolean,
     `enabled_at` Nullable(DateTime),
+    `updated_at` Nullable(DateTime),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (driver_id);
@@ -306,6 +313,7 @@ FROM atlas_driver_offer_bpp.daily_stats_queue;
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_information_queue (
     `driver_id` String,
     `driver_flow_status` Nullable(String),
+    `mode` Nullable(String),
     `enabled` Boolean,
     `enabled_at` Nullable(DateTime),
     `updated_at` Nullable(DateTime)
@@ -314,7 +322,7 @@ SETTINGS kafka_broker_list='localhost:29092', kafka_topic_list='adob-sessionizer
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS atlas_driver_offer_bpp.driver_information_mv
 TO atlas_driver_offer_bpp.driver_information AS
-SELECT driver_id, driver_flow_status, enabled, enabled_at, updated_at AS version
+SELECT driver_id, driver_flow_status, mode, enabled, enabled_at, updated_at, updated_at AS version
 FROM atlas_driver_offer_bpp.driver_information_queue;
 
 -- fleet_operator_daily_stats ------------------------------------------------
