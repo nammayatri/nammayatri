@@ -1,0 +1,49 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  AssetType: Domain.Types.Extra.AssetRelease
+
+AssetRelease:
+  tableName: asset_release
+  derives: Generic,Show,FromJSON,ToJSON
+
+  fields:
+    id: Id AssetRelease
+    assetType: AssetType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    version: Text
+    url: Text
+    sha256: Text
+    sizeBytes: Int
+    sourceRef: Maybe Text
+    rolledBackAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    id: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+
+  constraints:
+    id: PrimaryKey
+    assetType: SecondaryKey
+
+  queries:
+    findLatestByAssetTypeAndCity:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [assetType, merchantId, merchantOperatingCityId]
+      orderBy:
+        field: createdAt
+        order: desc
+
+    updateRolledBackAt:
+      kvFunction: updateOneWithKV
+      params: [rolledBackAt]
+      where: id
+
+  extraOperations:
+    - EXTRA_CACHED_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
