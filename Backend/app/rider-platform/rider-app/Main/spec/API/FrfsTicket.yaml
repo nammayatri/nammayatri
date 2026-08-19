@@ -213,6 +213,7 @@ types:
     # Whole booking: this is what the payment order was created for.
     overriddenTotalPrice: Maybe PriceAPIEntity
     appliedPurchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
+    nudge: Maybe FRFSNudgeAPI
     derive: "Show"
 
   FRFSBookingGroupSlotReq:
@@ -245,6 +246,23 @@ types:
   FRFSRepeatSlotsRes:
     originalBookingId: Id FRFSTicketBooking
     candidates: "[FRFSRepeatSlotCandidate]"
+    derive: "Show"
+
+  FRFSNudgeType:
+    enum: "RETURN_TRIP, MULTI_SELECT_REPEAT"
+
+  FRFSNudgeTimeWindow:
+    enum: "MORNING, AFTERNOON, EVENING, NIGHT"
+
+  FRFSNudgeAPI:
+    nudgeType: FRFSNudgeType
+    fromStationCode: Text
+    toStationCode: Text
+    # RETURN_TRIP only: default time-window suggestion (opposite bucket of the original booking).
+    timeWindowHint: Maybe FRFSNudgeTimeWindow
+    # MULTI_SELECT_REPEAT only: an existing CONFIRMED booking in the direction being suggested,
+    # to feed into the existing GET /frfs/booking/{bookingId}/repeatSlots.
+    seedBookingId: Maybe (Id FRFSTicketBooking)
     derive: "Show"
 
   FRFSRefundAttemptAPI:

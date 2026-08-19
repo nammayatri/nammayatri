@@ -213,6 +213,30 @@ data FRFSGtfsStopAPI = FRFSGtfsStopAPI {code :: Data.Text.Text, lat :: Data.Mayb
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSNudgeAPI = FRFSNudgeAPI
+  { fromStationCode :: Data.Text.Text,
+    nudgeType :: FRFSNudgeType,
+    seedBookingId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking),
+    timeWindowHint :: Data.Maybe.Maybe FRFSNudgeTimeWindow,
+    toStationCode :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSNudgeTimeWindow
+  = MORNING
+  | AFTERNOON
+  | EVENING
+  | NIGHT
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSNudgeType
+  = RETURN_TRIP
+  | MULTI_SELECT_REPEAT
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSPassOptionAPIEntity = FRFSPassOptionAPIEntity
   { availableTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -445,6 +469,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     isSpotBooking :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    nudge :: Data.Maybe.Maybe FRFSNudgeAPI,
     overriddenTotalPrice :: Data.Maybe.Maybe Kernel.Types.Common.PriceAPIEntity,
     overrideType :: Data.Maybe.Maybe Domain.Types.FRFSTicketBooking.OverrideType,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,

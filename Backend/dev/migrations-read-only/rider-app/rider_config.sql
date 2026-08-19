@@ -814,3 +814,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_aversion double 
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_walk_pct_of_ride double precision ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_min_saving_pct_of_ride double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shuttle_multi_select_nudge_threshold integer ;
