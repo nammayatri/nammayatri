@@ -30,6 +30,7 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.BapHostRedirect (shouldRedirectBapHost)
 import qualified Kernel.Prelude as Kernel
 import qualified Kernel.Storage.Hedis as Redis
@@ -40,7 +41,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Servant hiding (throwError)
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()

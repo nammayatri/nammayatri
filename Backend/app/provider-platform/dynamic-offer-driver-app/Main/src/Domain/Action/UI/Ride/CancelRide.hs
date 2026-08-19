@@ -39,7 +39,9 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -210,6 +212,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
   unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
   booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  L.setOptionLocal TxnIdKey booking.transactionId
   driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   (rideCancelationReason, cancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, _disToPickup, rideEndedBy) <- case requestorId of
     PersonRequestorId personId -> do

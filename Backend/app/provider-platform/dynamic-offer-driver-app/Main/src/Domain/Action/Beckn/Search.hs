@@ -67,6 +67,7 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -81,7 +82,6 @@ import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius, getGatesBySpecialLocationIdCached)
 import qualified Lib.Types.GateInfoExtra as GExtra

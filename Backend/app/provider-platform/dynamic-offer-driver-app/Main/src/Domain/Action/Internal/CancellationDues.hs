@@ -6,6 +6,8 @@ import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
+import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -40,6 +42,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound req.rideId)
   let bookingId = (Id req.bookingId) :: Id DBooking.Booking
   booking <- QBookingLite.findByIdLite bookingId >>= fromMaybeM (BookingNotFound req.bookingId)
+  L.setOptionLocal TxnIdKey booking.transactionId
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   -- Check if cancellation dues for this ride are still pending

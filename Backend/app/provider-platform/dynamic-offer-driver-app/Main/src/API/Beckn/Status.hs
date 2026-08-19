@@ -26,6 +26,7 @@ import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Tools.Logging
 import Kernel.Types.Beckn.Ack
@@ -33,7 +34,6 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo

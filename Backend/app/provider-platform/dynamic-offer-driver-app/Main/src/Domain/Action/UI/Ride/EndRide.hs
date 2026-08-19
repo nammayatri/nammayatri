@@ -62,6 +62,7 @@ import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -83,7 +84,6 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Days)
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics

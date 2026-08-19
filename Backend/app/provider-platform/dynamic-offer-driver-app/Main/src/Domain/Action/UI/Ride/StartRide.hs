@@ -42,6 +42,7 @@ import qualified Domain.Types.VehicleVariant as Veh
 import Environment (Flow)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
@@ -57,7 +58,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates as LocUpd

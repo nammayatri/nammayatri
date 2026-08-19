@@ -32,6 +32,7 @@ import Domain.Types.SearchTry (SearchTry)
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -42,7 +43,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
