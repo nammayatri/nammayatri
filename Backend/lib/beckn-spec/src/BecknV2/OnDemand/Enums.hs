@@ -241,6 +241,8 @@ data CancellationReasonId
   | DRIVER_ASKED_TO_CANCEL -- 003
   | INCORRECT_PICKUP_LOCATION -- 004
   | BOOKED_BY_MISTAKE -- 005 (v2.1.0)
+  | SAFETY_CONCERN_WITH_DRIVER_OR_RIDE -- 006
+  | VEHICLE_UNSAFE_OR_NON_COMPLIANT -- 007
   deriving (Eq, Generic, ToJSON, FromJSON, Bounded, Enum)
 
 instance Show CancellationReasonId where
@@ -250,6 +252,8 @@ instance Show CancellationReasonId where
   show DRIVER_ASKED_TO_CANCEL = "003"
   show INCORRECT_PICKUP_LOCATION = "004"
   show BOOKED_BY_MISTAKE = "005"
+  show SAFETY_CONCERN_WITH_DRIVER_OR_RIDE = "006"
+  show VEHICLE_UNSAFE_OR_NON_COMPLIANT = "007"
 
 data CancellationReasonCode
   = -- message.order.cancellation.reason.descriptor.code -- sent by BPP in cancel
@@ -257,6 +261,9 @@ data CancellationReasonCode
   | COULD_NOT_FIND_CUSTOMER -- 012
   | RIDE_ACCEPTED_MISTAKENLY -- 013
   | UNABLE_TO_CONTACT_RIDER -- 014 (v2.1.0)
+  | STOPPED_BY_TRAFFIC_OFFICIALS -- 015
+  | VEHICLE_ISSUE -- 016
+  | CUSTOMER_MISCONDUCT_OR_SAFETY_CONCERN -- 017
   deriving (Eq, Generic, ToJSON, FromJSON)
 
 instance Show CancellationReasonCode where
@@ -264,6 +271,9 @@ instance Show CancellationReasonCode where
   show COULD_NOT_FIND_CUSTOMER = "012"
   show RIDE_ACCEPTED_MISTAKENLY = "013"
   show UNABLE_TO_CONTACT_RIDER = "014"
+  show STOPPED_BY_TRAFFIC_OFFICIALS = "015"
+  show VEHICLE_ISSUE = "016"
+  show CUSTOMER_MISCONDUCT_OR_SAFETY_CONCERN = "017"
 
 data CancelReqMessageCancellationReasonId
   = CANCELLED_BY_CUSTOMER -- 001

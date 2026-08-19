@@ -28,6 +28,7 @@ import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude
 import Kernel.Utils.Common
 import qualified SharedLogic.CancellationConfig as SCC
+import qualified SharedLogic.RiderCancellationReason as SRCR
 
 -- | Parse @message.cancellation_reason_id@ into the buyer-side enum.
 --
@@ -54,6 +55,8 @@ ondcReasonInternalCode = \case
   Enums.DRIVER_ASKED_TO_CANCEL -> "ONDC_DRIVER_ASKED_TO_CANCEL"
   Enums.INCORRECT_PICKUP_LOCATION -> "ONDC_INCORRECT_PICKUP_LOCATION"
   Enums.BOOKED_BY_MISTAKE -> "ONDC_BOOKED_BY_MISTAKE"
+  Enums.SAFETY_CONCERN_WITH_DRIVER_OR_RIDE -> "ONDC_SAFETY_CONCERN_WITH_DRIVER_OR_RIDE"
+  Enums.VEHICLE_UNSAFE_OR_NON_COMPLIANT -> "ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT"
 
 ondcUnknownCodePrefix :: Text
 ondcUnknownCodePrefix = "ONDC_UNKNOWN_"
@@ -64,11 +67,12 @@ ondcUnspecifiedCode = "ONDC_UNSPECIFIED"
 -- | Resolve the internal reason code for a buyer-initiated cancellation.
 --
 -- @
--- flag off  ->  short_desc                                   -- today's behaviour, unchanged
--- flag on   ->  reason_id present, mapped    -> ONDC_\<CODE\>
---               reason_id present, unmapped  -> ONDC_UNKNOWN_\<code\>, alarm
---               reason_id absent             -> short_desc
---               neither                      -> ONDC_UNSPECIFIED, alarm
+-- flag off  ->  short_desc                                    -- today's behaviour, unchanged
+-- flag on   ->  reason_id matches ONDC's enum   -> ONDC_\<CODE\>
+--               reason_id matches MSIL's rider  -> RIDER_CANCEL_\<CODE\>  (provisional codes)
+--               reason_id present, neither      -> ONDC_UNKNOWN_\<code\>, alarm
+--               reason_id absent                -> short_desc
+--               neither                         -> ONDC_UNSPECIFIED, alarm
 -- @
 --
 -- With the flag on the ladder never yields 'Nothing', so the fee rules always have something
@@ -85,9 +89,12 @@ resolveCancellationReasonCode mbTransporterConfig mbOndcReasonId mbShortDesc
   | otherwise = case mbOndcReasonId of
     Just rawId -> case parseOndcCancellationReasonId rawId of
       Just reasonId -> pure . Just $ ondcReasonInternalCode reasonId
-      Nothing -> do
-        logError $ "Unmapped ONDC cancellation_reason_id received: " <> show rawId
-        pure . Just $ ondcUnknownCodePrefix <> sanitiseUnknownCode rawId
+      -- MSIL's rider vocabulary has no ONDC codes yet; provisional ones are tried next.
+      Nothing -> case SRCR.parseRiderCancellationReasonId rawId of
+        Just riderReason -> pure . Just $ SRCR.riderReasonInternalCode riderReason
+        Nothing -> do
+          logError $ "Unmapped ONDC cancellation_reason_id received: " <> show rawId
+          pure . Just $ ondcUnknownCodePrefix <> sanitiseUnknownCode rawId
     Nothing -> case mbShortDesc of
       Just shortDesc -> pure $ Just shortDesc
       Nothing -> do

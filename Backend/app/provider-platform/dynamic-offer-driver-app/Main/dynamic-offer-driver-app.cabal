@@ -627,6 +627,7 @@ library
       SharedLogic.Ride
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
+      SharedLogic.RiderCancellationReason
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications
