@@ -31,6 +31,19 @@ updateHasStartedTrackingWithoutBooking hasStartedTrackingWithoutBooking id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.hasStartedTrackingWithoutBooking hasStartedTrackingWithoutBooking, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsPaymentSuccessIfNoOrder ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> m ())
+updateIsPaymentSuccessIfNoOrder isPaymentSuccess id paymentOrderShortId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.isPaymentSuccess isPaymentSuccess, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.paymentOrderShortId $ Se.Eq (Kernel.Types.Id.getShortId <$> paymentOrderShortId)
+        ]
+    ]
+
 updatePaymentOrderShortId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())

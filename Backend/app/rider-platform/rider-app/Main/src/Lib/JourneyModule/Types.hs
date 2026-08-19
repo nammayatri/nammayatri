@@ -29,8 +29,10 @@ import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RouteDetails
@@ -289,6 +291,7 @@ data JourneyInitData = JourneyInitData
 data LegInfo = LegInfo
   { journeyLegId :: Id DJL.JourneyLeg,
     applicablePasses :: [FRFSTicketServiceAPI.FRFSPassOptionAPIEntity],
+    appliedPass :: Maybe AppliedPassInfo,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     pricingId :: Maybe Text,
@@ -316,6 +319,15 @@ data LegInfo = LegInfo
     hasApplicablePasses :: Maybe Bool,
     observingFailures :: Maybe Bool,
     isCancellable :: Maybe Bool
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AppliedPassInfo = AppliedPassInfo
+  { purchasedPassPaymentId :: Id DPPP.PurchasedPassPayment,
+    passId :: Id DPass.Pass,
+    passName :: Maybe Text,
+    overriddenTotalFare :: Maybe PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -640,6 +652,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   return $
     LegInfo
       { applicablePasses = [],
+        appliedPass = Nothing,
         journeyLegId = journeyLeg.id,
         skipBooking = False,
         bookingAllowed = True,
@@ -724,6 +737,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
   return $
     LegInfo
       { applicablePasses = [],
+        appliedPass = Nothing,
         journeyLegId = journeyLeg.id,
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
@@ -789,6 +803,7 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
   return $
     LegInfo
       { applicablePasses = [],
+        appliedPass = Nothing,
         journeyLegId = id,
         skipBooking = False,
         bookingAllowed = False,
@@ -903,9 +918,23 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   journeyLegInfo' <- getLegRouteInfo (Just $ mkFallbackFromFrfsBooking booking) (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
   isCancellable <- computeIsCancellable booking integratedBPPConfig
+  mbAppliedPass <-
+    if booking.overrideType == Just DFRFSBooking.PassOverride
+      then do
+        mbResolved <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
+        pure $
+          mbResolved <&> \(payment, pass) ->
+            AppliedPassInfo
+              { purchasedPassPaymentId = payment.id,
+                passId = pass.id,
+                passName = payment.passName,
+                overriddenTotalFare = mkPriceAPIEntity . mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount
+              }
+      else pure Nothing
   return $
     LegInfo
       { applicablePasses = [],
+        appliedPass = mbAppliedPass,
         journeyLegId = journeyLeg.id,
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
@@ -1314,6 +1343,7 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
   pure
     LegInfo
       { applicablePasses = [],
+        appliedPass = Nothing,
         journeyLegId = legId,
         skipBooking = False,
         bookingAllowed = True,
@@ -1454,6 +1484,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   return $
     LegInfo
       { applicablePasses,
+        appliedPass = Nothing,
         journeyLegId = journeyLeg.id,
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed,
