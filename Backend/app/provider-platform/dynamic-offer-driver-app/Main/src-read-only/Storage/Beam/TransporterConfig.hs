@@ -243,6 +243,7 @@ data TransporterConfigT f = TransporterConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     meterRideBulkLocUpdateBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Integer),
+    metricsDistanceBucketsKm :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     minBaseFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     minDistanceForStopFcm :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
