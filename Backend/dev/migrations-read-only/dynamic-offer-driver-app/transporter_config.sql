@@ -1085,6 +1085,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN drop_qar_cal_ra
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enforce_upload_file_type_check boolean ;
 
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN area_preference_min_cells integer  default 4;
+
+
+------- SQL updates -------
+
+
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN metrics_distance_buckets_km integer[] ;

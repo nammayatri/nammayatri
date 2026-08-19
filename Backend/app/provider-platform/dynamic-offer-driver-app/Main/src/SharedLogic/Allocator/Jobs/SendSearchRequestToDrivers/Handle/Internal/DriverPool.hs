@@ -32,10 +32,13 @@ where
 
 import qualified Control.Monad as CM
 import Data.Aeson as A
+import qualified Data.Aeson.Key as A
+import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Types as A
 import qualified Data.Hashable as DH
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
@@ -45,6 +48,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Lib.Utils (pushToKafka)
+import qualified Kernel.External.Maps as EMaps
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Hedis as Redis
@@ -59,6 +63,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import SharedLogic.DriverPool
+import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
@@ -137,6 +142,57 @@ ensurePoolingLogicVersion searchReq
     whenJust mbVersion $ \_ -> QSR.updatePoolingLogicVersion mbVersion searchReq.id
     pure $ searchReq {DSR.poolingLogicVersion = mbVersion}
 
+-- | Per-driver preference-match checks for a search. Each entry is one independently
+-- pluggable dimension over the driver's own self-selected preferences.
+mkDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> [PreferenceCheck]
+mkDriverPreferenceChecks searchReq driver =
+  [rideDistanceCheck, pickupRadiusCheck, petModeCheck, areaCheck]
+  where
+    dpr = driver.driverPoolResult
+    rideDistanceCheck =
+      binaryCheck
+        (isJust dpr.minRideDistance || isJust dpr.maxRideDistance)
+        ( case driver.tripDistance of
+            Nothing -> True -- ride distance unknown yet, don't penalize
+            Just rideDistance -> maybe True (rideDistance >=) dpr.minRideDistance && maybe True (rideDistance <=) dpr.maxRideDistance
+        )
+    pickupRadiusCheck =
+      binaryCheck
+        (isJust dpr.maxPickupDistance)
+        (maybe True (driver.actualDistanceToPickup <=) dpr.maxPickupDistance)
+    petModeCheck =
+      -- Only relevant when this search is itself a pet ride; an ordinary ride never
+      -- counts against (or for) a driver's pet-mode setting.
+      binaryCheck searchReq.isPetRide dpr.isPetModeEnabled
+    -- Area preference is stored as tags on driverTags (see
+    -- SharedLogic.DriverPool.AreaPreference), not a dedicated typed field, so this
+    -- reads the raw tag object directly. Matched against the ride's DROP location
+    -- only -- pickup is deliberately not considered (product decision).
+    areaCheck = case dpr.driverTags of
+      A.Object tagsObj
+        | Just radiusValue <- lookupTagValue AreaPref.areaPreferenceRadiusTagName tagsObj,
+          Just (center, radius) <- AreaPref.parseRadiusTagValue radiusValue ->
+          case EMaps.getCoordinates <$> searchReq.toLocation of
+            Nothing -> notApplicable
+            Just dropPoint -> binaryCheck True (AreaPref.matchesRadius center radius dropPoint)
+        | hasAnyCellTag tagsObj ->
+          case searchReq.toLocGeohash of
+            Nothing -> notApplicable
+            Just dropGeohash -> binaryCheck True (KM.member (A.fromText (AreaPref.areaPreferenceCellTagName dropGeohash)) tagsObj)
+      _ -> notApplicable
+    hasAnyCellTag tagsObj = any (T.isPrefixOf AreaPref.areaPreferenceCellTagPrefix . A.toText) (KM.keys tagsObj)
+    -- convertTags turns an '&'-joined tag value into a JSON array of strings
+    -- (one element per '&' part), so the radius tag's value round-trips as
+    -- ["lat","lon","radiusMeters"] rather than a single string.
+    lookupTagValue name tagsObj = do
+      v <- KM.lookup (A.fromText name) tagsObj
+      case v of
+        A.Array arr -> do
+          parts <- traverse (\case A.String t -> Just t; _ -> Nothing) (toList arr)
+          pure (T.intercalate "&" parts)
+        A.String t -> Just t
+        _ -> Nothing
+
 makeTaggedDriverPool ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -187,7 +243,11 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       map
         ( \driver ->
             let personId = cast driver.driverPoolResult.driverId
-             in driver {searchReqDriverStatsCounters = Map.lookup personId countersMap, idleTimeSeconds = Map.lookup personId idleMap}
+             in driver
+                  { searchReqDriverStatsCounters = Map.lookup personId countersMap,
+                    idleTimeSeconds = Map.lookup personId idleMap,
+                    preferenceMatchScore = computePreferenceMatchScore (mkDriverPreferenceChecks searchReq driver)
+                  }
         )
         onlyNewDriversWithCustomerInfo
   -- Rejects accumulated by the earlier batches of this search try, so the POOLING ruleset can
@@ -205,9 +265,14 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
                   <> show d.driverPoolResult.driverGender
                   <> " customerTags="
                   <> show d.driverPoolResult.customerTags
+                  <> " preferenceMatchScore="
+                  <> show d.preferenceMatchScore
                   <> "; "
             )
-            onlyNewDriversWithCustomerInfo
+            -- Log the enriched list, not the pre-enrichment one: the counters, idle
+            -- time and preference score are exactly what this line exists to explain,
+            -- and they are only present after enrichment.
+            enrichedDrivers
         )
       <> "]"
   resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING (Just searchReq.transactionId) allLogics taggedDriverPoolInput

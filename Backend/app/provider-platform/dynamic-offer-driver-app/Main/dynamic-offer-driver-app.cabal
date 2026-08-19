@@ -289,6 +289,7 @@ library
       Domain.Action.UI.City
       Domain.Action.UI.DemandHotspots
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverGoHomeRequest
@@ -558,6 +559,7 @@ library
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool
+      SharedLogic.DriverPool.AreaPreference
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
@@ -719,6 +721,7 @@ library
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+      Storage.CachedQueries.GeohashArea
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.IncentiveJourney
       Storage.CachedQueries.IncentiveJourneyMilestone
@@ -1102,6 +1105,7 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
+      API.Action.UI.DriverAreaPreference
       API.Action.UI.DriverDocument
       API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
@@ -1187,6 +1191,7 @@ library
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
+      API.Types.UI.DriverAreaPreference
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
@@ -1320,6 +1325,7 @@ library
       Domain.Types.FleetRcDailyStats
       Domain.Types.FleetRouteAssociation
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
+      Domain.Types.GeohashArea
       Domain.Types.GoHomeConfig
       Domain.Types.HyperVergeSdkLogs
       Domain.Types.HyperVergeVerification
@@ -1511,6 +1517,7 @@ library
       Storage.Beam.FleetRcDailyStats
       Storage.Beam.FleetRouteAssociation
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
+      Storage.Beam.GeohashArea
       Storage.Beam.GoHomeConfig
       Storage.Beam.HyperVergeSdkLogs
       Storage.Beam.HyperVergeVerification
@@ -1707,6 +1714,7 @@ library
       Storage.Queries.FleetRcDailyStats
       Storage.Queries.FleetRouteAssociation
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
+      Storage.Queries.GeohashArea
       Storage.Queries.GoHomeConfig
       Storage.Queries.HyperVergeSdkLogs
       Storage.Queries.HyperVergeVerification
