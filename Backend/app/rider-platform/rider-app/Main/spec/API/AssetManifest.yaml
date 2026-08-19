@@ -1,0 +1,23 @@
+imports:
+  AssetType: Domain.Types.AssetRelease
+
+module: AssetManifest
+
+types:
+  AssetEntry:
+    assetType: AssetType
+    version: Text
+    url: Text
+    sha256: Text
+    publishedAt: UTCTime
+
+  AssetManifestResp:
+    assets: [AssetEntry]
+
+apis:
+  - GET:
+      endpoint: /assetManifest
+      query:
+        assetTypes: "[AssetType]"
+      response:
+        type: AssetManifestResp
