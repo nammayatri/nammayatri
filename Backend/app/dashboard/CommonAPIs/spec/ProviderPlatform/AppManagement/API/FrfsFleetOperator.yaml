@@ -1,0 +1,36 @@
+imports:
+  FleetOperatorCurrentOperationReq: API.Types.UI.FRFSFleetOperator
+  FleetOperatorCurrentOperationResp: API.Types.UI.FRFSFleetOperator
+  FleetOperatorTripActionReq: API.Types.UI.FRFSFleetOperator
+  FleetOperatorTripActionResp: API.Types.UI.FRFSFleetOperator
+
+importPackageOverrides:
+  API.Types.UI.FRFSFleetOperator: "dynamic-offer-driver-app"
+
+module: FrfsFleetOperator
+apiPrefix: FrfsFleetOperator
+
+apis:
+  - POST:
+      endpoint: /currentOperation
+      name: PostFrfsFleetOperatorCurrentOperation
+      auth: ApiAuthV2
+      request:
+        type: FleetOperatorCurrentOperationReq
+      response:
+        type: FleetOperatorCurrentOperationResp
+      migrate:
+        capability: transit-operations.trip.execute
+
+  - POST:
+      endpoint: /tripAction
+      name: PostFrfsFleetOperatorTripAction
+      auth: ApiAuthV2
+      request:
+        type: FleetOperatorTripActionReq
+      response:
+        type: FleetOperatorTripActionResp
+      migrate:
+        capability: transit-operations.trip.execute
+
+types: {}
