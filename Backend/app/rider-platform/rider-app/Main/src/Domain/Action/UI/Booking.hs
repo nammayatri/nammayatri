@@ -192,7 +192,7 @@ getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset
   getBookingListImpl useCachedActiveRidesList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
 
 getBookingListImpl :: Bool -> (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow ([SRB.Booking], [SRB.Booking])
-getBookingListImpl True (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+getBookingListImpl True (Just personId, _merchantId) _mbAgentId _onlyDashboard _mbLimit _mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' _mbBookingStatusList _mbMerchantOperatingCityId = do
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   mbActiveRbIds <- QRB.getActiveRideAvailableFromCacheKey personId
