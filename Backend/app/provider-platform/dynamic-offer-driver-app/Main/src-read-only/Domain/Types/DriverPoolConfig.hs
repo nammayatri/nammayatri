@@ -36,6 +36,7 @@ data DriverPoolConfig = DriverPoolConfig
     enableForwardBatching :: Kernel.Prelude.Bool,
     enablePriorityTagSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig,
+    idleBulkChunkSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxDriverQuotesRequired :: Kernel.Prelude.Int,
     maxNumberOfBatches :: Kernel.Prelude.Int,
     maxParallelSearchRequests :: Kernel.Prelude.Int,
@@ -51,6 +52,7 @@ data DriverPoolConfig = DriverPoolConfig
     scheduleTryTimes :: [Kernel.Prelude.Int],
     selfRequestIfRiderIsDriver :: Kernel.Prelude.Bool,
     singleBatchProcessTime :: Kernel.Types.Common.Seconds,
+    srdCountersBulkChunkSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdToIgnoreActualDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     tripCategory :: Kernel.Prelude.Text,
@@ -59,4 +61,4 @@ data DriverPoolConfig = DriverPoolConfig
     useOneToOneOsrmMapping :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (ToSchema), Eq)

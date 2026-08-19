@@ -428,10 +428,11 @@ decrementSrdSentCount sentAt driverId = Redis.withCrossAppRedis $ SWC.decrementB
 -- day-buckets) for use in the POOLING dynamic-logic data. Acceptance reuses the existing
 -- mkQuotesAcceptedKey counter and cancellation reuses mkRideCancelledKey (to avoid
 -- double-counting); rejection and sent use the dedicated SRDStats keys.
--- Cap on how many drivers' keys go into a single pipelined MGET, so a large pool never issues one
--- unboundedly large multi-key Redis read in a single I/O.
-bulkDriverChunkSize :: Int
-bulkDriverChunkSize = 50
+-- Fallback cap on how many drivers' keys go into a single pipelined MGET, so a large pool never
+-- issues one unboundedly large multi-key Redis read in a single I/O. Overridable per pool via
+-- DriverPoolConfig.srdCountersBulkChunkSize.
+defaultBulkDriverChunkSize :: Int
+defaultBulkDriverChunkSize = 50
 
 chunksOfList :: Int -> [a] -> [[a]]
 chunksOfList _ [] = []
@@ -440,19 +441,21 @@ chunksOfList n xs
   | otherwise = let (a, rest) = splitAt n xs in a : chunksOfList n rest
 
 -- | Bulk per-driver SRD counters for the pool batch, in pipelined cross-slot MGETs of at most
--- 'bulkDriverChunkSize' drivers each. Reads each counter's 7 per-day bucket keys directly (the
--- authoritative integers written by incrementWindowCount, built via the SWC lib's own key builders
--- so the format matches exactly), so it needs neither the per-key combined-cache read/lock nor N
--- separate round-trips. today = current day-bucket (index 0), weekly = sum over the 7 day-buckets.
+-- @fromMaybe defaultBulkDriverChunkSize mbChunkSize@ drivers each. Reads each counter's 7 per-day
+-- bucket keys directly (the authoritative integers written by incrementWindowCount, built via the
+-- SWC lib's own key builders so the format matches exactly), so it needs neither the per-key
+-- combined-cache read/lock nor N separate round-trips. today = current day-bucket (index 0),
+-- weekly = sum over the 7 day-buckets.
 getSrdStatsCountersBulk ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  Maybe Int ->
   [Id DP.Person] ->
   m (Map.Map (Id DP.Person) SearchReqDriverStatsCounters)
-getSrdStatsCountersBulk driverIds =
-  Map.unions <$> mapM readChunk (chunksOfList bulkDriverChunkSize driverIds)
+getSrdStatsCountersBulk mbChunkSize driverIds =
+  Map.unions <$> mapM readChunk (chunksOfList (fromMaybe defaultBulkDriverChunkSize mbChunkSize) driverIds)
   where
     baseKeysFor did = [mkQuotesAcceptedKey did, mkRideCancelledKey did, mkSrdRejectedCountKey did, mkSrdSentCountKey did]
     readChunk [] = pure Map.empty
