@@ -133,6 +133,12 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
+  // contextApiUrl points at the test-context-api itself (PROXY_BASE), so service='internal'
+  // strips the base and leaves only the path (e.g. /api/db/update) for direct forwarding.
+  'contextApiUrl': { service: 'internal' },
+  // mock_fcm_url = http://localhost:8080/fcm (FCM is mounted at /fcm on the unified mock server).
+  // Routing via mock-server strips the base and prepends the /fcm path correctly.
+  'mock_fcm_url': { service: 'mock-server' },
 };
 
 // ── Parser ──
