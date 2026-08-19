@@ -456,16 +456,16 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled mbDashboardPersonI
   let merchantOpCityId = merchantOpCity.id
   mobileNumberHash <- getDbHash mobileNumber
   mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
-  personId <- case mbPerson of
-    Just person -> pure person.id
+  fleetOwnerPerson <- case mbPerson of
+    Just existingPerson -> pure existingPerson
     Nothing -> do
       -- Operator won't reach here as it has separate sign up flow --
       let personAuth = buildFleetOwnerAuthReq merchant.id opCity req
       deploymentVersion <- asks (.version)
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId
-      pure person.id
-  let useFakeOtpM = useFakeSms smsCfg
-  otp <- maybe generateOTPCode (return . show) useFakeOtpM
+      createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled mbDashboardPersonId
+  let personId = fleetOwnerPerson.id
+  let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> fleetOwnerPerson.useFakeOtp
+  otp <- maybe generateOTPCode return useFakeOtpM
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = otp
