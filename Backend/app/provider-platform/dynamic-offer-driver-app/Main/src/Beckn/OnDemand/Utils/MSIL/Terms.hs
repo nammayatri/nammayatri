@@ -35,6 +35,7 @@ module Beckn.OnDemand.Utils.MSIL.Terms
   ( verifyIncomingStaticTerms,
     patchOrderTags,
     patchCatalogTags,
+    dropNonConformingOrderTags,
   )
 where
 
@@ -101,14 +102,38 @@ addTagGroup (Just newGroup) existingGroups = Just (fromMaybe [] existingGroups <
 -- (echoing back the BAP's own declared terms, if known) -- used only on
 -- on_confirm, per this task's scope. on_search/on_select/on_init pass
 -- 'includeBapTerms = False' and 'mbBapStaticTermsUrl = Nothing'.
+--
+-- Also drops anything Layer 1 already put in order.tags that isn't
+-- BAP_TERMS/BPP_TERMS -- ONDC v2.1.0's TRV10 schema restricts
+-- order.tags[*].descriptor.code to exactly those two. On_confirm's Layer 1
+-- (Beckn.ACL.OnConfirm.tfOrder) puts a BPP_INVOICE_INFO group there for every
+-- merchant today; that's valid for non-MSIL BAPs but fails this stricter
+-- validation, so it's filtered out here rather than fixed in Layer 1.
 patchOrderTags :: Bool -> Maybe BaseUrl -> DBC.BecknConfig -> Spec.Order -> Spec.Order
 patchOrderTags includeBapTerms mbBapStaticTermsUrl bppConfig order =
-  order {Spec.orderTags = withBapTerms . withBppTerms $ order.orderTags}
+  conformingOrder {Spec.orderTags = withBapTerms . withBppTerms $ conformingOrder.orderTags}
   where
+    conformingOrder = dropNonConformingOrderTags order
     withBppTerms = addTagGroup (mkBppTermsTagGroup bppConfig)
     withBapTerms
       | includeBapTerms = addTagGroup (mkBapTermsTagGroup mbBapStaticTermsUrl bppConfig)
       | otherwise = \tagGroups -> tagGroups
+
+-- | Drops anything already in order.tags that isn't BAP_TERMS/BPP_TERMS --
+-- ONDC v2.1.0's TRV10 schema restricts order.tags[*].descriptor.code to
+-- exactly those two. Several Layer 1 order builders put other tag groups
+-- there for every merchant today (Beckn.ACL.OnConfirm.tfOrder's
+-- BPP_INVOICE_INFO; Beckn.ACL.Common.Order.tfAssignedReqToOrder's
+-- SETTLEMENT_TERMS, via mkOrderSettlementTags) -- valid for non-MSIL BAPs but
+-- failing this stricter validation, so they're filtered out here rather than
+-- fixed in Layer 1. Exported standalone (not just via 'patchOrderTags') for
+-- callers like on_update's ride-assigned push that need the drop but not the
+-- BAP_TERMS/BPP_TERMS addition.
+dropNonConformingOrderTags :: Spec.Order -> Spec.Order
+dropNonConformingOrderTags order = order {Spec.orderTags = fmap (filter isAllowedOrderTag) order.orderTags}
+  where
+    allowedOrderTagCodes = ["BAP_TERMS", "BPP_TERMS"]
+    isAllowedOrderTag tagGroup = maybe False (`elem` allowedOrderTagCodes) (Spec.tagGroupDescriptor tagGroup >>= Spec.descriptorCode)
 
 -- | The single patch/fix operation for on_search's catalog-level tag list
 -- (message.catalog.tags -- on_search has no Order to hang order.tags off of).
