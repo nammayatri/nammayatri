@@ -128,6 +128,7 @@ handler merchant sReq searchReq estimates = do
             DSR.parcelType = if isJust parcelType then parcelType else searchReq.parcelType,
             DSR.parcelQuantity = if isJust parcelType then snd sReq.parcelDetails else searchReq.parcelQuantity,
             DSR.preferSafetyPlus = sReq.preferSafetyPlus,
+            DSR.isPetRide = sReq.isPetRide,
             DSR.area = mbEstimateArea <|> searchReq.area,
             DSR.pickupGateId = mbEstimateGateId <|> searchReq.pickupGateId
           }

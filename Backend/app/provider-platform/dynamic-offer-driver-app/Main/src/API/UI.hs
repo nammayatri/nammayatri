@@ -23,6 +23,7 @@ import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
+import qualified API.Action.UI.DriverAreaPreference as DriverAreaPreference
 import qualified API.Action.UI.DriverDocument as DriverDocument
 import qualified API.Action.UI.DriverIncentiveCoins as DriverIncentiveCoins
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
@@ -191,6 +192,7 @@ type API =
            :<|> FRFSFleetOperator.API
            :<|> FleetEngineToken.API
            :<|> DriverDocument.API
+           :<|> DriverAreaPreference.API
        )
 
 handler :: FlowServer API
@@ -273,3 +275,4 @@ handler =
     :<|> FRFSFleetOperator.handler
     :<|> FleetEngineToken.handler
     :<|> DriverDocument.handler
+    :<|> DriverAreaPreference.handler

@@ -82,6 +82,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.useWithSnapToRoadFallback useWithSnapToRoadFallback,
       Se.Set Beam.dpGeoHashPercision dpGeoHashPercision,
+      Se.Set Beam.areaPreferenceMinCells areaPreferenceMinCells,
       Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
       Se.Set Beam.driverSearchBlacklistDurationSeconds driverSearchBlacklistDurationSeconds,
       Se.Set Beam.driverRiderBlacklistDurationSeconds driverRiderBlacklistDurationSeconds,

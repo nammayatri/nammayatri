@@ -699,6 +699,7 @@ buildSearchRequest DSearchReq {..} bapCity mbPickupGateId mbSpecialZoneGateId mb
         parcelType = Nothing,
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
+        isPetRide = False,
         numberOfLuggages = numberOfLuggages,
         cloudType = cloudType,
         specialLocationName = mbSpecialLocName,

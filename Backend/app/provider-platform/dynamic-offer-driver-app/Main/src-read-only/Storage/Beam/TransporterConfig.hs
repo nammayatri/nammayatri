@@ -54,6 +54,7 @@ data TransporterConfigT f = TransporterConfigT
     allowedReferralEntities :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     analyticsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
+    areaPreferenceMinCells :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     arrivalTimeBufferOfVehicle :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivedStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
@@ -362,8 +363,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
+$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off"), ("individualPANCheck", "individual_pan_check")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))
