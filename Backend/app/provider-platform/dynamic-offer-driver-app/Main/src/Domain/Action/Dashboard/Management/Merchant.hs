@@ -2769,6 +2769,17 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               <> "(vehicleServiceTier, tripCategory, area, timeBound, searchSource). "
               <> "Please deduplicate: "
               <> show duplicateKeys
+
+      let pricingSlabIssues =
+            [ (lookupKey (head fpGroup), reason)
+              | fpGroup <- groups,
+                Just reason <- [validateGroupPricingSlabs fpGroup]
+            ]
+      unless (null pricingSlabIssues) $
+        throwError $
+          InvalidRequest $
+            "Invalid pricing slabs, rides on such a fare policy could not be ended: "
+              <> show pricingSlabIssues
       let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
       (farePolicyErrors, _) <- foldlM (processFarePolicyGroup merchantOpCity allCityFareProducts) ([], boundedAlreadyDeletedMap) groups
       return $
@@ -2785,6 +2796,33 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> V.imapM (makeFarePolicy merchantId merchantOpCity distanceUnit) v >>= (pure . V.toList)
+
+    validateGroupPricingSlabs :: [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> Maybe Text
+    validateGroupPricingSlabs fpGroup =
+      case (NE.nonEmpty interCitySlabs, NE.nonEmpty rentalSlabs) of
+        (Just slabs, _) -> validateInterCityPricingSlabs slabs
+        (_, Just slabs) -> validateRentalPricingSlabs slabs
+        _ -> Nothing
+      where
+        allFarePolicyDetails = [farePolicy.farePolicyDetails | (_, _, _, _, _, _, _, _, farePolicy) <- fpGroup]
+        interCitySlabs = [slab | FarePolicy.InterCityDetails details <- allFarePolicyDetails, slab <- NE.toList details.pricingSlabs]
+        rentalSlabs = [slab | FarePolicy.RentalDetails details <- allFarePolicyDetails, slab <- NE.toList details.pricingSlabs]
+
+    validateInterCityPricingSlabs :: NonEmpty FPIDPS.FPInterCityDetailsPricingSlabs -> Maybe Text
+    validateInterCityPricingSlabs slabs
+      | not (any FPIDPS.isBasePricingSlab slabs) =
+        Just "InterCity pricing slabs must include a row with time_percentage = 0 and distance_percentage = 0"
+      | not (FPIDPS.isFullFarePricingSlab (FPIDPS.findFPInterCityDetailsByTimeAndDistancePercentage 100 100 slabs)) =
+        Just "the InterCity pricing slab picked for a fully completed ride must charge the whole fare, add a row with fare_percentage = 100 above the others"
+      | otherwise = Nothing
+
+    validateRentalPricingSlabs :: NonEmpty FPRDPS.FPRentalDetailsPricingSlabs -> Maybe Text
+    validateRentalPricingSlabs slabs
+      | not (any FPRDPS.isBasePricingSlab slabs) =
+        Just "Rental pricing slabs must include a row with time_percentage = 0 and distance_percentage = 0"
+      | not (FPRDPS.isFullFarePricingSlab (FPRDPS.findFPRentalDetailsByTimeAndDistancePercentage 100 100 slabs)) =
+        Just "the Rental pricing slab picked for a fully completed ride must charge the whole base fare, add a row with fare_percentage = 100 above the others"
+      | otherwise = Nothing
 
     groupFarePolices :: [(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)] -> [[(Maybe Bool, Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, Bool, FarePolicy.FarePolicy)]]
     groupFarePolices = DL.groupBy (\a b -> fst7 a == fst7 b) . DL.sortBy (compare `on` fst7)
