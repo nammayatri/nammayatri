@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Action.UI.AlertWebhook as AlertWebhook
+import qualified API.Action.UI.AssetReleaseInternal as AssetReleaseInternal
 import qualified API.Action.UI.FRFSInternal as FRFSInternal
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
@@ -57,6 +58,7 @@ type API =
            :<|> VerifyEmailUpdate.API
            :<|> InMemManagement.API
            :<|> FRFSInternal.API
+           :<|> AssetReleaseInternal.API
            :<|> ZendeskWebhook.API
            :<|> XyneWebhook.API
            :<|> NotificationWebhook.API
@@ -88,6 +90,7 @@ handler =
     :<|> VerifyEmailUpdate.handler
     :<|> InMemManagement.handler
     :<|> FRFSInternal.handler
+    :<|> AssetReleaseInternal.handler
     :<|> ZendeskWebhook.handler
     :<|> XyneWebhook.handler
     :<|> NotificationWebhook.handler

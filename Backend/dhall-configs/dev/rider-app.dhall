@@ -459,6 +459,7 @@ in  { esqDBCfg
     , googleTranslateKey = common.googleTranslateKey
     , internalAPIKey = sec.internalAPIKey
     , internalClickhouseAPIKey = sec.internalClickhouseAPIKey
+    , assetPublisherApiKey = sec.assetPublisherApiKey
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
