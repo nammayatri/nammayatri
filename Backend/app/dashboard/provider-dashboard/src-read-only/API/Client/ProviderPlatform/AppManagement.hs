@@ -7,6 +7,7 @@ import qualified "dynamic-offer-driver-app" API.Dashboard
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Driver
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.DriverWallet
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.FrfsFleetOperator
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Overlay
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Penalty
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Subscription
@@ -23,6 +24,7 @@ data AppManagementAPIs = AppManagementAPIs
   { driverDSL :: API.Types.Dashboard.AppManagement.Driver.DriverAPIs,
     driverSubscriptionDSL :: API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionAPIs,
     driverWalletDSL :: API.Types.Dashboard.AppManagement.DriverWallet.DriverWalletAPIs,
+    frfsFleetOperatorDSL :: API.Types.Dashboard.AppManagement.FrfsFleetOperator.FrfsFleetOperatorAPIs,
     overlayDSL :: API.Types.Dashboard.AppManagement.Overlay.OverlayAPIs,
     penaltyDSL :: API.Types.Dashboard.AppManagement.Penalty.PenaltyAPIs,
     subscriptionDSL :: API.Types.Dashboard.AppManagement.Subscription.SubscriptionAPIs,
@@ -34,13 +36,14 @@ mkAppManagementAPIs merchantId city token = do
   let driverDSL = API.Types.Dashboard.AppManagement.Driver.mkDriverAPIs driverClientDSL
   let driverSubscriptionDSL = API.Types.Dashboard.AppManagement.DriverSubscription.mkDriverSubscriptionAPIs driverSubscriptionClientDSL
   let driverWalletDSL = API.Types.Dashboard.AppManagement.DriverWallet.mkDriverWalletAPIs driverWalletClientDSL
+  let frfsFleetOperatorDSL = API.Types.Dashboard.AppManagement.FrfsFleetOperator.mkFrfsFleetOperatorAPIs frfsFleetOperatorClientDSL
   let overlayDSL = API.Types.Dashboard.AppManagement.Overlay.mkOverlayAPIs overlayClientDSL
   let penaltyDSL = API.Types.Dashboard.AppManagement.Penalty.mkPenaltyAPIs penaltyClientDSL
   let subscriptionDSL = API.Types.Dashboard.AppManagement.Subscription.mkSubscriptionAPIs subscriptionClientDSL
   let subscriptionTransactionDSL = API.Types.Dashboard.AppManagement.SubscriptionTransaction.mkSubscriptionTransactionAPIs subscriptionTransactionClientDSL
   (AppManagementAPIs {..})
   where
-    driverClientDSL :<|> driverSubscriptionClientDSL :<|> driverWalletClientDSL :<|> overlayClientDSL :<|> penaltyClientDSL :<|> subscriptionClientDSL :<|> subscriptionTransactionClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    driverClientDSL :<|> driverSubscriptionClientDSL :<|> driverWalletClientDSL :<|> frfsFleetOperatorClientDSL :<|> overlayClientDSL :<|> penaltyClientDSL :<|> subscriptionClientDSL :<|> subscriptionTransactionClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.

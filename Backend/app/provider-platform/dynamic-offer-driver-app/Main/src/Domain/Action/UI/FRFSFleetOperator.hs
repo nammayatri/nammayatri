@@ -2,7 +2,9 @@ module Domain.Action.UI.FRFSFleetOperator
   ( getV2FrfsRoute,
     getV2FrfsTripRouteManifest,
     postFrfsFleetOperatorTripAction,
+    postFrfsFleetOperatorTripAction',
     postFrfsFleetOperatorCurrentOperation,
+    postFrfsFleetOperatorCurrentOperation',
     getV2FrfsBusTripSchedule,
   )
 where
@@ -213,7 +215,20 @@ postFrfsFleetOperatorTripAction ::
     FleetOperatorTripActionReq ->
     Flow FleetOperatorTripActionResp
   )
-postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
+postFrfsFleetOperatorTripAction ctx req = postFrfsFleetOperatorTripAction' ctx False req
+
+-- | Dashboard-aware variant. `isDashboard = True` marks the call as originating
+-- from the operator dashboard so future driver-only gates can be overridden.
+postFrfsFleetOperatorTripAction' ::
+  ( ( Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Bool ->
+    FleetOperatorTripActionReq ->
+    Flow FleetOperatorTripActionResp
+  )
+postFrfsFleetOperatorTripAction' (_, _merchantId, merchantOpCityId) _isDashboard req = do
   let FleetOperatorTripActionReq {action = act} = req
   integratedBPPConfig <-
     findFirstIbppConfigByCityAndVehicle
@@ -391,7 +406,20 @@ postFrfsFleetOperatorCurrentOperation ::
     FleetOperatorCurrentOperationReq ->
     Flow FleetOperatorCurrentOperationResp
   )
-postFrfsFleetOperatorCurrentOperation (_, _merchantId, merchantOpCityId) req = do
+postFrfsFleetOperatorCurrentOperation ctx req = postFrfsFleetOperatorCurrentOperation' ctx False req
+
+-- | Dashboard-aware variant. `isDashboard = True` marks the call as originating
+-- from the operator dashboard so future driver-only gates can be overridden.
+postFrfsFleetOperatorCurrentOperation' ::
+  ( ( Maybe (Id Domain.Types.Person.Person),
+      Id Domain.Types.Merchant.Merchant,
+      Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Bool ->
+    FleetOperatorCurrentOperationReq ->
+    Flow FleetOperatorCurrentOperationResp
+  )
+postFrfsFleetOperatorCurrentOperation' (_, _merchantId, merchantOpCityId) _isDashboard req = do
   logInfo "FRFSFleetOperator: Current operation"
   integratedBPPConfig <-
     findFirstIbppConfigByCityAndVehicle
