@@ -148,6 +148,22 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                         mbCurrentDistance = mbFreshDriverLocation <&> \dloc -> realToFrac $ distanceBetweenInMeters (LatLong dloc.lat dloc.lon) pickupLoc
                         progressThreshold = fromIntegral monitoringConfig.progressThresholdMeters
                         tickCase = classifyTick state.lastDistanceToPickup mbCurrentDistance progressThreshold
+                    logInfo $
+                      "PickupProgressTick rideId=" <> rideId.getId
+                        <> " lastDistanceToPickup="
+                        <> show state.lastDistanceToPickup
+                        <> " currentDistance="
+                        <> show mbCurrentDistance
+                        <> " progressThresholdMeters="
+                        <> show progressThreshold
+                        <> " tickCase="
+                        <> show tickCase
+                        <> " activeCaseBefore="
+                        <> show state.activeCase
+                        <> " candidateCaseBefore="
+                        <> show state.candidateCase
+                        <> " consecutiveBadTicksBefore="
+                        <> show state.consecutiveBadTicks
                     case tickCase of
                       Nothing -> do
                         -- Progressing (or first baseline tick): full reset, clean slate.
