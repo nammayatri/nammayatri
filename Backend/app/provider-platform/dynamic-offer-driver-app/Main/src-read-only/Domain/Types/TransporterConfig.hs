@@ -245,6 +245,7 @@ data TransporterConfig = TransporterConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     meterRideBulkLocUpdateBatchSize :: Kernel.Prelude.Integer,
+    metricsDistanceBucketsKm :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     minBaseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minDistanceForStopFcm :: Kernel.Types.Common.HighPrecMeters,
     minLocationAccuracy :: Kernel.Prelude.Double,
