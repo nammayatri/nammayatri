@@ -3,6 +3,7 @@ module SharedLogic.FRFSReschedule where
 import qualified Data.Time as Time
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
+import qualified Domain.Types.FRFSRecon as DFRFSRecon
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -329,9 +330,28 @@ completeReschedule oldBookingId stagingBookingId = do
           { DFRFSTicketBookingPayment.frfsTicketBookingId = stagingBookingId,
             DFRFSTicketBookingPayment.updatedAt = now
           }
-    let zeroPrice = mkPrice (Just oldBooking.totalPrice.currency) 0
-    void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicketStatus.RESCHEDULED) oldBookingId
-    void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById zeroPrice zeroPrice oldBookingId
+    let negatePrice p = modifyPrice p negate
+    oldRecons <- QFRFSRecon.findAllByFrfsTicketBookingId oldBookingId
+    forM_ oldRecons $ \recon -> do
+      reversalId <- generateGUID
+      QFRFSRecon.create
+        recon
+          { DFRFSRecon.id = reversalId,
+            DFRFSRecon.buyerFinderFee = negatePrice recon.buyerFinderFee,
+            DFRFSRecon.fare = negatePrice recon.fare,
+            DFRFSRecon.settlementAmount = negatePrice recon.settlementAmount,
+            DFRFSRecon.totalOrderValue = negatePrice recon.totalOrderValue,
+            DFRFSRecon.differenceAmount = negatePrice <$> recon.differenceAmount,
+            DFRFSRecon.reconStatus = Just DFRFSRecon.PENDING,
+            DFRFSRecon.settlementDate = Nothing,
+            DFRFSRecon.settlementReferenceNumber = Nothing,
+            DFRFSRecon.message = Just "RESCHEDULE_REVERSAL",
+            DFRFSRecon.ticketStatus = Just DFRFSTicketStatus.RESCHEDULED,
+            DFRFSRecon.date = show now,
+            DFRFSRecon.time = show now,
+            DFRFSRecon.createdAt = now,
+            DFRFSRecon.updatedAt = now
+          }
     void $ CQP.clearPSCache oldBooking.riderId
     oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldBooking.quoteId
     let oldSeatIds = concat (mapMaybe (.seatIds) oldQuoteCategories)
