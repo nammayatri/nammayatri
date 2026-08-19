@@ -301,7 +301,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = d
       paymentCharge = fromMaybe 0 ride.paymentCharge
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
-      amountPaidByCustomer = fare - discount + tips
+      amountPaidByCustomer = fare - discount
       EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare} = labels
       cancellationDues = fromMaybe 0 (finalFareParam >>= (.customerCancellationDues))
   let mkComp sec key mbLabel value applicable =
