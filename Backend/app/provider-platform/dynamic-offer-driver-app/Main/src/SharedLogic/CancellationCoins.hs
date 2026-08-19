@@ -19,7 +19,10 @@ data CancellationCoinData = CancellationCoinData
     driverWaitingTime :: Maybe Int,
     callAttemptByDriver :: Bool,
     actualCoveredDistance :: Maybe Meters,
-    expectedCoveredDistance :: Maybe Meters
+    expectedCoveredDistance :: Maybe Meters,
+    -- STALLED / RETREATING / LOCATION_DARK from the pickup progress monitor, if it
+    -- flagged this ride before the cancellation; Nothing when no stall was detected.
+    pickupStallCase :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -37,5 +40,6 @@ instance Default CancellationCoinData where
         driverWaitingTime = Nothing,
         callAttemptByDriver = False,
         actualCoveredDistance = Nothing,
-        expectedCoveredDistance = Nothing
+        expectedCoveredDistance = Nothing,
+        pickupStallCase = Nothing
       }

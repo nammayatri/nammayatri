@@ -228,13 +228,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                   cancellationCharges = cancellationDues,
                   ..
                 }
-        -- calDisputeChances <-
-        --   if thresholdConfig.cancellationFee == 0.0
-        --     then do
-        --       logWarning "Unable to calculate dispute chances used"
-        --       return 0
-        --     else do
-        --       return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
         QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
@@ -250,7 +243,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 appBackendBapInternal.apiKey
                 appBackendBapInternal.url
                 (CallBAPInternal.UpdateCancellationFeeStatusReq {bppRideIds = bppRideIds})
-      -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 

@@ -521,6 +521,7 @@ library
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
       SharedLogic.BehaviourManagement.PickupStall
+      SharedLogic.BehaviourManagement.PickupStallState
       SharedLogic.BehaviourManagement.Visibility
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
@@ -531,6 +532,7 @@ library
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
+      SharedLogic.CancellationSignals
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
       SharedLogic.DriverFee

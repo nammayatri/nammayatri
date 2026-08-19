@@ -24,8 +24,6 @@ module SharedLogic.FareCalculator
     isNightAllowanceApplicable,
     timeZoneIST,
     UTCTime (UTCTime, utctDay),
-    calculateCancellationCharges,
-    calculateNoShowCharges,
     computeRideDiscount,
     computeTotalGstRate,
     countFullFareOfParamsDetails,
@@ -57,7 +55,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.SharedLogic.RideDiscount as RD
-import Domain.Types.CancellationFarePolicy as DTCFP
 import Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.FareParameters
@@ -1022,37 +1019,6 @@ calculateAllowanceMins timeDiffFromUtc perDayMaxAllowanceInMins startTime endTim
     endIST = utcToIst (secondsToMinutes timeDiffFromUtc) endTime
     startDay = localDay startIST
     endDay = localDay endIST
-
-calculateCancellationCharges :: DTCFP.CancellationFarePolicy -> Maybe Meters -> Maybe Meters -> Int -> HighPrecMoney -> HighPrecMoney
-calculateCancellationCharges cancellationAndNoShowConfigs initialDistanceToPickup currDistanceToPickup timeSpentByDriver estimatedFare = do
-  case (currDistanceToPickup, initialDistanceToPickup) of
-    (Just currDist, Just initDist) -> do
-      let distanceTravelledByDriver = initDist - currDist
-      if distanceTravelledByDriver.getMeters > 0
-        then
-          let distanceCharges = cancellationAndNoShowConfigs.perMetreCancellationCharge * toHighPrecMoney distanceTravelledByDriver.getMeters
-              timeCharges = (toHighPrecMoney timeSpentByDriver / 60) * cancellationAndNoShowConfigs.perMinuteCancellationCharge
-              percentageOfRideFare = toHighPrecMoney cancellationAndNoShowConfigs.percentageOfRideFareToBeCharged * estimatedFare
-              timeAndDistanceCharges = distanceCharges + timeCharges
-              minCharge = cancellationAndNoShowConfigs.minCancellationCharge
-              maxCharge = cancellationAndNoShowConfigs.maxCancellationCharge
-              cancellationFee = max minCharge (min timeAndDistanceCharges (min percentageOfRideFare maxCharge))
-           in cancellationFee
-        else cancellationAndNoShowConfigs.minCancellationCharge
-    _ -> cancellationAndNoShowConfigs.minCancellationCharge
-
-calculateNoShowCharges :: Maybe UTCTime -> Maybe DTCFP.CancellationFarePolicy -> UTCTime -> Maybe HighPrecMoney
-calculateNoShowCharges mbDriverArrivalTime mbCancellationAndNoShowConfigs now = do
-  case (mbDriverArrivalTime, mbCancellationAndNoShowConfigs) of
-    (Just arrivalTime, Just cancellationAndNoShowConfigs) -> do
-      let timeDiff = roundToIntegral $ diffUTCTime now arrivalTime
-      if timeDiff > cancellationAndNoShowConfigs.maxWaitingTimeAtPickupSeconds
-        then
-          let maxWaitingTimeAtPickupMinutes = fromIntegral (cancellationAndNoShowConfigs.maxWaitingTimeAtPickupSeconds.getSeconds `div` 60)
-              cancellationFee = cancellationAndNoShowConfigs.maxCancellationCharge + (maxWaitingTimeAtPickupMinutes * cancellationAndNoShowConfigs.perMinuteCancellationCharge)
-           in Just cancellationFee
-        else Nothing
-    _ -> Nothing
 
 -- | Compute total GST rate as a fractional Double from TaxConfig GstBreakup.
 --   E.g. cgstPercentage=9, sgstPercentage=9 → total = 0.18

@@ -17,7 +17,11 @@
 -- cancel flow (customer cancelled a ride the driver had stalled on). Repeat-offender
 -- consequences (nudge/warn/fee/block) are decided by PICKUP_STALL_BEHAVIOR JsonLogic
 -- rules per operating city.
-module SharedLogic.BehaviourManagement.PickupStall where
+module SharedLogic.BehaviourManagement.PickupStall
+  ( module SharedLogic.BehaviourManagement.PickupStall,
+    module SharedLogic.BehaviourManagement.PickupStallState,
+  )
+where
 
 import qualified Data.Aeson as A
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -37,51 +41,12 @@ import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import SharedLogic.BehaviourManagement.PickupStallState
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import Tools.DynamicLogic (getAppDynamicLogic)
 
 pickupStallActionType :: Text
 pickupStallActionType = "PICKUP_STALL"
-
--- Per-ride monitor state kept in Redis between ticks of the CheckDriverPickupProgress job.
--- Lives here (not in the job module) so the customer-cancel flow can read it too.
-data PickupProgressState = PickupProgressState
-  { lastDistanceToPickup :: Maybe Double,
-    candidateCase :: Maybe Text,
-    consecutiveBadTicks :: Int,
-    activeCase :: Maybe Text,
-    caseStartedAt :: Maybe UTCTime,
-    firedStageCount :: Int
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-emptyPickupProgressState :: PickupProgressState
-emptyPickupProgressState =
-  PickupProgressState
-    { lastDistanceToPickup = Nothing,
-      candidateCase = Nothing,
-      consecutiveBadTicks = 0,
-      activeCase = Nothing,
-      caseStartedAt = Nothing,
-      firedStageCount = 0
-    }
-
-pickupProgressStateKey :: Id DRide.Ride -> Text
-pickupProgressStateKey rideId = "CheckDriverPickupProgress:rideId-" <> rideId.getId
-
-pickupProgressStateTtl :: Int
-pickupProgressStateTtl = 6 * 3600
-
-caseStalled, caseRetreating, caseLocationDark :: Text
-caseStalled = "STALLED"
-caseRetreating = "RETREATING"
-caseLocationDark = "LOCATION_DARK"
-
-pickupStallRideTagPrefix :: Text
-pickupStallRideTagPrefix = "PickupStallDetected"
-
-mkPickupStallRideTag :: Text -> LYT.TagNameValue
-mkPickupStallRideTag stallCase = LYT.TagNameValue $ pickupStallRideTagPrefix <> "#" <> stallCase
 
 -- Cooldown tags exposed to rules (e.g. {"var": "cooldowns.PICKUP_STALL_FEE"}) so a
 -- fee/block consequence fires at most once per cooldown window.

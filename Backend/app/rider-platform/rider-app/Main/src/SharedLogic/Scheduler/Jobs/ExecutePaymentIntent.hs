@@ -14,7 +14,6 @@
 
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
-import qualified Data.HashMap.Strict as HM
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -35,14 +34,10 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
-import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import qualified SharedLogic.CancellationFee as CancellationFee
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import SharedLogic.Payment as SPayment
-import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -161,49 +156,4 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             let pendingTipEntries = filter (\e -> e.referenceType == RidePaymentFinance.ridePaymentRefTip && e.status == LE.PENDING) tipEntries
             unless (null pendingTipEntries) $ do
               logInfo $ "Found " <> show (length pendingTipEntries) <> " pending tip entries for ride: " <> rideId.getId
-  return Complete
-
-cancelExecutePaymentIntentJob ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    Finance.HasActorInfo m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    SchedulerFlow r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Job 'CancelExecutePaymentIntent ->
-  m ExecutionResult
-cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
-  let jobData = jobInfo.jobData
-      bookingId = jobData.bookingId
-      personId = jobData.personId
-      rideId = jobData.rideId
-      cancellationAmount = jobData.cancellationAmount
-      cancellationTax = jobData.cancellationTax
-  logDebug "Cancelling payment intent"
-  booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  merchantOpCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  let mobileCountryCode = person.mobileCountryCode
-  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  when (isNothing ride.cancellationFeeIfCancelled) $ do
-    QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  let syncCancellationLedger action =
-        void $
-          CallBPPInternal.customerCancellationDuesSync
-            merchant.driverOfferApiKey
-            merchant.driverOfferBaseUrl
-            merchant.driverOfferMerchantId
-            mobileNumber
-            (fromMaybe "+91" mobileCountryCode)
-            merchantOpCity.city
-            action
-            ride.bppRideId.getId
-  CancellationFee.settleCancellationFeeViaStripe booking ride person cancellationAmount.amount cancellationTax cancellationAmount.currency syncCancellationLedger
   return Complete

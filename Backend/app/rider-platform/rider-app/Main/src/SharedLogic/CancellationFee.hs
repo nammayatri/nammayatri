@@ -34,8 +34,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 -- | Charge a customer's cancellation fee via Stripe and reconcile the finance ledger.
---   Shared by the immediate-charge path (Beckn.Common.cancellationTransaction, Card)
---   and the deferred CancelExecutePaymentIntent job so both behave identically:
+--   Used by the immediate-charge path (Beckn.Common.cancellationTransaction, Card):
 --     1. cancel the existing ride payment intent (voids unsettled ride-fare entries)
 --     2. create the pending cancellation-fee ledger (base + tax)
 --     3. create a NEW payment intent for the cancellation fee and charge it

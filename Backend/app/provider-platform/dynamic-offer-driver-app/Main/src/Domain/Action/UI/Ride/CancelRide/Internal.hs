@@ -82,6 +82,7 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -104,7 +105,6 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
-import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -474,28 +474,17 @@ customerCancellationChargesCalculation ::
 customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode mbExistingVersion = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
-  now <- getCurrentTime
-  durationToPickup <- (maybe (fromMaybe 0 booking.dqDurationToPickup) (.durationToPickup)) <$> (QDQ.findById (Id booking.quoteId))
-  let estimatedTimeToPickup = secondsToNominalDiffTime durationToPickup
-  mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
-  let callAttemptByDriver = isJust mbCallStatus
-  let _isArrivedAtPickup = case cancellationDisToPickup of
-        Just disToPickup' -> disToPickup' < highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
-        Nothing -> False
-      timeOfCancellation = round $ diffUTCTime now ride.createdAt
-      initialDisToPickup = booking.distanceToPickup
-      actualCoveredDistance = case (initialDisToPickup, cancellationDisToPickup) of
-        (Just initial, Just cancellation) -> Just (initial - cancellation)
-        _ -> Nothing
-      expectedCoveredDistance =
-        if isJust initialDisToPickup
-          then
-            let initialDistance = fromJust initialDisToPickup
-                progressRatio = fromIntegral timeOfCancellation / max 1 estimatedTimeToPickup
-                expectedDistance = round $ fromIntegral initialDistance * progressRatio
-             in Just expectedDistance
-          else Nothing
-      driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
+  signals <-
+    CancellationSignals.buildCancellationSignals
+      CancellationSignals.CancellationSignalsReq
+        { ride = ride,
+          quoteId = booking.quoteId,
+          bookingCreatedAt = Just booking.createdAt,
+          fallbackDurationToPickup = booking.dqDurationToPickup,
+          initialDisToPickup = booking.distanceToPickup,
+          cancellationDisToPickup = cancellationDisToPickup,
+          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
+        }
   mbSearchRequest <- QSRLite.findByTransactionIdAndMerchantIdLite booking.transactionId booking.providerId
   let userSdkVersionText = Version.versionToText <$> (mbSearchRequest >>= (.userSdkVersion))
   mbPaymentMethod <- forM booking.paymentMethodId $ \pmId ->
@@ -508,17 +497,16 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
       -- A booking without a payment method is treated as Cash, matching isCashPayment above.
       bookingPaymentInstrument = maybe DMPM.Cash (.paymentInstrument) mbPaymentMethod
       isCancellationFeeExemptPaymentMethod = bookingPaymentInstrument `elem` fromMaybe [] transporterConfig.cancellationFeePaymentMethodExceptions
-  let timeSinceBooking = round $ diffUTCTime now booking.createdAt
-      logicInput =
+  let logicInput =
         UserCancellationDues.UserCancellationDuesData
           { cancelledBy = cancellationType,
-            timeOfDriverCancellation = timeOfCancellation,
-            timeOfCustomerCancellation = timeOfCancellation,
-            isArrivedAtPickup = isJust ride.driverArrivalTime || _isArrivedAtPickup,
-            driverWaitingTime = fromMaybe 0 driverWaitingTime,
-            callAttemptByDriver = callAttemptByDriver,
-            actualCoveredDistance = fromMaybe 0 actualCoveredDistance,
-            expectedCoveredDistance = fromMaybe 0 expectedCoveredDistance,
+            timeOfDriverCancellation = signals.timeOfCancellation,
+            timeOfCustomerCancellation = signals.timeOfCancellation,
+            isArrivedAtPickup = signals.isArrivedAtPickup,
+            driverWaitingTime = fromMaybe 0 signals.driverWaitingTime,
+            callAttemptByDriver = signals.callAttemptByDriver,
+            actualCoveredDistance = fromMaybe 0 signals.actualCoveredDistance,
+            expectedCoveredDistance = fromMaybe 0 signals.expectedCoveredDistance,
             cancellationDues = riderDetails.cancellationDues,
             cancelledRides = riderDetails.cancelledRides,
             totalBookings = riderDetails.totalBookings,
@@ -531,7 +519,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             cancellationReasonSelected = reasonCode,
             userSdkVersion = userSdkVersionText,
             isCashPayment = isCashPayment,
-            timeSinceBooking = timeSinceBooking
+            timeSinceBooking = fromMaybe 0 signals.timeSinceBooking,
+            pickupStallCase = signals.pickupStallCase
           }
   if transporterConfig.canAddCancellationFee && not isCancellationFeeExemptPaymentMethod
     then do

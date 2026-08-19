@@ -74,16 +74,15 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
+import qualified SharedLogic.CancellationSignals as CancellationSignals
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
-import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
@@ -520,53 +519,34 @@ hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpira
     _ -> pure 0
 
 validateCancellation :: EventFlow m r => Maybe Text -> UTCTime -> Maybe Meters -> Maybe Meters -> TransporterConfig -> DCT.CancellationType -> m Int
-validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPickup transporterConfig cancelledBy = do
-  now <- getCurrentTime
-
-  rideInfo <- case rideId of
-    Nothing -> throwError $ RideNotFound "RideId is not present"
-    Just rideIdText -> do
-      ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
-      let bookingId = ride.bookingId.getId
-      booking <- QBookingLite.findByIdLite (Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
-      let quoteId = booking.quoteId
-      driverQuote <- QDQ.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
-      let estimatedTimeToPickup = secondsToNominalDiffTime driverQuote.durationToPickup
-      mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
-      let callAttemptByDriver = isJust mbCallStatus
-      let isArrivedAtPickup = case cancellationDisToPickup of
-            Just disToPickup -> disToPickup < highPrecMetersToMeters transporterConfig.arrivedPickupThreshold
-            Nothing -> False
-      pure (ride, booking.transactionId, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup)
-
-  let (ride, transactionId, callAttemptByDriver, isArrivedAtPickup, estimatedTimeToPickup) = rideInfo
-      timeOfCancellation = round $ diffUTCTime now rideStartTime
-      actualCoveredDistance = case (initialDisToPickup, cancellationDisToPickup) of
-        (Just initial, Just cancellation) -> Just (initial - cancellation)
-        _ -> Nothing
-      expectedCoveredDistance =
-        if isJust initialDisToPickup
-          then
-            let initialDistance = fromJust initialDisToPickup
-                progressRatio = fromIntegral timeOfCancellation / max 1 estimatedTimeToPickup
-                expectedDistance = round $ fromIntegral initialDistance * progressRatio
-             in Just expectedDistance
-          else Nothing
-      driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
-
+validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToPickup transporterConfig cancelledBy = do
+  rideIdText <- fromMaybeM (RideNotFound "RideId is not present") rideId
+  ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
+  booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  signals <-
+    CancellationSignals.buildCancellationSignals
+      CancellationSignals.CancellationSignalsReq
+        { ride = ride,
+          quoteId = booking.quoteId,
+          bookingCreatedAt = Nothing,
+          fallbackDurationToPickup = Nothing,
+          initialDisToPickup = initialDisToPickup,
+          cancellationDisToPickup = cancellationDisToPickup,
+          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
+        }
   let logicInput =
         CancellationCoins.CancellationCoinData
           { cancelledBy = cancelledBy,
-            timeOfDriverCancellation = timeOfCancellation,
-            timeOfCustomerCancellation = timeOfCancellation,
-            isArrivedAtPickup = isArrivedAtPickup,
-            driverWaitingTime = driverWaitingTime,
-            callAttemptByDriver = callAttemptByDriver,
-            actualCoveredDistance = actualCoveredDistance,
-            expectedCoveredDistance = expectedCoveredDistance
+            timeOfDriverCancellation = signals.timeOfCancellation,
+            timeOfCustomerCancellation = signals.timeOfCancellation,
+            isArrivedAtPickup = signals.isArrivedAtPickup,
+            driverWaitingTime = signals.driverWaitingTime,
+            callAttemptByDriver = signals.callAttemptByDriver,
+            actualCoveredDistance = signals.actualCoveredDistance,
+            expectedCoveredDistance = signals.expectedCoveredDistance,
+            pickupStallCase = signals.pickupStallCase
           }
-
-  runCancellationLogic ride.merchantOperatingCityId (Just transactionId) logicInput
+  runCancellationLogic ride.merchantOperatingCityId (Just booking.transactionId) logicInput
 
 runCancellationLogic :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Text -> CancellationCoins.CancellationCoinData -> m Int
 runCancellationLogic merchantOpCityId mbEntityTransactionId logicInput = do

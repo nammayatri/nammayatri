@@ -29,7 +29,10 @@ data UserCancellationDuesData = UserCancellationDuesData
     cancellationReasonSelected :: Maybe DCancellationReason.CancellationReasonCode,
     userSdkVersion :: Maybe Text,
     isCashPayment :: Bool,
-    timeSinceBooking :: Int
+    timeSinceBooking :: Int,
+    -- STALLED / RETREATING / LOCATION_DARK from the pickup progress monitor, if it
+    -- flagged this ride before the cancellation; Nothing when no stall was detected.
+    pickupStallCase :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -56,7 +59,8 @@ instance Default UserCancellationDuesData where
         cancellationReasonSelected = Nothing,
         userSdkVersion = Nothing,
         isCashPayment = False,
-        timeSinceBooking = 0
+        timeSinceBooking = 0,
+        pickupStallCase = Nothing
       }
 
 data UserCancellationDuesResult = UserCancellationDuesResult
