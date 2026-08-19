@@ -28,6 +28,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.TransporterConfig as DTTC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps
@@ -209,9 +210,12 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           let estOrQuoteId = firstQuoteDetail.estimateOrQuoteId -- for fallback case
           let estimateOrQuoteIds = tripQuoteDetails <&> (.estimateOrQuoteId)
           let estimateOrQuoteServiceTierNames = tripQuoteDetails <&> (.vehicleServiceTierName)
+          -- Read once here and thread it down: buildSearchTry needs it, and so does the
+          -- search-try counter's distance bucket, and both run on every search try.
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo)
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
@@ -222,7 +226,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- TODO : Fix this
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo)
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig
               when (oldSearchTry.status == DST.ACTIVE) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
@@ -236,7 +240,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               <> "; estimated base fare:"
               <> show estimatedFare
           cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
-          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType) (SML.distanceBucketLabel searchReq.estimatedDistance)
+          Metrics.incrementSearchTryCount merchant.shortId.getShortId cityLabel (show searchTry.vehicleServiceTier) (show searchTry.searchRepeatType) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) searchReq.estimatedDistance)
           return searchTry
 
 buildSearchTry ::
@@ -263,12 +267,12 @@ buildSearchTry ::
   Maybe Text ->
   Maybe [Text] ->
   Maybe DMPM.PaymentInstrument ->
+  DTTC.TransporterConfig ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then
       fork "updateDynamicPricingDemandCounters" $
