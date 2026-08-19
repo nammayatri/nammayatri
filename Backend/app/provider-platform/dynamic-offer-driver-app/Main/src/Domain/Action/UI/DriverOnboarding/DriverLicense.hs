@@ -171,19 +171,21 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 resp <-
                   Verification.extractDLImage person.merchantId merchantOpCityId $
                     Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
-                case resp.extractedDL of
-                  Just extractedDL -> do
-                    let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-                    let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
-                    let _nameOnCard = extractedDL.nameOnCard
-                    -- disable this check for debugging with mock-idfy
-                    cacheExtractedDl person.id extractDLNumber operatingCity
-                    unless (extractDLNumber == dlNumber) $
-                      throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
-                    let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
-                    void $ compareDateOfBirth extractedDob (Just driverDateOfBirth)
-                    return (_nameOnCard, extractedDL.dateOfBirth)
-                  Nothing -> throwImageError imageId1 ImageExtractionFailed
+                if resp.provider == Just VT.InternalOCR
+                  then return (Nothing, Nothing)
+                  else case resp.extractedDL of
+                    Just extractedDL -> do
+                      let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+                      let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+                      let _nameOnCard = extractedDL.nameOnCard
+                      -- disable this check for debugging with mock-idfy
+                      cacheExtractedDl person.id extractDLNumber operatingCity
+                      unless (extractDLNumber == dlNumber) $
+                        throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+                      let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
+                      void $ compareDateOfBirth extractedDob (Just driverDateOfBirth)
+                      return (_nameOnCard, extractedDL.dateOfBirth)
+                    Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
   cachedNameOnCard <- getCachedExtractedDlName person.id
   let nameOnTheCard =
