@@ -180,6 +180,7 @@ data RiderConfig = RiderConfig
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     serviceTierRelationshipCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.ServiceTierRelationshipCfg],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    shuttleMultiSelectNudgeThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     singleModeWalkSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     sosTrackingLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,

@@ -48,6 +48,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FRFSNudge
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
@@ -486,6 +487,7 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
           Nothing -> do
             let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
             return (routeStations, Nothing)
+  nudge <- SharedLogic.FRFSNudge.computeShuttleNudge booking
   return $
     FRFSTicketService.FRFSTicketBookingStatusAPIRes
       { bookingId = booking.id,

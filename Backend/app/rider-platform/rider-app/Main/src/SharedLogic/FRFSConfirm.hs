@@ -54,6 +54,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified SharedLogic.FRFSNudge
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSStatus
@@ -648,36 +649,38 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           action (paymentBooking, paymentOrder, Nothing)
         _ -> do
           latestBooking <- B.runInReplica $ QFRFSTicketBooking.findById booking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")
-          return $ makeBookingStatusAPI (latestBooking, quoteCategories) fareParameters routeStations stations merchantOperatingCity.city
+          makeBookingStatusAPI (latestBooking, quoteCategories) fareParameters routeStations stations merchantOperatingCity.city
 
     makeBookingStatusAPI (booking, quoteCategories) fareParameters routeStations stations city = do
-      FRFSTicketService.FRFSTicketBookingStatusAPIRes
-        { bookingId = booking.id,
-          overrideType = booking.overrideType,
-          overriddenTotalPrice = mkPriceAPIEntity . Kernel.Types.Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
-          appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
-          city,
-          updatedAt = booking.updatedAt,
-          createdAt = booking.createdAt,
-          _type = booking._type,
-          quoteCategories = map mkFRFSQuoteCategoryAPIEntity quoteCategories,
-          price = Just booking.totalPrice.amount,
-          priceWithCurrency = Just $ mkPriceAPIEntity booking.totalPrice,
-          quantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity),
-          validTill = booking.validTill,
-          vehicleType = booking.vehicleType,
-          status = booking.status,
-          payment = Nothing,
-          tickets = [],
-          discountedTickets = booking.discountedTickets,
-          eventDiscountAmount = booking.eventDiscountAmount,
-          isFareChanged = booking.isFareChanged,
-          googleWalletJWTUrl = booking.googleWalletJWTUrl,
-          integratedBppConfigId = booking.integratedBppConfigId,
-          bppOrderId = booking.bppOrderId,
-          isSpotBooking = booking.isSpotBooking,
-          ..
-        }
+      nudge <- SharedLogic.FRFSNudge.computeShuttleNudge booking
+      pure
+        FRFSTicketService.FRFSTicketBookingStatusAPIRes
+          { bookingId = booking.id,
+            overrideType = booking.overrideType,
+            overriddenTotalPrice = mkPriceAPIEntity . Kernel.Types.Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
+            appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
+            city,
+            updatedAt = booking.updatedAt,
+            createdAt = booking.createdAt,
+            _type = booking._type,
+            quoteCategories = map mkFRFSQuoteCategoryAPIEntity quoteCategories,
+            price = Just booking.totalPrice.amount,
+            priceWithCurrency = Just $ mkPriceAPIEntity booking.totalPrice,
+            quantity = find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity),
+            validTill = booking.validTill,
+            vehicleType = booking.vehicleType,
+            status = booking.status,
+            payment = Nothing,
+            tickets = [],
+            discountedTickets = booking.discountedTickets,
+            eventDiscountAmount = booking.eventDiscountAmount,
+            isFareChanged = booking.isFareChanged,
+            googleWalletJWTUrl = booking.googleWalletJWTUrl,
+            integratedBppConfigId = booking.integratedBppConfigId,
+            bppOrderId = booking.bppOrderId,
+            isSpotBooking = booking.isSpotBooking,
+            ..
+          }
 
 -- | Sync live vehicle + driver/conductor data onto the frfs_ticket_booking row.
 -- Runs synchronously (NOT forked) from the confirm flow. A forked version raced with the confirm/on_init
