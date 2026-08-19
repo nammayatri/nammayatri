@@ -19,7 +19,6 @@ import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
-import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -42,6 +41,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
+import qualified Storage.Queries.FRFSBookingGroup as QFRFSBookingGroup
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -124,18 +124,31 @@ onInit onInitReq merchant oldBooking quoteCategories mbEnableOffer = do
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   booking' <- if isFareChanged then dropPassOverrideOnFareChange booking else pure booking
-  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking'
+  (bookingPaymentGroup, allJourneyBookings) <- getBookingPaymentSiblings booking'
 
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
       payableBookings = filter (not . FRFSPassOverride.isFullyPassCovered . (.overriddenAmount)) allJourneyBookings
-  when (allLegsOnInitDone && not (null payableBookings)) $ do
-    Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
+  -- A booking group's siblings are created one at a time as the checkout loop runs each slot's
+  -- confirm sequentially -- unlike a journey's legs, which all exist upfront before any leg
+  -- confirms. So "every sibling that currently exists is done" is not the same as "every slot in
+  -- the cart is done" until the sibling count actually reaches the group's declared slot count.
+  allSlotsCreated <- case bookingPaymentGroup of
+    BookingGroupPaymentGroup groupId -> do
+      mbGroup <- QFRFSBookingGroup.findById groupId
+      pure $ maybe False (\g -> length allJourneyBookings >= g.totalSlots) mbGroup
+    _ -> pure True
+  when (allLegsOnInitDone && allSlotsCreated && not (null payableBookings)) $ do
+    Redis.withLockRedis (key (bookingPaymentGroupKey booking.id.getId bookingPaymentGroup)) 60 $ do
       let paymentType = getPaymentType (integratedBPPConfig.platformType == DIBC.MULTIMODAL) booking.vehicleType
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- createBasketFromBookings payableBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
-      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer mbJourneyId
+      createPayments payableBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer bookingPaymentGroup
   where
-    key journeyId = "initJourney-" <> journeyId
+    key groupKey = "initJourney-" <> groupKey
+    bookingPaymentGroupKey bookingId = \case
+      JourneyPaymentGroup journeyId -> journeyId.getId
+      BookingGroupPaymentGroup groupId -> groupId.getId
+      NoPaymentGroup -> bookingId
 
 dropPassOverrideOnFareChange ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -168,9 +181,9 @@ createPayments ::
   [Payment.VendorSplitDetails] ->
   [Payment.Basket] ->
   Maybe Bool ->
-  Maybe (Id DJ.Journey) ->
+  BookingPaymentGroup ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer mbJourneyId = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer bookingPaymentGroup = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findTicketBookingPayment) bookings
   let isMockPayment = all (\booking -> fromMaybe False booking.isMockPayment) bookings
   mbPaymentOrder <-
@@ -192,10 +205,12 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
   where
     markBookingApproved paymentOrder booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
-      whenJust mbJourneyId $ \journeyId -> do
-        isTestTransaction <- asks (.isMetroTestTransaction)
-        let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
-        void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
+      isTestTransaction <- asks (.isMetroTestTransaction)
+      let updatedOrderShortId = DPayment.updateShortId (Just paymentType) isTestTransaction paymentOrder.shortId.getShortId
+      case bookingPaymentGroup of
+        JourneyPaymentGroup journeyId -> void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) Nothing journeyId
+        BookingGroupPaymentGroup groupId -> void $ QFRFSBookingGroup.updatePaymentOrderShortIdById (Just $ ShortId updatedOrderShortId) groupId
+        NoPaymentGroup -> pure ()
     markBookingFailed booking = do
       -- on_init normally precedes the confirm, so nothing has been debited and the release below
       -- is a no-op -- it guards on CONFIRMED internally. Kept anyway rather than reasoned away:
