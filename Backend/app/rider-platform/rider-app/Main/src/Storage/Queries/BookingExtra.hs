@@ -100,6 +100,16 @@ getActiveRideAvailableFromCacheKey personId = do
 bookingTerminalStatuses :: [BookingStatus]
 bookingTerminalStatuses = [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED]
 
+findActiveBookingsByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [Booking]
+findActiveBookingsByRiderId riderId =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamB.riderId $ Se.Eq (getId riderId),
+          Se.Is BeamB.status $ Se.In [DRB.NEW, DRB.CONFIRMED, DRB.TRIP_ASSIGNED]
+        ]
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+
 updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id Booking -> BookingStatus -> m ()
 updateStatus personId rbId rbStatus = do
   now <- getCurrentTime

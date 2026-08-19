@@ -132,10 +132,11 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation mbHotSpotConfig =
     Just isSpecialLocation -> do
       when isSpecialLocation $ frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
     Nothing -> do
-      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong origin.gps
-      case specialLocationBody of
-        Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
-        Nothing -> return ()
+      eSpecialLocationBody <- try @_ @SomeException (QSpecialLocation.findSpecialLocationByLatLong origin.gps)
+      case eSpecialLocationBody of
+        Right (Just _) -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
+        Right Nothing -> return ()
+        Left _ -> return ()
 
 extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
 extractSearchDetails now = \case
@@ -850,7 +851,10 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
             mode = Just Maps.CAR
           }
       sourceLatLong = NE.head (NE.fromList latLongs)
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
+  eSpecialLocation <- try @_ @SomeException (QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong)
+  let mbSpecialLocation = case eSpecialLocation of
+        Right ma -> ma
+        Left _ -> Nothing
   let mbSpecialLocationEnforceToll = QSpecialLocation.filterGates mbSpecialLocation True >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
   let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll

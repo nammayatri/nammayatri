@@ -77,7 +77,12 @@ resolveConfigList dims logicDomain mocId fetch matchers fallback = do
   IM.withInMemCache l1Key 3600 $
     Hedis.withRedisCache redisHashPrefix [dimensionsCacheKey dims <> ":v:" <> versionKey] 7200 $ do
       logDebug $ "CP Log: [FILL] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " versions=" <> versionKey
-      cfgs <- runInMasterDbAndRedis fetch
+      eCfgs <- try @_ @SomeException (runInMasterDbAndRedis fetch)
+      cfgs <- case eCfgs of
+        Right result -> pure result
+        Left err -> do
+          logDebug $ "CP Log: [FETCH_FAILED] domain=" <> show logicDomain <> " dims=" <> dimensionsCacheKey dims <> " err=" <> show err
+          pure []
       let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
       let filtered = case (applyMatchers matchers, fallback) of
             ([], Just fb) -> applyMatchers fb

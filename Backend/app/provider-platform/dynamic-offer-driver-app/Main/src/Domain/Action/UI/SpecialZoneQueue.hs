@@ -40,6 +40,7 @@ import Storage.Beam.SpecialZone ()
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
+import Utils.Common.Fallback (withFallback)
 
 getSpecialZoneQueueRequest ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -52,7 +53,7 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
   now <- getCurrentTime
   -- Fetch both Active and Accepted requests in one query, then split
-  allReqs <- QSZQR.findActiveByStasusListAndDriverId personId [Domain.Types.SpecialZoneQueueRequest.Active, Domain.Types.SpecialZoneQueueRequest.Accepted]
+  allReqs <- withFallback "findActiveByStasusListAndDriverId" (QSZQR.findActiveByStasusListAndDriverId personId [Domain.Types.SpecialZoneQueueRequest.Active, Domain.Types.SpecialZoneQueueRequest.Accepted]) (pure [])
   let (activeRequests, acceptedRequests) = partition (\request -> request.status == Domain.Types.SpecialZoneQueueRequest.Active) allReqs
   -- Lazy-expire Active requests past validTill
   validActiveRequests <- collectValidActive now activeRequests

@@ -136,6 +136,7 @@ import qualified Tools.MultiModal as MM
 import qualified Tools.Notifications as Notify
 import Tools.SignatureResponseBody (SignatureResponseConfig (..), SignedResponse, wrapWithSignature)
 import Tools.Whatsapp
+import Utils.Common.Fallback (withFallback)
 
 data AuthReq = AuthReq
   { mobileNumber :: Maybe Text,
@@ -761,7 +762,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
   let useFakeOtp =
         (req.mobileNumber >>= (\n -> if n `elem` merchant.fakeOtpMobileNumbers then Just "7891" else Nothing))
           <|> (req.email >>= (\n -> if n `elem` merchant.fakeOtpEmails then Just "7891" else Nothing))
-  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken req.deviceToken)
+  personWithSameDeviceToken <- listToMaybe <$> withFallback "findBlockedByDeviceToken" (runInReplica (Person.findBlockedByDeviceToken req.deviceToken)) (pure [])
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   useFraudDetection <- do
     if isBlockedBySameDeviceToken
@@ -953,7 +954,7 @@ verify tokenId req mbClientId mbXForwardedFor = do
   person <- checkPersonExists entityId
   when (isNothing person.clientId && isJust mbClientId) $ Person.updateClientId mbClientId person.id
   let deviceToken = Just req.deviceToken
-  personWithSameDeviceToken <- listToMaybe <$> runInReplica (Person.findBlockedByDeviceToken deviceToken)
+  personWithSameDeviceToken <- listToMaybe <$> withFallback "findBlockedByDeviceToken" (runInReplica (Person.findBlockedByDeviceToken deviceToken)) (pure [])
   let isBlockedBySameDeviceToken = maybe False (.blocked) personWithSameDeviceToken
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do

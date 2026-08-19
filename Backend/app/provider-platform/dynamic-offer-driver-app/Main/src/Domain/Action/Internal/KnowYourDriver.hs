@@ -49,6 +49,7 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRLite
 import qualified Storage.Queries.RatingExtra as QRating
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import Utils.Common.Fallback (withFallback)
 
 data DriverReview = DriverReview
   { riderName :: Maybe Text,
@@ -207,7 +208,7 @@ getDriverProfile withImages person = do
 
     constructRemRatings prevRatings driverId = do
       feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 10)
-      ratings <- (QRating.findRatingForRideIfPositive (nub ((.rideId) <$> feedbacks)))
+      ratings <- withFallback "findRatingForRideIfPositive" (QRating.findRatingForRideIfPositive (nub ((.rideId) <$> feedbacks))) (pure [])
       ratingsWithDriverNames <- getBookingsAndRides ratings
       pure $ take 5 $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames
 

@@ -36,6 +36,7 @@ library
       Utils.Common.CacUtils
       Utils.Common.CrossCloudProxy
       Utils.Common.Events
+      Utils.Common.Fallback
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
       Utils.QRCode.Scanner

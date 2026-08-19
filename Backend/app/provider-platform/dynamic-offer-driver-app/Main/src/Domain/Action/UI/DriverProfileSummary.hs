@@ -27,6 +27,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -45,6 +46,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as RQ
 import qualified Storage.Queries.Vehicle as QVehicle
+import Utils.Common.Fallback (withFallback)
 
 data DriverProfleSummaryRes = DriverProfleSummaryRes
   { id :: Id Person,
@@ -75,7 +77,7 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> m DriverProfleSummaryRes
+getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> m DriverProfleSummaryRes
 getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
   person <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicleMB <- B.runInReplica $ QVehicle.findById person.id
@@ -111,7 +113,7 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
         setMissedEarnings (cast person.id) missedEarnings
         QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
       else QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  feedbackBadgeList <- B.runInReplica $ QFB.findByDriverId person.id
+  feedbackBadgeList <- withFallback "findByDriverId" (B.runInReplica $ QFB.findByDriverId person.id) (pure [])
   totalUsersRated <- B.runInReplica $ QRating.findAllRatingUsersCountByPerson driverId
 
   let driverSummary =

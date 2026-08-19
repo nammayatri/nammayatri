@@ -205,11 +205,11 @@ getBookingListImpl True (Just personId, merchantId) mbAgentId onlyDashboard mbLi
             Nothing -> do
               otherActiveParties <- QR.findOtherActivePartyBooking (Just personId) mbBookingStatus mbClientId mbFromDate mbToDate
               case otherActiveParties of
-                [] -> getBookingListImpl False (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
+                [] -> QRB.findActiveBookingsByRiderId personId <&> \bxs -> (bxs, bxs)
                 bxs -> return (bxs, bxs)
             Just booking -> return ([booking], [booking])
-        _ -> getBookingListImpl False (Just personId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset (Just True) mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
-    Nothing -> return ([], [])
+        _ -> QRB.findActiveBookingsByRiderId personId <&> \bxs -> (bxs, bxs)
+    Nothing -> QRB.findActiveBookingsByRiderId personId <&> \bxs -> (bxs, bxs)
 getBookingListImpl _ (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
   logInfo $ "getBookingList: Executing query for personId=" <> show mbPersonId <> ", merchantId=" <> show merchantId <> ", onlyActive=" <> show mbOnlyActive
   let mbFromDate = millisecondsToUTC <$> mbFromDate'

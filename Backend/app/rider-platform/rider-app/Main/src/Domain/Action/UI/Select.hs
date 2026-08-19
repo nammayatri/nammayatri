@@ -105,6 +105,7 @@ import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
+import Utils.Common.Fallback (withFallback)
 
 type SelectFlow m r c =
   ( CacheFlow m r,
@@ -273,7 +274,7 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
       ( \deviceId -> do
           if toUpdateDeviceIdInfo
             then do
-              personsWithSameDeviceId <- QP.findAllByDeviceId (Just deviceId)
+              personsWithSameDeviceId <- withFallback "findAllByDeviceId" (QP.findAllByDeviceId (Just deviceId)) (pure [])
               return $ Just (length personsWithSameDeviceId > 1)
             else return Nothing
       )

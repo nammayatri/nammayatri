@@ -14,6 +14,7 @@ import Domain.Types.Merchant as DM
 import Domain.Types.Person (Person, RideShareOptions (..))
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import qualified Safety.Domain.Types.Common as SafetyCommon
@@ -23,6 +24,7 @@ import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as Lib
 import Storage.Beam.Sos ()
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import Utils.Common.Fallback (withFallback)
 
 -- Type alias for API/spec compatibility (table and domain live in Safety.*).
 type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberAPIEntity
@@ -55,9 +57,9 @@ toSafetyRideShare = \case
   NEVER_SHARE -> SafetyCommon.NEVER_SHARE
 
 -- | Rider: ensure PDEN list has share option; if not set, use Person.shareTripWithEmergencyContactOption.
-findpersonENListWithFallBack :: (BeamFlow m r) => Id Person -> Maybe Person -> m [SafetyPDEN.PersonDefaultEmergencyNumber]
+findpersonENListWithFallBack :: (BeamFlow m r, Metrics.CoreMetrics m) => Id Person -> Maybe Person -> m [SafetyPDEN.PersonDefaultEmergencyNumber]
 findpersonENListWithFallBack personId mbPerson = do
-  personENList <- Lib.findAllByPersonId (cast personId)
+  personENList <- withFallback "findpersonENListWithFallBack" (Lib.findAllByPersonId (cast personId)) (pure [])
   let isUpdated = any (\item -> isJust (SafetyPDEN.shareTripWithEmergencyContactOption item)) personENList
   if isUpdated
     then return personENList
