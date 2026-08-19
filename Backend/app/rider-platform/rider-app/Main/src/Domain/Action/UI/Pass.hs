@@ -949,7 +949,10 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
 
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
 
-  let reUploadValidTill = mbReUploadWindow <&> \reUploadWindow -> DT.addUTCTime (secondsToNominalDiffTime reUploadWindow) (fromMaybe purchasedPass.updatedAt purchasedPass.activatedAt)
+  let reUploadValidTill = do
+        reUploadWindow <- mbReUploadWindow
+        activatedAt <- purchasedPass.activatedAt
+        pure $ DT.addUTCTime (secondsToNominalDiffTime reUploadWindow) activatedAt
 
   passes <- CQPass.findAllByPassTypeIdAndEnabled purchasedPass.passTypeId True
   let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
@@ -1048,10 +1051,16 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
           whenJust mbPassStatus $ \passStatus -> unless isPaymentInRefundFlow $ do
             when (purchasedPassPayment.status `notElem` activeLikeStatuses) $ do
               QPurchasedPassPayment.updateStatusByOrderId passStatus paymentOrderId
+              when (passStatus == DPurchasedPass.Active) $ do
+                activatedAt <- getCurrentTime
+                QPurchasedPassPayment.updateActivatedAt (Just activatedAt) purchasedPassPayment.id
               when (passStatus `elem` activeLikeStatuses && isDashboard) $ do
                 void $ withTryCatch "sendPassPurchasedSuccessMessage" $ sendPassPurchasedSuccessMessage purchasedPass.personId purchasedPass.merchantId purchasedPass.merchantOperatingCityId (fromMaybe "" purchasedPass.passName)
             when (purchasedPass.status `notElem` activeLikeStatuses) $ do
               QPurchasedPass.updatePurchaseData purchasedPass.id purchasedPassPayment.startDate purchasedPassPayment.endDate passStatus purchasedPassPayment.benefitDescription purchasedPassPayment.benefitType purchasedPassPayment.benefitValue purchasedPassPayment.amount (Just purchasedPassPayment.orderId)
+              when (passStatus == DPurchasedPass.Active) $ do
+                activatedAt <- getCurrentTime
+                QPurchasedPass.updateActivatedAt (Just activatedAt) purchasedPass.id
               when (passStatus `elem` activeLikeStatuses) $ do
                 recordStatsResult <-
                   withTryCatch "passOrderStatusHandler:recordPersonPTStats" $ do
@@ -1168,6 +1177,12 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
             | firstPayment.startDate <= today = DPurchasedPass.Active
             | otherwise = DPurchasedPass.PreBooked
 
+          newActivatedAt
+            | newStatus /= DPurchasedPass.Active = purchasedPass.activatedAt
+            | firstPayment.status == DPurchasedPass.PreBooked && newStatus == DPurchasedPass.Active = Just now
+            | maybe False (\activatedAt -> firstPayment.startDate > DT.utctDay activatedAt) purchasedPass.activatedAt = Just now
+            | otherwise = purchasedPass.activatedAt
+
           newPass =
             purchasedPass
               { DPurchasedPass.startDate = firstPayment.startDate,
@@ -1177,19 +1192,22 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
                 DPurchasedPass.usedTripCount = Just 0,
                 DPurchasedPass.deviceSwitchCount = 0,
                 DPurchasedPass.updatedAt = now,
+                DPurchasedPass.activatedAt = newActivatedAt,
                 DPurchasedPass.profilePicture = newProfilePicture
               }
 
           newPassPayment =
             firstPayment
               { DPurchasedPassPayment.status = newStatus,
-                DPurchasedPassPayment.updatedAt = now
+                DPurchasedPassPayment.updatedAt = now,
+                DPurchasedPassPayment.activatedAt = newActivatedAt
               }
 
           hasChanged =
             purchasedPass.status /= newStatus
               || firstPayment.status /= newStatus
               || firstPayment.passPhotoMediaId /= purchasedPass.passPhotoMediaId
+              || purchasedPass.activatedAt /= newActivatedAt
               || isChangedProfilePicture
        in return (newPass, Just newPassPayment, hasChanged)
     Nothing ->
@@ -1307,8 +1325,9 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
           -- Refresh the SDK version of the client that drove this transition. Inside shouldUpdateDB
           -- so it fires only on real transitions, never on every pass-list read.
           QPurchasedPassPayment.updateSdkVersionByOrderId person.clientSdkVersion firstPreBookedPayment.orderId
-          when ((purchasedPass.status /= updatedPass.status || isNothing purchasedPass.activatedAt) && updatedPass.status == DPurchasedPass.Active) $ QPurchasedPass.updateActivatedAt (Just updatedPass.updatedAt) purchasedPass.id
-          when ((purchasedPass.status /= updatedPass.status || isNothing firstPreBookedPayment.activatedAt) && updatedPass.status == DPurchasedPass.Active) $ QPurchasedPassPayment.updateActivatedAt (Just updatedPass.updatedAt) firstPreBookedPayment.id
+          when (purchasedPass.activatedAt /= updatedPass.activatedAt) $ do
+            QPurchasedPass.updateActivatedAt updatedPass.activatedAt purchasedPass.id
+            QPurchasedPassPayment.updateActivatedAt firstPreBookedPayment.activatedAt firstPreBookedPayment.id
           when (updatedPass.profilePicture /= purchasedPass.profilePicture) $
             QPurchasedPass.updateProfilePictureById updatedPass.profilePicture purchasedPass.id
           -- Project the activating term's photo onto the pass. whenJust-guarded so a photo-less
@@ -1913,9 +1932,10 @@ incrementPhotoChangeCount purchasedPass = do
   when (isJust maxPhotoChangeCount && updatedPhotoCount > maxPhotoChangeCount) $ throwError (InvalidRequest "Cannot change photo more than the limit")
 
   now <- getCurrentTime
-  whenJust reUploadWindow $ \window ->
-    when (now > DT.addUTCTime (secondsToNominalDiffTime window) (fromMaybe purchasedPass.updatedAt purchasedPass.activatedAt)) $
-      throwError (InvalidRequest "Photo re-upload time limit exceeded")
+  let withinReUploadWindow = case (reUploadWindow, purchasedPass.activatedAt) of
+        (Just window, Just activatedAt) -> now <= DT.addUTCTime (secondsToNominalDiffTime window) activatedAt
+        _ -> False
+  unless withinReUploadWindow $ throwError (InvalidRequest "Photo re-upload failed")
 
   QPurchasedPassPayment.updatePhotoChangeCountByPurchasedPassIdAndStatus updatedPhotoCount purchasedPass.id [DPurchasedPass.Active]
 
