@@ -792,6 +792,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
+          isPetModeEnabled = False,
           vehicleNumber = Nothing,
           onRide = Just onRide,
           previousRideDropLat = Nothing,
@@ -846,7 +847,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           score = driverGoHomePoolWithActualDistance.score,
           poolingLogicVersion = driverGoHomePoolWithActualDistance.poolingLogicVersion,
           searchReqDriverStatsCounters = Nothing,
-          idleTimeSeconds = Nothing
+          idleTimeSeconds = Nothing,
+          preferenceMatchScore = 1.0
         }
 
     makeDriverPoolResultFromGoHome NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
@@ -857,6 +859,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
+          isPetModeEnabled = False,
           vehicleNumber = Nothing,
           onRide = Just onRide,
           previousRideDropLat = Nothing,
@@ -1130,7 +1133,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           score = dpr.score,
           poolingLogicVersion = Nothing,
           searchReqDriverStatsCounters = Nothing,
-          idleTimeSeconds = Nothing
+          idleTimeSeconds = Nothing,
+          preferenceMatchScore = 1.0
         }
 
     filterFunc threshold estDist distanceToPickup =
@@ -1366,7 +1370,8 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           score = distDur.origin.score,
           poolingLogicVersion = Nothing,
           searchReqDriverStatsCounters = Nothing,
-          idleTimeSeconds = Nothing
+          idleTimeSeconds = Nothing,
+          preferenceMatchScore = 1.0
         }
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
@@ -1428,7 +1433,8 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           score = distDur.origin.score,
           poolingLogicVersion = Nothing,
           searchReqDriverStatsCounters = Nothing,
-          idleTimeSeconds = Nothing
+          idleTimeSeconds = Nothing,
+          preferenceMatchScore = 1.0
         }
 
 refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult)

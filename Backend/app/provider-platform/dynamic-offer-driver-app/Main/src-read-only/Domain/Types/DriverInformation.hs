@@ -107,7 +107,7 @@ data DriverInformationE e = DriverInformation
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     preferredMapProvider :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.MapProvider,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
-    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
+    preferredSecondarySpecialLocIds :: [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     referredByFleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -139,9 +139,9 @@ data DriverInformationE e = DriverInformation
   }
   deriving (Generic)
 
-type DriverInformation = DriverInformationE 'AsEncrypted
+type DriverInformation = DriverInformationE ('AsEncrypted)
 
-type DecryptedDriverInformation = DriverInformationE 'AsUnencrypted
+type DecryptedDriverInformation = DriverInformationE ('AsUnencrypted)
 
 instance EncryptedItem DriverInformation where
   type Unencrypted DriverInformation = (DecryptedDriverInformation, HashSalt)
@@ -438,28 +438,28 @@ data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Gen
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddressDocumentType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AddressDocumentType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirportRestrictionType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirportRestrictionType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DisabledReasonFlag)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DisabledReasonFlag))
 
-$(mkHttpInstancesForEnum ''DisabledReasonFlag)
+$(mkHttpInstancesForEnum (''DisabledReasonFlag))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
 
-$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EnabledReasonFlag)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EnabledReasonFlag))
 
-$(mkHttpInstancesForEnum ''EnabledReasonFlag)
+$(mkHttpInstancesForEnum (''EnabledReasonFlag))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MapProvider)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MapProvider))
 
-$(mkHttpInstancesForEnum ''MapProvider)
+$(mkHttpInstancesForEnum (''MapProvider))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingAs)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OnboardingAs))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))

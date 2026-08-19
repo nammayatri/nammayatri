@@ -1156,6 +1156,9 @@ TransporterConfig:
     dpWhiteListedGeohash: Maybe [Text]
     dpBlackListedGeohash: Maybe [Text]
     dpGeoHashPercision: Maybe Int
+    # Fewest cells a driver must select for a preferred-area (cells method) selection
+    # to be accepted.
+    areaPreferenceMinCells: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     feedbackNotificationConfig: Maybe FeedbackNotificationConfig
     onboardingTryLimit: Int
@@ -1853,6 +1856,7 @@ TransporterConfig:
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
+    areaPreferenceMinCells: "4"
     dpWhiteListedGeohash: "ARRAY[]::TEXT[]"
     dpBlackListedGeohash: "ARRAY[]::TEXT[]"
     minLocationAccuracy: "50"
@@ -2085,6 +2089,7 @@ TransporterConfig:
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
         - dpGeoHashPercision
+        - areaPreferenceMinCells
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - driverRiderBlacklistDurationSeconds

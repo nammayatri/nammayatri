@@ -1,2 +1,2 @@
-alter table atlas_driver_offer_bpp.driver_pool_config add column soft_max_parallel_search_requests integer;
-alter table atlas_driver_offer_bpp.driver_pool_config add column enable_early_batch_advance_on_full_reject boolean;
+alter table atlas_driver_offer_bpp.driver_pool_config add column if not exists soft_max_parallel_search_requests integer;
+alter table atlas_driver_offer_bpp.driver_pool_config add column if not exists enable_early_batch_advance_on_full_reject boolean;
