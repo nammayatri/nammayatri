@@ -92,10 +92,10 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
   vehicleNumber <- decrypt rc.certificateNumber
   recentFleetInfo <- case HM.lookup rc.id fleetAssocByRc of
     Nothing -> pure Nothing
-    Just fra -> mkAssociationInfo (HM.lookup fra.fleetOwnerId personById) (HM.lookup fra.fleetOwnerId fleetOwnerInfoById) fra.associatedTill
+    Just fra -> mkAssociationInfo (HM.lookup fra.fleetOwnerId personById) (HM.lookup fra.fleetOwnerId fleetOwnerInfoById) fra.associatedTill True
   linkedDriverInfo <- case HM.lookup rc.id driverAssocByRc of
     Nothing -> pure Nothing
-    Just dra -> mkAssociationInfo (HM.lookup dra.driverId personById) Nothing dra.associatedTill
+    Just dra -> mkAssociationInfo (HM.lookup dra.driverId personById) Nothing dra.associatedTill dra.isRcActive
   pure
     VehicleAPI.VehicleListItem
       { rcId = rc.id.getId,
@@ -111,10 +111,11 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         linkedDriverInfo
       }
 
-mkAssociationInfo :: Maybe DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe UTCTime -> Flow (Maybe Common.DriverAssociationInfo)
-mkAssociationInfo Nothing _ _ = pure Nothing
-mkAssociationInfo (Just person) mbFoi associatedTill = do
+mkAssociationInfo :: Maybe DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe UTCTime -> Bool -> Flow (Maybe Common.DriverAssociationInfo)
+mkAssociationInfo Nothing _ _ _ = pure Nothing
+mkAssociationInfo (Just person) mbFoi associatedTill isActive = do
   mobileNumber <- mapM decrypt person.mobileNumber
+  now <- getCurrentTime
   pure $
     Just
       Common.DriverAssociationInfo
@@ -125,8 +126,8 @@ mkAssociationInfo (Just person) mbFoi associatedTill = do
           fleetName = mbFoi >>= (.fleetName),
           verified = (.verified) <$> mbFoi,
           enabled = (.enabled) <$> mbFoi,
-          isActive = True,
-          isAssociated = True,
+          isActive,
+          isAssociated = maybe False (> now) associatedTill,
           associatedTill,
           requestReason = Nothing
         }

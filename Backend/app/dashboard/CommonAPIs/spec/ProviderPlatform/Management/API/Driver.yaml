@@ -784,6 +784,18 @@ types:
     - recentFleetInfo: Maybe DriverAssociationInfo
     - hasActiveRc: Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
+    - linkedVehicleInfo: [LinkedVehicleInfo]
+  LinkedVehicleInfo:
+    - rcId: Text
+    - vehicleNumber: Maybe Text
+    - vehicleMake: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleClass: Maybe Text
+    - verified: Maybe Bool
+    - approved: Maybe Bool
+    - isActive: Bool
+    - associatedTill: Maybe UTCTime
   LicDetails:
     - licExpiry: UTCTime
     - vehicleClass: [Text]

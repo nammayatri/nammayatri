@@ -360,14 +360,18 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
   let pageDriverIds = map (\(person, _, _) -> person.id) driversWithInfo
   fleetAssocs <- B.runInReplica $ QFDA.findActiveOrMostRecentByDriverIds pageDriverIds
   activeRcAssocs <- B.runInReplica $ QDRCA.findAllActiveByDriverIds pageDriverIds
+  linkedRcAssocs <- B.runInReplica $ QDRCA.findAllLinkedByDriverIds pageDriverIds
+  linkedRcs <- B.runInReplica $ RCQueryExtra.findAllById (nub $ map (.rcId) linkedRcAssocs)
   let fleetAssocByDriver = HM.fromList $ map (\fda -> (fda.driverId, fda)) fleetAssocs
       driversWithActiveRc = HS.fromList $ map (.driverId) activeRcAssocs
+      rcById = HM.fromList $ map (\rc -> (rc.id, rc)) linkedRcs
+      linkedAssocsByDriver = HM.fromListWith (<>) $ map (\dra -> (dra.driverId, [dra])) linkedRcAssocs
       fleetOwnerIds = nub $ map (.fleetOwnerId) fleetAssocs
   fleetOwners <- B.runInReplica $ QPerson.findAllByPersonIds fleetOwnerIds
   fleetOwnerInfos <- B.runInReplica $ QFOI.findAllByPrimaryKeys (Id <$> fleetOwnerIds)
   let fleetOwnerById = HM.fromList $ map (\p -> (p.id.getId, p)) fleetOwners
       fleetOwnerInfoById = HM.fromList $ map (\foi -> (foi.fleetOwnerPersonId.getId, foi)) fleetOwnerInfos
-  items <- mapM (buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetOwnerInfoById now) driversWithInfo
+  items <- mapM (buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver rcById fleetOwnerById fleetOwnerInfoById now) driversWithInfo
   let count = length items
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.DriverListRes {totalItems = count, summary, drivers = items}
@@ -379,13 +383,16 @@ buildDriverListItem ::
   EncFlow m r =>
   HM.HashMap (Id DP.Person) FDA.FleetDriverAssociation ->
   HS.HashSet (Id DP.Person) ->
+  HM.HashMap (Id DP.Person) [DriverRCAssociation] ->
+  HM.HashMap (Id VehicleRegistrationCertificate) VehicleRegistrationCertificate ->
   HM.HashMap Text DP.Person ->
   HM.HashMap Text DFOI.FleetOwnerInformation ->
   UTCTime ->
   (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) ->
   m Common.DriverListItem
-buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetOwnerInfoById now (person, driverInformation, mbVehicle) = do
+buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver rcById fleetOwnerById fleetOwnerInfoById now (person, driverInformation, mbVehicle) = do
   phoneNo <- mapM decrypt person.mobileNumber
+  linkedVehicleInfo <- mapM (mkLinkedVehicleInfo rcById) (HM.lookupDefault [] person.id linkedAssocsByDriver)
   let mbFda = HM.lookup person.id fleetAssocByDriver
   mbRecentFleetInfo <- case mbFda of
     Nothing -> pure Nothing
@@ -430,7 +437,8 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
         onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
         recentFleetInfo = mbRecentFleetInfo,
         hasActiveRc = HS.member person.id driversWithActiveRc,
-        disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag
+        disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag,
+        linkedVehicleInfo
       }
   where
     castOnboardingAs DrInfo.FLEET_DRIVER = Common.FLEET_DRIVER
@@ -438,6 +446,24 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
     castDisabledReasonFlag DrInfo.FleetDisabled = Common.FleetDisabled
     castDisabledReasonFlag DrInfo.AdminDisabled = Common.AdminDisabled
     castDisabledReasonFlag DrInfo.DriverDisabled = Common.DriverDisabled
+
+mkLinkedVehicleInfo :: EncFlow m r => HM.HashMap (Id VehicleRegistrationCertificate) VehicleRegistrationCertificate -> DriverRCAssociation -> m Common.LinkedVehicleInfo
+mkLinkedVehicleInfo rcById dra = do
+  let mbRc = HM.lookup dra.rcId rcById
+  vehicleNumber <- maybe (pure Nothing) (fmap Just . decrypt . (.certificateNumber)) mbRc
+  pure
+    Common.LinkedVehicleInfo
+      { rcId = dra.rcId.getId,
+        vehicleNumber,
+        vehicleMake = mbRc >>= (.vehicleManufacturer),
+        vehicleModel = mbRc >>= (.vehicleModel),
+        vehicleColor = mbRc >>= (.vehicleColor),
+        vehicleClass = mbRc >>= (.vehicleClass),
+        verified = mbRc >>= (.verified),
+        approved = mbRc >>= (.approved),
+        isActive = dra.isRcActive,
+        associatedTill = dra.associatedTill
+      }
 
 ---------------------------------------------------------------------
 getDriverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActivityRes

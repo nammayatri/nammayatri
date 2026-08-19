@@ -131,17 +131,22 @@ findAllActiveByDriverIds driverIds = do
         ]
     ]
 
+findAllLinkedByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [DriverRCAssociation]
+findAllLinkedByDriverIds [] = pure []
+findAllLinkedByDriverIds driverIds = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [Se.And [Se.Is BeamDRCA.driverId $ Se.In (getId <$> driverIds), Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
+    (Se.Desc BeamDRCA.associatedOn)
+    Nothing
+    Nothing
+
 findAllActiveByRcIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id VehicleRegistrationCertificate] -> m [DriverRCAssociation]
 findAllActiveByRcIds [] = pure []
 findAllActiveByRcIds rcIds = do
   now <- getCurrentTime
   findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamDRCA.rcId $ Se.In (getId <$> rcIds),
-          Se.Is BeamDRCA.isRcActive $ Se.Eq True,
-          Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now
-        ]
-    ]
+    [Se.And [Se.Is BeamDRCA.rcId $ Se.In (getId <$> rcIds), Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
     (Se.Desc BeamDRCA.associatedOn)
     Nothing
     Nothing
