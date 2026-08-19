@@ -136,9 +136,16 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                           logWarning $ "driversLocation failed in pickup progress monitor: " <> show err
                           return Nothing
                         Right locations -> return $ listToMaybe locations
+                    -- The LTS last-known-location key has a long TTL and is never cleared when a
+                    -- driver's GPS goes dark, so an absent key is not the only signal for "dark" —
+                    -- a ping older than 2 ticks means we're reading a stale position, not a live one.
+                    let staleAfter = fromIntegral (2 * monitoringConfig.tickIntervalSec) :: NominalDiffTime
+                        mbFreshDriverLocation =
+                          mbDriverLocation >>= \dloc ->
+                            if diffUTCTime now dloc.coordinatesCalculatedAt <= staleAfter then Just dloc else Nothing
                     state <- fromMaybe emptyPickupProgressState <$> Redis.safeGet (pickupProgressStateKey rideId)
                     let pickupLoc = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-                        mbCurrentDistance = mbDriverLocation <&> \dloc -> realToFrac $ distanceBetweenInMeters (LatLong dloc.lat dloc.lon) pickupLoc
+                        mbCurrentDistance = mbFreshDriverLocation <&> \dloc -> realToFrac $ distanceBetweenInMeters (LatLong dloc.lat dloc.lon) pickupLoc
                         progressThreshold = fromIntegral monitoringConfig.progressThresholdMeters
                         tickCase = classifyTick state.lastDistanceToPickup mbCurrentDistance progressThreshold
                     case tickCase of
