@@ -2,6 +2,7 @@ imports:
   Summary: Dashboard.Common
   DriverAssociationInfo: Dashboard.Common.Driver
   ApprovalStatusFilter: Dashboard.Common.Driver
+  VehicleVariant: Dashboard.Common
 
 module: Vehicle
 
@@ -34,6 +35,7 @@ types:
     - vehicleModel: Maybe Text
     - vehicleColor: Maybe Text
     - vehicleClass: Maybe Text
+    - vehicleVariant: Maybe VehicleVariant
     - verified: Maybe Bool
     - approved: Maybe Bool
     - createdAt: UTCTime
