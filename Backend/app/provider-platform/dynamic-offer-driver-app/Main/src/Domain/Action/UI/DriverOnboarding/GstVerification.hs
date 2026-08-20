@@ -56,6 +56,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.Common as SCommonOnb
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -218,8 +219,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         if DCommon.checkFleetOwnerRole person.role
           then do
             fodvc <-
-              getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, role = Just [person.role]}) Nothing
-                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
+              getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, role = Nothing}) Nothing
+                >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate)) . SCommonOnb.findFleetConfigForRole ODC.GSTCertificate person.role
             pure fodvc.checkExtraction
           else do
             dvc <-
