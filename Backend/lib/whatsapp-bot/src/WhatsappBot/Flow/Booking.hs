@@ -48,6 +48,10 @@ module WhatsappBot.Flow.Booking
     flexiOffered,
     regularOffered,
 
+    -- * Ride-type chooser button layout (initial prompt + "More" reveal)
+    rideTypeButtons,
+    hiddenRideTypeButtons,
+
     -- * The flow's post-auth prefetch hook
     prefetchSavedLocations,
   )
@@ -96,13 +100,16 @@ promptForBookingEntry env ev ctx = do
           promptForPickup env ev ctx1 False
 
 -- | Ask which ride type (@engine.ts:714-725@); the @ride_type:*@ intercept handles
--- the taps.
+-- the taps, and the @more_ride_types@ intercept (Engine.hs) handles a tap on
+-- "More" when the merchant offers more types than fit as direct buttons —
+-- see 'rideTypeButtons'.
 sendRideTypePrompt :: Monad m => BotEnv m -> InboundEvent -> FlowContext -> m ()
 sendRideTypePrompt env ev ctx = do
   let s = t env.cfg.translations ctx.language
       to = ev.fromPhone
+      merchant = env.cfg.merchant
   save env ev (ctx {rideType = Nothing} :: FlowContext)
-  replyButtons env to s.rideTypePrompt [btn s.rideTypeFlexi "ride_type:flexi", btn s.rideTypeRegular "ride_type:regular"]
+  replyButtons env to s.rideTypePrompt (rideTypeButtons s merchant.maxDirectButtons merchant.rideTypesOrder)
 
 -- | The @ride_type:(flexi|regular)@ intercept (@engine.ts:276-292@): record the
 -- choice, ensure auth (deferred booking survives it), then ask for pickup.
@@ -604,10 +611,67 @@ menuRow env ev s = do
   pure (trackBtn <> [bookBtn, btn s.moreButton "more", btn s.chooseLanguage "choose_language"])
 
 flexiOffered :: MerchantCtx -> Bool
-flexiOffered merchant = merchant.flexiEnabled
+flexiOffered merchant = Flexi `elem` merchant.rideTypesOrder
 
 regularOffered :: MerchantCtx -> Bool
-regularOffered merchant = merchant.regularEnabled
+regularOffered merchant = Regular `elem` merchant.rideTypesOrder
+
+-- ---------------------------------------------------------------------------
+-- Ride-type chooser button layout: a merchant's rideTypesOrder -> the
+-- WhatsApp buttons for the initial prompt + the "More" reveal.
+--
+-- Default layout rule (design discussion, not ported from TS — this is new):
+--   total <= 1 -> show it directly, no More (nothing to hide)
+--   total >= 2 -> show min(total - 1, 2) directly, in priority order;
+--                 everything else goes behind "More"
+-- The "-1" reserves a slot for the More button itself whenever there IS a
+-- hidden item; capped at 2 so direct+More never exceeds WhatsApp's real
+-- 3-button-per-message limit. This is the ONLY rule used when a merchant's
+-- maxDirectButtons is Nothing — unchanged from before maxDirectButtons existed.
+--
+-- Just n (explicit per-merchant override, e.g. "always nudge to priority
+-- option even when both would fit"): cap = clamp(n, 1, 2). If everything
+-- fits within cap, show it all directly with NO "More" (no reservation) —
+-- otherwise show `cap` directly and hide the rest. This is a genuinely
+-- different rule from the Nothing case (no automatic "-1" reservation), so
+-- Just 2 at total=2 shows both with no More, which Nothing never does.
+--
+-- Wire ids for direct buttons are UNCHANGED ("ride_type:flexi"/
+-- "ride_type:regular" — a byte-identical contract, see this package's own
+-- CLAUDE.md), so handleRideType needs no changes.
+-- ---------------------------------------------------------------------------
+
+-- | One direct button for a single ride type.
+rideTypeBtn :: LanguageStrings -> RideType -> OutButton
+rideTypeBtn s Flexi = btn s.rideTypeFlexi "ride_type:flexi"
+rideTypeBtn s Regular = btn s.rideTypeRegular "ride_type:regular"
+
+-- | Split a merchant's offered ride types into (shown directly, behind More),
+-- per the layout rule above. 'Nothing' keeps the original default rule
+-- byte-for-byte; 'Just n' is the explicit per-merchant override.
+splitRideTypes :: Maybe Int -> [RideType] -> ([RideType], [RideType])
+splitRideTypes Nothing rts
+  | length rts <= 1 = (rts, [])
+  | otherwise = splitAt (min (length rts - 1) 2) rts
+splitRideTypes (Just n) rts
+  | length rts <= cap = (rts, [])
+  | otherwise = splitAt cap rts
+  where
+    cap = max 1 (min n 2)
+
+-- | The ride-type chooser's initial set of buttons for a merchant's full
+-- offered list (used by 'sendRideTypePrompt').
+rideTypeButtons :: LanguageStrings -> Maybe Int -> [RideType] -> [OutButton]
+rideTypeButtons s maxDirect rts =
+  let (direct, hidden) = splitRideTypes maxDirect rts
+   in map (rideTypeBtn s) direct <> [btn s.moreRideTypes "more_ride_types" | not (null hidden)]
+
+-- | The buttons "More" reveals: the hidden remainder from 'rideTypeButtons'.
+-- Recomputed fresh from the merchant's config on each tap — nothing about
+-- which types were hidden is persisted between the initial prompt and the
+-- More tap.
+hiddenRideTypeButtons :: LanguageStrings -> Maybe Int -> [RideType] -> [OutButton]
+hiddenRideTypeButtons s maxDirect rts = map (rideTypeBtn s) (snd (splitRideTypes maxDirect rts))
 
 -- ---------------------------------------------------------------------------
 -- Small pure/effect helpers
