@@ -73,7 +73,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
     Just
       emptyOrder
         { Spec.orderFulfillments = Just fulfillments,
-          Spec.orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings) fulfillments,
+          Spec.orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings (not $ null searchRequest.stops)) fulfillments,
           Spec.orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           Spec.orderPayments = Just [paymentV2],
           Spec.orderProvider = mkProvider bppConfig
@@ -122,14 +122,14 @@ mkAgentTagsV2 quote =
     [ Tags.RATING Tags.~=? (show . (.getCenti) <$> quote.driverRating)
     ]
 
-mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Spec.Item
-mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
+mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Bool -> Spec.Item
+mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings hasStops = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   emptyItem
     { Spec.itemId = Just quote.estimateId.getId,
       Spec.itemFulfillmentIds = Just [fulfillmentId],
       Spec.itemPrice = Just $ mkPriceV2 quote,
-      Spec.itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.customerCancellationDues quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
+      Spec.itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.customerCancellationDues quote.fareParams.congestionChargeViaDp mbFarePolicy taggings hasStops,
       Spec.itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       Spec.itemCategoryIds = Just [Utils.tripCategoryToCategoryCode quote.tripCategory]
     }
@@ -155,9 +155,9 @@ mkPriceV2 quote =
       Spec.priceOfferedValue = show <$> quote.fareParams.driverSelectedFare
     }
 
-mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Maybe [Spec.TagGroup]
-mkItemTagsV2 estimatedFare mbCancellationCharge congestionChargeViaDp mbFarePolicy taggings = do
-  let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
+mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Bool -> Maybe [Spec.TagGroup]
+mkItemTagsV2 estimatedFare mbCancellationCharge congestionChargeViaDp mbFarePolicy taggings hasStops = do
+  let farePolicyTag = Utils.mkRateCardTag Nothing mbCancellationCharge Nothing estimatedFare congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing hasStops
   Tags.convertToTagGroup taggings.itemTags <> farePolicyTag
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation

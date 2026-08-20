@@ -37,6 +37,8 @@ data Ride = Ride
     cancellationChargesLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationFaultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationFaultVerdict :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -142,8 +144,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator | FleetO
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)

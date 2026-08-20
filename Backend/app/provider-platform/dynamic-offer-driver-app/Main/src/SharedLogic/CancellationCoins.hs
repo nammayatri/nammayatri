@@ -22,7 +22,12 @@ data CancellationCoinData = CancellationCoinData
     expectedCoveredDistance :: Maybe Meters,
     -- STALLED / RETREATING / LOCATION_DARK from the pickup progress monitor, if it
     -- flagged this ride before the cancellation; Nothing when no stall was detected.
-    pickupStallCase :: Maybe Text
+    pickupStallCase :: Maybe Text,
+    -- Advisory verdict from the CANCELLATION_FAULT_VERDICT rules (DriverAtFault /
+    -- CustomerAtFault / SharedFault / NoFault) and the self-reported name of the rule
+    -- that decided it; Nothing when the city has no fault rules configured.
+    faultVerdict :: Maybe Text,
+    faultRule :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -41,5 +46,7 @@ instance Default CancellationCoinData where
         callAttemptByDriver = False,
         actualCoveredDistance = Nothing,
         expectedCoveredDistance = Nothing,
-        pickupStallCase = Nothing
+        pickupStallCase = Nothing,
+        faultVerdict = Nothing,
+        faultRule = Nothing
       }

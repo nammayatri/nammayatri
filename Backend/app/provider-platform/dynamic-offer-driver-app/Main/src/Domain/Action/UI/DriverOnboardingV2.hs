@@ -407,7 +407,9 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                     currency
                   }
               perMinuteRate = getPerMinuteRate fareParams
-          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing (transporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))) (fullFarePolicyToFarePolicy fullFarePolicy)
+          -- True: this is a trip-less policy rate card preview for drivers, so show the
+          -- full policy including per-stop charge
+          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id (mkBreakupItem currency) Nothing Nothing Nothing totalFare.amount Nothing (transporterConfig >>= (computeTotalGstRate . (.taxConfig.rideGst))) True (fullFarePolicyToFarePolicy fullFarePolicy)
           return $
             Just $
               API.Types.UI.DriverOnboardingV2.RateCardResp

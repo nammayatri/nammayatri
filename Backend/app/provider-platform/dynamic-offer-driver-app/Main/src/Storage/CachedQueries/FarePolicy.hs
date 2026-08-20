@@ -71,7 +71,11 @@ create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
 create = Queries.create
 
 delete :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m ()
-delete = Queries.delete
+delete farePolicyId = do
+  Queries.delete farePolicyId
+  clearCacheById farePolicyId
 
 update' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => FarePolicy -> m ()
-update' = Queries.update'
+update' farePolicy = do
+  Queries.update' farePolicy
+  clearCacheById farePolicy.id

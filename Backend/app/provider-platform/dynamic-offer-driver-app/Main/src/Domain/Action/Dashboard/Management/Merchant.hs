@@ -2033,19 +2033,21 @@ getMerchantConfigFarePolicyDetails _ _ reqFarePolicyId = do
   let farePolicyId = cast reqFarePolicyId
   farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   let curr = farePolicy.currency
-  let (farePolicyType, mbBaseFare, mbBaseDistance, mbDeadKmFare, mbWaitingChargeInfo, mbNightShiftCharge) = case farePolicy.farePolicyDetails of
+  let (farePolicyType, mbBaseFare, mbBaseDistance, mbDeadKmFare, mbWaitingChargeInfo, mbNightShiftCharge, mbPerMinRateSections, mbPerMinRateDurationBasis) = case farePolicy.farePolicyDetails of
         FarePolicy.ProgressiveDetails d ->
           ( "Progressive" :: Text,
             Just d.baseFare,
             Just d.baseDistance,
             Just d.deadKmFare,
             toApiWaitingChargeInfo curr <$> d.waitingChargeInfo,
-            toApiNightShiftCharge curr <$> d.nightShiftCharge
+            toApiNightShiftCharge curr <$> d.nightShiftCharge,
+            map toApiPerMinRateSection . NE.toList <$> d.perMinRateSections,
+            show <$> d.perMinRateDurationBasis
           )
-        FarePolicy.SlabsDetails _ -> ("Slabs", Nothing, Nothing, Nothing, Nothing, Nothing)
-        FarePolicy.RentalDetails _ -> ("Rental", Nothing, Nothing, Nothing, Nothing, Nothing)
-        FarePolicy.InterCityDetails _ -> ("InterCity", Nothing, Nothing, Nothing, Nothing, Nothing)
-        FarePolicy.AmbulanceDetails _ -> ("Ambulance", Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.SlabsDetails _ -> ("Slabs", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.RentalDetails _ -> ("Rental", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.InterCityDetails _ -> ("InterCity", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.AmbulanceDetails _ -> ("Ambulance", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
   pure
     Common.FarePolicyDetailsResp
       { id = cast farePolicy.id,
@@ -2068,9 +2070,16 @@ getMerchantConfigFarePolicyDetails _ _ reqFarePolicyId = do
         baseDistance = mbBaseDistance,
         deadKmFare = mbDeadKmFare,
         waitingChargeInfo = mbWaitingChargeInfo,
-        nightShiftCharge = mbNightShiftCharge
+        nightShiftCharge = mbNightShiftCharge,
+        perMinRateSections = mbPerMinRateSections,
+        perMinRateDurationBasis = mbPerMinRateDurationBasis
       }
   where
+    toApiPerMinRateSection section =
+      Common.PerMinRateSectionAPIEntity
+        { rideDurationInMin = section.rideDurationInMin,
+          perMinRate = section.perMinRate.amount
+        }
     toApiCongestionChargeMultiplier = \case
       FarePolicy.BaseFareAndExtraDistanceFare v -> Common.BaseFareAndExtraDistanceFare v
       FarePolicy.ExtraDistanceFare v -> Common.ExtraDistanceFare v

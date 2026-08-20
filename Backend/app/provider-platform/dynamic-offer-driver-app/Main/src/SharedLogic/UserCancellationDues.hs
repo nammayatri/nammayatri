@@ -32,7 +32,12 @@ data UserCancellationDuesData = UserCancellationDuesData
     timeSinceBooking :: Int,
     -- STALLED / RETREATING / LOCATION_DARK from the pickup progress monitor, if it
     -- flagged this ride before the cancellation; Nothing when no stall was detected.
-    pickupStallCase :: Maybe Text
+    pickupStallCase :: Maybe Text,
+    -- Advisory verdict from the CANCELLATION_FAULT_VERDICT rules (DriverAtFault /
+    -- CustomerAtFault / SharedFault / NoFault) and the self-reported name of the rule
+    -- that decided it; Nothing when the city has no fault rules configured.
+    faultVerdict :: Maybe Text,
+    faultRule :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -60,7 +65,9 @@ instance Default UserCancellationDuesData where
         userSdkVersion = Nothing,
         isCashPayment = False,
         timeSinceBooking = 0,
-        pickupStallCase = Nothing
+        pickupStallCase = Nothing,
+        faultVerdict = Nothing,
+        faultRule = Nothing
       }
 
 data UserCancellationDuesResult = UserCancellationDuesResult

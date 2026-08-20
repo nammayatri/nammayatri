@@ -121,6 +121,7 @@ import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
 import SharedLogic.CancellationCoins
+import SharedLogic.CancellationFault (FaultVerdict, FaultVerdictData)
 import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
@@ -246,6 +247,7 @@ $(genToSchema ''DIJM.IncentiveJourneyMilestone)
 $(genToSchema ''MerchantServiceConfigDimensions)
 $(genToSchema ''TaggedDriverPoolInput)
 $(genToSchema ''CancellationCoinData)
+$(genToSchema ''FaultVerdictData)
 $(genToSchema ''DynamicPricingData)
 $(genToSchema ''UserCancellationDuesData)
 $(genToSchema ''UserCancellationDuesWaiveOffData)
@@ -451,6 +453,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.USER_CANCELLATION_DUES_WAIVE_OFF -> do
       logicData :: UserCancellationDuesWaiveOffData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy UserCancellationDuesWaiveOffResult) transporterConfig.referralLinkPassword req logicData
+    LYT.CANCELLATION_FAULT_VERDICT -> do
+      logicData :: FaultVerdictData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy FaultVerdict) transporterConfig.referralLinkPassword req logicData
     LYT.CONFIG LYT.DriverPoolConfig -> do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
@@ -753,6 +758,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (def :: UserCancellationDuesWaiveOffData),
             LYT.schema = toInlinedSchemaValue (Proxy @UserCancellationDuesWaiveOffData)
+          }
+    LYT.CANCELLATION_FAULT_VERDICT ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: FaultVerdictData),
+            LYT.schema = toInlinedSchemaValue (Proxy @FaultVerdictData)
           }
     LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
       defaultConfig <- fromMaybeM (InvalidRequest "DriverPoolConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTD.DriverPoolConfig))

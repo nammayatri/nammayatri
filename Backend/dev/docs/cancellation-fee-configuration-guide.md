@@ -175,6 +175,8 @@ The dynamic logic receives these variables for writing conditional rules:
 | `tripCategory` | Object | Trip type info |
 | `callAttemptByDriver` | Bool | Whether driver called rider |
 | `pickupStallCase` | String? | `STALLED` / `RETREATING` / `LOCATION_DARK` when the pickup progress monitor flagged the driver before the cancellation, else null. Also available to `CANCELLATION_COIN_POLICY`. Use it to zero the customer charge (and penalise driver coins) when the driver stalled. |
+| `faultVerdict` | String? | Advisory verdict from the city's `CANCELLATION_FAULT_VERDICT` rules: `DriverAtFault` / `CustomerAtFault` / `SharedFault` / `NoFault`; null when no fault rules are configured. Also available to `CANCELLATION_COIN_POLICY`. |
+| `faultRule` | String? | The self-reported name of the fault rule that decided the verdict — every fault rule that sets `atFault` must also set `rule` (e.g. `pickup_stall`, `customer_no_show`); `UNNAMED_RULE` if a rule forgot, `NO_RULE_MATCHED` if no rule fired. |
 
 #### Example: Conditional Overrides
 

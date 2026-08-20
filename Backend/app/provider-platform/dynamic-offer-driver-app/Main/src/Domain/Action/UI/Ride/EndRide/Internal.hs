@@ -50,7 +50,6 @@ import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
-import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
@@ -108,6 +107,7 @@ import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calculatePlatformFeeAttr)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -129,7 +129,6 @@ import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
-import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
@@ -230,12 +229,13 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 }
         QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
-        QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
-        pendingDues <- QCDD.findAllPendingByRiderId riderDetails.id
-        let pendingIds = (.id) <$> pendingDues
-            bppRideIds = (\d -> d.rideId.getId) <$> pendingDues
-        unless (null pendingIds) $ do
-          QCDD.updateStatusByIds DCDD.PAID pendingIds
+        QCC.create cancellationCharges
+        -- Settle only the dues that actually rode on this fare (oldest rows first) and
+        -- decrement the balance by that amount — dues accrued after the fare was quoted
+        -- stay PENDING and attach to the next ride instead of being wiped.
+        settledRideIds <- SCD.settleCancellationDuesUpTo riderDetails cancellationDues
+        let bppRideIds = (.getId) <$> settledRideIds
+        unless (null bppRideIds) $ do
           appBackendBapInternal <- asks (.appBackendBapInternal)
           fork "updateCancellationFeeStatusOnBAP" $ do
             void $

@@ -29,7 +29,6 @@ import qualified Data.Text as Text
 import Domain.Action.UI.Ride.CancelRide.Internal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
@@ -57,6 +56,8 @@ import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.Booking
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationDues as SCD
+import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -178,7 +179,8 @@ cancel req merchant booking mbActiveSearchTry = do
         cancellationCharges <- withTryCatch "cancellationCharges" $ do
           case mbRide of
             Just ride -> do
-              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
+              (signals, mbFaultVerdict) <- buildCancellationContext booking ride transporterConfig DCT.CancellationByCustomer bookingCR.reasonCode disToPickup
+              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig mbFaultVerdict
               when (validDriverCancellation `elem` rideTags) $ do
                 let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
                 void $ SCR.incrementCancelledCount ride.driverId windowSize
@@ -186,7 +188,12 @@ cancel req merchant booking mbActiveSearchTry = do
                 Just riderId -> do
                   riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
                   void $ QRD.updateCancelledRidesCount riderId.getId
-                  if validCustomerCancellation `elem` rideTags
+                  -- Charge eligibility: the fault verdict decides when CANCELLATION_FAULT_VERDICT
+                  -- rules are configured; otherwise fall back to the legacy tag gate so
+                  -- cities migrate to verdict gating one at a time.
+                  when (transporterConfig.canAddCancellationFee && isNothing mbFaultVerdict) $
+                    logWarning $ "No CANCELLATION_FAULT_VERDICT rules configured for city " <> booking.merchantOperatingCityId.getId <> " — falling back to tag-based charge gating, rideId: " <> ride.id.getId
+                  if CancellationFault.customerAtFaultOrLegacy (validCustomerCancellation `elem` rideTags) mbFaultVerdict
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
                       mbExistingCancellationDuesDetails <- QCDD.findByRideId ride.id
@@ -202,38 +209,29 @@ cancel req merchant booking mbActiveSearchTry = do
                                 overdueCommission = mbExistingCancellationDuesDetails >>= (.overdueCancellationCommission)
                               }
                         Nothing -> do
-                          (mbOutcome, _mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
+                          (mbOutcome, _mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion signals mbFaultVerdict
                           case mbOutcome of
                             Just o -> do
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show o.fee <> " tax: " <> show o.tax)
                               return o
                             Nothing -> return (CancellationChargesOutcome Nothing Nothing Nothing Nothing Nothing Nothing)
                       let totalCharges = fromMaybe 0 chargesOutcome.fee + fromMaybe 0 chargesOutcome.tax
-                      QRD.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
-                      when (totalCharges > 0) $ do
+                      SCD.applyCancellationCharge
+                        SCD.ApplyCancellationChargeReq
+                          { ride = ride,
+                            riderId = riderId,
+                            currentDues = riderDetails.cancellationDues,
+                            totalCharges = totalCharges,
+                            currency = booking.currency,
+                            cancellationFee = chargesOutcome.fee,
+                            cancellationFeeTax = chargesOutcome.tax,
+                            overdueCancellationCharge = chargesOutcome.overdueFee,
+                            overdueCancellationTax = chargesOutcome.overdueTax,
+                            cancellationCommission = chargesOutcome.commission,
+                            overdueCancellationCommission = chargesOutcome.overdueCommission
+                          }
+                      when (totalCharges > 0) $
                         QRD.updateCancellationDueRidesCount riderId.getId
-                        cancellationDuesDetailsId <- generateGUID
-                        now <- getCurrentTime
-                        let cancellationDuesDetails =
-                              DCDD.CancellationDuesDetails
-                                { id = cancellationDuesDetailsId,
-                                  rideId = ride.id,
-                                  riderId = riderId,
-                                  cancellationAmount = totalCharges,
-                                  cancellationFee = chargesOutcome.fee,
-                                  cancellationFeeTax = chargesOutcome.tax,
-                                  overdueCancellationCharge = chargesOutcome.overdueFee,
-                                  overdueCancellationTax = chargesOutcome.overdueTax,
-                                  cancellationCommission = chargesOutcome.commission,
-                                  overdueCancellationCommission = chargesOutcome.overdueCommission,
-                                  currency = booking.currency,
-                                  paymentStatus = DCDD.PENDING,
-                                  createdAt = now,
-                                  updatedAt = now,
-                                  merchantId = ride.merchantId,
-                                  merchantOperatingCityId = Just ride.merchantOperatingCityId
-                                }
-                        QCDD.create cancellationDuesDetails
                       return (chargesOutcome.fee, chargesOutcome.tax, chargesOutcome.overdueFee, chargesOutcome.overdueTax)
                     else return (Nothing, Nothing, Nothing, Nothing)
                 Nothing -> return (Nothing, Nothing, Nothing, Nothing)

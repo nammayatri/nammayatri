@@ -440,8 +440,8 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
           }
   SFC.calculateFareParameters params
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe Double -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp mbGovtChargesRate farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe Double -> Bool -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp mbGovtChargesRate hasStops farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
@@ -464,7 +464,12 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       parkingChargeItem = mkBreakupItem parkingChargeCaption . (mkValue . show) <$> farePolicy.parkingCharge
 
       perStopChargesCaption = show Tags.PER_STOP_CHARGES
-      perStopChargeItem = mkBreakupItem perStopChargesCaption . (mkValue . show) <$> farePolicy.perStopCharge
+      -- per-stop charge only applies when the trip actually has stops; sending it
+      -- unconditionally shows a confusing line in the customer rate card
+      perStopChargeItem =
+        if hasStops
+          then mkBreakupItem perStopChargesCaption . (mkValue . show) <$> farePolicy.perStopCharge
+          else Nothing
 
       petChargesCaption = show Tags.PET_CHARGES
       petChargesItem = mkBreakupItem petChargesCaption . (mkValue . show) <$> farePolicy.petCharges
@@ -688,6 +693,18 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
           perMinRateSections = List.sortBy (comparing (.rideDurationInMin)) $ maybe [] toList det.perMinRateSections
           perMinStepFareItems = mkPerMinStepFareItem [] perMinRateSections
 
+          -- "1" = sections priced on the full ride duration, "0" = only on the traffic
+          -- delay over the static duration; numeric so BAP estimate-breakup parsing keeps it.
+          -- Omitted when the basis is unset — the UI then defaults to the traffic-delay copy.
+          perMinRateDurationBasisItems =
+            case (det.perMinRateDurationBasis, perMinRateSections) of
+              (Just basis, _ : _) ->
+                let basisValue = case basis of
+                      FarePolicyD.TotalDuration -> "1"
+                      FarePolicyD.TrafficDelayDuration -> "0"
+                 in [mkBreakupItem (show Tags.PER_MINUTE_RATE_ON_FULL_RIDE_DURATION) (mkValue basisValue)]
+              _ -> []
+
           baseDistanceCaption = show Tags.BASE_DISTANCE
           baseDistanceBreakup = mkBreakupItem baseDistanceCaption (mkValue $ show det.baseDistance)
 
@@ -701,6 +718,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
         <> perExtraKmFareItems
         <> perExtraKmStepFareItems
         <> perMinStepFareItems
+        <> perMinRateDurationBasisItems
         <> (waitingChargeBreakups det.waitingChargeInfo)
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)

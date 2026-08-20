@@ -532,6 +532,8 @@ library
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
+      SharedLogic.CancellationDues
+      SharedLogic.CancellationFault
       SharedLogic.CancellationSignals
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty

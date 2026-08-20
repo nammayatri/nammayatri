@@ -27,7 +27,12 @@ data CancelRideTagData = CancelRideTagData
     rideCreatedTime :: Int,
     bookingCreatedTime :: Int,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    driverArrivalTime :: Maybe Int
+    driverArrivalTime :: Maybe Int,
+    -- Verdict from the CANCELLATION_FAULT_VERDICT rules (DriverAtFault / CustomerAtFault /
+    -- SharedFault / NoFault) and the self-reported name of the deciding rule; Nothing when
+    -- the city has no fault rules configured.
+    faultVerdict :: Maybe Text,
+    faultRule :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

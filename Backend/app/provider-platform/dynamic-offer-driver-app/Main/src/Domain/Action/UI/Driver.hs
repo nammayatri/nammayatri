@@ -3320,7 +3320,7 @@ buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
       pure Nothing
     Just quote -> do
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate) quote.farePolicy
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id (mkBreakupItem currency) estimatedDistance quote.fareParams.customerCancellationDues Nothing estimatedFare quote.fareParams.congestionChargeViaDp govtChargesRate (not $ null stops)) quote.farePolicy
       return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
 mkBreakupItem :: Currency -> Text -> Text -> Maybe DOVT.RateCardItem

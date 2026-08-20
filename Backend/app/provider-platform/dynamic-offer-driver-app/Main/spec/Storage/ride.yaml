@@ -126,6 +126,8 @@ Ride:
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     cancellationChargesLogicVersion: Maybe Int
+    cancellationFaultVerdict: Maybe Text
+    cancellationFaultRule: Maybe Text
     tipAmount: Maybe HighPrecMoney
     passedThroughDestination: Maybe Bool
     deliveryFileIds: Maybe [Id MediaFile]
@@ -310,6 +312,10 @@ Ride:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
       params: [cancellationFeeIfCancelled, cancellationChargesLogicVersion]
+      where: id
+    updateCancellationFaultVerdict:
+      kvFunction: updateOneWithKV
+      params: [cancellationFaultVerdict, cancellationFaultRule]
       where: id
     updateTipAmountField:
       kvFunction: updateOneWithKV

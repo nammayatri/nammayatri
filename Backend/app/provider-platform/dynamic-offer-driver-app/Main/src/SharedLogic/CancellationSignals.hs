@@ -31,11 +31,13 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverQuote as QDQ
 
 data CancellationSignals = CancellationSignals
-  { timeOfCancellation :: Int,
+  { computedAt :: UTCTime,
+    timeOfCancellation :: Int,
     timeSinceBooking :: Maybe Int,
     isArrivedAtPickup :: Bool,
     driverWaitingTime :: Maybe Int,
     callAttemptByDriver :: Bool,
+    callAttemptCount :: Int,
     actualCoveredDistance :: Maybe Meters,
     expectedCoveredDistance :: Maybe Meters,
     pickupStallCase :: Maybe Text
@@ -55,12 +57,13 @@ data CancellationSignalsReq = CancellationSignalsReq
 buildCancellationSignals :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => CancellationSignalsReq -> m CancellationSignals
 buildCancellationSignals req = do
   now <- getCurrentTime
-  mbCallStatus <- QCallStatus.findOneByEntityId (Just req.ride.id.getId)
+  callAttemptCount <- getCallAttemptCount req.ride.id
   durationToPickup <- maybe (fromMaybe 0 req.fallbackDurationToPickup) (.durationToPickup) <$> QDQ.findById (Id req.quoteId)
   pickupStallCase <- getPickupStallCase req.ride
-  let estimatedTimeToPickup = secondsToNominalDiffTime durationToPickup
+  let computedAt = now
+      estimatedTimeToPickup = secondsToNominalDiffTime durationToPickup
       timeOfCancellation = round $ diffUTCTime now req.ride.createdAt
-      callAttemptByDriver = isJust mbCallStatus
+      callAttemptByDriver = callAttemptCount > 0
       actualCoveredDistance = case (req.initialDisToPickup, req.cancellationDisToPickup) of
         (Just initial, Just cancellation) -> Just (initial - cancellation)
         _ -> Nothing
@@ -73,6 +76,14 @@ buildCancellationSignals req = do
       isArrivedAtPickup = isJust req.ride.driverArrivalTime || isDistanceArrived
       timeSinceBooking = req.bookingCreatedAt <&> \createdAt -> round $ diffUTCTime now createdAt
   pure CancellationSignals {..}
+
+-- | The one definition of "the driver attempted to call the rider" — every cancellation
+-- consumer (tags, coins, dues, penalty preview) must derive from this count.
+getCallAttemptCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRide.Ride -> m Int
+getCallAttemptCount rideId = QCallStatus.countCallsByEntityId rideId
+
+getCallAttemptByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DRide.Ride -> m Bool
+getCallAttemptByDriver rideId = (> 0) <$> getCallAttemptCount rideId
 
 -- | The stall verdict for this ride, if any: the case name (STALLED / RETREATING /
 -- LOCATION_DARK) from the PickupStallDetected ride tag, falling back to the pickup

@@ -410,6 +410,10 @@ data BecknTag
     NIGHT_SHIFT_CHARGE
   | PER_HOUR_CHARGE
   | PER_MINUTE_CHARGE
+  | -- Whether progressive per-minute rate sections are charged on the full ride
+    -- duration ("1") or only on the traffic delay over the static duration ("0").
+    -- Numeric-encoded because BAP estimate-breakup parsing keeps only numeric tag values.
+    PER_MINUTE_RATE_ON_FULL_RIDE_DURATION
   | UNPLANNED_PER_KM_CHARGE
   | PER_HOUR_DISTANCE_KM
   | PLANNED_PER_KM_CHARGE
@@ -867,6 +871,7 @@ instance CompleteTag BecknTag where
     NIGHT_SHIFT_CHARGE -> FARE_POLICY
     PER_HOUR_CHARGE -> FARE_POLICY
     PER_MINUTE_CHARGE -> FARE_POLICY
+    PER_MINUTE_RATE_ON_FULL_RIDE_DURATION -> FARE_POLICY
     UNPLANNED_PER_KM_CHARGE -> FARE_POLICY
     PER_HOUR_DISTANCE_KM -> FARE_POLICY
     PLANNED_PER_KM_CHARGE -> FARE_POLICY

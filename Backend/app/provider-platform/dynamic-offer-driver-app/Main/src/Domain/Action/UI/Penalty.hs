@@ -99,7 +99,12 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               rideCreatedTime = rideCreatedTime,
               bookingCreatedTime = bookingCreatedTime,
               driverArrivalTime = driverArrivalTime,
-              merchantOperatingCityId = booking.merchantOperatingCityId
+              merchantOperatingCityId = booking.merchantOperatingCityId,
+              -- Preview-only simulation: computing the fault verdict here would cache it in
+              -- Redis and persist it on the ride row for a cancellation that may never
+              -- happen, so the simulated tag context runs without one (legacy behaviour).
+              faultVerdict = Nothing,
+              faultRule = Nothing
             }
     tagsE <- withTryCatch "computeNammaTags:RideCancel" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) YA.RideCancel (Just booking.transactionId) tagData
     let tags = fromMaybe [] $ eitherToMaybe tagsE

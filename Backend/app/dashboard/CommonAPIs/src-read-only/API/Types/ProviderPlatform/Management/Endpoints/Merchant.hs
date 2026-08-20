@@ -478,7 +478,9 @@ data FarePolicyDetailsResp = FarePolicyDetailsResp
     baseDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     deadKmFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     waitingChargeInfo :: Kernel.Prelude.Maybe WaitingChargeInfoAPIEntity,
-    nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity
+    nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity,
+    perMinRateSections :: Kernel.Prelude.Maybe [PerMinRateSectionAPIEntity],
+    perMinRateDurationBasis :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -677,6 +679,10 @@ data PayoutConfigReq = PayoutConfigReq
 
 instance Kernel.Types.HideSecrets.HideSecrets PayoutConfigReq where
   hideSecrets = Kernel.Prelude.identity
+
+data PerMinRateSectionAPIEntity = PerMinRateSectionAPIEntity {rideDurationInMin :: Kernel.Prelude.Int, perMinRate :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PoolSortingType
   = Intelligent

@@ -606,7 +606,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         subscriptionPurchaseIds = Nothing,
         cloudType = cloudType,
         sosId = Nothing,
-        referralFlagReason = Nothing
+        referralFlagReason = Nothing,
+        cancellationFaultRule = Nothing,
+        cancellationFaultVerdict = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

@@ -129,7 +129,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                         pure buildOnCancelMessageV2
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
-              (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
+              (mbChargesOutcome, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer (DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) Nothing True) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
               let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               void $ case (cancellationCharges, mbRide) of
