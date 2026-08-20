@@ -29,6 +29,7 @@ library
       Dashboard
       FileManagementUnitTests
   other-modules:
+      CsvSanitizationTests
       RegistrationUnitTests
       VehicleAssociationUnitTests
       DriverDocumentUploadUnitTests

@@ -248,6 +248,47 @@ assertAdminEmailDomain merchantId role mbEmail =
 adminEmailDomainError :: Text
 adminEmailDomainError = "Administrator accounts must use an approved organizational email domain."
 
+-- | Merchants whose admin-email policy a given person is subject to.
+--
+-- One person row carries one email across every merchant that person can reach, so checking only
+-- the caller's merchant is too weak: an admin of a permissive merchant could set an address that
+-- violates a stricter merchant the same person administers. Reachability is defined exactly as in
+-- 'assertPersonInCallerMerchant' — access rows when there are any, the provisioning merchant
+-- otherwise — so the two guards cannot drift apart. The caller's own merchant is always included,
+-- which is what preserves today's behaviour for a person with neither access rows nor a
+-- provisioning merchant.
+--
+-- Merchants with an empty allow-list impose nothing, so this only tightens where a policy is
+-- actually configured. Two merchants with disjoint non-empty lists will reject every address for
+-- a person they share, which is the correct outcome: such an account cannot satisfy both.
+policyMerchantsForPerson ::
+  BeamFlow m r =>
+  TokenInfo ->
+  SP.Person ->
+  m [Id DMerchant.Merchant]
+policyMerchantsForPerson tokenInfo person = do
+  allAccess <- QAccess.findAllMerchantAccessByPersonId person.id
+  let reachable =
+        if null allAccess
+          then maybe [] (: []) person.merchantId
+          else map (.merchantId) allAccess
+  pure . nub $ tokenInfo.merchantId : reachable
+
+-- | 'assertAdminEmailDomain' against every merchant the person is subject to, not just the
+-- caller's. Use this for mutations on an existing person; 'assertAdminEmailDomain' alone is right
+-- only at creation, where there is no person row and so nothing else to be subject to.
+assertAdminEmailDomainForPerson ::
+  BeamFlow m r =>
+  TokenInfo ->
+  SP.Person ->
+  DRole.Role ->
+  Maybe Text ->
+  m ()
+assertAdminEmailDomainForPerson tokenInfo person role mbEmail =
+  when (isAdminTier role.dashboardAccessType) $ do
+    merchants <- policyMerchantsForPerson tokenInfo person
+    forM_ merchants $ \merchantId -> assertAdminEmailDomain merchantId role mbEmail
+
 -- | Admin mutations that address a person directly by id must not reach across merchants.
 -- Without this an admin of any merchant could act on an arbitrary person id.
 --
@@ -439,7 +480,7 @@ assignRole tokenInfo personId roleId = do
   -- an email whose value would then be discarded.
   when (isAdminTier newRole.dashboardAccessType) $ do
     decPerson <- decrypt person
-    assertAdminEmailDomain tokenInfo.merchantId newRole decPerson.email
+    assertAdminEmailDomainForPerson tokenInfo person newRole decPerson.email
   when (DRole.isBppSyncRole oldRole || DRole.isBppSyncRole newRole) $
     throwError RoleConversionNotAllowed
   -- Admin tiering (existence-guarded): promoting into (or demoting out of) an
@@ -455,6 +496,7 @@ assignRole tokenInfo personId roleId = do
 
 assignMerchantCityAccess ::
   ( BeamFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
@@ -475,7 +517,15 @@ assignMerchantCityAccess tokenInfo personId req = do
   let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
   unless isSupportedCity $
     throwError $ InvalidRequest "Server does not support this city"
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- Granting admin-tier access into a merchant must satisfy that merchant's domain policy.
+  -- Without this the control is bypassable in one hop: provision the admin under a merchant with
+  -- no allow-list, then grant them access to the merchant that has one. Checked against
+  -- merchant.id, the merchant being joined, rather than the caller's.
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  when (isAdminTier role.dashboardAccessType) $ do
+    decPerson <- decrypt person
+    assertAdminEmailDomain merchant.id role decPerson.email
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   whenJust mbMerchantAccess $ \_ -> do
     throwError $ InvalidRequest "Merchant access already assigned."
@@ -772,7 +822,7 @@ changeEmailByAdmin tokenInfo personId req = do
       throwError (InvalidRequest $ "Email already registered with another user: " <> req.newEmail)
   -- Changing an existing admin's email must not move them off an approved domain.
   role <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
-  assertAdminEmailDomain tokenInfo.merchantId role (Just newEmail)
+  assertAdminEmailDomainForPerson tokenInfo person role (Just newEmail)
   encEmail <- encrypt newEmail
   QP.updatePersonEmail personId encEmail
   recordAdminActionOnPerson DTransaction.DashboardUserEmailChangeByAdmin tokenInfo personId

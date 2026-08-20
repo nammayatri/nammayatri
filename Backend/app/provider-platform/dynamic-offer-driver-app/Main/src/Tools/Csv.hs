@@ -50,6 +50,22 @@ hasCsvFormulaPrefix value =
     Just (c, _) -> c `elem` csvFormulaTriggers
     Nothing -> False
 
+-- | Values that must carry a quote in a CSV export: those a spreadsheet would evaluate, and —
+-- recursively — those that already look like the quoted form of such a value.
+--
+-- The recursion is what makes the encoding reversible. Quoting only formula-prefixed values makes
+-- @"=x"@ and @"'=x"@ both encode to @"'=x"@, so the import side cannot tell a value the exporter
+-- quoted from one the user actually typed. Counting the leading apostrophes distinguishes them:
+-- @"=x"@ -> @"'=x"@ and @"'=x"@ -> @"''=x"@.
+--
+-- Note this is deliberately narrow. A value beginning with an apostrophe that is NOT followed by
+-- a trigger — @'24x7' service@, @'Best' plan@ — is left completely alone, because there is
+-- nothing to disambiguate. Only genuinely ambiguous values pay the extra character.
+needsCsvQuoting :: Text -> Bool
+needsCsvQuoting value =
+  hasCsvFormulaPrefix value
+    || maybe False needsCsvQuoting (T.stripPrefix "'" value)
+
 -- | Neutralize a value for inclusion in a CSV export by prefixing a single quote, which makes
 -- spreadsheets treat the cell as literal text. Apply to every user-controlled field on the way
 -- out; validating on the way in is not sufficient on its own, because rows can predate the
@@ -60,29 +76,29 @@ hasCsvFormulaPrefix value =
 -- to parse on the way back in. Note that '-' is a trigger, so this affects every negative number.
 sanitizeCsvField :: Text -> Text
 sanitizeCsvField value
-  | hasCsvFormulaPrefix value = T.cons '\'' value
+  | needsCsvQuoting value = T.cons '\'' value
   | otherwise = value
 
--- | Undo 'sanitizeCsvField' on the import side of a round-trip CSV: drop a leading apostrophe,
--- but only where sanitize could have added one — that is, only when what follows would itself
--- have been treated as a formula. Stripping unconditionally corrupts values that legitimately
--- begin with an apostrophe: @'24x7' service@ is never quoted on export, yet would come back as
--- @24x7' service@, losing a character on every round trip.
+-- | Exact inverse of 'sanitizeCsvField': drops a leading apostrophe only when sanitization is
+-- what put it there. @desanitizeCsvField . sanitizeCsvField == id@ for every input, which the
+-- unit tests pin.
 --
--- Safe against both shapes of round trip. A spreadsheet treats the apostrophe as a text-format
--- marker and omits it when re-saving to CSV, in which case there is nothing to strip and this is
--- the identity. A file re-uploaded verbatim still carries it, and this removes it. Without this,
--- "'-5" reaches readMaybe, yields Nothing, and the field is silently dropped.
+-- Stripping unconditionally would corrupt values that legitimately begin with an apostrophe:
+-- @'24x7' service@ is never quoted on export, yet would come back as @24x7' service@, losing a
+-- character on every round trip. Matching only on a formula-like remainder — the previous
+-- behaviour — fixed that but still corrupted @'-5@ into @-5@ and @'=cmd()@ into @=cmd()@, which
+-- silently rewrote stored values and, worse, turned an inert quoted string back into a live
+-- formula. Deferring to 'needsCsvQuoting' removes both failure modes.
 --
--- Not a true inverse, and cannot be: 'sanitizeCsvField' is not injective, since @"=x"@ and
--- @"'=x"@ both encode to @"'=x"@. A value that literally starts with an apostrophe followed by
--- @=@, @+@, @-@ or @\@@ therefore loses that apostrophe on round trip. Escaping the apostrophe
--- by doubling it would restore injectivity but breaks the spreadsheet path, which silently eats
--- one apostrophe of its own. The ambiguity is accepted; the realistic cases round-trip exactly.
+-- The spreadsheet leg of the trip remains outside our control: Excel and Sheets treat a leading
+-- apostrophe as a text-format marker and drop it when re-saving, so a value that made the round
+-- trip through a spreadsheet may arrive already unquoted. That is handled — with nothing to
+-- strip, this is the identity — but a value the user typed as @'=x@ cannot survive a spreadsheet
+-- edit, because the spreadsheet itself discards the apostrophe before we ever see the file.
 desanitizeCsvField :: Text -> Text
 desanitizeCsvField value =
   case T.stripPrefix "'" value of
-    Just rest | hasCsvFormulaPrefix rest -> rest
+    Just rest | needsCsvQuoting rest -> rest
     _ -> value
 
 cleanField :: Text -> Maybe Text
