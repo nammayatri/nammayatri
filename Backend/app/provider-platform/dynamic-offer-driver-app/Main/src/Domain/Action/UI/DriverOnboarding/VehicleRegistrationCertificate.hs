@@ -270,14 +270,15 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         resp <-
           Verification.extractRCImage person.merchantId merchantOpCityId $
             Verification.ExtractImageReq {image1 = image, image2, driverId = person.id.getId}
-        case resp.extractedRC of
-          Just extractedRC -> do
-            let extractRCNumber = removeSpaceAndDash <$> extractedRC.rcNumber
-            let rcNumber = removeSpaceAndDash <$> Just req.vehicleRegistrationCertNumber
-            -- disable this check for debugging with mock-idfy
-            unless (extractRCNumber == rcNumber) $
-              throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
-          Nothing -> throwImageError req.imageId ImageExtractionFailed
+        unless (resp.provider == Just VT.InternalOCR) $
+          case resp.extractedRC of
+            Just extractedRC -> do
+              let extractRCNumber = removeSpaceAndDash <$> extractedRC.rcNumber
+              let rcNumber = removeSpaceAndDash <$> Just req.vehicleRegistrationCertNumber
+              -- disable this check for debugging with mock-idfy
+              unless (extractRCNumber == rcNumber) $
+                throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
+            Nothing -> throwImageError req.imageId ImageExtractionFailed
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
     -- Reject cross-fleet hijacks: if the RC is already linked to a different
     -- fleet owner, fail rather than silently re-linking it to this fleet.

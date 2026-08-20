@@ -16,6 +16,8 @@ module Domain.Action.UI.DriverOnboarding.DocumentRegistration
   ( validateDocument,
     ValidateDocumentImageRequest (..),
     ValidateDocumentImageResponse (..),
+    getOCRResultRC,
+    getOCRResultDL,
   )
 where
 
@@ -28,6 +30,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.VehicleCategory
 import Environment
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -62,7 +65,8 @@ data ValidateDocumentImageResponse = ValidateDocumentImageResponse
     chassisNumber :: Maybe Text,
     engineNumber :: Maybe Text,
     registrationDate :: Maybe Text,
-    ownerName :: Maybe Text
+    ownerName :: Maybe Text,
+    ocrProvider :: Maybe VT.VerificationService
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -97,38 +101,42 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
         DVC.DriverLicense -> do
           resp <- Verification.extractDLImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
           logDebug $ "DocumentRegistration.validateDocument: Extracted DL Image successfully, resp=" <> show resp
-          case resp.extractedDL of
-            Just extractedDL -> do
-              let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-              let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedDL.dateOfBirth)
-              let nameOnCard = extractedDL.nameOnCard
-              DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
-              DL.cacheExtractedDlName personId nameOnCard
-              logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
-              pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard}
-            Nothing ->
-              return $ emptyValidateDocumentImageResponse imageId
+          if resp.provider == Just VT.InternalOCR
+            then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
+            else case resp.extractedDL of
+              Just extractedDL -> do
+                let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+                let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedDL.dateOfBirth)
+                let nameOnCard = extractedDL.nameOnCard
+                DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
+                DL.cacheExtractedDlName personId nameOnCard
+                logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
+                pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard}
+              Nothing ->
+                return $ emptyValidateDocumentImageResponse imageId
         DVC.VehicleRegistrationCertificate -> do
           resp <- Verification.extractRCImage merchantId merchantOpCityId $ Verification.ExtractImageReq {image1 = imageData, image2 = Nothing, driverId = personId.getId}
-          case resp.extractedRC of
-            Just extractedRC -> do
-              let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
-              logDebug $ "DocumentRegistration.validateDocument: RC OCR completed, rcNumber=" <> show documentNumber
-              pure $
-                (emptyValidateDocumentImageResponse imageId)
-                  { documentNumber,
-                    vehicleClass = extractedRC.vehicleClass,
-                    manufacturer = extractedRC.manufacturer,
-                    vehicleModel = extractedRC.model,
-                    fuelType = extractedRC.fuelType,
-                    colour = extractedRC.colour,
-                    chassisNumber = extractedRC.chassisNumber,
-                    engineNumber = extractedRC.engineNumber,
-                    registrationDate = extractedRC.registrationDate,
-                    ownerName = extractedRC.ownerName
-                  }
-            Nothing ->
-              return $ emptyValidateDocumentImageResponse imageId
+          if resp.provider == Just VT.InternalOCR
+            then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
+            else case resp.extractedRC of
+              Just extractedRC -> do
+                let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
+                logDebug $ "DocumentRegistration.validateDocument: RC OCR completed, rcNumber=" <> show documentNumber
+                pure $
+                  (emptyValidateDocumentImageResponse imageId)
+                    { documentNumber,
+                      vehicleClass = extractedRC.vehicleClass,
+                      manufacturer = extractedRC.manufacturer,
+                      vehicleModel = extractedRC.model,
+                      fuelType = extractedRC.fuelType,
+                      colour = extractedRC.colour,
+                      chassisNumber = extractedRC.chassisNumber,
+                      engineNumber = extractedRC.engineNumber,
+                      registrationDate = extractedRC.registrationDate,
+                      ownerName = extractedRC.ownerName
+                    }
+              Nothing ->
+                return $ emptyValidateDocumentImageResponse imageId
         _ -> return $ emptyValidateDocumentImageResponse imageId
 
 emptyValidateDocumentImageResponse :: Id Domain.Image -> ValidateDocumentImageResponse
@@ -147,5 +155,58 @@ emptyValidateDocumentImageResponse imageId =
       chassisNumber = Nothing,
       engineNumber = Nothing,
       registrationDate = Nothing,
-      ownerName = Nothing
+      ownerName = Nothing,
+      ocrProvider = Nothing
     }
+
+getOCRResultRC ::
+  Id Person.Person ->
+  Maybe Text ->
+  Flow (Maybe ValidateDocumentImageResponse)
+getOCRResultRC personId mbImageId = do
+  mbRC <- Verification.getOCRResultRC personId.getId
+  case mbRC of
+    Nothing -> pure Nothing
+    Just rc -> do
+      let resolvedImageId = maybe (Id "") Id mbImageId
+      pure $
+        Just $
+          (emptyValidateDocumentImageResponse resolvedImageId)
+            { documentNumber = removeSpaceAndDash <$> rc.rcNumber,
+              vehicleClass = rc.vehicleClass,
+              manufacturer = rc.manufacturer,
+              vehicleModel = rc.model,
+              fuelType = rc.fuelType,
+              colour = rc.colour,
+              chassisNumber = rc.chassisNumber,
+              engineNumber = rc.engineNumber,
+              registrationDate = rc.registrationDate,
+              ownerName = rc.ownerName,
+              ocrProvider = Just VT.InternalOCR
+            }
+
+getOCRResultDL ::
+  Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text ->
+  Flow (Maybe ValidateDocumentImageResponse)
+getOCRResultDL personId merchantOpCityId mbImageId = do
+  mbDL <- Verification.getOCRResultDL personId.getId
+  case mbDL of
+    Nothing -> pure Nothing
+    Just dl -> do
+      operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      let resolvedImageId = maybe (Id "") Id mbImageId
+      let documentNumber = removeSpaceAndDash <$> dl.dlNumber
+      let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< dl.dateOfBirth)
+      let nameOnCard = dl.nameOnCard
+      DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
+      DL.cacheExtractedDlName personId nameOnCard
+      pure $
+        Just $
+          (emptyValidateDocumentImageResponse resolvedImageId)
+            { documentNumber,
+              nameOnCard,
+              dateOfBirth,
+              ocrProvider = Just VT.InternalOCR
+            }
