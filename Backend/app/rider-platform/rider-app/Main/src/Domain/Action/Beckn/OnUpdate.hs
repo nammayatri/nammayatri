@@ -26,6 +26,7 @@ module Domain.Action.Beckn.OnUpdate
     BreakupPriceInfo (..),
     EstimateRepetitionReq (..),
     QuoteRepetitionReq (..),
+    BookingReallocationReq (..),
     NewMessageReq (..),
     SafetyAlertReq (..),
     StopArrivedReq (..),
@@ -120,7 +121,7 @@ data OnUpdateReq
   | OURideStartedReq Common.RideStartedReq
   | OURideCompletedReq Common.RideCompletedReq
   | OUBookingCancelledReq Common.BookingCancelledReq
-  | OUBookingReallocationReq BookingReallocationReq -- not used
+  | OUBookingReallocationReq BookingReallocationReq
   | OUDriverArrivedReq Common.DriverArrivedReq
   | OUEstimateRepetitionReq EstimateRepetitionReq
   | OUQuoteRepetitionReq QuoteRepetitionReq

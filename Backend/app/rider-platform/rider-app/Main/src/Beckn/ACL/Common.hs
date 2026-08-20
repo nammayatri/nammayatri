@@ -177,6 +177,11 @@ parseRideAssignedEvent order msgId txnId bppUri = do
       favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
   let fareBreakups = mbFareBreakupsQuotationBreakup <&> (mapMaybe mkDFareBreakup)
+  -- Dynamic BPP reallocation re-prices per driver; carry the new quote fare so the BAP can re-bill on reassignment.
+  let mbUpdatedFare =
+        Utils.decimalValueToPrice
+          <$> (order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack))
+          <*> (order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString)
   bookingDetails <- parseBookingDetails order msgId
   return
     Common.RideAssignedReq

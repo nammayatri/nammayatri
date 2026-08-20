@@ -5,6 +5,7 @@ module Domain.Types.Ride where
 
 import Data.Aeson
 import qualified Domain.Types.Booking
+import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.FareParameters
@@ -34,10 +35,13 @@ data Ride = Ride
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationChargesLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationReasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
+    cancelledBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,

@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.Ride where
 
 import qualified Data.Text
+import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.Ride
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -39,10 +40,13 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             backendConfigVersion = backendConfigVersion',
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
             bookingId = Kernel.Types.Id.Id bookingId,
+            cancellationAdditionalInfo = cancellationAdditionalInfo,
             cancellationChargesLogicVersion = cancellationChargesLogicVersion,
             cancellationChargesOnCancel = cancellationChargesOnCancel,
             cancellationCommission = cancellationCommission,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled,
+            cancellationReasonCode = Domain.Types.CancellationReason.CancellationReasonCode <$> cancellationReasonCode,
+            cancelledBy = cancelledBy,
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
@@ -144,10 +148,13 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.cancellationAdditionalInfo = cancellationAdditionalInfo,
         Beam.cancellationChargesLogicVersion = cancellationChargesLogicVersion,
         Beam.cancellationChargesOnCancel = cancellationChargesOnCancel,
         Beam.cancellationCommission = cancellationCommission,
         Beam.cancellationFeeIfCancelled = cancellationFeeIfCancelled,
+        Beam.cancellationReasonCode = (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode,
+        Beam.cancelledBy = cancelledBy,
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
