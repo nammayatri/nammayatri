@@ -15,7 +15,6 @@
 
 module Storage.CachedQueries.DocumentVerificationStagesConfig
   ( findAllByMerchantOpCityId,
-    findByMerchantOpCityIdAndCategory,
     findByMerchantOpCityIdAndDocumentCategory,
     clearCache,
     create,
