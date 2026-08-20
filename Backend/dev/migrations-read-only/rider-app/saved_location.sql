@@ -24,3 +24,8 @@ ALTER TABLE atlas_app.saved_location ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.saved_location ADD COLUMN location_name character varying(500) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.saved_location ADD COLUMN preferred_service_tier_type character varying(60) ;

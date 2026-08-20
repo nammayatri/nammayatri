@@ -1,5 +1,6 @@
 imports:
   Person: Domain.Types.Person
+  ServiceTierType: Domain.Types.ServiceTierType
 
 
 SavedReqLocation:
@@ -21,6 +22,7 @@ SavedReqLocation:
       placeId: Maybe Text
       ward: Maybe Text
       locationName : Maybe Text
+      preferredServiceTierType: Maybe ServiceTierType
       derive': Generic,FromJSON,ToJSON,Show,ToSchema
   fields:
     id: Id SavedReqLocation
@@ -42,6 +44,7 @@ SavedReqLocation:
     placeId: Maybe Text
     ward: Maybe Text
     locationName: Maybe Text
+    preferredServiceTierType: Maybe ServiceTierType
 
   sqlType:
     ward: character varying(255)
@@ -56,6 +59,7 @@ SavedReqLocation:
     tag: character varying(255)
     placeId: text
     locationName: character varying(500)
+    preferredServiceTierType: character varying(60)
 
   excludedFields:
     - merchantId

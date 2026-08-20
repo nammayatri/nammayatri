@@ -6,6 +6,7 @@ imports:
   DeletedPersonReq: API.Types.UI.DeletedPerson
   APISuccess: Kernel.Types.APISuccess
   SavedReqLocationAPIEntity: Domain.Types.SavedReqLocation
+  ServiceTierType: Domain.Types.ServiceTierType
 
 importPackageOverrides:
   API.Types.Dashboard.AppManagement: "rider-app"
@@ -35,6 +36,7 @@ types:
     ward: Maybe Text
     isMoved: Maybe Bool
     locationName: Maybe Text
+    preferredServiceTierType: Maybe ServiceTierType
 
 apis:
   - POST:
