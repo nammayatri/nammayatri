@@ -1394,3 +1394,35 @@ instance IsHTTPError SeatLayoutError where
     InvalidSleeperSeatPosition _ -> E400
 
 instance IsAPIError SeatLayoutError
+
+-- | Thrown by Domain.Action.UI.MetaWhatsappWebhook. Each constructor is a
+-- genuinely distinct failure with its own errorCode -- replaces 3 separate
+-- @InvalidRequest "SOME_STRING"@ throws that all collapsed to the same
+-- generic "INVALID_REQUEST" errorCode (InvalidRequest's toErrorCode ignores
+-- its Text argument; only toMessage keeps it), making every real cause
+-- indistinguishable from the response's errorCode alone.
+data MetaWebhookError
+  = MetaWebhookVerifyFailed
+  | MetaAppSecretNotConfigured
+  | MetaWebhookSignatureInvalid
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MetaWebhookError
+
+instance IsBaseError MetaWebhookError where
+  toMessage = \case
+    MetaWebhookVerifyFailed -> Just "Meta webhook verification failed: hub.verify_token did not match any enabled config."
+    MetaAppSecretNotConfigured -> Just "Meta webhook app secret is not configured for this phone number."
+    MetaWebhookSignatureInvalid -> Just "Meta webhook X-Hub-Signature-256 did not match the computed HMAC."
+
+instance IsHTTPError MetaWebhookError where
+  toErrorCode = \case
+    MetaWebhookVerifyFailed -> "META_WEBHOOK_VERIFY_FAILED"
+    MetaAppSecretNotConfigured -> "META_APP_SECRET_NOT_CONFIGURED"
+    MetaWebhookSignatureInvalid -> "META_WEBHOOK_SIGNATURE_INVALID"
+  toHttpCode = \case
+    MetaWebhookVerifyFailed -> E400
+    MetaAppSecretNotConfigured -> E500
+    MetaWebhookSignatureInvalid -> E400
+
+instance IsAPIError MetaWebhookError
