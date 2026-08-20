@@ -16,6 +16,7 @@ module Tools.Error (module Tools.Error, SearchCancelErrors (..)) where
 
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.External.Types (Language)
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error as Tools.Error
 import Kernel.Types.Error.BaseError.HTTPError
@@ -1394,3 +1395,23 @@ instance IsHTTPError SeatLayoutError where
     InvalidSleeperSeatPosition _ -> E400
 
 instance IsAPIError SeatLayoutError
+
+-- | Thrown by WhatsappBot.Adapter.Translations when a message key has no row
+-- in atlas_app.translations for the requested language — a wired field with
+-- no fallback (per-field migration off the static I18n files; see that
+-- package's Adapter/Translations.hs).
+data WhatsappBotTranslationError = WhatsappBotTranslationNotFound Text Language
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''WhatsappBotTranslationError
+
+instance IsBaseError WhatsappBotTranslationError where
+  toMessage = \case
+    WhatsappBotTranslationNotFound key language -> Just $ "WhatsApp bot translation not found for key: " <> key <> " and language: " <> show language
+
+instance IsHTTPError WhatsappBotTranslationError where
+  toErrorCode = \case
+    WhatsappBotTranslationNotFound _ _ -> "WHATSAPP_BOT_TRANSLATION_NOT_FOUND"
+  toHttpCode _ = E500
+
+instance IsAPIError WhatsappBotTranslationError
