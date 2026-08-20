@@ -5,6 +5,7 @@ module Domain.Types.SavedReqLocation where
 
 import Data.Aeson
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -23,6 +24,7 @@ data SavedReqLocation = SavedReqLocation
     locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferredServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -43,6 +45,7 @@ data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
     locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferredServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tag :: Kernel.Prelude.Text,

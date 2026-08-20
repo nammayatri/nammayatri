@@ -9,6 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.SavedReqLocation
+import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -30,6 +31,7 @@ data CreateSavedReqLocationReq = CreateSavedReqLocationReq
     locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferredServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tag :: Kernel.Prelude.Text,
