@@ -10,8 +10,8 @@
 -- Tier-gated per city on rider_config.bus_approaching_notification_tiers (a dedicated whitelist,
 -- separate from BUS_TRIP_STARTED's bus_tracking_notification_tiers).
 --
--- Sound: reuses the existing TRIP_UPDATED notification_sounds_config row for the city (no new
--- sound config needed).
+-- Sound: own notification_sounds_config rows (BUS_APPROACHING, BUS_PREV_STOP_CROSSED) — same
+-- "default" sound value used by every other row in this table, not a new sound asset.
 --
 -- Scope: ONLY merchant_operating_city_id = de93a406-aa99-4db9-8691-2baa1258d4d0
 -- (ANNA_APP / Chennai — premium bus, not the shuttle city used by 0039/0042/0045).
@@ -61,3 +61,63 @@ WHERE moc.id = 'de93a406-aa99-4db9-8691-2baa1258d4d0'
     WHERE mpn.key = 'BUS_APPROACHING'
       AND mpn.merchant_operating_city_id = moc.id
 );
+
+------------------------------------------------------------------------------------------------------
+-- Sound: BUS_APPROACHING (own row — "default", same value used by every other row in this table,
+-- e.g. REGISTRATION_APPROVED)
+------------------------------------------------------------------------------------------------------
+INSERT INTO atlas_app.notification_sounds_config (
+    blind_sound,
+    default_sound,
+    merchant_id,
+    merchant_operating_city_id,
+    notification_type,
+    created_at,
+    updated_at
+)
+SELECT
+    'default',
+    'default',
+    moc.merchant_id,
+    moc.id,
+    'BUS_APPROACHING',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM atlas_app.merchant_operating_city moc
+WHERE moc.id = 'de93a406-aa99-4db9-8691-2baa1258d4d0'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM atlas_app.notification_sounds_config nsc
+    WHERE nsc.notification_type = 'BUS_APPROACHING'
+      AND nsc.merchant_operating_city_id = moc.id
+  );
+
+------------------------------------------------------------------------------------------------------
+-- Sound: BUS_PREV_STOP_CROSSED (own row — same "default" sound; category added in shared-kernel
+-- for "bus crossed previous stop" flow)
+------------------------------------------------------------------------------------------------------
+INSERT INTO atlas_app.notification_sounds_config (
+    blind_sound,
+    default_sound,
+    merchant_id,
+    merchant_operating_city_id,
+    notification_type,
+    created_at,
+    updated_at
+)
+SELECT
+    'default',
+    'default',
+    moc.merchant_id,
+    moc.id,
+    'BUS_PREV_STOP_CROSSED',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM atlas_app.merchant_operating_city moc
+WHERE moc.id = 'de93a406-aa99-4db9-8691-2baa1258d4d0'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM atlas_app.notification_sounds_config nsc
+    WHERE nsc.notification_type = 'BUS_PREV_STOP_CROSSED'
+      AND nsc.merchant_operating_city_id = moc.id
+  );

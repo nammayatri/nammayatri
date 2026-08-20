@@ -12,6 +12,7 @@ types:
     etaSeconds: Maybe Int
     distanceMeters: Double
     thresholdType: Text
+    crossedStopId: Maybe Text
 
 apis:
   - GET:

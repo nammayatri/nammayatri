@@ -2035,6 +2035,7 @@ data BusNotificationType
   | AT_STOP
   | TRACKING_AVAILABLE_ON_START
   | DETAILS_UPDATED
+  | PREV_STOP_CROSSED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data BusNotificationEntityData = BusNotificationEntityData
@@ -2135,6 +2136,58 @@ notifyBusApproachingStop person vehicleNumber routeName routeNumber vehicleTagNu
     entity
     Nothing
     [("routeDisplay", routeDisplay), ("routeName", routeName), ("stopName", stopName), ("distanceDisplay", distanceDisplay)]
+    Nothing
+    Nothing
+
+data BusPrevStopCrossedParam = BusPrevStopCrossedParam
+  { vehicleNumber :: Text,
+    routeName :: Text,
+    routeNumber :: Text,
+    vehicleTagNumber :: Maybe Text,
+    prevStopName :: Text,
+    stopName :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Notify a rider that the bus just left the stop right before their source.
+notifyBusPrevStopCrossed ::
+  ServiceFlow m r =>
+  Person.Person ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Maybe (Id Domain.Types.Journey.Journey) ->
+  Maybe Text ->
+  m ()
+notifyBusPrevStopCrossed person vehicleNumber routeName routeNumber vehicleTagNumber tripId stopCode prevStopName stopName mbJourneyId mbBookingId = do
+  let entityData =
+        BusNotificationEntityData
+          { tripId = Just tripId,
+            vehicleNumber = vehicleNumber,
+            routeId = routeName,
+            stopCode = Just stopCode,
+            stopName = Just stopName,
+            notificationType = PREV_STOP_CROSSED,
+            journeyId = mbJourneyId <&> (.getId),
+            bookingId = mbBookingId
+          }
+  let entity = Notification.Entity Notification.Product person.id.getId entityData
+      dynamicParams = BusPrevStopCrossedParam vehicleNumber routeName routeNumber vehicleTagNumber prevStopName stopName
+      routeDisplay = case vehicleTagNumber of
+        Just tag | not (T.null tag) -> routeNumber <> " (" <> tag <> ")"
+        _ -> routeNumber
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "BUS_PREV_STOP_CROSSED" (\r -> r {notificationTypeForSound = Just Notification.BUS_PREV_STOP_CROSSED}))
+    dynamicParams
+    entity
+    Nothing
+    [("routeDisplay", routeDisplay), ("routeName", routeName), ("prevStopName", prevStopName), ("stopName", stopName)]
     Nothing
     Nothing
 
