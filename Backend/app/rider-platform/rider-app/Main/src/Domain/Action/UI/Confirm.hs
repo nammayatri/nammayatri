@@ -51,7 +51,9 @@ import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
 
 confirm ::
-  ( EsqDBFlow m r,
+  ( MonadFlow m,
+    CoreMetrics m,
+    EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
@@ -77,7 +79,7 @@ confirm ::
   Maybe Text ->
   m SConfirm.DConfirmRes
 confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAdvanceBookingEnabled requiresPaymentBeforeConfirm mbSelectedOfferId = do
-  quote' <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  quote' <- QQuote.findByIdOutageTolerant quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   let quote = quote' {DQuote.selectedOfferId = mbSelectedOfferId} -- Post validation, in SConfirm.confirm -> buildBooking this `selectedOfferId` is persisted.
   merchant <- CQM.findById quote.merchantId >>= fromMaybeM (MerchantNotFound quote.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
