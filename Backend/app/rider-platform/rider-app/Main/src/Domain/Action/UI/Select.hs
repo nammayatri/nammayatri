@@ -227,7 +227,7 @@ newtype SelectListRes = SelectListRes
 select :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select personId estimateId req = do
   now <- getCurrentTime
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- QEstimate.findByIdOutageTolerant estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (estimate.validTill < now) $ throwError (InvalidRequest $ "Estimate expired " <> show estimate.id) -- select validation check
   select2 personId estimateId req Nothing
 
@@ -238,15 +238,15 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   when (not (fromMaybe False person.businessProfileVerified) && billingCategory == Just BUSINESS) $ throwError (InvalidRequest "Business profile not verified for business billing category")
   merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   SPayment.validatePaymentInstrument merchant paymentInstrument paymentMethodId
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- QEstimate.findByIdOutageTolerant estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
   let searchRequestId = estimate.requestId
-  remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
+  remainingEstimates <- catMaybes <$> (QEstimate.findByIdOutageTolerant `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
   unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
-  searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  searchRequest <- QSearchRequest.findByIdOutageTolerant searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
@@ -345,18 +345,18 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
       mapM decrypt person.mobileNumber
 
 --DEPRECATED
-selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
+selectList :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
-  estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- runInReplica $ QEstimate.findByIdOutageTolerant estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
   bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
   isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
   pure $ SelectListRes $ mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList
 
-selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
+selectResult :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
-  estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- runInReplica $ QEstimate.findByIdOutageTolerant estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   batchConfig <- SharedRedisKeys.getBatchConfig estimate.requestId.getId
   res <- runMaybeT $ do
     when (UEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId

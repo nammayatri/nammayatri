@@ -42,3 +42,7 @@ findBySRIdAndStatusesInKV requestId status = do findOneWithKVRedis [Se.And [Se.I
 findAllBySRIdNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id SearchRequest -> m [Estimate]
 findAllBySRIdNewEntity searchRequestId =
   withFallback "findAllBySRIdNewEntity" (findAllWithKVAndConditionalDB [Se.Is BeamE.requestId $ Se.Eq searchRequestId.getId] Nothing) (pure [])
+
+findByIdOutageTolerant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id Estimate -> m (Maybe Estimate)
+findByIdOutageTolerant estimateId =
+  withFallback "findByIdOutageTolerant" (findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId.getId]) (pure Nothing)

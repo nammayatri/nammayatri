@@ -19,6 +19,7 @@ import qualified Storage.Beam.SearchRequest as BeamSR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.SearchRequest ()
+import Utils.Common.Fallback (withFallback)
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq' searchReq = do
@@ -48,6 +49,10 @@ createDSReq searchRequest = do
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+
+findByIdOutageTolerant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id SearchRequest -> m (Maybe SearchRequest)
+findByIdOutageTolerant (Id searchRequestId) =
+  withFallback "findByIdOutageTolerant" (findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]) (pure Nothing)
 
 findAllByPerson :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [SearchRequest]
 findAllByPerson (Id personId) = findAllWithKV [Se.Is BeamSR.riderId $ Se.Eq personId]
