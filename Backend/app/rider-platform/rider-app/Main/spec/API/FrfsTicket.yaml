@@ -216,6 +216,9 @@ types:
     # Whole booking: this is what the payment order was created for.
     overriddenTotalPrice: Maybe PriceAPIEntity
     appliedPurchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
+    appliedPassId: Maybe (Id Pass)
+    appliedPassName: Maybe Text
+    startTime: Maybe UTCTime
     derive: "Show"
 
   FRFSRefundAttemptAPI:
@@ -685,6 +688,7 @@ apis:
         vehicleType: VehicleCategory
         limit: Int
         offset: Int
+        overrideEntityId: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
 

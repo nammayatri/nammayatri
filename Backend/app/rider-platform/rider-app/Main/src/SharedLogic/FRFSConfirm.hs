@@ -669,14 +669,18 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
           action (paymentBooking, paymentOrder, Nothing)
         _ -> do
           latestBooking <- B.runInReplica $ QFRFSTicketBooking.findById booking.id >>= fromMaybeM (InvalidRequest "Invalid booking id")
-          return $ makeBookingStatusAPI (latestBooking, quoteCategories) fareParameters routeStations stations merchantOperatingCity.city
+          mbAppliedPassPayment <- FRFSPassOverride.paymentForOverrideAppliedEntity latestBooking.overrideAppliedEntityId
+          return $ makeBookingStatusAPI (latestBooking, quoteCategories) fareParameters routeStations stations merchantOperatingCity.city mbAppliedPassPayment
 
-    makeBookingStatusAPI (booking, quoteCategories) fareParameters routeStations stations city = do
+    makeBookingStatusAPI (booking, quoteCategories) fareParameters routeStations stations city mbAppliedPassPayment = do
       FRFSTicketService.FRFSTicketBookingStatusAPIRes
         { bookingId = booking.id,
           overrideType = booking.overrideType,
           overriddenTotalPrice = mkPriceAPIEntity . Kernel.Types.Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
           appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
+          appliedPassId = mbAppliedPassPayment >>= (.passId),
+          appliedPassName = mbAppliedPassPayment >>= (.passName),
+          startTime = booking.startTime,
           city,
           updatedAt = booking.updatedAt,
           createdAt = booking.createdAt,
@@ -858,7 +862,9 @@ buildJourneyAndLeg booking fareParameters = do
               convenienceCost = 0,
               estimatedDistance = distance,
               estimatedDuration = duration,
-              isPaymentSuccess = Nothing,
+              -- Stamped here, not patched later: this journey is built in a fork that runs after
+              -- OnConfirm, so OnConfirm's mark finds no leg yet and skips a fully covered booking.
+              isPaymentSuccess = if FRFSPassOverride.fullyCoveredByPass booking then Just True else Nothing,
               totalLegs = 1,
               modes = [mapVehicleCategoryToTripMode booking.vehicleType],
               searchRequestId = booking.searchId.getId, -- Note :: This is not SearchRequest Table's ID. Do not use it to Query SearchReqeust Anywhere in Application.

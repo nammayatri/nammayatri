@@ -124,6 +124,6 @@ instance B.Table FRFSTicketBookingT where
 
 type FRFSTicketBooking = FRFSTicketBookingT Identity
 
-$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
+$(enableKVPG ''FRFSTicketBookingT ['id] [['bppOrderId], ['overrideAppliedEntityId], ['quoteId], ['riderId], ['searchId], ['tripId], ['waybillNo]])
 
 $(mkTableInstances ''FRFSTicketBookingT "frfs_ticket_booking")
