@@ -5,13 +5,19 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 import Storage.Queries.OrphanInstances.SearchTry ()
+import Utils.Common.Fallback (withFallback)
 
 -- Extra code goes here --
+
+findByIdOutageTolerant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id SearchTry -> m (Maybe SearchTry)
+findByIdOutageTolerant searchTryId =
+  withFallback "findByIdOutageTolerant" (findOneWithKV [Se.Is BeamST.id $ Se.Eq (getId searchTryId)]) (pure Nothing)
 
 findLastByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

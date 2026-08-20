@@ -1920,7 +1920,7 @@ offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..}
 respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow APISuccess
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
-  searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+  searchTry <- QST.findByIdOutageTolerant searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
   sReqFD <-
     case mSReqFD of
@@ -1949,7 +1949,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               when (maybe False (sReqFD.previousDropGeoHash /=) mbGeohash) $ throwError CustomerDestinationUpdated
             let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ------ added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
             when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
-            searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+            searchReq <- QSR.findByIdOutageTolerant searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
             when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
               mbActiveBooking <- runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]

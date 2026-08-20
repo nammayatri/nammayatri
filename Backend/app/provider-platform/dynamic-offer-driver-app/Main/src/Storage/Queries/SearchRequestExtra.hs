@@ -7,6 +7,7 @@ import Domain.Types.SearchRequest as Domain
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -15,6 +16,7 @@ import qualified Storage.Beam.SearchRequest as BeamSR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.SearchRequest ()
+import Utils.Common.Fallback (withFallback)
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
 createDSReq' searchReq =
@@ -85,6 +87,10 @@ updateMultipleByRequestId searchRequest isScheduled =
    in if isScheduled
         then updateOneWithKVWithOptions Nothing True updates condition
         else updateOneWithKV updates condition
+
+findByIdOutageTolerant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id SearchRequest -> m (Maybe SearchRequest)
+findByIdOutageTolerant searchRequestId =
+  withFallback "findByIdOutageTolerant" (findOneWithKV [Se.Is BeamSR.id $ Se.Eq (getId searchRequestId)]) (pure Nothing)
 
 findSearchRequestById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequest] -> m [SearchRequest]
 findSearchRequestById srIds =
