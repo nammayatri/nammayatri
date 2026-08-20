@@ -7,6 +7,7 @@ import Domain.Types.SearchRequest
 import Domain.Utils (mapConcurrently)
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
@@ -18,6 +19,7 @@ import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote ()
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
+import Utils.Common.Fallback (withFallback)
 
 -- Extra code goes here --
 createQuote :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
@@ -76,6 +78,16 @@ findAllByEstimateId estimateId status = do
 
 findDOfferByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
 findDOfferByEstimateId (Id estimateId) status = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]] Nothing
+
+-- | Safe ONLY when searchRequestId was generated moments earlier in the same flow (a fresh
+-- /rideSearch) -- see Storage.Queries.LocationMappingExtra.findAllByEntityIdAndOrderNewEntity for
+-- why this tolerates a Postgres outage safely: every Quote for a search is written through the
+-- same KV-connector path as the search itself, so a genuine Redis miss means no driver has
+-- quoted yet, not that quotes exist and are being hidden. Used by the /rideSearch results-polling
+-- path (Domain.Action.UI.Quote.getQuotes) only -- do not reuse for a pre-existing searchRequestId.
+findAllBySRIdNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id SearchRequest -> m [Quote]
+findAllBySRIdNewEntity searchRequestId =
+  withFallback "findAllBySRIdNewEntity" (findAllWithKVAndConditionalDB [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)] Nothing) (pure [])
 
 findAllQuotesBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> DriverOfferStatus -> m [Quote]
 findAllQuotesBySRId (Id srId) status = do
