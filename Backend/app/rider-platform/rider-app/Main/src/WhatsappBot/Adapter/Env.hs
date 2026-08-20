@@ -15,7 +15,7 @@
 -- | Wiring hub: resolve a webhook config row to rider-app ids + a 'MerchantCtx',
 -- then assemble the pure engine's 'BotEnv' (or per-merchant 'TrackerDeps') from
 -- the in-process 'Flow' adapters. This is where the DB-stored @MetaBotCfg@
--- becomes the engine's @MerchantCtx@ (rideMode Text → flexi/regular bools).
+-- becomes the engine's @MerchantCtx@ (rideTypesOrder [Text] → [RideType]).
 module WhatsappBot.Adapter.Env
   ( dispatchInbound,
     buildTrackerDeps,
@@ -48,43 +48,45 @@ import WhatsappBot.Handles (Clock (..), RideRegistry (..))
 import qualified WhatsappBot.I18n as WI
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage)
 import WhatsappBot.Tracker (TrackerDeps (..))
-import WhatsappBot.Types (InboundEvent (..), MerchantCtx (..), RideMode (..))
+import WhatsappBot.Types (InboundEvent (..), MerchantCtx (..), RideType (..))
 
--- | @MetaBotCfg@ (app-env) → the engine's @MerchantCtx@. @rideMode@ is the single
--- enablement source (case-insensitive @flexi@|@regular@|@both@; anything else =>
--- neither offered), from which the two bools are DERIVED so they can't contradict
--- (config.ts:19-20).
+-- | Parse one @rideTypesOrder@ entry (case-insensitive @"flexi"@/@"regular"@)
+-- into the engine's 'RideType'. Anything else (a future type not yet built,
+-- or a typo) is dropped by the caller rather than failing the whole config —
+-- see 'mkMerchantCtx'.
+parseRideType :: Text -> Maybe RideType
+parseRideType t = case T.toLower (T.strip t) of
+  "flexi" -> Just Flexi
+  "regular" -> Just Regular
+  _ -> Nothing
+
+-- | @MetaBotCfg@ (app-env) → the engine's @MerchantCtx@. @rideTypesOrder@ is
+-- the single enablement + priority source: membership is "is it offered",
+-- position is display priority (see 'WhatsappBot.Flow.Booking.rideTypeButtons').
+-- Unrecognized entries are silently dropped, not an error.
 mkMerchantCtx :: DMWC.MetaBotCfg -> MerchantCtx
 mkMerchantCtx c =
-  let rm = T.toLower (T.strip c.rideMode)
-      flexiOn = rm == "flexi" || rm == "both"
-      regularOn = rm == "regular" || rm == "both"
-      mode = case rm of
-        "flexi" -> RideModeFlexi
-        "regular" -> RideModeRegular
-        _ -> RideModeBoth
-   in MerchantCtx
-        { merchantLabel = c.merchantLabel,
-          rideMode = mode,
-          flexiEnabled = flexiOn,
-          regularEnabled = regularOn,
-          flexiBaseFare = c.flexiBaseFare,
-          flexiPerKm = c.flexiPerKm,
-          flexiServiceArea = c.flexiServiceArea,
-          flexiServiceRadiusKm = c.flexiServiceRadiusKm,
-          flexiRentalDistanceM = c.flexiRentalDistanceM,
-          flexiRentalDurationS = c.flexiRentalDurationS,
-          flexiIntroVideoUrl = c.flexiIntroVideoUrl,
-          flexiSupportPhone = c.flexiSupportPhone,
-          nyTrackingUrl = c.nyTrackingUrl,
-          flexiQuotePollAttempts = c.flexiQuotePollAttempts,
-          flexiQuotePollIntervalMs = c.flexiQuotePollIntervalMs,
-          regularEstimatePollAttempts = c.regularEstimatePollAttempts,
-          regularEstimatePollIntervalMs = c.regularEstimatePollIntervalMs,
-          driverPollAttempts = c.driverPollAttempts,
-          driverPollIntervalMs = c.driverPollIntervalMs,
-          driverPollNotifyEvery = c.driverPollNotifyEvery
-        }
+  MerchantCtx
+    { merchantLabel = c.merchantLabel,
+      rideTypesOrder = mapMaybe parseRideType c.rideTypesOrder,
+      maxDirectButtons = c.maxDirectButtons,
+      flexiBaseFare = c.flexiBaseFare,
+      flexiPerKm = c.flexiPerKm,
+      flexiServiceArea = c.flexiServiceArea,
+      flexiServiceRadiusKm = c.flexiServiceRadiusKm,
+      flexiRentalDistanceM = c.flexiRentalDistanceM,
+      flexiRentalDurationS = c.flexiRentalDurationS,
+      flexiIntroVideoUrl = c.flexiIntroVideoUrl,
+      flexiSupportPhone = c.flexiSupportPhone,
+      nyTrackingUrl = c.nyTrackingUrl,
+      flexiQuotePollAttempts = c.flexiQuotePollAttempts,
+      flexiQuotePollIntervalMs = c.flexiQuotePollIntervalMs,
+      regularEstimatePollAttempts = c.regularEstimatePollAttempts,
+      regularEstimatePollIntervalMs = c.regularEstimatePollIntervalMs,
+      driverPollAttempts = c.driverPollAttempts,
+      driverPollIntervalMs = c.driverPollIntervalMs,
+      driverPollNotifyEvery = c.driverPollNotifyEvery
+    }
 
 -- | Resolve the DB row's typed merchantId/merchantOperatingCityId to rider-app
 -- ids + MerchantCtx. These are stored directly on MetaWebhookConfig (not

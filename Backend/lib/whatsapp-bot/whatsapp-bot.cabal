@@ -33,6 +33,7 @@ extra-source-files:
     test/resources/golden/status-tracking.json
     test/resources/golden/token-expiry-reauth.json
     test/resources/golden/welcome-back.json
+    test/resources/i18n/non-english.json
 
 source-repository head
   type: git
@@ -50,13 +51,9 @@ library
       WhatsappBot.Flow.Booking
       WhatsappBot.Handles
       WhatsappBot.I18n
+      WhatsappBot.I18n.Build
       WhatsappBot.I18n.Detect
       WhatsappBot.I18n.En
-      WhatsappBot.I18n.Gu
-      WhatsappBot.I18n.Hi
-      WhatsappBot.I18n.Kn
-      WhatsappBot.I18n.Ta
-      WhatsappBot.I18n.Te
       WhatsappBot.I18n.Types
       WhatsappBot.Inbound
       WhatsappBot.Messages
@@ -128,6 +125,7 @@ test-suite whatsapp-bot-tests
   other-modules:
       CodecSpec
       GoldenReplay
+      StaticI18nData
       Paths_whatsapp_bot
   hs-source-dirs:
       test/app

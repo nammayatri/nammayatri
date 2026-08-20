@@ -18,11 +18,6 @@ import qualified Data.Map.Strict as Map
 import Kernel.Prelude
 import WhatsappBot.I18n.Detect (detectLanguage)
 import WhatsappBot.I18n.En (en)
-import WhatsappBot.I18n.Gu (gu)
-import WhatsappBot.I18n.Hi (hi)
-import WhatsappBot.I18n.Kn (kn)
-import WhatsappBot.I18n.Ta (ta)
-import WhatsappBot.I18n.Te (te)
 import WhatsappBot.I18n.Types
 
 -- | The string table for a language; unset/unknown -> English (@index.ts:20-22@).
@@ -43,15 +38,14 @@ data LanguageInfo = LanguageInfo
   }
 
 -- | All languages with their (native) display names, in @languages@ order
--- (en, hi, gu, kn, ta, te — matches index.ts:11-18).
-getAllLanguages :: [LanguageInfo]
-getAllLanguages =
-  [ mk En en,
-    mk Hi hi,
-    mk Gu gu,
-    mk Kn kn,
-    mk Ta ta,
-    mk Te te
-  ]
+-- (en, hi, gu, kn, ta, te — matches index.ts:11-18). Reads names from the
+-- SAME resolved translations map every other message uses (DB-backed in
+-- production, so editing @wa_bot_languageName@/@wa_bot_nativeLanguageName@ in
+-- the DB now actually changes this menu, unlike before when it always read
+-- the static compiled tables regardless of the DB).
+getAllLanguages :: Map.Map SupportedLanguage LanguageStrings -> [LanguageInfo]
+getAllLanguages translations = [mk c | c <- allLanguages]
   where
-    mk c s = LanguageInfo {code = c, name = s.languageName, nativeName = s.nativeLanguageName}
+    mk c =
+      let s = t translations (Just c)
+       in LanguageInfo {code = c, name = s.languageName, nativeName = s.nativeLanguageName}
