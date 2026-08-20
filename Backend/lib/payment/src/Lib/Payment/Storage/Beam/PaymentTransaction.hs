@@ -49,6 +49,8 @@ data PaymentTransactionT f = PaymentTransactionT
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
     splitSettlementResponse :: B.C f (Maybe Value),
+    splitPayoutResponse :: B.C f (Maybe Value),
+    splitPayoutSuccess :: B.C f (Maybe Bool),
     customerName :: B.C f (Maybe Text),
     gatewayName :: B.C f (Maybe Text),
     cardType :: B.C f (Maybe Text),

@@ -56,6 +56,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.CrisRecon
 import "rider-app" SharedLogic.Scheduler.Jobs.DailyPassStatusUpdate
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
+import "rider-app" SharedLogic.Scheduler.Jobs.FRFSCCAvenueSplitPayout
 import "rider-app" SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper
 import "rider-app" SharedLogic.Scheduler.Jobs.MetroBusinessHour
 import "rider-app" SharedLogic.Scheduler.Jobs.NyRegularInstance
@@ -145,6 +146,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env dailyPassStatusUpdate
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
           & putJobHandlerInListWrapper flowRt env reconcileRewardInflight
+          & putJobHandlerInListWrapper flowRt env runFRFSCCAvenueSplitPayoutJob
     }
 
 runRiderAppScheduler ::

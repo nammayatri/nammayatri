@@ -2,6 +2,7 @@ module Domain.Types.Extra.MerchantServiceConfig where
 
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
+import qualified External.CCAvenue.Types as CCAvenue
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
@@ -43,6 +44,10 @@ data PartnerSdkProvider = Aarokya
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+data SplitPayoutProvider = CCAvenue
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
@@ -72,6 +77,7 @@ data ServiceName
   | EventTrackingService EventTracking.EventTrackingService
   | FleetEngineService FleetEngineProvider
   | PartnerSdkService PartnerSdkProvider
+  | SplitPayoutService SplitPayoutProvider
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -106,6 +112,7 @@ instance Show ServiceName where
   show (EventTrackingService s) = "EventTracking_" <> show s
   show (FleetEngineService s) = "FleetEngine_" <> show s
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
+  show (SplitPayoutService s) = "SplitPayout_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -224,6 +231,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "PartnerSdk_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (SplitPayoutService v1, r2)
+                 | r1 <- stripPrefix "SplitPayout_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -258,6 +269,7 @@ data ServiceConfigD (s :: UsageSafety)
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
   | FleetEngineServiceConfig !FleetEngineCfg
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
+  | SplitPayoutServiceConfig !CCAvenue.CCAvenueSplitPayoutConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -299,6 +311,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (SplitPayoutServiceConfig cfg) = "SplitPayoutServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (FleetEngineServiceConfig cfg) = "FleetEngineServiceConfig " <> show cfg
@@ -329,3 +342,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
   show (PartnerSdkServiceConfig cfg) = "PartnerSdkServiceConfig " <> show cfg
+  show (SplitPayoutServiceConfig cfg) = "SplitPayoutServiceConfig " <> show cfg
