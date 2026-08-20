@@ -29,7 +29,6 @@ module WhatsappBot.Ride
     handleCallDriver,
     registerRide',
     bumpStage,
-    buildTrackingLink,
     isValidBookingId,
     cancelTriggers,
     statusTriggers,
@@ -50,7 +49,7 @@ import WhatsappBot.I18n (LanguageStrings, t)
 -- selectors are never referenced by name, but the HasField instances are needed.
 -- (Naming them would trip -Wunused-imports under -Werror.)
 import WhatsappBot.I18n.Types ()
-import WhatsappBot.Messages (RideStage (..), classifyStage)
+import WhatsappBot.Messages (RideStage (..), buildTrackingLink, classifyStage)
 import WhatsappBot.Types
 
 -- ---------------------------------------------------------------------------
@@ -213,18 +212,6 @@ handleTracking env ev ctx = do
             Nothing -> btn s.sosButton "sos_confirm"
           buttons = [sosBtn, btn s.call112Button "call_112", btn s.cancelRide ("cancel_confirm:" <> b.bookingId)]
       replyButtons env to (T.intercalate "\n" lns) buttons
-
--- | Build a tracking link (@engine.ts:1471-1477@): the merchant's URL template with
--- the ride id substituted (falling back to the bookingId until a ride is assigned,
--- and to the default template if the merchant's URL is unset — TS @|| default@).
--- The link text is not golden-projected.
-buildTrackingLink :: MerchantCtx -> BotBookingDetails -> Text
-buildTrackingLink merchant b =
-  let template = if T.null merchant.nyTrackingUrl then defaultTrackingUrl else merchant.nyTrackingUrl
-   in T.replace "{rideId}" (fromMaybe b.bookingId b.rideId) template
-
-defaultTrackingUrl :: Text
-defaultTrackingUrl = "https://www.nammayatri.in/u?vp=shareRide&rideId={rideId}"
 
 -- ---------------------------------------------------------------------------
 -- Cancel (engine.ts:1282-1355, 153-178)
