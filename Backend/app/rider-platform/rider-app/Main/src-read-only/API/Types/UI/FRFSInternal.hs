@@ -9,7 +9,8 @@ import Servant
 import Tools.Auth
 
 data NotifyBusApproachingReq = NotifyBusApproachingReq
-  { distanceMeters :: Kernel.Prelude.Double,
+  { crossedStopId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    distanceMeters :: Kernel.Prelude.Double,
     etaSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     gtfsId :: Kernel.Prelude.Text,
     routeId :: Kernel.Prelude.Text,

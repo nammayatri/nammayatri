@@ -1851,27 +1851,44 @@ formatApproachingDistance distanceMeters =
                 else Data.Text.pack (show wholeKm) <> "." <> Data.Text.pack (show tenths) <> " km"
         else Data.Text.pack (show roundedMeters) <> " m"
 
--- | Notifies stop-bookings once per gps-processor threshold crossing; distance is passed as a template var rather than baked into per-threshold copy.
-notifyBusApproachingStopForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()
-notifyBusApproachingStopForTrip tripId stopCode req = do
+-- | Shared prep for both stop-notification flows below: batched bookings/persons/legs, plus
+-- route/vehicle info resolved once per event (same for every booking).
+fetchStopBookingsForNotify ::
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Environment.Flow
+    ( [DFRFSTicketBooking.FRFSTicketBooking],
+      Map (Id DP.Person) DP.Person,
+      Map Text DJL.JourneyLeg,
+      Text,
+      Maybe Text,
+      Maybe DIBC.IntegratedBPPConfig
+    )
+fetchStopBookingsForNotify tripId stopCode routeId vehicleNumber = do
   bookings <- QFRFSTicketBooking.findAllConfirmedByTripId tripId
   let stopBookings = filter (\b -> b.fromStationCode == stopCode) bookings
+  let riderIds = map (.riderId) stopBookings
+  persons <- QP.findAllByIds riderIds
+  let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+  legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) stopBookings)
+  let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
+  (routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig) <- case stopBookings of
+    (sampleBooking : _) -> do
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity sampleBooking
+      mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeId
+      mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
+      pure (maybe "" (.shortName) mbRoute, mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber), Just integratedBPPConfig)
+    [] -> pure ("", Nothing, Nothing)
+  pure (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig)
+
+-- | Distance-threshold ("relaxed"/"nearing") stop-approach notification.
+notifyBusApproachingStopForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()
+notifyBusApproachingStopForTrip tripId stopCode req = do
+  (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, _) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber
   unless (null stopBookings) $ do
-    let riderIds = map (.riderId) stopBookings
-    persons <- QP.findAllByIds riderIds
-    let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
-    legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) stopBookings)
-    let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
-        notificationKey = "BUS_APPROACHING"
-        distanceDisplay = formatApproachingDistance req.distanceMeters
-    -- Resolved once off any one booking, not per booking — same route/vehicle for the whole event.
-    (routeNumber, mbVehicleTagNumber) <- case stopBookings of
-      (sampleBooking : _) -> do
-        integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity sampleBooking
-        mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig req.routeId
-        mbVehicleMetadata <- JMU.getVehicleMetadataFromInMem [integratedBPPConfig] req.vehicleNumber
-        pure (maybe "" (.shortName) mbRoute, mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber))
-      [] -> pure ("", Nothing)
+    let distanceDisplay = formatApproachingDistance req.distanceMeters
     forM_ stopBookings $ \booking -> do
       let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
           mbJourneyId = (.journeyId) <$> mbJourneyLeg
@@ -1888,7 +1905,38 @@ notifyBusApproachingStopForTrip tripId stopCode req = do
                 vehicleNo = fromMaybe "" booking.vehicleNumber
                 stopName = fromMaybe "-" booking.fromStationName
             logInfo $ "Notifying passenger " <> person.id.getId <> " that bus is " <> distanceDisplay <> " from stop " <> stopCode <> " on trip " <> tripId
-            Notifications.notifyBusApproachingStop person vehicleNo routeName routeNumber mbVehicleTagNumber tripId stopCode stopName notificationKey distanceDisplay mbJourneyId (Just booking.id.getId)
+            Notifications.notifyBusApproachingStop person vehicleNo routeName routeNumber mbVehicleTagNumber tripId stopCode stopName "BUS_APPROACHING" distanceDisplay mbJourneyId (Just booking.id.getId)
+
+-- | Watermark-based "crossed" notification — fired when the bus leaves the stop right before this
+-- one. Kept separate from the distance-threshold flow above so a future lookahead change (e.g.
+-- notifying N stops ahead instead of 1) only touches this function.
+notifyBusPrevStopCrossedForTrip :: Text -> Text -> FRFSInternal.NotifyBusApproachingReq -> Environment.Flow ()
+notifyBusPrevStopCrossedForTrip tripId stopCode req = do
+  (stopBookings, personMap, legMap, routeNumber, mbVehicleTagNumber, mbIntegratedBPPConfig) <- fetchStopBookingsForNotify tripId stopCode req.routeId req.vehicleNumber
+  unless (null stopBookings) $ do
+    -- crossedStopId is the gtfs stop code of the stop just left; resolve its display name once.
+    mbPrevStopName <- case (mbIntegratedBPPConfig, req.crossedStopId) of
+      (Just integratedBPPConfig, Just crossedStopId) ->
+        fmap (.name) <$> OTPRest.getStationByGtfsIdAndStopCode crossedStopId integratedBPPConfig
+      _ -> pure Nothing
+    let prevStopName = fromMaybe "-" mbPrevStopName
+    forM_ stopBookings $ \booking -> do
+      let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
+          mbJourneyId = (.journeyId) <$> mbJourneyLeg
+      case Map.lookup booking.riderId personMap of
+        Nothing -> pure ()
+        Just person -> do
+          -- Only notify for tiers whitelisted per city (RiderConfig.busApproachingNotificationTiers)
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+          let allowedTiers = fromMaybe [] (mbRiderConfig >>= (.busApproachingNotificationTiers))
+              isAllowedTier = maybe False (`elem` allowedTiers) booking.serviceTierType
+          when isAllowedTier $ do
+            -- booking.routeName is stored as either "X To Y" or "X - Y" — normalize to the dash form.
+            let routeName = Data.Text.replace " To " " - " (fromMaybe "" booking.routeName)
+                vehicleNo = fromMaybe "" booking.vehicleNumber
+                stopName = fromMaybe "-" booking.fromStationName
+            logInfo $ "Notifying passenger " <> person.id.getId <> " that bus crossed prev stop " <> prevStopName <> " heading to stop " <> stopCode <> " on trip " <> tripId
+            Notifications.notifyBusPrevStopCrossed person vehicleNo routeName routeNumber mbVehicleTagNumber tripId stopCode prevStopName stopName mbJourneyId (Just booking.id.getId)
 
 postFrfsFleetOperatorCurrentOperation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
