@@ -68,6 +68,7 @@ FleetOwnerInformation:
     approved: Maybe Bool
     disabledReasonFlag: Maybe DisabledReasonFlag
     initiatedBy: Maybe InitiatedBy
+    enableCashRide: Maybe Bool
 
   excludedFields: [merchantOperatingCityId]
   default:
@@ -142,6 +143,10 @@ FleetOwnerInformation:
     fleetOwnerPersonId : PrimaryKey
 
   queries:
+    updateEnableCashRide:
+      kvFunction: updateOneWithKV
+      params: [enableCashRide]
+      where: fleetOwnerPersonId
     updateFleetOwnerVerifiedStatus:
       kvFunction: updateOneWithKV
       params: [verified, updatedAt]

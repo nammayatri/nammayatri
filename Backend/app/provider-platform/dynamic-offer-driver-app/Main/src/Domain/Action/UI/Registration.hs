@@ -469,6 +469,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             enableForAirport = DriverInfo.ENABLED,
             airportBlockExpiryTime = Nothing,
             canSwitchToIntraCity = True,
+            enableCashRide = Just True,
             aadhaarVerified = False,
             blockedReason = Nothing,
             blockExpiryTime = Nothing,

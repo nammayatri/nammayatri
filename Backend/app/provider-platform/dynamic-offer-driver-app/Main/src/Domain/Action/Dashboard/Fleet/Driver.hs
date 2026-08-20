@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetGetAllVehicle,
     getDriverFleetGetAllDriver,
     postDriverFleetUnlink,
+    postDriverFleetCashRideUpdate,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -201,6 +202,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
@@ -856,6 +858,93 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
                 }
         Notification.notifyDriverOnEvents merchantOpCityId personId driver.deviceToken notification merchantPN.fcmNotificationType
   pure Success
+
+-- | Single cash-ride toggle endpoint, common to fleet owners and admin (no
+-- operator role in this feature). 'req.targetIds' is a single list mixing
+-- driver ids and/or fleet-owner ids freely -- each id's own role decides
+-- how it's applied. The flag itself lives on driver_information (the
+-- driver's own preference) and fleet_owner_information (the fleet-wide
+-- switch), never on person; 'DriverPoolData.enableCashRide' caches their
+-- AND. If empty/omitted entirely, a fleet-owner caller defaults to their
+-- own fleet; an admin caller with an empty list is rejected. 'requestorId'
+-- is the caller: when it doesn't resolve to any driver-side 'Person' at
+-- all, the caller is treated as admin (full authority, no fleet-membership
+-- check); when it does resolve to a real fleet owner, they're only
+-- authorized to act on drivers under their own fleet or on their own fleet.
+postDriverFleetCashRideUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.UpdateCashRideReq ->
+  Flow APISuccess
+postDriverFleetCashRideUpdate merchantShortId opCity requestorId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  mbRequestor <- QPerson.findById (Id requestorId)
+  targetIds <- case (fromMaybe [] req.targetIds, mbRequestor) of
+    (ids@(_ : _), _) -> pure ids
+    ([], Just requestor) | DCommon.checkFleetOwnerRole requestor.role -> pure [requestor.id.getId]
+    ([], _) -> throwError $ InvalidRequest "targetIds must be provided"
+  when (length targetIds > maxCashRideTargetIds) $ throwError $ MaxDriversLimitExceeded maxCashRideTargetIds
+  forM_ targetIds $ applyToTarget merchant merchantOpCityId mbRequestor req.enableCashRide
+  pure Success
+  where
+    maxCashRideTargetIds = 100 -- TODO: Configure the limit
+    applyToTarget merchant merchantOpCityId mbRequestor enableCashRide targetIdText = do
+      let targetPersonId = Id @DP.Person targetIdText
+      targetPerson <- QPerson.findById targetPersonId >>= fromMaybeM (PersonDoesNotExist targetIdText)
+      unless (merchant.id == targetPerson.merchantId && merchantOpCityId == targetPerson.merchantOperatingCityId) $
+        throwError (PersonDoesNotExist targetIdText)
+      if DCommon.checkFleetOwnerRole targetPerson.role
+        then do
+          -- Whole-fleet cascade: writes only fleet_owner_information's own
+          -- row; each driver's individual preference (driver_information)
+          -- is left untouched, only their cached effective (driver-flag AND
+          -- fleet-flag) eligibility is recomputed.
+          whenJust mbRequestor $ \requestor -> do
+            unless (requestor.id.getId == targetIdText) $ throwError (InvalidRequesterRole $ show requestor.role)
+            DCommon.checkFleetOwnerVerification targetIdText merchant.fleetOwnerEnabledCheck
+          FOI.updateEnableCashRide (Just enableCashRide) targetPersonId
+          activeDrivers <- QFDAExtra.findAllActiveByFleetOwnerId targetIdText
+          syncCashRideEligibilityForFleet enableCashRide (map (.driverId) activeDrivers)
+        else do
+          whenJust mbRequestor $ \requestor -> do
+            DCommon.checkFleetOwnerVerification requestor.id.getId merchant.fleetOwnerEnabledCheck
+            isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId targetPersonId requestor.id.getId True
+            when (isNothing isFleetDriver) $ throwError DriverNotPartOfFleet
+          QDriverInfo.updateEnableCashRide (Just enableCashRide) targetPersonId
+          syncCashRideEligibility targetPersonId
+
+    -- Recompute a driver's effective cash-ride eligibility (their own
+    -- driver_information flag AND their active fleet owner's
+    -- fleet_owner_information flag, if any) and push it to the cached
+    -- DriverPoolData used at dispatch time.
+    syncCashRideEligibility driverId = do
+      mbDriverInfo <- QDriverInfo.findById driverId
+      let driverFlag = maybe True (fromMaybe True . (.enableCashRide)) mbDriverInfo
+      mbFleetAssoc <- FDV.findByDriverId driverId True
+      fleetOwnerFlag <- case mbFleetAssoc of
+        Nothing -> pure Nothing
+        Just fleetAssoc -> do
+          mbFleetOwnerInfo <- FOI.findByPrimaryKey (Id @DP.Person fleetAssoc.fleetOwnerId)
+          pure $ mbFleetOwnerInfo >>= (.enableCashRide)
+      let effective = driverFlag && fromMaybe True fleetOwnerFlag
+      LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+        LTSSync.emptyUpdate {LTSSync.enableCashRide = LTSSync.Set effective}
+
+    -- Batched variant for the whole-fleet cascade: avoids one
+    -- driver_information + fleet_driver_association + fleet_owner_information
+    -- round trip per driver (a loop over 'syncCashRideEligibility' would be
+    -- N+1 for a large fleet). The new fleet flag is already known (we just
+    -- wrote it), so only driver_information needs fetching, and in one
+    -- batched query for every active driver.
+    syncCashRideEligibilityForFleet fleetEnableCashRide driverIds = do
+      driverInfos <- QDriverInfo.findAllByDriverIds (map getId driverIds)
+      let driverFlagMap = Map.fromList $ map (\di -> (di.driverId, fromMaybe True di.enableCashRide)) driverInfos
+      forM_ driverIds $ \driverId -> do
+        let effective = Map.findWithDefault True driverId driverFlagMap && fleetEnableCashRide
+        LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+          LTSSync.emptyUpdate {LTSSync.enableCashRide = LTSSync.Set effective}
 
 unlinkVehicleFromDriver :: DM.Merchant -> Id DP.Person -> Text -> Context.City -> DP.Role -> Flow ()
 unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do

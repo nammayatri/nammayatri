@@ -132,6 +132,11 @@ updateDrunkAndDriveViolationCount drunkAndDriveViolationCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateEnableCashRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateEnableCashRide enableCashRide driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.enableCashRide enableCashRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateExtraFareMitigation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateExtraFareMitigation extraFareMitigationFlag driverId = do
   _now <- getCurrentTime
@@ -296,6 +301,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
       Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
       Se.Set Beam.drunkAndDriveViolationCount drunkAndDriveViolationCount,
+      Se.Set Beam.enableCashRide enableCashRide,
       Se.Set Beam.enableForAirport (Kernel.Prelude.Just enableForAirport),
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,

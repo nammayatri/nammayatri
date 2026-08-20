@@ -28,13 +28,18 @@ createMany = traverse_ create
 deleteByFleetOwnerPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByFleetOwnerPersonId fleetOwnerPersonId = do deleteWithKV [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
-findAllByPrimaryKeys :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation])
+findAllByPrimaryKeys :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m ([Domain.Types.FleetOwnerInformation.FleetOwnerInformation]))
 findAllByPrimaryKeys fleetOwnerPersonId = do findAllWithKV [Se.Is Beam.fleetOwnerPersonId $ Se.In (Kernel.Types.Id.getId <$> fleetOwnerPersonId)]
 
 updateBusinessLicenseImage :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateBusinessLicenseImage businessLicenseImageId fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.businessLicenseImageId businessLicenseImageId, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+updateEnableCashRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateEnableCashRide enableCashRide fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.enableCashRide enableCashRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 updateFleetOwnerDisabledReasonFlag ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

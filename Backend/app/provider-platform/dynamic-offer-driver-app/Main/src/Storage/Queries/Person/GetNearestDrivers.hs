@@ -228,6 +228,7 @@ buildDriverResult NearestDriversReq {..} poolDataMap cityServiceTiersHashMap loc
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED
+  guard $ not (shouldCheckCashWallet paymentInstrument) || dpd.enableCashRide
   when dpd.onRide $ do
     guard dpd.forwardBatchingEnabled
     guard $ dpd.hasRideStarted == Just True

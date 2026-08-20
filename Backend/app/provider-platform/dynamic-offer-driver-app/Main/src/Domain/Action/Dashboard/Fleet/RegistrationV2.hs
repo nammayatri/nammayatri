@@ -410,6 +410,7 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             payoutVpaStatus = Nothing,
             createdAt = now,
             updatedAt = now,
+            enableCashRide = Just True,
             registeredAt = Nothing,
             isEligibleForSubscription = True,
             ticketPlaceId = Nothing,

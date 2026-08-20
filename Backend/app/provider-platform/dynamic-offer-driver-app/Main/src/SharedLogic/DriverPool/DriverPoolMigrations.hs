@@ -21,6 +21,7 @@ import SharedLogic.DriverPool.DriverPoolData
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 
 -- | A migrator takes a batch of LTS-loaded entries and returns the same entries
@@ -66,7 +67,8 @@ migrations =
   [ MigrationEntry 1 backfillEffectiveBankAccount,
     MigrationEntry 2 backfillEnabled,
     MigrationEntry 3 backfillCloudType,
-    MigrationEntry 4 backfillEnableForAirport
+    MigrationEntry 4 backfillEnableForAirport,
+    MigrationEntry 5 backfillEnableCashRide
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -146,6 +148,37 @@ backfillEnableForAirport entries = do
   pure $
     map
       (\e -> e {enableForAirport = HashMap.lookupDefault e.enableForAirport (cast e.driverId :: Id Person.Person) airportMap})
+      entries
+
+-- | v5: backfill the new 'enableCashRide' field (driver's own preference,
+-- from driver_information, AND their fleet owner's preference, from
+-- fleet_owner_information, if any). Without this, legacy entries would
+-- default to 'enableCashRide = True' regardless of what's actually stored,
+-- which is the safe direction (never wrongly deny cash rides) but still
+-- needs correcting once real data exists.
+backfillEnableCashRide ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillEnableCashRide entries = do
+  let personIds = map (cast . (.driverId)) entries :: [Id Person.Person]
+      driverIdTexts = map (getId . (.driverId)) entries
+  fleetAssocs <- QFDA.findAllByDriverIds personIds
+  let faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId :: Id Person.Person, fa)) fleetAssocs
+      fleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) fleetAssocs
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let driverFlagMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, fromMaybe True di.enableCashRide)) dis
+  fleetOwnerInfos <- if null fleetOwnerPersonIds then pure [] else QFOI.findAllByPrimaryKeys fleetOwnerPersonIds
+  let fleetOwnerFlagMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, fromMaybe True foi.enableCashRide)) fleetOwnerInfos
+  pure $
+    map
+      ( \e ->
+          let pid = cast e.driverId :: Id Person.Person
+              driverFlag = HashMap.lookupDefault True pid driverFlagMap
+              fleetOwnerFlag = case HashMap.lookup pid faMap of
+                Just fa -> HashMap.lookup (Id @Person.Person fa.fleetOwnerId) fleetOwnerFlagMap
+                Nothing -> Nothing
+           in e {enableCashRide = driverFlag && fromMaybe True fleetOwnerFlag}
+      )
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case
