@@ -430,7 +430,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
   forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
     mbOffer <- case Map.lookup productId offerMap of
       Nothing -> pure Nothing
-      Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup
+      Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup Nothing
     serviceTierName <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierName
     serviceTierShortDesc <- translateServiceTierText searchReq.merchantOperatingCityId language quoteEntity.serviceTierShortDesc
     pure quoteEntity {customerOffers = mbOffer, SharedLogic.Quote.serviceTierName = serviceTierName, SharedLogic.Quote.serviceTierShortDesc = serviceTierShortDesc}
@@ -493,9 +493,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
     let mbOfferResp = Map.lookup (show estimate.vehicleServiceTierType) offerMap
     mbOffer <- case mbOfferResp of
       Nothing -> pure Nothing
-      -- Pass the parsed breakup so the offer-response post-offer amount
-      -- reflects VAT redistribution via applyRideDiscount.
-      Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup
+      Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup Nothing
     (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
     apiEntity <- UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
     serviceTierName <- translateServiceTierText searchRequest.merchantOperatingCityId language apiEntity.serviceTierName

@@ -13,6 +13,7 @@ import qualified Data.Time
 import qualified Domain.Action.Dashboard.AppManagement.Pass
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Pass
+import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
 import qualified "this" Domain.Types.PurchasedPassPayment
@@ -32,7 +33,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.AppManagement.Pass.API)
-handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city
+handler merchantId city = getPassCustomerAvailablePasses merchantId city :<|> getPassCustomerPurchasedPasses merchantId city :<|> getPassCustomerTransactions merchantId city :<|> postPassCustomerActivateToday merchantId city :<|> postPassCustomerPassSelect merchantId city :<|> getPassCustomerPaymentStatus merchantId city :<|> postPassCustomerPassResetDeviceSwitchCount merchantId city :<|> postPassCustomerPassUpdateProfilePicture merchantId city :<|> getPassCustomerPassPhoto merchantId city :<|> postPassCustomerPassRestore merchantId city :<|> listPassCatalog merchantId city :<|> createPass merchantId city :<|> updatePass merchantId city :<|> deletePass merchantId city
 
 getPassCustomerAvailablePasses :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity])
 getPassCustomerAvailablePasses a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Pass.getPassCustomerAvailablePasses a4 a3 a2 a1
@@ -63,3 +64,15 @@ getPassCustomerPassPhoto a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Acti
 
 postPassCustomerPassRestore :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassCustomerPassRestore a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Pass.postPassCustomerPassRestore a3 a2 a1
+
+listPassCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.Pass.PassCatalogItem])
+listPassCatalog a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Pass.listPassCatalog a4 a3 a2 a1
+
+createPass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.Pass.PassCreateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Pass.PassCreateResp)
+createPass a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Pass.createPass a3 a2 a1
+
+updatePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> API.Types.Dashboard.AppManagement.Pass.PassUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+updatePass a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Pass.updatePass a4 a3 a2 a1
+
+deletePass :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Pass.Pass -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deletePass a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Pass.deletePass a3 a2 a1

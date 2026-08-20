@@ -398,7 +398,12 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                     Recon.merchantId = Just purchasedPassPayment.merchantId,
                     Recon.merchantOperatingCityId = Just purchasedPassPayment.merchantOperatingCityId,
                     Recon.createdAt = now,
-                    Recon.updatedAt = now
+                    Recon.updatedAt = now,
+                    -- This is the pass purchase itself, the row a discounted trip points back at.
+                    -- Nothing was overridden to buy it, so the override columns stay empty here.
+                    Recon.overrideType = Nothing,
+                    Recon.overriddenAmount = Nothing,
+                    Recon.overrideAppliedEntityId = Nothing
                   }
           void $ QRecon.create reconEntry
 
@@ -850,6 +855,15 @@ type MakePaymentIntentConstraints m r c =
     Finance.HasActorInfo m r
   )
 
+-- | The portion of the Stripe payment charge the platform collects via the application
+--   fee: added when the CUSTOMER or DRIVER bears it, zero when the PLATFORM bears it.
+paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+paymentChargeForAppFee mbCharge mbBearer =
+  case mbBearer of
+    Just bearer
+      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER", "PAYMENT_CUSTOMER_AND_DRIVER"] -> fromMaybe 0 mbCharge
+    _ -> 0
+
 makePaymentIntent ::
   MakePaymentIntentConstraints m r c =>
   Id Merchant.Merchant ->
@@ -931,6 +945,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 paymentRules = Nothing,
                 webhookUrl = Just nwAddress,
                 udf1 = Nothing,
+                udf2 = Nothing,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,
@@ -1301,7 +1316,7 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
     (customerPaymentId, _) <- getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let debtApplicationFeeAmount = fromMaybe 0 ride.commission
+    let debtApplicationFeeAmount = fromMaybe 0 ride.commission + paymentChargeForAppFee ride.paymentCharge ride.paymentChargeBearer
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,

@@ -184,6 +184,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) expiredCount
     QSRD.setInactiveBySTId Nothing searchTry.id.getId -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
+  SDP.setBatchSentCount searchTry.id batchNumber (length searchRequestsForDrivers)
   forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> ((srfd.vehicleServiceTier, srfd.poolingConfigVersion, srfd.poolingLogicVersion), 1 :: Int)) searchRequestsForDrivers) $ \((serviceTier, poolingConfigVersion, poolingLogicVersion), sentCount) ->
     TM.addSearchRequestSentToDriverCount merchantLabel cityLabel (show serviceTier) (maybe "unknown" show poolingConfigVersion) (maybe "unknown" show poolingLogicVersion) sentCount
 
@@ -392,7 +393,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 previousDropGeoHash = dpwRes.previousDropGeoHash,
                 driverTags = Just $ addSpecialLocWarriorPreferredSpecialLocId dpwRes.specialLocWarriorPreferredSpecialLocId dpRes.driverTags,
                 customerTags = dpRes.customerTags,
-                poolingLogicVersion = searchReq.poolingLogicVersion,
+                poolingLogicVersion = dpwRes.poolingLogicVersion <|> searchReq.poolingLogicVersion,
                 poolingConfigVersion = searchReq.poolingConfigVersion,
                 notificationSource = Nothing,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),

@@ -21,7 +21,9 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Update as DUpdate
 import Domain.Types.Merchant (Merchant)
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -47,6 +49,7 @@ update ::
   FlowHandler AckResponse
 update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId req.updateReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "updateAPI" "Received update API call."
     dUpdateReq <- ACL.buildUpdateReq merchantId subscriber req

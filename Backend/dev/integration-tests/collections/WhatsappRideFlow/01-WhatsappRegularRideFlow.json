@@ -1,0 +1,461 @@
+{
+  "info": {
+    "name": "NY WhatsApp Regular Ride Flow (Bangalore, Auto Rickshaw)",
+    "description": "End-to-end Regular (one-way) ride booked entirely through the WhatsApp bot's real webhook, driver side unchanged from EasyBookingRideFlow:\n  Driver onboard -> WA: ride_type:regular -> WA: pickup pin -> WA: pickup_confirm -> WA: drop pin -> WA: regular_book (fires select2 in the background) -> driver accepts -> driver starts -> end ride -> verify completed.\n\nScope: ride mechanics only. This does NOT assert WhatsApp message content/buttons, and does NOT exercise the background tracker's assigned/arrived/started/ended pushes (Tracker.hs) - those all require a Meta Graph API mock, which is out of scope here. Outbound sends will still fire for real against https://graph.facebook.com using whatever's in meta_config and will most likely fail (no valid access token) - that's expected and non-fatal (WhatsappBot.Adapter.Sender.sendSafe swallows the error).\n\nEach WA step POSTs a simulated Meta webhook envelope to {{webhook_base_url}}/webhook/whatsapp, signed with X-Hub-Signature-256 computed in the prerequest script using {{whatsapp_app_secret}} - this MUST match the plaintext meta_config.app_secret for {{whatsapp_phone_number_id}} in the local DB (see config-sync/assets/patches.json's meta_config override; run config_transfer.py import before this collection or the signature check will reject every WA step with a non-2xx).\n\nEnvelope shapes copied verbatim from lib/whatsapp-bot/test/resources/golden/regular-happy-path.json (the real recorded fixture for this exact scenario). Driver-side steps copied from EasyBookingRideFlow/01-EasyBookingRideFlow.json.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    pm.collectionVariables.set('_wa_msg_seq', '0');",
+          "    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"},
+        "url": {"raw": "{{baseURL_namma_P}}/auth", "host": ["{{baseURL_namma_P}}"], "path": ["auth"]}
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"},
+        "url": {"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify", "host": ["{{baseURL_namma_P}}"], "path": ["auth", "{{driver_authId}}", "verify"]}
+      }
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+        "body": {"mode": "raw", "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test WhatsApp Driver\", \"colour\": \"White\"}"},
+        "url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]}
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+        "body": {"mode": "raw", "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"},
+        "url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]}
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver)",
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe", "host": ["{{baseURL_namma_P}}"], "path": ["plan", "{{plan_id}}", "subscribe"]}
+      }
+    },
+    {
+      "name": "Set Driver Online",
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "setActivity"], "query": [{"key": "active", "value": "true"}, {"key": "mode", "value": "%22ONLINE%22"}]}
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {"listen": "prerequest", "script": {"exec": ["pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"], "type": "text/javascript"}},
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "token", "value": "{{driver_token}}"},
+          {"key": "vt", "value": "{{vehicle_variant}}"},
+          {"key": "dm", "value": "ONLINE"},
+          {"key": "mId", "value": "{{driver_merchant_id}}"}
+        ],
+        "body": {"mode": "raw", "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"},
+        "url": {"raw": "{{baseUrl_lts}}/driver/location", "host": ["{{baseUrl_lts}}"], "path": ["driver", "location"]}
+      }
+    },
+    {
+      "name": "WA: Ride Type (Regular)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "(function () {",
+              "  var to = pm.collectionVariables.get('_test_rider_number');",
+              "  var seq = parseInt(pm.collectionVariables.get('_wa_msg_seq') || '0', 10) + 1;",
+              "  pm.collectionVariables.set('_wa_msg_seq', String(seq));",
+              "  var envelope = {",
+              "    object: 'whatsapp_business_account',",
+              "    entry: [{ id: 'entry-1', changes: [{ field: 'messages', value: {",
+              "      messaging_product: 'whatsapp',",
+              "      metadata: { display_phone_number: '15550000000', phone_number_id: pm.environment.get('whatsapp_phone_number_id') },",
+              "      contacts: [{ profile: { name: to }, wa_id: to }],",
+              "      messages: [{",
+              "        from: to, id: 'wamid.wa-' + to + '-' + seq, timestamp: String(Math.floor(Date.now() / 1000)),",
+              "        type: 'interactive',",
+              "        interactive: { type: 'button_reply', button_reply: { id: 'ride_type:regular', title: 'Ride with destination' } }",
+              "      }]",
+              "    }}] }]",
+              "  };",
+              "  var raw = JSON.stringify(envelope);",
+              "  pm.request.body.raw = raw;",
+              "  var sig = CryptoJS.HmacSHA256(raw, pm.environment.get('whatsapp_app_secret')).toString(CryptoJS.enc.Hex);",
+              "  pm.request.headers.upsert({ key: 'X-Hub-Signature-256', value: 'sha256=' + sig });",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<1500){}"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{webhook_base_url}}/webhook/whatsapp", "host": ["{{webhook_base_url}}"], "path": ["webhook", "whatsapp"]}
+      }
+    },
+    {
+      "name": "WA: Pickup Pin",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "(function () {",
+              "  var to = pm.collectionVariables.get('_test_rider_number');",
+              "  var seq = parseInt(pm.collectionVariables.get('_wa_msg_seq') || '0', 10) + 1;",
+              "  pm.collectionVariables.set('_wa_msg_seq', String(seq));",
+              "  var envelope = {",
+              "    object: 'whatsapp_business_account',",
+              "    entry: [{ id: 'entry-1', changes: [{ field: 'messages', value: {",
+              "      messaging_product: 'whatsapp',",
+              "      metadata: { display_phone_number: '15550000000', phone_number_id: pm.environment.get('whatsapp_phone_number_id') },",
+              "      contacts: [{ profile: { name: to }, wa_id: to }],",
+              "      messages: [{",
+              "        from: to, id: 'wamid.wa-' + to + '-' + seq, timestamp: String(Math.floor(Date.now() / 1000)),",
+              "        type: 'location',",
+              "        location: { latitude: parseFloat(pm.environment.get('origin_lat')), longitude: parseFloat(pm.environment.get('origin_lon')) }",
+              "      }]",
+              "    }}] }]",
+              "  };",
+              "  var raw = JSON.stringify(envelope);",
+              "  pm.request.body.raw = raw;",
+              "  var sig = CryptoJS.HmacSHA256(raw, pm.environment.get('whatsapp_app_secret')).toString(CryptoJS.enc.Hex);",
+              "  pm.request.headers.upsert({ key: 'X-Hub-Signature-256', value: 'sha256=' + sig });",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{webhook_base_url}}/webhook/whatsapp", "host": ["{{webhook_base_url}}"], "path": ["webhook", "whatsapp"]}
+      }
+    },
+    {
+      "name": "WA: Confirm Pickup",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "(function () {",
+              "  var to = pm.collectionVariables.get('_test_rider_number');",
+              "  var seq = parseInt(pm.collectionVariables.get('_wa_msg_seq') || '0', 10) + 1;",
+              "  pm.collectionVariables.set('_wa_msg_seq', String(seq));",
+              "  var envelope = {",
+              "    object: 'whatsapp_business_account',",
+              "    entry: [{ id: 'entry-1', changes: [{ field: 'messages', value: {",
+              "      messaging_product: 'whatsapp',",
+              "      metadata: { display_phone_number: '15550000000', phone_number_id: pm.environment.get('whatsapp_phone_number_id') },",
+              "      contacts: [{ profile: { name: to }, wa_id: to }],",
+              "      messages: [{",
+              "        from: to, id: 'wamid.wa-' + to + '-' + seq, timestamp: String(Math.floor(Date.now() / 1000)),",
+              "        type: 'interactive',",
+              "        interactive: { type: 'button_reply', button_reply: { id: 'pickup_confirm', title: 'Confirm pickup' } }",
+              "      }]",
+              "    }}] }]",
+              "  };",
+              "  var raw = JSON.stringify(envelope);",
+              "  pm.request.body.raw = raw;",
+              "  var sig = CryptoJS.HmacSHA256(raw, pm.environment.get('whatsapp_app_secret')).toString(CryptoJS.enc.Hex);",
+              "  pm.request.headers.upsert({ key: 'X-Hub-Signature-256', value: 'sha256=' + sig });",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<1000){}"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{webhook_base_url}}/webhook/whatsapp", "host": ["{{webhook_base_url}}"], "path": ["webhook", "whatsapp"]}
+      }
+    },
+    {
+      "name": "WA: Drop Pin",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "(function () {",
+              "  var to = pm.collectionVariables.get('_test_rider_number');",
+              "  var seq = parseInt(pm.collectionVariables.get('_wa_msg_seq') || '0', 10) + 1;",
+              "  pm.collectionVariables.set('_wa_msg_seq', String(seq));",
+              "  var envelope = {",
+              "    object: 'whatsapp_business_account',",
+              "    entry: [{ id: 'entry-1', changes: [{ field: 'messages', value: {",
+              "      messaging_product: 'whatsapp',",
+              "      metadata: { display_phone_number: '15550000000', phone_number_id: pm.environment.get('whatsapp_phone_number_id') },",
+              "      contacts: [{ profile: { name: to }, wa_id: to }],",
+              "      messages: [{",
+              "        from: to, id: 'wamid.wa-' + to + '-' + seq, timestamp: String(Math.floor(Date.now() / 1000)),",
+              "        type: 'location',",
+              "        location: { latitude: parseFloat(pm.environment.get('dest_lat')), longitude: parseFloat(pm.environment.get('dest_lon')) }",
+              "      }]",
+              "    }}] }]",
+              "  };",
+              "  var raw = JSON.stringify(envelope);",
+              "  pm.request.body.raw = raw;",
+              "  var sig = CryptoJS.HmacSHA256(raw, pm.environment.get('whatsapp_app_secret')).toString(CryptoJS.enc.Hex);",
+              "  pm.request.headers.upsert({ key: 'X-Hub-Signature-256', value: 'sha256=' + sig });",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });", "console.log('Waiting for search + estimate poll (up to 6x2s) to settle...');", "const s=Date.now(); while(Date.now()-s<14000){}"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{webhook_base_url}}/webhook/whatsapp", "host": ["{{webhook_base_url}}"], "path": ["webhook", "whatsapp"]}
+      }
+    },
+    {
+      "name": "WA: Book",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "(function () {",
+              "  var to = pm.collectionVariables.get('_test_rider_number');",
+              "  var seq = parseInt(pm.collectionVariables.get('_wa_msg_seq') || '0', 10) + 1;",
+              "  pm.collectionVariables.set('_wa_msg_seq', String(seq));",
+              "  var envelope = {",
+              "    object: 'whatsapp_business_account',",
+              "    entry: [{ id: 'entry-1', changes: [{ field: 'messages', value: {",
+              "      messaging_product: 'whatsapp',",
+              "      metadata: { display_phone_number: '15550000000', phone_number_id: pm.environment.get('whatsapp_phone_number_id') },",
+              "      contacts: [{ profile: { name: to }, wa_id: to }],",
+              "      messages: [{",
+              "        from: to, id: 'wamid.wa-' + to + '-' + seq, timestamp: String(Math.floor(Date.now() / 1000)),",
+              "        type: 'interactive',",
+              "        interactive: { type: 'button_reply', button_reply: { id: 'regular_book', title: 'Book auto' } }",
+              "      }]",
+              "    }}] }]",
+              "  };",
+              "  var raw = JSON.stringify(envelope);",
+              "  pm.request.body.raw = raw;",
+              "  var sig = CryptoJS.HmacSHA256(raw, pm.environment.get('whatsapp_app_secret')).toString(CryptoJS.enc.Hex);",
+              "  pm.request.headers.upsert({ key: 'X-Hub-Signature-256', value: 'sha256=' + sig });",
+              "})();"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });", "console.log('select2 fires in the background - moving on to driver dispatch');", "const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{}"},
+        "url": {"raw": "{{webhook_base_url}}/webhook/whatsapp", "host": ["{{webhook_base_url}}"], "path": ["webhook", "whatsapp"]}
+      }
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}},
+        {"listen": "test", "script": {"exec": [
+          "var d = pm.response.json();",
+          "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+          "    var req = d.searchRequestsForDriver[0];",
+          "    pm.environment.set('searchTryId', req.searchTryId);",
+          "    console.log('Got Regular search request, searchTryId:', req.searchTryId, 'variant:', req.requestedVehicleVariant, 'tripCategory:', JSON.stringify(req.tripCategory));",
+          "    pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+          "    pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });",
+          "    pm.collectionVariables.set('_nearby_attempt', '0');",
+          "} else {",
+          "    var attempt = parseInt(pm.collectionVariables.get('_nearby_attempt') || '0');",
+          "    if (attempt < 8) {",
+          "        console.log('No nearby requests yet (attempt', attempt + 1, ') - retrying after busy-wait...');",
+          "        var t0=Date.now(); while(Date.now()-t0<5000){}",
+          "        pm.collectionVariables.set('_nearby_attempt', String(attempt + 1));",
+          "        pm.execution.setNextRequest(pm.info.requestName);",
+          "    } else {",
+          "        console.log('WARNING: No nearby ride requests found for driver after retries. Response:', JSON.stringify(d));",
+          "        pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+          "        pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });",
+          "        pm.collectionVariables.set('_nearby_attempt', '0');",
+          "    }",
+          "}"
+        ], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{"key": "token", "value": "{{driver_token}}"}],
+        "url": {"raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "nearbyRideRequest"]}
+      }
+    },
+    {
+      "name": "Driver Accept Ride",
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver accepted WhatsApp-booked Regular ride!');"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+        "body": {"mode": "raw", "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"},
+        "url": {"raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "searchRequest", "quote", "respond"]}
+      }
+    },
+    {
+      "name": "Rider Auth (Verification Token Only)",
+      "event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"},
+        "url": {"raw": "{{baseUrl_app}}/auth", "host": ["{{baseUrl_app}}"], "path": ["auth"]}
+      }
+    },
+    {
+      "name": "Rider OTP (Verification Token Only)",
+      "event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); }); pm.test('Rider person already existed (created silently by the bot)', function () { pm.expect(d.token).to.be.a('string').that.is.not.empty; });"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"},
+        "url": {"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify", "host": ["{{baseUrl_app}}"], "path": ["auth", "{{rider_authId}}", "verify"]}
+      }
+    },
+    {
+      "name": "Get Booking (Verify Regular, Extract OTP)",
+      "event": [
+        {"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<5000){}"], "type": "text/javascript"}},
+        {"listen": "test", "script": {"exec": [
+          "var d = pm.response.json();",
+          "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+          "if (d.list && d.list.length > 0) {",
+          "  var booking = d.list[0];",
+          "  pm.environment.set('customer_bookingId', booking.id);",
+          "  var otp = booking.rideOtp;",
+          "  if (!otp && booking.rideList && booking.rideList.length > 0) {",
+          "    otp = booking.rideList[0].rideOtp;",
+          "  }",
+          "  pm.environment.set('ride_otp', otp || '');",
+          "  console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', otp, 'tripCategory:', JSON.stringify(booking.tripCategory));",
+          "  pm.test('Booking is a Regular (OneWay) trip', function () { pm.expect(JSON.stringify(booking.tripCategory)).to.include('OneWay'); });",
+          "  pm.test('Has rideOtp', function () { pm.expect(pm.environment.get('ride_otp')).to.be.a('string').that.is.not.empty; });",
+          "}"
+        ], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{"key": "token", "value": "{{rider_token}}"}],
+        "url": {"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "onlyActive", "value": "true"}, {"key": "offset", "value": "0"}]}
+      }
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [{"listen": "test", "script": {"exec": [
+        "var d = pm.response.json();",
+        "if (d.list && d.list.length > 0) {",
+        "    pm.environment.set('driver_ride_id', d.list[0].id);",
+        "    console.log('Regular Ride:', d.list[0].id, 'Status:', d.list[0].status);",
+        "}",
+        "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+      ], "type": "text/javascript"}}],
+      "request": {
+        "method": "GET",
+        "header": [{"key": "token", "value": "{{driver_token}}"}],
+        "url": {"raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "isActive", "value": "true"}]}
+      }
+    },
+    {
+      "name": "Driver Start Ride",
+      "event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Regular ride started!');"], "type": "text/javascript"}}],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+        "body": {"mode": "raw", "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"odometer\": {\"value\": 0, \"fileId\": \"test-odometer-start\"}}"},
+        "url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "start"]}
+      }
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<1500){}"], "type": "text/javascript"}},
+        {"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Regular ride ended.');"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+        "body": {"mode": "raw", "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}, \"odometer\": {\"value\": 3, \"fileId\": \"test-odometer-end\"}}"},
+        "url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "end"]}
+      }
+    },
+    {
+      "name": "Verify Booking Completed (Rider)",
+      "event": [
+        {"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}},
+        {"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); }); pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); }); console.log('WhatsApp Regular flow done! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"], "type": "text/javascript"}}
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{"key": "token", "value": "{{rider_token}}"}],
+        "url": {"raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "v2", "{{customer_bookingId}}"]}
+      }
+    }
+  ]
+}

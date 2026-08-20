@@ -94,7 +94,6 @@ import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -165,8 +164,8 @@ findFleetDocVerificationConfig :: OnboardingFlow m r => Id DMOC.MerchantOperatin
 findFleetDocVerificationConfig merchantOpCityId docType role = do
   configs <-
     getConfig
-      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just role})
-      (Just (filter (\c -> c.documentType == docType) <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+      (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, role = Just [role]})
+      Nothing
   pure $ findFleetConfigForRole docType role configs
 
 -- | Throwing variant of 'findFleetDocVerificationConfig' — errors if the city has no such config.
@@ -397,7 +396,7 @@ runRefreshOnboardingFlagsDriver mbPerson mbTransporterConfig personId =
       then do
         let language = fromMaybe merchantOperatingCity.language statusPerson.language
         (allDocVerificationConfigs, driverDocuments, vehicleCategory, vehicleDocuments) <-
-          fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language (Just True)
+          fetchDriverDocStatusesForPerson statusPerson merchantOperatingCity transporterConfig language Nothing
         res <-
           recomputeOnboardingFlags
             OnboardingFlagsInput
@@ -625,7 +624,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                       && not (checkIfDocumentValid allDocVerificationConfigs person.role doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory)
               -- First check if fleet should be disabled (has rejected mandatory docs)
               when (any isRejectedMandatoryFleetDoc driverDocuments && transporterConfig.allowDisableFleetOnRejectionDoc == Just True) $
-                markDisabledFlags False person FleetRejectionDisable
+                markEnableDisableReasonFlags False person FleetRejectionDisable
               -- Then check if fleet should be enabled (all mandatory docs valid)
               when allFleetDocsVerified $
                 enableDriver merchantOpCityId personId person.role Nothing transporterConfig merchantId True
@@ -718,6 +717,11 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
   where
     getVehicleDocuments driverDocConfs role vehicleDocumentsUnverified requiresOnboardingInspection vehicleCategoryExcludedFromVerification separateEnablement driverDocuments merchantOpCityId = do
       let personId = person.id
+      mbDriverInfo <-
+        if role == DP.DRIVER
+          then Just <$> (DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId))
+          else pure Nothing
+      let dontAutoEnable = fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         let allVehicleDocsVerified = checkAllVehicleDocsValidForEnabling driverDocConfs vehicleDoc makeSelfieAadhaarPanMandatory
             inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
@@ -731,7 +735,8 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 else ((allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
 
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
-        -- isActive=False means RC was explicitly deactivated — skip auto-reactivation
+        -- isActive=False means RC was explicitly deactivated — skip auto-reactivation for already-enabled drivers.
+        -- First-time onboarding still auto-activates: associations are created with isRcActive=False.
         -- Under enableBotFlow: write VRC.verified (= all isMandatory vehicle docs VALID) both ways;
         -- `approved` and RC activation are BOT-owned (suppressed below).
         let enableBotFlow = entityImagesInfo.transporterConfig.enableBotFlow == Just True || entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
@@ -753,7 +758,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 }
               (entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
         mbVehicle <- QVehicle.findById personId
-        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && (isActive || not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver))) $ do
+        let firstTimeOnboarding = maybe False (isNothing . (.enabledAt)) mbDriverInfo
+            allowAutoActivate =
+              isActive
+                || (firstTimeOnboarding && not dontAutoEnable)
+        let unifiedRecompute = entityImagesInfo.transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+        when (unifiedRecompute && shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && firstTimeOnboarding) $ do
+          void $ withTryCatch "activateRCAutomatically:statusHandler:unifiedRecompute" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
+        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && not enableBotFlow && allowAutoActivate) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
           -- Enable driver when RC is activated (only when flow is NOT separated)
           -- When separated, driver enablement is handled separately in the driver enablement section
@@ -844,7 +856,7 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
     mbCommonDoc <-
       if docType `Set.member` SDO.domainTableDocumentTypes
         then pure Nothing
-        else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType (Just driverId) Nothing docType
+        else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType (QCommonDocExtra.OwnedByDriver driverId) docType
     let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
 
     (mbProcessedStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbDocumentId) <- getProcessedDriverDocuments person.role person.id entityImagesInfo mbCommonDoc docType useHVSdkForDL enableMetadata
@@ -875,8 +887,8 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
       -- can drift apart (e.g. role=FLEET_OWNER but fleet_type=BUSINESS_FLEET, so
       -- configs are seeded for FLEET_BUSINESS). For any fleet role, if no configs
       -- match the exact role, fall back to configs for any fleet role in the city.
-      let exactRoleConfigs = filter (\config -> config.role == role) fleetConfigs
-          anyFleetRoleConfigs = filter (\config -> SDO.isFleetRole config.role) fleetConfigs
+      let exactRoleConfigs = filter (\config -> role `elem` config.role) fleetConfigs
+          anyFleetRoleConfigs = filter (any SDO.isFleetRole . (.role)) fleetConfigs
           effectiveConfigs =
             if SDO.isFleetRole role && null exactRoleConfigs
               then anyFleetRoleConfigs
@@ -1412,7 +1424,7 @@ checkIfImageUploadedOrInvalidated role entityImagesInfo docType onlyImageLookup 
         case allDocVerificationConfigs of
           Left fleetConfigs ->
             -- Per-docType role match for fleet roles; fall back to any config row for this docType (old behavior).
-            let exactRoleConfigs = filter (\c -> c.documentType == docType && c.role == role) fleetConfigs
+            let exactRoleConfigs = filter (\c -> c.documentType == docType && role `elem` c.role) fleetConfigs
                 fallbackConfigs = filter (\c -> c.documentType == docType) fleetConfigs
                 effectiveConfigs = if SDO.isFleetRole role && not (null exactRoleConfigs) then exactRoleConfigs else fallbackConfigs
              in any

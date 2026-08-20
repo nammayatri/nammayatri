@@ -194,12 +194,14 @@ data TransporterConfig = TransporterConfig
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
     fareRecomputeWeeklyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
+    favouriteDriverDailyCoinRideThreshold :: Kernel.Prelude.Int,
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     feedbackNotificationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FeedbackNotificationConfig,
     fleetAlertThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fleetBankPayoutEnabled :: Kernel.Prelude.Bool,
     fleetUpiPayoutEnabled :: Kernel.Prelude.Bool,
     forceDirectCalling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    forceEnabledBypassingDocsUponDisableTakesToOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fraudAuthCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fraudAuthCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     freeTrialDays :: Kernel.Prelude.Int,
@@ -415,6 +417,8 @@ data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshol
 data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data ChargeFrequency = CHARGE_DAILY | CHARGE_WEEKLY | CHARGE_MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data CommissionAggregationFrequency = DAILY | WEEKLY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CommunicationChannelCharLimits = CommunicationChannelCharLimits
@@ -424,6 +428,8 @@ data CommunicationChannelCharLimits = CommunicationChannelCharLimits
     whatsappBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data ConnectChargeBearer = CONNECT_PLATFORM | CONNECT_DRIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
@@ -443,7 +449,13 @@ data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data DriverWalletConfig = DriverWalletConfig
-  { driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
+  { connectAccountCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    connectAccountChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ConnectChargeBearer,
+    connectAccountChargeDayOfMonth :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    connectAccountChargeDayOfWeek :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    connectAccountChargeFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ChargeFrequency,
+    connectAccountChargeTimeOfDay :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
     enableDriverWallet :: Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
@@ -454,6 +466,8 @@ data DriverWalletConfig = DriverWalletConfig
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     onlineCommissionPaidOutDirectly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PaymentChargeBearer,
+    paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutCutOffDays :: Kernel.Prelude.Int,
     payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
   }
@@ -484,7 +498,17 @@ data InvoiceConfig = InvoiceConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}
+data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM | PAYMENT_CUSTOMER_AND_DRIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data PayoutChargeBearer = DRIVER_BEARER | PLATFORM_BEARER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data PayoutFeeConfig = PayoutFeeConfig
+  { feeBearer :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutChargeBearer,
+    feeType :: Domain.Types.TransporterConfig.PayoutFeeType,
+    feeValue :: Kernel.Types.Common.HighPrecMoney,
+    fixedFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    percentageRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq)
 
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -538,6 +562,14 @@ data TaxConfig = TaxConfig
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
 
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ChargeFrequency)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommissionAggregationFrequency)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ConnectChargeBearer)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentChargeBearer)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutChargeBearer)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFeeType)

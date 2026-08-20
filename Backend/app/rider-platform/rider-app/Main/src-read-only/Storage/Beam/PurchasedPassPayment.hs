@@ -15,7 +15,9 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PurchasedPassPaymentT f = PurchasedPassPaymentT
-  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+  { activatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    availableTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     benefitDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
@@ -28,7 +30,9 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     orderId :: B.C f Kernel.Prelude.Text,
     passCode :: B.C f Kernel.Prelude.Text,
     passEnum :: B.C f (Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum),
+    passId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     passName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    passPhotoChangeCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     passPhotoMediaId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     personId :: B.C f Kernel.Prelude.Text,
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

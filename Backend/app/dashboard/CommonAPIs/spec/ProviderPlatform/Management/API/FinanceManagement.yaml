@@ -25,6 +25,9 @@ imports:
   SubscriptionCreditAllocation: Lib.Finance.Domain.Types.LedgerEntry
   TransactionType: Lib.Finance.Domain.Types.SapJournalEntry
   JournalEntryStatus: Lib.Finance.Domain.Types.SapJournalEntry
+  Image: Dashboard.Common
+  FinanceTdsReimbursementRequest: Dashboard.Common
+  Invoice: Lib.Finance.Domain.Types.Invoice
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -225,6 +228,75 @@ apis:
       response:
         type: SapJournalTransactionsRes
 
+  - POST: # TdsReimbursementRequestSubmitAPI
+      endpoint: /tdsReimbursement/request/submit
+      auth: ApiAuthV2
+      request:
+        type: TdsReimbursementRequestSubmitReq
+      response:
+        type: TdsReimbursementRequestSubmitRes
+      migrate:
+        capability: finance.tds_reimbursement.write
+      helperApi:
+        - POST:
+            endpoint: /tdsReimbursement/request/submit
+            auth: ApiAuthV2
+            request:
+              type: TdsReimbursementRequestSubmitReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: TdsReimbursementRequestSubmitRes
+
+  - GET: # TdsReimbursementStatusAPI
+      endpoint: /tdsReimbursement/status
+      mandatoryQuery:
+        quarter: TdsReimbursementQuarter
+        assessmentYear: Text
+      auth: ApiAuthV2
+      response:
+        type: TdsReimbursementStatusRes
+      migrate:
+        capability: finance.tds_reimbursement.read
+      helperApi:
+        - GET:
+            endpoint: /tdsReimbursement/status
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - quarter: TdsReimbursementQuarter
+              - assessmentYear: Text
+              - requestorId: Text
+            response:
+              type: TdsReimbursementStatusRes
+
+  - GET: # TdsReimbursementListAPI
+      endpoint: /tdsReimbursement/list
+      query:
+        limit: Int
+        offset: Int
+        fleetOwnerId: Text
+        tanNumber: Text
+        quarter: TdsReimbursementQuarter
+        assessmentYear: Text
+        status: TdsReimbursementStatus
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: TdsReimbursementListRes
+      migrate:
+        capability: finance.tds_reimbursement.read
+
+  - GET: # TdsReimbursementDetailAPI
+      endpoint: /tdsReimbursement/{requestId}
+      params:
+        requestId: Id FinanceTdsReimbursementRequest
+      auth: ApiAuthV2
+      response:
+        type: TdsReimbursementDetailRes
+      migrate:
+        capability: finance.tds_reimbursement.read
+
 types:
   SubscriptionPurchaseStatus:
     - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
@@ -366,6 +438,8 @@ types:
     - taxRate: Maybe Double
     - issuedToTaxNo: Maybe Text
     - issuedByTaxNo: Maybe Text
+    - recognizedRevenue: Maybe HighPrecMoney
+    - deferredRevenue: Maybe HighPrecMoney
 
   # ----- Audit trail -----
   AuditListRes:
@@ -660,6 +734,104 @@ types:
     - creationDate: UTCTime
     - createdBy: Text
 
+  TdsReimbursementQuarter:
+    - enum: "Q1, Q2, Q3, Q4"
+    - derive: "HttpInstance"
+
+  TdsReimbursementStatus:
+    # TODO(WS3): add TDS_POSTED here once finance_tds_reimbursement_request.status supports it
+    # (ledger-adjustment posting — see ledgerAdjustmentRequestId in the storage spec)
+    - enum: "TDS_PENDING, TDS_APPROVED, TDS_REJECTED"
+    - derive: "HttpInstance"
+
+  TdsReimbursementInvoiceLineReq:
+    - invoiceId: Id Invoice
+    - tdsAmount: HighPrecMoney
+
+  TdsReimbursementRequestSubmitReq:
+    - tanNumber: Text
+    - certNumber: Text
+    - quarter: TdsReimbursementQuarter
+    - assessmentYear: Text
+    - tdsSection: Text
+    - certAmount: HighPrecMoney
+    - tdsRate: Double
+    - documentId: Id Image
+    - invoiceLines: [TdsReimbursementInvoiceLineReq]
+
+  TdsReimbursementRequestSubmitTReq:
+    - quarter: TdsReimbursementQuarter
+    - assessmentYear: Text
+    - tdsSection: Text
+    - certAmount: HighPrecMoney
+    - tdsRate: Double
+    - documentId: Id Image
+    - invoiceLines: [TdsReimbursementInvoiceLineReq]
+
+  TdsReimbursementRequestSubmitRes:
+    - requestId: Id FinanceTdsReimbursementRequest
+    - status: TdsReimbursementStatus
+
+  TdsReimbursementStatusInvoiceLine:
+    - invoiceId: Id Invoice
+    - invoiceNumber: Text
+    - invoiceDate: Day
+    - baseValue: Maybe HighPrecMoney
+    - gst: Maybe HighPrecMoney
+    - invoiceValue: HighPrecMoney
+    - tdsAmount: HighPrecMoney
+    - revenueRecognisedSnapshot: HighPrecMoney
+    - tdsCreditReceivable: HighPrecMoney
+    - deferment: HighPrecMoney
+
+  TdsReimbursementStatusRes:
+    - status: Maybe TdsReimbursementStatus
+    - requestId: Maybe (Id FinanceTdsReimbursementRequest)
+    - certNumber: Maybe Text
+    - certAmount: Maybe HighPrecMoney
+    - tdsRate: Maybe Double
+    - tdsSection: Maybe Text
+    - rejectionReason: Maybe Text
+    - submittedAt: Maybe UTCTime
+    - invoiceLines: [TdsReimbursementStatusInvoiceLine]
+    - totalTdsAmount: HighPrecMoney
+
+  TdsReimbursementListRes:
+    - totalItems: Int
+    - summary: Summary
+    - tdsReimbursementRequests: [TdsReimbursementListItem]
+
+  TdsReimbursementListItem:
+    - requestId: Id FinanceTdsReimbursementRequest
+    - fleetOwnerId: Text
+    - fleetOwnerName: Maybe Text
+    - tanNumber: Text
+    - certNumber: Text
+    - quarter: TdsReimbursementQuarter
+    - assessmentYear: Text
+    - tdsSection: Maybe Text
+    - certAmount: HighPrecMoney
+    - status: TdsReimbursementStatus
+    - invoiceCount: Int
+    - submittedAt: UTCTime
+
+  TdsReimbursementDetailRes:
+    - requestId: Id FinanceTdsReimbursementRequest
+    - fleetOwnerId: Text
+    - fleetOwnerName: Maybe Text
+    - tanNumber: Text
+    - certNumber: Text
+    - quarter: TdsReimbursementQuarter
+    - assessmentYear: Text
+    - certAmount: HighPrecMoney
+    - tdsRate: Double
+    - tdsSection: Maybe Text
+    - documentUrl: Text
+    - status: TdsReimbursementStatus
+    - rejectionReason: Maybe Text
+    - submittedAt: UTCTime
+    - invoiceLines: [TdsReimbursementStatusInvoiceLine]
+    - totalTdsAmount: HighPrecMoney
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

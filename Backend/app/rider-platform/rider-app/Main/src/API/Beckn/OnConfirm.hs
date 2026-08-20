@@ -23,13 +23,13 @@ import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Domain.Types
 import Environment
 import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Getter (TxnIdKey (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite

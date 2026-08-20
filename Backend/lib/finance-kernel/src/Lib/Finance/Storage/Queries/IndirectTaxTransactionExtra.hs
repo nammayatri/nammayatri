@@ -1,5 +1,6 @@
 module Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra
   ( findByReferenceIds,
+    findByInvoiceNumbers,
   )
 where
 
@@ -21,3 +22,11 @@ findByReferenceIds ::
 findByReferenceIds [] = pure []
 findByReferenceIds referenceIds =
   findAllWithKV [Se.Is Beam.referenceId $ Se.In referenceIds]
+
+findByInvoiceNumbers ::
+  (BeamFlow m r) =>
+  [Text] ->
+  m [Domain.IndirectTaxTransaction]
+findByInvoiceNumbers [] = pure []
+findByInvoiceNumbers invoiceNumbers =
+  findAllWithKV [Se.Is Beam.invoiceNumber $ Se.In (map Just invoiceNumbers)]

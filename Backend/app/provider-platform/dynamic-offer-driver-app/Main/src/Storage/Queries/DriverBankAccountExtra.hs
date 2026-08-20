@@ -2,6 +2,7 @@ module Storage.Queries.DriverBankAccountExtra where
 
 import qualified Data.Aeson as A
 import Domain.Types.DriverBankAccount
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person
 import qualified Domain.Types.Person as DP
@@ -19,6 +20,12 @@ import Storage.Queries.OrphanInstances.DriverBankAccount ()
 -- Extra code goes here --
 getDriverBankAccounts :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.DriverBankAccount.DriverBankAccount])
 getDriverBankAccounts driverIds = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds)]]
+
+-- | Active Stripe connect accounts (charges enabled) in an operating city — used by
+--   the connect-account maintenance-charge scheduled job.
+findActiveConnectAccountsByCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverBankAccount]
+findActiveConnectAccountsByCity cityId =
+  findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just cityId.getId), Se.Is Beam.chargesEnabled $ Se.Eq True]]
 
 -- Wrapper for src-read-only function with LTS sync
 

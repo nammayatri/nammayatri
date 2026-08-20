@@ -136,11 +136,34 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                           logWarning $ "driversLocation failed in pickup progress monitor: " <> show err
                           return Nothing
                         Right locations -> return $ listToMaybe locations
+                    -- The LTS last-known-location key has a long TTL and is never cleared when a
+                    -- driver's GPS goes dark, so an absent key is not the only signal for "dark" —
+                    -- a ping older than 2 ticks means we're reading a stale position, not a live one.
+                    let staleAfter = fromIntegral (2 * monitoringConfig.tickIntervalSec) :: NominalDiffTime
+                        mbFreshDriverLocation =
+                          mbDriverLocation >>= \dloc ->
+                            if diffUTCTime now dloc.coordinatesCalculatedAt <= staleAfter then Just dloc else Nothing
                     state <- fromMaybe emptyPickupProgressState <$> Redis.safeGet (pickupProgressStateKey rideId)
                     let pickupLoc = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-                        mbCurrentDistance = mbDriverLocation <&> \dloc -> realToFrac $ distanceBetweenInMeters (LatLong dloc.lat dloc.lon) pickupLoc
+                        mbCurrentDistance = mbFreshDriverLocation <&> \dloc -> realToFrac $ distanceBetweenInMeters (LatLong dloc.lat dloc.lon) pickupLoc
                         progressThreshold = fromIntegral monitoringConfig.progressThresholdMeters
                         tickCase = classifyTick state.lastDistanceToPickup mbCurrentDistance progressThreshold
+                    logInfo $
+                      "PickupProgressTick rideId=" <> rideId.getId
+                        <> " lastDistanceToPickup="
+                        <> show state.lastDistanceToPickup
+                        <> " currentDistance="
+                        <> show mbCurrentDistance
+                        <> " progressThresholdMeters="
+                        <> show progressThreshold
+                        <> " tickCase="
+                        <> show tickCase
+                        <> " activeCaseBefore="
+                        <> show state.activeCase
+                        <> " candidateCaseBefore="
+                        <> show state.candidateCase
+                        <> " consecutiveBadTicksBefore="
+                        <> show state.consecutiveBadTicks
                     case tickCase of
                       Nothing -> do
                         -- Progressing (or first baseline tick): full reset, clean slate.
@@ -156,9 +179,9 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                               Just stage | stallDuration >= fromIntegral stage.afterStallSec -> do
                                 let situation = rideSituation booking
                                 sendStallOverlay ride.merchantOperatingCityId driverId (stage.overlayKey <> "_" <> situation)
-                                -- REALLOCATE_RIDE acts only on non-cancellable rides; for cancellable
-                                -- situations the driver always had the cancel exit, so we only record.
-                                let shouldReallocate = stage.terminalAction == Just DTC.REALLOCATE_RIDE && situation == situationNonCancellable
+                                -- REALLOCATE_RIDE is controlled purely by pickupStallMonitoringConfig's
+                                -- terminalAction; the ride's cancellation situation no longer gates it.
+                                let shouldReallocate = stage.terminalAction == Just DTC.REALLOCATE_RIDE
                                 if isJust stage.terminalAction
                                   then do
                                     stampPickupStallTag ride activeCase'

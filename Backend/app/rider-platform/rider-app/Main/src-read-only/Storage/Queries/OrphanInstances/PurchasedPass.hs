@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PurchasedPass where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.PurchasedPass
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -18,13 +19,14 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
     pure $
       Just
         Domain.Types.PurchasedPass.PurchasedPass
-          { applicableVehicleServiceTiers = applicableVehicleServiceTiers,
+          { activatedAt = activatedAt,
+            applicableVehicleServiceTiers = applicableVehicleServiceTiers,
             benefitDescription = benefitDescription,
             benefitType = benefitType,
             benefitValue = benefitValue,
             currentPaymentOrderId = Kernel.Types.Id.Id <$> currentPaymentOrderId,
             deviceId = deviceId,
-            deviceSwitchCount = fromMaybe 0 deviceSwitchCount,
+            deviceSwitchCount = (fromMaybe 0 deviceSwitchCount),
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             maxValidDays = maxValidDays,
@@ -45,6 +47,7 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
             startDate = startDate,
             status = status,
             usedTripCount = usedTripCount,
+            vehicleType = Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS vehicleType,
             verificationValidity = Kernel.Prelude.fromMaybe 9000 verificationValidity,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -53,7 +56,8 @@ instance FromTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass 
 instance ToTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass where
   toTType' (Domain.Types.PurchasedPass.PurchasedPass {..}) = do
     Beam.PurchasedPassT
-      { Beam.applicableVehicleServiceTiers = applicableVehicleServiceTiers,
+      { Beam.activatedAt = activatedAt,
+        Beam.applicableVehicleServiceTiers = applicableVehicleServiceTiers,
         Beam.benefitDescription = benefitDescription,
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,
@@ -80,6 +84,7 @@ instance ToTType' Beam.PurchasedPass Domain.Types.PurchasedPass.PurchasedPass wh
         Beam.startDate = startDate,
         Beam.status = status,
         Beam.usedTripCount = usedTripCount,
+        Beam.vehicleType = Kernel.Prelude.Just vehicleType,
         Beam.verificationValidity = Just verificationValidity,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

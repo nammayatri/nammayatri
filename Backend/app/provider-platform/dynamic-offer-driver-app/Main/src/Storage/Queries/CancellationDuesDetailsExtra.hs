@@ -15,17 +15,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationDuesDetails as Beam
 import Storage.Queries.OrphanInstances.CancellationDuesDetails
 
-updateAllPendingToPaidByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id.Id DRD.RiderDetails -> m ()
-updateAllPendingToPaidByRiderId riderId = do
-  _now <- getCurrentTime
-  updateWithKV
-    [Se.Set Beam.paymentStatus DCDD.PAID, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.riderId $ Se.Eq (Id.getId riderId),
-          Se.Is Beam.paymentStatus $ Se.Eq DCDD.PENDING
-        ]
-    ]
-
 findAllPendingByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id.Id DRD.RiderDetails -> m [DCDD.CancellationDuesDetails]
 findAllPendingByRiderId riderId = do
   findAllWithKV

@@ -34,7 +34,9 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.OnCancel as OC
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
@@ -72,6 +74,7 @@ cancel ::
 cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
     transactionId <- Utils.getTransactionId reqV2.cancelReqContext
+    L.setOptionLocal TxnIdKey transactionId
     Utils.withTransactionIdLogTag transactionId $ do
       logTagInfo "Cancel APIV2 Flow" "Reached"
       dCancelReq <- ACL.buildCancelReqV2 reqV2

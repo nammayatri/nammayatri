@@ -228,13 +228,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                   cancellationCharges = cancellationDues,
                   ..
                 }
-        -- calDisputeChances <-
-        --   if thresholdConfig.cancellationFee == 0.0
-        --     then do
-        --       logWarning "Unable to calculate dispute chances used"
-        --       return 0
-        --     else do
-        --       return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
         QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
@@ -250,7 +243,6 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                 appBackendBapInternal.apiKey
                 appBackendBapInternal.url
                 (CallBAPInternal.UpdateCancellationFeeStatusReq {bppRideIds = bppRideIds})
-      -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
 
@@ -872,6 +864,18 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
+
+    -- Stripe payment charge (card / online rides only; opt-in via paymentChargeBearer).
+    -- P = paymentChargeRate% of the online cash-in total; posts SellerExpense → SellerLiability
+    -- plus the bearer's funding leg (recordStripeChargeLedger). Reuses the ride-settlement ctx,
+    -- whose counterparty is already DRIVER/FLEET_OWNER so the driver funding leg is correct.
+    whenJust transporterConfig.driverWalletConfig.paymentChargeBearer $ \paymentBearer ->
+      when isOnline $ do
+        let paymentRate = fromMaybe 0 transporterConfig.driverWalletConfig.paymentChargeRate
+            onlineCashInTotal = baseFare + taxAmount + tollWithVat + parkingWithVat + customerDiscountAmount + tipAmount
+            paymentChargeAmount = onlineCashInTotal * realToFrac paymentRate / 100
+        recordStripeChargeLedger ctx (paymentBearerToFunder paymentBearer) paymentChargeAmount walletReferencePGPaymentCharges
+          >>= fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e))
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId

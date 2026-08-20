@@ -65,6 +65,7 @@ data DriverInformationT f = DriverInformationT
     enableForAirport :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AirportRestrictionType),
     enabled :: B.C f Kernel.Prelude.Bool,
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    enabledReasonFlag :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.EnabledReasonFlag),
     extraFareMitigationFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     firstVerifiedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     forwardBatchingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

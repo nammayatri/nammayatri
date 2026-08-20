@@ -9,18 +9,21 @@ import qualified Domain.Types.PassType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PassTypeT f = PassTypeT
   { catchline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    maxPhotoChangeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     name :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     order :: B.C f Kernel.Prelude.Int,
     passCategoryId :: B.C f Kernel.Prelude.Text,
     passEnum :: B.C f (Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum),
+    photoReUploadTimeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     title :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

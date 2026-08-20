@@ -8,6 +8,7 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
@@ -157,8 +158,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, serviceTier = serviceTier, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> m ()
-confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId mbVehicleNumber =
+confirm :: JL.ConfirmFlow m r c => Bool -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe (Id DPPP.PurchasedPassPayment) -> m ()
+confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer mbIsMockPayment mbTripId mbVehicleNumber mbPurchasedPassPaymentId =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -207,7 +208,8 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               isSingleMode,
               mbEnableOffer,
               categorySelectionReq,
-              mbIsMockPayment
+              mbIsMockPayment,
+              mbPurchasedPassPaymentId
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -225,7 +227,8 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               isSingleMode,
               mbEnableOffer,
               categorySelectionReq,
-              mbIsMockPayment
+              mbIsMockPayment,
+              mbPurchasedPassPaymentId
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -244,5 +247,6 @@ confirm forcedBooked bookLater JL.LegInfo {..} crisSdkResponse categorySelection
               mbEnableOffer,
               mbIsMockPayment,
               mbTripId,
-              mbVehicleNumber
+              mbVehicleNumber,
+              mbPurchasedPassPaymentId
             }

@@ -565,3 +565,14 @@ ALTER TABLE atlas_app.booking ADD COLUMN vehicle_service_tier_luggage_capacity i
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN driver_cancellation_not_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN is_whatsapp_request boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN payment_charge_bearer text ;
+ALTER TABLE atlas_app.booking ADD COLUMN payment_charge double precision ;

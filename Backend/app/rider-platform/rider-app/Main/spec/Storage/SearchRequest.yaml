@@ -84,6 +84,10 @@ SearchRequest:
     isAdvanceBookingEnabled: Maybe Bool
     isMeterRideSearch: Maybe Bool
     isDashboardRequest: Maybe Bool
+    # True when this search originated from the WhatsApp bot (WhatsappBot/Adapter/Backend.hs's
+    # runSearch), so it can be traced/counted at the source. Set once here, copied onto
+    # Booking at confirm time (SharedLogic/Confirm.hs), same pattern as isDashboardRequest.
+    isWhatsappRequest: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
     placeNameSource:  Maybe Text
     initiatedBy: Maybe TripParty
@@ -284,8 +288,13 @@ SearchRequest:
     # forced form is required for the KV secondary-key list to include it.
     parentSearchRequestId: "!SecondaryKey"
 
+  extraIndexes:
+    - columns: [parentSearchRequestId]
+
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+    - NO_DEFAULT_INDEXES
 
 SearchRequestPartiesLink:
   fields:

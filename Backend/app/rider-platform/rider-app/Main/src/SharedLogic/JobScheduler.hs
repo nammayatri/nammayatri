@@ -46,7 +46,6 @@ data RiderJobType
   | CheckExotelCallStatusAndNotifyBPP
   | SafetyCSAlert
   | ExecutePaymentIntent
-  | CancelExecutePaymentIntent
   | ExecuteCashRideCashbackPayout
   | OtherJobTypes
   | MetroIncentivePayout
@@ -96,7 +95,6 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SMetroIncentivePayout jobData = AnyJobInfo <$> restoreJobInfo SMetroIncentivePayout jobData
   restoreAnyJobInfo SScheduledRidePopupToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRidePopupToRider jobData
   restoreAnyJobInfo SExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SExecutePaymentIntent jobData
-  restoreAnyJobInfo SCancelExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SCancelExecutePaymentIntent jobData
   restoreAnyJobInfo SExecuteCashRideCashbackPayout jobData = AnyJobInfo <$> restoreJobInfo SExecuteCashRideCashbackPayout jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
@@ -321,19 +319,6 @@ data ExecutePaymentIntentJobData = ExecutePaymentIntentJobData
 instance JobInfoProcessor 'ExecutePaymentIntent
 
 type instance JobContent 'ExecutePaymentIntent = ExecutePaymentIntentJobData
-
-data CancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData
-  { bookingId :: Id Booking,
-    personId :: Id Person,
-    cancellationAmount :: PriceAPIEntity,
-    cancellationTax :: HighPrecMoney,
-    rideId :: Id DRide.Ride
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance JobInfoProcessor 'CancelExecutePaymentIntent
-
-type instance JobContent 'CancelExecutePaymentIntent = CancelExecutePaymentIntentJobData
 
 data ExecuteCashRideCashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData
   { personId :: Id Person

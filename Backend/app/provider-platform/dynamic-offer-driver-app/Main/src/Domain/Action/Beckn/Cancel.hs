@@ -41,7 +41,6 @@ import EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.External.Types (ServiceFlow)
-import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -61,8 +60,6 @@ import SharedLogic.Cancel
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.FareCalculator as FareCalculator
-import SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
@@ -294,42 +291,6 @@ cancel req merchant booking mbActiveSearchTry = do
             ..
           }
 
-_customerCancellationChargesCalculation' :: SRB.Booking -> Maybe SRide.Ride -> Maybe Meters -> Flow (Maybe PriceAPIEntity)
-_customerCancellationChargesCalculation' booking mbRide currDistanceToPickup = do
-  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  let mbCancellationAndNoShowConfigs = (.cancellationFarePolicy) =<< mbFarePolicy
-  case (mbRide, mbCancellationAndNoShowConfigs) of
-    (Just ride, Just cancellationAndNoShowConfigs) -> do
-      driverDetails <- QDI.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      timeSpentByDriver <- getTimeSpentByDriver ride
-      initialDistanceToPickup <- getInitialDistanceToPickup ride
-      let isTimeSpentByDriverLessThanThreshold = timeSpentByDriver <= (cancellationAndNoShowConfigs.freeCancellationTimeSeconds.getSeconds)
-      if isTimeSpentByDriverLessThanThreshold || driverDetails.hasAdvanceBooking
-        then return Nothing
-        else do
-          logDebug $ "Params passed to calculateCancellationCharges: cancellationAndNoShowConfigs " <> show cancellationAndNoShowConfigs <> "| initialDistanceToPickup: " <> show initialDistanceToPickup <> "| currDistanceToPickup: " <> show currDistanceToPickup <> "| timeSpentByDriver: " <> show timeSpentByDriver <> "| estimatedFare: " <> show booking.estimatedFare
-          let cancellationCharges = FareCalculator.calculateCancellationCharges cancellationAndNoShowConfigs initialDistanceToPickup currDistanceToPickup timeSpentByDriver booking.estimatedFare
-          QRide.updateCancellationFeeIfCancelledField (Just cancellationCharges) Nothing ride.id
-          return $ Just $ PriceAPIEntity {amount = cancellationCharges, currency = booking.currency}
-    _ -> do
-      logError $ "customerCancellationChargesCalculation: Ride or cancellation and now show configs not found for fare policy" <> show mbFarePolicy
-      return Nothing
-  where
-    getInitialDistanceToPickup ride = do
-      if ride.isAdvanceBooking
-        then do
-          forM ride.previousRideTripEndPos $ \location -> do
-            driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
-        else return booking.distanceToPickup
-    getTimeSpentByDriver ride = do
-      now <- getCurrentTime
-      if ride.isAdvanceBooking
-        then do
-          case ride.previousRideTripEndTime of
-            Just endTime -> return $ roundToIntegral $ diffUTCTime now endTime
-            Nothing -> return $ roundToIntegral $ diffUTCTime now ride.createdAt
-        else return $ roundToIntegral $ diffUTCTime now ride.createdAt
-
 -- Cancel Search is only allowed to be called before Init happens on Driver App (i.e, when booking is created)
 cancelSearch ::
   ( CacheFlow m r,
@@ -366,6 +327,7 @@ cancelSearch merchantId searchTry = do
       -- free the driver's parallel-request slot; it otherwise stays consumed
       -- against maxParallelSearchRequests until the entry's validTill passes
       DP.removeSearchReqIdFromMap merchantId driverReq.driverId driverReq.requestId
+      DP.decrementSrdSentCount driverReq.createdAt driverReq.driverId
       whenJust mbTransporterConfig $ \transporterConfig ->
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverReq.driverId transporterConfig False False False True

@@ -25,6 +25,8 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Tools.Logging
 import Kernel.Types.Beckn.Ack
@@ -53,6 +55,7 @@ status ::
 status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel "bpp-status-api" $ do
     txnId <- Utils.getTransactionId reqV2.statusReqContext
+    L.setOptionLocal TxnIdKey txnId
     Utils.withTransactionIdLogTag txnId $ do
       logDebug $ "BPP_STATUS_API_DEBUG: Received status request for transactionId: " <> txnId
       logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2

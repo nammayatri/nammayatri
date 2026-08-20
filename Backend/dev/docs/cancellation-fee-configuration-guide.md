@@ -174,6 +174,7 @@ The dynamic logic receives these variables for writing conditional rules:
 | `cancellationDues` | Number | Rider's pending cancellation dues |
 | `tripCategory` | Object | Trip type info |
 | `callAttemptByDriver` | Bool | Whether driver called rider |
+| `pickupStallCase` | String? | `STALLED` / `RETREATING` / `LOCATION_DARK` when the pickup progress monitor flagged the driver before the cancellation, else null. Also available to `CANCELLATION_COIN_POLICY`. Use it to zero the customer charge (and penalise driver coins) when the driver stalled. |
 
 #### Example: Conditional Overrides
 

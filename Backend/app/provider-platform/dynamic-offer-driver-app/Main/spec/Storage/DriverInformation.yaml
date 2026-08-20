@@ -65,6 +65,9 @@ DriverInformation:
     DisabledReasonFlag:
       enum: "FleetDisabled,AdminDisabled,DriverDisabled"
       derive: "HttpInstance"
+    EnabledReasonFlag:
+      enum: "AdminEnabled"
+      derive: "HttpInstance"
     MapProvider:
       enum: "GOOGLE_MAPS, WAZE, APPLE_MAPS"
       derive: "HttpInstance"
@@ -134,6 +137,7 @@ DriverInformation:
     weeklyCancellationRateBlockingCooldown: Maybe UTCTime
     blockReasonFlag: Maybe BlockReasonFlag
     disabledReasonFlag: Maybe DisabledReasonFlag
+    enabledReasonFlag: Maybe EnabledReasonFlag
     initiatedBy: Maybe InitiatedBy
     payoutRegAmountRefunded: Maybe HighPrecMoney
     driverTripEndLocation: Maybe LatLong

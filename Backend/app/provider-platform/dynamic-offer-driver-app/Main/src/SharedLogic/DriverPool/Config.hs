@@ -128,6 +128,7 @@ instance Default DriverPoolConfig where
         driverRequestCountLimit = 15,
         driverToDestinationDistanceThreshold = Common.Meters 1000,
         driverToDestinationDuration = Common.Seconds 900,
+        enableEarlyBatchAdvanceOnFullReject = Nothing,
         enableForwardBatching = True,
         id = Id "default-driver-pool-config-id",
         maxDriverQuotesRequired = 5,
@@ -144,6 +145,7 @@ instance Default DriverPoolConfig where
         radiusStepSize = Nothing,
         scheduleTryTimes = [1, 2, 3],
         singleBatchProcessTime = Common.Seconds 120,
+        softMaxParallelSearchRequests = Nothing,
         thresholdToIgnoreActualDistanceThreshold = Nothing,
         timeBounds = Unbounded, -- Replace with actual default for `TimeBound`
         tripCategory = "DefaultTripCategory",
@@ -153,7 +155,9 @@ instance Default DriverPoolConfig where
         vehicleVariant = Nothing,
         dynamicBatchSize = V.singleton 1,
         selfRequestIfRiderIsDriver = False,
-        enablePriorityTagSplit = Nothing
+        enablePriorityTagSplit = Nothing,
+        srdCountersBulkChunkSize = Nothing,
+        idleBulkChunkSize = Nothing
       }
 
 getDriverPoolConfigFromDB ::

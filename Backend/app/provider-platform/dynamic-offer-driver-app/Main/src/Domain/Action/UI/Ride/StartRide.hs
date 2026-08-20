@@ -40,7 +40,9 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Trip
 import qualified Domain.Types.VehicleVariant as Veh
 import Environment (Flow)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
@@ -186,6 +188,7 @@ startRideHandler ServiceHandle {..} rideId req = do
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  L.setOptionLocal TxnIdKey booking.transactionId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
   when (fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide) $
     AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driverId booking

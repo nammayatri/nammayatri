@@ -64,8 +64,10 @@ import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
 import Domain.Utils (mapConcurrently)
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -271,6 +273,7 @@ getRouteServiceability merchantId merchantOpCityId _distanceUnit fromLocation to
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = do
+  L.setOptionLocal TxnIdKey sReq.transactionId
   bapMetadata <- mkBapMetaData
   CQBapMetaData.createIfNotPresent bapMetadata (Id sReq.bapId) (show Domain.MOBILITY)
   searchMetricsMVar <- Metrics.startSearchMetrics merchant.name

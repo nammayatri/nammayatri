@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import Lib.Types.GateInfo (GateConfig)
 
 -- | The `point` column historically stored a serialized 'LatLong' produced by
 --   persistent's @derivePersistField@ (i.e. @T.pack . show@). We preserve that
@@ -47,6 +48,13 @@ decodeBoolMap (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
 
 encodeBoolMap :: Maybe (Map.Map Text Bool) -> Maybe Text
 encodeBoolMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
+
+decodeGateConfig :: Maybe Text -> Maybe GateConfig
+decodeGateConfig Nothing = Nothing
+decodeGateConfig (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
+
+encodeGateConfig :: Maybe GateConfig -> Maybe Text
+encodeGateConfig = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
 
 decodeTextMap :: Maybe Text -> Maybe (Map.Map Text Text)
 decodeTextMap Nothing = Nothing

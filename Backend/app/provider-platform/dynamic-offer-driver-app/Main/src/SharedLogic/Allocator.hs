@@ -105,6 +105,7 @@ data AllocatorJobType
   | AggregatedCommissionInvoiceCreation
   | SAPSubscriptionPurchaseDispatch
   | SAPPGSettlementDispatch
+  | ConnectAccountChargeDeduction
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -164,6 +165,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
   restoreAnyJobInfo SSAPSubscriptionPurchaseDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPSubscriptionPurchaseDispatch jobData
   restoreAnyJobInfo SSAPPGSettlementDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPPGSettlementDispatch jobData
+  restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -199,7 +201,12 @@ type instance JobContent 'QuarterlyUpdateTag = LYT.UpdateKaalBasedTagsData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
-    estimatedRideDistance :: Maybe Meters
+    estimatedRideDistance :: Maybe Meters,
+    -- | Generation token of the batch chain this job belongs to. A job whose epoch is behind
+    -- the search try's current one has been superseded by an early batch advance and must
+    -- terminate without rescheduling, so only one chain stays live. Nothing == epoch 0, which
+    -- keeps jobs enqueued by older deployments valid.
+    batchEpoch :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -609,6 +616,16 @@ data ScheduledBatchPayoutJobData = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'ScheduledBatchPayout
 
 type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
+
+data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ConnectAccountChargeDeduction
+
+type instance JobContent 'ConnectAccountChargeDeduction = ConnectAccountChargeDeductionJobData
 
 data SettlementReportIngestionJobData = SettlementReportIngestionJobData
   { merchantId :: Id DM.Merchant,

@@ -76,12 +76,12 @@ getFRFSTicketServiceCustomerFrfsRoute merchantShortId _opCity customerId routeCo
 postFRFSTicketServiceCustomerFrfsSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes)
 postFRFSTicketServiceCustomerFrfsSearch merchantShortId _opCity customerId city integratedBppConfigId newServiceTiers vehicleType req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  DFrfs.postFrfsSearch (Just customerId, merchant.id) city integratedBppConfigId newServiceTiers vehicleType req
+  DFrfs.postFrfsSearch (Just customerId, merchant.id) city Nothing integratedBppConfigId newServiceTiers vehicleType req
 
 getFRFSTicketServiceCustomerFrfsSearchQuote :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes])
 getFRFSTicketServiceCustomerFrfsSearchQuote merchantShortId _opCity customerId searchId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  DFrfs.getFrfsSearchQuote (Just customerId, merchant.id) searchId
+  DFrfs.getFrfsSearchQuote (Just customerId, merchant.id) searchId Nothing Nothing
 
 postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)
 postFRFSTicketServiceCustomerFrfsQuoteV2Confirm merchantShortId _opCity customerId quoteId isMockPayment mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @Domain.Types.Person.Person) <$> mbRequestorId) $ do

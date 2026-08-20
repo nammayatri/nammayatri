@@ -22,6 +22,8 @@ module Domain.Action.Dashboard.Management.NammaTag
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
     postNammaTagAppDynamicLogicUpsertLogicRollout,
+    postNammaTagAppDynamicLogicUpdateExperimentGroup,
+    getNammaTagAppDynamicLogicExperimentGroups,
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
@@ -399,7 +401,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   resp <- case req.domain of
     LYT.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False 0 (Just 0))
     LYT.CANCELLATION_COIN_POLICY -> do
       logicData :: CancellationCoinData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy CancellationCoinResult) transporterConfig.referralLinkPassword req logicData
@@ -625,6 +627,18 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
       logDebug $ "CP Log: Cleared Cache for " <> show cfgType
     _ -> pure ()
   pure result
+
+postNammaTagAppDynamicLogicUpdateExperimentGroup :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UpdateRolloutGroupReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagAppDynamicLogicUpdateExperimentGroup merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.postAppDynamicLogicUpdateExperimentGroup (cast merchantOpCityId) req
+
+getNammaTagAppDynamicLogicExperimentGroups :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe LYT.LogicDomain -> Environment.Flow [LYT.RolloutGroupInfo]
+getNammaTagAppDynamicLogicExperimentGroups merchantShortId opCity mbDomain = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.getExperimentGroups (cast merchantOpCityId) mbDomain
 
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYT.LogicDomain -> Environment.Flow LYT.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do
@@ -1017,7 +1031,7 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
       cfgs <- getConfig (TagActionNotificationConfigDimensions {merchantOperatingCityId = mocId, notificationKey = dimLookup "notificationKey" dims}) (Just (SQTANC.findAllByMerchantOperatingCityId (cast merchantOpCityId)))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.FleetOwnerDocumentVerificationConfig -> do
-      cfgs <- getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, role = dimLookup "role" dims}) (Just (SQFODVC.findAllByMerchantOpCityId Nothing Nothing merchantOpCityId))
+      cfgs <- getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, role = dimLookup "role" dims}) Nothing
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.CoinsConfig -> do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
@@ -1128,6 +1142,7 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity req = do
       cfg :: DDVC.DocumentVerificationConfig <- parseConfigData req.configData
       SQDVC.create cfg
       invalidateConfigInMem LYT.DocumentVerificationConfig
+      invalidateConfigInMem LYT.FleetOwnerDocumentVerificationConfig
     LYT.GoHomeConfig -> do
       cfg :: DGHC.GoHomeConfig <- parseConfigData req.configData
       existing <- SQGHC.findByMerchantOpCityId merchantOpCityId

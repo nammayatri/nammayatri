@@ -170,7 +170,7 @@ disableDriverForMandatoryReminder transporterConfig driverId now documentTypeNam
   when driverInfo.enabled $
     SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Expire (SGuard.TargetDriver driverId) $ do
       driverPersonForDisable <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      SFlags.markDisabledFlags (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) driverPersonForDisable (SFlags.AdminDisable DDriverInfoDI.DriverDisabled)
+      SFlags.markEnableDisableReasonFlags (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) driverPersonForDisable (SFlags.AdminDisable DDriverInfoDI.DriverDisabled)
       logInfo $ "Disabled driver " <> driverId.getId <> " due to expired mandatory " <> documentTypeName <> " reminder"
 
   let isActive = False

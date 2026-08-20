@@ -299,6 +299,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.enableForAirport (Kernel.Prelude.Just enableForAirport),
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
+      Se.Set Beam.enabledReasonFlag enabledReasonFlag,
       Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag,
       Se.Set Beam.firstVerifiedAt firstVerifiedAt,
       Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),

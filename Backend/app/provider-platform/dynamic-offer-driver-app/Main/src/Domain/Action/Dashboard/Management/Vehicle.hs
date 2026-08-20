@@ -5,6 +5,7 @@ import qualified Dashboard.Common as Common
 import qualified Dashboard.Common.Driver as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Types.DriverRCAssociation as DDRCA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.FleetRCAssociation as DFRCA
@@ -92,10 +93,10 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
   vehicleNumber <- decrypt rc.certificateNumber
   recentFleetInfo <- case HM.lookup rc.id fleetAssocByRc of
     Nothing -> pure Nothing
-    Just fra -> mkAssociationInfo (HM.lookup fra.fleetOwnerId personById) (HM.lookup fra.fleetOwnerId fleetOwnerInfoById) fra.associatedTill
+    Just fra -> mkAssociationInfo (HM.lookup fra.fleetOwnerId personById) (HM.lookup fra.fleetOwnerId fleetOwnerInfoById) fra.associatedTill True
   linkedDriverInfo <- case HM.lookup rc.id driverAssocByRc of
     Nothing -> pure Nothing
-    Just dra -> mkAssociationInfo (HM.lookup dra.driverId personById) Nothing dra.associatedTill
+    Just dra -> mkAssociationInfo (HM.lookup dra.driverId personById) Nothing dra.associatedTill dra.isRcActive
   pure
     VehicleAPI.VehicleListItem
       { rcId = rc.id.getId,
@@ -104,6 +105,7 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         vehicleModel = rc.vehicleModel,
         vehicleColor = rc.vehicleColor,
         vehicleClass = rc.vehicleClass,
+        vehicleVariant = DCommon.castVehicleVariantDashboard rc.vehicleVariant,
         verified = rc.verified,
         approved = rc.approved,
         createdAt = rc.createdAt,
@@ -111,10 +113,11 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         linkedDriverInfo
       }
 
-mkAssociationInfo :: Maybe DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe UTCTime -> Flow (Maybe Common.DriverAssociationInfo)
-mkAssociationInfo Nothing _ _ = pure Nothing
-mkAssociationInfo (Just person) mbFoi associatedTill = do
+mkAssociationInfo :: Maybe DP.Person -> Maybe DFOI.FleetOwnerInformation -> Maybe UTCTime -> Bool -> Flow (Maybe Common.DriverAssociationInfo)
+mkAssociationInfo Nothing _ _ _ = pure Nothing
+mkAssociationInfo (Just person) mbFoi associatedTill isActive = do
   mobileNumber <- mapM decrypt person.mobileNumber
+  now <- getCurrentTime
   pure $
     Just
       Common.DriverAssociationInfo
@@ -125,8 +128,8 @@ mkAssociationInfo (Just person) mbFoi associatedTill = do
           fleetName = mbFoi >>= (.fleetName),
           verified = (.verified) <$> mbFoi,
           enabled = (.enabled) <$> mbFoi,
-          isActive = True,
-          isAssociated = True,
+          isActive,
+          isAssociated = maybe False (> now) associatedTill,
           associatedTill,
           requestReason = Nothing
         }

@@ -627,7 +627,7 @@ DocumentVerificationConfig:
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
-      enum: "Driver,Vehicle,Permission,Training"
+      enum: "Driver,Vehicle,Permission,Training,Fleet"
     DocumentFlowGrouping:
       enum: "COMMON,STANDARD"
     DocumentApplicableType:
@@ -771,15 +771,15 @@ DocumentVerificationConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  configPilot:
-    configType: DocumentVerificationConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.DocumentVerificationConfig
-    filterDimensions:
-      - documentType
-      - vehicleCategory
+#   configPilot:
+#     configType: DocumentVerificationConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.DocumentVerificationConfig
+#     filterDimensions:
+#       - documentType
+#       - vehicleCategory
 
 VehiclePermit:
   tableName: vehicle_permit
@@ -1358,7 +1358,7 @@ FleetOwnerDocumentVerificationConfig:
     maxRetryCount: Int
     doStrictVerifcation: Bool
     order: Int
-    role: Role
+    role: "[Role]"
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
     documentOnboardingStage: Maybe DocumentOnboardingStage
     rolesAllowedToUploadDocument: Maybe [Role]
@@ -1373,18 +1373,23 @@ FleetOwnerDocumentVerificationConfig:
     documentType: PrimaryKey
     role: PrimaryKey
   sqlType:
+    role: text
     dependencyDocumentType: text[]
     rolesAllowedToUploadDocumentText: text[]
     documentFieldsJSON: json
   beamFields:
+    role:
+      role: Role
     rolesAllowedToUploadDocument:
       rolesAllowedToUploadDocumentText: Maybe [Text]
     documentFields:
       documentFieldsJSON: Maybe Value
   toTType:
+    role: fromMaybe Domain.Types.Person.FLEET_OWNER (listToMaybe role)|E
     rolesAllowedToUploadDocumentText: (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument|E
     documentFieldsJSON: Storage.Queries.Transformers.DocumentVerificationConfig.mkDocumentFieldsJSON documentFields|E
   fromTType:
+    role: "[role]|E"
     rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
     documentFields: Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON documentFieldsJSON|E
   queries:
@@ -1394,18 +1399,14 @@ FleetOwnerDocumentVerificationConfig:
       orderBy:
         field: order
         order: asc
-    findAllByMerchantOpCityIdAndRole:
-      kvFunction: findAllWithKV
-      where:
-        and: [merchantOperatingCityId, role]
 
-  configPilot:
-    configType: FleetOwnerDocumentVerificationConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
-    filterDimensions: [documentType, role]
+#   configPilot:
+#     configType: FleetOwnerDocumentVerificationConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+#     filterDimensions: [documentType, role]
 
 AadhaarCard:
   tableName: aadhaar_card
@@ -1682,6 +1683,10 @@ CommonDriverOnboardingDocuments:
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
       where: id
+  extraIndexes:
+    - columns: [rcId]
+  extraOperations:
+    - GENERATE_INDEXES
 
 MorthVerification:
   tableName: morth_verification

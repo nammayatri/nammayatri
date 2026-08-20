@@ -119,7 +119,6 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendCustomerRefund
           & putJobHandlerInListWrapper flowRt env sendScheduledRidePopupToRider
           & putJobHandlerInListWrapper flowRt env executePaymentIntentJob
-          & putJobHandlerInListWrapper flowRt env cancelExecutePaymentIntentJob
           & putJobHandlerInListWrapper flowRt env executeCashRideCashbackPayoutJob
           & putJobHandlerInListWrapper flowRt env postRideSafetyNotification
           & putJobHandlerInListWrapper flowRt env runDailyJob

@@ -24,7 +24,9 @@ import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -52,6 +54,7 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch reqV2 = withFlowHandlerAPI $ d
     throwError $ AuthBlocked "Invalid sync_search internal api key"
   unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
   transactionId <- Utils.getTransactionId reqV2.searchReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "SyncSearchV2 Internal Flow" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
     let context = reqV2.searchReqContext

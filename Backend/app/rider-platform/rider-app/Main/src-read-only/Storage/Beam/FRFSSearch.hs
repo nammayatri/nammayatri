@@ -23,6 +23,7 @@ data FRFSSearchT f = FRFSSearchT
     fromStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     fromStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    hasApplicablePass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

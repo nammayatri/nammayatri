@@ -28,6 +28,7 @@ packages:
   lib/config-pilot
   lib/finance-kernel
   lib/producer
+  lib/whatsapp-bot
   lib/utils
   lib/external
   lib/webhook
@@ -67,6 +68,18 @@ jobs: 6
 --
 -- optimization: 0
 --
+-- Build and run test-suites. Without this, `cabal build all` silently skips
+-- every test stanza in the project — including whatsapp-bot's golden replay
+-- suite, which is the equivalence oracle for the TypeScript port.
+--
+-- Scoped to whatsapp-bot rather than set project-wide: a top-level `tests: True`
+-- also enables lib/location-updates' suite, which depends on `tasty-hspec` — a
+-- package the pinned nix package set does not provide, so the solver fails
+-- before anything builds. Enabling the other suites is a separate change that
+-- has to fix their dependencies first.
+package whatsapp-bot
+  tests: True
+
 -- ## Enables flags in the project.
 -- #  +flagname enables the flag.
 -- #  -flagname disables it.

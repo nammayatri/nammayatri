@@ -93,6 +93,7 @@ onSearch ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
+    EncFlow m r,
     HasShortDurationRetryCfg r c,
     Metrics.HasBAPMetrics m r
   ) =>
@@ -116,7 +117,7 @@ onSearch onSearchReq validatedReq = do
           return $ station {stationCode = fromMaybe station.stationCode stationCode}
       return $ quote {stations = stations}
 
-onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DIBC.IntegratedBPPConfig -> m ()
+onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DIBC.IntegratedBPPConfig -> m ()
 onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just onSearchReq.transactionId)
@@ -165,6 +166,7 @@ upsertFareCache ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
+    EncFlow m r,
     HasShortDurationRetryCfg r c,
     Metrics.HasBAPMetrics m r
   ) =>
@@ -349,7 +351,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
               ((,) <$> (decodeFromText =<< quote.routeStationsJson) <*> (listToMaybe journeyLeg.routeDetails))
         _ -> True
 
-mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m (Quote.FRFSQuote, [FRFSQuoteCategory])
+mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m (Quote.FRFSQuote, [FRFSQuoteCategory])
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
@@ -360,6 +362,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
   uid <- generateGUID
   now <- getCurrentTime
+  offerSegment <- SFU.getQuoteOfferSegment search.riderId search.merchantOperatingCityId vehicleType (Just routeStationsJSON)
   let mbAdultPrice = find (\category -> category.category == ADULT) categories <&> (.price)
       (discountedTickets, eventDiscountAmount) =
         case mbAdultPrice of
@@ -402,6 +405,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.vehicleNumber = search.vehicleNumber,
             bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
             oldCacheDump = Nothing,
+            Quote.offerSegment = offerSegment,
             ..
           }
 
@@ -510,6 +514,7 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.searchId = quotesFromCache.searchId,
       Quote.stationsJson = quotesFromCache.stationsJson,
       Quote.routeStationsJson = quotesFromOnSearch.routeStationsJson,
+      Quote.offerSegment = quotesFromOnSearch.offerSegment,
       Quote.toStationCode = quotesFromCache.toStationCode,
       Quote.validTill = quotesFromOnSearch.validTill,
       Quote.vehicleType = quotesFromCache.vehicleType,

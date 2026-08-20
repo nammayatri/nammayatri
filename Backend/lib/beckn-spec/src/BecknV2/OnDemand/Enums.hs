@@ -195,6 +195,7 @@ data QuoteBreakupTitle
   | INSURANCE_CHARGES
   | CARD_CHARGES_ON_FARE
   | CARD_CHARGES_FIXED
+  | PAYMENT_CHARGE -- Stripe payment-gateway charge shown as a customer-visible fare line (when the rider bears it)
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
   | RIDE_STOP_CHARGES

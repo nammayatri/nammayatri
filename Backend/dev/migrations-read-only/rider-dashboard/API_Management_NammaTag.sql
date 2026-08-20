@@ -98,3 +98,15 @@ INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"PostNammaTagConfigPilotActionChange","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'NAMMA_TAG' AND T1.user_action_type = 'APP_DYNAMIC_LOGIC_VERIFY' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagAppDynamicLogicUpdateExperimentGroup","migration":"capability","param":"system-config.dynamic_logic.write","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPDATE_EXPERIMENT_GROUP' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetNammaTagAppDynamicLogicExperimentGroups","migration":"capability","param":"system-config.dynamic_logic.read","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.read', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_EXPERIMENT_GROUPS' ) ON CONFLICT DO NOTHING;

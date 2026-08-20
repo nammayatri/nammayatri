@@ -95,7 +95,7 @@ docAppliesToDriver (Just isFleetDriver) applicableTo = case applicableTo of
 findFleetConfigForRole :: DVC.DocumentType -> DP.Role -> [FODVC.FleetOwnerDocumentVerificationConfig] -> Maybe FODVC.FleetOwnerDocumentVerificationConfig
 findFleetConfigForRole docType role fleetConfigs
   | SDO.isFleetRole role =
-    find (\c -> c.documentType == docType && c.role == role) fleetConfigs
+    find (\c -> c.documentType == docType && role `elem` c.role) fleetConfigs
       <|> find (\c -> c.documentType == docType) fleetConfigs
   | otherwise = find (\c -> c.documentType == docType) fleetConfigs
 
@@ -123,7 +123,7 @@ checkIfDocumentValid' ::
   Bool
 checkIfDocumentValid' _ _ _ _ _ _ VALID _ = True
 checkIfDocumentValid' mode _mbIsFleetDriver (Left fleetConfigs) role docType _category status _makeSelfieAadhaarPanMandatory = do
-  let mbConfig = find (\config -> config.documentType == docType && config.role == role) fleetConfigs
+  let mbConfig = find (\config -> config.documentType == docType && role `elem` config.role) fleetConfigs
       -- ForVerified uses isMandatory; ForEnabling uses isMandatoryForEnabling (falling back to isMandatory).
       isMandatoryForFleet config = case mode of
         ForVerified -> config.isMandatory

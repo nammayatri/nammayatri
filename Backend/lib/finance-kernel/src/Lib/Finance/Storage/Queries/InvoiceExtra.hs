@@ -4,11 +4,19 @@ import Data.Time (UTCTime (UTCTime), utctDay)
 import qualified Domain.Types.Invoice as DInvoiceSpec
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Id (Id, getId)
 import qualified Lib.Finance.Domain.Types.Invoice as DInvoice
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Beam.Invoice as Beam
 import Lib.Finance.Storage.Queries.OrphanInstances.Invoice ()
 import qualified Sequelize as Se
+
+findByIds ::
+  (BeamFlow.BeamFlow m r) =>
+  [Id DInvoice.Invoice] ->
+  m [DInvoice.Invoice]
+findByIds [] = pure []
+findByIds ids = findAllWithKV [Se.Is Beam.id $ Se.In (map getId ids)]
 
 -- | Find the latest invoice created today (for sequence number fallback).
 -- Filters by createdAt >= start of today, ordered by createdAt DESC, limit 1.

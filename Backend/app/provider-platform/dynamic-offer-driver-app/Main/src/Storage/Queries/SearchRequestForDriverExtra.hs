@@ -149,3 +149,9 @@ isDriverValidToCache validDeviceTypes driverDeviceType = do
 findAnyAcceptedBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m (Maybe SearchRequestForDriver)
 findAnyAcceptedBySTId (Id searchTryId) = do
   findOneWithKV [Se.And [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId, Se.Is BeamSRFD.response $ Se.Eq (Just Domain.Accept)]]
+
+-- | Every row of a search try, whatever its status or response — the per-batch breakdown the
+-- pool-stats endpoint reports. Unlike findAllActiveBySTId this keeps the rows already marked
+-- Inactive, which is exactly the answered ones we want to count.
+findAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m [SearchRequestForDriver]
+findAllBySTId (Id searchTryId) = findAllWithKV [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]

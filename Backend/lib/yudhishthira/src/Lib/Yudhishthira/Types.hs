@@ -45,6 +45,9 @@ module Lib.Yudhishthira.Types
     GetLogicsResp (..),
     LogicRolloutObject (..),
     RolloutVersion (..),
+    UpdateRolloutGroupObject (..),
+    UpdateRolloutGroupReq,
+    RolloutGroupInfo (..),
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
     TimeBoundResp,
@@ -307,6 +310,7 @@ data LogicDomain
   | CANCELLATION_COIN_POLICY
   | FARE_POLICY
   | CUMULATIVE_OFFER_POLICY
+  | FRFS_OFFER_SEGMENT_POLICY
   | OFFERS_FRAUD_CHECKS
   | DYNAMIC_PRICING_UNIFIED
   | PICKUP_ETA_CALCULATION
@@ -328,6 +332,7 @@ data LogicDomain
   | BEHAVIOR_RESOLUTION
   | CANCELLATION_REASONS
   | RIDE_FOOTNOTES_DISPLAY
+  | PASS_PURCHASE_ELIGIBILITY
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
@@ -348,6 +353,7 @@ instance Enumerable LogicDomain where
       FRFS_TICKET_CATEGORIES,
       CANCELLATION_COIN_POLICY,
       CUMULATIVE_OFFER_POLICY,
+      FRFS_OFFER_SEGMENT_POLICY,
       OFFERS_FRAUD_CHECKS,
       GPS_TOLL_BEHAVIOR,
       CANCELLATION_RATE_BEHAVIOR,
@@ -363,7 +369,8 @@ instance Enumerable LogicDomain where
       BEHAVIOR_COMMUNICATION,
       BEHAVIOR_RESOLUTION,
       CANCELLATION_REASONS,
-      RIDE_FOOTNOTES_DISPLAY
+      RIDE_FOOTNOTES_DISPLAY,
+      PASS_PURCHASE_ELIGIBILITY
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG [minBound .. maxBound]
@@ -394,6 +401,7 @@ generateLogicDomainShowInstances =
     ++ [show (UI_RIDER a b) | a <- a', b <- b']
     ++ [show CANCELLATION_COIN_POLICY]
     ++ [show CUMULATIVE_OFFER_POLICY]
+    ++ [show FRFS_OFFER_SEGMENT_POLICY]
     ++ [show OFFERS_FRAUD_CHECKS]
     ++ [show GPS_TOLL_BEHAVIOR]
     ++ [show CANCELLATION_RATE_BEHAVIOR]
@@ -412,6 +420,7 @@ generateLogicDomainShowInstances =
     ++ [show RIDE_FOOTNOTES_DISPLAY]
     ++ [show (INVOICE_TEMPLATE InvoiceTypeGeneric)]
     ++ [show (INVOICE_TEMPLATE (InvoiceTypeSpecific it)) | it <- invoiceTypes]
+    ++ [show PASS_PURCHASE_ELIGIBILITY]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
@@ -442,6 +451,7 @@ instance Show LogicDomain where
   show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
   show CANCELLATION_COIN_POLICY = "CANCELLATION-COIN-POLICY"
   show CUMULATIVE_OFFER_POLICY = "CUMULATIVE-OFFER-POLICY"
+  show FRFS_OFFER_SEGMENT_POLICY = "FRFS-OFFER-SEGMENT-POLICY"
   show OFFERS_FRAUD_CHECKS = "OFFERS-FRAUD-CHECKS"
   show GPS_TOLL_BEHAVIOR = "GPS-TOLL-BEHAVIOR"
   show CANCELLATION_RATE_BEHAVIOR = "CANCELLATION-RATE-BEHAVIOR"
@@ -459,6 +469,7 @@ instance Show LogicDomain where
   show CANCELLATION_REASONS = "CANCELLATION-REASONS"
   show RIDE_FOOTNOTES_DISPLAY = "RIDE-FOOTNOTES-DISPLAY"
   show (INVOICE_TEMPLATE scope) = "INVOICE-TEMPLATE_" ++ show scope
+  show PASS_PURCHASE_ELIGIBILITY = "PASS-PURCHASE-ELIGIBILITY"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -483,6 +494,8 @@ instance Read LogicDomain where
             [(CANCELLATION_COIN_POLICY, drop 1 rest)]
           "CUMULATIVE-OFFER-POLICY" ->
             [(CUMULATIVE_OFFER_POLICY, drop 1 rest)]
+          "FRFS-OFFER-SEGMENT-POLICY" ->
+            [(FRFS_OFFER_SEGMENT_POLICY, drop 1 rest)]
           "OFFERS-FRAUD-CHECKS" ->
             [(OFFERS_FRAUD_CHECKS, drop 1 rest)]
           "GPS-TOLL-BEHAVIOR" ->
@@ -515,6 +528,8 @@ instance Read LogicDomain where
             [(CANCELLATION_REASONS, drop 1 rest)]
           "RIDE-FOOTNOTES-DISPLAY" ->
             [(RIDE_FOOTNOTES_DISPLAY, drop 1 rest)]
+          "PASS-PURCHASE-ELIGIBILITY" ->
+            [(PASS_PURCHASE_ELIGIBILITY, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
@@ -781,12 +796,40 @@ instance HideSecrets LogicRolloutObject where
 data RolloutVersion = RolloutVersion
   { version :: Int,
     rolloutPercentage :: Int,
-    versionDescription :: Maybe Text
+    versionDescription :: Maybe Text,
+    experimentGroup :: Maybe Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets RolloutVersion where
   hideSecrets = identity
+
+type UpdateRolloutGroupReq = [UpdateRolloutGroupObject]
+
+data UpdateRolloutGroupObject = UpdateRolloutGroupObject
+  { domain :: LogicDomain,
+    version :: Int,
+    timeBounds :: Maybe Text,
+    experimentGroup :: Maybe Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateRolloutGroupReq where
+  hideSecrets = identity
+
+-- | Flat, read-only view of a domain's active rollouts and their experiment
+-- group tags (for a given city). Base and RUNNING rows are included; CONCLUDED /
+-- DISCARDED / REVERTED rows are excluded.
+data RolloutGroupInfo = RolloutGroupInfo
+  { domain :: LogicDomain,
+    timeBounds :: Text,
+    version :: Int,
+    rolloutPercentage :: Int,
+    experimentGroup :: Maybe Text,
+    experimentStatus :: Maybe ExperimentStatus,
+    isBaseVersion :: Maybe Bool
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 type AppDynamicLogicVersionResp = [AppDynamicLogicVersion]
 

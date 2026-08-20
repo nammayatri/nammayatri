@@ -458,6 +458,7 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           specialLocationSupportNumber = quote.specialLocationSupportNumber,
           fareSettlementType = quote.fareSettlementType,
           isDashboardRequest = searchRequest.isDashboardRequest,
+          isWhatsappRequest = searchRequest.isWhatsappRequest,
           tripCategory = quote.tripCategory,
           initiatedBy = searchRequest.initiatedBy,
           hasStops = searchRequest.hasStops,
@@ -474,6 +475,8 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           -- BAP doesn't have access to fare policy, so commission remains Nothing here.
           -- If commission is needed on BAP, it should flow from BPP via Beckn protocol extension.
           commission = Nothing,
+          paymentCharge = Nothing,
+          paymentChargeBearer = Nothing,
           selectedOfferId = quote.selectedOfferId,
           offersFraudCheckFailureReason = Nothing,
           issuedById = Nothing,

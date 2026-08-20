@@ -496,6 +496,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
               timeBounds = "Unbounded",
               version = baseVersion,
               versionDescription = Just "System generated base rollout",
+              experimentGroup = Nothing,
               createdAt = now,
               updatedAt = now
             }
@@ -512,6 +513,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
             timeBounds = "Unbounded",
             version = version,
             versionDescription = req.description,
+            experimentGroup = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -635,9 +637,57 @@ getLogicRollout merchantOpCityId _ mbActiveOnly domain = do
   where
     combineRollout :: NonEmpty AppDynamicLogicRollout -> Maybe Lib.Yudhishthira.Types.LogicRolloutObject
     combineRollout logicRollouts =
-      let rollout = DLNE.map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription) logicRollouts
+      let rollout = DLNE.map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription r.experimentGroup) logicRollouts
           firstElement = DLNE.head logicRollouts
        in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout) (firstElement.modifiedBy)
+
+postAppDynamicLogicUpdateExperimentGroup ::
+  (BeamFlow m r) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.UpdateRolloutGroupReq ->
+  m Kernel.Types.APISuccess.APISuccess
+postAppDynamicLogicUpdateExperimentGroup merchantOpCityId reqs = do
+  forM_ reqs $ \Lib.Yudhishthira.Types.UpdateRolloutGroupObject {..} -> do
+    let timeBounds' = fromMaybe "Unbounded" timeBounds
+    void $
+      LYSQADLR.findByPrimaryKey domain merchantOpCityId timeBounds' version
+        >>= fromMaybeM (InvalidRequest $ "Rollout not found for Domain: " <> show domain <> " City: " <> merchantOpCityId.getId <> " TimeBounds: " <> timeBounds' <> " Version: " <> show version)
+    LYSQADLRE.updateExperimentGroup merchantOpCityId domain timeBounds' version experimentGroup
+  forM_ (nub $ map (.domain) reqs) $ \domain -> CADLR.clearCache merchantOpCityId domain
+  return Kernel.Types.APISuccess.Success
+
+-- | Read-only view of active rollouts and their experiment group tags
+getExperimentGroups ::
+  BeamFlow m r =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Maybe Lib.Yudhishthira.Types.LogicDomain ->
+  m [Lib.Yudhishthira.Types.RolloutGroupInfo]
+getExperimentGroups merchantOpCityId mbDomain = do
+  allDomainRollouts <- case mbDomain of
+    Just domain -> CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain
+    Nothing -> LYSQADLR.findAllByMerchantOpCityId merchantOpCityId
+  let activeRollouts =
+        filter
+          ( \r ->
+              r.isBaseVersion == Just True
+                || ( r.experimentStatus /= Just LYT.CONCLUDED
+                       && r.experimentStatus /= Just LYT.DISCARDED
+                       && r.experimentStatus /= Just LYT.REVERTED
+                   )
+          )
+          allDomainRollouts
+  pure $ map toGroupInfo activeRollouts
+  where
+    toGroupInfo r =
+      Lib.Yudhishthira.Types.RolloutGroupInfo
+        { domain = r.domain,
+          timeBounds = r.timeBounds,
+          version = r.version,
+          rolloutPercentage = r.percentageRollout,
+          experimentGroup = r.experimentGroup,
+          experimentStatus = r.experimentStatus,
+          isBaseVersion = r.isBaseVersion
+        }
 
 getFrontendLogicUrlAndToken :: BeamFlow m r => m (BaseUrl, Text)
 getFrontendLogicUrlAndToken = do
@@ -795,6 +845,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq _giveConfigs opCity 
           timeBounds = "Unbounded",
           version = newVersion,
           versionDescription = Just "System generated base rollout",
+          experimentGroup = Nothing,
           createdAt = now,
           updatedAt = now,
           ..
@@ -1098,6 +1149,7 @@ postNammaTagConfigPilotActionChange mbMerchantId merchantOpCityId req handleConf
           timeBounds = "Unbounded",
           version = newVersion,
           versionDescription = Just "System generated base rollout",
+          experimentGroup = Nothing,
           createdAt = now,
           updatedAt = now,
           ..

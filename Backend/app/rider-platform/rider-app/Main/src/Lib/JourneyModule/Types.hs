@@ -29,8 +29,10 @@ import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RouteDetails
@@ -78,6 +80,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as YTypes
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
@@ -287,6 +290,8 @@ data JourneyInitData = JourneyInitData
 
 data LegInfo = LegInfo
   { journeyLegId :: Id DJL.JourneyLeg,
+    applicablePasses :: [FRFSTicketServiceAPI.FRFSPassOptionAPIEntity],
+    appliedPass :: Maybe AppliedPassInfo,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     pricingId :: Maybe Text,
@@ -314,6 +319,15 @@ data LegInfo = LegInfo
     hasApplicablePasses :: Maybe Bool,
     observingFailures :: Maybe Bool,
     isCancellable :: Maybe Bool
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AppliedPassInfo = AppliedPassInfo
+  { purchasedPassPaymentId :: Id DPPP.PurchasedPassPayment,
+    passId :: Id DPass.Pass,
+    passName :: Maybe Text,
+    overriddenTotalFare :: Maybe PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -637,7 +651,9 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   (oldStatus, bookingStatus, trackingStatus, trackingStatusLastUpdatedAt) <- JMStateUtils.getTaxiAllStatuses journeyLeg (Just booking) mRide Nothing
   return $
     LegInfo
-      { journeyLegId = journeyLeg.id,
+      { applicablePasses = [],
+        appliedPass = Nothing,
+        journeyLegId = journeyLeg.id,
         skipBooking = False,
         bookingAllowed = True,
         searchId = booking.transactionId,
@@ -720,7 +736,9 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
   (oldStatus, bookingStatus, trackingStatus, trackingStatusLastUpdatedAt) <- JMStateUtils.getTaxiAllStatuses journeyLeg Nothing Nothing mbEstimate
   return $
     LegInfo
-      { journeyLegId = journeyLeg.id,
+      { applicablePasses = [],
+        appliedPass = Nothing,
+        journeyLegId = journeyLeg.id,
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
         searchId = id.getId,
@@ -784,7 +802,9 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
   now <- getCurrentTime
   return $
     LegInfo
-      { journeyLegId = id,
+      { applicablePasses = [],
+        appliedPass = Nothing,
+        journeyLegId = id,
         skipBooking = False,
         bookingAllowed = False,
         searchId = id.getId,
@@ -898,9 +918,24 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   journeyLegInfo' <- getLegRouteInfo (Just $ mkFallbackFromFrfsBooking booking) (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
   isCancellable <- computeIsCancellable booking integratedBPPConfig
+  mbAppliedPass <-
+    if booking.overrideType == Just DFRFSBooking.PassOverride
+      then do
+        mbResolved <- FRFSPassOverride.passForOverrideAppliedEntity booking.overrideAppliedEntityId
+        pure $
+          mbResolved <&> \(payment, pass) ->
+            AppliedPassInfo
+              { purchasedPassPaymentId = payment.id,
+                passId = pass.id,
+                passName = payment.passName,
+                overriddenTotalFare = mkPriceAPIEntity . mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount
+              }
+      else pure Nothing
   return $
     LegInfo
-      { journeyLegId = journeyLeg.id,
+      { applicablePasses = [],
+        appliedPass = mbAppliedPass,
+        journeyLegId = journeyLeg.id,
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
         searchId = booking.searchId.getId,
@@ -1307,7 +1342,9 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
               }
   pure
     LegInfo
-      { journeyLegId = legId,
+      { applicablePasses = [],
+        appliedPass = Nothing,
+        journeyLegId = legId,
         skipBooking = False,
         bookingAllowed = True,
         pricingId = Nothing,
@@ -1337,8 +1374,8 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
         isCancellable = Nothing
       }
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> m LegInfo
-mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg journeyLegs = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> Maybe [FRFSPassOverride.PassCandidate] -> m LegInfo
+mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg journeyLegs mbPassCandidates = do
   let fallbackFare = journeyLeg.estimatedMinFare
   let distance = journeyLeg.distance
   let duration = journeyLeg.duration
@@ -1375,11 +1412,34 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
           Nothing
           Nothing
       else pure []
-  let hasApplicablePass =
+  overridePasses <-
+    if integratedBPPConfig.passOverrideApplicable /= Just True
+      then pure []
+      else do
+        now' <- getCurrentTime
+        -- Same guard as booking time (SharedLogic/FRFSConfirm.hs): fromDepartureTime is a
+        -- timetable lookup and is the epoch where the stop has no timing, which is most subway
+        -- legs. An epoch tripTime yields a 1970 tripDay, and filterCandidatesForLeg then rejects
+        -- every pass on the startDate/endDate window -- the leg silently offers no passes at all.
+        let tripTime = maybe now' (\departure -> if departure > now' then departure else now') journeyLeg.fromDepartureTime
+        case mbPassCandidates of
+          Just candidates -> do
+            tripDay <- FRFSPassOverride.localTripDay person tripTime
+            pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay
+          Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass
+  let overridePurchasedPassIds = map (.purchasedPassPayment.purchasedPassId) overridePasses
+      adultUnitPrice = (mbFareParameters <&> (.priceItems)) >>= find (\priceItem -> priceItem.categoryType == ADULT) <&> (.unitPrice)
+      overridePriceItems = maybe [] (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) . (.priceItems)) mbFareParameters
+      applicablePasses =
+        maybe
+          []
+          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig overridePasses serviceTierType unitPrice overridePriceItems)
+          adultUnitPrice
+  let hasTicketFreePass =
         shouldCheckPass
           && any
             ( \p ->
-                (maybe False (`elem` DPurchasedPass.applicableVehicleServiceTiers p) serviceTierType && (shouldMatchDeviceId p imeiNumber))
+                (p.id `notElem` overridePurchasedPassIds && maybe False (`elem` DPurchasedPass.applicableVehicleServiceTiers p) serviceTierType && (shouldMatchDeviceId p imeiNumber))
             )
             userPasses
   let isTicketAllowed = case vehicleType of
@@ -1403,7 +1463,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
           Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
           Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
           Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser) && (isTicketAllowed || isCanaryAllowed || isPTBookingAllowedForUser)
-  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser && not hasApplicablePass
+  let bookingAllowed = bookingAllowedForVehicleType && not isPTBookingNotAllowedForUser && not hasTicketFreePass
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
   (mbEstimatedFare, mbChildFare, categories) <-
@@ -1423,7 +1483,9 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
 
   return $
     LegInfo
-      { journeyLegId = journeyLeg.id,
+      { applicablePasses,
+        appliedPass = Nothing,
+        journeyLegId = journeyLeg.id,
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed,
         searchId = id.getId,
@@ -1448,7 +1510,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         entrance = Nothing,
         exit = Nothing,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
-        hasApplicablePasses = Just hasApplicablePass,
+        hasApplicablePasses = Just hasTicketFreePass,
         observingFailures = Just observingFailures,
         isCancellable = Nothing
       }

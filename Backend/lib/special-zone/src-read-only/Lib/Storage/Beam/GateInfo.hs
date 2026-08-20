@@ -21,6 +21,7 @@ data GateInfoT f = GateInfoT
     demandThresholdsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     enableQueueFilter :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     entryFeeAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    gateConfig :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     gateTags :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     gateType :: (B.C f Lib.Types.GateInfo.GateType),
     geomGeoJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

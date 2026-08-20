@@ -26,6 +26,8 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude hiding (init)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -61,6 +63,7 @@ init ::
   FlowHandler AckResponse
 init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.initReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Init APIV2 Flow" "Reached"
     (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri) <- do

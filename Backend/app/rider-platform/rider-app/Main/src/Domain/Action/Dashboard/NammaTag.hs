@@ -19,6 +19,8 @@ module Domain.Action.Dashboard.NammaTag
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
     postNammaTagAppDynamicLogicUpsertLogicRollout,
+    postNammaTagAppDynamicLogicUpdateExperimentGroup,
+    getNammaTagAppDynamicLogicExperimentGroups,
     getNammaTagTimeBounds,
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
@@ -114,6 +116,8 @@ import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import SharedLogic.Offer
+import qualified SharedLogic.OfferSegment as SOfferSegment
+import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PickupETA as PickupETA
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
@@ -364,6 +368,10 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
       logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy CumulativeOfferRespI) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.FRFS_OFFER_SEGMENT_POLICY -> do
+      defaultVal <- fromMaybeM (InvalidRequest "OfferSegmentInput not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @SOfferSegment.OfferSegmentInput))
+      logicData :: SOfferSegment.OfferSegmentInput <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SOfferSegment.OfferSegmentResp) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.OFFERS_FRAUD_CHECKS -> do
       defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))
       logicData :: OffersFraudChecksReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
@@ -410,6 +418,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
       logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.PASS_PURCHASE_ELIGIBILITY -> do
+      logicData :: SLE.PassEligibilityData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SLE.PassEligibilityResult) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) _riderConfig.dynamicLogicUpdatePassword req logicData
@@ -536,6 +547,16 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
     _ -> pure ()
   pure result
 
+postNammaTagAppDynamicLogicUpdateExperimentGroup :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.UpdateRolloutGroupReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagAppDynamicLogicUpdateExperimentGroup merchantShortId opCity req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.postAppDynamicLogicUpdateExperimentGroup (cast merchantOperatingCity.id) req
+
+getNammaTagAppDynamicLogicExperimentGroups :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe LYTU.LogicDomain -> Environment.Flow [LYTU.RolloutGroupInfo]
+getNammaTagAppDynamicLogicExperimentGroups merchantShortId opCity mbDomain = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  YudhishthiraFlow.getExperimentGroups (cast merchantOperatingCity.id) mbDomain
+
 getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> LYTU.LogicDomain -> Environment.Flow LYTU.AppDynamicLogicVersionResp
 getNammaTagAppDynamicLogicVersions merchantShortId opCity mbLimit mbOffset domain = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -584,6 +605,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultVal,
             LYTU.schema = toInlinedSchemaValue (Proxy @CumulativeOfferReq)
+          }
+    LYTU.FRFS_OFFER_SEGMENT_POLICY -> do
+      defaultVal <- fromMaybeM (InvalidRequest "OfferSegmentInput not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @SOfferSegment.OfferSegmentInput))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON defaultVal,
+            LYTU.schema = toInlinedSchemaValue (Proxy @SOfferSegment.OfferSegmentInput)
           }
     LYTU.OFFERS_FRAUD_CHECKS -> do
       defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))
@@ -653,6 +681,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultInput,
             LYTU.schema = toInlinedSchemaValue (Proxy @CancelLogic.CancellationReasonInput)
+          }
+    LYTU.PASS_PURCHASE_ELIGIBILITY ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: SLE.PassEligibilityData),
+            LYTU.schema = toInlinedSchemaValue (Proxy @SLE.PassEligibilityData)
           }
     LYTU.INVOICE_TEMPLATE _scope ->
       return $

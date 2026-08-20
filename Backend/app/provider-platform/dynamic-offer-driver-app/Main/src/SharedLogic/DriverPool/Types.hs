@@ -284,6 +284,10 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest),
     specialLocWarriorPreferredSpecialLocId :: Maybe (Id SL.SpecialLocation),
     score :: Maybe A.Value,
+    -- The POOLING logic version that produced `score`. Stamped by makeTaggedDriverPool from the
+    -- version it actually ran, never read back from the SearchRequest -- the two used to be
+    -- sourced independently and could disagree, which silently mislabelled experiment arms.
+    poolingLogicVersion :: Maybe Int,
     searchReqDriverStatsCounters :: Maybe SearchReqDriverStatsCounters,
     idleTimeSeconds :: Maybe Double
   }
@@ -308,6 +312,7 @@ instance Default DriverPoolWithActualDistResult where
         goHomeReqId = Nothing,
         specialLocWarriorPreferredSpecialLocId = Nothing,
         score = Nothing,
+        poolingLogicVersion = Nothing,
         searchReqDriverStatsCounters = Nothing,
         idleTimeSeconds = Nothing
       }
@@ -330,7 +335,14 @@ instance Default IntelligentScores where
 data TaggedDriverPoolInput = TaggedDriverPoolInput
   { drivers :: [DriverPoolWithActualDistResult],
     needOnRideDrivers :: Bool,
-    batchNum :: PoolBatchNum
+    batchNum :: PoolBatchNum,
+    -- | Rejects so far in this search try, across all its batches. Lets a POOLING rule react to
+    -- a pool that keeps refusing instead of only seeing the batch in front of it.
+    --
+    -- Maybe on purpose: this type is also how the ruleset's *output* is parsed, and a live
+    -- ruleset that rebuilds the object without this key would otherwise fail to decode and
+    -- silently drop the whole ranking back to the unsorted pool.
+    cumulativeRejectCount :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -339,7 +351,8 @@ instance Default TaggedDriverPoolInput where
     TaggedDriverPoolInput
       { drivers = [],
         needOnRideDrivers = False,
-        batchNum = 0
+        batchNum = 0,
+        cumulativeRejectCount = Just 0
       }
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags

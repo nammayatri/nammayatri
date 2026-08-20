@@ -17,6 +17,8 @@ PassType:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     passEnum: Maybe PassEnum
+    maxPhotoChangeLimit: Maybe Int
+    photoReUploadTimeLimit: Maybe Seconds
 
   types:
     PassEnum:

@@ -141,6 +141,8 @@ Ride:
     insuredAmount: Maybe Text
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
+    paymentCharge: Maybe HighPrecMoney
+    paymentChargeBearer: Maybe Text
     sosId: Maybe (Id Sos)
     isTierUpgrade: Maybe Bool
     assignedServiceTierName: Maybe Text

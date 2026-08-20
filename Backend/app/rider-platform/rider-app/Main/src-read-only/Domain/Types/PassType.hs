@@ -9,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassCategory
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
@@ -17,12 +18,14 @@ data PassType = PassType
   { catchline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
+    maxPhotoChangeLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     order :: Kernel.Prelude.Int,
     passCategoryId :: Kernel.Types.Id.Id Domain.Types.PassCategory.PassCategory,
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
+    photoReUploadTimeLimit :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     title :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

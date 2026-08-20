@@ -4,11 +4,14 @@
 module API.Types.Dashboard.AppManagement.Endpoints.Pass where
 
 import qualified "this" API.Types.UI.Pass
+import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
 import qualified "this" Domain.Types.Pass
+import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.PurchasedPass
 import qualified "this" Domain.Types.PurchasedPassPayment
@@ -21,12 +24,104 @@ import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified "payment" Lib.Payment.Domain.Action
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Servant.Client
+
+data PassCatalogItem = PassCatalogItem
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
+    autoApply :: Kernel.Prelude.Bool,
+    benefit :: Kernel.Prelude.Maybe Domain.Types.Pass.Benefit,
+    benefitDescription :: Kernel.Prelude.Text,
+    code :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentsRequired :: [Domain.Types.Pass.PassDocumentType],
+    enable :: Kernel.Prelude.Bool,
+    formVerificationConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
+    maxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    maxSwitchCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    order :: Kernel.Prelude.Int,
+    passCategoryName :: Kernel.Prelude.Text,
+    passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
+    passTypeTitle :: Kernel.Prelude.Text,
+    pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    verificationValidity :: Kernel.Types.Common.Seconds
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassCreateReq = PassCreateReq
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    applicableVehicleServiceTiers :: [BecknV2.FRFS.Enums.ServiceTierType],
+    autoApply :: Kernel.Prelude.Bool,
+    benefit :: Kernel.Prelude.Maybe Domain.Types.Pass.Benefit,
+    benefitDescription :: Kernel.Prelude.Text,
+    code :: Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentsRequired :: [Domain.Types.Pass.PassDocumentType],
+    enable :: Kernel.Prelude.Bool,
+    formVerificationConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    maxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    maxSwitchCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    order :: Kernel.Prelude.Int,
+    passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
+    pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    verificationValidity :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PassCreateReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data PassCreateResp = PassCreateResp {passId :: Kernel.Types.Id.Id Domain.Types.Pass.Pass}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassUpdateReq = PassUpdateReq
+  { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    applicableVehicleServiceTiers :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
+    autoApply :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    benefit :: Kernel.Prelude.Maybe Domain.Types.Pass.Benefit,
+    benefitDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    code :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentsRequired :: Kernel.Prelude.Maybe [Domain.Types.Pass.PassDocumentType],
+    enable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    formVerificationConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    maxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    maxSwitchCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    order :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    passTypeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType),
+    pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    vehicleType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory,
+    verificationValidity :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PassUpdateReq where
+  hideSecrets = Kernel.Prelude.identity
 
 data PurchasedPassSelectReq = PurchasedPassSelectReq {startDay :: Kernel.Prelude.Maybe Data.Time.Day, profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
@@ -35,7 +130,7 @@ data PurchasedPassSelectReq = PurchasedPassSelectReq {startDay :: Kernel.Prelude
 instance Kernel.Types.HideSecrets.HideSecrets PurchasedPassSelectReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelectHelper :<|> GetPassCustomerPaymentStatusHelper :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore))
+type API = ("pass" :> (GetPassCustomerAvailablePasses :<|> GetPassCustomerPurchasedPasses :<|> GetPassCustomerTransactions :<|> PostPassCustomerActivateToday :<|> PostPassCustomerPassSelectHelper :<|> GetPassCustomerPaymentStatusHelper :<|> PostPassCustomerPassResetDeviceSwitchCount :<|> PostPassCustomerPassUpdateProfilePicture :<|> GetPassCustomerPassPhoto :<|> PostPassCustomerPassRestore :<|> ListPassCatalog :<|> CreatePass :<|> UpdatePass :<|> DeletePass))
 
 type GetPassCustomerAvailablePasses =
   ( "customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "availablePasses"
@@ -162,6 +257,19 @@ type GetPassCustomerPassPhoto =
 
 type PostPassCustomerPassRestore = ("customer" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "pass" :> "restore" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type ListPassCatalog =
+  ( "catalog" :> "list" :> QueryParam "enable" Kernel.Prelude.Bool :> QueryParam "passTypeId" (Kernel.Types.Id.Id Domain.Types.PassType.PassType)
+      :> Get
+           '[JSON]
+           [PassCatalogItem]
+  )
+
+type CreatePass = ("catalog" :> "create" :> ReqBody '[JSON] PassCreateReq :> Post '[JSON] PassCreateResp)
+
+type UpdatePass = ("catalog" :> Capture "passId" (Kernel.Types.Id.Id Domain.Types.Pass.Pass) :> "update" :> ReqBody '[JSON] PassUpdateReq :> Put '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type DeletePass = ("catalog" :> Capture "passId" (Kernel.Types.Id.Id Domain.Types.Pass.Pass) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data PassAPIs = PassAPIs
   { getPassCustomerAvailablePasses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PassInfoAPIEntity],
     getPassCustomerPurchasedPasses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType -> EulerHS.Types.EulerClient [API.Types.UI.Pass.PurchasedPassAPIEntity],
@@ -178,13 +286,17 @@ data PassAPIs = PassAPIs
       ) ->
       EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.IssueMediaUploadRes,
     getPassCustomerPassPhoto :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
-    postPassCustomerPassRestore :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPassCustomerPassRestore :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    listPassCatalog :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassType.PassType) -> EulerHS.Types.EulerClient [PassCatalogItem],
+    createPass :: PassCreateReq -> EulerHS.Types.EulerClient PassCreateResp,
+    updatePass :: Kernel.Types.Id.Id Domain.Types.Pass.Pass -> PassUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    deletePass :: Kernel.Types.Id.Id Domain.Types.Pass.Pass -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPassAPIs :: (Client EulerHS.Types.EulerClient API -> PassAPIs)
 mkPassAPIs passClient = (PassAPIs {..})
   where
-    getPassCustomerAvailablePasses :<|> getPassCustomerPurchasedPasses :<|> getPassCustomerTransactions :<|> postPassCustomerActivateToday :<|> postPassCustomerPassSelect :<|> getPassCustomerPaymentStatus :<|> postPassCustomerPassResetDeviceSwitchCount :<|> postPassCustomerPassUpdateProfilePicture :<|> getPassCustomerPassPhoto :<|> postPassCustomerPassRestore = passClient
+    getPassCustomerAvailablePasses :<|> getPassCustomerPurchasedPasses :<|> getPassCustomerTransactions :<|> postPassCustomerActivateToday :<|> postPassCustomerPassSelect :<|> getPassCustomerPaymentStatus :<|> postPassCustomerPassResetDeviceSwitchCount :<|> postPassCustomerPassUpdateProfilePicture :<|> getPassCustomerPassPhoto :<|> postPassCustomerPassRestore :<|> listPassCatalog :<|> createPass :<|> updatePass :<|> deletePass = passClient
 
 data PassUserActionType
   = GET_PASS_CUSTOMER_AVAILABLE_PASSES
@@ -197,6 +309,10 @@ data PassUserActionType
   | POST_PASS_CUSTOMER_PASS_UPDATE_PROFILE_PICTURE
   | GET_PASS_CUSTOMER_PASS_PHOTO
   | POST_PASS_CUSTOMER_PASS_RESTORE
+  | LIST_PASS_CATALOG
+  | CREATE_PASS
+  | UPDATE_PASS
+  | DELETE_PASS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

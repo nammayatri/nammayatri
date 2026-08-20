@@ -40,6 +40,7 @@ import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.PersonPTStats as DPUS
 import EulerHS.Prelude ((+||), (<|>), (||+))
 import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
@@ -59,11 +60,13 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PersonPTStats as SPUS
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -81,9 +84,11 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
+import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Text.Regex as TR
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -122,7 +127,9 @@ validateRequest DOrder {..} = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
+  mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+    throwError (FRFSTicketBookingPaymentNotFound booking.id.getId)
   now <- getCurrentTime
   if booking.validTill < now
     then do
@@ -130,8 +137,13 @@ validateRequest DOrder {..} = do
       logInfo $ "booking is expired: " <> show booking
       merchantOperatingCity <- QMerchOpCity.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
       bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:- " <> merchantId.getId)
+      -- Kept, and it is not dead: validateRequest has no status guard at all, so a replayed
+      -- on_confirm for a booking that already reached CONFIRMED -- and therefore already debited --
+      -- lands here once validTill has passed and gets marked FAILED. The release is guarded on
+      -- CONFIRMED internally, so it is a no-op on the ordinary pre-confirm expiry.
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
-      void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
+      void $ withTryCatch "onConfirmValidate:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
+      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -164,9 +176,18 @@ onConfirmFailure bapConfig ticketBooking = do
   logInfo $ "onConfirmFailure: " <> show ticketBooking
   merchant <- QMerch.findById ticketBooking.merchantId >>= fromMaybeM (MerchantNotFound ticketBooking.merchantId.getId)
   merchantOperatingCity <- QMerchOpCity.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound ticketBooking.merchantOperatingCityId.getId)
-  bookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
+  mbBookingPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment ticketBooking
+  unless (isJust mbBookingPayment || FRFSPassOverride.isFullyPassCovered ticketBooking.overriddenAmount) $
+    throwError (FRFSTicketBookingPaymentNotFound ticketBooking.id.getId)
   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED ticketBooking.id
-  void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
+  -- The only release left in the codebase, and it is guarded on CONFIRMED for a reason: this is
+  -- the one path where a failure can arrive AFTER a successful on_confirm already debited the
+  -- pass. Everywhere else is pre-CONFIRMED, where nothing has been spent. ticketBooking still
+  -- holds the pre-FAILED status read above, so the guard sees the status that matters.
+  void $ withTryCatch "onConfirmFailure:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure ticketBooking)
+  whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
+  -- enforceCap=False: this is a Technical cancellation, so it must not consume the rider's
+  -- cancellation allowance (see ExternalBPP.CallAPI.Cancel).
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False ticketBooking
 
 onConfirm ::
@@ -208,11 +229,36 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- Update journey expiry time based on maximum ticket validity using the created tickets
   whenJust mbJourneyId $ \journeyId -> do
     QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
-  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
+  recordStatsResult <-
+    withTryCatch "onConfirm:recordPersonPTStats" $ do
+      purchaseEvent <-
+        SPUS.mkPurchaseEvent
+          person
+          (Just booking.vehicleType)
+          booking.serviceTierType
+          DPUS.TICKET
+          Nothing
+          (Just fareParameters.totalQuantity)
+          booking.merchantId
+          booking.merchantOperatingCityId
+      SPUS.recordPurchase purchaseEvent
+  case recordStatsResult of
+    Right () -> pure ()
+    Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
+  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  -- Debit the pass here, once the ticket exists. Everything between a debit and the ticket -- a
+  -- thrown BPP call, a pod restart, a journey the rider abandons -- used to strand the trip with
+  -- nothing left to release it. Swallowed so a metering failure can never undo a confirmed ticket.
+  --
+  -- Guarded on the PRE-update status: validateRequest does not reject an already-CONFIRMED
+  -- booking, so a replayed on_confirm re-runs this handler, and the TripConsumed marker only
+  -- dedupes for passMarkerTtl. Debit strictly on the transition into CONFIRMED.
+  unless (booking.status == Booking.CONFIRMED) $
+    void $ withTryCatch "onConfirm:spendTripForBooking" (FRFSPassOverride.spendTripForBooking person booking {Booking.status = Booking.CONFIRMED})
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-  let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
   buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
   void $ QPS.incrementTicketsBookedInEvent booking.riderId fareParameters.totalQuantity
@@ -231,6 +277,11 @@ onConfirm merchant booking' quoteCategories dOrder = do
         transitObjects' <- createTransitObjects pOrgId booking tickets person serviceAccount className integratedBPPConfig
         url <- mkGoogleWalletLink serviceAccount transitObjects'
         void $ QTBooking.updateGoogleWalletLinkById (Just url) booking.id
+  -- Last, after everything that can throw: a throw above returns Left to the direct confirm flow,
+  -- which marks the booking FAILED, and a journey must not read as paid with a failed leg.
+  when (FRFSPassOverride.fullyCoveredByPass booking) $
+    whenJust mbJourneyId $ \journeyId ->
+      void $ withTryCatch "onConfirm:markJourneyPaid" (QJourney.updateIsPaymentSuccessIfNoOrder (Just True) journeyId Nothing)
   return ()
   where
     sendTicketBookedSMS mRiderNumber mRiderMobileCountryCode fareParameters =
@@ -278,15 +329,37 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
-  txn <- runInReplica $ HQPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId")
-  paymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let paymentBookingStatus = paymentBooking.status
+  let isPassCovered = FRFSPassOverride.isFullyPassCovered booking.overriddenAmount
+  -- A pass-covered booking took no payment here, but money did move -- when the pass was bought.
+  -- The txn columns point at that purchase's charge, so they keep holding payment transactions
+  -- rather than a purchasedPassPaymentId; which pass was applied is carried by the override
+  -- columns below instead.
+  mbPassPayment <-
+    if isPassCovered
+      then maybe (pure Nothing) (QPurchasedPassPayment.findByPrimaryKey . Id) booking.overrideAppliedEntityId
+      else pure Nothing
+  mbTxn <-
+    if isPassCovered
+      then maybe (pure Nothing) (\passPayment -> runInReplica $ HQPaymentTransaction.findEarliestChargedTransactionByOrderId passPayment.orderId) mbPassPayment
+      else do
+        transactionRefNumber <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Txn Id not found in booking")
+        Just <$> (runInReplica $ HQPaymentTransaction.findById (Id transactionRefNumber) >>= fromMaybeM (InvalidRequest "Payment Transaction not found for approved TicketBookingId"))
+  mbPaymentBooking <- QFRFSTicketBookingPayment.findTicketBookingPayment booking
+  -- Only a pass-covered booking is allowed to have no payment row; for anything else a missing one
+  -- is still a hard error, as it was before the override work.
+  unless (isJust mbPaymentBooking || isPassCovered) $
+    throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  let transactionRefNumber' = if isPassCovered then (.id.getId) <$> mbTxn else booking.paymentTxnId
   now <- getCurrentTime
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
   let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee -- FIXME
       finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational fareParameters.totalQuantity
-  tOrderPrice <- FRFSUtils.totalOrderValue paymentBookingStatus booking
+  -- A pass-covered booking has no payment row, and settles at FACE FARE on purpose -- not at
+  -- overriddenAmount. The operator is owed the fare for a real ride whatever funded it; the money
+  -- was already collected by the BUS_PASS recon row at pass purchase, and this trip is settled out
+  -- of that prepaid pool. Using overriddenAmount would settle 0 for a ride that actually happened.
+  -- overrideAppliedEntityId on this row is what joins it back to the purchase that paid for it.
+  tOrderPrice <- maybe (pure booking.totalPrice) (\pb -> FRFSUtils.totalOrderValue pb.status booking) mbPaymentBooking
   let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / toRational (length tickets)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   let reconEntry =
@@ -310,13 +383,13 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
             Recon.settlementDate = Nothing,
             Recon.settlementReferenceNumber = Nothing,
             Recon.sourceStationCode = Just fromStation.code,
-            Recon.transactionUUID = txn.txnUUID,
+            Recon.transactionUUID = mbTxn >>= (.txnUUID),
             Recon.ticketNumber = Just "",
             Recon.ticketQty = Just fareParameters.totalQuantity,
             Recon.time = show now,
-            Recon.txnId = txn.txnId,
+            Recon.txnId = mbTxn >>= (.txnId),
             Recon.totalOrderValue = tOrderValue,
-            Recon.transactionRefNumber = Just transactionRefNumber,
+            Recon.transactionRefNumber = transactionRefNumber',
             Recon.merchantId = Just booking.merchantId,
             Recon.merchantOperatingCityId = Just booking.merchantOperatingCityId,
             Recon.createdAt = now,
@@ -326,7 +399,14 @@ buildReconTable _merchant booking fareParameters _dOrder tickets mRiderNumber in
             Recon.providerName = booking.providerName,
             Recon.entityType = Just Recon.FRFS_TICKET_BOOKING,
             Recon.reconStatus = Just Recon.PENDING,
-            Recon.paymentGateway = Nothing
+            Recon.paymentGateway = Nothing,
+            -- Carried over from the booking so recon can tell a pass-funded trip from a paid one.
+            -- The money columns stay at face fare either way: the operator is settled the fare
+            -- whatever funded it, and overrideAppliedEntityId joins back to the BUS_PASS row that
+            -- collected it up front.
+            Recon.overrideType = booking.overrideType,
+            Recon.overriddenAmount = booking.overriddenAmount,
+            Recon.overrideAppliedEntityId = booking.overrideAppliedEntityId
           }
 
   reconEntries <- mapM (buildRecon reconEntry) tickets

@@ -148,6 +148,7 @@ import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociatio
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
@@ -359,14 +360,18 @@ getDriverList merchantShortId opCity mbLimit mbOffset mbVerified mbEnabled mbBlo
   let pageDriverIds = map (\(person, _, _) -> person.id) driversWithInfo
   fleetAssocs <- B.runInReplica $ QFDA.findActiveOrMostRecentByDriverIds pageDriverIds
   activeRcAssocs <- B.runInReplica $ QDRCA.findAllActiveByDriverIds pageDriverIds
+  linkedRcAssocs <- B.runInReplica $ QDRCA.findAllLinkedByDriverIds pageDriverIds
+  linkedRcs <- B.runInReplica $ RCQueryExtra.findAllById (nub $ map (.rcId) linkedRcAssocs)
   let fleetAssocByDriver = HM.fromList $ map (\fda -> (fda.driverId, fda)) fleetAssocs
       driversWithActiveRc = HS.fromList $ map (.driverId) activeRcAssocs
+      rcById = HM.fromList $ map (\rc -> (rc.id, rc)) linkedRcs
+      linkedAssocsByDriver = HM.fromListWith (<>) $ map (\dra -> (dra.driverId, [dra])) linkedRcAssocs
       fleetOwnerIds = nub $ map (.fleetOwnerId) fleetAssocs
   fleetOwners <- B.runInReplica $ QPerson.findAllByPersonIds fleetOwnerIds
   fleetOwnerInfos <- B.runInReplica $ QFOI.findAllByPrimaryKeys (Id <$> fleetOwnerIds)
   let fleetOwnerById = HM.fromList $ map (\p -> (p.id.getId, p)) fleetOwners
       fleetOwnerInfoById = HM.fromList $ map (\foi -> (foi.fleetOwnerPersonId.getId, foi)) fleetOwnerInfos
-  items <- mapM (buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetOwnerInfoById now) driversWithInfo
+  items <- mapM (buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver rcById fleetOwnerById fleetOwnerInfoById now) driversWithInfo
   let count = length items
   let summary = Common.Summary {totalCount = 10000, count}
   pure Common.DriverListRes {totalItems = count, summary, drivers = items}
@@ -378,13 +383,16 @@ buildDriverListItem ::
   EncFlow m r =>
   HM.HashMap (Id DP.Person) FDA.FleetDriverAssociation ->
   HS.HashSet (Id DP.Person) ->
+  HM.HashMap (Id DP.Person) [DriverRCAssociation] ->
+  HM.HashMap (Id VehicleRegistrationCertificate) VehicleRegistrationCertificate ->
   HM.HashMap Text DP.Person ->
   HM.HashMap Text DFOI.FleetOwnerInformation ->
   UTCTime ->
   (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) ->
   m Common.DriverListItem
-buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetOwnerInfoById now (person, driverInformation, mbVehicle) = do
+buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver rcById fleetOwnerById fleetOwnerInfoById now (person, driverInformation, mbVehicle) = do
   phoneNo <- mapM decrypt person.mobileNumber
+  linkedVehicleInfo <- mapM (mkLinkedVehicleInfo rcById) (HM.lookupDefault [] person.id linkedAssocsByDriver)
   let mbFda = HM.lookup person.id fleetAssocByDriver
   mbRecentFleetInfo <- case mbFda of
     Nothing -> pure Nothing
@@ -416,6 +424,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
         lastName = person.lastName,
         vehicleNo = mbVehicle <&> (.registrationNo),
         phoneNo,
+        mobileCountryCode = person.mobileCountryCode,
         enabled = driverInformation.enabled,
         blocked = driverInformation.blocked,
         verified = driverInformation.verified,
@@ -429,7 +438,8 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
         onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
         recentFleetInfo = mbRecentFleetInfo,
         hasActiveRc = HS.member person.id driversWithActiveRc,
-        disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag
+        disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag,
+        linkedVehicleInfo
       }
   where
     castOnboardingAs DrInfo.FLEET_DRIVER = Common.FLEET_DRIVER
@@ -437,6 +447,24 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc fleetOwnerById fleetO
     castDisabledReasonFlag DrInfo.FleetDisabled = Common.FleetDisabled
     castDisabledReasonFlag DrInfo.AdminDisabled = Common.AdminDisabled
     castDisabledReasonFlag DrInfo.DriverDisabled = Common.DriverDisabled
+
+mkLinkedVehicleInfo :: EncFlow m r => HM.HashMap (Id VehicleRegistrationCertificate) VehicleRegistrationCertificate -> DriverRCAssociation -> m Common.LinkedVehicleInfo
+mkLinkedVehicleInfo rcById dra = do
+  let mbRc = HM.lookup dra.rcId rcById
+  vehicleNumber <- maybe (pure Nothing) (fmap Just . decrypt . (.certificateNumber)) mbRc
+  pure
+    Common.LinkedVehicleInfo
+      { rcId = dra.rcId.getId,
+        vehicleNumber,
+        vehicleMake = mbRc >>= (.vehicleManufacturer),
+        vehicleModel = mbRc >>= (.vehicleModel),
+        vehicleColor = mbRc >>= (.vehicleColor),
+        vehicleClass = mbRc >>= (.vehicleClass),
+        verified = mbRc >>= (.verified),
+        approved = mbRc >>= (.approved),
+        isActive = dra.isRcActive,
+        associatedTill = dra.associatedTill
+      }
 
 ---------------------------------------------------------------------
 getDriverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActivityRes
@@ -459,7 +487,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   driverPerson <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   tcForDisable <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driverPerson.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driverPerson.merchantOperatingCityId.getId)
   SGuard.withOnboardingAction tcForDisable SGuard.None SGuard.Disable (SGuard.TargetDriver personId) $
-    SFlags.markDisabledFlags (tcForDisable.unifiedOnboardingFlagsRecompute == Just True) driverPerson (SFlags.AdminDisable DrInfo.DriverDisabled)
+    SFlags.markEnableDisableReasonFlags (tcForDisable.unifiedOnboardingFlagsRecompute == Just True) driverPerson (SFlags.AdminDisable DrInfo.DriverDisabled)
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -496,10 +524,15 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
+  let isFleetOwner = SDO.isFleetRole driver.role
+  alreadyBlocked <-
+    if isFleetOwner
+      then (.blocked) <$> (QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId))
+      else (.blocked) <$> (QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound)
+  when alreadyBlocked $ throwError DriverAccountAlreadyBlocked
   tcForBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block (SGuard.TargetDriver personId) $ do
+  let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
+  SGuard.withOnboardingAction tcForBlock SGuard.None SGuard.Block blockTarget $ do
     void $
       SFlags.markBlockFlags personId $
         SFlags.Block
@@ -540,10 +573,15 @@ postDriverBlock merchantShortId opCity reqDriverId = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && driver.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  let isFleetOwner = SDO.isFleetRole driver.role
+  alreadyBlocked <-
+    if isFleetOwner
+      then (.blocked) <$> (QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId))
+      else (.blocked) <$> (QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound)
   tcForSimpleBlock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForSimpleBlock SGuard.None SGuard.Block (SGuard.TargetDriver personId) $
-    when (not driverInf.blocked) $
+  let blockTarget = if isFleetOwner then SGuard.TargetFleetOwner personId else SGuard.TargetDriver personId
+  SGuard.withOnboardingAction tcForSimpleBlock SGuard.None SGuard.Block blockTarget $
+    unless alreadyBlocked $
       void $
         SFlags.markBlockFlags personId $
           SFlags.SimpleBlock
@@ -586,31 +624,37 @@ postDriverUnblock merchantShortId opCity reqDriverId dashboardUserName preventWe
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   tcForUnblock <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetDriver personId) $ do
-    when driverInf.blocked $ do
-      void $
-        SFlags.markBlockFlags personId $
-          SFlags.Unblock
-            SFlags.SimplePayload
-              { SFlags.spModifier = Just dashboardUserName,
-                SFlags.spMerchantId = merchantId,
-                SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
-                SFlags.spBlockedBy = DTDBT.Dashboard
-              }
-      now <- getCurrentTime
-      void $ LF.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
-      case (preventDailyCancellationRateBlockingTill, preventWeeklyCancellationRateBlockingTill) of
-        (Just _, Just _) -> do
-          QDriverInfo.updateDailyAndWeeklyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill preventWeeklyCancellationRateBlockingTill driver.id
-        (Just _, Nothing) -> do
-          QDriverInfo.updateDailyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill driver.id
-        (Nothing, Just _) -> do
-          QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
-        _ -> pure ()
-    when (isJust driverInf.softBlockStiers) $ do
-      QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
+  let unblockPayload =
+        SFlags.SimplePayload
+          { SFlags.spModifier = Just dashboardUserName,
+            SFlags.spMerchantId = merchantId,
+            SFlags.spMerchantOperatingCityId = driver.merchantOperatingCityId,
+            SFlags.spBlockedBy = DTDBT.Dashboard
+          }
+  if SDO.isFleetRole driver.role
+    then do
+      fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetFleetOwner personId) $
+        when fleetOwnerInfo.blocked $
+          void $ SFlags.markBlockFlags personId (SFlags.Unblock unblockPayload)
+    else do
+      driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+      SGuard.withOnboardingAction tcForUnblock SGuard.None SGuard.Unblock (SGuard.TargetDriver personId) $ do
+        when driverInf.blocked $ do
+          void $ SFlags.markBlockFlags personId (SFlags.Unblock unblockPayload)
+          now <- getCurrentTime
+          void $ LF.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
+          case (preventDailyCancellationRateBlockingTill, preventWeeklyCancellationRateBlockingTill) of
+            (Just _, Just _) -> do
+              QDriverInfo.updateDailyAndWeeklyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill preventWeeklyCancellationRateBlockingTill driver.id
+            (Just _, Nothing) -> do
+              QDriverInfo.updateDailyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill driver.id
+            (Nothing, Just _) -> do
+              QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
+            _ -> pure ()
+        when (isJust driverInf.softBlockStiers) $ do
+          QDriverInfo.updateSoftBlock Nothing Nothing Nothing (cast driverId)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -740,8 +784,10 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
       logInfo $ "CSV parse error: " <> show err
       return [Dashboard.Common.UpdateTagBulkRes "parse-error" False (Just $ T.pack err)]
     Right (_, v) -> do
+      merchant <- findMerchantByShortId merchantShortId
+      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
       results <- forM (V.toList v) $ \row -> do
-        res <- withTryCatch "processDriverTagUpdate" (processDriverTagUpdate merchantShortId opCity row)
+        res <- withTryCatch "processDriverTagUpdate" (processDriverTagUpdate merchant merchantOpCityId row)
         case res of
           Left err -> do
             let errorMsg = show err
@@ -752,11 +798,8 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
             return $ Dashboard.Common.UpdateTagBulkRes row.driverId True Nothing
       return results
   where
-    processDriverTagUpdate :: ShortId DM.Merchant -> Context.City -> Dashboard.Common.DriverTagBulkCSVRow -> Flow ()
-    processDriverTagUpdate merchantShortId' opCity' row = do
-      merchant <- findMerchantByShortId merchantShortId'
-      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity')
-
+    processDriverTagUpdate :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Dashboard.Common.DriverTagBulkCSVRow -> Flow ()
+    processDriverTagUpdate merchant merchantOpCityId row = do
       -- Convert driverId to Person ID
       let personId = Id row.driverId
       driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

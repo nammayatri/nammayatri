@@ -5,6 +5,7 @@ module Storage.Beam.Person where
 
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.Time
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -65,6 +66,7 @@ data PersonT f = PersonT
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
     hasDisability :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasPassTill :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     hasTakenValidRide :: B.C f Kernel.Prelude.Bool,
     id :: B.C f Kernel.Prelude.Text,
     identifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -203,7 +203,7 @@ postDriverEnable merchantShortId opCity reqDriverId = do
 
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Enable (SGuard.TargetDriver personId) $
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-      then SFlags.markDisabledFlags True driver SFlags.AdminEnable
+      then SFlags.markEnableDisableReasonFlags True driver SFlags.AdminEnable
       else enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
   logTagInfo "dashboard -> enableDriver : " (show personId)
   fork "sending dashboard sms - onboarding" $ do

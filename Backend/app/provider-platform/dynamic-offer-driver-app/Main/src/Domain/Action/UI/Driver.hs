@@ -197,6 +197,7 @@ import qualified IssueManagement.Domain.Action.UI.Issue as Issue
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
+import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -253,7 +254,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
-import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
+import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..), SendSearchRequestToDriverJobData (..))
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
@@ -266,7 +267,9 @@ import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
@@ -862,7 +865,8 @@ data ClearManualSelectedDues = ClearManualSelectedDues
   deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)
 
 getInformationV2 ::
-  ( BeamFlow m r,
+  ( OnboardingFlow m r,
+    BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -897,7 +901,8 @@ getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant
   getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo) mbFleetInfo
 
 getInformation ::
-  ( BeamFlow m r,
+  ( OnboardingFlow m r,
+    BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -922,6 +927,10 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   let driverId = cast personId
       serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION mbServiceName
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbTransporterConfigForFlags <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  when (maybe False (\tc -> tc.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfigForFlags) $
+    fork "refreshOnboardingFlags:getInformation" . void $
+      SStatus.runRefreshOnboardingFlagsDriver (Just person) mbTransporterConfigForFlags personId
   when (isNothing person.clientId && isJust mbClientId) $ QPerson.updateClientId mbClientId person.id
   cloudType <- asks (.cloudType)
   when (person.cloudType /= cloudType) $ QPerson.updateCloudType cloudType person.id
@@ -1973,6 +1982,17 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (maybe "unknown" show sReqFD.poolingConfigVersion) (maybe "unknown" show sReqFD.poolingLogicVersion) (show sReqFD.batchNumber) (show req.response)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
+      -- The per-driver weekly reject counter the intelligent pool ranks on. It was only ever
+      -- incremented from driverScoreEventHandler's Reject case, which this branch never reaches
+      -- (the handler is fired from the Accept branch only), so the signal sat at zero.
+      DP.incrementSrdRejectedCount driverId
+      -- Cross-batch reject accounting: the cumulative count reaches the POOLING ruleset on the
+      -- next batch, the per-batch count tells us when a batch has been turned down outright.
+      void $ DP.incrementSearchTryRejectCount searchTry.id
+      batchRejectCount <- DP.incrementBatchRejectCount searchTry.id sReqFD.batchNumber
+      -- Forked for the same reason as the queue-skip below: nothing here should add latency to
+      -- the driver-respond hot path, and an early advance is fire-and-forget.
+      fork "earlyBatchAdvanceOnFullReject" $ tryAdvanceBatchEarly searchTry sReqFD batchRejectCount
       -- Handle queue skip for special zone rides — forked so a slow Redis/LTS hop
       -- can't add latency to the driver-respond hot path.
       fork "specialZoneQueueSkipOnDriverReject" $ do
@@ -1996,6 +2016,56 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     unlockRedisQuoteKeys = do
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown driverId)
       Redis.unlockRedis (editDestinationLockKey driverId)
+
+    -- Every driver in the batch has now rejected, so waiting out singleBatchProcessTime before
+    -- the next batch is pure dead time. Bump the search try's batch epoch — which orphans the
+    -- job already scheduled, see isBatchChainSuperseded — and enqueue an immediate one in its
+    -- place, so exactly one chain stays live and no batch is sent twice.
+    --
+    -- Only a *full* rejection qualifies: a batch still holding an unanswered offer may yet be
+    -- accepted, and pulling that offer early would waste it.
+    tryAdvanceBatchEarly searchTry sReqFD batchRejectCount = do
+      mbSentCount <- DP.getBatchSentCount searchTry.id sReqFD.batchNumber
+      case mbSentCount of
+        Just sentCount | sentCount > 0 && batchRejectCount >= sentCount -> do
+          searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+          driverPoolConfig <-
+            SCDPC.getDriverPoolConfig
+              searchReq.merchantOperatingCityId
+              searchTry.vehicleServiceTier
+              searchTry.tripCategory
+              (fromMaybe SL.Default searchReq.area)
+              searchReq.estimatedDistance
+              searchTry.searchRepeatType
+              searchTry.searchRepeatCounter
+              (Just (TransactionId (Id searchReq.transactionId)))
+              searchReq
+          singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
+          now <- getCurrentTime
+          let isEnabled = fromMaybe False driverPoolConfig.enableEarlyBatchAdvanceOnFullReject
+              -- Never advance into the final batch: that one ends in the terminal cancel path,
+              -- and pulling it in would change when the customer is told the search failed.
+              hasBatchesLeft = sReqFD.batchNumber + 1 < driverPoolConfig.maxNumberOfBatches
+              -- The same delay the normal reschedule carries: a second FCM arriving before the
+              -- first has rendered costs more than the wait it saves.
+              batchOldEnough = addUTCTime singleBatchProcessingTempDelay sReqFD.startTime <= now
+          when (isEnabled && hasBatchesLeft && batchOldEnough) $ do
+            epoch <- DP.bumpBatchEpoch searchTry.id
+            logInfo $
+              "EarlyBatchAdvance: searchTryId=" <> searchTry.id.getId
+                <> " batchNum="
+                <> show sReqFD.batchNumber
+                <> " sent="
+                <> show sentCount
+                <> " epoch="
+                <> show epoch
+            createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) 0 $
+              SendSearchRequestToDriverJobData
+                { searchTryId = searchTry.id,
+                  estimatedRideDistance = searchReq.estimatedDistance,
+                  batchEpoch = Just epoch
+                }
+        _ -> pure ()
     callWithErrorHandling func = do
       exep <- withTryCatch "callWithErrorHandling:respondQuote" func
       case exep of
@@ -2084,6 +2154,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       logDebug $ "active quotes for driverId = " <> driverId.getId <> show activeQuotes
       pure $ not $ null activeQuotes
     getQuoteLimit dist vehicleServiceTier tripCategory searchReq area searchRepeatType searchRepeatCounter = do
+      L.setOptionLocal TxnIdKey searchReq.transactionId
       driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
       pure driverPoolCfg.driverQuoteLimit
 

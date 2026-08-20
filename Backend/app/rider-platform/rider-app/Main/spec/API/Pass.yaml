@@ -11,6 +11,7 @@ imports:
   StatusType: Domain.Types.PurchasedPass
   HighPrecMoney: Kernel.Types.Common
   ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
   Benefit: Domain.Types.Pass
   APISuccess: Kernel.Types.APISuccess
@@ -50,6 +51,7 @@ types:
     benefit: Maybe Benefit
     benefitDescription: Text
     vehicleServiceTierType: "[ServiceTierType]"
+    vehicleType: VehicleCategory
     maxTrips: Maybe Int
     maxDays: Maybe Int
     documentsRequired: "[PassDocumentType]"
@@ -99,11 +101,16 @@ types:
     passNumber: Text
     passEntity: PassDetailsAPIEntity
     tripsLeft: Maybe Int
+    availableTripCount: Maybe Int
+    unlimitedTripCount: Bool
     lastVerifiedVehicleNumber: Maybe Text
     isAutoVerified: Bool
     status: StatusType
     purchaseDate: Day
     daysToExpire: Int
+    photoUploadTimeLimit: Maybe UTCTime
+    photoChangedCount: Maybe Int
+    maxPhotoChangeConfigCount: Maybe Int
     startDate: Day
     expiryDate: Day
     deviceMismatch: Bool
@@ -246,6 +253,7 @@ apis:
         purchasedPassId: Id PurchasedPass
       query:
         imeiNumber: Text
+        reupload: Bool
       multipart:
         type: IssueMediaUploadReq
       response:

@@ -77,6 +77,7 @@ Person:
     referralCode : Maybe Text
     referredAt : Maybe UTCTime
     hasTakenValidRide : Bool
+    hasPassTill : Maybe Day
     hasDisability : Maybe Bool
     blockedAt : Maybe UTCTime
     blockedByRuleId : Maybe (Id MerchantConfig)

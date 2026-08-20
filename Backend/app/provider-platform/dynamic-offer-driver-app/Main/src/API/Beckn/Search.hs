@@ -27,8 +27,10 @@ import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.BapHostRedirect (shouldRedirectBapHost)
 import qualified Kernel.Prelude as Kernel
 import qualified Kernel.Storage.Hedis as Redis
@@ -94,6 +96,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
     _ -> do
       -- Process locally
       transactionId <- Utils.getTransactionId reqV2.searchReqContext
+      L.setOptionLocal TxnIdKey transactionId
       Utils.withTransactionIdLogTag transactionId $ do
         logTagInfo "SearchV2 API Flow Local Processing" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
         let context = reqV2.searchReqContext

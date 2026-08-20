@@ -240,7 +240,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
   logInfo $ "FRFSFleetOperator: Trip action - " <> show act
   case act of
     TripStart -> handleTripStart baseUrl gtfsId anchor tripNums redisKey epochNow wbNo
-    TripEnd -> handleTripEnd baseUrl gtfsId anchor redisKey tripNums
+    TripEnd -> handleTripEnd baseUrl gtfsId anchor redisKey epochNow tripNums
     TripReset -> handleTripReset baseUrl gtfsId anchor redisKey tripNums
     TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow tripNums
   where
@@ -287,7 +287,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
                   hasUpcomingTrips = not (null (filter (> nextTrip) tripNums))
                 }
 
-    handleTripEnd baseUrl gtfsId anchor redisKey tripNums = do
+    handleTripEnd baseUrl gtfsId anchor redisKey epochNow tripNums = do
       let lockKey = redisKey <> ":lock"
       lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
       unless lockAcquired $ do
@@ -307,7 +307,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
             GimsTripActionReq
               { action = GimsTripActionEnd,
                 tripNumber = Just currentTrip,
-                timestamp = Nothing,
+                timestamp = Just epochNow,
                 gimsConductorId = ct,
                 gimsDriverId = dt,
                 vehicleNumber = vn

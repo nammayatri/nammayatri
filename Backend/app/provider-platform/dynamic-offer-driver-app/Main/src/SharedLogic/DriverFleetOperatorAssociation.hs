@@ -233,10 +233,10 @@ isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
     (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
     (DP.OPERATOR, DP.FLEET_BUSINESS) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
     (DP.OPERATOR, DP.OPERATOR) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociationIgnoringActive requestedPersonDetails.id personDetails.id
     (DP.FLEET_OWNER, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.FLEET_OWNER, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
-    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociationIgnoringActive requestedPersonDetails.id personDetails.id
     (DP.FLEET_BUSINESS, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.FLEET_BUSINESS, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.ADMIN, _) -> return True

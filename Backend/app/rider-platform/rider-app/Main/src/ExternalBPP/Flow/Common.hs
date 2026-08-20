@@ -556,7 +556,7 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
   let orderStatus = case cancellationType of
         Spec.SOFT_CANCEL -> Spec.SOFT_CANCELLED
         Spec.CONFIRM_CANCEL -> Spec.CANCELLED
-  let baseFare = booking.totalPrice.amount
+  let baseFare = fromMaybe booking.totalPrice.amount booking.overriddenAmount
       departureTime = fromMaybe booking.validTill booking.startTime
   (charges, refund) <- calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
   return $
@@ -596,7 +596,9 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
             DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
           charges = min baseFare (max 0 rawCharges)
           refund = baseFare - charges
-      when (rawCharges /= charges) $
+      -- A fully pass-covered booking has baseFare 0, so a FLAT tier always clamps. The tier is
+      -- fine; there is simply no fare to charge against. Only a real clamp is worth an error.
+      when (rawCharges /= charges && baseFare > 0) $
         logError $
           "FRFSCancellationConfig misconfigured for tier " <> tier.id.getId
             <> " (type="

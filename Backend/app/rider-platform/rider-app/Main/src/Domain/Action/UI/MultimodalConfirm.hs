@@ -208,10 +208,11 @@ postMultimodalInitiate ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbNewServiceTiers = do
+postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = do
   runAction journeyId $ do
     journeyLegs <- JMU.measureLatency (QJourneyLeg.getJourneyLegs journeyId) "QJourneyLeg.getJourneyLegs postMultimodalInitiate"
     journey <- JMU.measureLatency (JM.getJourney journeyId) "JM.getJourney postMultimodalInitiate"
@@ -221,7 +222,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyTy
         then JMU.measureLatency (JM.getAllLegsInfoFromLegs journey.riderId journey.id journeyLegs) "JM.getAllLegsInfoFromLegs"
         else do
           let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
-          JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
+          JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) "addAllLegs"
           JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
           JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
@@ -231,10 +232,11 @@ postMultimodalInitiateSimpl ::
   Domain.Types.Journey.Journey ->
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklistedFareQuoteTypes = do
+postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
   runAction journey.id $ do
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes) "addAllLegs"
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
@@ -274,7 +276,10 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
             Just paymentOrder -> do
               person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
               let isSingleMode = fromMaybe False journey.isSingleMode
-              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode
+              let mbQuoteId = case legs of
+                    [leg] -> Id <$> leg.legPricingId
+                    _ -> Nothing
+              buildCreateOrderResp paymentOrder journey.riderId journey.merchantOperatingCityId person Payment.FRFSMultiModalBooking isSingleMode mbQuoteId
             Nothing -> return Nothing
       Nothing -> return Nothing
   pure ApiTypes.JourneyConfirmResp {ApiTypes.orderSdkPayload = sdkPayload, ApiTypes.gatewayReferenceId = paymentGateWayId, result = "Success"}
@@ -326,7 +331,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
                           orderStatusCall = Payment.orderStatus merchantId merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
                           fulfillmentHandler = mkFulfillmentHandler paymentServiceType paymentOrder.id
                       void $ SPayment.orderStatusHandler merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
-                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode
+                      createOrderResp <- buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode (Just booking.quoteId)
                       return (createOrderResp, Just paymentBooking.status)
                     Nothing -> return (Nothing, Nothing)
               Nothing -> return (Nothing, Nothing)
@@ -385,8 +390,8 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = ActorInfo
         pure (paymentFulfillStatus, Nothing, Nothing)
       _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
 
-buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Environment.Flow (Maybe Payment.CreateOrderResp)
-buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode = do
+buildCreateOrderResp :: DOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Id DMOC.MerchantOperatingCity -> Domain.Types.Person.Person -> Payment.PaymentServiceType -> Bool -> Maybe (Id DFRFSQuote.FRFSQuote) -> Environment.Flow (Maybe Payment.CreateOrderResp)
+buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymentServiceType isSingleMode mbQuoteId = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled_ <- Payment.getIsSplitEnabled (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
@@ -395,6 +400,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
+  udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
   offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
   let createOrderReq =
         Payment.CreateOrderReq
@@ -420,7 +426,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
-            udf1 = udf1
+            udf1 = udf1,
+            udf2 = udf2
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
@@ -2022,19 +2029,18 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
             JMU.measureLatency (handleSingleVehicleRoute routeServiceabilityContext vno routeId) ("handleSingleVehicleRoute vno=" <> vno <> " routeId=" <> routeId)
           Nothing -> do
             (srcCode, destCode) <- JMU.measureLatency (resolveSrcAndDestCode req.sourceStopCode req.destinationStopCode req.routeCodes routeServiceabilityContext) ("resolveSrcAndDestCode req=" <> show req)
-            directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
-            if not (null directRouteCodes)
-              then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
-              else do
-                mbClusterRoutes <-
-                  if fromMaybe False req.allowClusteredStops
-                    then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
-                    else pure Nothing
-                case mbClusterRoutes of
-                  Just clusterRoutes@(_ : _) ->
-                    JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
-                  _ ->
-                    JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
+            mbClusterRoutes <-
+              if fromMaybe False req.allowClusteredStops
+                then JMU.measureLatency (JLU.getClusterRoutesFromTo srcCode destCode integratedBPPConfig) ("JLU.getClusterRoutesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                else pure Nothing
+            case mbClusterRoutes of
+              Just clusterRoutes@(_ : _) ->
+                JMU.measureLatency (handleClusterRoute routeServiceabilityContext userRequestedCodes srcCode destCode clusterRoutes) ("handleClusterRoute src=" <> srcCode <> " dest=" <> destCode <> " connections=" <> show (length clusterRoutes))
+              _ -> do
+                directRouteCodes <- JMU.measureLatency (JLU.getRouteCodesFromTo srcCode destCode integratedBPPConfig) ("JLU.getRouteCodesFromTo src=" <> srcCode <> " dest=" <> destCode)
+                if not (null directRouteCodes)
+                  then JMU.measureLatency (handleDirectRoute routeServiceabilityContext userRequestedCodes srcCode destCode directRouteCodes) ("handleDirectRoute src=" <> srcCode <> " dest=" <> destCode <> " routeCodes=" <> show directRouteCodes)
+                  else JMU.measureLatency (handleOtpRoute routeServiceabilityContext userRequestedCodes srcCode destCode) ("handleOtpRoute src=" <> srcCode <> " dest=" <> destCode)
     )
     ("FULL_API postMultimodalRouteServiceability req=" <> show req)
   where
@@ -2163,7 +2169,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               return $
                 Just $
                   API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                    { eta = Just [],
+                    { bearing = round <$> busLiveInfo.bearing,
+                      eta = Just [],
                       number = vno,
                       position = LatLong busLiveInfo.latitude busLiveInfo.longitude,
                       locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral busLiveInfo.timestamp,
@@ -2190,7 +2197,8 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
               return $
                 Just $
                   API.Types.UI.MultimodalConfirm.LiveVehicleInfo
-                    { eta = Just enrichedEta,
+                    { bearing = round <$> singleBus.busData.bearing,
+                      eta = Just enrichedEta,
                       number = vno,
                       position = LatLong singleBus.busData.latitude singleBus.busData.longitude,
                       locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral singleBus.busData.timestamp,

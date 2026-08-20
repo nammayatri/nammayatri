@@ -46,6 +46,7 @@ updateByPrimaryKey (Lib.Types.GateInfo.GateInfo {..}) = do
       Se.Set Beam.demandThresholdsJson (Lib.Queries.Transformers.GateInfo.encodeThresholdMap demandThresholds),
       Se.Set Beam.enableQueueFilter (Lib.Queries.Transformers.GateInfo.encodeBoolMap enableQueueFilter),
       Se.Set Beam.entryFeeAmount entryFeeAmount,
+      Se.Set Beam.gateConfig (Lib.Queries.Transformers.GateInfo.encodeGateConfig gateConfig),
       Se.Set Beam.gateTags gateTags,
       Se.Set Beam.gateType gateType,
       Se.Set Beam.geomGeoJson geomGeoJson,

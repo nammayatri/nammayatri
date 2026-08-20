@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data AppDynamicLogicRollout = AppDynamicLogicRollout
   { domain :: Lib.Yudhishthira.Types.LogicDomain,
+    experimentGroup :: Kernel.Prelude.Maybe Data.Text.Text,
     experimentStatus :: Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ExperimentStatus,
     isBaseVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Yudhishthira.Types.Merchant),

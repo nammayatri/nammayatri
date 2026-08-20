@@ -18,3 +18,9 @@ ALTER TABLE atlas_app.pass_type ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass_type ADD COLUMN pass_enum text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_type ADD COLUMN photo_re_upload_time_limit integer ;
+ALTER TABLE atlas_app.pass_type ADD COLUMN max_photo_change_limit integer ;

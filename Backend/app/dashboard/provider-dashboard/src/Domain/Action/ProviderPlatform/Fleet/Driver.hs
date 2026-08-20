@@ -634,6 +634,11 @@ postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = d
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $ do
     let requestorId = apiTokenInfo.personId.getId
+    whenJust req.email $ \reqEmail -> do
+      mbExistingPerson <- QP.findByEmail (toLower reqEmail)
+      whenJust mbExistingPerson $ \existingPerson ->
+        when (existingPerson.id /= cast driverId) $
+          throwError (InvalidRequest $ "Email already registered with another user: " <> reqEmail)
     -- Pass requestorId to BPP - role-based checks and associations are validated on BPP side
     result <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetDriverUpdate) driverId requestorId req
     when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
@@ -646,7 +651,7 @@ postDriverFleetDriverUpdate merchantShortId opCity apiTokenInfo driverId req = d
 
         -- Handle encryption for email if provided
         newEmail <- case req.email of
-          Just email -> Just <$> encrypt email
+          Just email -> Just <$> encrypt (toLower email)
           Nothing -> pure person.email
 
         let updatedPerson :: DP.Person

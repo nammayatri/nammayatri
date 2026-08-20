@@ -80,6 +80,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
       API.Internal.SpecialLocationList
@@ -265,6 +266,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SpecialLocationUpsert
@@ -479,6 +481,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.Notification
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
+      SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
       SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout
@@ -518,6 +521,7 @@ library
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
       SharedLogic.BehaviourManagement.PickupStall
+      SharedLogic.BehaviourManagement.PickupStallState
       SharedLogic.BehaviourManagement.Visibility
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
@@ -528,6 +532,7 @@ library
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
+      SharedLogic.CancellationSignals
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
       SharedLogic.DriverFee
@@ -538,6 +543,7 @@ library
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Common
       SharedLogic.DriverOnboarding.Digilocker
+      SharedLogic.DriverOnboarding.OnboardingFlags.Checks
       SharedLogic.DriverOnboarding.OnboardingFlags.Flow
       SharedLogic.DriverOnboarding.OnboardingFlags.Guard
       SharedLogic.DriverOnboarding.OnboardingFlags.Types

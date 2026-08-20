@@ -212,7 +212,7 @@ MerchantMessage:
   derives: Generic,Show,'UsageSafety,Eq
   types:
     MessageKey:
-      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP
+      enum: SEND_OTP,WELCOME_TO_PLATFORM,ALTERNATE_NUMBER_OTP,ONBOARD_SUPPORT_SMS_TEMPLATE,END_RIDE_MESSAGE,ONBOARDING_YATRI_MESSAGE,BOOKING_MESSAGE,CASH_COLLECTED_MESSAGE,SEND_PAYMENT_LINK,WHATSAPP_CLEAR_DUES_CALL_MISSED_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE,WHATSAPP_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,WHATSAPP_SETUP_AUTOPAY_MESSAGE,WHATSAPP_SWITCH_PLAN_MESSAGE,WHATSAPP_HOW_IT_WORKS_MESSAGE,SMS_CLEAR_DUES_CALL_MISSED_MESSAGE,SMS_CLEAR_DUES_MESSAGE,SMS_CLEAR_DUES_MESSAGE_TO_BLOCKED_DRIVERS,SMS_SETUP_AUTOPAY_MESSAGE,SMS_SWITCH_PLAN_MESSAGE,SMS_HOW_IT_WORKS_MESSAGE,WHATSAPP_SETUP_MANDATE_MESSAGE,WHATSAPP_VEHICLE_UNLINKED_MESSAGE,WHATSAPP_VEHICLE_LINKED_MESSAGE,YATRI_RENTAL_PAUSE,YATRI_RENTAL_RESUME,WHATSAPP_SEND_MANUAL_PAYMENT_LINK,SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE,FLEET_JOINING_MESSAGE,FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE,WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK,WHATSAPP_MANUAL_PAYMENT_LINK,FLEET_CONSENT_DEEPLINK_MESSAGE,SEND_FARE_RECEIPT_MESSAGE,WAIVE_OFF_ENABLED_FOR_SUBSCRIPTION,OPERATOR_CONSENT_DEEPLINK_MESSAGE,OPERATOR_JOINING_MESSAGE,OPERATOR_JOIN_AND_DOWNLOAD_APP_MESSAGE,FLEET_LINK_SUCCESS_MESSAGE,FLEET_UNLINK_SUCCESS_MESSAGE,DOCUMENT_INVALID,DRIVER_PAYOUT,SEND_SOS_ALERT,POST_RIDE_SOS,DOCUMENT_EXPIRY_REMINDER_SMS,VEHICLE_INSPECTION_SMS,DRIVER_INSPECTION_SMS,TRAINING_VIDEO_SMS,FLEET_COMMUNICATION_SMS,FLEET_COMMUNICATION_WHATSAPP,SEND_TOTP,DOCUMENT_VALID
       derive: "Bounded, Enum"
 
     MediaChannel:
@@ -297,15 +297,15 @@ MerchantMessage:
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
 
-  configPilot:
-    configType: MerchantMessage
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.MerchantMessage
-    filterDimensions:
-      - messageKey
-      - vehicleCategory
+#   configPilot:
+#     configType: MerchantMessage
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.MerchantMessage
+#     filterDimensions:
+#       - messageKey
+#       - vehicleCategory
 
 LlmPrompt:
   derives: Generic,Show,'UsageSafety
@@ -567,17 +567,17 @@ Overlay:
         and:
           [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
-  configPilot:
-    configType: Overlay
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.Overlay
-    filterDimensions:
-      - overlayKey
-      - language
-      - udf1
-      - vehicleCategory
+#   configPilot:
+#     configType: Overlay
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.Overlay
+#     filterDimensions:
+#       - overlayKey
+#       - language
+#       - udf1
+#       - vehicleCategory
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
@@ -1011,9 +1011,23 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     PayoutFeeType:
       enum: "PERCENTAGE, FIXED"
+    PaymentChargeBearer:
+      enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM, PAYMENT_CUSTOMER_AND_DRIVER"
+    PayoutChargeBearer:
+      enum: "DRIVER_BEARER, PLATFORM_BEARER"
+    ConnectChargeBearer:
+      enum: "CONNECT_PLATFORM, CONNECT_DRIVER"
+    ChargeFrequency:
+      enum: "CHARGE_DAILY, CHARGE_WEEKLY, CHARGE_MONTHLY"
     PayoutFeeConfig:
       feeType: PayoutFeeType
       feeValue: HighPrecMoney
+      # Stripe payout charge = fixedFee + percentageRate% * payoutAmount; feeBearer decides who funds it.
+      # All new fields MUST stay Maybe — payoutFee is parsed as a whole record, so a non-Maybe
+      # addition would make every existing stored blob fail FromJSON and collapse payoutFee to Nothing.
+      fixedFee: Maybe HighPrecMoney
+      percentageRate: Maybe Double
+      feeBearer: Maybe PayoutChargeBearer
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Read, Eq
     DriverWalletConfig:
       enableDriverWallet: Bool
@@ -1029,6 +1043,16 @@ TransporterConfig:
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
+      # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
+      paymentChargeBearer: Maybe PaymentChargeBearer
+      paymentChargeRate: Maybe Double
+      # Stripe connect-account maintenance charge (scheduled deduction).
+      connectAccountCharge: Maybe HighPrecMoney
+      connectAccountChargeFrequency: Maybe ChargeFrequency
+      connectAccountChargeBearer: Maybe ConnectChargeBearer
+      connectAccountChargeTimeOfDay: Maybe Text
+      connectAccountChargeDayOfWeek: Maybe Int
+      connectAccountChargeDayOfMonth: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
@@ -1309,6 +1333,7 @@ TransporterConfig:
     dontAutoEnableDriver: Maybe Bool
     enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
     unifiedOnboardingFlagsRecompute: Maybe Bool
+    forceEnabledBypassingDocsUponDisableTakesToOnboarding: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
@@ -1396,6 +1421,7 @@ TransporterConfig:
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
+    favouriteDriverDailyCoinRideThreshold: Int
     communicationChannelCharLimits: Maybe CommunicationChannelCharLimits
     allowPanReupload: Maybe Bool
     allowAadhaarReupload: Maybe Bool
@@ -1485,6 +1511,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
     sameRiderDriverRideCountLookbackDays: Maybe Int
     sameRiderDriverRideCountThreshold: Maybe Int
+    favouriteDriverDailyCoinRideThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
     stclConfig: Maybe Value
 
@@ -1592,6 +1619,7 @@ TransporterConfig:
       <$>) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
+    favouriteDriverDailyCoinRideThreshold: Just favouriteDriverDailyCoinRideThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
 
@@ -1720,6 +1748,7 @@ TransporterConfig:
       Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: fromMaybe 2 sameRiderDriverRideCountThreshold|E
+    favouriteDriverDailyCoinRideThreshold: fromMaybe 4 favouriteDriverDailyCoinRideThreshold|E
     communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       communicationChannelCharLimits|E
@@ -2061,11 +2090,11 @@ TransporterConfig:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
 
-  configPilot:
-    configType: TransporterConfig
-    fetchQuery: getTransporterConfigFromDB
-    returnType: Maybe
-    queryModule: Storage.CachedQueries.Merchant.TransporterConfig
+#   configPilot:
+#     configType: TransporterConfig
+#     fetchQuery: getTransporterConfigFromDB
+#     returnType: Maybe
+#     queryModule: Storage.CachedQueries.Merchant.TransporterConfig
 
 MerchantServiceConfig:
   derives: Generic,Show,'UsageSafety
@@ -2172,14 +2201,14 @@ MerchantPushNotification:
       where:
         and: [merchantOperatingCityId, key, tripCategory]
 
-  configPilot:
-    configType: MerchantPushNotification
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.MerchantPushNotification
-    filterDimensions:
-      - key
-      - tripCategory
+#   configPilot:
+#     configType: MerchantPushNotification
+#     fetchQuery: findAllByMerchantOpCityId
+#     returnType: List
+#     queryModule: Storage.Queries.MerchantPushNotification
+#     filterDimensions:
+#       - key
+#       - tripCategory
 
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config
@@ -2221,14 +2250,14 @@ RideRelatedNotificationConfig:
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
 
-  configPilot:
-    configType: RideRelatedNotificationConfig
-    fetchQuery: findAllByMerchantOperatingCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
-    filterDimensions:
-      - timeDiffEvent
+#   configPilot:
+#     configType: RideRelatedNotificationConfig
+#     fetchQuery: findAllByMerchantOperatingCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
+#     filterDimensions:
+#       - timeDiffEvent
 
 PayoutConfig:
   tableName: payout_config
@@ -2305,15 +2334,15 @@ PayoutConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  configPilot:
-    configType: PayoutConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just [])"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.PayoutConfig
-    filterDimensions:
-      - vehicleCategory
-      - isPayoutEnabled
+#   configPilot:
+#     configType: PayoutConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just [])"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.PayoutConfig
+#     filterDimensions:
+#       - vehicleCategory
+#       - isPayoutEnabled
 
 ScheduledPayoutConfig:
   tableName: scheduled_payout_config
@@ -2364,9 +2393,9 @@ ScheduledPayoutConfig:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
 
-  configPilot:
-    configType: ScheduledPayoutConfig
-    fetchQuery: findAllByMerchantOpCityId
-    returnType: List
-    queryModule: Storage.Queries.ScheduledPayoutConfig
-    filterDimensions: [isEnabled, payoutCategory]
+#   configPilot:
+#     configType: ScheduledPayoutConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     returnType: List
+#     queryModule: Storage.Queries.ScheduledPayoutConfig
+#     filterDimensions: [isEnabled, payoutCategory]

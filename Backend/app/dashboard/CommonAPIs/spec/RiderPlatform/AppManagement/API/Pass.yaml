@@ -16,6 +16,14 @@ imports:
   MediaFile: IssueManagement.Domain.Types.MediaFile
   IssueMediaUploadReq: IssueManagement.Common.UI.Issue
   IssueMediaUploadRes: IssueManagement.Common.UI.Issue
+  PassType: Domain.Types.PassType
+  Benefit: Domain.Types.Pass
+  PassDocumentType: Domain.Types.Pass
+  ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
+  HighPrecMoney: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Value: Data.Aeson
 
 importPackageOverrides:
   API.Types.Dashboard.AppManagement: "rider-app"
@@ -25,6 +33,7 @@ importPackageOverrides:
   Lib.Payment.Domain.Action: "payment"
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
   Domain.Types.Pass: "rider-app"
+  Domain.Types.PassType: "rider-app"
   API.Types.UI.Pass: "rider-app"
   IssueManagement.Domain.Types.MediaFile: "shared-services"
   IssueManagement.Common.UI.Issue: "shared-services"
@@ -36,6 +45,88 @@ types:
     - startDay: Maybe Day
     - profilePicture: Maybe Text
     - derive: "'HideSecrets"
+
+  # Pass catalog CRUD (dashboard-authored). Deliberately omits
+  # purchaseEligibilityJsonLogic / redeemEligibilityJsonLogic: purchase rules now
+  # live in the PASS_PURCHASE_ELIGIBILITY dynamic-logic domain (authored via the
+  # NammaTag dashboard) and the redeem column has no reader in rider-app.
+  PassCreateReq:
+    passTypeId: Id PassType
+    code: Text
+    name: Maybe Text
+    description: Maybe Text
+    amount: HighPrecMoney
+    benefitDescription: Text
+    benefit: Maybe Benefit
+    applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: VehicleCategory
+    documentsRequired: "[PassDocumentType]"
+    pricingTiers: Maybe Value
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    verificationValidity: Maybe Seconds
+    order: Int
+    enable: Bool
+    autoApply: Bool
+    maxSwitchCount: Maybe Int
+    minFare: Maybe HighPrecMoney
+    maxFare: Maybe HighPrecMoney
+    formVerificationConfig: Maybe Value
+    derive: "'HideSecrets"
+
+  # Partial patch — every field optional, absent means "leave as is".
+  PassUpdateReq:
+    passTypeId: Maybe (Id PassType)
+    code: Maybe Text
+    name: Maybe Text
+    description: Maybe Text
+    amount: Maybe HighPrecMoney
+    benefitDescription: Maybe Text
+    benefit: Maybe Benefit
+    applicableVehicleServiceTiers: "Maybe [ServiceTierType]"
+    vehicleType: Maybe VehicleCategory
+    documentsRequired: "Maybe [PassDocumentType]"
+    pricingTiers: Maybe Value
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    verificationValidity: Maybe Seconds
+    order: Maybe Int
+    enable: Maybe Bool
+    autoApply: Maybe Bool
+    maxSwitchCount: Maybe Int
+    minFare: Maybe HighPrecMoney
+    maxFare: Maybe HighPrecMoney
+    formVerificationConfig: Maybe Value
+    derive: "'HideSecrets"
+
+  PassCatalogItem:
+    id: Id Pass
+    passTypeId: Id PassType
+    passTypeTitle: Text
+    passCategoryName: Text
+    code: Text
+    name: Maybe Text
+    description: Maybe Text
+    amount: HighPrecMoney
+    benefitDescription: Text
+    benefit: Maybe Benefit
+    applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: VehicleCategory
+    documentsRequired: "[PassDocumentType]"
+    pricingTiers: Maybe Value
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    verificationValidity: Seconds
+    order: Int
+    enable: Bool
+    autoApply: Bool
+    maxSwitchCount: Maybe Int
+    minFare: Maybe HighPrecMoney
+    maxFare: Maybe HighPrecMoney
+    formVerificationConfig: Maybe Value
+
+  PassCreateResp:
+    passId: Id Pass
 
 apis:
   - GET:
@@ -161,5 +252,48 @@ apis:
       auth: ApiAuthV2
       params:
         customerId: Id Person
+      response:
+        type: APISuccess
+
+  # ---- Pass catalog CRUD ----
+
+  - GET:
+      endpoint: /catalog/list
+      name: ListPassCatalog
+      auth: ApiAuthV2
+      query:
+        passTypeId: Id PassType
+        enable: Bool
+      response:
+        type: "[PassCatalogItem]"
+
+  - POST:
+      endpoint: /catalog/create
+      name: CreatePass
+      auth: ApiAuthV2
+      request:
+        type: PassCreateReq
+      response:
+        type: PassCreateResp
+
+  - PUT:
+      endpoint: /catalog/{passId}/update
+      name: UpdatePass
+      auth: ApiAuthV2
+      params:
+        passId: Id Pass
+      request:
+        type: PassUpdateReq
+      response:
+        type: APISuccess
+
+  # Soft delete (enable = false), matching deleteEDCMachine. A hard delete would
+  # orphan purchased_pass rows that reference pass_id for rider history.
+  - DELETE:
+      endpoint: /catalog/{passId}/delete
+      name: DeletePass
+      auth: ApiAuthV2
+      params:
+        passId: Id Pass
       response:
         type: APISuccess

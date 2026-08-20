@@ -61,6 +61,10 @@ DriverPoolConfig:
     dynamicBatchSize: Vector Int
     selfRequestIfRiderIsDriver: Bool
     enablePriorityTagSplit: Maybe Bool
+    srdCountersBulkChunkSize: Maybe Int
+    idleBulkChunkSize: Maybe Int
+    softMaxParallelSearchRequests: Maybe Int
+    enableEarlyBatchAdvanceOnFullReject: Maybe Bool
 
   beamFields:
     dynamicBatchSize:
@@ -111,17 +115,17 @@ DriverPoolConfig:
       where: merchantOperatingCityId
       orderBy: tripDistance
 
-  configPilot:
-    configType: DriverPoolConfig
-    fetchQuery: findAllByMerchantOpCityId
-    fetchQueryArgs: "(Just []) Nothing"
-    returnType: List
-    queryModule: Storage.CachedQueries.Merchant.DriverPoolConfig
-    filterDimensions:
-      - tripDistance
-      - area
-      - vehicleVariant
-      - tripCategory
+#   configPilot:
+#     configType: DriverPoolConfig
+#     fetchQuery: findAllByMerchantOpCityId
+#     fetchQueryArgs: "(Just []) Nothing"
+#     returnType: List
+#     queryModule: Storage.CachedQueries.Merchant.DriverPoolConfig
+#     filterDimensions:
+#       - tripDistance
+#       - area
+#       - vehicleVariant
+#       - tripCategory
 
 MerchantState:
   tableName: merchant_state

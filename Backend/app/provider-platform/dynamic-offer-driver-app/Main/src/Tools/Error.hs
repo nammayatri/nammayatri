@@ -1135,33 +1135,6 @@ instance IsHTTPError RiderDetailsError where
 
 instance IsAPIError RiderDetailsError
 
-data CustomerCancellationDuesError
-  = DisputeChancesLimitNotMet Text Text Text
-  | CityRestrictionOnCustomerCancellationDuesAddition Text
-  | DisputeChancesOrCancellationDuesHasToBeNull
-  | CustomerCancellationDuesLimitNotMet Text
-  deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''CustomerCancellationDuesError
-
-instance IsBaseError CustomerCancellationDuesError where
-  toMessage = \case
-    (DisputeChancesLimitNotMet riderDetailsId disputeChancesUsed disputeChanceThreshold) -> Just $ "Limits not met for dispute chances for riderDetailsId " <> riderDetailsId <> ". Dispute Chances Used are :" <> disputeChancesUsed <> "and DisputeChanceThreshold is: " <> disputeChanceThreshold
-    (CityRestrictionOnCustomerCancellationDuesAddition city) -> Just $ city <> " is restricted from addition of customer cancellation dues on ride cancellation"
-    DisputeChancesOrCancellationDuesHasToBeNull -> Just "Either of the two , Due Amount or Dispute Chances has to be Null"
-    (CustomerCancellationDuesLimitNotMet riderDetailsId) -> Just $ "Limits not met for cancellation dues for riderDetailsId :" <> riderDetailsId
-
-instance IsHTTPError CustomerCancellationDuesError where
-  toErrorCode = \case
-    DisputeChancesLimitNotMet {} -> "DISPUTE_CHANCES_LIMIT_NOT_MET"
-    CityRestrictionOnCustomerCancellationDuesAddition _ -> "CITY_RESTRICTION_ON_CUSTOMER_CANCELLATION_DUES_ADDITION"
-    DisputeChancesOrCancellationDuesHasToBeNull -> "DISPUTE_CHANCES_OR_CANCELLATION_DUES_HAS_TO_BE_NULL"
-    CustomerCancellationDuesLimitNotMet _ -> "CUSTOMER_CANCELLATION_DUES_LIMIT_NOT_MET"
-
-  toHttpCode _ = E400
-
-instance IsAPIError CustomerCancellationDuesError
-
 data RentalError
   = OdometerReadingRequired Text
   | EndRideOtpRequired Text

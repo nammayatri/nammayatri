@@ -124,6 +124,13 @@ updateIsPickupOrDestinationEdited isPickupOrDestinationEdited id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isPickupOrDestinationEdited isPickupOrDestinationEdited, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePaymentCharge ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updatePaymentCharge paymentCharge paymentChargeBearer id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.paymentCharge paymentCharge, Se.Set Beam.paymentChargeBearer paymentChargeBearer, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePreviousRideTripEndPosAndTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())

@@ -6,6 +6,8 @@ module Tools.DynamicLogic where
 import Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
 import Data.List (nub)
+import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Hedis
@@ -18,6 +20,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as DALE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as DALR
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
+import qualified Lib.Yudhishthira.Tools.DynamicLogicGroup as LYG
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
@@ -164,12 +167,41 @@ selectVersionForUnboundedConfigs ::
   LogicDomain ->
   Maybe Int ->
   m (Maybe Int)
-selectVersionForUnboundedConfigs merchantOpCityId domain mbToss = do
-  mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-  configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-  let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") $ filterActiveRollouts configs
-  mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
-  return $ mbSelectedConfig <&> (.version)
+selectVersionForUnboundedConfigs merchantOpCityId domain mbToss =
+  selectWithTxnStickiness domain $ do
+    mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+    configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+    let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") $ filterActiveRollouts configs
+    mbSelectedConfig <- chooseLogicWithGroups applicapleConfigs mbToss
+    return $ mbSelectedConfig <&> (.version)
+
+dynamicLogicVersionStickyTtlSec :: Int
+dynamicLogicVersionStickyTtlSec = 7200
+
+mkTxnVersionStickyKey :: Text -> LogicDomain -> Text
+mkTxnVersionStickyKey txnId domain = "sticky_dynamic_logic_version:" <> txnId <> ":" <> show domain
+
+selectWithTxnStickiness ::
+  BeamFlow m r =>
+  LogicDomain ->
+  m (Maybe Int) ->
+  m (Maybe Int)
+selectWithTxnStickiness domain selectFresh = do
+  mbTxnId <- L.getOptionLocal TxnIdKey
+  case mbTxnId of
+    Nothing -> selectFresh
+    Just txnId -> do
+      let stickyKey = mkTxnVersionStickyKey txnId domain
+      mbCached <- Hedis.withCrossAppRedis $ Hedis.safeGet stickyKey
+      case mbCached of
+        Just cachedVersion -> do
+          logDebug $ "DYNAMIC_LOGIC_STICKY: [HIT] domain=" <> show domain <> " txnId=" <> txnId <> " version=" <> show (cachedVersion :: Maybe Int)
+          pure cachedVersion
+        Nothing -> do
+          version <- selectFresh
+          Hedis.withCrossAppRedis $ Hedis.setExp stickyKey version dynamicLogicVersionStickyTtlSec
+          logDebug $ "DYNAMIC_LOGIC_STICKY: [NEW] domain=" <> show domain <> " txnId=" <> txnId <> " frozeVersion=" <> show version <> " ttlSec=" <> show dynamicLogicVersionStickyTtlSec
+          pure version
 
 isExperimentRunning :: BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> m Bool
 isExperimentRunning merchantOpCityId domain = do
@@ -184,22 +216,23 @@ selectAppDynamicLogicVersion ::
   UTCTime ->
   Maybe Int ->
   m (Maybe Int)
-selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss = do
-  mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-  configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-  let activeConfigs = filterActiveRollouts configs
-  allTimeBoundConfigs <- CTBC.findByCityAndDomain (cast merchantOpCityId) domain
-  let boundedTimeBoundConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) allTimeBoundConfigs) localTime
-  let applicapleConfigs =
-        case boundedTimeBoundConfigs of -- if not bounded config found, return all configs with Unbounded timeBounds
-          [] -> unboundedConfigs activeConfigs
-          (x : _) -> do
-            let boundedConfigs = filter (\cfg -> cfg.timeBounds == x.name) activeConfigs
-            if null boundedConfigs
-              then unboundedConfigs activeConfigs
-              else boundedConfigs
-  mbSelectedConfig <- chooseLogic applicapleConfigs mbToss
-  return $ mbSelectedConfig <&> (.version)
+selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
+  selectWithTxnStickiness domain $ do
+    mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+    configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+    let activeConfigs = filterActiveRollouts configs
+    allTimeBoundConfigs <- CTBC.findByCityAndDomain (cast merchantOpCityId) domain
+    let boundedTimeBoundConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) allTimeBoundConfigs) localTime
+    let applicapleConfigs =
+          case boundedTimeBoundConfigs of -- if not bounded config found, return all configs with Unbounded timeBounds
+            [] -> unboundedConfigs activeConfigs
+            (x : _) -> do
+              let boundedConfigs = filter (\cfg -> cfg.timeBounds == x.name) activeConfigs
+              if null boundedConfigs
+                then unboundedConfigs activeConfigs
+                else boundedConfigs
+    mbSelectedConfig <- chooseLogicWithGroups applicapleConfigs mbToss
+    return $ mbSelectedConfig <&> (.version)
   where
     unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
 
@@ -222,6 +255,12 @@ chooseLogic logics mbToss = do
   let cumulative = cumulativeRollout logics
   toss <- maybe (getRandomInRange (1, 100 :: Int)) pure mbToss
   return $ findLogic toss cumulative
+
+-- | Group-aware version of 'chooseLogic': delegates to the shared per-transaction
+-- experiment-group resolver (reads 'TxnIdKey' via option-local), using this
+-- engine's cumulative-percentage 'chooseLogic' as the candidate selector.
+chooseLogicWithGroups :: (BeamFlow m r) => [AppDynamicLogicRollout] -> Maybe Int -> m (Maybe AppDynamicLogicRollout)
+chooseLogicWithGroups applicable mbToss = LYG.chooseWithGroups applicable (\cands -> chooseLogic cands mbToss)
 
 -- Function to find the logic corresponding to the random number
 findLogic :: Int -> [(AppDynamicLogicRollout, Int)] -> Maybe AppDynamicLogicRollout

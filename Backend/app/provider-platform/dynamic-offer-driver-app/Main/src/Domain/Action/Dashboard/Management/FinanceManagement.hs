@@ -11,10 +11,15 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinanceInvoicePdf,
     getFinanceManagementFinanceSapJournals,
     getFinanceManagementFinanceSapJournalsTransactions,
+    postFinanceManagementTdsReimbursementRequestSubmit,
+    getFinanceManagementTdsReimbursementStatus,
+    getFinanceManagementTdsReimbursementList,
+    getFinanceManagementTdsReimbursement,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement as API
+import qualified AWS.S3 as S3
 import qualified Dashboard.Common
 import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
@@ -28,6 +33,7 @@ import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), addDays, addUTCTime, diffUTCTime, timeOfDayToTime, utctDay)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
+import qualified Domain.Types.Image as DImage
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -41,6 +47,7 @@ import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -52,6 +59,9 @@ import qualified Lib.Finance.Core.Types as FinanceCore
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.AuditEntry as AuditEntry
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
+import qualified Lib.Finance.Domain.Types.Extra.FinanceTdsReimbursementRequest as DTdsReqExtra
+import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementInvoiceMapping as DTdsMap
+import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
@@ -67,7 +77,11 @@ import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
 import qualified Lib.Finance.Reconciliation.Types as ReconT
 import qualified Lib.Finance.Storage.Queries.AuditEntryExtra as QAuditEntryExtra
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
+import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementInvoiceMapping as QTdsMap
+import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest as QTdsReq
+import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequestExtra as QTdsReqExtra
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
@@ -99,6 +113,7 @@ import qualified Storage.CachedQueries.Plan as CQPlan
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
@@ -376,35 +391,6 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             orderId = Just subscription.paymentOrderId.getId
           }
 
-    -- Calculate utilized value from RideSubscriptionDebit ledger entries
-    calculateUtilizedValue :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
-    calculateUtilizedValue subId = do
-      -- Get all rides linked to this subscription
-      rides <- QRide.findAllBySubscriptionPurchaseId subId
-      let bookingIds = map (\r -> r.bookingId.getId) rides
-
-      -- Sum all RideSubscriptionDebit entries for these booking IDs
-      utilized <- fmap sum $
-        forM bookingIds $ \bId -> do
-          entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" bId
-          fmap sum $ forM entries $ FinancePrepaid.attributableRideDebitAmount subId
-
-      pure utilized
-
-    calculateRevenueRecognized :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
-    calculateRevenueRecognized subId = do
-      -- Get all rides linked to this subscription
-      rides <- QRide.findAllBySubscriptionPurchaseId subId
-      let bookingIds = map (\r -> r.bookingId.getId) rides
-
-      -- Sum ledger entries for these booking IDs with revenue recognition types
-      revenue <- fmap sum $
-        forM bookingIds $ \bId -> do
-          entries <- QLedgerEntryExtra.findByReferenceIn ["RideRevenueRecognition", "ExpiryRevenueRecognition"] bId
-          pure $ sum $ map (.amount) entries
-
-      pure revenue
-
     buildLinkedRideItem :: Id DSP.SubscriptionPurchase -> DRide.Ride -> Flow API.LinkedRideItem
     buildLinkedRideItem subId ride = do
       entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" ride.bookingId.getId
@@ -417,6 +403,30 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             rideCreatedAt = ride.createdAt,
             rideSubscriptionDebitAmount = rideSubscriptionDebitAmount
           }
+
+-- Calculate utilized value from RideSubscriptionDebit ledger entries
+calculateUtilizedValue :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
+calculateUtilizedValue subId = do
+  -- Get all rides linked to this subscription
+  rides <- QRide.findAllBySubscriptionPurchaseId subId
+  let bookingIds = map (\r -> r.bookingId.getId) rides
+
+  -- Sum all RideSubscriptionDebit entries for these booking IDs
+  utilized <- fmap sum $
+    forM bookingIds $ \bId -> do
+      entries <- QLedgerEntry.findByReference "RideSubscriptionDebit" bId
+      fmap sum $ forM entries $ FinancePrepaid.attributableRideDebitAmount subId
+
+  pure utilized
+
+calculateRevenueRecognized :: Id DSP.SubscriptionPurchase -> Flow HighPrecMoney
+calculateRevenueRecognized subId = do
+  -- Get all rides linked to this subscription
+  rides <- QRide.findAllBySubscriptionPurchaseId subId
+  let bookingIds = map (\r -> r.bookingId.getId) rides
+
+  entries <- QLedgerEntryExtra.findByReferenceTypesAndReferenceIds ["RideRevenueRecognition", "ExpiryRevenueRecognition"] bookingIds
+  pure $ sum $ map (.amount) entries
 
 -- | Fetch invoices using the shared filter logic for invoice list / pdf endpoints.
 -- When @mbIssuedToTypes@ is supplied and non-empty, it overrides the singular
@@ -569,6 +579,21 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
           pure $ listToMaybe txns >>= (.paymentMethod)
         Nothing -> pure Nothing
 
+      -- Recognized / deferred revenue (SubscriptionPurchase invoices only)
+      (recognizedRevenue, deferredRevenue) <- case invoice.invoiceType of
+        SubscriptionPurchase -> do
+          recognized <- case listToMaybe subscriptionIds of
+            Nothing -> pure 0
+            Just subIdText -> do
+              let subId = Id subIdText
+              mbSubscription <- QSubscriptionPurchase.findByPrimaryKey subId
+              case (.status) <$> mbSubscription of
+                Just DSP.EXHAUSTED -> pure invoice.subtotal
+                Just DSP.EXPIRED -> pure invoice.subtotal
+                _ -> calculateRevenueRecognized subId
+          pure (Just recognized, Just $ max 0 (invoice.subtotal - recognized))
+        _ -> pure (Nothing, Nothing)
+
       pure $
         API.InvoiceListItem
           { invoiceId = invoice.id.getId,
@@ -607,7 +632,9 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             generatedAt = invoice.createdAt,
             taxRate = mbTaxRate,
             issuedToTaxNo = mbIssuedToTaxNo,
-            issuedByTaxNo = mbIssuedByTaxNo
+            issuedByTaxNo = mbIssuedByTaxNo,
+            recognizedRevenue = recognizedRevenue,
+            deferredRevenue = deferredRevenue
           }
 
     extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])
@@ -1919,3 +1946,389 @@ toSapJournalItem entry =
       createdAt = entry.createdAt,
       updatedAt = entry.updatedAt
     }
+
+postFinanceManagementTdsReimbursementRequestSubmit ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  API.TdsReimbursementRequestSubmitReq ->
+  Flow API.TdsReimbursementRequestSubmitRes
+postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity requestorId req = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let fleetOwnerId = Id requestorId :: Id DP.Person
+  fleetOwner <- QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist requestorId)
+
+  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist requestorId)
+  unless (fleetOwner.role == DP.FLEET_BUSINESS) $
+    throwError (InvalidRequest "Only business fleet owners can submit TDS reimbursement requests")
+
+  (assessmentYear, fyStartYear) <- DTdsReqExtra.mkAssessmentYearWithFyStartYear req.assessmentYear
+  let quarter = castTdsReimbursementQuarter req.quarter
+
+  let lockKey = "tdsReimbursementSubmitLock:" <> requestorId
+  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    requestsForPeriod <- QTdsReq.findAllByFleetOwnerIdQuarterAndAssessmentYear requestorId quarter assessmentYear merchantOpCityId.getId
+    let hasActiveDuplicate = any (\r -> r.status `elem` [DTdsReq.PENDING, DTdsReq.APPROVED]) requestsForPeriod
+    when hasActiveDuplicate $
+      throwError (InvalidRequest "A PENDING or APPROVED TDS reimbursement request already exists for this quarter and assessment year")
+
+    when (null req.invoiceLines) $
+      throwError (InvalidRequest "At least one invoice line is required")
+
+    -- The same invoice must not appear twice, otherwise its TDS is counted more than once
+    -- towards the certificate total. The (request_id, invoice_id) unique index would also
+    -- reject this, but only as an opaque constraint violation at insert time.
+    let requestedInvoiceIds = map ((.getId) . (.invoiceId)) req.invoiceLines
+        duplicateInvoiceIds = nub $ filter (\i -> length (filter (== i) requestedInvoiceIds) > 1) requestedInvoiceIds
+    unless (null duplicateInvoiceIds) $
+      throwError (InvalidRequest $ "Duplicate invoice lines for: " <> T.intercalate ", " duplicateInvoiceIds)
+
+    let (periodStart, periodEnd) = quarterDateRange fyStartYear quarter
+
+    let roundingTolerance = 1 :: HighPrecMoney
+
+    invoicesWithLines <- forM req.invoiceLines $ \line -> do
+      invoice <- QFinanceInvoice.findById line.invoiceId >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> line.invoiceId.getId)
+      unless (invoice.issuedToId == requestorId) $
+        throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not belong to this fleet owner")
+      unless (invoice.issuedAt >= periodStart && invoice.issuedAt < periodEnd) $
+        throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not fall within " <> show quarter <> " of assessment year " <> req.assessmentYear)
+
+      indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
+      forM_ indirectTaxTxns $ \txn ->
+        unless (abs (invoice.subtotal - txn.taxableValue) <= roundingTolerance) $
+          throwError
+            ( InvalidRequest $
+                "Base value mismatch for invoice " <> line.invoiceId.getId <> ": invoice subtotal ("
+                  <> show invoice.subtotal
+                  <> ") does not match its indirect tax taxable value ("
+                  <> show txn.taxableValue
+                  <> ")"
+            )
+
+      let expectedTdsAmount = invoice.subtotal * realToFrac req.tdsRate / 100
+      when (abs (line.tdsAmount - expectedTdsAmount) > roundingTolerance) $
+        throwError
+          ( InvalidRequest $
+              "TDS amount (" <> show line.tdsAmount <> ") for invoice " <> line.invoiceId.getId
+                <> " does not match "
+                <> show req.tdsRate
+                <> "% of its taxable value "
+                <> show invoice.subtotal
+                <> " (expected "
+                <> show expectedTdsAmount
+                <> ")"
+          )
+      pure (line, invoice)
+
+    let sumTdsAmount = sum $ map ((.tdsAmount) . fst) invoicesWithLines
+    when (abs (sumTdsAmount - req.certAmount) > roundingTolerance) $
+      throwError (InvalidRequest $ "Sum of invoice TDS amounts (" <> show sumTdsAmount <> ") does not match certificate amount (" <> show req.certAmount <> ")")
+
+    document <- QImage.findById (cast req.documentId) >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> req.documentId.getId)
+    unless (document.personId == fleetOwnerId) $
+      throwError (InvalidRequest $ "Document " <> req.documentId.getId <> " does not belong to this fleet owner")
+
+    requestId <- generateGUID
+    now <- getCurrentTime
+
+    mappingRows <- forM invoicesWithLines $ \(line, invoice) -> do
+      revenueRecognised <- getInvoiceRecognizedRevenueForTds invoice
+      let tdsCreditReceivable = computeTdsCreditReceivable line.tdsAmount revenueRecognised invoice.subtotal
+      mappingId <- generateGUID
+      pure
+        DTdsMap.FinanceTdsReimbursementInvoiceMapping
+          { id = mappingId,
+            requestId = requestId,
+            invoiceId = line.invoiceId,
+            revenueRecognisedSnapshot = revenueRecognised,
+            tdsAmount = line.tdsAmount,
+            tdsCreditReceivable = tdsCreditReceivable,
+            createdAt = now
+          }
+
+    QTdsReq.create
+      DTdsReq.FinanceTdsReimbursementRequest
+        { id = requestId,
+          merchantId = merchant.id.getId,
+          merchantOperatingCityId = merchantOpCityId.getId,
+          fleetOwnerId = requestorId,
+          tanNumber = req.tanNumber,
+          certNumber = req.certNumber,
+          quarter = quarter,
+          assessmentYear = assessmentYear,
+          tdsSection = Just req.tdsSection,
+          certAmount = req.certAmount,
+          tdsRate = req.tdsRate,
+          documentId = cast req.documentId,
+          status = DTdsReq.PENDING,
+          rejectionReason = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
+
+    mapM_ QTdsMap.create mappingRows
+
+    pure API.TdsReimbursementRequestSubmitRes {requestId = cast requestId, status = API.TDS_PENDING}
+
+castTdsReimbursementQuarter :: API.TdsReimbursementQuarter -> DTdsReq.Quarter
+castTdsReimbursementQuarter API.Q1 = DTdsReq.Q1
+castTdsReimbursementQuarter API.Q2 = DTdsReq.Q2
+castTdsReimbursementQuarter API.Q3 = DTdsReq.Q3
+castTdsReimbursementQuarter API.Q4 = DTdsReq.Q4
+
+quarterDateRange :: Integer -> DTdsReq.Quarter -> (UTCTime, UTCTime)
+quarterDateRange fyStartYear quarter =
+  let mkDay y m d = UTCTime (DT.fromGregorian y m d) 0
+   in case quarter of
+        DTdsReq.Q1 -> (mkDay fyStartYear 4 1, mkDay fyStartYear 7 1)
+        DTdsReq.Q2 -> (mkDay fyStartYear 7 1, mkDay fyStartYear 10 1)
+        DTdsReq.Q3 -> (mkDay fyStartYear 10 1, mkDay (fyStartYear + 1) 1 1)
+        DTdsReq.Q4 -> (mkDay (fyStartYear + 1) 1 1, mkDay (fyStartYear + 1) 4 1)
+
+getInvoiceRecognizedRevenueForTds :: FinanceInvoice.Invoice -> Flow HighPrecMoney
+getInvoiceRecognizedRevenueForTds invoice = case invoice.invoiceType of
+  SubscriptionPurchase -> do
+    ledgerLinks <- QInvoiceLedgerLink.findByInvoice invoice.id
+    ledgerEntries <- mapM (QLedgerEntry.findById . (.ledgerEntryId)) ledgerLinks
+    let subscriptionIds = [entry.referenceId | Just entry <- ledgerEntries, entry.referenceType == "SubscriptionPurchase"]
+    subIdText <-
+      fromMaybeM (InvalidRequest $ "No subscription linked to invoice " <> invoice.id.getId) $
+        listToMaybe subscriptionIds
+    let subId = Id subIdText
+    subscription <-
+      QSubscriptionPurchase.findByPrimaryKey subId
+        >>= fromMaybeM (InvalidRequest $ "Subscription " <> subId.getId <> " not found for invoice " <> invoice.id.getId)
+    case subscription.status of
+      DSP.ACTIVE -> calculateRevenueRecognized subId
+      DSP.EXHAUSTED -> pure invoice.subtotal
+      DSP.EXPIRED -> pure invoice.subtotal
+      otherStatus -> throwError $ InvalidRequest $ "Subscription " <> subId.getId <> " is " <> show otherStatus <> ", not eligible for TDS reimbursement"
+  otherType -> throwError $ InvalidRequest $ "Invoice " <> invoice.id.getId <> " is of type " <> show otherType <> "; TDS reimbursement only supports SubscriptionPurchase invoices"
+
+computeTdsCreditReceivable :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
+computeTdsCreditReceivable tdsAmount revenueRecognised invoiceSubtotal =
+  tdsAmount * recognizedFraction
+  where
+    recognizedFraction
+      | invoiceSubtotal <= 0 = 1
+      | otherwise = min 1 (max 0 (revenueRecognised / invoiceSubtotal))
+
+castTdsReimbursementRequestStatus :: DTdsReq.FinanceTdsReimbursementRequestStatus -> API.TdsReimbursementStatus
+castTdsReimbursementRequestStatus DTdsReq.PENDING = API.TDS_PENDING
+castTdsReimbursementRequestStatus DTdsReq.APPROVED = API.TDS_APPROVED
+castTdsReimbursementRequestStatus DTdsReq.REJECTED = API.TDS_REJECTED
+
+getFinanceManagementTdsReimbursementStatus ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  API.TdsReimbursementQuarter ->
+  Text ->
+  Text ->
+  Flow API.TdsReimbursementStatusRes
+getFinanceManagementTdsReimbursementStatus merchantShortId opCity apiQuarter assessmentYearText requestorId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  let fleetOwnerId = Id requestorId :: Id DP.Person
+  fleetOwner <- QPerson.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist requestorId)
+
+  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist requestorId)
+  unless (fleetOwner.role == DP.FLEET_BUSINESS) $
+    throwError (InvalidRequest "Only business fleet owners can view TDS reimbursement status")
+
+  assessmentYear <- DTdsReqExtra.mkAssessmentYear assessmentYearText
+  let quarter = castTdsReimbursementQuarter apiQuarter
+
+  -- A rejected request can be resubmitted for the same period, so more than one row can match;
+  -- the most recently submitted one is the one that reflects the current state.
+  requestsForPeriod <- QTdsReq.findAllByFleetOwnerIdQuarterAndAssessmentYear requestorId quarter assessmentYear merchantOpCityId.getId
+  let mbRequest = listToMaybe $ sortOn (Down . (.createdAt)) requestsForPeriod
+
+  case mbRequest of
+    Nothing ->
+      pure
+        API.TdsReimbursementStatusRes
+          { status = Nothing,
+            requestId = Nothing,
+            certNumber = Nothing,
+            certAmount = Nothing,
+            tdsRate = Nothing,
+            tdsSection = Nothing,
+            rejectionReason = Nothing,
+            submittedAt = Nothing,
+            invoiceLines = [],
+            totalTdsAmount = 0
+          }
+    Just request -> do
+      mappings <- QTdsMap.findAllByRequestId request.id
+      invoiceLines <- buildStatusInvoiceLines mappings
+      let totalTdsAmount = sum $ map (.tdsAmount) mappings
+      pure
+        API.TdsReimbursementStatusRes
+          { status = Just (castTdsReimbursementRequestStatus request.status),
+            requestId = Just (cast request.id),
+            certNumber = Just request.certNumber,
+            certAmount = Just request.certAmount,
+            tdsRate = Just request.tdsRate,
+            tdsSection = request.tdsSection,
+            rejectionReason = request.rejectionReason,
+            submittedAt = Just request.createdAt,
+            invoiceLines = invoiceLines,
+            totalTdsAmount = totalTdsAmount
+          }
+
+buildStatusInvoiceLines :: [DTdsMap.FinanceTdsReimbursementInvoiceMapping] -> Flow [API.TdsReimbursementStatusInvoiceLine]
+buildStatusInvoiceLines mappings = do
+  invoices <- QFinanceInvoiceExtra.findByIds (map (.invoiceId) mappings)
+  let invoiceById = HM.fromList [(invoice.id.getId, invoice) | invoice <- invoices]
+  indirectTaxTxns <- QIndirectTaxExtra.findByInvoiceNumbers (map (.invoiceNumber) invoices)
+  let indirectTaxByInvoiceNumber = HM.fromListWith (\_new existing -> existing) [(invoiceNumber, txn) | txn <- indirectTaxTxns, Just invoiceNumber <- [txn.invoiceNumber]]
+  forM mappings $ \mapping -> do
+    invoice <- HM.lookup mapping.invoiceId.getId invoiceById & fromMaybeM (InvalidRequest $ "Invoice not found: " <> mapping.invoiceId.getId)
+    (baseValue, gst) <- case HM.lookup invoice.invoiceNumber indirectTaxByInvoiceNumber of
+      Just txn -> pure (Just txn.taxableValue, Just txn.totalGstAmount)
+      Nothing -> do
+        logWarning $ "No indirect tax transaction found for invoice " <> invoice.invoiceNumber
+        pure (Nothing, Nothing)
+
+    pure
+      API.TdsReimbursementStatusInvoiceLine
+        { invoiceId = mapping.invoiceId,
+          invoiceNumber = invoice.invoiceNumber,
+          invoiceDate = utctDay invoice.issuedAt,
+          baseValue = baseValue,
+          gst = gst,
+          invoiceValue = invoice.totalAmount,
+          tdsAmount = mapping.tdsAmount,
+          revenueRecognisedSnapshot = mapping.revenueRecognisedSnapshot,
+          tdsCreditReceivable = mapping.tdsCreditReceivable,
+          deferment = mapping.tdsAmount - mapping.tdsCreditReceivable
+        }
+
+castDomainQuarterToTds :: DTdsReq.Quarter -> API.TdsReimbursementQuarter
+castDomainQuarterToTds DTdsReq.Q1 = API.Q1
+castDomainQuarterToTds DTdsReq.Q2 = API.Q2
+castDomainQuarterToTds DTdsReq.Q3 = API.Q3
+castDomainQuarterToTds DTdsReq.Q4 = API.Q4
+
+castTdsReimbursementStatusToDomain :: API.TdsReimbursementStatus -> DTdsReq.FinanceTdsReimbursementRequestStatus
+castTdsReimbursementStatusToDomain API.TDS_PENDING = DTdsReq.PENDING
+castTdsReimbursementStatusToDomain API.TDS_APPROVED = DTdsReq.APPROVED
+castTdsReimbursementStatusToDomain API.TDS_REJECTED = DTdsReq.REJECTED
+
+getFinanceManagementTdsReimbursementList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe API.TdsReimbursementQuarter ->
+  Maybe API.TdsReimbursementStatus ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Flow API.TdsReimbursementListRes
+getFinanceManagementTdsReimbursementList merchantShortId opCity mbAssessmentYear mbFleetOwnerId mbFrom mbLimit mbOffset mbQuarter mbStatus mbTan mbTo = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  mbAssessmentYearTyped <- traverse DTdsReqExtra.mkAssessmentYear mbAssessmentYear
+  let mbQuarterTyped = castTdsReimbursementQuarter <$> mbQuarter
+      mbStatusTyped = castTdsReimbursementStatusToDomain <$> mbStatus
+
+  requests <-
+    QTdsReqExtra.findAllByMerchantOpCityIdWithFilters
+      merchantOpCityId.getId
+      mbFleetOwnerId
+      mbTan
+      mbQuarterTyped
+      mbAssessmentYearTyped
+      mbStatusTyped
+      mbFrom
+      mbTo
+      mbLimit
+      mbOffset
+
+  items <- mapM buildTdsReimbursementListItem requests
+  let totalItems = length items
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+
+  pure API.TdsReimbursementListRes {totalItems, summary, tdsReimbursementRequests = items}
+
+buildTdsReimbursementListItem :: DTdsReq.FinanceTdsReimbursementRequest -> Flow API.TdsReimbursementListItem
+buildTdsReimbursementListItem request = do
+  mbFleetOwner <- QPerson.findById (Id request.fleetOwnerId)
+  let fleetOwnerName = mbFleetOwner <&> \p -> T.intercalate " " $ catMaybes [Just p.firstName, p.middleName, p.lastName]
+      DTdsReq.AssessmentYear assessmentYearText = request.assessmentYear
+  mappings <- QTdsMap.findAllByRequestId request.id
+  pure
+    API.TdsReimbursementListItem
+      { requestId = cast request.id,
+        fleetOwnerId = request.fleetOwnerId,
+        fleetOwnerName = fleetOwnerName,
+        tanNumber = request.tanNumber,
+        certNumber = request.certNumber,
+        quarter = castDomainQuarterToTds request.quarter,
+        assessmentYear = assessmentYearText,
+        tdsSection = request.tdsSection,
+        certAmount = request.certAmount,
+        status = castTdsReimbursementRequestStatus request.status,
+        invoiceCount = length mappings,
+        submittedAt = request.createdAt
+      }
+
+getFinanceManagementTdsReimbursement ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Dashboard.Common.FinanceTdsReimbursementRequest ->
+  Flow API.TdsReimbursementDetailRes
+getFinanceManagementTdsReimbursement merchantShortId opCity requestId = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  request <-
+    QTdsReq.findByPrimaryKey (cast requestId)
+      >>= fromMaybeM (InvalidRequest $ "TDS reimbursement request not found: " <> requestId.getId)
+  unless (request.merchantOperatingCityId == merchantOpCityId.getId) $
+    throwError (InvalidRequest $ "TDS reimbursement request not found: " <> requestId.getId)
+
+  mbFleetOwner <- QPerson.findById (Id request.fleetOwnerId)
+  let fleetOwnerName = mbFleetOwner <&> \p -> T.intercalate " " $ catMaybes [Just p.firstName, p.middleName, p.lastName]
+      DTdsReq.AssessmentYear assessmentYearText = request.assessmentYear
+
+  documentUrl <- resolveTdsDocumentUrl (cast request.documentId)
+
+  mappings <- QTdsMap.findAllByRequestId request.id
+  invoiceLines <- buildStatusInvoiceLines mappings
+  let totalTdsAmount = sum $ map (.tdsAmount) mappings
+
+  pure
+    API.TdsReimbursementDetailRes
+      { requestId = cast request.id,
+        fleetOwnerId = request.fleetOwnerId,
+        fleetOwnerName = fleetOwnerName,
+        tanNumber = request.tanNumber,
+        certNumber = request.certNumber,
+        quarter = castDomainQuarterToTds request.quarter,
+        assessmentYear = assessmentYearText,
+        certAmount = request.certAmount,
+        tdsRate = request.tdsRate,
+        tdsSection = request.tdsSection,
+        documentUrl = documentUrl,
+        status = castTdsReimbursementRequestStatus request.status,
+        rejectionReason = request.rejectionReason,
+        submittedAt = request.createdAt,
+        invoiceLines = invoiceLines,
+        totalTdsAmount = totalTdsAmount
+      }
+
+resolveTdsDocumentUrl :: Id DImage.Image -> Flow Text
+resolveTdsDocumentUrl imageId = do
+  image <- QImage.findById imageId >>= fromMaybeM (InvalidRequest $ "Document image not found: " <> imageId.getId)
+  S3.generateDownloadUrl (T.unpack image.s3Path) 3600

@@ -3,10 +3,12 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
   PassType: Domain.Types.PassType
+  Pass: Domain.Types.Pass
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   HighPrecMoney: Kernel.Types.Common
   FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
   ServiceTierType: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.FRFS.Enums
   BenefitType: Domain.Types.PurchasedPass
   PassEnum: Domain.Types.PassType
   MediaFile: IssueManagement.Domain.Types.MediaFile
@@ -49,6 +51,7 @@ PurchasedPass:
     benefitType: Maybe BenefitType
     benefitValue: Maybe HighPrecMoney
     applicableVehicleServiceTiers: "[ServiceTierType]"
+    vehicleType: VehicleCategory
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
     usedTripCount: Maybe Int
@@ -60,16 +63,20 @@ PurchasedPass:
     preferredSource: Maybe Text
     preferredDestination: Maybe Text
     currentPaymentOrderId: Maybe (Id PaymentOrder)
+    activatedAt: Maybe UTCTime
 
   beamType:
+    vehicleType: Maybe VehicleCategory
     deviceSwitchCount: Maybe Int
     verificationValidity: Maybe Seconds
 
   fromTType:
+    vehicleType: Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS|I
     deviceSwitchCount: (fromMaybe 0 deviceSwitchCount)|E
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
 
   toTType:
+    vehicleType: Kernel.Prelude.Just|I
     deviceSwitchCount: Just deviceSwitchCount|E
     verificationValidity: Just verificationValidity|E
 
@@ -117,6 +124,11 @@ PurchasedPass:
           - in: [personId]
           - status
 
+    updateActivatedAt:
+      kvFunction: updateOneWithKV
+      params: [activatedAt]
+      where: id
+
 PurchasedPassPayment:
   tableName: purchased_pass_payment
 
@@ -141,6 +153,10 @@ PurchasedPassPayment:
     passPhotoMediaId: Maybe (Id MediaFile)
     passEnum: Maybe PassEnum
     clientSdkVersion: Maybe Version
+    passId: Maybe (Id Pass)
+    availableTripCount: Maybe Int
+    passPhotoChangeCount: Maybe Int
+    activatedAt: Maybe UTCTime
 
   beamType:
     benefitDescription: Maybe Text
@@ -265,6 +281,15 @@ PurchasedPassPayment:
           - in:
             - status
 
+    updatePhotoChangeCountByPurchasedPassIdAndStatus:
+      kvFunction: updateWithKV
+      params: [passPhotoChangeCount]
+      where:
+        and:
+          - purchasedPassId
+          - in:
+            - status
+
     findAllByPersonIdWithFilters:
       kvFunction: findAllWithOptionsKV
       where:
@@ -274,6 +299,16 @@ PurchasedPassPayment:
           - in:
             - status
           - passCode
+
+    updateAvailableTripCountById:
+      kvFunction: updateOneWithKV
+      params: [availableTripCount]
+      where: id
+
+    updateActivatedAt:
+      kvFunction: updateOneWithKV
+      params: [activatedAt]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -29,7 +29,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
-import Domain.Action.Dashboard.Management.DriverRegistration (mapDocumentType, sendDocumentRejectionNotification)
+import Domain.Action.Dashboard.Management.DriverRegistration (DocumentDecision (..), mapDocumentType, sendDocumentDecisionNotification)
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -1083,7 +1083,9 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
     when (not isDocReqEmpty) $ do
       forM_ mbPersonToNotify $ \person -> do
         forM_ validatedDocs $ \(_images, _rejectedReason, docDetail) -> do
-          sendDocumentRejectionNotification merchantOpCity.id (show docDetail.documentType) docDetail.rejectedReason person
+          void $
+            withTryCatch "SubmitReview:sendRejectionNotification" $
+              sendDocumentDecisionNotification merchantOpCity.id (show docDetail.documentType) (DocumentRejected docDetail.rejectedReason) person
 
     let domainEntityType = case req.entityType of
           API.Types.ProviderPlatform.Operator.Driver.DRIVER -> DRR.DRIVER
@@ -1163,8 +1165,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             -- Role-aware: match this fleet owner's role, falling back to any fleet-role row on drift.
             let isFleetRoleCfg r = r `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
                 mbConfig =
-                  (mbFleetOwnerRole >>= \role -> find (\c -> c.documentType == domainDocType && c.role == role) allFODVC)
-                    <|> find (\c -> c.documentType == domainDocType && isFleetRoleCfg c.role) allFODVC
+                  (mbFleetOwnerRole >>= \role -> find (\c -> c.documentType == domainDocType && role `elem` c.role) allFODVC)
+                    <|> find (\c -> c.documentType == domainDocType && any isFleetRoleCfg c.role) allFODVC
             config <- mbConfig & fromMaybeM (InvalidRequest "Document Verification Config not found")
             pure config.isMandatory
           _ -> do

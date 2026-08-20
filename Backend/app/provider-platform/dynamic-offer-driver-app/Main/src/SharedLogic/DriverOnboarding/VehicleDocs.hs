@@ -312,6 +312,7 @@ isDriverSideDocType category docType = case category of
   Just DDVC.Training -> True
   Just DDVC.Vehicle -> False
   Just DDVC.Permission -> False
+  Just DDVC.Fleet -> False
   Nothing -> docType `elem` SDO.defaultDriverDocumentTypes
 
 -- | Does this document contribute to the vehicle-side flags? Same rule, vehicle fallback list.
@@ -398,7 +399,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
         mbCommonDoc <-
           if docType `Set.member` SDO.domainTableDocumentTypes
             then pure Nothing
-            else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType mbPersonId (Just rcId) docType
+            else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType (maybe (QCommonDocExtra.OwnedByRc rcId) (`QCommonDocExtra.OwnedByDriverAndRc` rcId) mbPersonId) docType
         let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
         (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId, mbImageId2, mbMetadata, mbProcessedDocumentId) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo) mbCommonDoc
         case mbStatus of
@@ -460,7 +461,7 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
               mbCommonDoc <-
                 if docType `Set.member` SDO.domainTableDocumentTypes
                   then pure Nothing
-                  else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType mbPersonId Nothing docType
+                  else maybe (pure Nothing) (\owner -> listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType owner docType) (QCommonDocExtra.mkCommonDocumentOwner mbPersonId Nothing)
               let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
               return $ DocumentStatusItem {documentType = docType, documentId = Nothing, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing, metadata = Nothing, commonDocumentData = mbCommonDocData}
           return
@@ -543,7 +544,7 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                       mbCommonDoc <-
                         if docType `Set.member` SDO.domainTableDocumentTypes
                           then pure Nothing
-                          else listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType mbPersonId mbRcId docType
+                          else maybe (pure Nothing) (\owner -> listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndRcIdAndDocumentType owner docType) (QCommonDocExtra.mkCommonDocumentOwner mbPersonId mbRcId)
                       let mbCommonDocData = mbCommonDoc <&> renderCommonDocumentData . (.documentData)
                       (status, mbReason, mbUrl, _, mbS3Path, mbImageId, mbInProgressDocumentId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs mbCommonDoc
                       mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages

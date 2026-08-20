@@ -378,3 +378,17 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN airport_block_e
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN initiated_by text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enabled_reason_flag text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

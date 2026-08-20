@@ -25,6 +25,8 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -65,6 +67,7 @@ confirm ::
   FlowHandler AckResponse
 confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.confirmReqContext
+  L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "Confirm APIV2 Flow" "Reached"
     let context = reqV2.confirmReqContext

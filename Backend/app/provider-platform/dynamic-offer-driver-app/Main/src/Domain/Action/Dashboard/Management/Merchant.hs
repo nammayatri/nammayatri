@@ -693,6 +693,11 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         minRadiusOfSearch = maybe minRadiusOfSearch distanceToMeters minRadiusOfSearchWithUnit,
         maxRadiusOfSearch = maybe maxRadiusOfSearch distanceToMeters maxRadiusOfSearchWithUnit,
         radiusStepSize = Nothing,
+        -- Not settable from the dashboard yet; both are opt-in dispatch tuning driven from config.
+        softMaxParallelSearchRequests = Nothing,
+        enableEarlyBatchAdvanceOnFullReject = Nothing,
+        srdCountersBulkChunkSize = Nothing,
+        idleBulkChunkSize = Nothing,
         actualDistanceThreshold = distanceToMeters <$> actualDistanceThresholdWithUnit <|> actualDistanceThreshold,
         radiusShrinkValueForDriversOnRide = maybe radiusShrinkValueForDriversOnRide distanceToMeters radiusShrinkValueForDriversOnRideWithUnit,
         driverToDestinationDistanceThreshold = maybe driverToDestinationDistanceThreshold distanceToMeters driverToDestinationDistanceThresholdWithUnit,
@@ -795,6 +800,11 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             maxNumberOfBatches,
             maxParallelSearchRequests,
             maxParallelSearchRequestsOnRide,
+            -- Not part of the CSV upload yet; both are opt-in dispatch tuning driven from config.
+            softMaxParallelSearchRequests = Nothing,
+            enableEarlyBatchAdvanceOnFullReject = Nothing,
+            srdCountersBulkChunkSize = Nothing,
+            idleBulkChunkSize = Nothing,
             singleBatchProcessTime,
             radiusShrinkValueForDriversOnRide,
             driverToDestinationDistanceThreshold,
@@ -1298,6 +1308,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle -> DVC.Vehicle
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission -> DVC.Permission
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training -> DVC.Training
+      API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Fleet -> DVC.Fleet
 
 castDocumentFlowGroupingFromReq :: Common.DocumentFlowGrouping -> DVC.DocumentFlowGrouping
 castDocumentFlowGroupingFromReq = \case
@@ -3500,6 +3511,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            gateConfig = mbGate >>= (.gateConfig),
             navigationInstructions = mbGate >>= (.navigationInstructions),
             ..
           }

@@ -82,6 +82,8 @@ data Booking = Booking
     numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
+    paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentInstrument :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument,
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
@@ -125,8 +127,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+$(mkHttpInstancesForEnum (''BookingStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))

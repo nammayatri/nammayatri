@@ -323,9 +323,14 @@ tfCompleteReqToOrder Common.DRideCompletedReq {..} mbFarePolicy becknConfig = do
   let farePolicy = FarePolicyD.fullFarePolicyToFarePolicy <$> mbFarePolicy
   let items = UtilsOU.tfItems ride booking merchant.shortId.getShortId Nothing farePolicy booking.paymentId
   let payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
-      commissionTag = do
-        c <- ride.commission
-        BecknV2Tags.buildTagGroups [BecknV2Tags.COMMISSION BecknV2Tags.~= highPrecMoneyToText c]
+      commissionTag =
+        let settlementTags =
+              catMaybes
+                [ (BecknV2Tags.COMMISSION BecknV2Tags.~=) . highPrecMoneyToText <$> ride.commission,
+                  (BecknV2Tags.PAYMENT_CHARGE BecknV2Tags.~=) . highPrecMoneyToText <$> ride.paymentCharge,
+                  (BecknV2Tags.PAYMENT_CHARGE_BEARER BecknV2Tags.~=) <$> ride.paymentChargeBearer
+                ]
+         in if null settlementTags then Nothing else BecknV2Tags.buildTagGroups settlementTags
       paymentWithCommission =
         payment
           { Spec.paymentTags = case (payment.paymentTags, commissionTag) of

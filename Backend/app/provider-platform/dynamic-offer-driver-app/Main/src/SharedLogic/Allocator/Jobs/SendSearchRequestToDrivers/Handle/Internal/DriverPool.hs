@@ -26,6 +26,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     ensurePoolingLogicVersion,
     splitSilentDriversAndSortWithDistance,
     previouslyAttemptedDriversKey,
+    isBatchChainSuperseded,
   )
 where
 
@@ -160,14 +161,28 @@ makeTaggedDriverPool ::
 makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags mbPoolingLogicVersion batchNum driverPoolCfg searchTryId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   (allLogics, mbVersion) <- getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime mbPoolingLogicVersion (Just $ poolingLogicVersionToss searchReq.id)
+  updateVersionInSearchReq mbVersion
+  -- A rollout toss happens here whenever mbPoolingLogicVersion is Nothing, so the version applied to
+  -- this pool can differ from the one already pinned on the SearchRequest. That divergence used to be
+  -- invisible and mislabelled scores with the wrong experiment arm; make it greppable.
+  when (isJust mbPoolingLogicVersion && mbVersion /= mbPoolingLogicVersion) $
+    logError $
+      "POOLING version mismatch: ran " <> show mbVersion <> " but SearchRequest is pinned to "
+        <> show mbPoolingLogicVersion
+        <> " (searchTryId="
+        <> searchTryId.getId
+        <> ", isOnRidePool="
+        <> show isOnRidePool
+        <> ")"
+  logInfo $ "POOLING version applied: " <> show mbVersion <> " batchNum=" <> show batchNum <> " isOnRidePool=" <> show isOnRidePool
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
   enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
     let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
-    countersMap <- getSrdStatsCountersBulk personIds
-    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk personIds
+    countersMap <- getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds
+    idleMap <- DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
     return $
       map
         ( \driver ->
@@ -175,7 +190,10 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
              in driver {searchReqDriverStatsCounters = Map.lookup personId countersMap, idleTimeSeconds = Map.lookup personId idleMap}
         )
         onlyNewDriversWithCustomerInfo
-  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum}
+  -- Rejects accumulated by the earlier batches of this search try, so the POOLING ruleset can
+  -- escalate (widen radius, grow the batch) instead of drip-feeding an unwilling pool.
+  cumulativeRejectCount <- getSearchTryRejectCount searchTryId
+  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = enrichedDrivers, needOnRideDrivers = isOnRidePool, batchNum, cumulativeRejectCount = Just cumulativeRejectCount}
   logInfo $
     "DriverPreference pooling input: customerNammaTags=" <> show customerNammaTags
       <> " | drivers=["
@@ -193,26 +211,65 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
         )
       <> "]"
   resp <- withTimeAPI "driverPooling" "runLogics" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast mOCityId) LYT.POOLING (Just searchReq.transactionId) allLogics taggedDriverPoolInput
+  -- Stamp the version we actually ran onto every driver, after decoding, so it travels with the
+  -- `score` that version produced. Callers must read the version from here rather than from
+  -- SearchRequest.poolingLogicVersion: that field is a pre-pool snapshot and, when the version is
+  -- chosen by rollout toss on this very call, it does not yet hold the version being applied.
   sortedPool' <-
-    case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
+    map (\d -> d {poolingLogicVersion = mbVersion}) <$> case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
       A.Success sortedPoolData -> pure sortedPoolData.drivers
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
         pure enrichedDrivers
+  -- Parallel-request admission, in two passes. `maxParallelSearchRequests` stays the absolute
+  -- ceiling; `softMaxParallelSearchRequests` is only a preference, so we fill the batch from
+  -- drivers below the soft cap first and dip into the soft..hard band solely when the batch
+  -- would otherwise under-fill. Spreading offers this way matters because acceptance is
+  -- capacity-bounded: a driver already holding several live offers rejects nearly all of them.
+  -- Unset soft cap == hard cap, i.e. provably the previous single-pass behaviour.
+  now <- getCurrentTime
+  let valueToPut = addUTCTime (fromIntegral driverPoolCfg.singleBatchProcessTime) now
+      fromScore = addUTCTime (-1 * (fromIntegral driverPoolCfg.singleBatchProcessTime)) now
+      hardCap = driverPoolCfg.maxParallelSearchRequests
+      softCap = min hardCap (fromMaybe hardCap driverPoolCfg.softMaxParallelSearchRequests)
+      -- `isLessThenNParallelRequests` is a single atomic check-and-reserve (zAddIfPossible), so
+      -- a failed soft attempt reserves nothing and the hard retry below can't double-count.
+      tryReserve cap driverPoolResult =
+        isLessThenNParallelRequests searchReq.id driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId valueToPut cap fromScore
+  softResults <- forM sortedPool' $ \driverPoolResult -> do
+    fork "removeExpiredSearchRequestInfoFromCache" $ removeExpiredSearchRequestInfoFromCache driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId
+    (driverPoolResult,) <$> tryReserve softCap driverPoolResult
+  let underSoft = [d | (d, True) <- softResults]
+      overSoft = [d | (d, False) <- softResults] -- at/over the soft cap, possibly still under the hard one
   sortedPool <-
-    filterM
-      ( \driverPoolResult -> do
-          now <- getCurrentTime
-          let valueToPut = addUTCTime (fromIntegral driverPoolCfg.singleBatchProcessTime) now
-          let fromScore = addUTCTime (-1 * (fromIntegral driverPoolCfg.singleBatchProcessTime)) now
-          fork "removeExpiredSearchRequestInfoFromCache" $ removeExpiredSearchRequestInfoFromCache driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId
-          isLessThenNParallelRequests searchReq.id driverPoolCfg.merchantId driverPoolResult.driverPoolResult.driverId valueToPut driverPoolCfg.maxParallelSearchRequests fromScore
-      )
-      sortedPool'
+    if softCap >= hardCap || length underSoft >= batchSize
+      then pure underSoft
+      else do
+        backfill <- filterM (tryReserve hardCap) overSoft
+        logInfo $
+          "SoftParallelBackfill: searchTryId=" <> searchTryId.getId
+            <> " batchNum="
+            <> show batchNum
+            <> " softCap="
+            <> show softCap
+            <> " hardCap="
+            <> show hardCap
+            <> " underSoft="
+            <> show (length underSoft)
+            <> " batchSize="
+            <> show batchSize
+            <> " backfilled="
+            <> show (length backfill)
+        -- Ranking is preserved: soft-cap drivers first, backfill appended behind them.
+        pure (underSoft <> backfill)
 
   pushTaggedPoolToKafka sortedPool
   return (mbVersion, take batchSize sortedPool)
   where
+    updateVersionInSearchReq mbVersion =
+      when (isNothing searchReq.poolingLogicVersion && isJust mbVersion) $
+        QSR.updatePoolingLogicVersion mbVersion searchReq.id
+
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
@@ -230,6 +287,44 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
         )
         "search-try-driver-tagged-pool-batch"
         searchTryId.getId
+
+-- | Whether this job has been superseded as the owner of the search try's batch chain.
+--
+-- Exactly one chain may be live. An early batch advance (see the Reject branch of respondQuote)
+-- bumps the search try's epoch and enqueues an immediate job, orphaning the job that was already
+-- scheduled; the orphan reaches this check with a stale epoch and must stop *without*
+-- rescheduling, or both chains would keep sending batches forever.
+--
+-- The comparison is not atomic with the bump, so an orphan that reads the epoch in the instant
+-- before it moves can still send one batch. That is bounded and self-healing: its very next tick
+-- sees the newer epoch and terminates. Preferred over a lock, which could stall the only live
+-- chain if it were ever held across a tick.
+--
+-- No-op unless early advance is enabled for the merchant: with no advances the epoch stays 0 and
+-- every job owns the chain.
+isBatchChainSuperseded ::
+  ( Redis.HedisFlow m r,
+    Log m
+  ) =>
+  DriverPoolConfig ->
+  Id DST.SearchTry ->
+  Maybe Int ->
+  m Bool
+isBatchChainSuperseded driverPoolCfg searchTryId mbJobEpoch
+  | not (fromMaybe False driverPoolCfg.enableEarlyBatchAdvanceOnFullReject) = pure False
+  | otherwise = do
+    currentEpoch <- getBatchEpoch searchTryId
+    let jobEpoch = fromMaybe 0 mbJobEpoch
+    if jobEpoch < currentEpoch
+      then do
+        logInfo $
+          "BatchChainSuperseded: searchTryId=" <> searchTryId.getId
+            <> " jobEpoch="
+            <> show jobEpoch
+            <> " currentEpoch="
+            <> show currentEpoch
+        pure True
+      else pure False
 
 poolBatchNumKey :: Id DST.SearchTry -> Text
 poolBatchNumKey searchTryId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchTryId.getId

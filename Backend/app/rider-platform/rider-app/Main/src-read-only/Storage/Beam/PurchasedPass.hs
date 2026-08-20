@@ -15,7 +15,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PurchasedPassT f = PurchasedPassT
-  { applicableVehicleServiceTiers :: B.C f [BecknV2.FRFS.Enums.ServiceTierType],
+  { activatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    applicableVehicleServiceTiers :: B.C f [BecknV2.FRFS.Enums.ServiceTierType],
     benefitDescription :: B.C f Kernel.Prelude.Text,
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
@@ -42,6 +43,7 @@ data PurchasedPassT f = PurchasedPassT
     startDate :: B.C f Data.Time.Calendar.Day,
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
     usedTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory),
     verificationValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

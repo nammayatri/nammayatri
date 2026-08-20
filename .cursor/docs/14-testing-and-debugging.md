@@ -67,10 +67,11 @@ cabal build dynamic-offer-driver-app
 | DB query returns nothing | Check table name, column names, migration applied |
 | Cache stale | Check TTL, invalidation logic, multi-cloud Redis |
 | Beckn callback not received | Check BPP URL, subscriber registration, ACL module |
-| Driver not getting requests | Check allocator service, driver pool config |
+| Driver not getting requests | See `21-driver-pool-debugging.md` for the full filter-gate pipeline and SQL |
 
 ## Related Docs
 
 - Build commands: `02-build-and-dev.md`
 - Database patterns: `08-database-patterns.md`
 - Multi-cloud debugging: `12-multi-cloud.md`
+- Driver pool / notification debugging: `21-driver-pool-debugging.md`

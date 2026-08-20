@@ -4,6 +4,7 @@
 module Lib.Types.GateInfo where
 
 import qualified Data.Map.Strict
+import qualified Data.OpenApi
 import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -22,6 +23,7 @@ data GateInfo = GateInfo
     demandThresholds :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Int),
     enableQueueFilter :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text Kernel.Prelude.Bool),
     entryFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    gateConfig :: Kernel.Prelude.Maybe Lib.Types.GateInfo.GateConfig,
     gateTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     gateType :: Lib.Types.GateInfo.GateType,
     geomGeoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -43,6 +45,9 @@ data GateInfo = GateInfo
     walkDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data GateConfig = GateConfig {enableIsDemandHigh :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, enablePerKmFare :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, Data.OpenApi.ToSchema)
 
 data GateType = Pickup | Drop | Parking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

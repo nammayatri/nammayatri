@@ -179,7 +179,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   commission <- FC.calculateCommission booking.fareParams mbFarePolicy
   cancellationCommission <- FC.calculateCancellationCommission booking.fareParams mbFarePolicy
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission
+  let (mbPaymentCharge, mbPaymentChargeBearer) = FC.calculatePaymentCharge (Just transporterConfig.driverWalletConfig) booking.fareParams
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
@@ -486,8 +487,10 @@ buildRide ::
   Maybe (Id Person) ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe Text ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission cancellationCommission mbPaymentCharge mbPaymentChargeBearer = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   envCloudType <- asks (.cloudType)
@@ -589,6 +592,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         isInsured = booking.isInsured,
         commission = commission,
         cancellationCommission = cancellationCommission,
+        paymentCharge = mbPaymentCharge,
+        paymentChargeBearer = mbPaymentChargeBearer,
         discountAmount = booking.discountAmount,
         driverGpsTurnedOff = Nothing,
         insuredAmount = booking.insuredAmount,
@@ -632,6 +637,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
     unless (driverId == quoteDriverId) $ do
       DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast driverReq.driverId) driverReq.requestId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
+      DP.decrementSrdSentCount driverReq.createdAt driverId
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

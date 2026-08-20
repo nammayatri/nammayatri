@@ -13,6 +13,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
+import qualified Domain.Types.PersonPTStats as DPUS
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,10 +28,12 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PersonPTStats as SPUS
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
@@ -76,7 +79,9 @@ handleCancelledStatus ::
   m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
 handleCancelledStatus _merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  paymentBooking <- QTBP.findTicketBookingPayment booking >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  mbPaymentBooking <- QTBP.findTicketBookingPayment booking
+  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+    throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   mRiderNumber <- mapM decrypt person.mobileNumber
@@ -96,11 +101,57 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
         void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
         void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-        void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+        whenJust mbPaymentBooking $ \paymentBooking ->
+          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
         return True
+  -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
+  -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
+  -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical
+  -- CONFIRM_CANCEL on bookings they have just marked FAILED, and the on_cancel lands here.
+  --
+  -- Stated as the pre-confirm statuses rather than a CONFIRMED allow-list, because the booking has
+  -- usually moved on by the time the callback arrives: OnCancel/Core sets CANCEL_INITIATED and
+  -- OnStatus sets COUNTER_CANCELLED, both from CONFIRMED and both still owing the rider a trip.
+  --
+  -- booking.status is the PRE-write snapshot handed in by the caller, so it is what distinguishes a
+  -- fresh cancellation from a replayed callback; fullyCancelled cannot, because the branch above
+  -- re-runs on a replay. On a replay, credit only when a pending marker says the earlier attempt
+  -- failed: TripReleased is TTL-bounded, so its absence means either "never refunded" or "refunded,
+  -- marker long expired", and treating the second as the first credits the pass twice.
+  refundOwed <-
+    if booking.status == DFRFSTicketBooking.CANCELLED
+      then FRFSPassOverride.hasPendingTripRefund booking.searchId
+      else pure fullyCancelled
+  when (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED]) $
+    whenJust booking.overrideAppliedEntityId $ \entityId ->
+      -- One trip per ticket went out at confirm, so the same number comes back here.
+      void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId) fareParameters.totalQuantity)
+
+  -- NOTE: these are not idempotent -- a replayed cancel callback decrements the ticket count again
+  -- and rewrites settlement. That is pre-existing behaviour, left exactly as it is on main: guarding
+  -- it would change the cancel flow for every non-pass booking, which is out of scope for a pass PR.
+  -- The pass trip refund above carries its own idempotency (the TripReleased marker) and does not
+  -- rely on a guard here. Filed separately.
   releaseSeatsIfHeld booking quoteCategories
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
+  -- Undo the segmentation counters recorded at on_confirm.
+  reverseStatsResult <-
+    withTryCatch "handleCancelledStatus:reversePersonPTStats" $ do
+      purchaseEvent <-
+        SPUS.mkPurchaseEvent
+          person
+          (Just booking.vehicleType)
+          booking.serviceTierType
+          DPUS.TICKET
+          Nothing
+          (Just fareParameters.totalQuantity)
+          booking.merchantId
+          booking.merchantOperatingCityId
+      SPUS.reversePurchase purchaseEvent
+  case reverseStatsResult of
+    Right () -> pure ()
+    Left err -> logError $ "Failed to reverse PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
   bapConfig <-
     getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
       >>= fromMaybeM (InternalError "Beckn Config not found")

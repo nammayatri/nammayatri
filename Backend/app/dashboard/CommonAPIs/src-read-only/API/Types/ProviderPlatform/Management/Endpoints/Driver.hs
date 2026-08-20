@@ -193,6 +193,7 @@ data DriverListItem = DriverListItem
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     phoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
     blocked :: Kernel.Prelude.Bool,
     subscribed :: Kernel.Prelude.Bool,
@@ -206,7 +207,8 @@ data DriverListItem = DriverListItem
     onboardingAs :: Kernel.Prelude.Maybe Dashboard.Common.Driver.OnboardingAs,
     recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
     hasActiveRc :: Kernel.Prelude.Bool,
-    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag
+    disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
+    linkedVehicleInfo :: [LinkedVehicleInfo]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -285,6 +287,21 @@ instance Kernel.Types.HideSecrets.HideSecrets GetOperatingCityResp where
   hideSecrets = Kernel.Prelude.identity
 
 data LicDetails = LicDetails {licExpiry :: Kernel.Prelude.UTCTime, vehicleClass :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LinkedVehicleInfo = LinkedVehicleInfo
+  { rcId :: Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleMake :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isActive :: Kernel.Prelude.Bool,
+    associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

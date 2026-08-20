@@ -28,6 +28,8 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified EulerHS.Language as L
+import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
@@ -135,6 +137,7 @@ initiateDriverSearchBatch ::
   DriverSearchBatchInput m ->
   m DST.SearchTry
 initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
+  L.setOptionLocal TxnIdKey searchReq.transactionId
   searchTry <- createNewSearchTry
   withTryCatch
     "initiateDriverSearchBatch"
@@ -191,7 +194,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
       JC.createJobIn @_ @'SendSearchRequestToDriver (Just searchReq.providerId) (Just searchReq.merchantOperatingCityId) inTime $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
-            estimatedRideDistance = searchReq.estimatedDistance
+            estimatedRideDistance = searchReq.estimatedDistance,
+            batchEpoch = Nothing -- start of the chain; early advances bump it from here
           }
 
     createNewSearchTry = do

@@ -224,6 +224,9 @@ Booking:
     isAirConditioned: Maybe Bool
     driverCancellationNotAllowed: Maybe Bool
     isDashboardRequest: Maybe Bool
+    # Copied from SearchRequest.isWhatsappRequest at confirm time (SharedLogic/Confirm.hs),
+    # same pattern as isDashboardRequest above.
+    isWhatsappRequest: Maybe Bool
     bookingDetails: BookingDetails
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -256,6 +259,8 @@ Booking:
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
     commission: Maybe HighPrecMoney
+    paymentCharge: Maybe HighPrecMoney
+    paymentChargeBearer: Maybe Text
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
