@@ -15,6 +15,7 @@ import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as CommonDriverRegistration
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified API.Types.UI.DriverOnboardingV2 as Onboarding
+import Control.Applicative ((<|>))
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.Text as Text
