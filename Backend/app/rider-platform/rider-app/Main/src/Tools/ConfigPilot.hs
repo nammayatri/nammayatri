@@ -83,7 +83,7 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       mscCfgs <- getConfigList (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
-      bcCfgs <- getConfigList (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing})
+      bcCfgs <- getConfigList (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing, becknProtocol = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
       mpnCfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId, key = Nothing, tripCategory = Nothing}) (Just (CQMPN.findAllByMerchantOpCityId (cast merchantOpCityId) (Just [])))

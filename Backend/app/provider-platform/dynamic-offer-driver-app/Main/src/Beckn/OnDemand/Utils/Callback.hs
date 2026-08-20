@@ -36,14 +36,15 @@ withCallback ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
   ) =>
   DM.Merchant ->
   WithBecknCallback api callback_success m
 withCallback = withCallback' withShortRetry
 
 withCallback' ::
-  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig]) =>
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]) =>
   (m () -> m ()) ->
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
@@ -73,7 +74,7 @@ type WithBecknCallback api callback_result m =
   m AckResponse
 
 withBecknCallback ::
-  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig], HasRequestId r) =>
+  (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], HasRequestId r) =>
   (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
   Text ->

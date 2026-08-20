@@ -596,7 +596,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
     then do
       bapConfig <-
         getOneConfig
-          (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType)})
+          (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType), becknProtocol = Nothing})
           (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType)))
           >>= fromMaybeM (InternalError "Beckn Config not found")
       let validTillPass = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
@@ -640,7 +640,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategori
             FRFSReschedule.syncPaymentCategories oldFrfsPaymentId updatedQuoteCategories
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.APPROVED dConfirmRes.id
         Nothing -> do
-          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+          bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
           let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
           mRiderNumber <- mapM decrypt rider.mobileNumber
           let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now

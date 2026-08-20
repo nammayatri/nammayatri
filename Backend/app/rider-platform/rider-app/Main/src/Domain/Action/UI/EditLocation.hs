@@ -85,7 +85,7 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   EditLocationThrottle.decEditLocConfirmAttempts booking.id merchant.numOfAllowedEditLocationAttemptsThreshold
   QBUR.updateStatusById DBUR.CONFIRM bookingUpdateReqId
-  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+  void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq
   return Success
 
 mkLocation :: QL.Location -> Common.Location

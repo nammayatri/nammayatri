@@ -148,6 +148,7 @@ cancelRideImpl ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     TranslateFlow m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],

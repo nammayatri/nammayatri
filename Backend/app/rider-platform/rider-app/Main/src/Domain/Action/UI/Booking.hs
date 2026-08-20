@@ -131,7 +131,7 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just booking.merchantId) "MOBILITY" (Just booking.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing, becknProtocol = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just booking.merchantId) "MOBILITY" (Just booking.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
   confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -662,7 +662,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
                       }
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq
       QRB.updateIsBookingUpdated True booking.id
       pure $ DRide.EditLocationResp Nothing "Success"
     (_, Just destination) -> do
@@ -706,7 +706,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
                       }
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq
       pure $ DRide.EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 
@@ -747,7 +747,7 @@ processStop bookingId loc merchantId isEdit = do
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+  void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq
 
 validateStopReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Bool -> StopReq -> Merchant.Merchant -> m ()
 validateStopReq booking isEdit loc merchant = do

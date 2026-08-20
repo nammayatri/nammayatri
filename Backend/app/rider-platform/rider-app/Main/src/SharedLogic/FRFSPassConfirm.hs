@@ -92,7 +92,7 @@ confirmOne booking = do
   let becknVehicleCategory = frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType
   bapConfig <-
     getOneConfig
-      (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just becknVehicleCategory})
+      (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just becknVehicleCategory, becknProtocol = Nothing})
       (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) becknVehicleCategory))
       >>= fromMaybeM (InternalError "Beckn Config not found")
   now <- getCurrentTime

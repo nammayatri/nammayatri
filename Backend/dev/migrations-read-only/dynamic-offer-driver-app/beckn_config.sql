@@ -57,3 +57,9 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config DROP COLUMN cancellation_fee_amo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN multimodal_on_search_ttl_sec integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN network_id text ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN beckn_protocol text  default 'Beckn_V2';

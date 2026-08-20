@@ -85,6 +85,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
+import qualified Kernel.Types.Beckn.Domain as BecknDomain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -103,6 +104,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
 import qualified SharedLogic.BetterRoutePointSearch as BRPS
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.GatewayLookup as GatewayLookup
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
 import qualified SharedLogic.SyncSearchDispatch as SSD
@@ -312,12 +314,19 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           pure Nothing
     Nothing -> pure Nothing
   suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedRes
+  let dispatch reqV =
+        GatewayLookup.dispatchToGateway
+          dSearchRes.merchant.id
+          BecknDomain.MOBILITY
+          "search"
+          reqV
+          (\url r -> void $ CallBPP.searchV2 url r merchantId)
+          (\url mappedAction jsonBody -> void $ CallBPP.callBecknAPIUnsigned mappedAction url jsonBody)
   if shouldSync
     then do
       becknTaxiReqV2 <- withTimeAPI "rideSearch" "buildBecknSearchReqV2" $ TaxiACL.buildSearchReqV2 dSearchRes
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
-      fork "search cabs" $
-        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+      fork "search cabs" $ dispatch becknTaxiReqV2
       mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
       -- Both searches were dispatched together; only now do we join on the suggestion, so
       -- its latency overlaps the real search's instead of adding to it.
@@ -331,7 +340,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
         becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
         let generatedJson = encode becknTaxiReqV2
         logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+        dispatch becknTaxiReqV2
       -- Async path: nothing to join on. The shadow's estimates are persisted by its inline
       -- on_search, and /rideSearch/results picks them up via parentSearchRequestId.
       pure Nothing
@@ -1103,6 +1112,7 @@ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mb
 searchTrigger' ::
   ( DSearch.SearchRequestFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Redis.HedisFlow m r,
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
@@ -1113,6 +1123,7 @@ searchTrigger' ::
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     EsqDBFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -1179,6 +1190,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
 handleBookingCancellation' ::
   ( DSearch.SearchRequestFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Redis.HedisFlow m r,
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
@@ -1189,6 +1201,7 @@ handleBookingCancellation' ::
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     EsqDBFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]

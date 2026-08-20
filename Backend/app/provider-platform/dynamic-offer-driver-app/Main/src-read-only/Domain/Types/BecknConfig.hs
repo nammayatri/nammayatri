@@ -5,6 +5,7 @@ module Domain.Types.BecknConfig where
 
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
+import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -13,12 +14,14 @@ import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
-  { buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { becknProtocol :: Kernel.Prelude.Maybe Domain.Types.BecknProtocol,
+    buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     multimodalOnSearchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    networkId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     onCancelTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onConfirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onInitTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

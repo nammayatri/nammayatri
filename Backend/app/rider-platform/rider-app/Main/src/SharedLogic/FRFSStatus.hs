@@ -90,7 +90,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
   logInfo $ "frfsBookingStatus for booking: " <> show booking'
   let bookingId = booking'.id
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking'.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking'.merchantOperatingCityId merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   now <- getCurrentTime
   let validTillWithBuffer = addUTCTime 5 booking'.validTill
@@ -271,7 +271,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
           riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
-          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
+          allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing, becknProtocol = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "FRFS" (Just merchantOperatingCity.id)))
           let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
                 [] -> 0 -- 30 minutes in seconds if all are Nothing

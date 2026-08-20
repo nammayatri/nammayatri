@@ -488,7 +488,7 @@ shareTicketInfo ticketBookingId = do
 
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
         bapConfig <-
-          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback city.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)))
+          getOneConfig (BecknConfigDimensions {merchantOperatingCityId = city.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback city.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)))
             >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
         void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
 
@@ -499,7 +499,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
   frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = fromStation.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bapConfig <-
-    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)))
+    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)))
       >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")
   route <-
     maybe

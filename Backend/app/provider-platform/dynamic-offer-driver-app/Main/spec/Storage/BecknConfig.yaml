@@ -5,6 +5,7 @@ imports:
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
   VehicleCategory: BecknV2.OnDemand.Enums
+  BecknProtocol: Domain.Types
 
 BecknConfig:
   tableName: beckn_config
@@ -33,6 +34,8 @@ BecknConfig:
     onUpdateTTLSec: Maybe Int
     onTrackTTLSec: Maybe Int
     onCancelTTLSec: Maybe Int
+    networkId: Maybe Text
+    becknProtocol: Maybe BecknProtocol
 
   types:
     PaymentCollectedBy:
@@ -41,16 +44,17 @@ BecknConfig:
   default:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
+    becknProtocol: "'Beckn_V2'"
 
   queries:
-    findByMerchantIdDomainAndVehicle:
-      kvFunction: findOneWithKV
-      where:
-        and: [merchantId, domain, vehicleCategory]
     findByMerchantIdAndDomain:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, domain]
+    findByMerchantIdDomainAndBecknProtocol:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain, becknProtocol]
     findById:
       kvFunction: findOneWithKV
       where: id
@@ -58,6 +62,9 @@ BecknConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   beamType:
     subscriberUrl: Text

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnCancel (API, handler) where
+module API.Beckn.OnCancel (API, handler, onCancelWebhook) where
 
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -28,6 +28,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
@@ -37,6 +38,9 @@ type API = OnCancel.OnCancelAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onCancel
+
+onCancelWebhook :: OnCancel.OnCancelReqV2 -> FlowHandler AckResponse
+onCancelWebhook = onCancel DummySig.dummySignatureAuthResult
 
 onCancel ::
   SignatureAuthResult ->

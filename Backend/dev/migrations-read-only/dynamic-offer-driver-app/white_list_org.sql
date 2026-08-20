@@ -26,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN merchant_operatin
 ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN merchant_id SET DEFAULT '';
 ALTER TABLE atlas_driver_offer_bpp.white_list_org ALTER COLUMN merchant_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.white_list_org ADD COLUMN supported_beckn_protocols text ;

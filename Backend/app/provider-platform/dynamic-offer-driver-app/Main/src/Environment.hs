@@ -182,6 +182,7 @@ data AppCfg = AppCfg
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     vocalyticsCnfg :: VocalyticsCnfg,
@@ -314,6 +315,7 @@ data AppEnv = AppEnv
     ondcGatewayUrl :: BaseUrl,
     nyRegistryUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     vocalyticsCnfg :: VocalyticsCnfg,
@@ -455,6 +457,7 @@ instance Registry Flow where
       fetchUrlFromList :: [Domain.Types.GatewayAndRegistryService] -> Flow BaseUrl
       fetchUrlFromList priorityList = do
         case priorityList of
+          (Fabric : rest) -> fetchUrlFromList rest
           (NY : _) -> asks (.nyRegistryUrl)
           _ -> asks (.ondcRegistryUrl)
       retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)

@@ -1,6 +1,7 @@
 module Storage.Queries.BecknConfigExtra where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified Domain.Types
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -12,18 +13,46 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as Beam
 import Storage.Queries.OrphanInstances.BecknConfig ()
 
--- Extra code goes here --
-
 findByMerchantIdDomainAndVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
-findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do listToMaybe <$> findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Text ->
+  BecknV2.OnDemand.Enums.VehicleCategory ->
+  m (Maybe Domain.Types.BecknConfig.BecknConfig)
+findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory =
+  listToMaybe
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+            Se.Is Beam.domain $ Se.Eq domain,
+            Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+            Se.Or
+              [ Se.Is Beam.becknProtocol $ Se.Eq Nothing,
+                Se.Is Beam.becknProtocol $ Se.Eq (Just Domain.Types.Beckn_V2)
+              ]
+          ]
+      ]
 
 findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.BecknConfig.BecknConfig)))
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Prelude.Text ->
+  BecknV2.OnDemand.Enums.VehicleCategory ->
+  m (Maybe Domain.Types.BecknConfig.BecknConfig)
 findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCityId merchantId domain vehicleCategory = do
-  configs <- findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId), Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
+  configs <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+            Se.Is Beam.domain $ Se.Eq domain,
+            Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+            Se.Or
+              [ Se.Is Beam.becknProtocol $ Se.Eq Nothing,
+                Se.Is Beam.becknProtocol $ Se.Eq (Just Domain.Types.Beckn_V2)
+              ]
+          ]
+      ]
   case listToMaybe configs of
     Just config -> return (Just config)
     Nothing -> findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory
