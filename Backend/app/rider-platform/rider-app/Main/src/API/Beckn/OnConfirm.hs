@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnConfirm (API, handler) where
+module API.Beckn.OnConfirm (API, handler, onConfirmWebhook) where
 
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -41,6 +41,9 @@ type API = OnConfirm.OnConfirmAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onConfirm
+
+onConfirmWebhook :: OnConfirm.OnConfirmReqV2 -> FlowHandler AckResponse
+onConfirmWebhook = onConfirm (error "OnConfirm webhook: SignatureAuthResult not present (verified upstream by onix)")
 
 onConfirm ::
   SignatureAuthResult ->

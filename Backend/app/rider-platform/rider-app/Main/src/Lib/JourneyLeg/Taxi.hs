@@ -269,7 +269,8 @@ cancelSearch' ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     EsqDBFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
   ) =>
   (Id DPerson.Person, Id Merchant.Merchant) ->
   Id DEstimate.Estimate ->

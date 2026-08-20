@@ -164,7 +164,8 @@ editLocation ::
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl]
   ) =>
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->
@@ -239,7 +240,7 @@ editLocation rideId (personId, merchantId) req = do
                 ..
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq
       QRB.updateIsBookingUpdated True booking.id
       pure $ EditLocationResp Nothing "Success"
     (_, Just destination) -> do
@@ -285,7 +286,7 @@ editLocation rideId (personId, merchantId) req = do
                 ..
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      void . withShortRetry $ CallBPP.updateV2 booking.merchantId booking.providerUrl becknUpdateReq
       pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 

@@ -122,6 +122,7 @@ type SearchRequestFlow m r c =
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
@@ -139,6 +140,7 @@ type ConfirmFlow m r c =
     HasBAPMetrics m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     Redis.HedisFlow m r,
@@ -162,6 +164,7 @@ type CancelFlow m r c =
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     m ~ Kernel.Types.Flow.FlowR AppEnv
   )
 
@@ -188,6 +191,7 @@ type GetStateFlow m r c =
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],

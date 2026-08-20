@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnSelect (API, handler) where
+module API.Beckn.OnSelect (API, handler, onSelectWebhook) where
 
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -36,6 +36,9 @@ type API = OnSelect.OnSelectAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSelect
+
+onSelectWebhook :: OnSelect.OnSelectReqV2 -> FlowHandler AckResponse
+onSelectWebhook = onSelect (error "OnSelect webhook: SignatureAuthResult not present (verified upstream by onix)")
 
 onSelect ::
   SignatureAuthResult ->

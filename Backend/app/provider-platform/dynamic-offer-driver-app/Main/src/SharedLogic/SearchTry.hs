@@ -127,6 +127,7 @@ initiateDriverSearchBatch ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     HasField "blackListedJobs" r [Text],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,

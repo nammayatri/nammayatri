@@ -17,7 +17,11 @@ module BecknV2.OnDemand.Utils.Context
     buildContextV2',
     buildContextV2_1,
     buildContextV2_1',
+    fabricActionName,
+    isFabricAction,
     mapToCbAction,
+    mutateFabricContext,
+    mutateFabricContextBpp,
     validateContext,
   )
 where
@@ -25,6 +29,7 @@ where
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.UUID as UUID
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, (%~))
@@ -148,6 +153,54 @@ mapToCbAction = \case
   "RATING" -> Just "ON_RATING"
   "SUPPORT" -> Just "ON_SUPPORT"
   _ -> Nothing
+
+fabricActionName :: Text -> Text
+fabricActionName = \case
+  "search" -> "discover"
+  "on_search" -> "on_discover"
+  "feedback" -> "rate"
+  "on_feedback" -> "on_rate"
+  other -> other
+
+isFabricAction :: Text -> Bool
+isFabricAction = \case
+  "discover" -> True
+  "on_discover" -> True
+  _ -> False
+
+mutateFabricContext :: Text -> Text -> A.Value -> A.Value
+mutateFabricContext networkId bapReceiverUri (A.Object o) =
+  case AKM.lookup "context" o of
+    Just (A.Object ctx) ->
+      let ctx' =
+            AKM.insert "domain" (A.String networkId)
+              . AKM.insert "bap_uri" (A.String bapReceiverUri)
+              . renameAction
+              $ ctx
+       in A.Object $ AKM.insert "context" (A.Object ctx') o
+    _ -> A.Object o
+  where
+    renameAction ctx = case AKM.lookup "action" ctx of
+      Just (A.String a) -> AKM.insert "action" (A.String (fabricActionName a)) ctx
+      _ -> ctx
+mutateFabricContext _ _ v = v
+
+mutateFabricContextBpp :: Text -> Text -> A.Value -> A.Value
+mutateFabricContextBpp networkId bppReceiverUri (A.Object o) =
+  case AKM.lookup "context" o of
+    Just (A.Object ctx) ->
+      let ctx' =
+            AKM.insert "domain" (A.String networkId)
+              . AKM.insert "bpp_uri" (A.String bppReceiverUri)
+              . renameAction
+              $ ctx
+       in A.Object $ AKM.insert "context" (A.Object ctx') o
+    _ -> A.Object o
+  where
+    renameAction ctx = case AKM.lookup "action" ctx of
+      Just (A.String a) -> AKM.insert "action" (A.String (fabricActionName a)) ctx
+      _ -> ctx
+mutateFabricContextBpp _ _ v = v
 
 validateContext :: (HasFlowEnv m r '["_version" ::: Text]) => Context.Action -> Spec.Context -> m ()
 validateContext action context = do

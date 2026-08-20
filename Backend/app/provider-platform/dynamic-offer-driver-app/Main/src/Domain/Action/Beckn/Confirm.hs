@@ -287,6 +287,7 @@ validateRequest ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r

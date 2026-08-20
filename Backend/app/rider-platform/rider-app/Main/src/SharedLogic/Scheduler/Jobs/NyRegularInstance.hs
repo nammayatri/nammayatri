@@ -44,6 +44,7 @@ runNyRegularInstanceJob ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],

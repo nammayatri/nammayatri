@@ -35,6 +35,7 @@ imports:
   VehicleCategory: BecknV2.OnDemand.Enums
   BusLocation: API.Types.UI.RiderLocation
   RiderPreferredOption: Domain.Types.RiderPreferredOption
+  BecknProtocol: Domain.Types
 
 SearchRequest:
   tableName: search_request

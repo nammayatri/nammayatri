@@ -487,6 +487,7 @@ type CallBAPConstraints m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     EsqDBReplicaFlow m r,
     HasField "esqDBReplicaEnv" r EsqDBEnv,
     EventStreamFlow m r,

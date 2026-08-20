@@ -35,8 +35,14 @@ data BknPaymentParams = BknPaymentParams
 
 data UsageSafety = Safe | Unsafe
 
-data GatewayAndRegistryService = ONDC | NY
+data GatewayAndRegistryService = ONDC | NY | Fabric
   deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON)
 
 $(mkBeamInstancesForEnumAndList ''GatewayAndRegistryService)
 derivePersistField "GatewayAndRegistryService"
+
+data BecknProtocol = Beckn_V2 | Beckn_V3
+  deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
+
+$(mkBeamInstancesForEnumAndList ''BecknProtocol)
+derivePersistField "BecknProtocol"

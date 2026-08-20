@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnSearch (API, handler, processOnSearchInline) where
+module API.Beckn.OnSearch (API, handler, processOnSearchInline, onSearchWebhook) where
 
 import qualified Beckn.ACL.OnSearch as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -59,6 +59,9 @@ data ProcessingMode = ProcessSync | ProcessAsync
 -- request like a disability-tagged off-us search).
 processOnSearchInline :: OnSearch.OnSearchReqV2 -> Flow (Maybe DOnSearch.OnSearchResult)
 processOnSearchInline reqV2 = processOnSearchPayload reqV2 ProcessSync
+
+onSearchWebhook :: OnSearch.OnSearchReqV2 -> FlowHandler AckResponse
+onSearchWebhook = onSearch (error "OnSearch webhook: SignatureAuthResult not present (verified upstream by onix)")
 
 processOnSearchPayload :: OnSearch.OnSearchReqV2 -> ProcessingMode -> Flow (Maybe DOnSearch.OnSearchResult)
 processOnSearchPayload reqV2 mode = do

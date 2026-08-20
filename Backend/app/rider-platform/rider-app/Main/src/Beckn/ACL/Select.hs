@@ -52,7 +52,7 @@ buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
   moc <- CQMOC.findByMerchantIdAndCity dSelectRes.merchant.id dSelectRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dSelectRes.merchant.id.getId <> "-city-" <> show dSelectRes.city)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dSelectRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just dSelectRes.merchant.id) "MOBILITY" (Just moc.id)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = dSelectRes.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing, becknProtocol = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just dSelectRes.merchant.id) "MOBILITY" (Just moc.id)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
   -- stops <- dSelectRes.searchRequest.stops
   messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig riderConfig

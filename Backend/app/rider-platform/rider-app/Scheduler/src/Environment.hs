@@ -118,6 +118,7 @@ data HandlerEnv = HandlerEnv
     bapMetrics :: BAPMetricsContainer,
     ondcGatewayUrl :: BaseUrl,
     nyGatewayUrl :: BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     apiRateLimitOptions :: APIRateLimitOptions,

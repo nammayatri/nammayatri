@@ -76,6 +76,7 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.MetaWhatsappWebhook
+      API.OnixBapWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
@@ -535,6 +536,7 @@ library
       SharedLogic.FRFSSeatBooking.Lua
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
+      SharedLogic.GatewayLookup
       SharedLogic.GoogleTranslate
       SharedLogic.Insurance
       SharedLogic.IntegratedBPPConfig

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnInit (API, handler) where
+module API.Beckn.OnInit (API, handler, onInitWebhook) where
 
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
@@ -44,6 +44,9 @@ type API = OnInit.OnInitAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit
+
+onInitWebhook :: OnInit.OnInitReqV2 -> FlowHandler AckResponse
+onInitWebhook = onInit (error "OnInit webhook: SignatureAuthResult not present (verified upstream by onix)")
 
 onInit ::
   SignatureAuthResult ->

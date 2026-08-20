@@ -99,6 +99,7 @@ cancelRideHandle ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     TranslateFlow m r,
     LT.HasLocationService m r,
