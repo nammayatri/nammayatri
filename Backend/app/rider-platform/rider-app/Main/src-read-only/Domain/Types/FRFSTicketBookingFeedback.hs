@@ -14,7 +14,9 @@ import qualified Tools.Beam.UtilsTH
 data FRFSTicketBookingFeedback = FRFSTicketBookingFeedback
   { bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     createdAt :: Kernel.Prelude.UTCTime,
+    driverRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeedback,
     isFareAccepted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

@@ -1,0 +1,48 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Text: Data.Text
+  Centesimal: Kernel.Types.Common
+
+# Bus/fleet-level rating aggregate, keyed by (gtfsId, fleetNumber).
+# Independent of driver: a rating is attributed to the boarded vehicle, not to
+# any permanent driver-fleet link. Pooled running (sum, count); rating derived.
+FRFSFleetStats:
+  tableName: frfs_fleet_stats
+
+  fields:
+    id : Id FRFSFleetStats
+    gtfsId : Text
+    fleetNumber : Text
+    totalRatingScore : Int
+    totalRatingCount : Int
+    rating : Maybe Centesimal
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    merchantId : Maybe (Id Merchant)
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+
+  constraints:
+    id: PrimaryKey
+    fleetNumber: SecondaryKey
+
+  extraIndexes:
+    - columns: [gtfsId, fleetNumber]
+      unique: true
+
+  queries:
+    findByGtfsIdAndFleetNumber:
+      kvFunction: findOneWithKV
+      where:
+        and: [gtfsId, fleetNumber]
+
+    updateRatingAgg:
+      kvFunction: updateOneWithKV
+      params: [totalRatingScore, totalRatingCount, rating, updatedAt]
+      where:
+        and: [id]
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - NO_DEFAULT_INDEXES
