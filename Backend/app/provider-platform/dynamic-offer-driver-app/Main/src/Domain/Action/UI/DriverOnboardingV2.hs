@@ -190,15 +190,26 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanManda
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personLanguage = fromMaybe ENGLISH person.language
-  getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle
+  getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle (Just person.role)
+
+stagesDocumentCategoryFor ::
+  Kernel.Prelude.Maybe Domain.Types.Person.Role ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  DTO.DocumentCategory
+stagesDocumentCategoryFor mbRequestorRole mbOnlyVehicle
+  | mbRequestorRole `elem` [Just Domain.Types.Person.FLEET_OWNER, Just Domain.Types.Person.FLEET_BUSINESS] = DTO.Fleet
+  | mbOnlyVehicle == Just True = DTO.Vehicle
+  | otherwise = DTO.Driver
 
 getOnboardingConfigs' ::
   Language ->
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Domain.Types.Person.Role ->
   Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
-getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
+getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle mbRequestorRole = do
+  let stagesDocumentCategory = stagesDocumentCategoryFor mbRequestorRole mbOnlyVehicle
   mbMerchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let verificationProvidersPriorityList = (.verificationProvidersPriorityList) <$> mbMerchantServiceUsageConfig
   let mkDims cat = DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just cat}
@@ -219,7 +230,7 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
   busConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments busConfigsRaw mbOnlyVehicle)
   boatConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments boatConfigsRaw mbOnlyVehicle)
   totoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments totoConfigsRaw mbOnlyVehicle)
-  stagesRaw <- getConfig (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing}) (Just (CQDVSC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+  stagesRaw <- getConfig (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing, documentCategory = Just stagesDocumentCategory}) (Just (CQDVSC.findByMerchantOpCityIdAndDocumentCategory merchantOpCityId stagesDocumentCategory Nothing))
   onboardingStages <- mapM (mkOnboardingStageAPIEntity personLanguage) (sortOn (.order) $ filter (not . (.isHidden)) stagesRaw)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList

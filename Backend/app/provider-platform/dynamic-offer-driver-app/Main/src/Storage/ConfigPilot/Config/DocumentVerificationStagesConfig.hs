@@ -21,7 +21,8 @@ import qualified Storage.CachedQueries.DocumentVerificationStagesConfig as SQ
 data DocumentVerificationStagesConfigDimensions = DocumentVerificationStagesConfigDimensions
   { merchantOperatingCityId :: Text,
     vehicleCategory :: Maybe Domain.Types.VehicleCategory.VehicleCategory,
-    applicableTo :: Maybe Domain.Types.DocumentVerificationConfig.DocumentApplicableType
+    applicableTo :: Maybe Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
+    documentCategory :: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -41,7 +42,8 @@ instance ConfigDimensions DocumentVerificationStagesConfigDimensions where
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
       [ LCP.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==),
-        LCP.DimMatcher (.applicableTo) (Just . (.applicableTo)) (==)
+        LCP.DimMatcher (.applicableTo) (Just . (.applicableTo)) (==),
+        LCP.DimMatcher (.documentCategory) (Just . (.documentCategory)) (==)
       ]
       Nothing
   configFallback _ = Nothing

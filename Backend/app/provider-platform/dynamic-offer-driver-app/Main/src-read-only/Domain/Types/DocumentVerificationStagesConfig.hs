@@ -16,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 data DocumentVerificationStagesConfig = DocumentVerificationStagesConfig
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentCategory :: Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
     hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isHidden :: Kernel.Prelude.Bool,
