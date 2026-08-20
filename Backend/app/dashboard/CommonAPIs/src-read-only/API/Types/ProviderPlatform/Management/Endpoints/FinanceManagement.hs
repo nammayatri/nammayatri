@@ -126,7 +126,8 @@ data InvoiceListItem = InvoiceListItem
     issuedToTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     recognizedRevenue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    deferredRevenue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+    deferredRevenue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    pdfUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -20,6 +20,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
+import Beckn.Types.Core.Taxi.Common.Document as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport
 import Beckn.Types.Core.Taxi.OnStatus.Order.OrderState (RideBookingCancelledOrderCode (RIDE_BOOKING_CANCELLED))
 import Data.Aeson as A
@@ -31,7 +32,8 @@ data BookingCancelledOrder = BookingCancelledOrder
   { id :: Text,
     state :: RideBookingCancelledOrderCode,
     cancellation_reason :: CancellationSource,
-    fulfillment :: Maybe FulfillmentInfo
+    fulfillment :: Maybe FulfillmentInfo,
+    documents :: Maybe [Document] -- ONDC order.documents[] (e.g. cancellation INVOICE); omitted when Nothing
   }
   deriving (Generic, Show)
 

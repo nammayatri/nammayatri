@@ -440,6 +440,7 @@ types:
     - issuedByTaxNo: Maybe Text
     - recognizedRevenue: Maybe HighPrecMoney
     - deferredRevenue: Maybe HighPrecMoney
+    - pdfUrl: Maybe Text
 
   # ----- Audit trail -----
   AuditListRes:

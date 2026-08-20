@@ -43,6 +43,7 @@ types:
     taxRate: Maybe Double
     issuedToTaxNo: Maybe Text
     issuedByTaxNo: Maybe Text
+    pdfUrl: Maybe Text # Pre-signed S3 URL of the rendered invoice PDF; Nothing until the PDF is materialised in S3
   FinanceInvoiceListRes:
     invoices: "[FinanceInvoiceItem]"
     totalItems: Int

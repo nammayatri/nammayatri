@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
 where
 
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.Document as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Reexport
@@ -33,7 +34,8 @@ data RideCompletedOrder = RideCompletedOrder
     state :: RideCompletedOrderCode,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
-    payment :: Maybe Payment
+    payment :: Maybe Payment,
+    documents :: Maybe [Document] -- ONDC order.documents[] (e.g. INVOICE); omitted when Nothing
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

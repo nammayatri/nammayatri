@@ -38,6 +38,7 @@ library
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim
+      Utils.QRCode.Encoder
       Utils.QRCode.Scanner
   other-modules:
       Paths_utils

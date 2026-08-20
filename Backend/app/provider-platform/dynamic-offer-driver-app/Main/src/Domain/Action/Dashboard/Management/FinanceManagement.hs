@@ -102,6 +102,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
+import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
@@ -593,6 +594,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
                 _ -> calculateRevenueRecognized subId
           pure (Just recognized, Just $ max 0 (invoice.subtotal - recognized))
         _ -> pure (Nothing, Nothing)
+      mbPdfUrl <- InvoiceDocument.mkInvoicePdfUrl invoice
 
       pure $
         API.InvoiceListItem
@@ -634,7 +636,8 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             issuedToTaxNo = mbIssuedToTaxNo,
             issuedByTaxNo = mbIssuedByTaxNo,
             recognizedRevenue = recognizedRevenue,
-            deferredRevenue = deferredRevenue
+            deferredRevenue = deferredRevenue,
+            pdfUrl = mbPdfUrl
           }
 
     extractIds :: LedgerEntry.LedgerEntry -> ([Text], [Text]) -> ([Text], [Text])
@@ -1831,7 +1834,8 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-      ctx =
+  mbQrDataUri <- InvoiceDocument.mkInvoiceQrDataUri chosenInv
+  let ctx =
         FRT.buildInvoiceContext
           FRT.BuildInvoiceContextInput
             { language = lang,
@@ -1846,7 +1850,16 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
               mbCardLastFour = chosenPdfData.mbCardLastFour,
               mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
               mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
-              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber
+              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
+              reverseCharge = transporterConfig.invoiceConfig >>= (.reverseCharge),
+              ecoName = transporterConfig.invoiceConfig >>= (.ecoName),
+              ecoAddress = transporterConfig.invoiceConfig >>= (.ecoAddress),
+              ecoGstin = transporterConfig.invoiceConfig >>= (.ecoGstin),
+              hsnSacCode = transporterConfig.invoiceConfig >>= (.hsnSacCode),
+              categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
+              signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
+              cityState = transporterConfig.invoiceConfig >>= (.cityState),
+              qrImageDataUri = mbQrDataUri
             }
       mbInvType = case chosenInv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission

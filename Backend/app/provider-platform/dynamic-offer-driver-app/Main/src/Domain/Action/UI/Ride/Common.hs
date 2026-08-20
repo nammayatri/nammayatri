@@ -13,6 +13,7 @@ module Domain.Action.UI.Ride.Common
     EarningsLabels (..),
     fetchEarningsLabels,
     mkDriverRideRes,
+    getBookingInvoicePdfUrl,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),
     ResolvedCalling (..),
@@ -25,6 +26,7 @@ module Domain.Action.UI.Ride.Common
   )
 where
 
+import qualified AWS.S3 as S3
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
@@ -59,17 +61,19 @@ import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
+import GHC.Records.Extra (HasField)
 import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds (Seconds), convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.SpecialLocation as SL
@@ -239,7 +243,8 @@ data DriverRideRes = DriverRideRes
     amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
     rideEarnings :: Maybe RideEarnings,
     customerLanguage :: Maybe Maps.Language,
-    driverCancellationNotAllowed :: Maybe Bool
+    driverCancellationNotAllowed :: Maybe Bool,
+    invoicePdfUrl :: Maybe Text -- pre-signed S3 URL of the ride-fare tax invoice (booking.financeInvoiceId); Nothing until the PDF is materialised
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -469,8 +474,9 @@ mkDriverRideRes ::
   Bool ->
   [DSI.StopInformation] ->
   ResolvedCalling ->
+  Maybe Text -> -- pre-signed invoice PDF URL (computed by the caller via getBookingInvoicePdfUrl); Nothing to skip
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling invoicePdfUrl = do
   let estimatedFareParams = booking.fareParams
       estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
@@ -662,8 +668,26 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
         amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
         rideEarnings = mbRideEarningsVal,
-        customerLanguage = booking.customerLanguage
+        customerLanguage = booking.customerLanguage,
+        invoicePdfUrl = invoicePdfUrl
       }
+
+-- | Pre-signed S3 URL of the ride-fare tax invoice (booking.financeInvoiceId),
+--   for driver-facing responses. No render — presigns only if the PDF is already
+--   materialised; Nothing otherwise. Cheap enough to call per ride in a list.
+getBookingInvoicePdfUrl ::
+  ( LYBF.BeamFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
+  ) =>
+  DRB.Booking ->
+  m (Maybe Text)
+getBookingInvoicePdfUrl booking = case booking.financeInvoiceId of
+  Nothing -> pure Nothing
+  Just invIdText -> do
+    mbInv <- QFInvoice.findById (Id invIdText)
+    case mbInv >>= (.pdfS3Path) of
+      Just path -> Just <$> S3.generateDownloadUrl (T.unpack path) (Seconds 3600)
+      Nothing -> pure Nothing
 
 -- calculateLocations moved from UI.Ride
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
