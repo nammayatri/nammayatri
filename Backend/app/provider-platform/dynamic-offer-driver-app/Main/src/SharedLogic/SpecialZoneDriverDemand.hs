@@ -285,6 +285,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
               estimatedRideStaticDuration = Nothing,
               timeDiffFromUtc = Nothing,
               tollCharges = Nothing,
+              isManualToll = False,
               currency,
               noOfStops = 0,
               shouldApplyBusinessDiscount = False,
