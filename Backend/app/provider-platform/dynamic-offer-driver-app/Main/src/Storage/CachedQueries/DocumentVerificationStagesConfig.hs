@@ -25,7 +25,6 @@ where
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.DocumentVerificationStagesConfig as DTO (DocumentVerificationStagesConfig)
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.VehicleCategory
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
