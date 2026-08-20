@@ -87,13 +87,16 @@ handler hnd = do
                 else Hedis.whenWithLockRedis (mkRunningJobKey parentJobId.getId) (fromIntegral expirationTime) runFn
         lockFn $
           withLogTag ("JobId = " <> id.getId <> " and parentJobId = " <> parentJobId.getId <> " jobType = " <> jobType' <> " isLongRunningJob = " <> show isLongRunningJob) $ do
-            res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher jobType'
+            (res, mbFailureReason) <-
+              measuringDuration (registerDuration jobType') $
+                ((,Nothing) <$> restore (executeTask hnd anyJob))
+                  `C.catchAll` (\e -> (,Just (show e)) <$> defaultCatcher jobType' e)
             registerExecutionResult hnd anyJob res
             releaseLock parentJobId
             Hedis.unlockRedis (mkRunningJobKey id.getId)
             -- Stream-native retry: requeue happens AFTER the locks are released so the fresh entry
             -- can acquire the parentJobId lock on its next pickup (avoids a lock-held silent drop).
-            handleStreamRetry hnd anyJob jobType' res
+            handleStreamRetry hnd anyJob jobType' res mbFailureReason
 
 dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
@@ -349,28 +352,28 @@ delStreamRetryCounter :: Id AnyJob -> SchedulerM ()
 delStreamRetryCounter jobId = Hedis.withNonCriticalCrossAppRedis $ Hedis.del (mkStreamRetryCounterKey jobId)
 
 -- | Requeue a job onto the stream if it is within its retry budget, else fail it terminally.
-requeueOrFailByBudget :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> BS.ByteString -> SchedulerM ()
-requeueOrFailByBudget hnd (AnyJob job) payload = do
+requeueOrFailByBudget :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> BS.ByteString -> Text -> SchedulerM ()
+requeueOrFailByBudget hnd (AnyJob job) payload retryReason = do
   let jobType' = show (fromSing $ jobType job.jobInfo)
   n <- incrStreamRetryCounter job.id
   if n <= toInteger job.maxErrors
     then do
-      logDebug $ "stream requeue attempt " <> show n <> " for jobId:" <> show job.id
+      logError $ "STREAM_RETRY_REQUEUED jobId=" <> job.id.getId <> " attempt=" <> show n <> "/" <> show job.maxErrors <> " jobType=" <> jobType' <> " reason=" <> retryReason
       reAddToStream payload
     else do
-      logError $ "STREAM_RETRY_BUDGET_EXCEEDED jobId=" <> job.id.getId <> " attempts=" <> show n <> " jobType=" <> jobType'
+      logError $ "STREAM_RETRY_BUDGET_EXCEEDED jobId=" <> job.id.getId <> " attempts=" <> show n <> " jobType=" <> jobType' <> " lastReason=" <> retryReason
       markAsFailed hnd jobType' job.id
       delStreamRetryCounter job.id
 
 -- | Called at the end of runTask (after locks are released) to drive stream-native retry for
 -- non-longRunning jobs. longRunning jobs keep the DB reschedule path in registerExecutionResult.
-handleStreamRetry :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> Text -> ExecutionResult -> SchedulerM ()
-handleStreamRetry hnd anyJob@(AnyJob job) jobType' result = do
+handleStreamRetry :: forall t. (JobProcessor t) => SchedulerHandle t -> AnyJob t -> Text -> ExecutionResult -> Maybe Text -> SchedulerM ()
+handleStreamRetry hnd anyJob@(AnyJob job) jobType' result mbFailureReason = do
   isLong <- isJobLongRunning jobType'
   unless isLong $
     case result of
       Complete -> delStreamRetryCounter job.id
-      Retry -> requeueOrFailByBudget hnd anyJob (BL.toStrict $ A.encode anyJob)
+      Retry -> requeueOrFailByBudget hnd anyJob (BL.toStrict $ A.encode anyJob) (fromMaybe "job handler returned Retry (no exception thrown)" mbFailureReason)
       _ -> pure ()
 
 -- | Reclaim idle pending (PEL) entries: XCLAIM them, re-add fresh copies (within budget) and ack+del
@@ -417,7 +420,7 @@ reclaimIdlePending hnd forceReclaim mbConsumer minIdleMs = do
                   when gotLock $ Hedis.withCrossAppRedis $ Hedis.unlockRedis runningKey
                   pure gotLock -- got the lock => not in-flight => safe to reclaim
             if shouldReclaim
-              then requeueOrFailByBudget hnd anyJob (DT.encodeUtf8 payload) >> pure [recordId]
+              then requeueOrFailByBudget hnd anyJob (DT.encodeUtf8 payload) "reclaimed idle pending stream entry (previous consumer died or delivery timed out)" >> pure [recordId]
               else pure []
     unless (null ackDelIds) $ do
       void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck streamName groupName ackDelIds
