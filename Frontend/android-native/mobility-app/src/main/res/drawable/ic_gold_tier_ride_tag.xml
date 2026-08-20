@@ -1,0 +1,24 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer layer with simulated angular-like gradient -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="400"
+                android:centerX="50%"
+                android:centerY="50%"
+                android:startColor="#FFBF00"
+                android:centerColor="#FFBF00"
+                android:endColor="#FFBF00"
+                android:useLevel="false" />
+            <corners android:radius="26dp" />
+        </shape>
+    </item>
+    
+    <item android:left="1dp" android:right="1dp" android:top="1dp" android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FAF3DE" />
+            <corners android:radius="26dp" />
+        </shape>
+    </item>
+</layer-list>

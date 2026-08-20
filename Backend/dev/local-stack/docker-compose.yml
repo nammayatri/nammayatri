@@ -1,0 +1,541 @@
+# Self-hosted Namma Yatri rider backend (2023 baseline).
+#
+# Networking note: the dhall configs hardcode `localhost` for Postgres, Redis,
+# Kafka and passetto (only the *ports* are env-overridable). Rather than patch
+# the upstream configs, the services that rider-app talks to publish their ports
+# on the Docker host, and rider-app itself runs with network_mode: host so that
+# `localhost` resolves to the same place. `proxy` then re-exposes the API on
+# 8014 so it is reachable from Windows (host-network ports are not forwarded
+# out of the Docker Desktop VM).
+#
+# Run via ./setup.sh — it fetches the pinned upstream tree that ./2023 refers to.
+#
+# RESERVED PORTS — do not use these for anything we add. The merchant row and
+# the upstream dhall configs point at them, so squatting on one makes the
+# backend talk to the wrong service and fail in a thoroughly confusing way:
+#
+#   8013  rider-app (BAP)          8016  driver-app (BPP)
+#   8015  beckn-gateway            8020  mock-registry
+#   8019  mock-google              5000  osrm
+#
+# 8015 and 8020 now have services behind them. They did not until we built
+# beckn-gateway and mock-registry ourselves -- neither is in the published image,
+# which ships beckn-cli-exe only. Until then atlas_app.merchant.gateway_url
+# pointed at a port with nothing listening, so every BECKN /search the rider app
+# sent went nowhere: a search came back with a route and no price, and the
+# driver side never saw the request.
+#
+# Keeping them reserved was still right. An earlier version of this file put the
+# map on 8015 and the shim on 8020, and ride search failed because rider-app
+# dutifully sent its /search to the map's nginx.
+#
+# Ours live above the reserved range: 8025 map, 8030 maps-shim, 8035 tiles, and
+# the Windows-facing proxies on 8014 / 8017 / 5001.
+
+# WHICH BACKEND IMAGE THIS USES
+#
+# By default it builds one locally from ./bin (see Dockerfile.rider), which is
+# what you want while iterating. To run the image CI published instead -- no
+# binaries to download, no build:
+#
+#   export NY_IMAGE=ghcr.io/nammayatri-algeria/ny-backend:latest
+#   docker compose pull rider-app
+#   docker compose up -d --no-build
+#
+# `--no-build` matters: rider-app still declares a build section, and compose
+# would otherwise rebuild it locally and overwrite the tag you just pulled.
+
+# WHERE PUBLISHED PORTS BIND -- $BIND_ADDR
+#
+# Every `ports:` entry below is published on ${BIND_ADDR}, which defaults to
+# 0.0.0.0 so a laptop behaves exactly as it always has.
+#
+# On a machine with a public IP, set BIND_ADDR=127.0.0.1 (see .env on the
+# server). Docker publishes ports by DNAT in nat/PREROUTING and filters them in
+# FORWARD -> DOCKER-USER; ufw only governs filter/INPUT. So `ufw default deny
+# incoming` does NOT close a published port, and without this the internet gets
+# Postgres on 5434, Redis on 6379 and -- worst -- Adminer on 8026, a full
+# database browser whose credentials are written down in the README.
+#
+# Reach them through an SSH tunnel instead:
+#   ssh -N -L 8014:127.0.0.1:8014 -L 8025:127.0.0.1:8025 ny@<host>
+#
+# The host-networked services (rider-app 8013, driver-app 8016, beckn-gateway
+# 8015, mock-registry 8020, mock-google 8019, osrm 5000, maps-shim 8030) are NOT
+# covered by this: they bind host sockets directly, so their bind address comes
+# from the upstream dhall configs. Those do go through filter/INPUT, so ufw does
+# close them. They cannot simply be moved to 127.0.0.1 either -- the socat
+# proxies reach them over the docker bridge at 172.17.0.1.
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: ny-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: atlas_dev
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:5434:5432"
+      # Both apps are configured with a read replica on 5435 (esqDBReplicaCfg)
+      # and use it for `runInReplica` queries -- GET /v2/rideSearch/{id}/results
+      # among them, which otherwise dies with
+      #   libpq: failed (could not connect to server ... port 5435)
+      # There is no actual replica here, so 5435 is pointed at the same
+      # database. Reads simply go to the primary.
+      - "${BIND_ADDR:-0.0.0.0}:5435:5432"
+    volumes:
+      - ny-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d atlas_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Same policy as the app containers. Without it a host reboot brings the
+    # apps back with no database underneath them, which looks like a broken
+    # stack rather than a stopped one.
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ny-redis
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:6379:6379"
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: ny-kafka
+    network_mode: host
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Bound to loopback, not 0.0.0.0. Kafka runs on host networking, so
+      # `ports:` and therefore BIND_ADDR do not apply to it -- on a public IP an
+      # unauthenticated broker would otherwise be listening on 29092. Its only
+      # clients (rider-app, driver-app) are host-networked too and already reach
+      # it at 127.0.0.1, which is what KAFKA_ADVERTISED_LISTENERS below says.
+      KAFKA_LISTENERS: PLAINTEXT://127.0.0.1:29092,CONTROLLER://127.0.0.1:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:29092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:29093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+    restart: unless-stopped
+
+  # Encryption sidecar. rider-app calls this to encrypt/decrypt PII (phone
+  # numbers); without it every auth request fails with a 500.
+  passetto-db:
+    image: postgres:12.3
+    container_name: ny-passetto-db
+    environment:
+      POSTGRES_DB: passetto
+      POSTGRES_USER: passetto
+      POSTGRES_PASSWORD: passetto
+    volumes:
+      # Pre-generated keys that match the encrypted values in the seed data.
+      - ./2023/Backend/dev/sql-seed/passetto-seed.sql:/docker-entrypoint-initdb.d/create_schema.sql:ro
+    # Note: this one has no named volume, so its keys live in the container
+    # layer. They survive stop/start and reboot, but NOT `docker compose down`
+    # -- after a `down` the initdb script re-seeds them, which is fine.
+    restart: unless-stopped
+
+  passetto:
+    image: juspayin/passetto-hs:0b18530
+    container_name: ny-passetto
+    command: demo
+    depends_on:
+      - passetto-db
+    environment:
+      PASSETTO_PG_BACKEND_CONN_STRING: postgresql://passetto:passetto@ny-passetto-db:5432/passetto
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:8021:8012"
+    restart: unless-stopped
+
+  rider-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.rider
+    image: ny-rider:patched
+    container_name: ny-rider
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/rider-app-exe"]
+    # Wait for a database that actually accepts connections. Without this the
+    # app can start first on a host reboot, fail its migrations, and sit there
+    # returning SqlError on every request instead of retrying.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_PRIMARY_PORT: "5434"
+      REDIS_PORT: "6379"
+      KAFKA_BROKER_PORT: "29092"
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # rider-app runs these migrations itself on every startup.
+      - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
+  # The driver side (BPP). Same image — it already contains every executable in
+  # the repo, so no second build — just a different entrypoint, a different
+  # schema (atlas_driver_offer_bpp) and its own migrations.
+  driver-app:
+    image: ny-rider:patched
+    container_name: ny-driver
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/dynamic-offer-driver-app-exe"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # It applies dev/migrations/dynamic-offer-driver-app itself on startup.
+      - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
+  # The connector between the two sides. rider-app (BAP) does not call
+  # driver-app (BPP) directly: it POSTs /search to the gateway, which looks up
+  # every BPP for the domain in the registry and multicasts to them. Without it
+  # the two halves of this stack never speak.
+  #
+  # Config: dhall-configs/dev/beckn-gateway.dhall -- port 8015, Redis on 6379,
+  # registryUrl http://localhost:8020/, selfId JUSPAY.BG.1. No database.
+  beckn-gateway:
+    image: ny-rider:patched
+    container_name: ny-beckn-gateway
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/beckn-gateway-exe"]
+    depends_on:
+      - redis
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+    restart: unless-stopped
+
+  # The registry all three resolve subscribers through, and the reason
+  # signature auth works: it holds each party's public key.
+  #
+  # It needs its own schema and role (atlas_registry / atlas_registry_user),
+  # created by setup.sh from dev/sql-seed/mock-registry-seed.sql. The subscriber
+  # rows come from dev/local-testing-data/mock-registry.sql and already match
+  # this deployment exactly -- nothing had to be written by hand:
+  #
+  #   JUSPAY.BG.1                     BG   -> http://localhost:8015/v1
+  #   JUSPAY.MOBILITY.APP.UAT.1       BAP  -> http://localhost:8013/cab/v1
+  #   JUSPAY.MOBILITY.PROVIDER.UAT.3  BPP  -> http://localhost:8016/beckn/favorit0-...
+  #
+  # That last one is atlas_driver_offer_bpp.merchant.subscriber_id for
+  # NAMMA_YATRI_PARTNER, whose id is favorit0-0000-0000-0000-00000favorit.
+  # All three sign with the same dev key, so the one public key the fixture
+  # carries is correct for all of them.
+  mock-registry:
+    image: ny-rider:patched
+    container_name: ny-mock-registry
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/mock-registry-exe"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # autoMigrate = True, migrationPath dev/migrations/mock-registry.
+      - ./2023/Backend/dev:/opt/app/dev:ro
+    restart: unless-stopped
+
+  # Maps. The seeded merchant config already points Maps_Google at
+  # http://localhost:8019/ -- i.e. at this mock, not at Google -- so without it
+  # running, every ride search fails with GOOGLE_MAPS_API_ERROR before it ever
+  # reaches BECKN. It serves distances, routes, place names and autocomplete
+  # from fixture data, so no API key and no billing account are involved.
+  #
+  # Distances are fixtures, not real Algerian routing. Switching to real
+  # routing means pointing Maps_OSRM at an OSRM server with an Algeria extract
+  # -- already supported in merchant_service_config, no code change.
+  mock-google:
+    image: ny-rider:patched
+    container_name: ny-mock-google
+    network_mode: host
+    working_dir: /opt/app
+    entrypoint: ["/opt/app/mock-google-exe"]
+    volumes:
+      - ./2023/Backend/dhall-configs:/opt/app/dhall-configs:ro
+      # mockDataPath in mock-google.dhall is "./app/mocks/google/mock-data/",
+      # resolved relative to working_dir.
+      - ./2023/Backend/app/mocks/google/mock-data:/opt/app/app/mocks/google/mock-data:ro
+    restart: unless-stopped
+
+  # Real routing for Algeria. merchant_service_config already carries
+  #   Maps_OSRM -> {"osrmUrl": "localhost:5000", "radiusDeviation": 20}
+  # so this is a configuration change, not a code change. Host networking so
+  # that `localhost:5000` means the same thing here as it does to rider-app.
+  #
+  # The graph is built by ./osrm-prepare.sh into the ny-osrm-data volume; this
+  # only serves it. mld matches how the graph was prepared -- osrm-routed
+  # refuses to start if the algorithm and the graph disagree.
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    container_name: ny-osrm
+    network_mode: host
+    command: osrm-routed --algorithm mld --port 5000 /data/algeria-latest.osrm
+    volumes:
+      - ny-osrm-data:/data:ro
+    restart: unless-stopped
+
+  # OSRM on host networking is invisible from Windows; this exposes it on 5001
+  # so routes can be inspected directly. Not needed by the backend.
+  osrm-proxy:
+    image: alpine/socat
+    container_name: ny-osrm-proxy
+    command: tcp-listen:5000,fork,reuseaddr tcp-connect:172.17.0.1:5000
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:5001:5000"
+    restart: unless-stopped
+
+  # The backend's entire "Google" is this container. See maps-shim/server.js.
+  #
+  #   /directions/json          -> OSRM, on the Algerian road graph
+  #   /place/autocomplete/json  -> geo.place, our own search index
+  #   /place/details/json       -> geo.place
+  #   /geocode/json             -> geo.place (reverse)
+  #   anything else             -> mock-google, untouched
+  #
+  # Three of those five were broken or wrong before: this baseline cannot get
+  # routes from OSRM at all, mock-google implements the *new* autocomplete API
+  # while the backend calls the legacy one, it has no place-details endpoint,
+  # and its reverse geocoder answers with an address in Karnataka wherever you
+  # ask about. One googleMapsUrl still covers everything.
+  #
+  # Built rather than pulled because it needs a Postgres driver; the source is
+  # still bind-mounted, so editing server.js and restarting is the whole loop.
+  # Run ./geocoder-prepare.sh once to fill the index.
+  maps-shim:
+    build:
+      context: .
+      dockerfile: Dockerfile.maps-shim
+    image: ny-maps-shim:local
+    container_name: ny-maps-shim
+    network_mode: host
+    working_dir: /app
+    command: node server.js
+    environment:
+      PORT: "8030"
+      OSRM_URL: "http://localhost:5000"
+      MOCK_GOOGLE_URL: "http://localhost:8019"
+      # Host networking, so 5434 is the published Postgres port. Unset this and
+      # the three search endpoints fall back to mock-google.
+      PG_URL: "postgres://postgres:root@localhost:5434/atlas_dev"
+    volumes:
+      - ./maps-shim:/app:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The lock on the OTP check. See auth-guard/server.js for the measurement
+  # behind it: the backend answers with `attempts: 3` and enforces nothing, so
+  # all 10,000 four-digit codes take about ten minutes.
+  #
+  # Harmless while every port but SSH is shut; not harmless the moment the API
+  # is published on 443. It is deployed and verified *before* the edge, and the
+  # edge sends the whole of /v2/ and /ui/ through it -- a guard you can route
+  # around is not a guard.
+  #
+  # On /ui/ it does one thing more. The backend's code is not merely guessable,
+  # it is fixed at 7891 for everyone, and there is no SMS gateway to turn that
+  # off with. So the guard keeps a personal code per approved driver, checks it
+  # here, and substitutes 7891 before forwarding -- the fixed code never works
+  # from the internet, and an unlisted number is refused before the backend can
+  # create a driver record for it. `./enrol-driver.sh` manages that list; the
+  # file it writes is a secret and is not in git.
+  #
+  # Belongs in the backend, where the counter already exists. It is here because
+  # this stack runs prebuilt binaries from a CI job with a 350-minute budget,
+  # and rebuilding to change a counter is not a proportionate risk.
+  auth-guard:
+    image: node:20-alpine
+    container_name: ny-auth-guard
+    network_mode: host
+    working_dir: /app
+    command: node server.js
+    environment:
+      PORT: "8031"
+      UPSTREAM_URL: "http://127.0.0.1:8013"
+      DRIVER_UPSTREAM_URL: "http://127.0.0.1:8016"
+      DRIVER_CODES: "/app/driver-codes.json"
+      # What the backend accepts today, from dhall-configs/dev/
+      # dynamic-offer-driver-app.dhall: `useFakeSms = Some 7891`. The guard
+      # substitutes this once the driver's own code checks out. When a real
+      # gateway replaces the fake one, this and DRIVER_CODES both go.
+      DRIVER_FIXED_OTP: "7891"
+      MAX_ATTEMPTS: "3"
+      AUTH_TTL_MS: "600000"
+      LOCK_MS: "900000"
+      # Document photos arrive base64 in JSON; nginx has the matching limit.
+      MAX_BODY: "8388608"
+    volumes:
+      - ./auth-guard:/app:ro
+    restart: unless-stopped
+
+  # ── The only thing the internet can reach, besides SSH ────────────────────
+  #
+  # TLS on 443, publishing two things and only through the auth guard: the rider
+  # API on /v2/ and the driver API on /ui/. Postgres, Redis, the demo pages,
+  # mock-google, OSRM, Swagger and -- the one that matters -- the driver
+  # binary's 41 /dashboard/ office routes all stay unreachable. See
+  # edge/nginx.conf.
+  #
+  # network_mode: host on purpose. A bridged container with published ports
+  # would bypass ufw entirely -- the trap that makes `ufw default deny`
+  # insufficient on this box. Bound to the host directly, 80 and 443 are
+  # governed by ufw like anything else, so the firewall still means something.
+  #
+  # Certificates come from ./edge-certs (Let's Encrypt via certbot, HTTP-01).
+  # Bring this up only after the guard is running and verified: publishing 443
+  # is what turns the OTP hole from theoretical into reachable.
+  edge:
+    image: nginx:alpine
+    container_name: ny-edge
+    network_mode: host
+    # nginx reads its certificate once, at start. A renewed certificate on disk
+    # therefore changes nothing until it reloads -- which is how a stack like
+    # this serves an expired certificate two months after renewing it
+    # successfully. Reloading every six hours costs nothing and removes that
+    # entire class of outage.
+    command: >
+      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+             nginx -g 'daemon off;'"
+    volumes:
+      - ./edge/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./edge/proxy-common.inc:/etc/nginx/conf.d/proxy-common.inc:ro
+      - ./edge-certs:/etc/letsencrypt:ro
+      - ./edge-webroot:/var/www/certbot:ro
+    depends_on:
+      - auth-guard
+    restart: unless-stopped
+
+  # Renewal only. The first certificate is issued by hand with --standalone
+  # (see README); after that this wakes twice a day, renews anything inside 30
+  # days of expiry over the HTTP-01 path nginx keeps open on port 80, and tells
+  # nginx to pick it up. Twice a day is Let's Encrypt's own recommendation --
+  # it means a failed renewal has ~60 chances before anything expires.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: ny-certbot
+    volumes:
+      - ./edge-certs:/etc/letsencrypt
+      - ./edge-webroot:/var/www/certbot
+    # List form, not a folded block. A `>` block collapses the newlines into
+    # one line and mangles the inner quoting -- the container then starts,
+    # reports healthy, and errors on every pass. It did exactly that here, and
+    # the only symptom was one line of log nobody would read for sixty days.
+    #
+    # No --deploy-hook: nginx reloads itself every six hours regardless, which
+    # covers the renewal without another moving part to get wrong.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
+    restart: unless-stopped
+
+  # rider-app uses host networking, so its port lives inside the Docker VM and
+  # isn't published to Windows. This forwards it to localhost:8014.
+  proxy:
+    image: alpine/socat
+    container_name: ny-proxy
+    command: tcp-listen:8013,fork,reuseaddr tcp-connect:172.17.0.1:8013
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:8014:8013"
+    restart: unless-stopped
+
+  # Same trick for the driver app: 8016 inside the VM -> 8017 on Windows.
+  driver-proxy:
+    image: alpine/socat
+    container_name: ny-driver-proxy
+    command: tcp-listen:8016,fork,reuseaddr tcp-connect:172.17.0.1:8016
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:8017:8016"
+    restart: unless-stopped
+
+  # Visual demo: a map of the service areas that queries the live API.
+  # It also exists to solve a CORS problem -- rider-app sends no CORS headers,
+  # so the page has to be served from the same origin as the API it calls.
+  # areas.geojson is exported from the database by setup.sh.
+  map:
+    image: nginx:alpine
+    container_name: ny-map
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:8025:80"
+    volumes:
+      - ./demo-map/site:/usr/share/nginx/html:ro
+      - ./demo-map/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+
+  # Self-hosted map tiles for Algeria -- the streets, water and labels drawn
+  # underneath the route. OSRM gives us the route; it does not give us the map.
+  #
+  # Decided 2026-08-06 to host our own rather than subscribe to MapTiler, Mapbox
+  # or Google: those charge per map view and need an international payment card.
+  # See tiles-prepare.sh, which builds the tiles into the ny-tiles-data volume;
+  # this service only serves them.
+  #
+  # public_url has to match how clients actually reach this, because it is baked
+  # into the absolute tile/glyph/sprite URLs inside the style JSON. A phone
+  # reaching it over `adb reverse tcp:8035 tcp:8035` sees it as localhost too.
+  # Keep --port 8080: the image's built-in healthcheck probes localhost:8080 and
+  # cannot be told otherwise, so serving on any other port reports "unhealthy"
+  # forever while working perfectly.
+  tiles:
+    image: maptiler/tileserver-gl:latest
+    container_name: ny-tiles
+    # public_url is baked into the style document tileserver serves: the URLs
+    # for the vector source and the glyphs are absolute, so whatever is set
+    # here is where every client will go for the actual tiles. Pointing it at
+    # loopback is why the map only ever worked behind a tunnel.
+    #
+    # Now the public HTTPS path, so one URL works from the phone, the browser
+    # demos and a release APK alike. Override TILES_PUBLIC_URL to point a local
+    # stack back at itself.
+    command: >-
+      --file /data/algeria.mbtiles
+      --port 8080
+      --public_url ${TILES_PUBLIC_URL:-https://api.169-58-139-65.sslip.io/tiles/}
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:8035:8080"
+    volumes:
+      - ny-tiles-data:/data
+    restart: unless-stopped
+
+  # Browser view of the database, for demos and screenshots. Nothing depends on
+  # it and nothing breaks if it is stopped.
+  #
+  # Log in with: system PostgreSQL · server ny-postgres · user postgres ·
+  # password root · database atlas_dev. It reaches Postgres over the compose
+  # network, so it uses the container name and port 5432, not the published 5434.
+  adminer:
+    image: adminer:4
+    container_name: ny-adminer
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:8026:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: ny-postgres
+      ADMINER_DESIGN: dracula
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ny-pgdata:
+  # Built by ./osrm-prepare.sh rather than by compose, because preprocessing is
+  # a one-off that takes far longer than a container start and should not be
+  # repeated on every `up`.
+  ny-osrm-data:
+    external: true
+  # Same reasoning for the map tiles: built once by ./tiles-prepare.sh.
+  ny-tiles-data:
+    external: true
