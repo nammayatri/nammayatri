@@ -1147,14 +1147,26 @@ from:
 `getNearestDrivers` filters on role, merchant, `active`, not-`blocked`, position
 freshness and vehicle variant. It never looks at `enabled` or `verified`.
 
-Two consequences. A driver **created by `POST /ui/auth` starts
-`enabled = true, verified = false`**, so `verified` is not what makes an account
-work — the app treats it as *"the agency has checked the papers"*, which is a
-product convention this stack invented and the backend does not enforce. And
-`enabled` is enforced at the *gate*, not in the pool: a driver switched off
-mid-shift keeps working until he next toggles, because nothing revokes an
-`active` flag that is already set. Set `active = false` too when disabling one
-for real.
+Three consequences.
+
+**A driver created by `POST /ui/auth` starts `enabled = false`**, which is why
+enrolling is not enabling. Watch out for the near-miss here: there are **two
+functions called `createDriverDetails`**, and they disagree. `Registration.hs`
+— the self-signup path `/ui/auth` uses — writes `enabled = False`. `Driver.hs`
+— the office path — writes `enabled = True`. Reading the wrong one produces the
+confident and wrong conclusion that a fresh driver can work immediately.
+
+**`verified` is not what makes an account work.** Nothing in the backend reads
+it. The app uses it as *"the agency has checked the papers"*, which is a product
+convention this stack invented; the approve SQL above must therefore keep
+setting it, or D7 holds a driver who could actually work.
+
+**Disabling by SQL does not put a driver offline.** The dashboard route does
+(`changeDriverEnableState` calls `updateActivity … False` when disabling), but
+`/dashboard/` is not published here, so accounts are switched off with raw SQL —
+and that leaves `active = true`. `setActivity` is a gate, not a leash: nothing
+revokes a flag already set, so he keeps receiving work until he next toggles.
+**Set `active = false` in the same statement.**
 
 `registration_no` is unique — reusing a plate fails the insert.
 `vehicle_class = '3WT'` is copied from the fleet rows known to dispatch
