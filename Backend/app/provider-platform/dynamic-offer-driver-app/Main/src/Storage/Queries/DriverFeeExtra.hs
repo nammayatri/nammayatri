@@ -453,8 +453,9 @@ updateFee ::
   Bool ->
   SRB.Booking ->
   Bool ->
+  (HighPrecMoney, Int, HighPrecMoney) ->
   m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _booking isSpecialZoneCharge = do
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _booking isSpecialZoneCharge (perRideAmountInc, dailyCountInc, dailyAmountInc) = do
   now <- getCurrentTime
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
@@ -482,6 +483,9 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _bookin
           ]
             <> [Se.Set BeamDF.specialZoneRideCount $ specialZoneRideCount' + 1 | isSpecialZoneCharge]
             <> [Se.Set BeamDF.specialZoneAmount $ specialZoneAmount' + totalDriverFee | isSpecialZoneCharge]
+            <> [Se.Set BeamDF.perRideBaseAmount $ Just (df.perRideBaseAmount + perRideAmountInc) | perRideAmountInc /= 0]
+            <> [Se.Set BeamDF.dailyBaseCount $ Just (df.dailyBaseCount + dailyCountInc) | dailyCountInc /= 0]
+            <> [Se.Set BeamDF.dailyBaseAmount $ Just (df.dailyBaseAmount + dailyAmountInc) | dailyAmountInc /= 0]
         )
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
