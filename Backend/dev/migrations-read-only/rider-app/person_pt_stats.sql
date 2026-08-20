@@ -17,3 +17,8 @@ ALTER TABLE atlas_app.person_pt_stats ADD COLUMN vehicle_type text ;
 ALTER TABLE atlas_app.person_pt_stats ADD PRIMARY KEY ( id);
 CREATE INDEX CONCURRENTLY person_pt_stats_idx_pass_type_id_product_type_static_person_id_vehicle_service_tier_type_vehicle_type ON atlas_app.person_pt_stats USING btree (pass_type_id, product_type, static_person_id, vehicle_service_tier_type, vehicle_type);
 CREATE INDEX CONCURRENTLY person_pt_stats_idx_static_person_id ON atlas_app.person_pt_stats USING btree (static_person_id);
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY person_pt_stats_idx_person_id ON atlas_app.person_pt_stats USING btree (person_id);
