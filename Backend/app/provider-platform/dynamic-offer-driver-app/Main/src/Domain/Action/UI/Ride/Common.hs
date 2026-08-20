@@ -302,9 +302,16 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = d
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
       amountPaidByCustomer = fare - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee} = labels
-      cancellationDues = fromMaybe 0 (finalFareParam >>= (.customerCancellationDues))
-      airportConvenienceFee = fromMaybe 0 (finalFareParam >>= (.airportConvenienceFee))
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblServiceCharge} = labels
+      cancellationDues =
+        fromMaybe 0 $
+          case finalFareParam of
+            Just fareParams -> fareParams.customerCancellationDues
+            Nothing -> estimatedFareParam.customerCancellationDues
+      airportConvenienceFee =
+        fromMaybe (fromMaybe 0 estimatedFareParam.airportConvenienceFee) (finalFareParam >>= (.airportConvenienceFee))
+      serviceCharge =
+        fromMaybe (fromMaybe 0 estimatedFareParam.serviceCharge) (finalFareParam >>= (.serviceCharge))
   let mkComp sec key mbLabel value applicable =
         if applicable
           then
@@ -324,7 +331,8 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = d
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
             mkComp FareBreakup "PAYMENT_CHARGE" Nothing paymentCharge (paymentCharge /= 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
-            mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0)
+            mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0),
+            mkComp FareBreakup "SERVICE_CHARGE" lblServiceCharge serviceCharge (serviceCharge > 0)
           ]
   footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam
 
@@ -427,7 +435,8 @@ data EarningsLabels = EarningsLabels
     lblCommission :: Maybe Text,
     lblNetEarnings :: Maybe Text,
     lblFare :: Maybe Text,
-    lblAirportConvenienceFee :: Maybe Text
+    lblAirportConvenienceFee :: Maybe Text,
+    lblServiceCharge :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -443,6 +452,7 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "NET_DRIVER_EARNINGS"
     <*> resolveLabel lang "FARE"
     <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
+    <*> resolveLabel lang "SERVICE_CHARGE"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
