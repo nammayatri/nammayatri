@@ -69,6 +69,8 @@ data BetterPoint = BetterPoint
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | At most one of 'betterPickup' / 'betterDrop' is ever set: only the end with the
+-- better saving-per-walk trade-off is suggested, so the customer never walks at both ends.
 data BetterRoute = BetterRoute
   { betterPickup :: Maybe BetterPoint,
     betterDrop :: Maybe BetterPoint,
@@ -151,9 +153,11 @@ findBetterRoutePoints cfg pickup dropPoint pts mbRouteDistance mbRouteDuration =
       mbDrop =
         bestCandidate dropPoint (\cum -> (polylineLength - cum) * scale) effMaxWalk effMinSaving $
           filter (\seg -> (polylineLength - seg.sCumAtStart) * scale >= effMinSaving) segments
-  -- Both suggestions together must still leave a route to drive. If they cross or
-  -- touch, keep only the one with the larger net benefit.
-  let (pickupCand, dropCand) = resolveOverlap mbPickup mbDrop
+  -- At most one end is ever suggested, so the customer walks once: the two are ranked
+  -- by the same 'netBenefit' used within a side, so a short walk can beat a longer one
+  -- that saves a little more. This also subsumes the crossing case, since two
+  -- suggestions can no longer invert the ride between them.
+  let (pickupCand, dropCand) = keepBetterSide mbPickup mbDrop
   guard (isJust pickupCand || isJust dropCand)
   let savedPolyline = maybe 0 cCum pickupCand + maybe 0 ((polylineLength -) . cCum) dropCand
       savedRoad = savedPolyline * scale
@@ -218,12 +222,11 @@ findBetterRoutePoints cfg pickup dropPoint pts mbRouteDistance mbRouteDuration =
 
     walkAversion = cfg.walkAversion
 
-    -- A suggested pickup at or past the suggested drop would invert the ride.
-    resolveOverlap :: Maybe Candidate -> Maybe Candidate -> (Maybe Candidate, Maybe Candidate)
-    resolveOverlap (Just p) (Just d)
-      | p.cPosition >= d.cPosition =
-        if netBenefit p >= netBenefit d then (Just p, Nothing) else (Nothing, Just d)
-    resolveOverlap p d = (p, d)
+    keepBetterSide :: Maybe Candidate -> Maybe Candidate -> (Maybe Candidate, Maybe Candidate)
+    keepBetterSide (Just p) (Just d)
+      | netBenefit p >= netBenefit d = (Just p, Nothing)
+      | otherwise = (Nothing, Just d)
+    keepBetterSide p d = (p, d)
 
     toBetterPoint :: Candidate -> BetterPoint
     toBetterPoint c =

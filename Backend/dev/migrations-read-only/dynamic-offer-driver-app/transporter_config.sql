@@ -1076,3 +1076,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_drive
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN force_enabled_bypassing_docs_upon_disable_takes_to_onboarding boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_drop_loc_qar_cal_enabled boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN drop_qar_cal_radius_in_km double precision ;
