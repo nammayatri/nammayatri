@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -283,6 +284,9 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  -- Blocking writes `active` too. Keyed on the driver's own city, which is what countOnlineByCity buckets on.
+  whenJust driverInfo $ \di ->
+    DSC.recordDriverActiveChange di.merchantOperatingCityId di.active (fromMaybe True (mbActive <|> activeState))
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.blocked = LTSSync.Set isBlocked,
@@ -577,12 +581,18 @@ countEnabledByDriverIds driverIds =
 updateMerchantIdAndCityIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantIdAndCityIdByDriverId driverId merchantId merchantOperatingCityId = do
   now <- getCurrentTime
+  -- A city move relocates an online driver between supply buckets without touching `active`.
+  mbDriverInfo <- findById (cast driverId)
   updateOneWithKV
     [ Se.Set BeamDI.merchantId (Just $ getId merchantId),
       Se.Set BeamDI.merchantOperatingCityId (Just $ getId merchantOperatingCityId),
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]
+  whenJust mbDriverInfo $ \di ->
+    when di.active $ do
+      DSC.recordDriverActiveChange di.merchantOperatingCityId True False
+      DSC.recordDriverActiveChange (Just merchantOperatingCityId) False True
 
 findEligibleForScheduledPayout ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

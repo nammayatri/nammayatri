@@ -22,13 +22,14 @@
 --     10-minute window (TTL 2.5 windows); the kernel's sAddExp already catches and
 --     logs Redis errors, so recording can never break a business flow.
 --   * publishing: a single forked loop (started at app boot) sets the gauges —
---     drivers-online every tick from driver_information on the read replica, and
+--     drivers-online every tick from the Redis counter in SharedLogic.DriverSupplyCounter
+--     (recounted from driver_information on a cache miss or the 10-minute reconcile), and
 --     the three windowed uniques once per COMPLETED window (the kernel exposes no
 --     SCARD, so cardinality = length of sMembers; publishing once per window keeps
 --     that to 3 set-reads per city per 10 minutes).
 --
--- Every pod runs the publisher; all pods compute the same values from shared
--- sources of truth, so concurrent publishes are benign.
+-- Every pod runs the publisher; the online recount is single-flighted behind a per-window
+-- lock so only one pod queries Postgres.
 module SharedLogic.DriverSupplyMetrics
   ( recordDriversPinged,
     recordDriverAccepted,
@@ -48,6 +49,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverSupplyCounter (onlineCountKey)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QDI
@@ -72,6 +74,12 @@ currentBucket now = floor (utcTimeToPOSIXSeconds now) `div` windowSecs
 -- distinct counts — no extra Redis reads, and no need to enumerate service tiers.
 supplyMember :: (Text, Id DP.Person) -> Text
 supplyMember (tier, driverId) = tier <> "|" <> driverId.getId
+
+reconcileLockKey :: Int -> Text
+reconcileLockKey bucket = "driverSupply:onlineCount:reconcile:" <> show bucket
+
+reconcileSecs :: Int
+reconcileSecs = 600
 
 recordSupplyEvent :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> [(Text, Id DP.Person)] -> m ()
 recordSupplyEvent kind cityId entries =
@@ -101,6 +109,33 @@ countWindowByTier kind cityId bucket = do
       let (tier, rest) = T.breakOn "|" m
        in if T.null rest then Nothing else Just (tier, T.drop 1 rest)
 
+-- | Authoritative recount for one city, straight from driver_information. Only ever
+-- called on a cache miss or on the periodic reconcile -- never per tick.
+-- | Absolute recount. `set` not a read-then-incrby delta: a delta is not idempotent
+-- across pods, so a cache miss would leave the key at (pods x online).
+rebuildOnlineCount :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Int
+rebuildOnlineCount cityId = do
+  online <- QDI.countOnlineByCity cityId
+  Redis.set (onlineCountKey cityId.getId) online
+  pure online
+
+-- | Redis is the fast path; Postgres only on a cache miss or when this pod won the reconcile lock.
+currentOnlineCount ::
+  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) =>
+  Bool ->
+  Id DMOC.MerchantOperatingCity ->
+  m Int
+currentOnlineCount shouldReconcile cityId
+  | shouldReconcile = rebuildOnlineCount cityId
+  | otherwise = do
+    mbCount <- Redis.get (onlineCountKey cityId.getId)
+    case mbCount of
+      -- DECR on a missing key creates it at -1, so "exists" is not enough.
+      Just count | count >= 0 -> pure count
+      _ -> do
+        logWarning $ "online count missing or negative for city " <> cityId.getId <> ", rebuilding from driver_information"
+        rebuildOnlineCount cityId
+
 -- | Forked once at app boot; must never die, so each tick is exception-guarded.
 runDriverSupplyMetricsPublisher ::
   ( CacheFlow m r,
@@ -110,21 +145,28 @@ runDriverSupplyMetricsPublisher ::
     MonadFlow m
   ) =>
   m ()
-runDriverSupplyMetricsPublisher = withLogTag "DriverSupplyMetrics" $ go (-1)
+runDriverSupplyMetricsPublisher = withLogTag "DriverSupplyMetrics" $ go (-1) (-1)
   where
-    go lastPublishedBucket = do
-      res <- try @_ @SomeException (publishTick lastPublishedBucket)
-      newLast <- case res of
+    go lastPublishedBucket lastReconciledBucket = do
+      res <- try @_ @SomeException (publishTick lastPublishedBucket lastReconciledBucket)
+      (newLast, newReconciled) <- case res of
         Left err -> do
           logError $ "publish tick failed: " <> show err
-          pure lastPublishedBucket
+          pure (lastPublishedBucket, lastReconciledBucket)
         Right published -> pure published
       liftIO $ threadDelay (publishTickSecs * 1000000)
-      go newLast
+      go newLast newReconciled
 
-    publishTick lastPublishedBucket = do
+    publishTick lastPublishedBucket lastReconciledBucket = do
       supplyMetrics <- asks (.driverSupplyMetrics)
       now <- getCurrentTime
+      -- One pod per window recounts from Postgres so drift cannot accumulate.
+      let reconcileBucket = floor (utcTimeToPOSIXSeconds now) `div` reconcileSecs
+      shouldReconcile <-
+        if reconcileBucket == lastReconciledBucket
+          then pure False
+          else Redis.setNxExpire (reconcileLockKey reconcileBucket) reconcileSecs True
+      when shouldReconcile $ logInfo "won reconcile lock, recounting online drivers from driver_information"
       let prevBucket = currentBucket now - 1
           -- Publish every completed-but-unpublished window, ascending so gauges end
           -- on the newest. Capped at 3 windows back (beyond the Redis TTL the sets
@@ -135,19 +177,27 @@ runDriverSupplyMetricsPublisher = withLogTag "DriverSupplyMetrics" $ go (-1)
             | otherwise = [max (lastPublishedBucket + 1) (prevBucket - 2) .. prevBucket]
       when (length bucketsToPublish > 1) $
         logWarning $ "publishing " <> show (length bucketsToPublish) <> " windows at once - earlier ticks were missed"
-      providers <- CQM.loadAllProviders
-      forM_ providers $ \merchant -> do
-        cities <- CQMOC.findAllByMerchantId merchant.id
-        forM_ cities $ \city -> do
-          let merchantLabel = merchant.shortId.getShortId
-              cityLabel = show city.city
-          online <- QDI.countOnlineByCity city.id
-          setDriverSupplyGauge supplyMetrics.driversOnlineGauge merchantLabel cityLabel online
-          forM_ bucketsToPublish $ \bucket -> do
-            publishTierGauge supplyMetrics.driversReceivingGauge "pinged" merchantLabel cityLabel city.id bucket
-            publishTierGauge supplyMetrics.driversAcceptingGauge "accepted" merchantLabel cityLabel city.id bucket
-            publishTierGauge supplyMetrics.driversOnRideGauge "onride" merchantLabel cityLabel city.id bucket
-      pure $ max lastPublishedBucket prevBucket
+      -- Release the lock if this tick dies partway, so the next one can retry.
+      res <- try @_ @SomeException $ do
+        providers <- CQM.loadAllProviders
+        forM_ providers $ \merchant -> do
+          cities <- CQMOC.findAllByMerchantId merchant.id
+          forM_ cities $ \city -> do
+            let merchantLabel = merchant.shortId.getShortId
+                cityLabel = show city.city
+            online <- currentOnlineCount shouldReconcile city.id
+            setDriverSupplyGauge supplyMetrics.driversOnlineGauge merchantLabel cityLabel online
+            forM_ bucketsToPublish $ \bucket -> do
+              publishTierGauge supplyMetrics.driversReceivingGauge "pinged" merchantLabel cityLabel city.id bucket
+              publishTierGauge supplyMetrics.driversAcceptingGauge "accepted" merchantLabel cityLabel city.id bucket
+              publishTierGauge supplyMetrics.driversOnRideGauge "onride" merchantLabel cityLabel city.id bucket
+        pure (max lastPublishedBucket prevBucket, if shouldReconcile then reconcileBucket else lastReconciledBucket)
+      case res of
+        Right published -> pure published
+        Left err -> do
+          logError $ "publish tick failed mid-publish: " <> show err
+          when shouldReconcile $ Redis.del (reconcileLockKey reconcileBucket)
+          pure (lastPublishedBucket, lastReconciledBucket)
 
     publishTierGauge gaugeVec kind merchantLabel cityLabel cityId bucket = do
       perTier <- countWindowByTier kind cityId bucket
