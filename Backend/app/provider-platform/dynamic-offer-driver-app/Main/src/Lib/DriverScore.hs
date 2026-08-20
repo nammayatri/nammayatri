@@ -75,7 +75,7 @@ driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HAND
   eventPayloadHandler merchantOpCityId payload
 
 eventPayloadHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, Redis.HedisLTSFlowEnv r, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
-eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
+eventPayloadHandler _merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of
     SRD.Accept -> do
