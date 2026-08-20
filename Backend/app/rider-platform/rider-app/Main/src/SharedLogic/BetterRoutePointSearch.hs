@@ -47,6 +47,7 @@ import qualified SharedLogic.BetterRoutePoint as BRP
 import qualified SharedLogic.Search as SLS
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Tools.Maps as Maps
+import qualified Tools.Metrics as Metrics
 
 -- | Looks for a better pickup/drop on the route the parent search already resolved.
 -- On a hit, persists the shadow search request and returns a 'SLS.SearchRes' for it
@@ -56,7 +57,7 @@ import qualified Tools.Maps as Maps
 -- reason about, or no point clears the configured thresholds — all of which are the
 -- normal case, so callers should treat 'Nothing' as unremarkable.
 buildSuggestedSearchRes ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) =>
   DRC.RiderConfig ->
   SLS.SearchRes ->
   m (Maybe SLS.SearchRes)

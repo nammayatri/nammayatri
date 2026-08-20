@@ -92,6 +92,7 @@ import Tools.Metrics.BAPMetrics.Types
 
 type SearchRequestFlow m r =
   ( MonadFlow m,
+    Metrics.CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,

@@ -19,6 +19,7 @@ import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -71,4 +72,52 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
       updatedAt = now
       locationId = location.id
   QLM.updatePastMappingVersions entityId order
+  return DLM.LocationMapping {..}
+
+-- ===========================================================================
+-- New-entity-safe variants -- use ONLY when entityId was generated moments
+-- earlier in the same flow (e.g. a fresh SearchRequest), never for edits.
+-- See Storage.Queries.LocationMappingExtra.findAllByEntityIdAndOrderNewEntity
+-- for why these tolerate a Postgres outage safely: a brand-new entity is
+-- structurally guaranteed to have no prior mappings, so the fallback value
+-- is always correct, not a guess.
+-- ===========================================================================
+
+buildPickUpLocationMappingNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildPickUpLocationMappingNewEntity locationId entityId tag merchantId merchantOperatingCityId = do
+  id <- generateGUID
+  let order = 0
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+  QLM.updatePastMappingVersionsNewEntity entityId order
+  return DLM.LocationMapping {..}
+
+buildDropLocationMappingNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
+buildDropLocationMappingNewEntity locationId entityId tag merchantId merchantOperatingCityId = do
+  id <- generateGUID
+  prevOrder <- QLM.maxOrderByEntityNewEntity entityId
+  let order = prevOrder + 1
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+  QLM.updatePastMappingVersionsNewEntity entityId order
+  return DLM.LocationMapping {..}
+
+buildStopsLocationMappingNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => [DL.Location] -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
+buildStopsLocationMappingNewEntity locations entityId tag merchantId merchantOperatingCityId = do
+  let order = 1
+  mapM (\(location, order') -> buildStopLocationMappingNewEntity location entityId tag merchantId merchantOperatingCityId order') $ zip locations [order ..]
+
+buildStopLocationMappingNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildStopLocationMappingNewEntity location entityId tag merchantId merchantOperatingCityId order = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+      locationId = location.id
+  QLM.updatePastMappingVersionsNewEntity entityId order
   return DLM.LocationMapping {..}
