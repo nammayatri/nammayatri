@@ -607,6 +607,7 @@ library
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverSupplyCounter
       SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
