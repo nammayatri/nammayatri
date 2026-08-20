@@ -17,7 +17,6 @@ import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote ()
-import qualified Storage.Queries.Quote as QueryQ
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import Utils.Common.Fallback (withFallback)
@@ -86,7 +85,7 @@ findAllBySRIdNewEntity searchRequestId =
 
 findByIdOutageTolerant :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id Quote -> m (Maybe Quote)
 findByIdOutageTolerant quoteId =
-  withFallback "findByIdOutageTolerant" (QueryQ.findById quoteId) (pure Nothing)
+  withFallback "findByIdOutageTolerant" (findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]) (pure Nothing)
 
 findAllQuotesBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> DriverOfferStatus -> m [Quote]
 findAllQuotesBySRId (Id srId) status = do
