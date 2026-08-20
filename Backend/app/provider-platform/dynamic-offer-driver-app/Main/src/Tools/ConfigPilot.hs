@@ -101,7 +101,7 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       dvCfg <- getConfigList (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON dvCfg}
     LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig -> do
-      dvsCfg <- getConfigList (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing})
+      dvsCfg <- getConfigList (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing, documentCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON dvsCfg}
     LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
       goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing

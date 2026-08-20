@@ -1443,6 +1443,7 @@ DocumentVerificationStagesConfig:
     documentOnboardingStage: DocumentOnboardingStage|NoRelation
     vehicleCategory: VehicleCategory|NoRelation
     applicableTo: Domain.Types.DocumentVerificationConfig.DocumentApplicableType
+    documentCategory: Domain.Types.DocumentVerificationConfig.DocumentCategory
     title: Text
     description: Maybe Text
     hint: Maybe Text
@@ -1454,11 +1455,13 @@ DocumentVerificationStagesConfig:
     order: "0"
     isHidden: "false"
     applicableTo: "'FLEET_AND_INDIVIDUAL'"
+    documentCategory: "'Driver'"
   constraints:
     merchantOperatingCityId: PrimaryKey
     documentOnboardingStage: PrimaryKey
     vehicleCategory: PrimaryKey
     applicableTo: PrimaryKey
+    documentCategory: PrimaryKey
   sqlType:
     stageDependency: text[]
     mediaJSON: json

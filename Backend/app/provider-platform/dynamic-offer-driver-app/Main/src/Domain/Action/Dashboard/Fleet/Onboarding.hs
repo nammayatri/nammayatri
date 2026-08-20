@@ -79,7 +79,9 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
 
   fleetConfigs <- filterByStage documentOnboardingStage . SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (SDO.mkFleetOwnerDocumentVerificationConfigAPIEntity personLanguage) fleetConfigsRaw
 
-  Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle
+  let requestorRole = (castFleetRoleToPersonRole <$> role) <|> ((.role) <$> mbPerson)
+
+  Onboarding.DocumentVerificationConfigList {..} <- DOnboarding.getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle requestorRole
   let castConfigs = fmap castDocumentVerificationConfigAPIEntity
   return $
     CommonOnboarding.DocumentVerificationConfigList
@@ -94,6 +96,11 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
         toto = fmap castConfigs toto,
         onboardingStages = fmap (map castOnboardingStageAPIEntity) onboardingStages
       }
+
+castFleetRoleToPersonRole :: CommonOnboarding.Role -> Role
+castFleetRoleToPersonRole = \case
+  CommonOnboarding.NORMAL_FLEET -> FLEET_OWNER
+  CommonOnboarding.BUSINESS_FLEET -> FLEET_BUSINESS
 
 filterByStage ::
   Maybe OnboardingExtra.DocumentOnboardingStage ->
