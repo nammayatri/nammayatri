@@ -13,8 +13,9 @@
 -}
 
 -- | Dispatch-eligible driver count per operating city, held in Redis.
--- Kept a leaf module on purpose: moving it into DriverSupplyMetrics would make
--- DriverInformationExtra -> DriverSupplyMetrics -> DriverInformation an import cycle.
+-- Deliberately a leaf: the writers of driver_information.active live in the storage
+-- and consumer layers, and this lets them maintain the counter without pulling in the
+-- publisher and its metrics/ClickHouse dependencies.
 module SharedLogic.DriverSupplyCounter
   ( onlineCountKey,
     recordDriverActiveChange,
