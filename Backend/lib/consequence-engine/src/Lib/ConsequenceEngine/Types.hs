@@ -23,6 +23,7 @@ module Lib.ConsequenceEngine.Types
     NudgeParams (..),
     WarnParams (..),
     IncrementCounterParams (..),
+    AssignTagParams (..),
     ConsequenceHandler (..),
     ConsequenceResult (..),
   )
@@ -53,6 +54,7 @@ data ConsequenceAction
   | PermanentBlock PermanentBlockParams
   | ChargeFee ChargeFeeParams
   | IncrementCounter IncrementCounterParams
+  | AssignTag AssignTagParams
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for a nudge (warning only, no restrictions)
@@ -123,6 +125,14 @@ data IncrementCounterParams = IncrementCounterParams
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | Parameters for assigning a namma tag to the entity (rule decides tag + value)
+data AssignTagParams = AssignTagParams
+  { tagName :: Text, -- tag name registered in the system (namma_tag_v2)
+    tagValue :: Text,
+    validityHours :: Maybe Int -- tag expiry in hours; falls back to the registered tag's validity when absent
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 -- | Result of executing a consequence
 data ConsequenceResult = ConsequenceResult
   { action :: ConsequenceAction,
@@ -151,6 +161,11 @@ class (Monad m) => ConsequenceHandler m where
   -- | Optional: called when rule output is NO_ACTION. Default: no-op.
   handleNoAction :: Text -> m ()
   handleNoAction _ = pure ()
+
+  -- | Optional: assign a tag to the entity. Default: no-op.
+  -- Apps override to write their domain tag store (e.g. person.driver_tag).
+  handleAssignTag :: Text -> AssignTagParams -> m ()
+  handleAssignTag _ _ = pure ()
 
   -- | Optional: log/record the consequence for audit. Default: no-op.
   recordConsequence :: Text -> ConsequenceAction -> Value -> m ()
