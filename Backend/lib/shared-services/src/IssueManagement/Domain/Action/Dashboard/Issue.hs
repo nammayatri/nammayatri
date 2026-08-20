@@ -7,6 +7,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import Data.Either (partitionEithers)
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T hiding (count, map)
@@ -15,13 +16,19 @@ import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import qualified IGM.Enums as Spec
+import qualified IssueManagement.Beckn.ACL.IssueStatus as ISACL
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import qualified IssueManagement.Common.UI.Issue as CommonUI
+import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DBecknIssueStatus
 import IssueManagement.Domain.Action.UI.Issue (ServiceHandle)
 import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.ChatMessage as DCM
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
+import qualified IssueManagement.Domain.Types.Issue.IGMConfig as DIGMC
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+import qualified IssueManagement.Domain.Types.Issue.IGMIssueAction as DIGA
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueChat as DICT
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as DICFG
@@ -31,6 +38,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueOption as DIO
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.Issue.IssueTranslation as DIT
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.SharedLogic.CallAPI as CallAPI
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQI
@@ -39,6 +47,9 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QC
+import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
+import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
+import qualified IssueManagement.Storage.Queries.Issue.IGMIssueAction as QIGA
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueChat as QICT
 import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
@@ -54,14 +65,15 @@ import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, generateShortId, throwError)
-import Kernel.Utils.Logging
+import Kernel.Types.TimeRFC339
+import Kernel.Utils.Common
 
 -- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
 getDefaultMerchantOperatingCityId :: BeamFlow m r => ServiceHandle m -> Identifier -> m (Id MerchantOperatingCity)
@@ -354,7 +366,8 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
             assignee = issueReport.assignee,
             status = issueReport.status,
             createdAt = issueReport.createdAt,
-            unreadForOperator = Just unread
+            unreadForOperator = Just unread,
+            becknIssueId = issueReport.becknIssueId
           }
 
 issueInfo ::
@@ -376,11 +389,22 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoesNotExist iReportShortId.getShortId)
       Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
   person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
+  mbIgmIssue <- case issueReport.becknIssueId of
+    Just becknIssueId -> B.runInReplica $ QIGM.findByPrimaryKey (Id becknIssueId)
+    Nothing -> pure Nothing
   merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
-  mkIssueInfoRes person issueReport merchantOpCity.id
+  mkIssueInfoRes person mbIgmIssue issueReport merchantOpCity.id
   where
-    mkIssueInfoRes person issueReport merchantOpCityId = do
+    mkIssueInfoRes person mbIgmIssue issueReport merchantOpCityId = do
       personDetail <- Just <$> mkPersonDetail person
+      let complainantDetail =
+            mbIgmIssue >>= \igmIssue ->
+              Just
+                Common.ComplainantDetail
+                  { name = igmIssue.customerName,
+                    phone = igmIssue.customerPhone,
+                    email = igmIssue.customerEmail
+                  }
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
       category <- case issueReport.categoryId of
@@ -407,6 +431,7 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
           { issueReportId = cast issueReport.id,
             issueReportShortId = issueReport.shortId,
             personDetail,
+            complainantDetail,
             rideId = cast <$> issueReport.rideId,
             ticketBookingId = cast <$> issueReport.ticketBookingId,
             category = category,
@@ -418,7 +443,8 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
             assignee = issueReport.assignee,
             status = issueReport.status,
             createdAt = issueReport.createdAt,
-            unreadForOperator = Just unread
+            unreadForOperator = Just unread,
+            becknIssueId = issueReport.becknIssueId
           }
 
     mkPersonDetail :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> m Common.PersonDetail
@@ -2221,3 +2247,220 @@ markDashboardChatRead merchantShortId opCity issueReportId issueHandle req = do
   _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   QCM.markReadUpTo issueReportId DCM.SENDER_RIDER req.upTo
   pure Success
+
+-- IGM Dashboard APIs
+
+igmIssueGetTrail ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIR.IssueReport ->
+  ServiceHandle m ->
+  m Common.IgmIssueData
+igmIssueGetTrail merchantShortId opCity issueReportId issueHandle = do
+  merchantOperatingCity <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show opCity)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  case issueReport.becknIssueId of
+    Just becknId -> do
+      igmIssue <- QIGM.findByPrimaryKey (Id becknId) >>= fromMaybeM (InvalidRequest "IGM issue record not found")
+      igmConfig <- QIGMConfig.findByMerchantId merchantOperatingCity.merchantId >>= fromMaybeM (InternalError "IGMConfig not found")
+      allActions <- QIGA.findAllByIgmIssueId igmIssue.id
+      let complainantActions = map toActionEntry $ filter (\a -> a.actionType == DIGA.COMPLAINANT) allActions
+          respondentActions = map toActionEntry $ filter (\a -> a.actionType == DIGA.RESPONDENT) allActions
+      let resolution = case (igmIssue.resolutionShortDesc, igmIssue.resolutionActionTriggered) of
+            (Just sd, Just at') ->
+              Just $
+                Common.IgmResolutionData
+                  { shortDesc = sd,
+                    longDesc = igmIssue.resolutionLongDesc,
+                    actionTriggered = at',
+                    refundAmount = igmIssue.resolutionRefundAmount
+                  }
+            _ -> Nothing
+      pure $
+        Common.IgmIssueData
+          { igmIssueId = Just $ getId igmIssue.id,
+            source = fromMaybe "ONDC" igmIssue.sourceType,
+            igmStatus = Just $ show igmIssue.issueStatus,
+            issueType = Just $ show igmIssue.issueType,
+            category = igmIssue.igmCategory,
+            subCategory = igmIssue.igmSubCategory,
+            domain = igmIssue.contextDomain,
+            complainantActions = complainantActions,
+            respondentActions = respondentActions,
+            resolution = resolution,
+            resolutionProvider =
+              Just $
+                Common.IgmResolutionProvider
+                  { resProviderType = show Spec.TRANSACTION_COUNTERPARTY_NP,
+                    orgName = igmIssue.respondingMerchantId,
+                    resProviderName = igmConfig.resolutionProviderName,
+                    resProviderPhone = igmConfig.resolutionProviderPhone,
+                    resProviderEmail = igmConfig.resolutionProviderEmail
+                  },
+            gro =
+              Just $
+                Common.IgmGro
+                  { groName = igmConfig.groName,
+                    groPhone = igmConfig.groPhone,
+                    groEmail = igmConfig.groEmail
+                  },
+            expectedResponseTime = igmIssue.expectedResponseTime,
+            expectedResolutionTime = igmIssue.expectedResolutionTime,
+            createdAt = Just igmIssue.createdAt,
+            updatedAt = Just igmIssue.updatedAt
+          }
+    Nothing -> throwError $ InvalidRequest "Not an external ONDC issue"
+  where
+    toActionEntry :: DIGA.IGMIssueAction -> Common.IgmActionEntry
+    toActionEntry a =
+      Common.IgmActionEntry
+        { action = a.action,
+          shortDesc = fromMaybe "" a.shortDesc,
+          updatedAt = a.updatedAt,
+          updatedBy =
+            Just $
+              Common.IgmActionUpdatedBy
+                { orgName = a.updatedByOrgName,
+                  phone = a.updatedByContactPhone,
+                  email = a.updatedByContactEmail,
+                  personName = a.updatedByPersonName
+                },
+          cascadedLevel = a.cascadedLevel
+        }
+
+igmIssueTriggerActionUpdate ::
+  ( BeamFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c
+  ) =>
+  ShortId Merchant ->
+  Context.City ->
+  Id DIR.IssueReport ->
+  ServiceHandle m ->
+  Common.IgmRespondentActionPayload ->
+  m APISuccess
+igmIssueTriggerActionUpdate merchantShortId opCity issueReportId issueHandle req = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+  let resShortDesc = req.resolution <&> (.shortDesc)
+      resLongDesc = req.resolution >>= (.longDesc)
+      resActionTriggered = (.actionTriggered) <$> req.resolution
+      resRefundAmount = req.resolution >>= (.refundAmount)
+      reportStatus = case req.action of
+        Spec.RESOLVED -> Just RESOLVED
+        Spec.PROCESSING -> Just IN_PROGRESS
+        Spec.NEED_MORE_INFO -> Just IN_PROGRESS
+        Spec.CASCADED -> Just IN_PROGRESS
+  whenJust reportStatus $ \s -> QIR.updateStatusAssignee issueReportId (Just s) issueReport.assignee
+  case issueReport.becknIssueId of
+    Just becknIssueId -> do
+      igmIssue <- QIGM.findByPrimaryKey (Id becknIssueId) >>= fromMaybeM (InvalidRequest "IGM issue not found")
+      booking <- issueHandle.findByBookingId (Id igmIssue.bookingId) >>= fromMaybeM (BookingDoesNotExist igmIssue.bookingId)
+      bapId <- booking.bapId & fromMaybeM (InvalidRequest "BAP id not found for booking")
+      bapUri <- booking.bapUri & fromMaybeM (InvalidRequest "BAP URI not found for booking")
+      merchant <- issueHandle.findByMerchantId (cast merchantOpCity.merchantId) >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
+      igmConfig <- QIGMConfig.findByMerchantId merchantOpCity.merchantId >>= fromMaybeM (InternalError "IGMConfig not found")
+      now <- getCurrentTime
+      let newIssueStatus = case req.action of
+            Spec.RESOLVED -> DIGM.CLOSED
+            _ -> igmIssue.issueStatus
+      let updatedIgm =
+            igmIssue
+              { DIGM.issueStatus = newIssueStatus,
+                DIGM.respondentAction = Just $ show req.action,
+                DIGM.resolutionShortDesc = resShortDesc <|> igmIssue.resolutionShortDesc,
+                DIGM.resolutionLongDesc = resLongDesc <|> igmIssue.resolutionLongDesc,
+                DIGM.resolutionActionTriggered = resActionTriggered <|> igmIssue.resolutionActionTriggered,
+                DIGM.resolutionRefundAmount = resRefundAmount <|> igmIssue.resolutionRefundAmount,
+                DIGM.updatedAt = now
+              }
+      QIGM.updateByPrimaryKey updatedIgm
+      recordRespondentActionTrail becknIssueId req.action now igmIssue igmConfig merchant
+      let issueStatusRes =
+            DBecknIssueStatus.IssueStatusRes
+              { issueId = igmIssue.id,
+                issueStatus = igmIssue.issueStatus,
+                respondentAction = show req.action,
+                groName = igmConfig.groName,
+                groPhone = igmConfig.groPhone,
+                groEmail = igmConfig.groEmail,
+                respondentName = fromMaybe igmConfig.groName igmConfig.respondentName,
+                respondentPhone = fromMaybe igmConfig.groPhone igmConfig.respondentPhone,
+                respondentEmail = fromMaybe igmConfig.groEmail igmConfig.respondentEmail,
+                resolutionProviderName = fromMaybe igmConfig.groName igmConfig.resolutionProviderName,
+                resolutionProviderPhone = fromMaybe igmConfig.groPhone igmConfig.resolutionProviderPhone,
+                resolutionProviderEmail = fromMaybe igmConfig.groEmail igmConfig.resolutionProviderEmail,
+                merchant = merchant,
+                merchantOperatingCity = merchantOpCity,
+                createdAt = UTCTimeRFC3339 igmIssue.createdAt,
+                updatedAt = UTCTimeRFC3339 now,
+                bapId = bapId,
+                domain = igmIssue.domain,
+                resolutionShortDesc = resShortDesc,
+                resolutionLongDesc = resLongDesc,
+                resolutionActionTriggered = resActionTriggered,
+                resolutionRefundAmount = resRefundAmount,
+                isValueAddNP = False
+              }
+      txnId <- generateGUID
+      msgId <- generateGUID
+      onIssueStatusReq <- ISACL.buildOnIssueStatusReq txnId msgId bapId (showBaseUrl bapUri) issueStatusRes
+      void $ CallAPI.callOnIssueStatus onIssueStatusReq bapUri merchant
+    Nothing -> throwError $ InvalidRequest "Not an external ONDC issue"
+  pure Success
+
+recordRespondentActionTrail ::
+  (BeamFlow m r, MonadFlow m) =>
+  Text ->
+  Spec.RespondentActions ->
+  UTCTime ->
+  DIGM.IGMIssue ->
+  DIGMC.IGMConfig ->
+  Merchant ->
+  m ()
+recordRespondentActionTrail becknIssueId action now igmIssue igmConfig merchant = do
+  existingActions <- QIGA.findAllByIgmIssueIdAndType (Id becknIssueId) DIGA.RESPONDENT
+  let actionText = show action
+      existingKeys = map (\a -> (a.action, a.updatedAt)) existingActions
+  unless ((actionText, now) `elem` existingKeys) $ do
+    actionId <- generateGUID
+    let (rName, rPhone, rEmail) =
+          ( fromMaybe igmConfig.groName igmConfig.respondentName,
+            fromMaybe igmConfig.groPhone igmConfig.respondentPhone,
+            fromMaybe igmConfig.groEmail igmConfig.respondentEmail
+          )
+        orgName = Just $ merchant.subscriberId.getShortId <> "::" <> fromMaybe "" igmIssue.contextDomain
+        shortDesc = case action of
+          Spec.PROCESSING -> "Complaint is being processed"
+          Spec.RESOLVED -> "Issue has been resolved"
+          Spec.CASCADED -> "Issue has been cascaded"
+          Spec.NEED_MORE_INFO -> "Need more information from complainant"
+    QIGA.create $
+      DIGA.IGMIssueAction
+        { DIGA.id = Id actionId,
+          DIGA.igmIssueId = Id becknIssueId,
+          DIGA.actionType = DIGA.RESPONDENT,
+          DIGA.action = actionText,
+          DIGA.shortDesc = Just shortDesc,
+          DIGA.updatedAt = now,
+          DIGA.updatedByOrgName = orgName,
+          DIGA.updatedByContactPhone = Just rPhone,
+          DIGA.updatedByContactEmail = Just rEmail,
+          DIGA.updatedByPersonName = Just rName,
+          DIGA.cascadedLevel = Just 1,
+          DIGA.createdAt = now
+        }
