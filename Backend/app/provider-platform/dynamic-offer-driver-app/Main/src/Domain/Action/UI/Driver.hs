@@ -1969,7 +1969,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
-            DP.recordQuoteResponseCounters merchantOpCityId driverId SRD.Accept
+            DP.recordQuoteResponseCounters merchantOpCityId driverId Accept
             -- accept counting happens in driverScoreEventHandler's Accept case (bt: QUOTE_RESPONSE_ACCEPT)
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
