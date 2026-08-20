@@ -4,7 +4,7 @@ import qualified Data.Aeson
 import qualified Domain.Types.DocumentVerificationConfig
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Utils.Common (MonadFlow, throwError)
+import Kernel.Utils.Common (MonadFlow, logError, throwError)
 
 getConfigJSON :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses -> Data.Aeson.Value
 getConfigJSON = \case
@@ -14,11 +14,16 @@ getConfigJSON = \case
 mkDocumentFieldsJSON :: Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo] -> Maybe Data.Aeson.Value
 mkDocumentFieldsJSON = fmap Data.Aeson.toJSON
 
-getDocumentFieldsFromJSON :: Maybe Data.Aeson.Value -> Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo]
-getDocumentFieldsFromJSON mDocumentFieldsJSON =
-  mDocumentFieldsJSON >>= \val -> case Data.Aeson.fromJSON val of
-    Data.Aeson.Success x -> Just x
-    Data.Aeson.Error _ -> Nothing
+-- A malformed literal blanks the WHOLE field list for the row, so the document renders with no
+-- inputs at all. These literals are hand-authored in seed SQL, so log rather than fail silently --
+-- but still return Nothing: one bad row must not take down the configs API for every other doc.
+getDocumentFieldsFromJSON :: MonadFlow m => Maybe Data.Aeson.Value -> m (Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo])
+getDocumentFieldsFromJSON Nothing = pure Nothing
+getDocumentFieldsFromJSON (Just val) = case Data.Aeson.fromJSON val of
+  Data.Aeson.Success x -> pure $ Just x
+  Data.Aeson.Error err -> do
+    logError $ "Unable to decode DocumentVerificationConfigT.documentFieldsJSON: " <> show err <> " value: " <> show val
+    pure Nothing
 
 getConfigFromJSON :: MonadFlow m => Domain.Types.DocumentVerificationConfig.DocumentType -> Data.Aeson.Value -> m Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses
 getConfigFromJSON documentType _supportedVehicleClassesJSON =

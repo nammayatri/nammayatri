@@ -698,6 +698,7 @@ library
       Storage.CachedQueries.BlockedRoute
       Storage.CachedQueries.CoinsConfig
       Storage.CachedQueries.DocumentVerificationConfig
+      Storage.CachedQueries.DocumentVerificationStagesConfig
       Storage.CachedQueries.DomainDiscountConfig
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
@@ -775,6 +776,7 @@ library
       Storage.Clickhouse.VehicleRegistrationCertificate
       Storage.ConfigPilot.Config.CoinsConfig
       Storage.ConfigPilot.Config.DocumentVerificationConfig
+      Storage.ConfigPilot.Config.DocumentVerificationStagesConfig
       Storage.ConfigPilot.Config.DriverPoolConfig
       Storage.ConfigPilot.Config.Exophone
       Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig
@@ -935,6 +937,7 @@ library
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.DailyStats
       Storage.Queries.Transformers.DocumentVerificationConfig
+      Storage.Queries.Transformers.DocumentVerificationStagesConfig
       Storage.Queries.Transformers.DriverFee
       Storage.Queries.Transformers.DriverInformation
       Storage.Queries.Transformers.DriverPlan
@@ -1250,6 +1253,7 @@ library
       Domain.Types.DigilockerVerification
       Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
+      Domain.Types.DocumentVerificationStagesConfig
       Domain.Types.DomainDiscountConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
@@ -1439,6 +1443,7 @@ library
       Storage.Beam.DigilockerVerification
       Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
+      Storage.Beam.DocumentVerificationStagesConfig
       Storage.Beam.DomainDiscountConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
@@ -1633,6 +1638,7 @@ library
       Storage.Queries.DigilockerVerification
       Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
+      Storage.Queries.DocumentVerificationStagesConfig
       Storage.Queries.DomainDiscountConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason

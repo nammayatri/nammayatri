@@ -13,6 +13,8 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   DocsVerificationStatus: Dashboard.Common
   DocumentOnboardingStage: API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
+  FieldConstraints: Domain.Types.DocumentFieldConstraints
+  CaseCorrection: Domain.Types.DocumentFieldConstraints
   OnboardingAs: Dashboard.Common.Driver
   DisabledReasonFlag: Dashboard.Common.Driver
   DriverAssociationInfo: Dashboard.Common.Driver
@@ -162,6 +164,27 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
+    onboardingStages: Maybe [DocumentOnboardingStageAPIEntity]
+  # Stage metadata for the onboarding hub, ordered by `order` with hidden stages already dropped.
+  # Documents carry the same `documentOnboardingStage`, so that value IS the join key. The wire
+  # form is the tagged object {"tag":..,"contents":..}; its DB/show spelling
+  # ("TaxAndLegal_LegalEntityStructure") is tag and contents joined by "_".
+  DocumentOnboardingStageAPIEntity:
+    stage: DocumentOnboardingStage
+    vehicleCategory: VehicleCategory
+    applicableTo: DocumentApplicableType
+    title: Text
+    description: Maybe Text
+    hint: Maybe Text
+    order: Int
+    stageDependency: '[DocumentOnboardingStage]'
+    media: Maybe [MediaInfo]
+  # Generic on purpose: an entry may be an image or a video, inferred from the URL.
+  MediaInfo:
+    title: Text
+    description: Maybe Text
+    url: Text
+    thumbnailUrl: Maybe Text
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     applicableTo: DocumentApplicableType
@@ -191,7 +214,7 @@ types:
   # FieldObject: children in `fields` become a nested object under `requestKey`.
   # FieldArray:  `fields` describe the shape of EACH element of the array under `requestKey`.
   FieldType:
-    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate"
+    enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate,FieldYear"
   # `requestKey` = the JSON key this field's value occupies in register's documentData; `_type` = its JSON value type.
   # Simple:  { _type: FieldText,   requestKey: "identifierNumber" }                    -> { "identifierNumber": "..." }
   # Nested:  { _type: FieldObject, requestKey: "registration", fields: [ ...leaves ] } -> { "registration": { ... } }
@@ -204,7 +227,9 @@ types:
     regexValidation: Maybe Text
     description: Maybe Text
     placeholder: Maybe Text
+    hint: Maybe Text
     dropdownValues: Maybe [Text]
+    fieldConstraints: Maybe FieldConstraints
     requestKey: Maybe Text
     fields: Maybe [FieldInfo]
     images: Maybe [ImageInfo]

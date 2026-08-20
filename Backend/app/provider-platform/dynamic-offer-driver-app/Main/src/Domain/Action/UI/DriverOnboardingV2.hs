@@ -29,6 +29,7 @@ import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
+import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverGstin as DGST
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPC
@@ -89,9 +90,11 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.DocumentVerificationStagesConfig as CQDVSC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.DocumentVerificationStagesConfig (DocumentVerificationStagesConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -154,6 +157,26 @@ mkDocumentVerificationConfigAPIEntity language verificationProvidersPriorityList
         ..
       }
 
+-- Stage metadata the onboarding hub renders around the documents. Documents carry the same
+-- DocumentOnboardingStage, so that value is the join key -- no separate string field is served.
+-- Translation keys are namespaced "DocumentOnboardingStage_<stage>_Title" so a stage can never
+-- collide with a DocumentType of the same name, which shares the message_translation table.
+mkOnboardingStageAPIEntity ::
+  Language ->
+  Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig ->
+  Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentOnboardingStageAPIEntity
+mkOnboardingStageAPIEntity language Domain.Types.DocumentVerificationStagesConfig.DocumentVerificationStagesConfig {..} = do
+  let translationKey suffix = "DocumentOnboardingStage_" <> show documentOnboardingStage <> suffix
+  mbTitle <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = translationKey "_Title", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (translationKey "_Title") language))
+  mbDescription <- getConfig (TranslationDimensions {merchantOperatingCityId = Just merchantOperatingCityId.getId, messageKey = translationKey "_Description", language = Just language}) (Just (MTQuery.findByErrorAndLanguage (translationKey "_Description") language))
+  return $
+    API.Types.UI.DriverOnboardingV2.DocumentOnboardingStageAPIEntity
+      { stage = documentOnboardingStage,
+        title = maybe title (.message) mbTitle,
+        description = maybe description (Just . (.message)) mbDescription,
+        ..
+      }
+
 getOnboardingConfigs ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -196,6 +219,8 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
   busConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments busConfigsRaw mbOnlyVehicle)
   boatConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments boatConfigsRaw mbOnlyVehicle)
   totoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments totoConfigsRaw mbOnlyVehicle)
+  stagesRaw <- getConfig (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing}) (Just (CQDVSC.findAllByMerchantOpCityId merchantOpCityId Nothing))
+  onboardingStages <- mapM (mkOnboardingStageAPIEntity personLanguage) (sortOn (.order) $ filter (not . (.isHidden)) stagesRaw)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = SDO.toMaybe cabConfigs,
@@ -205,7 +230,8 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
         trucks = SDO.toMaybe truckConfigs,
         bus = SDO.toMaybe busConfigs,
         boat = SDO.toMaybe boatConfigs,
-        toto = SDO.toMaybe totoConfigs
+        toto = SDO.toMaybe totoConfigs,
+        onboardingStages = SDO.toMaybe onboardingStages
       }
 
 getDriverVehiclePhotos ::

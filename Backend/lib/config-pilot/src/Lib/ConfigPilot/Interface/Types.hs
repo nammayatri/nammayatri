@@ -121,6 +121,7 @@ data SConfigType (cfg :: ConfigType) where
   SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
   SIncentiveJourneyConfig :: SConfigType 'IncentiveJourneyConfig
   SIncentiveJourneyMilestoneConfig :: SConfigType 'IncentiveJourneyMilestoneConfig
+  SDocumentVerificationStagesConfig :: SConfigType 'DocumentVerificationStagesConfig
 
 deriving instance Show (SConfigType cfg)
 

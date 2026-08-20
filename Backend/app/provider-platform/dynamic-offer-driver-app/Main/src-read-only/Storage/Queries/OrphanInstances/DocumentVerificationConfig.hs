@@ -17,6 +17,7 @@ import Storage.Queries.Transformers.DocumentVerificationConfig
 
 instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig where
   fromTType' (Beam.DocumentVerificationConfigT {..}) = do
+    documentFields' <- getDocumentFieldsFromJSON documentFieldsJSON
     supportedVehicleClasses' <- getConfigFromJSON documentType supportedVehicleClassesJSON
     pure $
       Just
@@ -30,7 +31,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
             disableWarning = disableWarning,
             doStrictVerifcation = doStrictVerifcation,
             documentCategory = documentCategory,
-            documentFields = getDocumentFieldsFromJSON documentFieldsJSON,
+            documentFields = documentFields',
             documentFlowGrouping = documentFlowGrouping,
             documentOnboardingStage = documentOnboardingStage,
             documentType = documentType,

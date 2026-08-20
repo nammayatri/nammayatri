@@ -62,7 +62,9 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified Domain.Types.Coins.CoinsConfig as DCC
+import qualified Domain.Types.DocumentFieldConstraints as DDFC
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
+import qualified Domain.Types.DocumentVerificationStagesConfig as DDVSC
 import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Exophone as DTEXO
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as DFODVC
@@ -188,7 +190,19 @@ instance YTH.GenericDefaults DDVC.FieldInfo where
           DDVC.placeholder = Just "defaultText",
           DDVC.regexValidation = Just "defaultText",
           DDVC.requestKey = Just "defaultText",
+          DDVC.hint = Just "defaultText",
+          DDVC.fieldConstraints = Just (DDFC.TextConstraints {DDFC.autoCaseCorrect = Just DDFC.Upper, DDFC.trimSpaces = Just True, DDFC.removeCharacters = Just ["defaultText"], DDFC.minLength = Just 1, DDFC.maxLength = Just 64}),
           DDVC.images = Just [DDVC.ImageInfo {DDVC.title = "defaultText", DDVC.text = Just "defaultText", DDVC.imageUrl = Just "defaultUrl"}]
+        }
+    ]
+
+instance YTH.GenericDefaults DDVSC.MediaInfo where
+  genDef _ =
+    [ DDVSC.MediaInfo
+        { DDVSC.title = "defaultText",
+          DDVSC.description = Just "defaultText",
+          DDVSC.url = "defaultUrl",
+          DDVSC.thumbnailUrl = Just "defaultUrl"
         }
     ]
 
@@ -201,6 +215,7 @@ $(YTH.generateGenericDefault ''DTPN.MerchantPushNotification)
 $(YTH.generateGenericDefault ''DTD.DriverPoolConfig)
 $(YTH.generateGenericDefault ''DMSUC.MerchantServiceUsageConfig)
 $(YTH.generateGenericDefault ''DDVC.DocumentVerificationConfig)
+$(YTH.generateGenericDefault ''DDVSC.DocumentVerificationStagesConfig)
 $(YTH.generateGenericDefault ''DGHC.GoHomeConfig)
 $(YTH.generateGenericDefault ''DLBC.LeaderBoardConfigs)
 $(YTH.generateGenericDefault ''DRMC.ReminderConfig)
@@ -218,6 +233,7 @@ $(genToSchema ''DTPN.MerchantPushNotification)
 $(genToSchema ''DTD.DriverPoolConfig)
 $(genToSchema ''DMSUC.MerchantServiceUsageConfig)
 $(genToSchema ''DDVC.DocumentVerificationConfig)
+$(genToSchema ''DDVSC.DocumentVerificationStagesConfig)
 $(genToSchema ''DGHC.GoHomeConfig)
 $(genToSchema ''DLBC.LeaderBoardConfigs)
 $(genToSchema ''DRMC.ReminderConfig)

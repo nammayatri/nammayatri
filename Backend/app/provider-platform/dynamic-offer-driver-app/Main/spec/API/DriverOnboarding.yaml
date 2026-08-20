@@ -6,6 +6,7 @@ imports:
   DocumentApplicableType: Domain.Types.DocumentVerificationConfig
   DocumentFlowGrouping: Domain.Types.DocumentVerificationConfig
   DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
+  MediaInfo: Domain.Types.DocumentVerificationStagesConfig
   FieldType: Domain.Types.DocumentVerificationConfig
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
@@ -55,6 +56,21 @@ types:
     bus: Maybe [DocumentVerificationConfigAPIEntity]
     boat: Maybe [DocumentVerificationConfigAPIEntity]
     toto: Maybe [DocumentVerificationConfigAPIEntity]
+    onboardingStages: Maybe [DocumentOnboardingStageAPIEntity]
+  # Stage metadata for the onboarding hub, ordered by `order` with hidden stages already dropped.
+  # Documents carry the same `documentOnboardingStage`, so that value IS the join key -- it needs
+  # no separate string field. Note the wire form is the tagged object {"tag":..,"contents":..};
+  # its DB/show spelling ("TaxAndLegal_LegalEntityStructure") is tag and contents joined by "_".
+  DocumentOnboardingStageAPIEntity:
+    stage: DocumentOnboardingStage
+    vehicleCategory: VehicleCategory
+    applicableTo: DocumentApplicableType
+    title: Text
+    description: Maybe Text
+    hint: Maybe Text
+    order: Int
+    stageDependency: '[DocumentOnboardingStage]'
+    media: Maybe [MediaInfo]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory

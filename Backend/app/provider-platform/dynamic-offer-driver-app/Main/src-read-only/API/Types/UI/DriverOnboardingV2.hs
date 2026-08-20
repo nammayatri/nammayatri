@@ -7,6 +7,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.Common
 import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
+import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -89,6 +90,20 @@ data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DocumentOnboardingStageAPIEntity = DocumentOnboardingStageAPIEntity
+  { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    media :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationStagesConfig.MediaInfo],
+    order :: Kernel.Prelude.Int,
+    stage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage,
+    stageDependency :: [Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage],
+    title :: Kernel.Prelude.Text,
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     checkExpiry :: Kernel.Prelude.Bool,
@@ -123,6 +138,7 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
     boat :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    onboardingStages :: Kernel.Prelude.Maybe [DocumentOnboardingStageAPIEntity],
     toto :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
   }

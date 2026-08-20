@@ -7,7 +7,7 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import Kernel.Prelude
 import qualified Text.Show
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnumAndList)
 
 data LegalStructure
   = IndividualLegalStructure
@@ -64,4 +64,4 @@ instance FromJSON DocumentOnboardingStage where
       "BankDetails" -> pure BankDetails
       _ -> fail $ "Unknown DocumentOnboardingStage tag: " <> T.unpack tag
 
-$(mkBeamInstancesForEnum ''DocumentOnboardingStage)
+$(mkBeamInstancesForEnumAndList ''DocumentOnboardingStage)
