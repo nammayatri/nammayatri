@@ -171,7 +171,7 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
     -- Isolate per-pass failures so one bad pass cannot fail the whole response.
     passAPIEntities <- flip mapMaybeM flatPasses $ \pass ->
       withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
-        >>= either (const (pure Nothing)) (pure . Just)
+        >>= either (const (pure Nothing)) (pure . mfilter (.eligibility) . Just)
 
     return $
       PassAPI.PassInfoAPIEntity
