@@ -4689,6 +4689,37 @@ def _push_metrics_to_vm(lines: list[str]) -> tuple[bool, str]:
         return False, msg
 
 
+def _failure_reasons(step: dict) -> list[str]:
+    """Classify a step's failures into a small, closed set of reasons.
+
+    Deliberately coarse. The value of this label is that you can chart and alert on it,
+    which requires the set to stay bounded -- three reasons you can act on beat a hundred
+    you can only read.
+    """
+    reasons = []
+    if step.get("no_response"):
+        # The request never completed: refused, reset, or timed out. Distinct from the
+        # operator answering with something we disliked, and the distinction is the whole
+        # point when an upstream goes down.
+        reasons.append("no_response")
+    for f in (step.get("failures") or []):
+        name = (f.get("name") or "").lower()
+        message = (f.get("message") or "").lower()
+        if "timeout" in name or "timeout" in message or "etimedout" in message:
+            reasons.append("timeout")
+        elif "econnrefused" in message or "socket hang up" in message or "enotfound" in message:
+            reasons.append("connection")
+        elif "status code" in message or "response code" in message:
+            reasons.append("status")
+        else:
+            reasons.append("assertion")
+    # A failing step with no assertion detail at all still deserves a sample, or the
+    # count of failures silently disagrees with the count of failed suites.
+    if not reasons and (step.get("failures") or step.get("no_response")):
+        reasons.append("unknown")
+    return sorted(set(reasons))
+
+
 def push_suite_metrics(version_id: str, collection: str, env: str, suite: str,
                        steps: list[dict], all_passed: bool):
     import time as _time
@@ -4704,20 +4735,39 @@ def push_suite_metrics(version_id: str, collection: str, env: str, suite: str,
         f'integration_test_suite_runs{{{labels_base},status="{status_str}"}} 1 {ts_ms}'
     ]
 
-    if all_passed:
-        total_ms = 0
-        for step in steps:
-            elapsed = step.get("elapsed_ms", 0)
-            total_ms += elapsed
-            api_name = f"{step.get('method','?')} {step.get('path','?')}".replace('"', "'")
-            lines.append(
-                f'integration_test_api_latency_ms{{{labels_base},api="{api_name}"}} '
-                f'{elapsed} {ts_ms}'
-            )
+    # Latency is emitted whether or not the suite passed.
+    #
+    # It used to be pass-only, which hid the most useful failures: a run that died on a
+    # 60s timeout and a run that failed an assertion in 40ms produced identical metrics --
+    # one "fail" sample and nothing else. The shape of a failing run is exactly what tells
+    # you whether the operator was slow, unreachable, or simply disagreed with us.
+    total_ms = 0
+    for step in steps:
+        elapsed = step.get("elapsed_ms", 0)
+        total_ms += elapsed
+        api_name = f"{step.get('method','?')} {step.get('path','?')}".replace('"', "'")
         lines.append(
-            f'integration_test_suite_latency_ms{{{labels_base}}} '
-            f'{total_ms} {ts_ms}'
+            f'integration_test_api_latency_ms{{{labels_base},api="{api_name}"}} '
+            f'{elapsed} {ts_ms}'
         )
+    lines.append(
+        f'integration_test_suite_latency_ms{{{labels_base}}} '
+        f'{total_ms} {ts_ms}'
+    )
+
+    # One sample per failed step, saying WHICH call failed and in which of a few ways.
+    #
+    # `reason` is a CLOSED vocabulary, never the raw error text. Prometheus-style backends
+    # create a distinct time series per label value, so putting a message in here means one
+    # chatty assertion can mint thousands of series and take the store down. The message
+    # stays in the run report, where it is already available and costs nothing.
+    for step in steps:
+        api_name = f"{step.get('method','?')} {step.get('path','?')}".replace('"', "'")
+        for reason in _failure_reasons(step):
+            lines.append(
+                f'integration_test_step_failures{{{labels_base},api="{api_name}",reason="{reason}"}} '
+                f'1 {ts_ms}'
+            )
 
     ok, msg = _push_metrics_to_vm(lines)
     status = 'PASS' if all_passed else 'FAIL'
@@ -4802,11 +4852,28 @@ def _run_all_master_webhook(run_id: str, version_id: str):
                                     path = _up(raw).path or raw
                                 except Exception:
                                     path = raw
+                                # Assertion failures and the status code come along too. Without
+                                # them a failed run can only say THAT it failed, which is what
+                                # made failures unactionable on the dashboard.
+                                failures = []
+                                for a in (ex.get("assertions") or []):
+                                    err = a.get("error") or {}
+                                    if err:
+                                        failures.append({
+                                            "assertion": a.get("assertion", "?"),
+                                            "name": err.get("name", "AssertionError"),
+                                            "message": err.get("message", ""),
+                                        })
                                 steps.append({
                                     "name": item.get("name", "?"),
                                     "method": req.get("method", "GET"),
                                     "path": path,
                                     "elapsed_ms": resp.get("responseTime", 0),
+                                    "status_code": resp.get("code"),
+                                    "failures": failures,
+                                    # newman records no response at all when the request itself
+                                    # never completed -- a connection refused or a timeout.
+                                    "no_response": not resp,
                                 })
                             report_file.unlink(missing_ok=True)
                         except Exception:

@@ -73,6 +73,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.searchTTLSec searchTTLSec,
       Se.Set Beam.selectTTLSec selectTTLSec,
+      Se.Set Beam.sellerEntityInfoJson sellerEntityInfoJson,
       Se.Set Beam.settlementType settlementType,
       Se.Set Beam.settlementWindow settlementWindow,
       Se.Set Beam.staticTermsUrl ((Kernel.Prelude.fmap showBaseUrl) staticTermsUrl),

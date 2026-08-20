@@ -9,6 +9,7 @@ import Domain.Types hiding (ONDC)
 import Domain.Types.Beckn.FRFS.OnSearch
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSQuoteCategory
+import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
@@ -33,9 +34,16 @@ import qualified ExternalBPP.ExternalAPI.Metro.CMRL.StationList as CMRLStationLi
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus as CMRLStatus
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.BusinessHour as CMRLV2BusinessHour
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare as CMRLV2GetFare
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.OperatingHours as CMRLV2OperatingHours
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order as CMRLV2Order
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.StationList as CMRLV2StationList
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketDetails as CMRLV2TicketDetails
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketStatus as CMRLV2TicketStatus
+import qualified ExternalBPP.ExternalAPI.Metro.KMRL.Cancel as KMRLCancel
+import qualified ExternalBPP.ExternalAPI.Metro.KMRL.GetFare as KMRLGetFare
+import qualified ExternalBPP.ExternalAPI.Metro.KMRL.Order as KMRLOrder
+import qualified ExternalBPP.ExternalAPI.Metro.KMRL.StationList as KMRLStationList
+import qualified ExternalBPP.ExternalAPI.Metro.KMRL.Transport as KMRLTransport
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney as CRISBookJourney
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFareV3
@@ -47,6 +55,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -66,6 +75,7 @@ getProviderName integrationBPPConfig =
     (_, DIRECT _) -> "Direct Multimodal Services"
     (_, ONDC _) -> "ONDC Services"
     (_, CRIS _) -> "CRIS Subway"
+    (_, KMRL _) -> "Kochi Metro Rail Limited"
 
 data BasicRouteDetail = BasicRouteDetail
   { routeCode :: Text,
@@ -90,7 +100,15 @@ data SubwayFareDetail = SubwayFareDetail
   deriving (Show)
 
 getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
-getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail = do
+getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail =
+  getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail Nothing
+
+getFaresForJourneyType :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> Maybe Int -> m [FRFSUtils.FRFSFare]
+getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail mbTicketTypeId = do
+  whenJust mbTicketTypeId $ \ticketTypeId ->
+    case integrationBPPConfig.providerConfig of
+      CMRLV2 _ -> pure ()
+      _ -> throwError . InternalError $ "Ticket type " <> show ticketTypeId <> " requested from a provider that cannot price it"
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   case integrationBPPConfig.providerConfig of
     CMRL config' -> do
@@ -111,7 +129,7 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
             { operatorNameId = config'.operatorNameId,
               fromStationId = extractStationCode startStopCode,
               toStationId = extractStationCode endStopCode,
-              ticketTypeId = config'.ticketTypeId,
+              ticketTypeId = fromMaybe config'.ticketTypeId mbTicketTypeId,
               merchantId = config'.merchantId,
               travelDatetime = travelDatetime,
               fareTypeId = config'.fareTypeId
@@ -150,6 +168,44 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       SubwayFareDetail {viaPoints, changeOver, rawChangeOver, getAllFares} <- subwayFareDetail & fromMaybeM (InternalError "SubwayFareDetail not found")
       fares <- callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares
       return fares
+    KMRL config' -> do
+      manager <- KMRLTransport.kmrlManager config'
+      fareData <-
+        KMRLGetFare.getFare config' manager $
+          KMRLGetFare.FareReq
+            { travellers = 1,
+              sourceStationId = startStopCode,
+              destinationStationId = endStopCode,
+              metroType = KMRLGetFare.kochiRailMetro,
+              ticketType = "SJT"
+            }
+      let farePrice = realToFrac fareData.ticketFare
+      return
+        [ FRFSUtils.FRFSFare
+            { categories =
+                [ FRFSUtils.FRFSTicketCategory
+                    { category = ADULT,
+                      price = Price {amountInt = round farePrice, amount = farePrice, currency = INR},
+                      offeredPrice = Price {amountInt = round farePrice, amount = farePrice, currency = INR},
+                      eligibility = True,
+                      bppItemId = FRFSUtils.getProviderName integrationBPPConfig
+                    }
+                ],
+              fareDetails = Nothing,
+              farePolicyId = Nothing,
+              vehicleServiceTier =
+                FRFSUtils.FRFSVehicleServiceTier
+                  { serviceTierType = Spec.ORDINARY,
+                    serviceTierProviderCode = "ORDINARY",
+                    serviceTierShortName = "ORDINARY",
+                    serviceTierDescription = "ORDINARY",
+                    serviceTierLongName = "ORDINARY",
+                    isAirConditioned = Just False
+                  },
+              fareQuoteType = Nothing,
+              fareQuoteId = Nothing
+            }
+        ]
   where
     callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares = do
       routeFareReq <- getRouteFareRequest startStopCode endStopCode changeOver rawChangeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
@@ -209,15 +265,57 @@ extractStationCode :: Text -> Text
 extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 $ T.splitOn "|" code
 
 createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
-createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do
+createOrder integrationBPPConfig qrTtl riderDetails booking quoteCategories =
+  createOrderForJourneyType integrationBPPConfig qrTtl riderDetails booking quoteCategories Nothing Nothing
+
+createOrderForJourneyType :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Int -> Maybe Text -> m ProviderOrder
+createOrderForJourneyType integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories mbTicketTypeId mbFareQuoteId = do
+  whenJust mbTicketTypeId $ \ticketTypeId ->
+    case integrationBPPConfig.providerConfig of
+      CMRLV2 _ -> pure ()
+      _ -> throwError . InternalError $ "Ticket type " <> show ticketTypeId <> " requested from a provider that cannot issue it"
   Metrics.startMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   resp <-
     case integrationBPPConfig.providerConfig of
       CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
-      CMRLV2 config' -> CMRLV2Order.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber
+      CMRLV2 config' -> CMRLV2Order.createOrder config' integrationBPPConfig booking quoteCategories mRiderNumber mbTicketTypeId mbFareQuoteId
       EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
       DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
       CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
+      KMRL config' -> do
+        manager <- KMRLTransport.kmrlManager config'
+        let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
+            travellers = fareParameters.totalQuantity
+        ticket <-
+          KMRLOrder.bookTicket config' manager $
+            KMRLOrder.BookTicketReq
+              { sourceStationId = booking.fromStationCode,
+                destinationStationId = booking.toStationCode,
+                metroType = KMRLGetFare.kochiRailMetro,
+                ticketType = "SJT",
+                travellers,
+                ticketFare = realToFrac booking.totalPrice.amount,
+                transactionId = KMRLOrder.toKMRLTransactionId (fromMaybe "" booking.bppOrderId) booking.searchId.getId
+              }
+        now <- getCurrentTime
+        let validity = addUTCTime (fromIntegral qrTtl.getSeconds) now
+        pure
+          ProviderOrder
+            { orderId = ticket.ticketRefId,
+              tickets =
+                replicate
+                  (max 1 travellers)
+                  ProviderTicket
+                    { ticketNumber = ticket.ticketNo,
+                      vehicleNumber = Nothing,
+                      description = ticket.ticketTypeDispName,
+                      qrData = ticket.ticketGUID,
+                      qrStatus = fromMaybe "UNCLAIMED" (KMRLOrder.transformKochiStatus =<< ticket.ticketStatus),
+                      qrValidity = validity,
+                      qrRefreshAt = Nothing,
+                      commencingHours = Nothing
+                    }
+            }
       _ -> throwError $ InternalError "Unimplemented!"
   Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   return resp
@@ -241,6 +339,32 @@ getTicketStatus integrationBPPConfig booking = do
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
     CRIS _config' -> return []
     _ -> throwError $ InternalError "Unimplemented!"
+
+softCancelTicket :: (MonadFlow m, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Text -> m (Maybe KMRLCancel.SoftCancelQuote)
+softCancelTicket integrationBPPConfig ticketRefId =
+  case integrationBPPConfig.providerConfig of
+    KMRL config' -> do
+      manager <- KMRLTransport.kmrlManager config'
+      Just <$> KMRLCancel.softCancelTicket config' manager ticketRefId
+    _ -> pure Nothing
+
+hardCancelTicket :: (MonadFlow m, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Text -> m (Maybe KMRLCancel.HardCancelResult)
+hardCancelTicket integrationBPPConfig ticketRefId =
+  case integrationBPPConfig.providerConfig of
+    KMRL config' -> do
+      manager <- KMRLTransport.kmrlManager config'
+      join <$> (Just <$> KMRLCancel.hardCancelTicket config' manager ticketRefId)
+    _ -> pure Nothing
+
+getTicketDetailStatusCode :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Text -> m (Maybe Text)
+getTicketDetailStatusCode integrationBPPConfig ticketNumber =
+  case integrationBPPConfig.providerConfig of
+    CMRLV2 config' -> CMRLV2TicketDetails.getTicketDetails config' ticketNumber
+    KMRL config' -> do
+      manager <- KMRLTransport.kmrlManager config'
+      info <- KMRLOrder.getTicketStatus config' manager ticketNumber
+      pure (KMRLOrder.transformKochiStatus =<< info.ticketStatus)
+    _ -> return Nothing
 
 verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Text -> m TicketPayload
 verifyTicket integrationBPPConfig encryptedQrData = do
@@ -298,29 +422,57 @@ getPassengerViewStatus integrationBPPConfig req = do
     _ -> throwError $ InternalError "Unimplemented!"
 
 getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m [CMRLStationList.Station]
-getStationList integrationBPPConfig = do
+getStationList integrationBPPConfig =
+  IM.withInMemCache ["FRFSStationList", integrationBPPConfig.id.getId] 3600 $ do
+    stations <- fetchStationList integrationBPPConfig
+    when (null stations) . throwError $ InternalError "Operator returned an empty station roster"
+    pure stations
+
+fetchStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m [CMRLStationList.Station]
+fetchStationList integrationBPPConfig =
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStationList.getStationList config'
-    CMRLV2 config' -> do
-      stations <- CMRLV2StationList.getStationList config'
-      return $
-        map
-          ( \s ->
-              CMRLStationList.Station
-                { id = 0,
-                  lineId = "",
-                  stationId = s.stationId,
-                  code = s.stationCode,
-                  name = s.stationName,
-                  taName = Nothing,
-                  address = "",
-                  latitude = fromMaybe 0.0 s.latitude,
-                  longitude = fromMaybe 0.0 s.longitude,
-                  sequenceNo = 0
-                }
-          )
-          stations
+    CMRLV2 config' -> map fromCMRLV2Station <$> CMRLV2StationList.getStationList config'
+    KMRL config' -> do
+      manager <- KMRLTransport.kmrlManager config'
+      KMRLStationList.toCMRLStations <$> KMRLStationList.getStationList config' manager
     _ -> throwError $ InternalError "Unimplemented!"
+
+fromCMRLV2Station :: CMRLV2StationList.Station -> CMRLStationList.Station
+fromCMRLV2Station s =
+  CMRLStationList.Station
+    { id = 0,
+      lineId = maybe "" show s.lineId,
+      stationId = s.stationUniqueid,
+      code = s.stationShortName,
+      name = s.stationName,
+      taName = s.stationNameTamil,
+      address = "",
+      latitude = fromMaybe 0.0 (readMaybe . T.unpack =<< s.latitude),
+      longitude = fromMaybe 0.0 (readMaybe . T.unpack =<< s.longitude),
+      sequenceNo = fromMaybe 0 s.sequenceNo
+    }
+
+getOperatingHoursTags :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m [(Text, Text)]
+getOperatingHoursTags integrationBPPConfig =
+  case integrationBPPConfig.providerConfig of
+    CMRLV2 config' -> do
+      result <-
+        try @_ @SomeException $
+          IM.withInMemCache ["FRFSOperatingHoursTags", integrationBPPConfig.id.getId] 3600 $ do
+            tags <- CMRLV2OperatingHours.getOperatingHoursTags config'
+            when (null tags) . throwError $ InternalError "Operator returned no usable operating-hours params"
+            pure tags
+      case result of
+        Right tags -> pure tags
+        Left err -> do
+          logWarning $ "Operating hours unavailable for " <> integrationBPPConfig.id.getId <> ", publishing without them: " <> show err
+          pure []
+    _ -> pure []
+
+getOperatingWindow :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m (Maybe (UTCTime, UTCTime))
+getOperatingWindow integrationBPPConfig =
+  CMRLV2OperatingHours.operatingWindowFromTags <$> getOperatingHoursTags integrationBPPConfig
 
 getPaymentDetails :: (MonadFlow m) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = throwError $ InternalError "getPaymentDetails: Unimplemented!"

@@ -5,6 +5,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
 import qualified FRFS.DirectQR as DirectQR
+import qualified KMRL.CryptoSpec as KMRLCrypto
+import qualified KMRL.OrderSpec as KMRLOrder
 import Kernel.Beam.Types (KafkaConn (..))
 import Kernel.Exit
 import Kernel.Tools.Metrics.CoreMetrics.Types
@@ -15,6 +17,8 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
 import System.Environment (lookupEnv)
 import System.Environment as Env (setEnv)
+import Test.Tasty (defaultMain, testGroup)
+import qualified Tools.HTTPManagerSpec as HTTPManagerSpec
 
 main :: IO ()
 main = do
@@ -32,4 +36,5 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  pure ()
+
+  defaultMain (testGroup "rider-app" [KMRLCrypto.tests, KMRLOrder.tests, HTTPManagerSpec.tests])

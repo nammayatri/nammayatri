@@ -72,6 +72,31 @@ data CMRLV2Config = CMRLV2Config
 instance Show CMRLV2Config where
   show _ = "CMRLV2Config"
 
+data KMRLConfig = KMRLConfig
+  { tokenUrl :: BaseUrl,
+    fareUrl :: BaseUrl,
+    bookTicketUrl :: BaseUrl,
+    ticketStatusUrl :: BaseUrl,
+    softCancelUrl :: BaseUrl,
+    hardCancelUrl :: BaseUrl,
+    stationListUrl :: BaseUrl,
+    ibmClientId :: Text,
+    ibmClientSecret :: EncryptedField 'AsEncrypted Text,
+    fapiChannelId :: Text,
+    kmrlAuthUserId :: Text,
+    kmrlAuthPassword :: EncryptedField 'AsEncrypted Text,
+    kmrlChannelId :: Text,
+    clientCertPem :: EncryptedField 'AsEncrypted Text,
+    operatorPublicCertPem :: Text,
+    signingPrivateKeyPem :: EncryptedField 'AsEncrypted Text,
+    serverCaPem :: Maybe Text
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Show KMRLConfig where
+  show _ = "KMRLConfig"
+
 data ONDCBecknConfig = ONDCBecknConfig
   { networkHostUrl :: Maybe BaseUrl,
     networkId :: Maybe Text,

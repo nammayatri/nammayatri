@@ -37,6 +37,16 @@ library
       API.Beckn.FRFS.OnSelect
       API.Beckn.FRFS.OnStatus
       API.Beckn.FRFS.OnUpdate
+      API.Beckn.FRFSSeller
+      API.Beckn.FRFSSeller.Cancel
+      API.Beckn.FRFSSeller.Confirm
+      API.Beckn.FRFSSeller.Handler
+      API.Beckn.FRFSSeller.IGM
+      API.Beckn.FRFSSeller.Init
+      API.Beckn.FRFSSeller.Search
+      API.Beckn.FRFSSeller.Select
+      API.Beckn.FRFSSeller.Status
+      API.Beckn.FRFSSellerRSF
       API.Beckn.IGM.Issue
       API.Beckn.OnCancel
       API.Beckn.OnConfirm
@@ -141,6 +151,14 @@ library
       Beckn.ACL.FRFS.Select
       Beckn.ACL.FRFS.Status
       Beckn.ACL.FRFS.Utils
+      Beckn.ACL.FRFSSeller.OnCancel
+      Beckn.ACL.FRFSSeller.OnConfirm
+      Beckn.ACL.FRFSSeller.OnInfo
+      Beckn.ACL.FRFSSeller.OnInit
+      Beckn.ACL.FRFSSeller.OnReceiverRecon
+      Beckn.ACL.FRFSSeller.OnSearch
+      Beckn.ACL.FRFSSeller.OnSelect
+      Beckn.ACL.FRFSSeller.OnStatus
       Beckn.ACL.IGM.Issue
       Beckn.ACL.IGM.IssueStatus
       Beckn.ACL.IGM.Utils
@@ -177,6 +195,16 @@ library
       Domain.Action.Beckn.FRFS.OnSelect
       Domain.Action.Beckn.FRFS.OnStatus
       Domain.Action.Beckn.FRFS.OnUpdate
+      Domain.Action.Beckn.FRFSSeller.Cancel
+      Domain.Action.Beckn.FRFSSeller.Confirm
+      Domain.Action.Beckn.FRFSSeller.IGM
+      Domain.Action.Beckn.FRFSSeller.Info
+      Domain.Action.Beckn.FRFSSeller.Init
+      Domain.Action.Beckn.FRFSSeller.ReceiverRecon
+      Domain.Action.Beckn.FRFSSeller.Recon
+      Domain.Action.Beckn.FRFSSeller.Search
+      Domain.Action.Beckn.FRFSSeller.Select
+      Domain.Action.Beckn.FRFSSeller.Status
       Domain.Action.Beckn.OnCancel
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
@@ -453,9 +481,17 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.V2.Encryption
       ExternalBPP.ExternalAPI.Metro.CMRL.V2.Error
       ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.OperatingHours
       ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order
       ExternalBPP.ExternalAPI.Metro.CMRL.V2.StationList
+      ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketDetails
       ExternalBPP.ExternalAPI.Metro.CMRL.V2.TicketStatus
+      ExternalBPP.ExternalAPI.Metro.KMRL.Cancel
+      ExternalBPP.ExternalAPI.Metro.KMRL.Crypto
+      ExternalBPP.ExternalAPI.Metro.KMRL.GetFare
+      ExternalBPP.ExternalAPI.Metro.KMRL.Order
+      ExternalBPP.ExternalAPI.Metro.KMRL.StationList
+      ExternalBPP.ExternalAPI.Metro.KMRL.Transport
       ExternalBPP.ExternalAPI.Subway.CRIS.Auth
       ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
       ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
@@ -530,6 +566,9 @@ library
       SharedLogic.FRFSReschedule
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
+      SharedLogic.FRFSSeller.CallBAP
+      SharedLogic.FRFSSeller.Common
+      SharedLogic.FRFSSeller.QuoteCache
       SharedLogic.FRFSStatus
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
@@ -848,7 +887,9 @@ library
       Tools.Payout
       Tools.Rewards.RedisPool
       Tools.Rewards.RiderContextReader
+      Tools.RsfSignatureAuth
       Tools.Schema
+      Tools.SellerSignatureAuth
       Tools.SignatureAuth
       Tools.SignatureResponseBody
       Tools.SMS
@@ -1735,6 +1776,7 @@ library
     , cereal
     , communication-engine
     , config-pilot
+    , connection
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1803,6 +1845,7 @@ library
     , text-conversions
     , text-format
     , time
+    , tls
     , transformers
     , unliftio-core
     , unordered-containers
@@ -1815,9 +1858,11 @@ library
     , warp
     , whatsapp-bot
     , x509
+    , x509-store
     , xml-conduit
     , xmlbf
     , yudhishthira
+    , zlib
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -1883,6 +1928,7 @@ executable rider-app-exe
     , cassava
     , cereal
     , config-pilot
+    , connection
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1944,6 +1990,7 @@ executable rider-app-exe
     , text-conversions
     , text-format
     , time
+    , tls
     , transformers
     , unliftio-core
     , unordered-containers
@@ -1955,9 +2002,11 @@ executable rider-app-exe
     , warp
     , whatsapp-bot
     , x509
+    , x509-store
     , xml-conduit
     , xmlbf
     , yudhishthira
+    , zlib
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -1969,6 +2018,9 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      KMRL.CryptoSpec
+      KMRL.OrderSpec
+      Tools.HTTPManagerSpec
       Paths_rider_app
   hs-source-dirs:
       test
@@ -2024,6 +2076,7 @@ test-suite rider-app-test
     , cassava
     , cereal
     , config-pilot
+    , connection
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -2089,6 +2142,7 @@ test-suite rider-app-test
     , text-conversions
     , text-format
     , time
+    , tls
     , transformers
     , unliftio-core
     , unordered-containers
@@ -2100,7 +2154,9 @@ test-suite rider-app-test
     , warp
     , whatsapp-bot
     , x509
+    , x509-store
     , xml-conduit
     , xmlbf
     , yudhishthira
+    , zlib
   default-language: Haskell2010

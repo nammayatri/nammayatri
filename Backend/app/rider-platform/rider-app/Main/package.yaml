@@ -65,6 +65,10 @@ dependencies:
   - base64-bytestring
   - bytestring
   - cryptonite
+  - zlib
+  - x509-store
+  - tls
+  - connection
   - cryptostore >= 0.2.3.0
   - x509
   - euler-hs

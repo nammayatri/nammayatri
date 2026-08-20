@@ -13,6 +13,7 @@ imports:
   CMRLV2Config: Domain.Types.Extra.IntegratedBPPConfig
   ONDCBecknConfig: Domain.Types.Extra.IntegratedBPPConfig
   CRISConfig: Domain.Types.Extra.IntegratedBPPConfig
+  KMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -27,6 +28,15 @@ BecknConfig:
     uniqueKeyId: Text
     settlementType: Maybe Text
     paymentParamsJson: Maybe Text
+    # The seller's own registration details, answered on `on_info`: GST, PAN, authorised
+    # signatory, country, email. JSON rather than columns for the same reason
+    # paymentParamsJson is: it is a config blob echoed onto the wire, not something queried.
+    #
+    # REAL GST AND PAN NUMBERS. Seeded per environment and never committed -- a dev row holds
+    # obvious placeholders. Unset means `info` is not answered at all, which is the same
+    # posture `init` takes when settlement terms are missing: refuse rather than publish a
+    # placeholder to the network.
+    sellerEntityInfoJson: Maybe Text
     vehicleCategory: VehicleCategory|NoRelation
     collectedBy: Network
     staticTermsUrl: Maybe BaseUrl
@@ -122,7 +132,7 @@ IntegratedBPPConfig:
       enum: "MULTIMODAL, PARTNERORG, APPLICATION"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     ProviderConfig:
-      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig"
+      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig, KMRL KMRLConfig"
       derive': "Generic, FromJSON, ToJSON, Eq, Show"
 
   domainInstance:
