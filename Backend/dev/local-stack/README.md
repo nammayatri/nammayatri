@@ -685,6 +685,26 @@ Two more things the table alone does not tell you:
   with 6 and 7 seeded drivers. Both dispatch, so a tariff applied to one leaves
   half the fleet quoting the old price. The SQL is deliberately not filtered by
   merchant.
+
+  **And the rider sees every category twice.** The Beckn gateway multicasts each
+  search to every BPP in the domain; both merchants live on the same driver-app
+  instance, so both answer, and a search comes back with **eight** estimates —
+  four variants at two different prices. Measured 2026-08-20.
+
+  This is *not* the duplicated-seed bug of 9 August returning: `fare_policy`
+  holds exactly one row per `(merchant, variant)`, so the unique indexes
+  `dedupe-seed.sql` added are intact. It is two operators answering, which over
+  Beckn is correct behaviour and is what the protocol is for. Checked with:
+
+  ```sql
+  SELECT merchant_id, vehicle_variant, count(*)
+    FROM atlas_driver_offer_bpp.fare_policy GROUP BY 1,2;
+  ```
+
+  The passenger app keeps one row per tier, the cheaper of the two. If a single
+  price list is wanted at the source instead, the fixture merchant can be taken
+  out of the registry so it stops answering — but nothing depends on it being
+  there, and nothing depends on it being gone either.
 - **`base_distance_meters` is 0**, so the per-km charge runs from the first
   metre and the "starting price" is a flat charge on top. The seed had it
   covering the first 3 km. If the client meant the start to include some
@@ -943,21 +963,88 @@ real search requests, 66 quotes and 41 rides sitting in
 built against it, and because **one part of it contradicts the server's own
 published schema**.
 
-### The timings, none of which are configurable from the app
+### The timings
 
 | What | Measured | Sample |
 |---|---|---|
-| Time to answer a request | **10 s**, no exception | 164 requests |
+| Time to answer a request | **a config value** — see below | 164 requests |
 | Quote validity once offered | **60 s**, no exception | 66 quotes |
 | Rider's time to choose | median **3 s**, p90 18 s, max 50 s | 41 bookings |
 | Ride visible after the rider picks | **0–1 s** | 41 rides |
 | Winning the ride → passenger aboard | median **85 s**, p90 111 s | 32 rides |
 | Distance to the pickup | avg **1 588 m**, max 4 391 m | accepted requests |
 
-Two consequences worth stating plainly. Ten seconds rules out any screen that
-needs a keyboard or a decision. And **no rider has ever chosen after the 60 s
-expiry** — the deadline is real, so the app may call an offer lost on its own
-clock, which it has to, because losing is silent (see below).
+**No rider has ever chosen after the 60 s quote expiry** — that deadline is
+real, so the app may call an offer lost on its own clock, which it has to,
+because losing is silent (see below).
+
+### The answer window — and how this line was wrong twice
+
+This row said **16,3 s** on 18 August and **10 s, no exception** on 19 August.
+Both were reading the same rows from opposite ends, and neither is the window.
+
+It is a **Dhall setting**, `singleBatchProcessTime`, not a measurement:
+
+```haskell
+-- SendSearchRequestToDrivers/Handle/Internal.hs:101
+searchRequestValidTill = singleBatchProcessTime `addUTCTime` now
+```
+
+`now` there is when the *dispatcher wrote this driver's row*. `startTime` is
+when the **rider** searched, seconds earlier — and a whole batch-length earlier
+again for the second batch of drivers. So the two anchors answer different
+questions:
+
+| Anchored on | Gives | Which is |
+|---|---|---|
+| `startTime` | 12–40 s, spread | the setting **plus** dispatch latency **plus** the batch offset |
+| the row's own `createdAt` | exactly the setting | the window the driver actually has |
+
+The full spread over every request this database has recorded, on `startTime`:
+
+```
+12s x4   13s x10  14s x29  15s x38  16s x23  17s x6
+18s x16  19s x12  22s x1   23s x3   24s x4   25s x1
+28s x3   30s x3   33s x4   36s x1   38s x3   40s x3
+```
+
+So "16,3 s" was one batch-one row and "10 s" was the setting — both true about
+what they measured, and both wrong as a statement about the driver's window.
+**A client must read `searchRequestValidTill` against its own clock** and derive
+nothing from `startTime`, which is what the driver app now does.
+
+### Changing it — `./apply-search-window.sh`
+
+```bash
+./apply-search-window.sh --show     # what it is now
+./apply-search-window.sh 60         # give the driver a minute
+./probe-search-window.py            # prove it took, on a real request
+```
+
+Raised from 10 s to **60 s on 2026-08-20**, on the client's instruction after
+driving the app: ten seconds at the wheel is the time for two glances, not for
+a decision.
+
+**The same value paces the batches, and that is the cost.** The request goes to
+`driverBatchSize` drivers at a time for `maxNumberOfBatches` rounds, one
+`singleBatchProcessTime` apart — seeded here at 5 and 3:
+
+```
+at 10 s   batch 1 at 0s, batch 2 at 10s, batch 3 at 20s   -- all asked within 30s
+at 60 s   batch 1 at 0s, batch 2 at 60s, batch 3 at 120s  -- all asked within 180s
+```
+
+So a longer window buys the driver time and spends the **rider's**: if the first
+five drivers ignore the request, nobody else is asked for a full minute. The
+rider's own search lives 300 s, so 3 × 60 still fits with room — but 60 is about
+the largest value that comfortably does, and the script refuses anything over
+100. If the rider's wait becomes the louder complaint, 30 is the middle setting.
+
+> **It is a script because `2023/` is gitignored.** That tree is fetched by
+> `setup.sh`, so an edit made by hand on the server is silently undone the next
+> time it is refreshed and the window drops back to 10 s with nothing to show
+> why. Re-run it after any `setup.sh` that refetches. Same reason
+> `apply-tariff.sh` and `apply-fcm.sh` exist.
 
 ### `driverMaxExtraFee` must be read, never computed
 
@@ -1045,8 +1132,31 @@ VALUES ('…', 4, 'Hyundai', 'Accent', 'SEDAN', 'Blanc', '06182 118 16',
         '3WT', now(), now());
 ```
 
-`enabled` and `verified` are separate switches and the pool skips a driver
-missing either. `registration_no` is unique — reusing a plate fails the insert.
+~~`enabled` and `verified` are separate switches and the pool skips a driver
+missing either.~~ **Not true, and worth knowing exactly which of the three
+matters where.** Read from `Storage/Queries/Person.hs` and
+`Domain/Action/UI/Driver.hs` at `03a7531`, the ref these binaries were built
+from:
+
+| Column | Read by | Effect |
+|---|---|---|
+| `blocked` | `setActivity` **and** `getNearestDrivers` | cannot go online, and skipped by the pool |
+| `enabled` | `setActivity` only | cannot go online — `DRIVER_ACCOUNT_DISABLED` |
+| `verified` | **nothing at all** | none |
+
+`getNearestDrivers` filters on role, merchant, `active`, not-`blocked`, position
+freshness and vehicle variant. It never looks at `enabled` or `verified`.
+
+Two consequences. A driver **created by `POST /ui/auth` starts
+`enabled = true, verified = false`**, so `verified` is not what makes an account
+work — the app treats it as *"the agency has checked the papers"*, which is a
+product convention this stack invented and the backend does not enforce. And
+`enabled` is enforced at the *gate*, not in the pool: a driver switched off
+mid-shift keeps working until he next toggles, because nothing revokes an
+`active` flag that is already set. Set `active = false` too when disabling one
+for real.
+
+`registration_no` is unique — reusing a plate fails the insert.
 `vehicle_class = '3WT'` is copied from the fleet rows known to dispatch
 correctly; it reads wrong for a sedan and is an upstream artefact.
 
@@ -1610,6 +1720,8 @@ ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh ins
 apply-fcm.sh           installs a real Firebase key — push, rider AND driver, no rebuild
 enrol-driver.sh        who may sign in on /ui/, and with which code;  the code is
                        printed once and cannot be read back
+apply-search-window.sh how long a driver has to answer.  A Dhall value, so it is
+                       lost on any setup.sh that refetches 2023/ -- re-run it
 
   measuring, not running — each records its results in its own header
 probe-booking-flow.py     a whole ride from both sides
@@ -1619,6 +1731,8 @@ probe-rider-extras.py     do the useful unused routes actually work?
 probe-trip-history.py     what a past-trips list can show — and one wrong finding
 probe-subscription.sql    can we switch off a driver who hasn't paid?
 probe-push.py             one push to a real phone, no ride needed;  isolates app vs server
+probe-search-window.py    how long a driver really gets, read off a real request.
+                          Signs in as a RIDER only -- never as a fleet driver
 
   services fronting the stack
 edge/                  nginx + TLS, the public face
