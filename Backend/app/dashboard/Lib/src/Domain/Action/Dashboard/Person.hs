@@ -22,6 +22,7 @@ import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Capability as DCap
 import qualified Domain.Types.AccessMatrix as DMatrix
+import qualified Domain.Types.DeletedUser as DDU
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
@@ -32,7 +33,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import qualified Domain.Types.Transaction as DTransaction
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash, unEncrypted)
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -51,10 +52,12 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.DeletedUser as QDeletedUser
 import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonCapability as QPC
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
@@ -845,13 +848,34 @@ deletePerson tokenInfo personId = do
   -- Every write below is keyed on personId alone and none is merchant-scoped, so without this
   -- guard any dashboard admin could hard-delete an arbitrary person in another merchant.
   assertPersonInCallerMerchant tokenInfo personId
-  void $ B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- Audit log: record who deleted which user before the deletion happens
   transaction <- STransaction.buildDashboardAuthTransaction DTransaction.DashboardUserDelete tokenInfo.personId tokenInfo.merchantId
   QT.create transaction{DTransaction.request = Just personId.getId}
+  -- Snapshot the user into deleted_user (tombstone) before removing them, so the
+  -- deletion leaves a resolvable record (also lets orphaned granted_by ids be
+  -- traced back to who was deleted).
+  now <- getCurrentTime
+  deletedUserId <- generateGUID
+  QDeletedUser.create
+    DDU.DeletedUser
+      { id = Id deletedUserId,
+        personId = person.id,
+        firstName = person.firstName,
+        lastName = person.lastName,
+        roleId = person.roleId,
+        emailEncrypted = person.email <&> (unEncrypted . (.encrypted)),
+        deletedBy = tokenInfo.personId,
+        deletedAt = now
+      }
   QAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
   QReg.deleteAllByPersonId personId
+  -- person_capability.person_id (subject) is a NOT NULL FK to person, so delete the
+  -- user's own overrides before the person delete. granted_by rows (capabilities this
+  -- user granted to others) are kept as history — that FK was dropped in migration
+  -- 0097, so the id survives and stays resolvable via deleted_user.
+  QPC.deleteAllByPersonId personId
   QP.deletePerson personId
   pure Success
 
