@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findByPrimaryKey ::
@@ -69,7 +69,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.onlyImageVerificationStatusLookupRequired onlyImageVerificationStatusLookupRequired,
       Se.Set Beam.order order,
-      Se.Set Beam.rolesAllowedToUploadDocumentText (((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument)),
+      Se.Set Beam.rolesAllowedToUploadDocumentText (Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]
@@ -82,6 +82,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
 
 instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig where
   fromTType' (Beam.FleetOwnerDocumentVerificationConfigT {..}) = do
+    documentFields' <- Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON documentFieldsJSON
     pure $
       Just
         Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig
@@ -92,7 +93,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             disableWarning = disableWarning,
             doStrictVerifcation = doStrictVerifcation,
             documentCategory = documentCategory,
-            documentFields = Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON documentFieldsJSON,
+            documentFields = documentFields',
             documentOnboardingStage = documentOnboardingStage,
             documentType = documentType,
             isApprovalSupported = isApprovalSupported,
@@ -110,7 +111,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             onlyImageVerificationStatusLookupRequired = onlyImageVerificationStatusLookupRequired,
             order = order,
             role = [role],
-            rolesAllowedToUploadDocument = (rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)),
+            rolesAllowedToUploadDocument = rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack),
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -144,7 +145,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.onlyImageVerificationStatusLookupRequired = onlyImageVerificationStatusLookupRequired,
         Beam.order = order,
         Beam.role = fromMaybe Domain.Types.Person.FLEET_OWNER (listToMaybe role),
-        Beam.rolesAllowedToUploadDocumentText = ((Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show)) Kernel.Prelude.<$> rolesAllowedToUploadDocument),
+        Beam.rolesAllowedToUploadDocumentText = Kernel.Prelude.map (Data.Text.pack . Kernel.Prelude.show) Kernel.Prelude.<$> rolesAllowedToUploadDocument,
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

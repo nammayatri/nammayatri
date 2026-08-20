@@ -31,6 +31,8 @@ imports:
   Centesimal: Kernel.Types.Common
   CommonDocumentData: Domain.Types.CommonDocumentData
   DocumentOnboardingStage: Domain.Types.DocumentOnboardingStage
+  FieldConstraints: Domain.Types.DocumentFieldConstraints
+  CaseCorrection: Domain.Types.DocumentFieldConstraints
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -635,7 +637,7 @@ DocumentVerificationConfig:
     FieldType:
       # FieldObject: this node has no value of its own; its `fields` become a nested JSON object under `requestKey`.
       # FieldArray:  this node is a JSON array under `requestKey`; its `fields` describe the shape of EACH element.
-      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate"
+      enum: "FieldText,FieldInt,FieldDouble,FieldDropdown,FieldImage,FieldObject,FieldArray,FieldDate,FieldYear"
     # FieldInfo drives BOTH how the UI renders an input AND where the entered value lands in the `documentData`
     # JSON that comes back on register (CommonDocumentReq.documentData). `requestKey` is that JSON key; `_type`
     # governs the JSON value type. The assembled `documentData` is strict-decoded into a CommonDocumentData variant
@@ -665,8 +667,21 @@ DocumentVerificationConfig:
     #                    { name: "Share", _type: FieldInt,  requestKey: "share" } ] }
     #      UI emits: { "owners": [ { "fullName": "A", "share": 60 }, { "fullName": "B", "share": 40 } ] }
     #
-    # VALIDATION: `regexValidation` + `isMandatory` are per-leaf (checked UI-side and re-checked backend-side);
-    # the whole-object shape is validated authoritatively by the strict decode into the target CommonDocumentData type.
+    # VALIDATION: `regexValidation` + `isMandatory` are per-leaf. They are enforced UI-side; the backend reads
+    # `regexValidation` only for DriverLicense and VehicleRegistrationCertificate today (SharedLogic.DriverOnboarding).
+    #
+    # CONSTRAINTS: `fieldConstraints` is a tagged sum (Domain.Types.DocumentFieldConstraints) declaring bounds and
+    # input transforms for a leaf. It is DECLARATIVE ONLY -- nothing on the backend enforces it; clients bound the
+    # input and normalise what the user types. Pick the constructor matching `_type`; a mismatched pair is a config
+    # error clients are free to ignore. Bounds are RELATIVE and SIGNED: negative = past, positive = future.
+    #   FieldInt   -> { "tag": "IntConstraints",  "minValue": 1, "maxValue": 9 }
+    #   FieldYear  -> { "tag": "YearConstraints", "minYearsFromNow": -30, "maxYearsFromNow": 0 }
+    #   FieldDate  -> { "tag": "DateConstraints", "minDaysFromNow": -21900, "maxDaysFromNow": -6570 }
+    #   FieldText  -> { "tag": "TextConstraints", "autoCaseCorrect": "Upper", "trimSpaces": true,
+    #                   "removeCharacters": [" ", "."], "minLength": 5, "maxLength": 12 }
+    # TextConstraints is the input-transform bag: clients apply trimSpaces -> removeCharacters -> autoCaseCorrect
+    # in that order, THEN check the length bounds. Keys left out decode as Nothing, so a literal carries only what
+    # it sets. `hint` is tooltip copy for the field; `description` remains the helper text under the input.
     FieldInfo:
       name: Text
       _type: FieldType
@@ -674,7 +689,9 @@ DocumentVerificationConfig:
       regexValidation: Maybe Text
       description: Maybe Text
       placeholder: Maybe Text
+      hint: Maybe Text
       dropdownValues: Maybe [Text]
+      fieldConstraints: Maybe FieldConstraints
       requestKey: Maybe Text
       fields: Maybe [FieldInfo]
       images: Maybe [ImageInfo]
@@ -715,7 +732,6 @@ DocumentVerificationConfig:
     documentFlowGrouping: Maybe DocumentFlowGrouping
     documentOnboardingStage: Maybe DocumentOnboardingStage
     applicableTo: DocumentApplicableType
-    # For RC: read regex from FieldInfo.regexValidation; prefix list remains fallback.
     documentFields: Maybe [FieldInfo]
     allowLicenseTransfer: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [Role]
@@ -757,7 +773,7 @@ DocumentVerificationConfig:
 
   fromTType:
     supportedVehicleClasses: (getConfigFromJSON documentType)|M
-    documentFields: getDocumentFieldsFromJSON documentFieldsJSON|E
+    documentFields: getDocumentFieldsFromJSON|M
     applicableTo: fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo|E
     rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
 
@@ -1391,7 +1407,7 @@ FleetOwnerDocumentVerificationConfig:
   fromTType:
     role: "[role]|E"
     rolesAllowedToUploadDocument: rolesAllowedToUploadDocumentText >>= traverse (readMaybe . Data.Text.unpack)|E
-    documentFields: Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON documentFieldsJSON|E
+    documentFields: Storage.Queries.Transformers.DocumentVerificationConfig.getDocumentFieldsFromJSON|M
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV
@@ -1407,6 +1423,59 @@ FleetOwnerDocumentVerificationConfig:
 #     returnType: List
 #     queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
 #     filterDimensions: [documentType, role]
+
+# Stage-level metadata for the onboarding hub: what each DocumentOnboardingStage is called, in what
+# order it runs, what it depends on, and any explainer media. Control-center used to hardcode all of
+# this; keyed the same way documents are (city + vehicle category + applicableTo) so a CAR flow and a
+# FLEET flow can present different copy over the same stage identifiers.
+DocumentVerificationStagesConfig:
+  tableName: document_verification_stages_config
+  types:
+    MediaInfo:
+      title: Text
+      description: Maybe Text
+      url: Text
+      thumbnailUrl: Maybe Text
+      derive': "Eq,Ord,Show,Read,Generic,ToJSON,FromJSON,ToSchema"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    documentOnboardingStage: DocumentOnboardingStage|NoRelation
+    vehicleCategory: VehicleCategory|NoRelation
+    applicableTo: Domain.Types.DocumentVerificationConfig.DocumentApplicableType
+    title: Text
+    description: Maybe Text
+    hint: Maybe Text
+    order: Int
+    stageDependency: "[DocumentOnboardingStage]"
+    media: Maybe [MediaInfo]
+    isHidden: Bool
+  default:
+    order: "0"
+    isHidden: "false"
+    applicableTo: "'FLEET_AND_INDIVIDUAL'"
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    documentOnboardingStage: PrimaryKey
+    vehicleCategory: PrimaryKey
+    applicableTo: PrimaryKey
+  sqlType:
+    stageDependency: text[]
+    mediaJSON: json
+  beamFields:
+    media:
+      mediaJSON: Maybe Value
+  toTType:
+    mediaJSON: Storage.Queries.Transformers.DocumentVerificationStagesConfig.mkMediaJSON media|E
+  fromTType:
+    media: Storage.Queries.Transformers.DocumentVerificationStagesConfig.getMediaFromJSON|M
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy:
+        field: order
+        order: asc
 
 AadhaarCard:
   tableName: aadhaar_card

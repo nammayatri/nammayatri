@@ -845,7 +845,9 @@ castDocumentFieldInfo Domain.Types.DocumentVerificationConfig.FieldInfo {..} =
       regexValidation = regexValidation,
       description = description,
       placeholder = placeholder,
+      hint = hint,
       dropdownValues = dropdownValues,
+      fieldConstraints = fieldConstraints,
       requestKey = requestKey,
       fields = fmap (map castDocumentFieldInfo) fields,
       images = fmap (map castImageInfo) images
@@ -869,6 +871,7 @@ castDocumentFieldType = \case
   Domain.Types.DocumentVerificationConfig.FieldObject -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldObject
   Domain.Types.DocumentVerificationConfig.FieldArray -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldArray
   Domain.Types.DocumentVerificationConfig.FieldDate -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldDate
+  Domain.Types.DocumentVerificationConfig.FieldYear -> API.Types.ProviderPlatform.Fleet.Onboarding.FieldYear
 
 castDocumentOnboardingStage :: Domain.Types.DocumentOnboardingStage.DocumentOnboardingStage -> API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage
 castDocumentOnboardingStage = \case

@@ -32,6 +32,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCMTC
 import qualified Storage.CachedQueries.UiDriverConfig as SCU
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.DocumentVerificationStagesConfig (DocumentVerificationStagesConfigDimensions (..))
 import Storage.ConfigPilot.Config.DriverPoolConfig (DriverPoolConfigDimensions (..))
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
@@ -54,6 +55,7 @@ import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
 import qualified Storage.Queries.DocumentVerificationConfig as SQDVC
+import qualified Storage.Queries.DocumentVerificationStagesConfig as SQDVSC
 import qualified Storage.Queries.DriverPoolConfig as SCMD
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as SQFODVC
 import qualified Storage.Queries.GoHomeConfig as SQGHC
@@ -98,6 +100,9 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
     LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
       dvCfg <- getConfigList (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON dvCfg}
+    LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig -> do
+      dvsCfg <- getConfigList (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON dvsCfg}
     LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
       goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList goHomeCfg)}
@@ -165,6 +170,8 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson (\mocId' -> maybeToList <$> SQMSUC.findByMerchantOpCityId mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver)) CQMSUC.updateMerchantServiceUsageConfig (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
       handleConfigUpdateViaJson (\mocId' -> SQDVC.findAllByMerchantOpCityId Nothing Nothing mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig)) SQDVC.updateByPrimaryKey (cast merchantOpCityId)
+    LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig -> do
+      handleConfigUpdateViaJson (\mocId' -> SQDVSC.findAllByMerchantOpCityId Nothing Nothing mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig)) SQDVSC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
       handleConfigUpdateViaJson (\mocId' -> maybeToList <$> SQGHC.findByMerchantOpCityId mocId') (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYT.DRIVER_CONFIG LYT.GoHomeConfig)) SQGHC.updateByPrimaryKey (cast merchantOpCityId)
     LYT.DRIVER_CONFIG LYT.LeaderBoardConfig -> do

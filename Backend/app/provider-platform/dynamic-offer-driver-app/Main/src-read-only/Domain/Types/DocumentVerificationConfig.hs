@@ -4,6 +4,7 @@
 module Domain.Types.DocumentVerificationConfig where
 
 import Data.Aeson
+import qualified Domain.Types.DocumentFieldConstraints
 import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -138,7 +139,9 @@ data FieldInfo = FieldInfo
   { _type :: Domain.Types.DocumentVerificationConfig.FieldType,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dropdownValues :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    fieldConstraints :: Kernel.Prelude.Maybe Domain.Types.DocumentFieldConstraints.FieldConstraints,
     fields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
+    hint :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     images :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.ImageInfo],
     isMandatory :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
@@ -148,7 +151,7 @@ data FieldInfo = FieldInfo
   }
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FieldType = FieldText | FieldInt | FieldDouble | FieldDropdown | FieldImage | FieldObject | FieldArray | FieldDate deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FieldType = FieldText | FieldInt | FieldDouble | FieldDropdown | FieldImage | FieldObject | FieldArray | FieldDate | FieldYear deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data ImageInfo = ImageInfo {imageUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, text :: Kernel.Prelude.Maybe Kernel.Prelude.Text, title :: Kernel.Prelude.Text}
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -171,20 +174,20 @@ data VehicleClassVariantMap = VehicleClassVariantMap
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, (Ord), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentApplicableType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentApplicableType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentCategory)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentFlowGrouping))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentFlowGrouping)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocumentType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
-$(mkHttpInstancesForEnum (''DocumentType))
+$(mkHttpInstancesForEnum ''DocumentType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FieldType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FieldType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SupportedVehicleClasses))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleClassCheckType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)

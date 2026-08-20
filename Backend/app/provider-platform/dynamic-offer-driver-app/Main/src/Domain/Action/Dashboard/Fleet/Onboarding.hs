@@ -28,6 +28,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as UIStatus
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
 import qualified Domain.Types.DocsVerificationStatus as DDVS
+import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
@@ -90,7 +91,8 @@ getOnboardingDocumentConfigs merchantShortId opCity fleetOwnerId makeSelfieAadha
         cabs = fmap castConfigs cabs,
         trucks = fmap castConfigs trucks,
         boat = fmap castConfigs boat,
-        toto = fmap castConfigs toto
+        toto = fmap castConfigs toto,
+        onboardingStages = fmap (map castOnboardingStageAPIEntity) onboardingStages
       }
 
 filterByStage ::
@@ -125,6 +127,19 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       isApprovalSupported = isApprovalSupported,
       rolesAllowedToUploadDocument = fmap (mapMaybe SDO.castPersonRoleToDashboardAccessType) rolesAllowedToUploadDocument
     }
+
+castOnboardingStageAPIEntity :: Onboarding.DocumentOnboardingStageAPIEntity -> CommonOnboarding.DocumentOnboardingStageAPIEntity
+castOnboardingStageAPIEntity Onboarding.DocumentOnboardingStageAPIEntity {..} =
+  CommonOnboarding.DocumentOnboardingStageAPIEntity
+    { stage = SDO.castDocumentOnboardingStage stage,
+      stageDependency = map SDO.castDocumentOnboardingStage stageDependency,
+      applicableTo = SDO.castDocumentApplicableType applicableTo,
+      media = fmap (map castMediaInfo) media,
+      ..
+    }
+
+castMediaInfo :: Domain.Types.DocumentVerificationStagesConfig.MediaInfo -> CommonOnboarding.MediaInfo
+castMediaInfo Domain.Types.DocumentVerificationStagesConfig.MediaInfo {..} = CommonOnboarding.MediaInfo {..}
 
 getOnboardingGetReferralDetails ::
   ShortId DM.Merchant ->
