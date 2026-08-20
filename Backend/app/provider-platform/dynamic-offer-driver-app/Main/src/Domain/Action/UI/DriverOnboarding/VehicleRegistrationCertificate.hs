@@ -91,6 +91,7 @@ import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -781,7 +782,11 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
   now <- getCurrentTime
+  -- Bypasses updateDriverModeAndFlowStatus, so the supply count is maintained here too.
+  mbDriverInfo <- DIQuery.findById (cast driverId)
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
+  whenJust mbDriverInfo $ \driverInfo ->
+    DSC.recordDriverActiveChange driverInfo.merchantOperatingCityId driverInfo.active False
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 
