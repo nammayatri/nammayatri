@@ -4,6 +4,7 @@
 module Storage.Beam.WhiteListOrg where
 
 import qualified Database.Beam as B
+import qualified Domain.Types
 import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -18,6 +19,7 @@ data WhiteListOrgT f = WhiteListOrgT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
+    supportedBecknProtocols :: B.C f (Kernel.Prelude.Maybe [Domain.Types.BecknProtocol]),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

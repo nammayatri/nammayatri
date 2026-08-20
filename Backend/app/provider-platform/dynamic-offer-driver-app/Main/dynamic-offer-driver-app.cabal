@@ -92,6 +92,7 @@ library
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
+      API.OnixBppWebhook
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -559,6 +560,7 @@ library
       SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
+      SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill
@@ -595,6 +597,7 @@ library
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
+      SharedLogic.GatewayDispatch
       SharedLogic.GoogleMaps
       SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
@@ -803,6 +806,7 @@ library
       Storage.ConfigPilot.Config.UiDriverConfig
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
+      Storage.Queries.BecknConfigExtra
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
@@ -1743,6 +1747,7 @@ library
       Storage.Queries.OrphanInstances.AadhaarCard
       Storage.Queries.OrphanInstances.AlertRequest
       Storage.Queries.OrphanInstances.BackgroundVerification
+      Storage.Queries.OrphanInstances.BecknConfig
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.BusinessEvent

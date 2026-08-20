@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.WhiteListOrg where
 
+import qualified Domain.Types
 import qualified Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,6 +28,7 @@ instance FromTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg whe
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
+            supportedBecknProtocols = supportedBecknProtocols,
             updatedAt = updatedAt'
           }
 
@@ -39,5 +41,6 @@ instance ToTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
+        Beam.supportedBecknProtocols = supportedBecknProtocols,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt
       }

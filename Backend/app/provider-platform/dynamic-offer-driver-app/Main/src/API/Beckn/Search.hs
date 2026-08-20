@@ -42,6 +42,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Servant hiding (throwError)
+import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.GatewayDispatch as GatewayDispatch
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -120,8 +122,13 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
                 let context' = onSearchReq.onSearchReqContext
                 logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
                 void $
-                  Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                    pure onSearchReq
+                  GatewayDispatch.dispatchAction dSearchRes.provider.id
+                    Domain.MOBILITY
+                    "on_search"
+                    (onSearchReq.onSearchReqContext.contextBapId)
+                    onSearchReq
+                    (Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ pure onSearchReq)
+                    (\url mappedAction jsonBody -> withShortRetry $ CallBAP.callBecknAPIUnsigned mappedAction url jsonBody)
         pure Ack
 
 searchLockKey :: Text -> Text -> Text

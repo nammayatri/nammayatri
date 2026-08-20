@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnUpdate (API, handler) where
+module API.Beckn.OnUpdate (API, handler, onUpdateWebhook) where
 
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -26,6 +26,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
@@ -36,6 +37,9 @@ type API = OnUpdate.OnUpdateAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onUpdate
+
+onUpdateWebhook :: OnUpdate.OnUpdateReqV2 -> FlowHandler AckResponse
+onUpdateWebhook = onUpdate DummySig.dummySignatureAuthResult
 
 onUpdate ::
   SignatureAuthResult ->

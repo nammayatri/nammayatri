@@ -204,3 +204,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN estimated_static_du
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

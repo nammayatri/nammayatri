@@ -67,6 +67,7 @@ checkDriverPickupProgress ::
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,

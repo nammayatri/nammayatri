@@ -904,6 +904,7 @@ instance ToHttpApiData ConfigNames where
 data NetworkEnums
   = ONDC
   | NY
+  | Fabric
   deriving stock (Show, Eq, Ord, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

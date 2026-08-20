@@ -29,3 +29,19 @@ findBySubscriberIdAndDomain ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> Kernel.Types.Beckn.Domain.Domain -> m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg))
 findBySubscriberIdAndDomain subscriberId domain = do listToMaybe <$> findAllWithKV [Se.And [Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId), Se.Is Beam.domain $ Se.Eq domain]]
+
+findBySubscriberIdAndDomainAndMerchantId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber ->
+  Kernel.Types.Beckn.Domain.Domain ->
+  Kernel.Types.Id.Id Merchant ->
+  m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg)
+findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId =
+  listToMaybe
+    <$> findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId),
+            Se.Is Beam.domain $ Se.Eq domain,
+            Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
+          ]
+      ]

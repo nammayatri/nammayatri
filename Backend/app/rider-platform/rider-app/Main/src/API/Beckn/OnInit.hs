@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnInit (API, handler) where
+module API.Beckn.OnInit (API, handler, onInitWebhook) where
 
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
@@ -34,6 +34,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.DummySignatureAuth as DummySig
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
@@ -44,6 +45,9 @@ type API = OnInit.OnInitAPIV2
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit
+
+onInitWebhook :: OnInit.OnInitReqV2 -> FlowHandler AckResponse
+onInitWebhook = onInit DummySig.dummySignatureAuthResult
 
 onInit ::
   SignatureAuthResult ->

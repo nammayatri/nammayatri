@@ -4,6 +4,7 @@
 module Domain.Types.WhiteListOrg where
 
 import Data.Aeson
+import qualified Domain.Types
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -20,6 +21,7 @@ data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
+    supportedBecknProtocols :: Kernel.Prelude.Maybe [Domain.Types.BecknProtocol],
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)

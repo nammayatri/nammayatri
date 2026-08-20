@@ -74,5 +74,5 @@ postAddBaggageConfirm (_personId, merchantId) bookingId req = do
   -- Optimistic BAP update is skipped. The BPP is authoritative for the fare;
   -- BAP mirrors via on_update after BPP confirms.
   updateMsg <- ACL.buildUpdateReq updateBuildReq
-  void $ CallBPP.updateV2 booking.providerUrl updateMsg
+  void $ CallBPP.updateV2 booking.merchantId booking.providerUrl updateMsg
   pure Success

@@ -27,6 +27,7 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   RiderPreferredOption: Domain.Types.RiderPreferredOption
+  BecknProtocol: Domain.Types
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
