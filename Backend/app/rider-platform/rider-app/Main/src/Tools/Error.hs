@@ -16,6 +16,7 @@ module Tools.Error (module Tools.Error, SearchCancelErrors (..)) where
 
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.External.Types (Language)
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error as Tools.Error
 import Kernel.Types.Error.BaseError.HTTPError

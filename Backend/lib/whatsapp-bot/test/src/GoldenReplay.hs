@@ -57,6 +57,7 @@ module GoldenReplay
   ( goldenTests,
     copyChecks,
     fixtureGuards,
+    rideTypeButtonLayoutChecks,
   )
 where
 
@@ -74,6 +75,7 @@ import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime, diffUTCTime)
 import qualified Kernel.External.Meta as Meta
 import Kernel.Prelude
+import StaticI18nData (staticNonEnglish)
 import System.Timeout (timeout)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
@@ -81,11 +83,7 @@ import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
-import WhatsappBot.I18n.Gu (gu)
-import WhatsappBot.I18n.Hi (hi)
-import WhatsappBot.I18n.Kn (kn)
-import WhatsappBot.I18n.Ta (ta)
-import WhatsappBot.I18n.Te (te)
+import WhatsappBot.Flow.Booking (hiddenRideTypeButtons, rideTypeButtons)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)
@@ -572,18 +570,17 @@ mkClock clockRef =
 fixtureMerchant :: Text -> MerchantCtx
 fixtureMerchant pn
   | pn == "pn_reg" =
-    base {merchantLabel = "REG", rideMode = RideModeRegular, flexiEnabled = False, regularEnabled = True}
+    base {merchantLabel = "REG", rideTypesOrder = [Regular]}
   | pn == "pn_flexi" =
-    base {merchantLabel = "FLEXI", rideMode = RideModeFlexi, flexiEnabled = True, regularEnabled = False}
+    base {merchantLabel = "FLEXI", rideTypesOrder = [Flexi]}
   | otherwise =
     error ("fixtureMerchant: unknown phone_number_id " <> pn)
   where
     base =
       MerchantCtx
         { merchantLabel = "FLEXI",
-          rideMode = RideModeFlexi,
-          flexiEnabled = True,
-          regularEnabled = False,
+          rideTypesOrder = [Flexi],
+          maxDirectButtons = Nothing, -- unset by default; explicit override tested separately below
           flexiBaseFare = Nothing, -- FLEXI_BASE_FARE unset in test/setup.ts
           flexiPerKm = Nothing, -- FLEXI_PER_KM unset in test/setup.ts
           flexiServiceArea = Just "Tumkur",
@@ -625,7 +622,7 @@ fixtureConfig m =
 -- copy it always has — a real proof that threading the translations map
 -- through the engine didn't change any behaviour.
 staticTranslations :: Map.Map SupportedLanguage LanguageStrings
-staticTranslations = Map.fromList [(En, en), (Hi, hi), (Gu, gu), (Kn, kn), (Ta, ta), (Te, te)]
+staticTranslations = Map.insert En en staticNonEnglish
 
 -- ===========================================================================
 -- World builder.
@@ -880,3 +877,57 @@ enCopyCases =
     ("regularConfirmButton", "✅ Book auto", en.regularConfirmButton),
     ("pickupConfirmButton", "✅ Confirm pickup", en.pickupConfirmButton)
   ]
+
+-- ===========================================================================
+-- Ride-type chooser button layout — direct unit checks of
+-- WhatsappBot.Flow.Booking.rideTypeButtons / hiddenRideTypeButtons.
+--
+-- maxDirectButtons = Nothing (default, locked design-discussion rule):
+--   total <= 1 -> show it directly, no More
+--   total >= 2 -> show min(total - 1, 2) directly, in priority order; the
+--                 rest goes behind More (capped at 2 direct so direct+More
+--                 never exceeds WhatsApp's real 3-button-per-message limit —
+--                 see developers.facebook.com's interactive-reply-buttons docs)
+--
+-- maxDirectButtons = Just n (explicit per-merchant override): cap =
+-- clamp(n, 1, 2). If everything fits within cap, show it ALL directly with
+-- NO More — no automatic "-1" reservation, unlike the Nothing case.
+-- Otherwise show `cap` directly, hide the rest.
+--
+-- No golden JSON fixture exercises this: both existing fixture merchants
+-- (pn_flexi/pn_reg) only ever offer ONE ride type each, so this is the only
+-- place the "More" path is actually verified. Sizes 3+ repeat a RideType
+-- value (only 2 real ones exist today) purely to exercise the counting
+-- logic — not a realistic merchant config.
+-- ===========================================================================
+
+rideTypeButtonLayoutChecks :: TestTree
+rideTypeButtonLayoutChecks =
+  testGroup "ride-type chooser button layout" $
+    map
+      (\(lbl, maxDirect, rts, expectedDirect, expectedHidden) -> testCase lbl (checkLayout maxDirect rts expectedDirect expectedHidden))
+      [ -- Nothing (default): unchanged from before maxDirectButtons existed
+        ("size 1 (Flexi only): no More", Nothing, [Flexi], ["ride_type:flexi"], []),
+        ("size 1 (Regular only): no More", Nothing, [Regular], ["ride_type:regular"], []),
+        ("size 2: top priority direct, rest in More", Nothing, [Flexi, Regular], ["ride_type:flexi"], ["ride_type:regular"]),
+        ("size 2 reversed order: priority follows the list", Nothing, [Regular, Flexi], ["ride_type:regular"], ["ride_type:flexi"]),
+        ("size 3: 2 direct (capped), 1 in More", Nothing, [Flexi, Regular, Flexi], ["ride_type:flexi", "ride_type:regular"], ["ride_type:flexi"]),
+        ("size 4: still 2 direct (capped), 2 in More", Nothing, [Flexi, Regular, Flexi, Regular], ["ride_type:flexi", "ride_type:regular"], ["ride_type:flexi", "ride_type:regular"]),
+        -- Just n: explicit override
+        ("override Just 2, size 2: everything fits, no More at all", Just 2, [Flexi, Regular], ["ride_type:flexi", "ride_type:regular"], []),
+        ("override Just 1, size 2: forced nudge, same shape as default", Just 1, [Flexi, Regular], ["ride_type:flexi"], ["ride_type:regular"]),
+        ("override Just 1, size 3: forced nudge, 2 hidden", Just 1, [Flexi, Regular, Flexi], ["ride_type:flexi"], ["ride_type:regular", "ride_type:flexi"]),
+        ("override Just 2, size 3: same shape as default", Just 2, [Flexi, Regular, Flexi], ["ride_type:flexi", "ride_type:regular"], ["ride_type:flexi"]),
+        ("override Just 0, size 2: clamped up to 1, same as Just 1", Just 0, [Flexi, Regular], ["ride_type:flexi"], ["ride_type:regular"]),
+        ("override Just 5, size 2: clamped down to 2, same as Just 2", Just 5, [Flexi, Regular], ["ride_type:flexi", "ride_type:regular"], []),
+        ("override Just 1, size 1: fits trivially, no More", Just 1, [Flexi], ["ride_type:flexi"], [])
+      ]
+  where
+    checkLayout maxDirect rts expectedDirect expectedHidden = do
+      let allButtons = map (.btnId) (rideTypeButtons en maxDirect rts)
+          hasMore = "more_ride_types" `elem` allButtons
+          direct = filter (/= "more_ride_types") allButtons
+          hidden = map (.btnId) (hiddenRideTypeButtons en maxDirect rts)
+      assertEqual "direct buttons" expectedDirect direct
+      assertEqual "More button present iff something is hidden" (not (null expectedHidden)) hasMore
+      assertEqual "hidden (More-revealed) buttons" expectedHidden hidden

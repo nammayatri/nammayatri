@@ -28,6 +28,12 @@ jobs:
       - name: Run the whatsapp-bot golden suite
         run: |
           nix develop .#backend --command bash -c "
+            export CABAL_DIR=\$GITHUB_WORKSPACE/Backend/.cabal-dir
+            mkdir -p \$CABAL_DIR
+            printf 'active-repositories: :none\n' > \$CABAL_DIR/config
+            export CABAL_CONFIG=\$CABAL_DIR/config
             cd Backend
+            mkdir -p \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)
+            ghc-pkg init \$CABAL_DIR/store/ghc-\$(ghc --numeric-version)/package.db 2>/dev/null || true
             cabal test whatsapp-bot --test-show-details=direct
           "
