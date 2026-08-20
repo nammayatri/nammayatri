@@ -70,10 +70,12 @@ supplyKey kind cityId bucket = "driverSupply:" <> kind <> ":" <> cityId <> ":" <
 currentBucket :: UTCTime -> Int
 currentBucket now = floor (utcTimeToPOSIXSeconds now) `div` windowSecs
 
--- Members are "&lt;tier&gt;|&lt;driverId&gt;" so one set per (city, window) still yields per-tier
--- distinct counts — no extra Redis reads, and no need to enumerate service tiers.
-supplyMember :: (Text, Id DP.Person) -> Text
-supplyMember (tier, driverId) = tier <> "|" <> driverId.getId
+-- Members are "<dim>|...|<dim>|<driverId>" so one set per (city, window) still yields
+-- distinct counts per dimension tuple — no extra Redis reads, and no need to enumerate
+-- tiers, buckets or pooling versions. Dimension values are metric labels, which never
+-- contain "|", and driver ids are UUIDs, so the last segment is unambiguous.
+supplyMember :: ([Text], Id DP.Person) -> Text
+supplyMember (dims, driverId) = T.intercalate "|" (dims <> [driverId.getId])
 
 reconcileLockKey :: Int -> Text
 reconcileLockKey bucket = "driverSupply:onlineCount:reconcile:" <> show bucket
@@ -81,33 +83,39 @@ reconcileLockKey bucket = "driverSupply:onlineCount:reconcile:" <> show bucket
 reconcileSecs :: Int
 reconcileSecs = 600
 
-recordSupplyEvent :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> [(Text, Id DP.Person)] -> m ()
+recordSupplyEvent :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> [([Text], Id DP.Person)] -> m ()
 recordSupplyEvent kind cityId entries =
   unless (null entries) $ do
     now <- getCurrentTime
     Redis.sAddExp (supplyKey kind cityId.getId (currentBucket now)) (map supplyMember entries) windowTtlSecs
 
-recordDriversPinged :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> [(Text, Id DP.Person)] -> m ()
-recordDriversPinged = recordSupplyEvent "pinged"
+-- | The whole batch shares one search request, so its funnel labels are passed once;
+-- the tier varies per driver.
+recordDriversPinged :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> (Text, Text, Text) -> [(Text, Id DP.Person)] -> m ()
+recordDriversPinged cityId (distanceBucket, poolingLogicV, poolingConfigV) entries =
+  recordSupplyEvent "pinged" cityId $ map (\(tier, driverId) -> ([tier, distanceBucket, poolingLogicV, poolingConfigV], driverId)) entries
 
-recordDriverAccepted :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> Id DP.Person -> m ()
-recordDriverAccepted cityId tier driverId = recordSupplyEvent "accepted" cityId [(tier, driverId)]
+recordDriverAccepted :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> (Text, Text, Text) -> Id DP.Person -> m ()
+recordDriverAccepted cityId tier (distanceBucket, poolingLogicV, poolingConfigV) driverId =
+  recordSupplyEvent "accepted" cityId [([tier, distanceBucket, poolingLogicV, poolingConfigV], driverId)]
 
-recordDriverOnRide :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> Id DP.Person -> m ()
-recordDriverOnRide cityId tier driverId = recordSupplyEvent "onride" cityId [(tier, driverId)]
+-- | No pooling versions: a booking does not carry them.
+recordDriverOnRide :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> Text -> Id DP.Person -> m ()
+recordDriverOnRide cityId tier distanceBucket driverId =
+  recordSupplyEvent "onride" cityId [([tier, distanceBucket], driverId)]
 
--- | Distinct drivers per tier for one window. Malformed members (no separator) are
--- dropped rather than counted under a bogus tier.
-countWindowByTier :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> Int -> m [(Text, Int)]
-countWindowByTier kind cityId bucket = do
+-- | Distinct drivers per dimension tuple for one window. Malformed members (no
+-- separator) are dropped rather than counted under a bogus label.
+countWindowByDims :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Id DMOC.MerchantOperatingCity -> Int -> m [([Text], Int)]
+countWindowByDims kind cityId bucket = do
   (members :: [Text]) <- Redis.sMembers (supplyKey kind cityId.getId bucket)
   let parsed = mapMaybe parseMember members
-      byTier = Map.fromListWith Set.union [(tier, Set.singleton driverId) | (tier, driverId) <- parsed]
-  pure $ map (second Set.size) (Map.toList byTier)
+      byDims = Map.fromListWith Set.union [(dims, Set.singleton driverId) | (dims, driverId) <- parsed]
+  pure $ map (second Set.size) (Map.toList byDims)
   where
-    parseMember m =
-      let (tier, rest) = T.breakOn "|" m
-       in if T.null rest then Nothing else Just (tier, T.drop 1 rest)
+    parseMember m = case reverse (T.splitOn "|" m) of
+      (driverId : revDims) | not (null revDims) -> Just (reverse revDims, driverId)
+      _ -> Nothing
 
 -- | Authoritative recount from driver_information, only on a cache miss or on the
 -- periodic reconcile -- never per tick. Uses `set`, not a read-then-incrby delta:
@@ -188,9 +196,9 @@ runDriverSupplyMetricsPublisher = withLogTag "DriverSupplyMetrics" $ go (-1) (-1
             online <- currentOnlineCount shouldReconcile city.id
             setDriverSupplyGauge supplyMetrics.driversOnlineGauge merchantLabel cityLabel online
             forM_ bucketsToPublish $ \bucket -> do
-              publishTierGauge supplyMetrics.driversReceivingGauge "pinged" merchantLabel cityLabel city.id bucket
-              publishTierGauge supplyMetrics.driversAcceptingGauge "accepted" merchantLabel cityLabel city.id bucket
-              publishTierGauge supplyMetrics.driversOnRideGauge "onride" merchantLabel cityLabel city.id bucket
+              publishFunnelGauge supplyMetrics.driversReceivingGauge "pinged" merchantLabel cityLabel city.id bucket
+              publishFunnelGauge supplyMetrics.driversAcceptingGauge "accepted" merchantLabel cityLabel city.id bucket
+              publishRideGauge supplyMetrics.driversOnRideGauge "onride" merchantLabel cityLabel city.id bucket
         pure (max lastPublishedBucket prevBucket, if shouldReconcile then reconcileBucket else lastReconciledBucket)
       case res of
         Right published -> pure published
@@ -199,6 +207,14 @@ runDriverSupplyMetricsPublisher = withLogTag "DriverSupplyMetrics" $ go (-1) (-1
           when shouldReconcile $ Redis.del (reconcileLockKey reconcileBucket)
           pure (lastPublishedBucket, lastReconciledBucket)
 
-    publishTierGauge gaugeVec kind merchantLabel cityLabel cityId bucket = do
-      perTier <- countWindowByTier kind cityId bucket
-      forM_ perTier $ \(tier, n) -> setDriverSupplyTierGauge gaugeVec merchantLabel cityLabel tier n
+    publishFunnelGauge gaugeVec kind merchantLabel cityLabel cityId bucket = do
+      perDims <- countWindowByDims kind cityId bucket
+      forM_ perDims $ \(dims, n) -> case dims of
+        [tier, distanceBucket, poolingLogicV, poolingConfigV] -> setDriverSupplyFunnelGauge gaugeVec merchantLabel cityLabel tier distanceBucket poolingLogicV poolingConfigV n
+        _ -> logWarning $ "unexpected dimensions for " <> kind <> ": " <> show dims
+
+    publishRideGauge gaugeVec kind merchantLabel cityLabel cityId bucket = do
+      perDims <- countWindowByDims kind cityId bucket
+      forM_ perDims $ \(dims, n) -> case dims of
+        [tier, distanceBucket] -> setDriverSupplyRideGauge gaugeVec merchantLabel cityLabel tier distanceBucket n
+        _ -> logWarning $ "unexpected dimensions for " <> kind <> ": " <> show dims

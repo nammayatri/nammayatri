@@ -186,9 +186,10 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
   -- scheduled bookings assign a driver hours before the trip - not on-ride supply
-  when (not booking.isScheduled) $ DSM.recordDriverOnRide booking.merchantOperatingCityId (show booking.vehicleServiceTier) ride.driverId
+  let rideDistanceBucket = SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance
+  when (not booking.isScheduled) $ DSM.recordDriverOnRide booking.merchantOperatingCityId (show booking.vehicleServiceTier) rideDistanceBucket ride.driverId
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
-  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
+  Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) rideDistanceBucket
   QRideD.create rideDetails
   fork "updateRiderDetails" $ do
     whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
