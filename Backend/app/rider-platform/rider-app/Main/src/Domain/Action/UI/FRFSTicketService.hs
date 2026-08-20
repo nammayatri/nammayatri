@@ -1743,7 +1743,7 @@ notifyBusTripStartedForTrip tripId = do
           when isShuttle $ do
             -- Send trip start notification sequentially
             let routeName = fromMaybe "" booking.routeName
-            let vehicleNo = fromMaybe "" booking.vehicleNumber
+            let vehicleNo = fromMaybe "" (mbJourneyLeg >>= (.finalBoardedBusNumber))
             logInfo $ "Notifying passenger " <> person.id.getId <> " that bus trip has started on route " <> routeName <> "for journeyId" <> show mbJourneyId
             -- Sends push (primary) + opt-in WhatsApp (secondary), both handled inside notifyBusTripStarted.
             -- The WhatsApp `trip_tracking_enabled` template carries a static deep link, so no URL variable is passed.
