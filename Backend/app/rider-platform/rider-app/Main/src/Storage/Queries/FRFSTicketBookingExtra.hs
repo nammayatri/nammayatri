@@ -88,12 +88,13 @@ findAllByCashbackStatus limit offset cashbackStatus = do
     limit
     offset
 
-findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Person -> Maybe Spec.VehicleCategory -> m [FRFSTicketBooking]
-findAllByRiderId limit offset riderId mbVehicleCategory = do
+findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Person -> Maybe Spec.VehicleCategory -> Maybe Text -> m [FRFSTicketBooking]
+findAllByRiderId limit offset riderId mbVehicleCategory mbOverrideEntityId = do
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
             <> [Se.Is Beam.vehicleType $ Se.Eq (fromJust mbVehicleCategory) | isJust mbVehicleCategory]
+            <> [Se.Is Beam.overrideAppliedEntityId $ Se.Eq mbOverrideEntityId | isJust mbOverrideEntityId]
         )
     ]
     (Se.Desc Beam.createdAt)

@@ -223,3 +223,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN parent_booking_id character
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN override_applied_entity_id text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN overridden_amount double precision ;
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_override_applied_entity_id ON atlas_app.frfs_ticket_booking USING btree (override_applied_entity_id);

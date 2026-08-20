@@ -26,6 +26,16 @@ import Servant
 import qualified SharedLogic.Offer
 import Tools.Auth
 
+data FrfsOverrideConfigAPIEntity = FrfsOverrideConfigAPIEntity
+  { fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    maximumTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    percentageApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    unlimitedTripCount :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PassAPIEntity = PassAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
     autoApply :: Kernel.Prelude.Bool,
@@ -36,6 +46,8 @@ data PassAPIEntity = PassAPIEntity
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     eligibility :: Kernel.Prelude.Bool,
     formVerificationConfig :: Data.Maybe.Maybe Data.Aeson.Value,
+    frfsCancelLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    frfsOverrideConfig :: Data.Maybe.Maybe FrfsOverrideConfigAPIEntity,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maxFare :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -129,6 +141,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     photoUploadTimeLimit :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
     purchaseDate :: Data.Time.Day,
+    purchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
     tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int,

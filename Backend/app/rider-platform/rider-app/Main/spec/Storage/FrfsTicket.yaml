@@ -545,6 +545,7 @@ FRFSTicketBooking:
     quoteId: SecondaryKey
     tripId: "!SecondaryKey"
     waybillNo: "!SecondaryKey"
+    overrideAppliedEntityId: "!SecondaryKey"
 
   queries:
     findById:
@@ -655,6 +656,7 @@ FRFSTicketBooking:
   extraIndexes:
     - columns: [tripId]
     - columns: [waybillNo]
+    - columns: [overrideAppliedEntityId]
 
   extraOperations:
     - EXTRA_QUERY_FILE
