@@ -255,8 +255,11 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $ do
   requestor <- findPerson requestorId
+  mbRide <- QRide.findById rideId
+  -- using ride's merchantOperatingCityId instead of the token's cityId for consistency
+  let rideMerchantOpCityId = maybe merchantOpCityId (.merchantOperatingCityId) mbRide
   let driverReq = RideEnd.DriverEndRideReq {..}
-  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just rideId) False
+  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId rideMerchantOpCityId (Just rideId) False
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
