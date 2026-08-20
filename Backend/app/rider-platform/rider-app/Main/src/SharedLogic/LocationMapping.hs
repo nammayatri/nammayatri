@@ -74,15 +74,6 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
 
--- ===========================================================================
--- New-entity-safe variants -- use ONLY when entityId was generated moments
--- earlier in the same flow (e.g. a fresh SearchRequest), never for edits.
--- See Storage.Queries.LocationMappingExtra.findAllByEntityIdAndOrderNewEntity
--- for why these tolerate a Postgres outage safely: a brand-new entity is
--- structurally guaranteed to have no prior mappings, so the fallback value
--- is always correct, not a guess.
--- ===========================================================================
-
 buildPickUpLocationMappingNewEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m DLM.LocationMapping
 buildPickUpLocationMappingNewEntity locationId entityId tag merchantId merchantOperatingCityId = do
   id <- generateGUID

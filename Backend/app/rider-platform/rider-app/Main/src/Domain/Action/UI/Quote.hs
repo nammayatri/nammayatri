@@ -215,10 +215,6 @@ getQuotes searchRequestId mbAllowMultiple = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
-    -- searchRequestId is always a freshly-created SearchRequest from this same rider's
-    -- /rideSearch -- see QuoteExtra/EstimateExtra's *NewEntity variants for why a Postgres
-    -- outage is safe to tolerate here (empty == "no driver has quoted/estimated yet", not a
-    -- guess).
     quoteList <- QQuote.findAllBySRIdNewEntity searchRequest.id
     estimateList <- QEstimate.findAllBySRIdNewEntity searchRequest.id
     res <- buildGetQuotesRes searchRequest estimateList quoteList riderConfig
