@@ -102,6 +102,16 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] AV.UnVerifiedDataReq
              :> Post '[JSON] APISuccess
+           :<|> "ocr"
+             :> ( "rc"
+                    :> TokenAuth
+                    :> QueryParam "imageId" Text
+                    :> Get '[JSON] (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+                    :<|> "dl"
+                      :> TokenAuth
+                      :> QueryParam "imageId" Text
+                      :> Get '[JSON] (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+                )
        )
     :<|> "driver" :> "referral"
       :> TokenAuth
@@ -144,6 +154,7 @@ handler =
       :<|> generateAadhaarOtp
       :<|> verifyAadhaarOtp
       :<|> unVerifiedAadhaarData
+      :<|> (getOCRResultRC :<|> getOCRResultDL)
   )
     :<|> addReferral
     :<|> getReferredDrivers
@@ -216,3 +227,9 @@ getAllLinkedRCs (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ 
 
 getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Text -> Maybe DP.Role -> FlowHandler DriverOnboarding.DriverReferralDetailsRes
 getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole
+
+getOCRResultRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+getOCRResultRC (personId, _, _) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultRC personId mbImageId
+
+getOCRResultDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+getOCRResultDL (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultDL personId merchantOpCityId mbImageId
