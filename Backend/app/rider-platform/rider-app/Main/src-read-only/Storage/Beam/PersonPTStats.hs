@@ -36,6 +36,6 @@ instance B.Table PersonPTStatsT where
 
 type PersonPTStats = PersonPTStatsT Identity
 
-$(enableKVPG ''PersonPTStatsT ['id] [['staticPersonId]])
+$(enableKVPG ''PersonPTStatsT ['id] [['personId], ['staticPersonId]])
 
 $(mkTableInstances ''PersonPTStatsT "person_pt_stats")
