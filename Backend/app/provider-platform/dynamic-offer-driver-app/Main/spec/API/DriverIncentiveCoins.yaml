@@ -24,15 +24,17 @@ module: DriverIncentiveCoins
 # 2. Parse Incentive tag(s): "Incentive#<value>".
 #    Value may have multiple functions joined by "&" — use ALL segments.
 #    Example: Incentive#DriverIncentiveCohortRidesCompleted 2&DriverIncentiveCohortRidesCompleted 5
-#    → both eventFunctions.
-# 3. For each DriverIncentiveCohortRidesCompleted N:
+#    Slot cohort example (same target N, different Ops-named cohorts):
+#      Incentive#DriverIncentiveCohortRidesCompletedSlot Airport_Morning 8
+#    Slot must be a single token (no spaces / '&'); tag must match CoinsConfig.eventFunction.
+# 3. For each DriverIncentiveCohortRidesCompleted N / DriverIncentiveCohortRidesCompletedSlot slot N:
 #    query active EndRide configs (city + merchant + vehicleCategory + eventFunction).
 #    Prefer real timeBounds if any exist (even outside peak); else unbounded/null.
 #    If no config for that eventFunction → skip (do not fail the whole list).
-# 4. If driver has NO Incentive tag with DriverIncentiveCohortRidesCompleted:
+# 4. If driver has NO Incentive tag with DriverIncentiveCohortRidesCompleted(Slot):
 #    return all active EndRide configs whose eventFunction is RidesCompleted X
 #    (same city / merchant / vehicleCategory), one preferred row per eventFunction.
-# 5. ridesThreshold = N from DriverIncentiveCohortRidesCompleted N or RidesCompleted N.
+# 5. ridesThreshold = N from DriverIncentiveCohortRidesCompleted(Slot) … N or RidesCompleted N.
 # 6. Response list may have 0..N items.
 # 7. ETag: hash of full response list.
 #
@@ -42,7 +44,7 @@ module: DriverIncentiveCoins
 #
 # Handler logic:
 # 1–4. Same tag parse + config selection as incentiveConfig (to know window):
-#      tagged → DriverIncentiveCohortRidesCompleted configs;
+#      tagged → DriverIncentiveCohortRidesCompleted / Slot configs;
 #      no tag → RidesCompleted X configs.
 # 5. Always read Redis (missing key → 0 / Nothing, never fail):
 #    - dayValidRideCount  ← DriverValidRideCount:DriverId:<id>
@@ -66,7 +68,7 @@ types:
     tripCategoryType: Maybe TripCategoryType
     serviceTierType: Maybe ServiceTierType
     timeBounds: Maybe TimeBound
-    # From DriverIncentiveCohortRidesCompleted N or RidesCompleted N → N
+    # From DriverIncentiveCohortRidesCompleted(Slot) … N or RidesCompleted N → N
     ridesThreshold: Int
 
   DriverIncentiveRideCountRes:

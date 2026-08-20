@@ -312,12 +312,14 @@ extractDriverIncentiveCohortFunctions =
 isDriverIncentiveCohortFunction :: DCT.DriverCoinsFunctionType -> Bool
 isDriverIncentiveCohortFunction = \case
   DCT.DriverIncentiveCohortRidesCompleted _ -> True
+  DCT.DriverIncentiveCohortRidesCompletedSlot _ _ -> True
   DCT.DriverIncentiveCohortMetrics _ -> True
   _ -> False
 
 isDriverIncentiveCohortRidesCompletedFunction :: DCT.DriverCoinsFunctionType -> Bool
 isDriverIncentiveCohortRidesCompletedFunction = \case
   DCT.DriverIncentiveCohortRidesCompleted _ -> True
+  DCT.DriverIncentiveCohortRidesCompletedSlot _ _ -> True
   _ -> False
 
 isDriverIncentiveCohortMetricsFunction :: DCT.DriverCoinsFunctionType -> Bool
@@ -395,6 +397,25 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       logDebug $
         "DriverIncentiveCohortRidesCompleted check - driverId: "
           <> driverId.getId
+          <> ", threshold: "
+          <> show a
+          <> ", window: "
+          <> show metricWindow
+          <> ", validRideCount: "
+          <> show validRideCount
+          <> ", configTimeBounds: "
+          <> show coinsConfig.timeBounds
+      runActionWhenValidConditions
+        [ pure (validRideCount == a)
+        ]
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+    DCT.DriverIncentiveCohortRidesCompletedSlot slot a -> do
+      validRideCount <- getCohortValidRideCount driverId tripCategoryType metricWindow
+      logDebug $
+        "DriverIncentiveCohortRidesCompletedSlot check - driverId: "
+          <> driverId.getId
+          <> ", slot: "
+          <> slot
           <> ", threshold: "
           <> show a
           <> ", window: "
