@@ -180,9 +180,21 @@ Anything about screens, the APK, the signing key or the map UI belongs there.
 
 ## Binaries, and why patches go around the backend
 
-The services run as **prebuilt images** from a CI job with a ~6-hour budget and
-a cache that accumulates across runs. Rebuilding to change one line risks
-ending up with binaries that differ from everything tested so far.
+The services run as **prebuilt images** from a CI job
+(`.github/workflows/algeria-backend-build.yml`, free GitHub Actions).
+
+**Rebuilding is affordable, and the reason to avoid it is not the clock.**
+Measured: **44 minutes cold**, 33 on the company org, 8 warm. The
+`timeout-minutes: 350` in that workflow is the *cap*, and reading it as a
+duration is how this file previously said "~6-hour budget" — which made every
+backend change sound like a day's work and led to at least one wrong answer to
+the client.
+
+The real cost is that a rebuild produces **new binaries, and every measurement
+in this project was taken against the current ones**. So: batch backend changes
+into one run, and re-prove the ride flow afterwards. Prefer config, SQL or a
+shim when one will do — most things have turned out not to need Haskell at all
+(routing, maps, geocoding, push, the fare policy, the driver's answer window).
 
 So: prefer config, SQL, or a shim in front. The OTP attempt limit lives in
 nginx for exactly this reason, not in the Haskell that already had the counter.

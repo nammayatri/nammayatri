@@ -1057,9 +1057,35 @@ The requests actually sent to drivers say otherwise:
    75 DZD ×15    285 DZD ×95
 ```
 
-`driverMinExtraFee` is **0 on all 164**, so a driver can never bid *below* the
-fare. `offeredFare` is the **supplement**, not the total — sending the total
-answers `EXTRA_FEE_NOT_ALLOWED`.
+`offeredFare` is the **supplement**, not the total — sending the total answers
+`EXTRA_FEE_NOT_ALLOWED`.
+
+~~`driverMinExtraFee` is **0 on all 164**~~ — **not quite, corrected
+2026-08-20.** It is 0 on **159 of 169**, and **10 DZD on the other ten**, all
+issued between 9 and 13 August, i.e. under the tariff that
+`apply-tariff.sh` replaced. The current Algerian policy declares
+`driver_min_extra_fee = 0` for all four variants and both merchants, so the
+floor is zero *today*. Read it off the request anyway: a step computed below it
+is refused, and the field is one `apply-tariff.sh` away from being non-zero
+again.
+
+**And the supplement path is not unexercised.** The D11 design page said
+`offeredFare` "has never been sent to this server" and recommended testing it
+before building the screen. `fare_parameters` disagrees:
+
+```sql
+SELECT driver_selected_fare, count(*) FROM atlas_driver_offer_bpp.fare_parameters
+ GROUP BY 1;   -->   0 x65,  120 x2
+```
+
+Two rides from 16 August carry a 120 DZD supplement — sent, accepted, and
+carried through fare calculation into the ride. Not the fleet simulator, which
+omits the field entirely; a manual test. The path works.
+
+`./probe-driver-offers.sql` is where all of this is read now, and it is a file
+rather than a shell one-liner because these figures have been quoted into design
+documents twice and been wrong twice, both times from the query being retyped
+slightly differently.
 
 ### The trap: `/start` needs a code that `/openapi` does not mention
 
@@ -1745,6 +1771,8 @@ probe-subscription.sql    can we switch off a driver who hasn't paid?
 probe-push.py             one push to a real phone, no ride needed;  isolates app vs server
 probe-search-window.py    how long a driver really gets, read off a real request.
                           Signs in as a RIDER only -- never as a fleet driver
+probe-driver-offers.sql   the bounds, the window and what drivers do with it.
+                          Read-only;  the source for every figure D10/D11 use
 
   services fronting the stack
 edge/                  nginx + TLS, the public face
