@@ -40,7 +40,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.BlockTracker as BT
-import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
@@ -80,26 +79,30 @@ eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = d
   DP.removeSearchReqIdFromMap merchantId driverId searchReqId
   case response of
     SRD.Accept -> do
-      DP.incrementQuoteAcceptedCount merchantOpCityId driverId
-      forM_ restDriverIds $ \restDriverId -> do
-        DP.decrementTotalQuotesCount merchantId merchantOpCityId (cast restDriverId) searchReqId
+      -- bt: QUOTE_RESPONSE_ACCEPT — this handler is fired from the accept flow right after
+      -- updateDriverResponse, so this counts each committed accept exactly once.
+      -- withdraw the accepted request from every other batch driver's open-requests map
+      -- (capacity bookkeeping; the old decrementTotalQuotesCount was an alias of this same call)
+      forM_ restDriverIds $ \restDriverId ->
         DP.removeSearchReqIdFromMap merchantId restDriverId searchReqId
-    SRD.Reject -> DP.incrementSrdRejectedCount driverId
+    -- Reject never reaches this handler (only the accept flow fires it); rejects are
+    -- counted at the respond site (Domain.Action.UI.Driver).
+    SRD.Reject -> pure ()
     SRD.Pulled -> pure ()
 eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
   windowSize <- SCR.getWindowSize merchantOpCityId
   void $ SCR.incrementAssignedCount driverId windowSize
-  -- Also increment via behavior-tracker for framework-based evaluation
-  let btCounterConfig = BTT.CounterConfig {windowSizeDays = windowSize, counters = [BTT.ELIGIBLE_COUNT], periods = []}
-  BTRecorder.incrementCounterOnly btCounterConfig BTT.DRIVER driverId.getId "RIDE_CANCELLATION" BTT.ELIGIBLE_COUNT
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   void $ case mbDriverStats of
     Just driverStats -> incrementOrSetTotalRides driverId driverStats
     Nothing -> createDriverStat currency distanceUnit driverId
   DP.incrementTotalRidesCount merchantOpCityId driverId
-eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
-  forM_ driverPool $ \dPoolRes -> DP.incrementTotalQuotesCount searchReq.providerId merchantOpCityId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill batchProcessTime
+eventPayloadHandler _merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
+  -- Shared quote-response eligibility is NOT counted here: DP.incrementSrdSentCount (called
+  -- when the request is actually sent to each driver) writes the bt: QUOTE_RESPONSE
+  -- ELIGIBLE_COUNT series, and cancellation flows retro-decrement it via DP.decrementSrdSentCount.
+  forM_ driverPool $ \dPoolRes -> DP.addSearchRequestInfoToCache searchReq.id searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) validTill batchProcessTime
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let driverId = driver.id
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)

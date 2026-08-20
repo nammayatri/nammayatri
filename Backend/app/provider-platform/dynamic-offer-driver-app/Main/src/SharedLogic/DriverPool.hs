@@ -18,21 +18,19 @@ module SharedLogic.DriverPool
     calculateDriverPoolWithActualDist,
     calculateDriverCurrentlyOnRideWithActualDist,
     filterOnRideDriversFromPool,
-    incrementTotalQuotesCount,
-    incrementQuoteAcceptedCount,
-    decrementTotalQuotesCount,
-    getTotalQuotesSent,
-    getLatestAcceptanceRatio,
     incrementTotalRidesCount,
     isThresholdRidesCompleted,
     incrementCancellationCount,
-    incrementSrdRejectedCount,
     incrementSrdSentCount,
     decrementSrdSentCount,
     getSrdStatsCountersBulk,
+    quoteResponseAcceptActionType,
+    quoteResponseRejectActionType,
+    quoteResponseEligibleActionType,
+    recordQuoteResponseCounters,
+    buildQuoteResponseSnapshot,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
-    getQuotesCount,
     getPopupDelay,
     getTotalRidesCount,
     getValidSearchRequestCount,
@@ -50,7 +48,6 @@ module SharedLogic.DriverPool
     CalculateDriverPoolReq (..),
     module Reexport,
     getBatchSize,
-    mkRideCancelledKey,
     addSearchRequestInfoToCache,
     isLessThenNParallelRequests,
     removeExpiredSearchRequestInfoFromCache,
@@ -69,6 +66,7 @@ module SharedLogic.DriverPool
 where
 
 import Control.Monad.Extra (mapMaybeM)
+import qualified Data.Aeson as A
 import Data.Fixed
 import qualified Data.Geohash as DG
 import Data.List (length, partition)
@@ -80,6 +78,7 @@ import Data.Time.Clock hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Data.Vector as V
 import Domain.Types as DVST
+import qualified Domain.Types.Common as SRD
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
@@ -101,7 +100,6 @@ import Kernel.Prelude (head, listToMaybe)
 import qualified Kernel.Prelude as KP
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
@@ -112,6 +110,10 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified Lib.BehaviorTracker.Accumulator as BTAcc
+import qualified Lib.BehaviorTracker.Recorder as BTRecorder
+import qualified Lib.BehaviorTracker.Snapshot as BTSnap
+import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Types.SpecialLocation as SL
@@ -134,34 +136,86 @@ import qualified Tools.Maps as TMaps
 import Tools.Metrics
 import Utils.Common.Cac.KeyNameConstants
 
-mkTotalQuotesKey :: Text -> Text
-mkTotalQuotesKey driverId = "driver-offer:DriverPool:Total-quotes:DriverId-" <> driverId
-
-mkQuotesAcceptedKey :: Text -> Text
-mkQuotesAcceptedKey driverId = "driver-offer:DriverPool:Quote-accepted:DriverId-" <> driverId
-
-mkTotalRidesKey :: Text -> Text
-mkTotalRidesKey driverId = "driver-offer:DriverPool:Total-Rides:DriverId-" <> driverId
-
-mkRideCancelledKey :: Text -> Text
-mkRideCancelledKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-" <> driverId
-
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-Time:DriverId-" <> driverId
 
--- Dedicated per-driver sliding-window counters surfaced in the POOLING dynamic-logic data.
--- Only REJECT and SENT get dedicated keys (no existing counter for those). ACCEPT and CANCEL
--- reuse the existing mkQuotesAcceptedKey / mkRideCancelledKey counters to avoid double-counting.
+-- Per-driver quote-response counters surfaced in the POOLING dynamic-logic data. Stored as
+-- behavior-tracker (bt:) counters so the behavior framework's rules and snapshots read the
+-- same series. ACCEPT/REJECT/PULL each get an ACTION_COUNT under their own action type;
+-- SENT is the shared eligibility (ELIGIBLE_COUNT under QUOTE_RESPONSE); CANCEL is the
+-- RIDE_CANCELLATION series (ACTION = cancels, ELIGIBLE = rides assigned).
 -- The fixed 7-day window lets both "today" (last 1 day-bucket) and "weekly" (last 7 day-buckets)
 -- be derived from the same series via getCurrentWindowValuesUptoLast.
-mkSrdRejectedCountKey :: Text -> Text
-mkSrdRejectedCountKey driverId = "driver-offer:SRDStats:rejected:DriverId-" <> driverId
+quoteResponseAcceptActionType, quoteResponseRejectActionType, quoteResponsePullActionType, quoteResponseEligibleActionType :: Text
+quoteResponseAcceptActionType = "QUOTE_RESPONSE_ACCEPT"
+quoteResponseRejectActionType = "QUOTE_RESPONSE_REJECT"
+quoteResponsePullActionType = "QUOTE_RESPONSE_PULL"
+quoteResponseEligibleActionType = "QUOTE_RESPONSE"
 
-mkSrdSentCountKey :: Text -> Text
-mkSrdSentCountKey driverId = "driver-offer:SRDStats:sent:DriverId-" <> driverId
+-- bt: series written on valid driver cancellation (Lib.DriverScore, OnDriverCancellation)
+rideCancellationActionType :: Text
+rideCancellationActionType = "RIDE_CANCELLATION"
+
+-- Cooldown tags exposed in the quote-response snapshot (e.g. {"var": "cooldowns.QuoteResponseNudge"})
+-- for the future quote-response behavior rulebook, so a nudge/block consequence can be
+-- guarded to fire at most once per cooldown window.
+quoteResponseCooldownTags :: [Text]
+quoteResponseCooldownTags = ["QuoteResponseNudge", "QuoteResponseBlock"]
+
+mkQuoteResponseCounterKey :: Text -> BTT.CounterType -> Text -> Text
+mkQuoteResponseCounterKey actionType counterType driverId = BTAcc.mkCounterKey BTT.DRIVER actionType counterType driverId
 
 srdStatsWindow :: SWC.SlidingWindowOptions
 srdStatsWindow = SWC.SlidingWindowOptions 7 SWC.Days
+
+quoteResponseActionType :: SRD.SearchRequestForDriverResponse -> Text
+quoteResponseActionType = \case
+  SRD.Accept -> quoteResponseAcceptActionType
+  SRD.Reject -> quoteResponseRejectActionType
+  SRD.Pulled -> quoteResponsePullActionType
+
+-- | Record the outcome of one quote response as a bt: ACTION_COUNT under the
+-- outcome's action type. Called at the respond site (Domain.Action.UI.Driver).
+recordQuoteResponseCounters ::
+  (EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  SRD.SearchRequestForDriverResponse ->
+  m ()
+recordQuoteResponseCounters _merchantOpCityId driverId response =
+  BTRecorder.incrementCounterOnly quoteResponseCounterConfig BTT.DRIVER driverId.getId (quoteResponseActionType response) BTT.ACTION_COUNT
+
+-- windowSizeDays fixed at 7 to match srdStatsWindow — getSrdStatsCountersBulk
+-- enumerates exactly these 7 day-buckets.
+quoteResponseCounterConfig :: BTT.CounterConfig
+quoteResponseCounterConfig =
+  BTT.CounterConfig
+    { windowSizeDays = 7,
+      counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
+      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7]
+    }
+
+-- | Snapshot for one quote-response outcome. Rates are computed against the shared
+-- QUOTE_RESPONSE eligibility (total requests received), not the outcome's own actionType.
+buildQuoteResponseSnapshot ::
+  (EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, MonadFlow m) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  SRD.SearchRequestForDriverResponse ->
+  m BTT.BehaviorSnapshot
+buildQuoteResponseSnapshot merchantOpCityId driverId response = do
+  eventTime <- getCurrentTime
+  let actionEvent =
+        BTT.ActionEvent
+          { entityType = BTT.DRIVER,
+            entityId = driverId.getId,
+            actionType = quoteResponseActionType response,
+            merchantOperatingCityId = merchantOpCityId.getId,
+            flowContext = A.object [],
+            eventData = A.object ["response" A..= (show response :: Text)],
+            timestamp = eventTime
+          }
+  BTSnap.buildSnapshotWithSharedEligible quoteResponseCounterConfig actionEvent (A.object []) quoteResponseCooldownTags quoteResponseEligibleActionType
 
 -- Per-search-try dispatch counters. All Redis-only and short-lived (a search try dies within
 -- minutes), they carry the cross-batch feedback a single batch can't see on its own:
@@ -243,16 +297,6 @@ getBatchSize dynamicBatchSize index driverBatchSize =
   let size = min (V.length dynamicBatchSize - 1) (index + 1)
    in bool (dynamicBatchSize V.! size) driverBatchSize (size <= -1)
 
-withAcceptanceRatioWindowOption ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  (SWC.SlidingWindowOptions -> m a) ->
-  m a
-withAcceptanceRatioWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.acceptanceRatioWindowOption) >>= fn
-
 withCancellationAndRideFrequencyRatioWindowOption ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
@@ -272,42 +316,6 @@ withAvailabilityTimeWindowOption ::
   (SWC.SlidingWindowOptions -> m a) ->
   m a
 withAvailabilityTimeWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.availabilityTimeWindowOption) >>= fn
-
-withMinQuotesToQualifyIntelligentPoolWindowOption ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  (SWC.SlidingWindowOptions -> m a) ->
-  m a
-withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId fn = windowFromIntelligentPoolConfig merchantOpCityId (.minQuotesToQualifyForIntelligentPoolWindowOption) >>= fn
-
-decrementTotalQuotesCount ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DM.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Id DP.Driver ->
-  Id SearchRequest ->
-  m ()
-decrementTotalQuotesCount merchantId _ driverId sreqId = removeSearchReqIdFromMap merchantId driverId sreqId
-
-incrementTotalQuotesCount ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DM.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Id DP.Person ->
-  SearchRequest ->
-  UTCTime ->
-  ExpirationTime ->
-  m ()
-incrementTotalQuotesCount merchantId _ driverId searchReq validTill = addSearchRequestInfoToCache searchReq.id merchantId driverId validTill
 
 isLessThenNParallelRequests ::
   ( Redis.HedisFlow m r,
@@ -379,35 +387,16 @@ removeSearchReqIdFromMap ::
 removeSearchReqIdFromMap merchantId driverId searchReqId = do
   void $ Redis.withMasterRedis $ Redis.withCrossAppRedis $ Redis.zRem (mkParallelSearchRequestKey merchantId driverId) [searchReqId.getId]
 
-incrementQuoteAcceptedCount ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  Id DP.Person ->
-  m ()
-incrementQuoteAcceptedCount merchantOpCityId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkQuotesAcceptedKey driverId.getId)
-
-getTotalQuotesSent ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  Id DP.Person ->
-  m Int
-getTotalQuotesSent merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkTotalQuotesKey driverId.getId)
-
-getLatestAcceptanceRatio ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  Id DP.Driver ->
-  m Double
-getLatestAcceptanceRatio merchantOpCityId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantOpCityId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey
+-- Ride-lifecycle counters, stored as the bt: RIDE_CANCELLATION series (ELIGIBLE = rides
+-- assigned, ACTION = cancellations) — the same series getSrdStatsCountersBulk feeds to the
+-- POOLING dynamic logic and the behavior framework's snapshots read.
+rideCancellationCounterConfig :: BTT.CounterConfig
+rideCancellationCounterConfig =
+  BTT.CounterConfig
+    { windowSizeDays = 7,
+      counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
+      periods = [BTT.mkPeriodConfig "daily" 1, BTT.mkPeriodConfig "weekly" 7]
+    }
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -417,7 +406,7 @@ incrementTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementTotalRidesCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
+incrementTotalRidesCount _merchantOpCityId driverId = BTRecorder.incrementCounterOnly rideCancellationCounterConfig BTT.DRIVER driverId.getId rideCancellationActionType BTT.ELIGIBLE_COUNT
 
 getTotalRidesCount ::
   ( Redis.HedisFlow m r,
@@ -427,7 +416,7 @@ getTotalRidesCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Int
-getTotalRidesCount merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkTotalRidesKey driverId.getId)
+getTotalRidesCount _merchantOpCityId driverId = fromIntegral <$> BTAcc.getCountForPeriod BTT.DRIVER rideCancellationActionType BTT.ELIGIBLE_COUNT driverId.getId 7 rideCancellationCounterConfig.windowSizeDays
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
@@ -437,7 +426,7 @@ incrementCancellationCount ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   m ()
-incrementCancellationCount merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
+incrementCancellationCount _merchantOpCityId driverId = BTRecorder.incrementCounterOnly rideCancellationCounterConfig BTT.DRIVER driverId.getId rideCancellationActionType BTT.ACTION_COUNT
 
 getLatestCancellationRatio' ::
   ( EsqDBFlow m r,
@@ -447,7 +436,7 @@ getLatestCancellationRatio' ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
+getLatestCancellationRatio' merchantOpCityId driverId = Redis.withCrossAppRedis . withCancellationAndRideFrequencyRatioWindowOption merchantOpCityId $ SWC.getLatestRatio driverId.getId (BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT) (BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ELIGIBLE_COUNT)
 
 getLatestCancellationRatio ::
   ( EsqDBFlow m r,
@@ -477,15 +466,9 @@ getCurrentWindowAvailability ::
   m [Maybe a]
 getCurrentWindowAvailability merchantOpCityId driverId = Redis.withCrossAppRedis . withAvailabilityTimeWindowOption merchantOpCityId $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
 
-incrementSrdRejectedCount ::
-  ( Redis.HedisFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  Id DP.Person ->
-  m ()
-incrementSrdRejectedCount driverId = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkSrdRejectedCountKey driverId.getId) srdStatsWindow
-
+-- | Shared quote-response eligibility (bt: ELIGIBLE_COUNT under QUOTE_RESPONSE): one +1 per
+-- request actually sent to the driver, whether he later accepts, rejects or ignores it.
+-- Multi-cloud so the behavior framework's cross-cloud readers see the same series.
 incrementSrdSentCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
@@ -493,7 +476,7 @@ incrementSrdSentCount ::
   ) =>
   Id DP.Person ->
   m ()
-incrementSrdSentCount driverId = Redis.withCrossAppRedis $ SWC.incrementWindowCount (mkSrdSentCountKey driverId.getId) srdStatsWindow
+incrementSrdSentCount driverId = BTRecorder.incrementCounterOnly quoteResponseCounterConfig BTT.DRIVER driverId.getId quoteResponseEligibleActionType BTT.ELIGIBLE_COUNT
 
 decrementSrdSentCount ::
   ( Redis.HedisFlow m r,
@@ -503,12 +486,12 @@ decrementSrdSentCount ::
   UTCTime ->
   Id DP.Person ->
   m ()
-decrementSrdSentCount sentAt driverId = Redis.withCrossAppRedis $ SWC.decrementByValueInTimeBucket sentAt 1 (mkSrdSentCountKey driverId.getId) srdStatsWindow
+decrementSrdSentCount sentAt driverId = BTRecorder.decrementCounterOnly quoteResponseCounterConfig BTT.DRIVER driverId.getId quoteResponseEligibleActionType BTT.ELIGIBLE_COUNT sentAt
 
 -- Fetch all 8 per-driver sliding-window counts (today = last 1 day-bucket, weekly = last 7
--- day-buckets) for use in the POOLING dynamic-logic data. Acceptance reuses the existing
--- mkQuotesAcceptedKey counter and cancellation reuses mkRideCancelledKey (to avoid
--- double-counting); rejection and sent use the dedicated SRDStats keys.
+-- day-buckets) for use in the POOLING dynamic-logic data. All four series are behavior-tracker
+-- (bt:) counters — the same ones the behavior framework's rules and snapshots use — so pooling
+-- dynamic logic and behavior rules always judge the same numbers.
 -- Fallback cap on how many drivers' keys go into a single pipelined MGET, so a large pool never
 -- issues one unboundedly large multi-key Redis read in a single I/O. Overridable per pool via
 -- DriverPoolConfig.srdCountersBulkChunkSize.
@@ -538,7 +521,12 @@ getSrdStatsCountersBulk ::
 getSrdStatsCountersBulk mbChunkSize driverIds =
   Map.unions <$> mapM readChunk (chunksOfList (fromMaybe defaultBulkDriverChunkSize mbChunkSize) driverIds)
   where
-    baseKeysFor did = [mkQuotesAcceptedKey did, mkRideCancelledKey did, mkSrdRejectedCountKey did, mkSrdSentCountKey did]
+    baseKeysFor did =
+      [ mkQuoteResponseCounterKey quoteResponseAcceptActionType BTT.ACTION_COUNT did,
+        BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT did,
+        mkQuoteResponseCounterKey quoteResponseRejectActionType BTT.ACTION_COUNT did,
+        mkQuoteResponseCounterKey quoteResponseEligibleActionType BTT.ELIGIBLE_COUNT did
+      ]
     readChunk [] = pure Map.empty
     readChunk chunk = do
       now <- getCurrentTime
@@ -550,10 +538,10 @@ getSrdStatsCountersBulk mbChunkSize driverIds =
             let vs = map (\k -> Map.findWithDefault 0 k valMap) ks
              in (fromIntegral (case vs of (x : _) -> x; _ -> 0 :: Integer), fromIntegral (sum vs))
           countersFor did =
-            let (accT, accW) = sumHead (dayKeys (mkQuotesAcceptedKey did))
-                (canT, canW) = sumHead (dayKeys (mkRideCancelledKey did))
-                (rejT, rejW) = sumHead (dayKeys (mkSrdRejectedCountKey did))
-                (sentT, sentW) = sumHead (dayKeys (mkSrdSentCountKey did))
+            let (accT, accW) = sumHead (dayKeys (mkQuoteResponseCounterKey quoteResponseAcceptActionType BTT.ACTION_COUNT did))
+                (canT, canW) = sumHead (dayKeys (BTAcc.mkCounterKey BTT.DRIVER rideCancellationActionType BTT.ACTION_COUNT did))
+                (rejT, rejW) = sumHead (dayKeys (mkQuoteResponseCounterKey quoteResponseRejectActionType BTT.ACTION_COUNT did))
+                (sentT, sentW) = sumHead (dayKeys (mkQuoteResponseCounterKey quoteResponseEligibleActionType BTT.ELIGIBLE_COUNT did))
              in SearchReqDriverStatsCounters
                   { acceptanceCountToday = accT,
                     acceptanceCountWeekly = accW,
@@ -565,20 +553,6 @@ getSrdStatsCountersBulk mbChunkSize driverIds =
                     totalRequestsSentWeekly = sentW
                   }
       pure $ Map.fromList [(d, countersFor d.getId) | d <- chunk]
-
-mkQuotesCountKey :: Text -> Text
-mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId
-
-getQuotesCount ::
-  ( FromJSON a,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Num a
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  Id DP.Driver ->
-  m a
-getQuotesCount merchantOpCityId driverId = fmap fromIntegral . Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption merchantOpCityId $ SWC.getCurrentWindowCount (mkQuotesCountKey driverId.getId)
 
 isThresholdRidesCompleted ::
   ( CacheFlow m r,

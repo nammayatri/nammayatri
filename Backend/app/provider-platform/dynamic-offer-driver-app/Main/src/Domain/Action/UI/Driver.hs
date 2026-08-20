@@ -1969,6 +1969,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+            DP.recordQuoteResponseCounters merchantOpCityId driverId SRD.Accept
+            -- accept counting happens in driverScoreEventHandler's Accept case (bt: QUOTE_RESPONSE_ACCEPT)
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
           else do
@@ -1979,13 +1981,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     Reject -> do
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
+      -- bt: QUOTE_RESPONSE_REJECT, anchored to the committed response (same series the
+      -- POOLING ruleset reads via getSrdStatsCountersBulk).
+      DP.recordQuoteResponseCounters merchantOpCityId driverId Reject
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
-      -- The per-driver weekly reject counter the intelligent pool ranks on. It was only ever
-      -- incremented from driverScoreEventHandler's Reject case, which this branch never reaches
-      -- (the handler is fired from the Accept branch only), so the signal sat at zero.
-      DP.incrementSrdRejectedCount driverId
       -- Cross-batch reject accounting: the cumulative count reaches the POOLING ruleset on the
       -- next batch, the per-batch count tells us when a batch has been turned down outright.
       void $ DP.incrementSearchTryRejectCount searchTry.id

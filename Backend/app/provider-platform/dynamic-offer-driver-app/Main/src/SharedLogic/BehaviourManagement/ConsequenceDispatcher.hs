@@ -29,6 +29,7 @@ import qualified Domain.Types.Person as DP
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorTracker.BlockTracker as BT
@@ -41,6 +42,9 @@ import qualified Lib.ConsequenceEngine.Parser as CEParser
 import qualified Lib.ConsequenceEngine.Types as CET
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
+import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
@@ -207,6 +211,18 @@ dispatchConsequence ctx driverId = \case
             BTRecorder.incrementCounterOnly config event.entityType event.entityId event.actionType counterType
           Nothing -> logWarning $ "Unknown counterType '" <> params.counterType <> "' for driver " <> driverId.getId
       _ -> logWarning $ "INCREMENT_COUNTER consequence for driver " <> driverId.getId <> " but no counterConfig/actionEvent in DispatchContext"
+  CET.AssignTag params -> do
+    logInfo $ "Assigning tag " <> params.tagName <> " with value " <> params.tagValue <> " for driver " <> driverId.getId
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    now <- getCurrentTime
+    let tag = Yudhishthira.mkTagNameValue (LYT.TagName params.tagName) (LYT.TextValue params.tagValue)
+    mbRegisteredTag <- catch (YudhishthiraFlow.verifyTag (cast ctx.merchantOperatingCityId) tag) $ \(err :: SomeException) -> do
+      logWarning $ "AssignTag: tag verification failed for '" <> params.tagName <> "': " <> show err
+      pure Nothing
+    let expiryHours = maybe (mbRegisteredTag >>= (.validity)) (Just . Hours) params.validityHours
+        tagWithExpiry = Yudhishthira.addTagExpiry tag expiryHours now
+        updatedTags = Yudhishthira.replaceTagNameValue driver.driverTag tagWithExpiry
+    QPerson.updateDriverTag (Just updatedTags) driverId
 
 -- | Map blockReasonTag text to BlockReasonFlag enum
 parseBlockReasonFlag :: Maybe Text -> BlockReasonFlag

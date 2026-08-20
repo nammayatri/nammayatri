@@ -15,6 +15,7 @@
 module Lib.BehaviorTracker.Snapshot
   ( buildSnapshot,
     buildSnapshotWithCooldowns,
+    buildSnapshotWithSharedEligible,
   )
 where
 
@@ -22,7 +23,7 @@ import qualified Data.Map.Strict as Map
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
-import Lib.BehaviorTracker.Accumulator (buildCounterValues)
+import Lib.BehaviorTracker.Accumulator (buildCounterValuesWithEligible)
 import Lib.BehaviorTracker.BlockTracker (isEntityInCooldown)
 import Lib.BehaviorTracker.Types
 
@@ -55,8 +56,42 @@ buildSnapshotWithCooldowns ::
   Value -> -- entityState
   [Text] -> -- cooldown reasonTags to check
   m BehaviorSnapshot
-buildSnapshotWithCooldowns config event entityState cooldownTags = do
-  counterMap <- buildCounterMapForEntity config event.entityType event.actionType event.entityId
+buildSnapshotWithCooldowns config event entityState cooldownTags =
+  buildSnapshotInternal config event entityState cooldownTags Nothing
+
+-- | Like buildSnapshotWithCooldowns, but the rate denominator (ELIGIBLE_COUNT) is read
+-- from a shared actionType instead of the event's own actionType. Use when several
+-- outcome-specific action types share one total-eligibility counter, so every outcome's
+-- rate reads as "share of the shared eligibility".
+buildSnapshotWithSharedEligible ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  CounterConfig ->
+  ActionEvent ->
+  Value -> -- entityState
+  [Text] -> -- cooldown reasonTags to check
+  Text -> -- actionType to read ELIGIBLE_COUNT from
+  m BehaviorSnapshot
+buildSnapshotWithSharedEligible config event entityState cooldownTags eligibleActionType =
+  buildSnapshotInternal config event entityState cooldownTags (Just eligibleActionType)
+
+buildSnapshotInternal ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  CounterConfig ->
+  ActionEvent ->
+  Value ->
+  [Text] ->
+  Maybe Text -> -- ELIGIBLE_COUNT actionType override
+  m BehaviorSnapshot
+buildSnapshotInternal config event entityState cooldownTags mbEligibleActionType = do
+  counterMap <- buildCounterMapForEntity config event.entityType event.actionType mbEligibleActionType event.entityId
   cooldownMap <- buildCooldownMap event.entityType event.entityId cooldownTags
   now <- getCurrentTime
   return $
@@ -83,14 +118,16 @@ buildCounterMapForEntity ::
   CounterConfig ->
   EntityType ->
   Text -> -- actionType
+  Maybe Text -> -- ELIGIBLE_COUNT actionType override
   Text -> -- entityId
   m (Map.Map Text CounterValues)
-buildCounterMapForEntity config entityType actionType entityId = do
+buildCounterMapForEntity config entityType actionType mbEligibleActionType entityId = do
   pairs <- forM config.periods $ \period -> do
     values <-
-      buildCounterValues
+      buildCounterValuesWithEligible
         entityType
         actionType
+        mbEligibleActionType
         entityId
         period.periodDays
         config.windowSizeDays
