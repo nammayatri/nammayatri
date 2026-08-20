@@ -171,9 +171,9 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
-            Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId []
             -- Same buildRentalDetails builder as Rental — EasyBooking reuses RentalBookingDetails.
-            EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
+            EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId []
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
@@ -182,7 +182,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         Nothing ->
           case fareProductType of
             ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId []
-            RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId []
             ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId []
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
@@ -215,9 +215,9 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             OneWay MeterRide -> DRB.MeterRideDetails <$> buildOneWayMeterRideDetails toLocId
             CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
-            Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId stops
             -- Same buildRentalDetails builder as Rental — EasyBooking reuses RentalBookingDetails.
-            EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
+            EasyBooking _ -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId stops
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
@@ -226,14 +226,14 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         Nothing ->
           case fareProductType of
             ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId stops
-            RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId stops
             DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
             ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId stops
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             -- Unreachable in practice (EasyBooking is new, so no legacy row lacks tripCategory),
             -- but the pattern must still be exhaustive; mirrors the RENTAL branch above.
-            EASY_BOOKING -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId
+            EASY_BOOKING -> DRB.EasyBookingDetails <$> buildRentalDetails stopLocationId stops
       return (fl, bookingDetails)
   where
     buildOneWayDetails mbToLocid stops = do
@@ -270,7 +270,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             toLocation = toLocation,
             ..
           }
-    buildRentalDetails mbStopLocationId = do
+    buildRentalDetails mbStopLocationId stops = do
       mbStopLocation <- maybe (pure Nothing) (QL.findById . Id) mbStopLocationId
       pure
         DRB.RentalBookingDetails

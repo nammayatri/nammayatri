@@ -451,6 +451,13 @@ isTollApplicableForTrip _ (Delivery _) = True
 isTollApplicableForTrip _ (EasyBooking _) = True
 isTollApplicableForTrip _ _ = False
 
+isManualTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
+isManualTollApplicableForTrip AUTO_RICKSHAW _ = False
+isManualTollApplicableForTrip AUTO_PLUS _ = False
+isManualTollApplicableForTrip _ (InterCity _ _) = True
+isManualTollApplicableForTrip _ (Rental _) = True
+isManualTollApplicableForTrip _ _ = False
+
 isDeliveryTrip :: TripCategory -> Bool
 isDeliveryTrip (Delivery _) = True
 isDeliveryTrip _ = False

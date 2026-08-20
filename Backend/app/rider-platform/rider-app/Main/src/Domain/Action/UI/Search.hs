@@ -173,7 +173,7 @@ extractSearchDetails now = \case
       { riderPreferredOption = DRPO.Rental,
         roundTrip = False,
         stops = fromMaybe [] stops,
-        hasStops = Nothing,
+        hasStops = stops >>= \s -> Just (length s > 1),
         returnTime = Nothing,
         driverIdentifier_ = Nothing,
         routeCode = Nothing,
@@ -219,7 +219,7 @@ extractSearchDetails now = \case
     SearchDetails
       { riderPreferredOption = DRPO.InterCity,
         stops = fromMaybe [] stops,
-        hasStops = Nothing,
+        hasStops = stops >>= \s -> Just (length s > 1),
         driverIdentifier_ = Nothing,
         routeCode = Nothing,
         destinationStopCode = Nothing,
