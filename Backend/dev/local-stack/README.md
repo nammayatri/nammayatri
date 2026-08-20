@@ -1119,14 +1119,73 @@ stores whatever is sent, and all four driver cancellations so far say `OTHER`.
 The list of reasons is therefore a product decision, not a technical constraint,
 and it is the only data the agency will ever have on why rides fail.
 
-### Losing an offer is silent
+### Losing an offer — recorded by the server, exposed by nothing
 
-When the rider picks someone else the quote simply flips `Active` → `Inactive`.
-No event, no notification, nothing to listen for. 25 of 66 offers (**38 %**)
-never became a ride. Whether the server pushes anything to the *driver* when he
-**wins** has not been measured — the app currently learns by polling
-`GET /ui/driver/ride/list?onlyActive=true&status=NEW`, which is enough given the
-0–1 s figure above.
+**This section said losing was silent, and that the server sends nothing. Both
+halves were wrong, and only the practical conclusion survives.** Corrected 20
+August against the live database and the published route list; the numbers come
+from `./probe-driver-wait.sql`.
+
+The server records a loss precisely. `Domain/Action/Beckn/Confirm.hs` sets every
+non-winning driver's `search_request_for_driver.response` to **`Pulled`** and
+sends each of them `notifyDriverClearedFare` — FCM `CLEARED_FARE`. In the data:
+
+| the driver's row, after the passenger decided | count |
+|---|---|
+| won — `response=Accept`, request `Inactive`, quote `Inactive` | 43 |
+| lost to another driver — `response=Pulled` | 22 |
+| lost some other way (search cancelled or expired) | 3 |
+
+So **26 of 69 offers (38 %) never became a ride**, and 22 of the 25 concluded
+losses are literally "another driver was chosen".
+
+What is true is that **no `/ui/` route exposes any of it.** All twenty driver
+routes the binary publishes were enumerated from `/openapi`; none returns a
+driver's own quotes, and none reports `Pulled`. So a client still cannot ask
+"did I lose".
+
+**But it can observe that the search ended.** Confirming sets the whole search
+inactive in one transaction, so the request leaves `nearbyRideRequest` at the
+instant the passenger decides — for the winner and every loser alike. That says
+the search is over, not which way it went; one
+`GET /ui/driver/ride/list?onlyActive=true` says which. Two traps sit in that,
+both of which produced a wrong verdict in testing:
+
+- **The ride row lags the booking**, 0 s on 31 assignments, 1 s on 11 and 3 s on
+  one. Inside that gap the request is gone and no ride exists yet, which is
+  indistinguishable from losing. The app waits 10 s before concluding.
+- **A row leaving the list is not always a decision.** `nearbyRideRequest`
+  selects on `searchRequestValidTill > now`, so it also ages out at the end of
+  the *answer* window — while the quote has its own fresh 60 s from the press
+  and the passenger's search runs 300 s. Only a disappearance *before* that
+  deadline counts as a verdict.
+
+### The offer's own life, which is not the answer window
+
+`driver_quote.valid_till - created_at` is **60 s on all 69 quotes**, and no
+booking in 43 has ever landed after it. The driver's *answer* window is also 60 s
+today, and the two are different settings that merely agree: the answer window is
+`singleBatchProcessTime`, moved from 10 s on 20 August, and the three quotes
+issued since that change are still exactly 60 s. Anything deriving one from the
+other is right today and wrong after the next `./apply-search-window.sh`.
+
+How long the passenger takes to choose, over the 43 assignments: fastest 0 s,
+**median 4 s**, mean 7 s, nine times in ten under 18 s, slowest 50 s.
+
+### Driver push is configured — this was recorded as unverified
+
+`atlas_driver_offer_bpp.transporter_config` carries `fcm_url`,
+`fcm_service_account` and `fcm_token_key_prefix` (note: **not** on `merchant`,
+which is where the rider side keeps them). It points at
+`https://fcm.googleapis.com/v1/projects/movin-dz/messages:send` with a real
+3 152-character service account — `./apply-fcm.sh` did both sides on purpose,
+and its header says why. The binary carries `NEW_RIDE_AVAILABLE`,
+`DRIVER_QUOTE_INCOMING` and `CLEARED_FARE`, and **26 of 33 driver rows already
+hold a device token**.
+
+What is still unproven is delivery to a real driver handset, and the driver app
+does not yet register its token. So push is an enhancement on top of the polling
+above, not a prerequisite — the wait screen must be correct without it.
 
 ## Two test drivers, at the two ends of the journey
 
@@ -1773,6 +1832,9 @@ probe-search-window.py    how long a driver really gets, read off a real request
                           Signs in as a RIDER only -- never as a fleet driver
 probe-driver-offers.sql   the bounds, the window and what drivers do with it.
                           Read-only;  the source for every figure D10/D11 use
+probe-driver-wait.sql     what happens AFTER the driver presses -- how long an
+                          offer lives, how it ends, how often it ends in
+                          nothing.  Read-only;  the source for D12
 
   services fronting the stack
 edge/                  nginx + TLS, the public face
