@@ -1143,7 +1143,9 @@ TransporterConfig:
     minRidesForCancellationScore: Maybe Int
     thresholdCancellationPercentageToUnlist: Maybe Int
     qarCalRadiusInKm: Maybe Double
+    dropQarCalRadiusInKm: Maybe Double
     isDynamicPricingQARCalEnabled: Maybe Bool
+    isDropLocQARCalEnabled: Maybe Bool
     recomputeCongestionChargeOnEndRide: Maybe Bool
     enableMobilityBilling: Maybe Bool
     minRidesToUnlist: Maybe Int

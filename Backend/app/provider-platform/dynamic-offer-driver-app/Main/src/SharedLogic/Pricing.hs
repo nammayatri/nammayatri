@@ -188,9 +188,9 @@ getActualQAR ::
   LatLong ->
   Double ->
   Int ->
-  Text ->
+  Maybe Text ->
   m (Maybe Double, Maybe Double)
-getActualQAR now vehicleCategory location radius distance cityId = do
+getActualQAR now vehicleCategory location radius distance mbCityId = do
   -- Levels, finest first: distance-bin @ radius → vehicle-category @ radius →
   -- vehicle-category @ 2×radius → city. 'current' and 'past' resolve INDEPENDENTLY:
   -- each takes its value from the finest level at which it has enough demand, so the
@@ -201,8 +201,8 @@ getActualQAR now vehicleCategory location radius distance cityId = do
       accDistAt t = mkAcceptanceVehicleCategoryWithDistanceBin t vehicleCategory (Just distance)
       demVcAt t = mkDemandVehicleCategory t vehicleCategory
       accVcAt t = mkAcceptanceVehicleCategory t vehicleCategory
-      demCityAt t = mkDemandVehicleCategoryCity t vehicleCategory cityId
-      accCityAt t = mkAcceptanceVehicleCategoryCity t vehicleCategory cityId
+      demCityAt cityId t = mkDemandVehicleCategoryCity t vehicleCategory cityId
+      accCityAt cityId t = mkAcceptanceVehicleCategoryCity t vehicleCategory cityId
       geoFetch rad keys = batchGeoSearchCounts keys location rad
       -- City counters live in plain (non-geo) keys; align the reply to the requested
       -- key order and default missing keys to 0, matching 'batchGeoSearchCounts'.
@@ -224,7 +224,11 @@ getActualQAR now vehicleCategory location radius distance cityId = do
           r3 <- resolveLevel demVcAt accVcAt (geoFetch (2 * radius)) r2
           if bothJust r3
             then return r3
-            else resolveLevel demCityAt accCityAt cityFetch r3 -- Level 4: city
+            else case mbCityId of
+              -- Level 4: city. Skipped when no cityId is supplied (drop-location QAR), where
+              -- the city-wide value would just duplicate the pickup-side one.
+              Just cityId -> resolveLevel (demCityAt cityId) (accCityAt cityId) cityFetch r3
+              Nothing -> return r3
   where
     timeN = now
     timeN_1 = addUTCTime (-900) now

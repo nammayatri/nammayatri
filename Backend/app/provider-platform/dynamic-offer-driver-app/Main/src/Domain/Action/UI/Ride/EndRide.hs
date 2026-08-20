@@ -193,7 +193,7 @@ data ServiceHandle m = ServiceHandle
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
-    getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
+    getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe FarePolicy.DropQARConfig -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
   }
 
 buildEndRideHandle ::
@@ -226,8 +226,8 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation,
-        getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur ->
-          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
+        getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbDropQARConfig mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur ->
+          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing mbDropQARConfig timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
       }
 
 -- Helper function to get driver number from Person record
@@ -885,6 +885,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
                 (Just recalcDistance)
                 finalDuration
                 thresholdConfig.qarCalRadiusInKm
+                (FarePolicy.mkDropQARConfig thresholdConfig (Just . getCoordinates =<< booking.toLocation))
                 booking.specialLocationName
                 booking.dynamicPricingLogicVersion
                 booking.merchantOperatingCityId
