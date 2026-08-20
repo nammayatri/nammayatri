@@ -308,8 +308,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
     DFRFSTicketBooking.RESCHEDULED -> do
       withPaymentStatusResponseHandler $ \(paymentBooking, _, paymentStatusResp) -> do
         let paymentBookingStatus = maybe FRFSTicketService.NEW (makeTicketBookingPaymentAPIStatus . (.status)) paymentStatusResp
-        buildRefundMoreThanOneChargedPaymentBookingStatusAPIRes paymentBooking paymentBookingStatus booking quoteCategories
-          `orElseM` buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
+        buildFRFSTicketBookingStatusAPIRes booking quoteCategories (buildPaymentObject booking paymentBooking paymentBookingStatus)
   where
     orElseM action fallback = action >>= maybe fallback pure
 
