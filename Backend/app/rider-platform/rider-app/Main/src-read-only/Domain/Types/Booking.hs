@@ -176,5 +176,5 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data RentalBookingDetails = RentalBookingDetails {otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location}
+data RentalBookingDetails = RentalBookingDetails {otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location, stops :: [Domain.Types.Location.Location]}
   deriving (Generic, Show, FromJSON, ToJSON)

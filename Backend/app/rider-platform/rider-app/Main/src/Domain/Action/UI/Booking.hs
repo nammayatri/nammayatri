@@ -671,7 +671,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
       startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
       origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
       let sourceLatLong = LatLong {lat = origin.lat, lon = origin.lon}
-      void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong destination.gps person
+      void $ Serviceability.validateServiceabilityForEditDestination booking.bookingDetails sourceLatLong destination.gps person
       newDropLocation <- DRide.buildLocation merchantId booking.merchantOperatingCityId destination
       QL.create newDropLocation
       oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)

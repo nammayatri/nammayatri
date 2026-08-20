@@ -152,6 +152,7 @@ Booking:
       derive': Generic,Show,FromJSON,ToJSON
     RentalBookingDetails:
       stopLocation: Maybe Location
+      stops: "[Location]"
       otpCode: Maybe Text
       derive': Generic,Show,FromJSON,ToJSON
     OneWaySpecialZoneBookingDetails:

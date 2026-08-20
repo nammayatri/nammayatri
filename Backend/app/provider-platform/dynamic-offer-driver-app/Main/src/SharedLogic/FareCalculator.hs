@@ -451,6 +451,8 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
+    -- True only when tollCharges is a manual driver entry (InterCity/Rental at ride end); lets it bypass the auto-toll category gate.
+    isManualToll :: Bool,
     noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit,
@@ -584,7 +586,7 @@ calculateFareParametersHandler params = do
                   params.currency
                   fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
+            tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory || params.isManualToll then params.tollCharges else Nothing),
             govtCharges = govtCharges,
             insuranceCharge = insuranceChargeResult,
             luggageCharge = luggageCharge,

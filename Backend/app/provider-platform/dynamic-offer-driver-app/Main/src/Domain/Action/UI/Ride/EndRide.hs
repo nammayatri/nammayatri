@@ -146,7 +146,8 @@ data DriverEndRideReq = DriverEndRideReq
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometer :: Maybe DRide.OdometerReading,
-    driverGpsTurnedOff :: Maybe Bool
+    driverGpsTurnedOff :: Maybe Bool,
+    driverEnteredTollCharges :: Maybe HighPrecMoney
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -546,7 +547,14 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
+                -- InterCity/Rental get no auto (route/GPS) toll; fall back to the driver-entered amount so it lands in the fare.
+                let isManualTollCategory = DTC.isManualTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
+                    -- Driver may enter 0 to mean "no toll"; treat that as absent so no ₹0 toll line shows in the breakup.
+                    mbDriverEnteredToll = case req of
+                      DriverReq dReq -> dReq.driverEnteredTollCharges >>= (\t -> if t > 0 then Just t else Nothing)
+                      _ -> Nothing
+                    finalTollCharges = if isManualTollCategory then mbDriverEnteredToll else tollCharges
+                let ride = updRide{tollCharges = finalTollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -916,6 +924,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
+              -- toll present on a manual-toll category (InterCity/Rental, non-auto) ⇒ entered by the driver ⇒ apply it to the fare.
+              isManualToll = DTC.isManualTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory && isJust ride.tollCharges,
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,
