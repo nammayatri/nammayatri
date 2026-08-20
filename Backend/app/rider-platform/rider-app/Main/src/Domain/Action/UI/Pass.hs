@@ -1179,7 +1179,7 @@ updatePurchasedPass mbClientSdkVersion purchasedPass today now = do
 
           newActivatedAt
             | newStatus /= DPurchasedPass.Active = purchasedPass.activatedAt
-            | firstPayment.status == DPurchasedPass.PreBooked && newStatus == DPurchasedPass.Active = Just now
+            | (firstPayment.status == DPurchasedPass.PreBooked || firstPayment.status == DPurchasedPass.PhotoPending) && newStatus == DPurchasedPass.Active = Just now
             | maybe False (\activatedAt -> firstPayment.startDate > DT.utctDay activatedAt) purchasedPass.activatedAt = Just now
             | otherwise = purchasedPass.activatedAt
 
