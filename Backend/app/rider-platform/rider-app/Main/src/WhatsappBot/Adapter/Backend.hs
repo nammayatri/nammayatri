@@ -199,6 +199,7 @@ mkBackendHandle merchantId mocId ctx =
               Nothing
               Nothing
               Nothing
+              Nothing
           let rides = mapMaybe onlyRide res.list
               filtered = maybe rides (\t -> filter (\e -> e.createdAt >= t) rides) mAfter
           pure (map toBotBooking filtered),

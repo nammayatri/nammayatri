@@ -49,6 +49,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaym
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.FRFSPassConfirm as FRFSPassConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -463,6 +464,7 @@ buildFRFSTicketBookingStatusAPIRes ::
   Maybe FRFSTicketService.FRFSBookingPaymentAPI ->
   m FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
+  mbAppliedPassPayment <- FRFSPassOverride.paymentForOverrideAppliedEntity booking.overrideAppliedEntityId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
@@ -493,6 +495,8 @@ buildFRFSTicketBookingStatusAPIRes booking quoteCategories payment = do
         overrideType = booking.overrideType,
         overriddenTotalPrice = mkPriceAPIEntity . Common.mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
         appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
+        appliedPassId = mbAppliedPassPayment >>= (.passId),
+        appliedPassName = mbAppliedPassPayment >>= (.passName),
         city = merchantOperatingCity.city,
         updatedAt = booking.updatedAt,
         createdAt = booking.createdAt,

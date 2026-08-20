@@ -19,6 +19,7 @@ module SharedLogic.FRFSPassOverride
     applyOverrideBenefit,
     benefitForOverrideAppliedEntity,
     passForOverrideAppliedEntity,
+    paymentForOverrideAppliedEntity,
     parseOverrideBenefitConfig,
     isFullyPassCovered,
     fullyCoveredByPass,
@@ -371,6 +372,12 @@ applyOverrideBenefit benefit basePrice
   where
     isEnabled = fromMaybe False
     discounted saving = mkPrice (Just basePrice.currency) (max 0 (basePrice.amount - saving))
+
+-- | The purchase that funded a booking. passId and passName both live on the payment row, so
+-- describing which pass paid needs no Pass read -- only callers wanting pass config need that.
+paymentForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe DPPP.PurchasedPassPayment)
+paymentForOverrideAppliedEntity Nothing = pure Nothing
+paymentForOverrideAppliedEntity (Just entityId) = QPurchasedPassPayment.findByPrimaryKey (Id entityId)
 
 passForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe (DPPP.PurchasedPassPayment, DPass.Pass))
 passForOverrideAppliedEntity Nothing = pure Nothing

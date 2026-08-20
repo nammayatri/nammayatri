@@ -43,6 +43,14 @@ types:
     passEnum: Maybe PassEnum
     derive: "Show"
 
+  FrfsOverrideConfigAPIEntity:
+    percentageApplicable: Maybe HighPrecMoney
+    fixedApplicable: Maybe HighPrecMoney
+    maximumTripCount: Maybe Int
+    unlimitedTripCount: Bool
+    maxTicketQuantityPerOverride: Maybe Int
+    derive: "Show"
+
   PassAPIEntity:
     id: Id Pass
     amount: HighPrecMoney
@@ -54,6 +62,8 @@ types:
     vehicleType: VehicleCategory
     maxTrips: Maybe Int
     maxDays: Maybe Int
+    frfsOverrideConfig: Maybe FrfsOverrideConfigAPIEntity
+    frfsCancelLimit: Maybe Int
     documentsRequired: "[PassDocumentType]"
     eligibility: Bool
     name: Maybe Text
@@ -103,6 +113,7 @@ types:
     tripsLeft: Maybe Int
     availableTripCount: Maybe Int
     unlimitedTripCount: Bool
+    purchasedPassPaymentId: Maybe (Id PurchasedPassPayment)
     lastVerifiedVehicleNumber: Maybe Text
     isAutoVerified: Bool
     status: StatusType

@@ -38,7 +38,9 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
+import Data.List (sortOn)
 import qualified Data.Map.Strict as Map
+import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -725,6 +727,16 @@ deletePassCatalog merchantShortId opCity passId = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
 
+mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity
+mkFrfsOverrideConfig benefit =
+  PassAPI.FrfsOverrideConfigAPIEntity
+    { percentageApplicable = benefit.percentageSaving >>= \p -> if p.enabled == Just True then Just p.applicableValue else Nothing,
+      fixedApplicable = benefit.fixedSaving >>= \f -> if f.enabled == Just True then Just f.applicableValue else Nothing,
+      maximumTripCount = benefit.maximumTripCount,
+      unlimitedTripCount = benefit.unlimitedTripCount == Just True,
+      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
+    }
+
 findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
 findMerchantOperatingCity merchantShortId opCity =
   CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
@@ -818,6 +830,11 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         Just (DPass.PercentageSaving percentage) -> passAmount / (1 - (percentage / 100))
         Nothing -> passAmount
 
+  mbFrfsOverrideConfig <-
+    if pass.frfsPriceOverrideApplicable == Just True
+      then fmap mkFrfsOverrideConfig <$> FRFSPassOverride.benefitFromPass pass
+      else pure Nothing
+
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
@@ -830,6 +847,8 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         vehicleType = pass.vehicleType,
         maxTrips = pass.maxValidTrips,
         maxDays = pass.maxValidDays,
+        frfsOverrideConfig = mbFrfsOverrideConfig,
+        frfsCancelLimit = pass.frfsCancelLimit,
         documentsRequired = pass.documentsRequired,
         eligibility = eligibility,
         name = name,
@@ -887,6 +906,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         vehicleType = purchasedPass.vehicleType,
         maxTrips = purchasedPass.maxValidTrips,
         maxDays = purchasedPass.maxValidDays,
+        frfsOverrideConfig = Nothing,
+        frfsCancelLimit = Nothing,
         description = description,
         documentsRequired = [],
         eligibility = True,
@@ -932,10 +953,16 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         purchasedPass.id
         [DPurchasedPass.Active, DPurchasedPass.PreBooked]
         today
-  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbLivePayment >>= (.passId))
+  mbPayment <-
+    case mbLivePayment of
+      Just live -> pure (Just live)
+      Nothing ->
+        listToMaybe . sortOn (Down . (.startDate)) . filter ((== DPurchasedPass.Expired) . (.status))
+          <$> QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
+  mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbPayment >>= (.passId))
   mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbOverridePass
-  availableTripCount <- case (mbLivePayment, mbBenefit) of
-    (Just livePayment, Just benefit) -> FRFSPassOverride.remainingTrips livePayment benefit
+  availableTripCount <- case (mbPayment, mbBenefit) of
+    (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
   let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
 
@@ -970,6 +997,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         tripsLeft = tripsLeft,
         availableTripCount = availableTripCount,
         unlimitedTripCount = unlimitedTripCount,
+        purchasedPassPaymentId = (.id) <$> mbPayment,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,

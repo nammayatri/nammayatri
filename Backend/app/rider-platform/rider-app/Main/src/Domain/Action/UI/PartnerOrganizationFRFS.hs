@@ -85,6 +85,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.FRFSConfirm
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSUtils as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -737,12 +738,15 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
   let routeStations = decodeFromText =<< booking.routeStationsJson
+  mbAppliedPassPayment <- FRFSPassOverride.paymentForOverrideAppliedEntity booking.overrideAppliedEntityId
   let bookingRes =
         FRFSTypes.FRFSTicketBookingStatusAPIRes
           { FRFSTypes._type = booking._type,
             overrideType = booking.overrideType,
             overriddenTotalPrice = mkPriceAPIEntity . mkPrice (Just booking.totalPrice.currency) <$> booking.overriddenAmount,
             appliedPurchasedPassPaymentId = Id <$> booking.overrideAppliedEntityId,
+            appliedPassId = mbAppliedPassPayment >>= (.passId),
+            appliedPassName = mbAppliedPassPayment >>= (.passName),
             bookingId = booking.id,
             city = merchantOperatingCity.city,
             createdAt = booking.createdAt,

@@ -400,6 +400,8 @@ data FRFSTicketAPI = FRFSTicketAPI
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    appliedPassId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
+    appliedPassName :: Data.Maybe.Maybe Data.Text.Text,
     appliedPurchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     bppOrderId :: Data.Maybe.Maybe Data.Text.Text,
