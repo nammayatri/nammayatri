@@ -1968,7 +1968,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             cityLabel <- SML.getCityLabel merchantOpCityId
-            Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+            Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (maybe "unknown" show sReqFD.poolingConfigVersion) (maybe "unknown" show sReqFD.poolingLogicVersion) (show sReqFD.batchNumber) (show req.response)
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
           else do
@@ -1980,7 +1980,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
-      Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+      Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (maybe "unknown" show sReqFD.poolingConfigVersion) (maybe "unknown" show sReqFD.poolingLogicVersion) (show sReqFD.batchNumber) (show req.response)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
       -- The per-driver weekly reject counter the intelligent pool ranks on. It was only ever
       -- incremented from driverScoreEventHandler's Reject case, which this branch never reaches
@@ -2003,7 +2003,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
-      Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response)
+      Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (maybe "unknown" show sReqFD.poolingConfigVersion) (maybe "unknown" show sReqFD.poolingLogicVersion) (show sReqFD.batchNumber) (show req.response)
       throwError UnexpectedResponseValue
   pure Success
   where

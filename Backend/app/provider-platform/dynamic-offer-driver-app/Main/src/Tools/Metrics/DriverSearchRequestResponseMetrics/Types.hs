@@ -28,9 +28,9 @@ import Prometheus as P
 type HasDriverSearchRequestResponseMetrics m r =
   HasFlowEnv m r ["driverSearchRequestResponseMetrics" ::: DriverSearchRequestResponseMetricsContainer, "version" ::: DeploymentVersion]
 
--- Labels: (merchant, city, vehicle_service_tier, version, batch_number, response)
+-- Labels: (merchant, city, vehicle_service_tier, pooling_config_version, pooling_logic_version, version, batch_number, response)
 -- merchant = merchant shortId, city = operating city name
-type DriverResponseCounterMetric = P.Vector P.Label6 P.Counter
+type DriverResponseCounterMetric = P.Vector P.Label8 P.Counter
 
 newtype DriverSearchRequestResponseMetricsContainer = DriverSearchRequestResponseMetricsContainer
   { driverResponseCounter :: DriverResponseCounterMetric
@@ -43,5 +43,5 @@ registerDriverSearchRequestResponseMetricsContainer = do
 
 registerDriverResponseCounter :: IO DriverResponseCounterMetric
 registerDriverResponseCounter =
-  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "version", "batch_number", "response") . P.counter $
-    P.Info "driver_search_request_response_count" "Count of driver responses to a search request, labelled by merchant shortId, city name, vehicle service tier, deployment version, batch number and response type"
+  P.register . P.vector ("merchant", "city", "vehicle_service_tier", "pooling_config_version", "pooling_logic_version", "version", "batch_number", "response") . P.counter $
+    P.Info "driver_search_request_response_count" "Count of driver responses to a search request, labelled by merchant shortId, city name, vehicle service tier, pooling config/logic version, deployment version, batch number and response type"
