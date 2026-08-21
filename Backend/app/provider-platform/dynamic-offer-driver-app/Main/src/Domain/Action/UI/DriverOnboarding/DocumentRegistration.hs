@@ -162,51 +162,49 @@ emptyValidateDocumentImageResponse imageId =
 getOCRResultRC ::
   Id Person.Person ->
   Maybe Text ->
-  Flow (Maybe ValidateDocumentImageResponse)
+  Flow ValidateDocumentImageResponse
 getOCRResultRC personId mbImageId = do
   mbRC <- Verification.getOCRResultRC personId.getId
+  let resolvedImageId = maybe (Id "") Id mbImageId
   case mbRC of
-    Nothing -> pure Nothing
-    Just rc -> do
-      let resolvedImageId = maybe (Id "") Id mbImageId
+    Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
+    Just rc ->
       pure $
-        Just $
-          (emptyValidateDocumentImageResponse resolvedImageId)
-            { documentNumber = removeSpaceAndDash <$> rc.rcNumber,
-              vehicleClass = rc.vehicleClass,
-              manufacturer = rc.manufacturer,
-              vehicleModel = rc.model,
-              fuelType = rc.fuelType,
-              colour = rc.colour,
-              chassisNumber = rc.chassisNumber,
-              engineNumber = rc.engineNumber,
-              registrationDate = rc.registrationDate,
-              ownerName = rc.ownerName,
-              ocrProvider = Just VT.InternalOCR
-            }
+        (emptyValidateDocumentImageResponse resolvedImageId)
+          { documentNumber = removeSpaceAndDash <$> rc.rcNumber,
+            vehicleClass = rc.vehicleClass,
+            manufacturer = rc.manufacturer,
+            vehicleModel = rc.model,
+            fuelType = rc.fuelType,
+            colour = rc.colour,
+            chassisNumber = rc.chassisNumber,
+            engineNumber = rc.engineNumber,
+            registrationDate = rc.registrationDate,
+            ownerName = rc.ownerName,
+            ocrProvider = Just VT.InternalOCR
+          }
 
 getOCRResultDL ::
   Id Person.Person ->
   Id DMOC.MerchantOperatingCity ->
   Maybe Text ->
-  Flow (Maybe ValidateDocumentImageResponse)
+  Flow ValidateDocumentImageResponse
 getOCRResultDL personId merchantOpCityId mbImageId = do
   mbDL <- Verification.getOCRResultDL personId.getId
+  let resolvedImageId = maybe (Id "") Id mbImageId
   case mbDL of
-    Nothing -> pure Nothing
+    Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
     Just dl -> do
       operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      let resolvedImageId = maybe (Id "") Id mbImageId
       let documentNumber = removeSpaceAndDash <$> dl.dlNumber
       let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< dl.dateOfBirth)
       let nameOnCard = dl.nameOnCard
       DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
       DL.cacheExtractedDlName personId nameOnCard
       pure $
-        Just $
-          (emptyValidateDocumentImageResponse resolvedImageId)
-            { documentNumber,
-              nameOnCard,
-              dateOfBirth,
-              ocrProvider = Just VT.InternalOCR
-            }
+        (emptyValidateDocumentImageResponse resolvedImageId)
+          { documentNumber,
+            nameOnCard,
+            dateOfBirth,
+            ocrProvider = Just VT.InternalOCR
+          }
