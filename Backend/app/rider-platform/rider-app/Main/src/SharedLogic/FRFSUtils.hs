@@ -1221,6 +1221,9 @@ updateTotalOrderValueAndSettlementAmount booking _quoteCategories bapConfig = do
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
 
+counterCancellationRefundTag :: Text
+counterCancellationRefundTag = "COUNTER_CANCELLATION_REFUND"
+
 -- | Books a counter-cancellation refund as one negative offsetting recon row per ticket, leaving the original rows' settlement untouched.
 -- These rows enter the daily settlement/order book like any other recon entry (PENDING), so the clawback settles in the run of the day the on_cancel arrived, not the original booking's day.
 createCounterCancelReconEntries ::
@@ -1269,7 +1272,7 @@ createCounterCancelReconEntries booking bapConfig refundAmount mRiderNumber fare
             Recon.settlementReferenceNumber = Nothing,
             Recon.settlementDate = Nothing,
             Recon.differenceAmount = Nothing,
-            Recon.message = Just "COUNTER_CANCELLATION_REFUND",
+            Recon.message = Just counterCancellationRefundTag,
             Recon.ticketStatus = Just DFRFSTicketStatus.COUNTER_CANCELLED,
             Recon.providerId = booking.providerId,
             Recon.providerName = booking.providerName,
