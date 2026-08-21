@@ -21,6 +21,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.AssetRelease as Queries
@@ -31,13 +32,16 @@ findLatest ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   m (Maybe AssetRelease)
-findLatest assetType merchantId merchantOperatingCityId = do
-  Hedis.safeGet (makeLatestKey assetType merchantId merchantOperatingCityId) >>= \case
-    Just release -> return $ Just release
-    Nothing -> do
-      mbRelease <- Queries.findLatestByAssetTypeAndCity (Just 1) Nothing assetType merchantId merchantOperatingCityId <&> listToMaybe
-      whenJust mbRelease cacheLatest
-      return mbRelease
+findLatest assetType merchantId merchantOperatingCityId =
+  IM.withInMemCache [cacheKey] inMemCacheExpTime $ do
+    Hedis.safeGet cacheKey >>= \case
+      Just release -> return $ Just release
+      Nothing -> do
+        mbRelease <- Queries.findLatestByAssetTypeAndCity (Just 1) Nothing assetType merchantId merchantOperatingCityId <&> listToMaybe
+        whenJust mbRelease cacheLatest
+        return mbRelease
+  where
+    cacheKey = makeLatestKey assetType merchantId merchantOperatingCityId
 
 findAllLatest ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -60,6 +64,11 @@ makeLatestKey :: AssetType -> Id Merchant -> Id MerchantOperatingCity -> Text
 makeLatestKey assetType merchantId merchantOperatingCityId =
   "rider-app:CachedQueries:AssetRelease:Latest-" <> show assetType <> "-" <> merchantId.getId <> "-" <> merchantOperatingCityId.getId
 
-clearCache :: Hedis.HedisFlow m r => AssetType -> Id Merchant -> Id MerchantOperatingCity -> m ()
-clearCache assetType merchantId merchantOperatingCityId =
-  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeLatestKey assetType merchantId merchantOperatingCityId)
+clearCache :: (CacheFlow m r, MonadFlow m) => AssetType -> Id Merchant -> Id MerchantOperatingCity -> m ()
+clearCache assetType merchantId merchantOperatingCityId = do
+  let cacheKey = makeLatestKey assetType merchantId merchantOperatingCityId
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del cacheKey
+  IM.refreshInMem cacheKey
+
+inMemCacheExpTime :: Seconds
+inMemCacheExpTime = 3600
