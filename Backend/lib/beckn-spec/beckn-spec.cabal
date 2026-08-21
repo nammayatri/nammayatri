@@ -204,6 +204,8 @@ library
       BecknV2.FRFS.Types
       BecknV2.FRFS.Utils
       BecknV2.IGM.APIs
+      BecknV2.NTS10.APIs
+      BecknV2.NTS10.Types
       BecknV2.OnDemand.Enums
       BecknV2.OnDemand.Tags
       BecknV2.OnDemand.Types
@@ -381,6 +383,7 @@ test-suite beckn-spec-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      BecknV2.NTS10.TypesSpec
       BecknV2.OnDemand.EnumsSpec
       BecknV2.OnDemand.TagsSpec
       BecknV2.OnDemand.TypesSpec

@@ -28,6 +28,7 @@ data BecknConfigT f = BecknConfigT
     registryUrl :: (B.C f Kernel.Prelude.Text),
     searchTTLSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     selectTTLSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    sellerEntityInfoJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     settlementWindow :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     staticTermsUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),

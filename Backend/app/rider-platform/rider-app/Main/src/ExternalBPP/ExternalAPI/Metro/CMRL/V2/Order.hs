@@ -163,8 +163,8 @@ type TicketAPI =
 ticketAPI :: Proxy TicketAPI
 ticketAPI = Proxy
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLV2Config -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
-createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLV2Config -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> Maybe Int -> Maybe Text -> m ProviderOrder
+createOrder config integratedBPPConfig booking quoteCategories mRiderNumber mbTicketTypeId mbFareQuoteId = do
   logInfo $ "[CMRLV2:Order] Starting createOrder for bookingId: " <> booking.id.getId
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
@@ -184,8 +184,11 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
       totalFare = fromMaybe 0 singleAdultTicketPrice * totalTicketQuantity
       singleTicketFare = fromMaybe 0 singleAdultTicketPrice
 
-  let fareQuoteIdValue = booking.id.getId
-  logDebug $ "[CMRLV2:Order] Using booking ID as fareQuoteId: " <> fareQuoteIdValue
+  let fareQuoteIdValue = fromMaybe booking.id.getId mbFareQuoteId
+  logDebug $ "[CMRLV2:Order] fareQuoteId: " <> fareQuoteIdValue <> (if isJust mbFareQuoteId then " (operator quote)" else " (booking id fallback)")
+
+  let ticketTypeId = fromMaybe config.ticketTypeId mbTicketTypeId
+  logDebug $ "[CMRLV2:Order] ticketTypeId: " <> show ticketTypeId <> " (config default: " <> show config.ticketTypeId <> ")"
 
   let operatorData =
         OperatorData
@@ -193,7 +196,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             merchantOrderId = orderId,
             bankTransactionRefNumber = paymentTxnId,
             merchantId = config.merchantId,
-            ticketTypeId = config.ticketTypeId,
+            ticketTypeId = ticketTypeId,
             paymentMode = 102,
             paymentChannelId = 0,
             transTypeId = 100,
@@ -209,7 +212,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
             src_Stn = extractStationCode fromStation.code,
             dest_Stn = extractStationCode toStation.code,
             activation_Date = travelDatetime,
-            product_Id = T.pack $ show config.ticketTypeId,
+            product_Id = T.pack $ show ticketTypeId,
             service_Id = "1",
             tkt_Fare = T.pack $ show singleTicketFare,
             validity = "100",
@@ -247,7 +250,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   logDebug $ "[CMRLV2:Order] TotalFare: " <> show totalFare <> ", Quantity: " <> show totalTicketQuantity
   logDebug $ "[CMRLV2:Order] Payload JSON (before encryption): " <> T.pack (show payload)
   logDebug $ "[CMRLV2:Order] Payload built, encrypting..."
-  encKey <- decrypt config.encryptionKey
+  (encKey, encKeyIndex) <- getEncryptionKey config
   let payloadText = TE.decodeUtf8 $ BL.toStrict $ encode payload
   logDebug $ "[CMRLV2:Order] Payload Text: " <> payloadText
   encryptedPayload <- encryptPayload payloadText encKey
@@ -259,7 +262,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           ticketAPI
           (Just $ "Bearer " <> accessToken)
           (Just "AES_CBC_PKCS5")
-          (Just $ T.pack $ show config.encKeyIndex)
+          (Just $ T.pack $ show encKeyIndex)
           (TicketReq encryptedPayload)
 
   encryptedResponse <- callCMRLV2API config eulerClient "generateTicket" ticketAPI

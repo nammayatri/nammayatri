@@ -29,6 +29,7 @@ data BecknConfig = BecknConfig
     registryUrl :: Servant.Client.Core.BaseUrl,
     searchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     selectTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sellerEntityInfoJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     settlementWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     staticTermsUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
