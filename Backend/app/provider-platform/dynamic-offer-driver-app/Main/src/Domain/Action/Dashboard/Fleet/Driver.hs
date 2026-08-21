@@ -316,7 +316,7 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
   whenJust mbFleetOwnerId $ \fleetOwnerId -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbMobileCountryCode
+  let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   MobileValidation.validateMobileNumber transporterConfig reqDriverPhoneNo mobileCountryCode merchantOpCity.country
   phoneNumberHash <- getDbHash reqDriverPhoneNo
@@ -1076,7 +1076,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       Flow (Either Text ())
     handleAddVehicleWithTry merchant transporterConfig mbCountryCode requestorId registerRcReq phoneNo mbFleetNo mbRole merchantOpCity = do
       result <- withTryCatch "handleAddVehicleWithTry" $ do
-        let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) mbCountryCode
+        let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbCountryCode)
         let addVehicleReq = convertToAddVehicleReq registerRcReq
         runRequestValidation Common.validateAddVehicleReq addVehicleReq
         MobileValidation.validateMobileNumber transporterConfig phoneNo mobileCountryCode merchantOpCity.country
@@ -1426,7 +1426,7 @@ getDriverFleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode m
   driverId <- case mbDriverPhNo of
     Just driverPhNo -> do
       mobileNumberHash <- getDbHash driverPhNo
-      let countryCode = fromMaybe (P.getCountryMobileCode merchant.country) mbMobileCountryCode
+      let countryCode = fromMaybe (P.getCountryMobileCode merchant.country) (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
       driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
       fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
       when (isNothing fleetDriverAssociation) $ throwError (DriverNotLinkedToFleet driver.id.getId)
@@ -2125,13 +2125,14 @@ getDriverFleetDriverListStats ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe Int ->
   Maybe Int ->
   Maybe Bool ->
   Maybe Common.FleetDriverListStatsSortOn ->
   Maybe Common.FleetDriverStatsResponseType ->
   Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbFleetOwnerId mbSearch mbDriverNumber mbLimit mbOffset sortDesc sortOnField mbResponseType = do
+getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbFleetOwnerId mbSearch mbDriverNumber mbDriverPhoneCountryCode mbLimit mbOffset sortDesc sortOnField mbResponseType = do
   mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
   let mbRole = (.role) <$> mbRequestor
   merchant <- findMerchantByShortId merchantShortId
@@ -2157,7 +2158,7 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
       Just driverNumber -> do
         driverNumberHash <- getDbHash driverNumber
         merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-        let mobileCountryCode = P.getCountryMobileCode merchantOpCity.country
+        let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode mbDriverPhoneCountryCode)
         mbPerson <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode driverNumberHash merchant.id DP.DRIVER
         case mbPerson of
           Just person -> do
@@ -2531,10 +2532,12 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   runRequestValidation (Common.validateUpdateFleetOwnerInfoReq merchantOpCity.country) req
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  let mobileCountryCode =
+        fromMaybe (P.getCountryMobileCode merchantOpCity.country) $
+          DCommon.appendPlusInMobileCountryCode req.mobileCountryCode <|> driver.mobileCountryCode
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
-    let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
-    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id driver.role
+    person <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash merchant.id driver.role
     when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
   whenJust req.email $ \reqEmail -> do
     person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
@@ -2544,7 +2547,7 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   encNewPhoneNumber <- forM req.mobileNo encrypt
   let updDriver =
         driver
-          { DP.mobileCountryCode = req.mobileCountryCode,
+          { DP.mobileCountryCode = Just mobileCountryCode,
             DP.mobileNumber = encNewPhoneNumber,
             DP.email = req.email,
             DP.firstName = fromMaybe driver.firstName req.firstName,
@@ -2960,7 +2963,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   phoneNumberHash <- getDbHash req.driverMobileNumber
-  let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) req.driverMobileCountryCode
+  let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) (DCommon.appendPlusInMobileCountryCode req.driverMobileCountryCode)
   driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
@@ -3418,7 +3421,8 @@ data CreateDriverBusRouteMappingCSVRow = CreateDriverBusRouteMappingCSVRow
     routeCode :: Text,
     roundTripFreq :: Text,
     driverBadgeName :: Maybe Text,
-    conductorBadgeName :: Maybe Text
+    conductorBadgeName :: Maybe Text,
+    driverPhoneCountryCode :: Maybe Text
   }
 
 data DriverBusRouteDetails = DriverBusRouteDetails
@@ -3427,7 +3431,8 @@ data DriverBusRouteDetails = DriverBusRouteDetails
     routeCode :: Text,
     roundTripFreq :: Maybe Int,
     driverBadgeName :: Maybe Text,
-    conductorBadgeName :: Maybe Text
+    conductorBadgeName :: Maybe Text,
+    driverPhoneCountryCode :: Maybe Text
   }
 
 instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
@@ -3439,6 +3444,7 @@ instance FromNamedRecord CreateDriverBusRouteMappingCSVRow where
       <*> r .: "round_trip_freq"
       <*> (Just <$> r .: "driver_badge_name" <|> pure Nothing)
       <*> (Just <$> r .: "conductor_badge_name" <|> pure Nothing)
+      <*> (Just <$> r .: "driver_phone_country_code" <|> pure Nothing)
 
 -- <*> r .: "force_assign"
 
@@ -3458,7 +3464,6 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 
   when (length driverBusRouteDetails > 100) $ throwError $ MaxDriversLimitExceeded 100
   let groupedDetails = groupBy (\a b -> a.driverPhoneNo == b.driverPhoneNo) $ sortOn (.driverPhoneNo) driverBusRouteDetails
-      mobileCountryCode = P.getCountryMobileCode merchantOpCity.country
 
   driverTripPlanner <-
     mapM
@@ -3466,6 +3471,7 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
           [] -> throwError (InternalError "Something Went Wrong while grouping Drivers")
           (driverGroup : driverGroups) -> do
             mobileNumberHash <- getDbHash driverGroup.driverPhoneNo
+            let mobileCountryCode = fromMaybe (P.getCountryMobileCode merchantOpCity.country) driverGroup.driverPhoneCountryCode
             person <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash merchant.id DP.DRIVER
             case person of
               Nothing -> throwError (InvalidRequest $ "Driver with Mobile Number (" <> driverGroup.driverPhoneNo <> ") Not Found, Please Add the Driver to the fleet and Try Again!")
@@ -3533,7 +3539,8 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
         case row.conductorBadgeName of
           Just conductorBadgeName -> Just <$> Csv.cleanCSVField idx conductorBadgeName "Conductor Badge name"
           Nothing -> pure Nothing
-      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq driverBadgeName conductorBadgeName
+      let driverPhoneCountryCode = DCommon.appendPlusInMobileCountryCode $ Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneCountryCode) "Driver phone country code"
+      pure $ DriverBusRouteDetails driverPhoneNo vehicleNumber routeCode roundTripFreq driverBadgeName conductorBadgeName driverPhoneCountryCode
 
     makeTripPlannerReq driverGroup =
       Common.TripDetails
@@ -3556,7 +3563,9 @@ data CreateDriversCSVRow = CreateDriversCSVRow
     fleetPhoneNo :: Maybe Text,
     badgeName :: Maybe Text,
     badgeRank :: Maybe Text,
-    badgeType :: Maybe Text
+    badgeType :: Maybe Text,
+    driverPhoneCountryCode :: Maybe Text,
+    fleetPhoneCountryCode :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
@@ -3567,7 +3576,9 @@ data DriverDetails = DriverDetails
     fleetPhoneNo :: Maybe Text,
     badgeName :: Maybe Text,
     badgeRank :: Maybe Text,
-    badgeType :: Maybe DFBT.FleetBadgeType
+    badgeType :: Maybe DFBT.FleetBadgeType,
+    driverPhoneCountryCode :: Maybe Text,
+    fleetPhoneCountryCode :: Maybe Text
   }
 
 instance FromNamedRecord CreateDriversCSVRow where
@@ -3580,6 +3591,8 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> optional (r .: "badge_name")
       <*> optional (r .: "badge_rank")
       <*> optional (r .: "badge_type")
+      <*> optional (r .: "driver_phone_country_code")
+      <*> optional (r .: "fleet_phone_country_code")
 
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
@@ -3646,14 +3659,15 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByFleetOwner :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
     processDriverByFleetOwner merchant moc transporterConfig fleetOwner req_ = do
       validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
-      let mobileCountryCode = P.getCountryMobileCode moc.country
-      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
-      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
+      let driverCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
+          fleetCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.fleetPhoneCountryCode
+      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo fleetCountryCode moc.country
       whenJust req_.fleetPhoneNo \fleetPhoneNo -> do
         mobileNumberHash <- getDbHash fleetPhoneNo
         fleetOwnerCsv <-
           B.runInReplica $
-            QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+            QP.findByMobileNumberAndMerchantAndRoles fleetCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
               >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
         unless (fleetOwnerCsv.id == fleetOwner.id) $
           throwError AccessDenied
@@ -3662,9 +3676,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DP.Person -> DriverDetails -> Flow (Id DP.Person) -- TODO: create single query to update all later
     processDriverByOperator merchant moc transporterConfig operator req_ = do
       validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
-      let mobileCountryCode = P.getCountryMobileCode moc.country
-      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
-      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
+      let driverCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
+          fleetCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.fleetPhoneCountryCode
+      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo fleetCountryCode moc.country
       case req_.fleetPhoneNo of
         Nothing -> do
           linkDriverToOperator merchant moc operator req_
@@ -3672,7 +3687,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           mobileNumberHash <- getDbHash fleetPhoneNo
           fleetOwner <-
             B.runInReplica $
-              QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+              QP.findByMobileNumberAndMerchantAndRoles fleetCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
                 >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
           DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
           association <-
@@ -3687,9 +3702,10 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
     processDriverByAdmin :: DM.Merchant -> DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> DriverDetails -> Flow (Id DP.Person)
     processDriverByAdmin merchant moc transporterConfig req_ = do
       validateDriverName req_.driverName transporterConfig.isDriverNameMandatoryInBulkUpload
-      let mobileCountryCode = P.getCountryMobileCode moc.country
-      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber mobileCountryCode moc.country
-      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo mobileCountryCode moc.country
+      let driverCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
+          fleetCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.fleetPhoneCountryCode
+      MobileValidation.validateMobileNumber transporterConfig req_.driverPhoneNumber driverCountryCode moc.country
+      whenJust req_.fleetPhoneNo $ \fleetPhoneNo -> MobileValidation.validateMobileNumber transporterConfig fleetPhoneNo fleetCountryCode moc.country
       case req_.fleetPhoneNo of
         Nothing ->
           throwError $ InvalidRequest "Fleet phone number is required for admin bulk driver addition"
@@ -3697,7 +3713,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           mobileNumberHash <- getDbHash fleetPhoneNo
           fleetOwner <-
             B.runInReplica $
-              QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+              QP.findByMobileNumberAndMerchantAndRoles fleetCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
                 >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
           DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
           linkDriverToFleetOwner merchant moc transporterConfig fleetOwner Nothing req_
@@ -3769,6 +3785,8 @@ parseDriverInfo idx row = do
       badgeName :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeName) "Badge name"
       badgeRank :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
       badgeType :: Maybe DFBT.FleetBadgeType = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeType) "Badge type"
+      driverPhoneCountryCode :: Maybe Text = DCommon.appendPlusInMobileCountryCode $ Csv.cleanMaybeCSVField idx (fromMaybe "" row.driverPhoneCountryCode) "Driver phone country code"
+      fleetPhoneCountryCode :: Maybe Text = DCommon.appendPlusInMobileCountryCode $ Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneCountryCode) "Fleet phone country code"
   pure $
     DriverDetails
       { rowNumber = idx + 2, -- +1 for the header row, +1 to make the 0-based index human-readable (matches the CSV line)
@@ -3778,12 +3796,14 @@ parseDriverInfo idx row = do
         fleetPhoneNo = fleetPhoneNo,
         badgeName = badgeName,
         badgeRank = badgeRank,
-        badgeType = badgeType
+        badgeType = badgeType,
+        driverPhoneCountryCode = driverPhoneCountryCode,
+        fleetPhoneCountryCode = fleetPhoneCountryCode
       }
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
 fetchOrCreatePerson moc req_ = do
-  let mobileCountryCode = P.getCountryMobileCode moc.country
+  let mobileCountryCode = fromMaybe (P.getCountryMobileCode moc.country) req_.driverPhoneCountryCode
   let authData =
         DReg.AuthReq
           { mobileNumber = Just req_.driverPhoneNumber,
@@ -4687,8 +4707,9 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         Nothing -> pure (driver.mobileCountryCode, driver.mobileNumber)
         Just reqMobileNo -> do
           mobileNumberHash <- getDbHash reqMobileNo
-          let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
-              countryCode = fromMaybe countryCodeFallback req.mobileCountryCode
+          let countryCode =
+                fromMaybe (P.getCountryMobileCode merchantOpCity.country) $
+                  DCommon.appendPlusInMobileCountryCode req.mobileCountryCode <|> driver.mobileCountryCode
           existingByMobile <- QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id driver.role
           whenJust existingByMobile $ \existing ->
             when (existing.id /= personId) $ throwError (MobileNumberAlreadyLinked reqMobileNo)

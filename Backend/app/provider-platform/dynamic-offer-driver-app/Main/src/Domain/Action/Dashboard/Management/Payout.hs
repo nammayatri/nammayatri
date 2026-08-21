@@ -17,6 +17,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout as ApiPayout
 import qualified "dashboard-helper-api" Dashboard.Common as DC
 import Data.Time (minutesToTimeZone, utcToLocalTime)
 import qualified Domain.Action.Common.PayoutRequest as CommonPayout
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.PayoutRequest as DashboardPayoutRequest
 import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant
@@ -193,12 +194,13 @@ getPayoutPayoutReferralHistory ::
   Maybe Text ->
   Maybe (Id.Id DC.Driver) ->
   Maybe Text ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
   Maybe UTCTime ->
   Environment.Flow ApiPayout.PayoutReferralHistoryRes
-getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId_ mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
+getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId_ mbDriverPhoneCountryCode mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
       areActivatedRidesOnly = fromMaybe False areActivatedRidesOnly_
@@ -258,7 +260,8 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
       (Just driverId, _) -> pure $ Just driverId
       (_, Just driverPhoneNo) -> do
         driverNumberHash <- getDbHash driverPhoneNo
-        driver <- QPerson.findByMobileNumberAndMerchantAndRole (P.getCountryMobileCode country) driverNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound driverPhoneNo)
+        let mobileCountryCode = fromMaybe (P.getCountryMobileCode country) (DCommon.appendPlusInMobileCountryCode mbDriverPhoneCountryCode)
+        driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode driverNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound driverPhoneNo)
         pure . Just $ Id.cast driver.id
       _ -> pure Nothing
 
