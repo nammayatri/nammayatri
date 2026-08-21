@@ -1793,11 +1793,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1781617079,
-        "narHash": "sha256-NXtj+dgXi4KRO13Sa51HL7eWjWGFeNWZ0egDjuxvCH8=",
+        "lastModified": 1787320312,
+        "narHash": "sha256-tTaP2ZA9/ii6V1yZGm/ppOFGzA9WmIyJ9Jaq5JNjMg0=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "dcdd6a603faf7f8b140728fb3511d7498d6ab03f",
+        "rev": "60c00c97cdc4886502a286e77b23932614a04c60",
         "type": "github"
       },
       "original": {
