@@ -26,6 +26,7 @@ data DeletedUserT f = DeletedUserT
     lastName :: B.C f Text,
     roleId :: B.C f Text,
     emailEncrypted :: B.C f (Maybe Text),
+    deleteReason :: B.C f (Maybe Text),
     deletedBy :: B.C f Text,
     deletedAt :: B.C f Time.UTCTime
   }

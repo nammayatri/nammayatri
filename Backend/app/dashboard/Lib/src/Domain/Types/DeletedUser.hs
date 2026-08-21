@@ -30,6 +30,7 @@ data DeletedUser = DeletedUser
     lastName :: Text,
     roleId :: Id DRole.Role,
     emailEncrypted :: Maybe Text,
+    deleteReason :: Maybe Text,
     deletedBy :: Id DP.Person,
     deletedAt :: UTCTime
   }

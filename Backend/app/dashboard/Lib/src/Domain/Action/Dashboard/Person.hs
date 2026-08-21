@@ -843,8 +843,9 @@ deletePerson ::
   ) =>
   TokenInfo ->
   Id DP.Person ->
+  Maybe Text ->
   m APISuccess
-deletePerson tokenInfo personId = do
+deletePerson tokenInfo personId mbDeleteReason = do
   -- Every write below is keyed on personId alone and none is merchant-scoped, so without this
   -- guard any dashboard admin could hard-delete an arbitrary person in another merchant.
   assertPersonInCallerMerchant tokenInfo personId
@@ -865,6 +866,7 @@ deletePerson tokenInfo personId = do
         lastName = person.lastName,
         roleId = person.roleId,
         emailEncrypted = person.email <&> (unEncrypted . (.encrypted)),
+        deleteReason = mbDeleteReason,
         deletedBy = tokenInfo.personId,
         deletedAt = now
       }

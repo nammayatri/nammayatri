@@ -78,6 +78,7 @@ type API =
            :<|> "delete"
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
+             :> QueryParam "deleteReason" Text
              :> Delete '[JSON] APISuccess
            :<|> "changeEnabledStatus"
              :> DashboardAuth 'DASHBOARD_ADMIN
@@ -256,9 +257,9 @@ getProductSpecInfo :: BeamFlow' => Maybe Text -> FlowHandler DPerson.GetProductS
 getProductSpecInfo releaseId =
   withFlowHandlerAPI' $ DPerson.getProductSpecInfo releaseId
 
-deletePerson :: BeamFlow' => TokenInfo -> Id DP.Person -> FlowHandler APISuccess
-deletePerson tokenInfo personId =
-  withFlowHandlerAPI' $ DPerson.deletePerson tokenInfo personId
+deletePerson :: BeamFlow' => TokenInfo -> Id DP.Person -> Maybe Text -> FlowHandler APISuccess
+deletePerson tokenInfo personId mbDeleteReason =
+  withFlowHandlerAPI' $ DPerson.deletePerson tokenInfo personId mbDeleteReason
 
 changeEnabledStatus :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeEnabledStatusReq -> FlowHandler APISuccess
 changeEnabledStatus tokenInfo personId req =
