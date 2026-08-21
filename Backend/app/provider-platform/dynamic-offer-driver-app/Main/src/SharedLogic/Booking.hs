@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.MetricsLabels as SML
@@ -92,6 +93,7 @@ cancelBooking booking mbDriver transporter = do
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       QRide.updateStatus ride.id SRide.CANCELLED
+      when (ride.status == SRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
       void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
 
