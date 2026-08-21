@@ -197,7 +197,7 @@ handler merchantId req validatedReq = do
         lon = searchRequest.fromLocation.lon
         merchantOpCityId = searchRequest.merchantOperatingCityId
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon)
+    DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon) searchRequest.estimatedDistance searchRequest.estimatedDuration
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId

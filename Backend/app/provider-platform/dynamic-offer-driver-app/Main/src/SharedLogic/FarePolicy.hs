@@ -1277,6 +1277,76 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                     }
 getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
 
+-- | Standalone congestion-multiplier lookup for a synthetic/representative trip
+-- (no real ride in progress) -- used by DemandHotspots' on-demand, short-TTL-cached
+-- path. Deliberately separate from 'getCongestionChargeMultiplierFromModel'':
+-- skips the historical congestionMultiplier/congestionMultiplierPast Redis inputs
+-- (no batch job populates those any more) and the ML-override/
+-- CongestionChargeDetailsModel machinery that only matters for an actual ride quote.
+-- 'serviceTier' is the calling driver's own real tier (derived at the call site
+-- via 'castVariantToServiceTier' from their actual vehicle variant) -- not guessed.
+getSyntheticCongestionMultiplier ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
+    ClickhouseFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Seconds ->
+  Text ->
+  LatLong ->
+  Maybe DVC.VehicleCategory ->
+  DVST.ServiceTierType ->
+  Int ->
+  Int ->
+  m (Maybe Double)
+getSyntheticCongestionMultiplier merchantOperatingCityId timeDiffFromUtc geohash location vehicleCategory serviceTier distanceMeters durationSeconds = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  now <- getCurrentTime
+  let distanceInKm = int2Double distanceMeters / 1000.0
+      estimatedDurationInH = int2Double durationSeconds / 3600.0
+      speedKmh = if estimatedDurationInH == 0.0 then 0.0 else distanceInKm / estimatedDurationInH
+  (allLogics, _mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
+  if null allLogics
+    then return Nothing
+    else do
+      (actualQAR, actualQARPast) <- getActualQAR now vehicleCategory location 5.0 distanceMeters (Just merchantOperatingCityId.getId)
+      mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash geohash vehicleCategory
+      mbRainStatus <- Hedis.withCrossAppRedis $ Hedis.get $ mkRainStatusKey geohash
+      toss <- getRandomInRange (1, 100 :: Int)
+      let dynamicPricingData =
+            DynamicPricingData
+              { serviceTier,
+                speedKmh,
+                distanceInKm,
+                supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc,
+                supplyDemandRatioToLoc = 0.0,
+                toss,
+                actualQAR = actualQAR,
+                actualQARPast = actualQARPast,
+                actualQARToLoc = Nothing,
+                actualQARToLocPast = Nothing,
+                congestionMultiplier = Nothing,
+                congestionMultiplierPast = Nothing,
+                rainStatus = mbRainStatus,
+                mbSpecialLocName = Nothing,
+                estimatedDurationInS = Just durationSeconds,
+                actualDurationInS = Nothing
+              }
+      response <- withTryCatch "runLogics:getSyntheticCongestionMultiplier" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED Nothing allLogics dynamicPricingData
+      case response of
+        Left e -> do
+          logError $ "Error running DynamicPricingLogics for synthetic congestion multiplier: " <> show e
+          return Nothing
+        Right resp ->
+          case (A.fromJSON resp.result :: Result DynamicPricingResult) of
+            A.Success result -> return $ realToFrac . FarePolicyD.congestionChargeMultiplierToCentesimal <$> result.congestionChargeMultiplier
+            A.Error err -> do
+              logWarning $ "Error parsing DynamicPricingResult for synthetic congestion multiplier: " <> show err
+              return Nothing
+
 data CongestionChargeDetailsModel = CongestionChargeDetailsModel
   { dpVersion :: Maybe Text,
     mbSupplyDemandRatioToLoc :: Maybe Double,
