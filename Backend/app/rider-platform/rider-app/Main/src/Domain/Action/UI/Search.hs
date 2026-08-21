@@ -58,6 +58,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
@@ -104,6 +105,8 @@ type SearchRequestFlow m r =
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasField "hotSpotExpiry" r Seconds
   )
 
@@ -385,7 +388,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   let stopsLatLong = if isJust fromSpecialLocationId then [] else map (.gps) stops
   originCity <- case city of
     Just c -> return c
-    Nothing -> Serviceability.validateServiceability sourceLatLong stopsLatLong person
+    Nothing -> withTimeAPI "rideSearch" "validateServiceability" $ Serviceability.validateServiceability sourceLatLong stopsLatLong person
 
   unless (justMultimodalSearch || null stopsLatLong) $ updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
 
@@ -402,15 +405,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOperatingCityId) -- TODO: we aren't using it as such for now, will put proper values later
-  riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
+  riderCfg <- withTimeAPI "rideSearch" "getRiderConfig" $ getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   whenJust numberOfLuggages $ \n ->
     when (n < 0) $ throwError (InvalidRequest "Number of luggages must be non-negative")
   whenJust numberOfLuggages $ \n ->
     whenJust riderCfg.maxNumberOfLuggages $ \maxN ->
       when (n > maxN) $ throwError (InvalidRequest $ "Number of luggages exceeds maximum allowed: " <> show maxN)
-  (RouteDetails {..}, mbDiscoveredSpecialLocId) <- getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
-  fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
-  stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
+  (RouteDetails {..}, mbDiscoveredSpecialLocId) <- withTimeAPI "rideSearch" "getRouteDetails" $ getRouteDetails person merchantOperatingCity searchRequestId stopsLatLong sourceLatLong roundTrip originCity riderCfg isMeterRide req
+  fromLocation <- withTimeAPI "rideSearch" "buildFromLocation" $ buildSearchReqLoc merchant.id merchantOperatingCityId origin
+  stopLocations <- withTimeAPI "rideSearch" "buildStopLocations" $ buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let enrichedOrigin = SearchReqLocation {gps = origin.gps, address = fromLocation.address}
       enrichedStops =
         zipWith
@@ -468,7 +471,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
-  QSearchRequest.createDSReq searchRequest
+  withTimeAPI "rideSearch" "createSearchRequest" $ QSearchRequest.createDSReq searchRequest
   -- Cache person -> current txnId so subsequent rider UI requests resolve
   -- dynamic-logic rollout / config-pilot config stickily for this transaction.
   setTxnIdForPerson person.id searchRequest.id.getId
@@ -858,17 +861,17 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
             mode = Just Maps.CAR
           }
       sourceLatLong = NE.head (NE.fromList latLongs)
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
+  mbSpecialLocation <- withTimeAPI "rideSearch" "findSpecialLocationByLatLong" $ QSpecialLocation.findSpecialLocationByLatLongFull sourceLatLong
   let mbSpecialLocationEnforceToll = QSpecialLocation.filterGates mbSpecialLocation True >>= (.enforceTollRoute)
   mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
   let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag || fromMaybe False mbSpecialLocationEnforceToll
       isAvoidTollEffective = if mustEnforceToll then False else riderConfig.isAvoidToll
       finalEffectiveToll = if isDashboardRequest then not <$> mbEnforceTollRoute else Just isAvoidTollEffective
-  routeResponse <- Maps.getRoutes finalEffectiveToll person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
+  routeResponse <- withTimeAPI "rideSearch" "getRoutes" $ Maps.getRoutes finalEffectiveToll person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
   finalRoutes <-
     if mustEnforceToll
-      then TollsDetector.filterRoutesPreferringToll merchantOperatingCity.id.getId routeResponse
+      then withTimeAPI "rideSearch" "filterRoutesPreferringToll" $ TollsDetector.filterRoutesPreferringToll merchantOperatingCity.id.getId routeResponse
       else pure routeResponse
   let distanceWeightage = riderConfig.distanceWeightage
       durationWeightage = 100 - distanceWeightage
