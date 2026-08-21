@@ -20,6 +20,7 @@ data DriverInformationT f = DriverInformationT
     enabled :: C f Bool,
     enabledAt :: C f (Maybe UTCTime),
     active :: C f (Maybe Text),
+    onRide :: C f (Maybe Text),
     merchantOperatingCityId :: C f (Maybe (Id DMOC.MerchantOperatingCity))
   }
   deriving (Generic)
@@ -35,6 +36,7 @@ driverInformationTTable =
       enabled = "enabled",
       enabledAt = "enabled_at",
       active = "active",
+      onRide = "on_ride",
       merchantOperatingCityId = "merchant_operating_city_id"
     }
 
@@ -124,6 +126,21 @@ getStatusCountsByDriverIds driverIds =
 -- today and is listed only to stay correct if the writer changes.
 activeTruthy :: [Maybe Text]
 activeTruthy = Just <$> ["True", "TRUE", "true"]
+
+-- | Drivers currently on a ride in one operating city. Same seed-only role, and the
+-- same string/casing caveat as `active`.
+countOnRideByCity ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  m Int
+countOnRideByCity merchantOpCityId = do
+  res <-
+    CH.findAll $
+      CH.select_ (\info -> CH.aggregate $ CH.count_ info.driverId) $
+        CH.filter_
+          (\info -> info.merchantOperatingCityId CH.==. Just merchantOpCityId CH.&&. info.onRide `CH.in_` activeTruthy)
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+  pure $ fromMaybe 0 (listToMaybe res)
 
 -- | Dispatch-eligible drivers in one operating city, for the supply gauges. Read from
 -- ClickHouse rather than Postgres: this only runs when the Redis counter key is absent,

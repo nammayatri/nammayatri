@@ -74,6 +74,7 @@ import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.DriverFyEarnings as SDFE
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.GstBreakdown
@@ -275,6 +276,9 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transport
   void $ LF.rideDetails ride.id DRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   void $ QRide.updateStatusAndRideEndedBy ride.id DRide.CANCELLED rideEndedBy
   QBCR.upsert bookingCReason
+  -- Only a ride that started was ever counted; `ride` here is the pre-update snapshot,
+  -- so its status still reflects whether the trip was in progress.
+  when (ride.status == DRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
