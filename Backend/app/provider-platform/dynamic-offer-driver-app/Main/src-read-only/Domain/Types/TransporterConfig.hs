@@ -402,8 +402,10 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
 data CallingOption = AnonymousCall | DirectCall | DualCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationConfig = CancellationConfig
-  { carryForwardEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { cancellationGracePeriodSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    carryForwardEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     consumeRideCreditOnCancellation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    noShowAcceptableWaitPeriodSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     preferOndcCancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)

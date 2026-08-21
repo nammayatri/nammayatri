@@ -1082,6 +1082,8 @@ TransporterConfig:
       enum: "DAILY, WEEKLY, MONTHLY"
     CancellationConfig:
       carryForwardEnabled: Maybe Bool
+      cancellationGracePeriodSeconds: Maybe Int
+      noShowAcceptableWaitPeriodSeconds: Maybe Int
       consumeRideCreditOnCancellation: Maybe Bool
       preferOndcCancellationReasonId: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Eq

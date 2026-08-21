@@ -113,7 +113,10 @@ cancel ::
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
-  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride)
+  -- | Reallocated, cancellation fee, updated ride, and the resolved internal reason code.
+  -- The reason code is returned so on_cancel echoes what we actually stored rather than the
+  -- raw short_desc off the wire, which is Nothing when a BAP sends only cancellation_reason_id.
+  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride, Maybe Text)
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
@@ -132,6 +135,7 @@ cancel req merchant booking mbActiveSearchTry = do
     let currentLocation = getCoordinates <$> mbLocation
     bookingCR <- buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
+    let resolvedReasonCode = (\(DTCR.CancellationReasonCode code) -> code) <$> bookingCR.reasonCode
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
     Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
     QRB.updateStatus booking.id SRB.CANCELLED
@@ -179,7 +183,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     if isReallocated
       then do
-        return (isReallocated, Nothing, Nothing)
+        return (isReallocated, Nothing, Nothing, resolvedReasonCode)
       else do
         cancellationCharges <- withTryCatch "cancellationCharges" $ do
           case mbRide of
@@ -279,7 +283,7 @@ cancel req merchant booking mbActiveSearchTry = do
         updatedRide <- case mbRide of
           Just ride -> QRide.findById ride.id
           Nothing -> pure Nothing
-        return (isReallocated, cancelCharges, updatedRide)
+        return (isReallocated, cancelCharges, updatedRide, resolvedReasonCode)
   where
     buildAdditionalInfo =
       case catMaybes

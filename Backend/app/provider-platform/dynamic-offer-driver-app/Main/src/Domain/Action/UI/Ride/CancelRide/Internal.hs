@@ -16,7 +16,6 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   ( cancelRideImpl,
     cancelRideTransaction,
     createCancellationLedgerEntries,
-    carryForwardCancellationDues,
     applyCancellationLedgerAction,
     updateNammaTagsForCancelledRide,
     driverDistanceToPickup,
@@ -551,7 +550,9 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             timeSinceBooking = fromMaybe 0 signals.timeSinceBooking,
             pickupStallCase = signals.pickupStallCase,
             faultVerdict = (\v -> show v.atFault) <$> mbFaultVerdict,
-            faultRule = (.rule) <$> mbFaultVerdict
+            faultRule = (.rule) <$> mbFaultVerdict,
+            cancellationGracePeriodSeconds = SCC.cancellationGracePeriodSeconds transporterConfig,
+            noShowAcceptableWaitPeriodSeconds = SCC.noShowAcceptableWaitPeriodSeconds transporterConfig
           }
   if transporterConfig.canAddCancellationFee && not isCancellationFeeExemptPaymentMethod
     then do
@@ -660,19 +661,6 @@ getCancellationCharges booking ride cancellationType reasonCode mbContext legacy
               return (dropZeroCharge <$> mbOutcome, mbVersion)
             else return (Nothing, Nothing)
         else return (Nothing, Nothing)
-
-carryForwardCancellationDues ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  DTC.TransporterConfig ->
-  Id RiderDetails.RiderDetails ->
-  HighPrecMoney ->
-  m ()
-carryForwardCancellationDues transporterConfig riderId totalCharges =
-  when (SCC.carryForwardEnabled transporterConfig) $ do
-    riderDetails <- QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-    void $ QRiderDetails.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
 
 createCancellationLedgerEntries ::
   ( EsqDBFlow m r,

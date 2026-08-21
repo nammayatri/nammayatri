@@ -1,2 +1,2 @@
 ALTER TABLE atlas_driver_offer_bpp.transporter_config
-  ADD COLUMN cancellation_config json;
+  ADD COLUMN IF NOT EXISTS cancellation_config json;

@@ -116,13 +116,13 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                 (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
                 mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
                 fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
-                  (isReallocated, cancellationCharge, mbUpdatedRide) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+                  (isReallocated, cancellationCharge, mbUpdatedRide, resolvedReasonCode) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
                   let onCancelBuildReq =
                         OC.DBookingCancelledReqV2
                           { booking = booking,
                             cancellationSource = DBCR.ByUser,
                             cancellationFee = cancellationCharge,
-                            cancellationReasonCode = cancelRideReq.cancellationReason,
+                            cancellationReasonCode = resolvedReasonCode,
                             mbRide = mbUpdatedRide
                           }
                   unless isReallocated $ do
@@ -150,7 +150,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
                         cancellationFee = cancellationCharges,
-                        cancellationReasonCode = cancelRideReq.cancellationReason,
+                        cancellationReasonCode = resolvedReasonCode,
                         mbRide = mbRide
                       }
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)

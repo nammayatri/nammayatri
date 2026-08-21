@@ -21,6 +21,8 @@ module SharedLogic.CancellationConfig
   ( carryForwardEnabled,
     preferOndcCancellationReasonId,
     consumeRideCreditOnCancellation,
+    cancellationGracePeriodSeconds,
+    noShowAcceptableWaitPeriodSeconds,
   )
 where
 
@@ -51,3 +53,18 @@ consumeRideCreditOnCancellation :: DTC.TransporterConfig -> Bool
 consumeRideCreditOnCancellation transporterConfig =
   fromMaybe False $
     transporterConfig.cancellationConfig >>= (.consumeRideCreditOnCancellation)
+
+-- | Grace window after booking in which a pre-arrival customer cancellation is free.
+-- Zero when unset, so a merchant that has not configured one keeps charging from the
+-- moment of booking, as before.
+cancellationGracePeriodSeconds :: DTC.TransporterConfig -> Int
+cancellationGracePeriodSeconds transporterConfig =
+  fromMaybe 0 $
+    transporterConfig.cancellationConfig >>= (.cancellationGracePeriodSeconds)
+
+-- | Minimum driver wait at pickup before a customer no-show may be charged.
+-- Zero when unset, leaving the decision entirely to the fee rules.
+noShowAcceptableWaitPeriodSeconds :: DTC.TransporterConfig -> Int
+noShowAcceptableWaitPeriodSeconds transporterConfig =
+  fromMaybe 0 $
+    transporterConfig.cancellationConfig >>= (.noShowAcceptableWaitPeriodSeconds)
