@@ -12,6 +12,7 @@ Toll:
     isTwoWheelerAllowed : Maybe Bool
     isAutoRickshawTollChargeApplicable : Maybe Bool
     isTwoWheelerTollChargeApplicable : Maybe Bool
+    maxTollCountInRide : Maybe Int
     price: Price
 
 

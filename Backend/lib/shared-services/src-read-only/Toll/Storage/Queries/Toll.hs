@@ -37,6 +37,7 @@ updateByPrimaryKey (Toll.Domain.Types.Toll.Toll {..}) = do
       Se.Set Beam.isAutoRickshawTollChargeApplicable isAutoRickshawTollChargeApplicable,
       Se.Set Beam.isTwoWheelerAllowed isTwoWheelerAllowed,
       Se.Set Beam.isTwoWheelerTollChargeApplicable isTwoWheelerTollChargeApplicable,
+      Se.Set Beam.maxTollCountInRide maxTollCountInRide,
       Se.Set Beam.name name,
       Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
       Se.Set Beam.price ((.amount) price),

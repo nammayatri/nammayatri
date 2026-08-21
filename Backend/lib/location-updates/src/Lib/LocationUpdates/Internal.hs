@@ -62,6 +62,7 @@ import Kernel.Utils.ComputeIntersection
 import Lib.LocationUpdates.TollTypes
   ( TollInfo (..),
     estimatedTollInfoFromCharges,
+    onRideTollIdsRedisKey,
   )
 
 data RideInterpolationHandler person m = RideInterpolationHandler
@@ -161,7 +162,7 @@ onRideTollNamesKey :: Id person -> Text
 onRideTollNamesKey driverId = "OnRideTollNames:" <> driverId.getId
 
 onRideTollIdsKey :: Id person -> Text
-onRideTollIdsKey driverId = "OnRideTollIds:" <> driverId.getId
+onRideTollIdsKey driverId = onRideTollIdsRedisKey driverId.getId
 
 takeLastTwo :: [a] -> [a]
 takeLastTwo xs = drop (max 0 (length xs - 2)) xs
