@@ -88,6 +88,7 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
+import qualified API.UI.VehicleServiceTier as VehicleServiceTier
 import qualified API.UI.Whatsapp as Whatsapp
 import qualified Data.Text as T
 import qualified Database.Persist.Sql as Persist
@@ -193,6 +194,7 @@ type API =
            :<|> AddBaggage.API
            :<|> ZendeskSdkToken.API
            :<|> FleetEngineToken.API
+           :<|> VehicleServiceTier.API
        )
 
 -- Healthcheck for every datastore connection the app holds, so a pod with any
@@ -328,3 +330,4 @@ handler =
     :<|> AddBaggage.handler
     :<|> ZendeskSdkToken.handler
     :<|> FleetEngineToken.handler
+    :<|> VehicleServiceTier.handler
