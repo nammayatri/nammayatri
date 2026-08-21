@@ -101,6 +101,8 @@ data HandlerEnv = HandlerEnv
     jobRetryOnExceptionMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool,
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
     smsCfg :: SmsConfig,
