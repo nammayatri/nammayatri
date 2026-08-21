@@ -39,6 +39,14 @@ deleteByPersonIdAndCapabilityId personId capabilityId =
         ]
     ]
 
+-- Deletes the departing user's own capability overrides (subject rows). Must run
+-- before deleting the person: person_capability.person_id is a NOT NULL FK to
+-- person. granted_by rows this user created for others are intentionally left
+-- intact (that FK is dropped in migration 0097, so it no longer blocks the delete).
+deleteAllByPersonId :: BeamFlow m r => Id DP.Person -> m ()
+deleteAllByPersonId personId =
+  deleteWithKV [Se.Is BeamPC.personId $ Se.Eq $ getId personId]
+
 instance FromTType' BeamPC.PersonCapability DC.PersonCapability where
   fromTType' BeamPC.PersonCapabilityT {..} = do
     return $
