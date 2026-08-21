@@ -35,7 +35,8 @@ postAssetReleasePublish mbToken req = do
   mbLatest <- findLatest req.assetType merchantId merchantOperatingCityId
   case mbLatest of
     Just latest
-      | latest.sha256 == sha256 && latest.url == req.url && latest.version == req.version ->
+      | latest.sha256 == sha256 && latest.url == req.url && latest.version == req.version -> do
+        reconcileCache latest
         pure $
           API.Types.UI.AssetReleaseInternal.AssetPublishResp
             { releaseId = latest.id.getId,
@@ -129,6 +130,12 @@ getAssetRelease mbAssetType mbCity mbMerchantShortId mbToken = do
   (merchantId, merchantOperatingCityId) <- resolveCity merchantShortId city
   mbRelease <- findLatest assetType merchantId merchantOperatingCityId
   pure $ toResp <$> mbRelease
+
+reconcileCache :: Domain.Types.AssetRelease.AssetRelease -> Environment.Flow ()
+reconcileCache latest = do
+  mbCached <- CQAssetRelease.findLatest latest.assetType latest.merchantId latest.merchantOperatingCityId
+  unless (((.id) <$> mbCached) == Just latest.id) $
+    CQAssetRelease.clearCache latest.assetType latest.merchantId latest.merchantOperatingCityId
 
 findLatest ::
   Domain.Types.AssetRelease.AssetType ->
