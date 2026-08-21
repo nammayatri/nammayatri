@@ -81,6 +81,7 @@ Person:
     hasDisability : Maybe Bool
     blockedAt : Maybe UTCTime
     blockedByRuleId : Maybe (Id MerchantConfig)
+    blockedReason : Maybe Text
     aadhaarVerified : Bool
     createdAt : UTCTime
     updatedAt : UTCTime

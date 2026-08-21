@@ -33,6 +33,13 @@ data ApplyCustomerOfferReq = ApplyCustomerOfferReq
 instance Kernel.Types.HideSecrets.HideSecrets ApplyCustomerOfferReq where
   hideSecrets = Kernel.Prelude.identity
 
+data BlockCustomerReq = BlockCustomerReq {blockedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets BlockCustomerReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data BulkApplyCustomerOfferReq = BulkApplyCustomerOfferReq
   { customers :: [BulkApplyOfferCustomer],
     offerCode :: Kernel.Prelude.Text,
@@ -87,7 +94,8 @@ data CustomerInfoRes = CustomerInfoRes
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
     safetyCenterDisabledOnDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     totalSosCount :: Kernel.Prelude.Int,
-    paymentMode :: Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode
+    paymentMode :: Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode,
+    blockedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -164,7 +172,7 @@ type GetCustomerList =
 
 type DeleteCustomerDelete = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostCustomerBlock = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "block" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostCustomerBlock = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "block" :> ReqBody '[JSON] BlockCustomerReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostCustomerUnblock = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "unblock" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -202,7 +210,7 @@ type PostCustomerBulkApplyOffer = ("bulkApplyOffer" :> ReqBody '[JSON] BulkApply
 data CustomerAPIs = CustomerAPIs
   { getCustomerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> EulerHS.Types.EulerClient CustomerListRes,
     deleteCustomerDelete :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postCustomerBlock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postCustomerBlock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> BlockCustomerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCustomerUnblock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getCustomerInfo :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CustomerInfoRes,
     getCustomerCancellationDuesDetails :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient CancellationDuesDetailsRes,

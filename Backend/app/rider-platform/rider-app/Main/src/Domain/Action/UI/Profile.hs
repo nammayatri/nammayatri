@@ -397,15 +397,13 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   logInfo $ "[Profile.getPersonDetails] findIntegratedBPPConfigs done, count=" <> show (length integratedBPPConfigs)
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
   -- Check if customer is temporarily blocked and should be unblocked
-  fork "Check and unblock customer if temporary block expired" $ do
-    when person.blocked $ do
-      case person.blockedUntil of
-        Just blockedUntilTime -> do
-          now <- getCurrentTime
-          when (now > blockedUntilTime) $ do
-            void $ QPerson.updatingEnabledAndBlockedState personId Nothing False
-            logInfo $ "Unblocked customer in profile API, customerId: " <> personId.getId <> " blockedUntil was: " <> show blockedUntilTime
-        Nothing -> pure ()
+  -- Cheap fast-path on the snapshot so we skip the DB update for non-blocked customers; the actual
+  -- clear is a conditional update guarded on blocked = True AND blockedUntil < now, so it's atomic
+  -- (a newer block with a future/NULL blockedUntil is never cleared) and can't fail on a strict
+  -- time-equality check.
+  fork "Check and unblock customer if temporary block expired" $
+    when person.blocked $
+      QPerson.unblockIfExpired personId
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
   makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage

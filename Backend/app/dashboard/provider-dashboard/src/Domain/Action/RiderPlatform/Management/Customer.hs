@@ -56,12 +56,13 @@ postCustomerBlock ::
   Kernel.Types.Beckn.Context.City ->
   ApiTokenInfo ->
   Kernel.Types.Id.Id Dashboard.Common.Customer ->
+  API.Types.RiderPlatform.Management.Customer.BlockCustomerReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postCustomerBlock merchantShortId opCity apiTokenInfo customerId = do
+postCustomerBlock merchantShortId opCity apiTokenInfo customerId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
-    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerBlock) customerId
+    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerBlock) customerId req
 
 postCustomerUnblock :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCustomerUnblock merchantShortId opCity apiTokenInfo customerId = do
