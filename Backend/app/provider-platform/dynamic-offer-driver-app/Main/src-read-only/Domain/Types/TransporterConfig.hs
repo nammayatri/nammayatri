@@ -502,7 +502,7 @@ data InvoiceConfig = InvoiceConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
-data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM | PAYMENT_CUSTOMER_AND_DRIVER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutChargeBearer = DRIVER_BEARER | PLATFORM_BEARER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
