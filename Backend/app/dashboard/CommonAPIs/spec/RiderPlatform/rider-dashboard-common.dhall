@@ -97,6 +97,7 @@ let defaultTypeImportMapper =
       , { _1 = "Int", _2 = "Kernel.Prelude" }
       , { _1 = "Bool", _2 = "Kernel.Prelude" }
       , { _1 = "NonEmpty", _2 = "Kernel.Prelude" }
+      , { _1 = "Either", _2 = "Kernel.Prelude" }
       , { _1 = "Id", _2 = "Kernel.Types.Id" }
       , { _1 = "ShortId", _2 = "Kernel.Types.Id" }
       , { _1 = "UTCTime", _2 = "Kernel.Prelude" }

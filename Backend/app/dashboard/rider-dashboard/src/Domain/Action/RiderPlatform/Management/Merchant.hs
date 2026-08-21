@@ -28,6 +28,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     postMerchantTicketConfigUpsert,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantSchedulerTrigger,
+    postMerchantSchedulerRevive,
     postMerchantConfigOperatingCityWhiteList,
     postMerchantConfigMerchantCreate,
     getMerchantConfigSpecialLocationList,
@@ -372,3 +373,9 @@ postMerchantMerchantMessageUpsert merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantMessageUpsert) req
+
+postMerchantSchedulerRevive :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ReviveSchedulerJobsReq -> Environment.Flow Common.ReviveSchedulerJobsRes
+postMerchantSchedulerRevive merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantSchedulerRevive) req

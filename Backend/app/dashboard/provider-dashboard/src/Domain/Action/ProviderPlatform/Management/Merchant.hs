@@ -41,6 +41,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigFareProductSetEnabled,
     postMerchantConfigOperatingCityCreate,
     postMerchantSchedulerTrigger,
+    postMerchantSchedulerRevive,
     postMerchantUpdateOnboardingVehicleVariantMapping,
     postMerchantSpecialLocationUpsert,
     deleteMerchantSpecialLocationDelete,
@@ -741,3 +742,9 @@ getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types
 getMerchantConfigSubscriptionConfigList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigSubscriptionConfigList)
+
+postMerchantSchedulerRevive :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ReviveSchedulerJobsReq -> Environment.Flow Common.ReviveSchedulerJobsRes
+postMerchantSchedulerRevive merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantSchedulerRevive) req
