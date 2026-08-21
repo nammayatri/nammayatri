@@ -5,6 +5,7 @@ module Storage.Beam.SavedReqLocation where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.SavedReqLocation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -22,10 +23,12 @@ data SavedReqLocationT f = SavedReqLocationT
     isMoved :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lat :: B.C f Kernel.Prelude.Double,
     locationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    locationType :: B.C f (Kernel.Prelude.Maybe Domain.Types.SavedReqLocation.LocationType),
     lon :: B.C f Kernel.Prelude.Double,
     placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderId :: B.C f Kernel.Prelude.Text,
     state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    stopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     tag :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
