@@ -91,12 +91,13 @@ calulateCongestionByGeohashAndDistanceBin ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   UTCTime ->
   UTCTime ->
-  m [(Maybe Text, Maybe Double, Text)]
+  m [(Maybe Text, Maybe Double, Int, DServiceTierType.ServiceTierType, Text)]
 calulateCongestionByGeohashAndDistanceBin from to = do
   CH.findAll $
     CH.select_
       ( \estimate -> do
           let congestion = CH.avg_ (estimate.congestionMultiplier)
+          let congestionCount = CH.count_ (estimate.id)
           let tripDistanceBin =
                 CH.case_
                   ( (estimate.estimatedDistance CH.>=.. CH.valColumn (Just 0) CH.&&.. estimate.estimatedDistance CH.<.. CH.valColumn (Just 2000), CH.valColumn "0-2")
@@ -114,14 +115,13 @@ calulateCongestionByGeohashAndDistanceBin from to = do
                   )
                   (CH.valColumn "unknown")
 
-          CH.groupBy (estimate.fromLocGeohash, tripDistanceBin) $ \(fromLocGeohash, tripDistanceBin') -> do
-            (fromLocGeohash, congestion, tripDistanceBin')
+          CH.groupBy (estimate.fromLocGeohash, tripDistanceBin, estimate.vehicleServiceTier) $ \(fromLocGeohash, tripDistanceBin', vehicleServiceTier) -> do
+            (fromLocGeohash, congestion, congestionCount, vehicleServiceTier, tripDistanceBin')
       )
       $ CH.filter_
         ( \estimate ->
             estimate.createdAt >=. CH.DateTime from
               CH.&&. estimate.createdAt <=. CH.DateTime to
-              CH.&&. estimate.vehicleServiceTier `in_` [DServiceTierType.TAXI]
               CH.&&. CH.isNotNull estimate.fromLocGeohash
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
@@ -130,20 +130,20 @@ calulateCongestionByGeohash ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   UTCTime ->
   UTCTime ->
-  m [(Maybe Text, Maybe Double)]
+  m [(Maybe Text, Maybe Double, Int, DServiceTierType.ServiceTierType)]
 calulateCongestionByGeohash from to = do
   CH.findAll $
     CH.select_
       ( \estimate -> do
           let congestion = CH.avg_ (estimate.congestionMultiplier)
-          CH.groupBy (estimate.fromLocGeohash) $ \(fromLocGeohash) -> do
-            (fromLocGeohash, congestion)
+          let congestionCount = CH.count_ (estimate.id)
+          CH.groupBy (estimate.fromLocGeohash, estimate.vehicleServiceTier) $ \(fromLocGeohash, vehicleServiceTier) -> do
+            (fromLocGeohash, congestion, congestionCount, vehicleServiceTier)
       )
       $ CH.filter_
         ( \estimate ->
             estimate.createdAt >=. CH.DateTime from
               CH.&&. estimate.createdAt <=. CH.DateTime to
-              CH.&&. estimate.vehicleServiceTier `in_` [DServiceTierType.TAXI]
               CH.&&. CH.isNotNull estimate.fromLocGeohash
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
@@ -152,19 +152,19 @@ calulateCongestionByCity ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   UTCTime ->
   UTCTime ->
-  m [(Id DMOC.MerchantOperatingCity, Maybe Double)]
+  m [(Id DMOC.MerchantOperatingCity, Maybe Double, Int, DServiceTierType.ServiceTierType)]
 calulateCongestionByCity from to = do
   CH.findAll $
     CH.select_
       ( \estimate -> do
           let congestion = CH.avg_ (estimate.congestionMultiplier)
-          CH.groupBy (estimate.merchantOperatingCityId) $ \(merchantOperatingCityId) -> do
-            (merchantOperatingCityId, congestion)
+          let congestionCount = CH.count_ (estimate.id)
+          CH.groupBy (estimate.merchantOperatingCityId, estimate.vehicleServiceTier) $ \(merchantOperatingCityId, vehicleServiceTier) -> do
+            (merchantOperatingCityId, congestion, congestionCount, vehicleServiceTier)
       )
       $ CH.filter_
         ( \estimate ->
             estimate.createdAt >=. CH.DateTime from
               CH.&&. estimate.createdAt <=. CH.DateTime to
-              CH.&&. estimate.vehicleServiceTier `in_` [DServiceTierType.TAXI]
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)

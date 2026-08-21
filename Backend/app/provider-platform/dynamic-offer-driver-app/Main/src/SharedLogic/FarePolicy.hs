@@ -991,35 +991,38 @@ firstJustIO :: Monad m => [m (Maybe a)] -> m (Maybe a)
 firstJustIO [] = pure Nothing
 firstJustIO (x : xs) = x >>= maybe (firstJustIO xs) (pure . Just)
 
--- | Congestion multipliers are pre-aggregated averages written by the
--- CongestionChargeAvg allocator job. Read them most-specific-first and stop at
--- the first level that has a value: geohash+distanceBin -> geohash -> city.
+-- | Congestion multipliers are pre-aggregated, per-VehicleCategory averages
+-- written by the CongestionChargeAvg allocator job. Read them most-specific-first
+-- and stop at the first level that has a value: geohash+distanceBin -> geohash -> city.
 getCongestionMultiplier ::
   (MonadFlow m, CacheFlow m r) =>
   Text ->
   Text ->
   Text ->
+  Maybe DVC.VehicleCategory ->
   m (Maybe Double, Maybe Double)
-getCongestionMultiplier geohash distanceBin cityId = do
+getCongestionMultiplier geohash distanceBin cityId vehicleCategory = do
   (congestionMultiplier :: Maybe Double) <-
     firstJustIO
-      [ Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin,
-        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohash geohash,
-        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity cityId
+      [ Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin vehicleCategory,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohash geohash vehicleCategory,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity cityId vehicleCategory
       ]
   (congestionMultiplierPast :: Maybe Double) <-
     firstJustIO
-      [ Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin,
-        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashPast geohash,
-        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast cityId
+      [ Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin vehicleCategory,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashPast geohash vehicleCategory,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast cityId vehicleCategory
       ]
   return (congestionMultiplier, congestionMultiplierPast)
 
 -- | All Redis-derived inputs (plus the random toss) that the dynamic-pricing
--- logic consumes. congestion / rain / toss are independent of vehicleCategory;
--- QAR and supply-demand are keyed by it. Splitting the fetch this way lets the
--- search path resolve the shared part once and the per-category part once per
--- distinct vehicleCategory, instead of re-hitting Redis for every service tier.
+-- logic consumes. rain / toss are independent of vehicleCategory; congestion,
+-- QAR and supply-demand are all keyed by it (congestion is aggregated from
+-- Estimates per VehicleCategory by the CongestionChargeAvg job). Splitting the
+-- fetch this way lets the search path resolve the shared part once and the
+-- per-category part once per distinct vehicleCategory, instead of re-hitting
+-- Redis for every service tier.
 data DynamicPricingInputs = DynamicPricingInputs
   { actualQAR :: Maybe Double,
     actualQARPast :: Maybe Double,
@@ -1033,19 +1036,16 @@ data DynamicPricingInputs = DynamicPricingInputs
     toss :: Int
   }
 
--- vehicleCategory-independent inputs: congestion (geohash+distanceBin), rain
--- (geohash) and the per-request random toss. Fetched once per search.
+-- vehicleCategory-independent inputs: rain (geohash) and the per-request random
+-- toss. Fetched once per search.
 fetchSharedDynamicPricingInputs ::
   (MonadFlow m, CacheFlow m r) =>
   Text ->
-  Text ->
-  Text ->
-  m (Maybe Double, Maybe Double, Maybe Text, Int)
-fetchSharedDynamicPricingInputs geohash distanceBin cityId = do
-  (congestionMultiplier, congestionMultiplierPast) <- getCongestionMultiplier geohash distanceBin cityId
+  m (Maybe Text, Int)
+fetchSharedDynamicPricingInputs geohash = do
   mbRainStatus <- Hedis.withCrossAppRedis $ Hedis.get $ mkRainStatusKey geohash
   toss <- getRandomInRange (1, 100 :: Int)
-  pure (congestionMultiplier, congestionMultiplierPast, mbRainStatus, toss)
+  pure (mbRainStatus, toss)
 
 data DropQARConfig = DropQARConfig
   { dropLocation :: LatLong,
@@ -1060,7 +1060,7 @@ mkDropQARConfig transporterConfig mbToLocation
       DropQARConfig {dropLocation, dropRadius = fromMaybe (fromMaybe 5.0 transporterConfig.qarCalRadiusInKm) transporterConfig.dropQarCalRadiusInKm}
   | otherwise = Nothing
 
--- vehicleCategory-dependent inputs: QAR (pickup and, when configured, drop) and the supply-demand ratios.
+-- vehicleCategory-dependent inputs: congestion, QAR (pickup and, when configured, drop) and the supply-demand ratios.
 fetchCategoryDynamicPricingInputs ::
   (MonadFlow m, CacheFlow m r) =>
   UTCTime ->
@@ -1072,20 +1072,21 @@ fetchCategoryDynamicPricingInputs ::
   Int ->
   Text ->
   Maybe DVC.VehicleCategory ->
-  m (Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double)
+  m (Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double)
 fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory = do
   (actualQAR, actualQARPast) <- getActualQAR now vehicleCategory location radius distance (Just cityId)
   (actualQARToLoc, actualQARToLocPast) <-
     maybe (pure (Nothing, Nothing)) (\cfg -> getActualQAR now vehicleCategory cfg.dropLocation cfg.dropRadius distance Nothing) mbDropQARConfig
   mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash geohash vehicleCategory
   mbSupplyDemandRatioToLoc <- join <$> traverse (\g -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash g vehicleCategory) mbToLocGeohash
-  pure (actualQAR, actualQARPast, actualQARToLoc, actualQARToLocPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc)
+  (congestionMultiplier, congestionMultiplierPast) <- getCongestionMultiplier geohash (getDistanceBin distance) cityId vehicleCategory
+  pure (actualQAR, actualQARPast, actualQARToLoc, actualQARToLocPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc, congestionMultiplier, congestionMultiplierPast)
 
 mkDynamicPricingInputs ::
-  (Maybe Double, Maybe Double, Maybe Text, Int) ->
-  (Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double) ->
+  (Maybe Text, Int) ->
+  (Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double, Maybe Double) ->
   DynamicPricingInputs
-mkDynamicPricingInputs (congestionMultiplier, congestionMultiplierPast, mbRainStatus, toss) (actualQAR, actualQARPast, actualQARToLoc, actualQARToLocPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc) =
+mkDynamicPricingInputs (mbRainStatus, toss) (actualQAR, actualQARPast, actualQARToLoc, actualQARToLocPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc, congestionMultiplier, congestionMultiplierPast) =
   DynamicPricingInputs {..}
 
 -- Single-vehicleCategory resolution, used on the single-tier (endRide / quote)
@@ -1103,7 +1104,7 @@ resolveDynamicPricingInputs ::
   Maybe DVC.VehicleCategory ->
   m DynamicPricingInputs
 resolveDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory = do
-  shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
+  shared <- fetchSharedDynamicPricingInputs geohash
   categoryInputs <- fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory
   pure $ mkDynamicPricingInputs shared categoryInputs
 
@@ -1123,7 +1124,7 @@ buildDynamicPricingInputs ::
   [Maybe DVC.VehicleCategory] ->
   m [(Maybe DVC.VehicleCategory, DynamicPricingInputs)]
 buildDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategories = do
-  shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
+  shared <- fetchSharedDynamicPricingInputs geohash
   forM (List.nub vehicleCategories) $ \vehicleCategory -> do
     categoryInputs <- fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory
     pure (vehicleCategory, mkDynamicPricingInputs shared categoryInputs)

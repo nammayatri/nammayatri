@@ -20,9 +20,11 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import Domain.Types.TransporterConfig
+import Domain.Types.VehicleVariant (castVehicleVariantToVehicleCategory)
 import Environment
 import EulerHS.Prelude hiding (foldr', id, length, map, mapM_, sum, whenJust)
 import GHC.Num.Integer (integerToInt)
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -36,7 +38,9 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.DynamicPricing (mkCongestionKeyWithCity, mkCongestionKeyWithGeohash)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Vehicle as QVehicle
 
 -- What it is:
 -- Entire city is divided into geohashes, whenever we encounter a search, we increase the frequency and whenver a booking happens
@@ -76,7 +80,7 @@ getDriverDemandHotspots ::
     ) ->
     Flow GetDemandHotspotsResp
   )
-getDriverDemandHotspots (_, _, merchantOpCityId) = do
+getDriverDemandHotspots (mbPersonId, _, merchantOpCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
@@ -84,7 +88,7 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
         then do
           let cachedResultKey = mkDemandHotspotCachedKey merchantOpCityId.getId
           cachedResult :: Maybe GetDemandHotspotsResp <- Redis.safeGet cachedResultKey
-          case cachedResult of
+          res <- case cachedResult of
             Just res -> do
               fork "Calculating demand hotpspots" $ do
                 expirySec <- Redis.ttl cachedResultKey
@@ -92,10 +96,17 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
                   void $ calculateDemandHotspots configs cachedResultKey True
               return res
             Nothing -> calculateDemandHotspots configs cachedResultKey False
+          overlayCongestionMultiplier transporterConfig.dpGeoHashPercision res
         else do
           throwError $ InvalidRequest "Demand Hotspots is not enabled"
     _ -> throwError $ InvalidRequest "Demand Hotspots feature configs not set"
   where
+    -- 'frequency'/'location' are shared across every driver in the city (cached
+    -- under a single per-city key), but the congestion multiplier is per
+    -- VehicleCategory. So the shared, locked, TTL-cached computation below only
+    -- ever produces 'multiplier = Nothing' placeholders — the real value is
+    -- overlaid fresh per request in 'overlayCongestionMultiplier', after the
+    -- calling driver's own vehicle category is known.
     calculateDemandHotspots configs cachedResultKey forceRecal =
       Redis.withWaitAndLockRedis (mkHotspotsCalculationLockKey merchantOpCityId.getId) 10 10000 $ do
         --1e4 microseconds
@@ -114,7 +125,7 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
                   GetDemandHotspotsResp
                     { createdAt = now,
                       expiryAt = T.addUTCTime (60 * fromIntegral configs.resultDurationMinutes) now,
-                      hotspotsDetails = map (uncurry HotspotsDetails) finalResults
+                      hotspotsDetails = map (\(freq, loc) -> HotspotsDetails {frequency = freq, location = loc, multiplier = Nothing}) finalResults
                     }
             Redis.setExp cachedResultKey resp (60 * configs.resultDurationMinutes)
             return resp
@@ -132,6 +143,41 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
           (sumLat, sumLong) = foldr' (\(HotspotObject (_, lat, long)) (accLat, accLong) -> (accLat + lat, accLong + long)) (0, 0) members
           avgLatLong = LatLong (sumLat / freq) (sumLong / freq)
       return (floor freq, avgLatLong)
+
+    -- Resolves the calling driver's own vehicle category and overlays a fresh
+    -- (uncached) congestion multiplier onto each returned hotspot — cheap
+    -- (one DB/replica read + up to noOfGeohashesToReturn * 2 Redis GETs), so
+    -- it's safe to run on every request even when 'res' itself came from cache.
+    overlayCongestionMultiplier geohashPrecision res = do
+      vehicleCategory <- resolveDriverVehicleCategory
+      hotspotsWithMultiplier <- mapM (attachMultiplier geohashPrecision vehicleCategory) res.hotspotsDetails
+      return res {hotspotsDetails = hotspotsWithMultiplier}
+
+    resolveDriverVehicleCategory = case mbPersonId of
+      Nothing -> pure Nothing
+      Just personId -> do
+        mbVehicle <- B.runInReplica $ QVehicle.findById personId
+        pure $ (\v -> fromMaybe (castVehicleVariantToVehicleCategory v.variant) v.category) <$> mbVehicle
+
+    attachMultiplier geohashPrecision vehicleCategory hotspot = do
+      multiplier <- lookupCongestionMultiplier geohashPrecision vehicleCategory hotspot.location
+      return hotspot {multiplier = multiplier}
+
+    -- Looks up the same (now VehicleCategory-aware) congestion-charge multiplier
+    -- used in real fare quotes (via the CongestionChargeAvg scheduler job's Redis
+    -- cache), geohash -> city fallback. This is deliberately re-encoded at
+    -- dpGeoHashPercision (the dynamic-pricing precision), which is independent of
+    -- DemandHotspotsConfig.precisionOfGeohash used for hotspot clustering.
+    lookupCongestionMultiplier geohashPrecision vehicleCategory latlong = do
+      let precision = fromMaybe 5 geohashPrecision
+          mbGeohash = T.pack <$> Geohash.encode precision (latlong.lat, latlong.lon)
+      case mbGeohash of
+        Nothing -> pure Nothing
+        Just geohash -> do
+          mbGeohashMultiplier :: Maybe Double <- Redis.withCrossAppRedis $ Redis.get (mkCongestionKeyWithGeohash geohash vehicleCategory)
+          case mbGeohashMultiplier of
+            Just _ -> pure mbGeohashMultiplier
+            Nothing -> Redis.withCrossAppRedis $ Redis.get (mkCongestionKeyWithCity merchantOpCityId.getId vehicleCategory)
 
 updateDemandHotspotsOnSearch :: Id SearchRequest -> Id MerchantOperatingCity -> TransporterConfig -> Maps.LatLong -> Flow ()
 updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latlong = do

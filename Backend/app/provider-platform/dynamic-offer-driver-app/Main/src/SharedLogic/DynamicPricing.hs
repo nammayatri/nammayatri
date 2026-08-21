@@ -44,23 +44,23 @@ mkActualQARKeyWithGeohashAndDistanceBinPast geohash distanceBin vehicleCategory 
 mkActualQARKeyWithCityPast :: Text -> Maybe DVC.VehicleCategory -> Text
 mkActualQARKeyWithCityPast city vehicleCategory = "A_QAR_city_past" <> city <> "_vehicleCategory_" <> show vehicleCategory
 
-mkCongestionKeyWithGeohash :: Text -> Text
-mkCongestionKeyWithGeohash geohash = "Congestion_geohash" <> geohash
+mkCongestionKeyWithGeohash :: Text -> Maybe DVC.VehicleCategory -> Text
+mkCongestionKeyWithGeohash geohash vehicleCategory = "Congestion_geohash" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
 
-mkCongestionKeyWithGeohashAndDistanceBin :: Text -> Text -> Text
-mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin = "Congestion_geohash" <> geohash <> "_distanceBin_" <> distanceBin
+mkCongestionKeyWithGeohashAndDistanceBin :: Text -> Text -> Maybe DVC.VehicleCategory -> Text
+mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin vehicleCategory = "Congestion_geohash" <> geohash <> "_distanceBin_" <> distanceBin <> "_vehicleCategory_" <> show vehicleCategory
 
-mkCongestionKeyWithCity :: Text -> Text
-mkCongestionKeyWithCity city = "Congestion_city" <> city
+mkCongestionKeyWithCity :: Text -> Maybe DVC.VehicleCategory -> Text
+mkCongestionKeyWithCity city vehicleCategory = "Congestion_city" <> city <> "_vehicleCategory_" <> show vehicleCategory
 
-mkCongestionKeyWithGeohashPast :: Text -> Text
-mkCongestionKeyWithGeohashPast geohash = "Congestion_geohash_past" <> geohash
+mkCongestionKeyWithGeohashPast :: Text -> Maybe DVC.VehicleCategory -> Text
+mkCongestionKeyWithGeohashPast geohash vehicleCategory = "Congestion_geohash_past" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
 
-mkCongestionKeyWithGeohashAndDistanceBinPast :: Text -> Text -> Text
-mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin = "Congestion_geohash_past" <> geohash <> "_distanceBin_" <> distanceBin
+mkCongestionKeyWithGeohashAndDistanceBinPast :: Text -> Text -> Maybe DVC.VehicleCategory -> Text
+mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin vehicleCategory = "Congestion_geohash_past" <> geohash <> "_distanceBin_" <> distanceBin <> "_vehicleCategory_" <> show vehicleCategory
 
-mkCongestionKeyWithCityPast :: Text -> Text
-mkCongestionKeyWithCityPast city = "Congestion_city_past" <> city
+mkCongestionKeyWithCityPast :: Text -> Maybe DVC.VehicleCategory -> Text
+mkCongestionKeyWithCityPast city vehicleCategory = "Congestion_city_past" <> city <> "_vehicleCategory_" <> show vehicleCategory
 
 data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
