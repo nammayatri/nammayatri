@@ -106,11 +106,11 @@ type API =
              :> ( "rc"
                     :> TokenAuth
                     :> QueryParam "imageId" Text
-                    :> Get '[JSON] (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+                    :> Get '[JSON] DocumentRegistration.ValidateDocumentImageResponse
                     :<|> "dl"
                       :> TokenAuth
                       :> QueryParam "imageId" Text
-                      :> Get '[JSON] (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+                      :> Get '[JSON] DocumentRegistration.ValidateDocumentImageResponse
                 )
        )
     :<|> "driver" :> "referral"
@@ -228,8 +228,8 @@ getAllLinkedRCs (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ 
 getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Text -> Maybe DP.Role -> FlowHandler DriverOnboarding.DriverReferralDetailsRes
 getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole
 
-getOCRResultRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+getOCRResultRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
 getOCRResultRC (personId, _, _) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultRC personId mbImageId
 
-getOCRResultDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler (Maybe DocumentRegistration.ValidateDocumentImageResponse)
+getOCRResultDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
 getOCRResultDL (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultDL personId merchantOpCityId mbImageId

@@ -41,6 +41,7 @@ import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
 import Kernel.External.Verification.Interface (prepareMorthHttpManager)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
+import Kernel.External.Verification.InternalScripts.InternalOCR (prepareInternalOCRHttpManager)
 import Kernel.External.Verification.SafetyPortal.Config (prepareSafetyPortalHttpManager)
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -157,7 +158,8 @@ runDynamicOfferDriverApp' appCfg = do
                 Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
                 Just (Just 40000, prepareIffcoTokioHttpManager 40000),
                 Just (Just 15000, prepareMorthHttpManager 15000),
-                Just (Just 150000, prepareEkatraHttpManager 150000)
+                Just (Just 150000, prepareEkatraHttpManager 150000),
+                Just (Just 10000, prepareInternalOCRHttpManager 10000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
