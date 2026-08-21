@@ -481,6 +481,8 @@ in  { esqDBCfg
     , minTripDistanceForReferralCfg = Some +1000
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
+    , enableAPILatencyLogging = True
+    , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
     , incomingAPIResponseTimeout = +15
