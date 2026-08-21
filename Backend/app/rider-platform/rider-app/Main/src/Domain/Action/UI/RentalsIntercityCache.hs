@@ -84,7 +84,8 @@ rentalsIntercityCache personId merchantId req = do
   let res =
         FareCacheResp
           { interCityMinimumFareResp = interCityResp,
-            rentalsMininumFareResp = rentalsResp
+            rentalsMininumFareResp = rentalsResp,
+            minScheduleAdvanceTimeForRentalAndIntercity = riderConfig.minScheduleAdvanceTimeForRentalAndIntercity
           }
   pure res
   where

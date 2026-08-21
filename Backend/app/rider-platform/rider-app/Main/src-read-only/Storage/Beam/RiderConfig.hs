@@ -127,6 +127,7 @@ data RiderConfigT f = RiderConfigT
     minRideDistanceSavingForBetterPoint :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     minRidesToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToShowCancellationRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    minScheduleAdvanceTimeForRentalAndIntercity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     minimumWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     monthlyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     monthlyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -173,6 +173,8 @@ data DriverRideRes = DriverRideRes
     coinsRewardedOnGoldTierRide :: Maybe Int,
     requestedVehicleVariant :: DVeh.VehicleVariant,
     isOdometerReadingsRequired :: Bool,
+    -- True for InterCity/Rental on non-auto vehicles: driver app must collect a toll (0 allowed) at ride end.
+    isManualTollEntryRequired :: Bool,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
     isVehicleAirConditioned :: Maybe Bool,
@@ -605,6 +607,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         coinsRewardedOnGoldTierRide = booking.coinsRewardedOnGoldTierRide,
         requestedVehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
+        isManualTollEntryRequired = DTC.isManualTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory,
         vehicleServiceTier = booking.vehicleServiceTier,
         vehicleServiceTierName = booking.vehicleServiceTierName,
         vehicleCapacity = booking.vehicleServiceTierSeatingCapacity,

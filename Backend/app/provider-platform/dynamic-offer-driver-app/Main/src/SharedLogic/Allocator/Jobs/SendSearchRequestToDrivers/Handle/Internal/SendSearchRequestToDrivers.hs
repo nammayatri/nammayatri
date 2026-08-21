@@ -273,6 +273,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
               timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
               tollCharges = Nothing,
+              isManualToll = False,
               vehicleAge = vehicleAge,
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,
