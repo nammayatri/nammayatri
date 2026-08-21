@@ -140,18 +140,29 @@ fetchUsageRows ::
   Person.Person ->
   m [DPUS.PersonPTStats]
 fetchUsageRows person = do
-  -- Same fallback as the write path, so reads and writes agree on the key.
-  staticPersonId <-
-    maybe
-      (pure person.id.getId)
-      (\encPhone -> SLUtils.getPureStaticCustomerId person <$> decrypt encPhone)
-      person.mobileNumber
-  rows <- QPersonPTStats.findAllByStaticPersonId staticPersonId
-  let staleRows = filter (\row -> row.personId /= person.id) rows
-  unless (null staleRows) $
-    fork "repoint person usage stats" $
-      forM_ staleRows $ \row -> QPersonPTStats.updatePersonIdById person.id row.id
-  pure rows
+  mbStaticPersonId <-
+    forM person.mobileNumber $ \encPhone ->
+      SLUtils.getPureStaticCustomerId person <$> decrypt encPhone
+  case mbStaticPersonId of
+    Nothing -> QPersonPTStats.findAllByPersonId person.id
+    Just staticPersonId ->
+      QPersonPTStats.findAllByStaticPersonId staticPersonId >>= \case
+        [] -> adoptRowsKeyedOnPersonId staticPersonId
+        rows -> repointStalePersonIds rows
+  where
+    adoptRowsKeyedOnPersonId staticPersonId = do
+      rows <- QPersonPTStats.findAllByPersonId person.id
+      unless (null rows) $
+        fork "adopt backfilled person pt stats" $
+          forM_ rows $ \row -> QPersonPTStats.updateStaticPersonIdById staticPersonId row.id
+      pure rows
+
+    repointStalePersonIds rows = do
+      let staleRows = filter (\row -> row.personId /= person.id) rows
+      unless (null staleRows) $
+        fork "repoint person pt stats" $
+          forM_ staleRows $ \row -> QPersonPTStats.updatePersonIdById person.id row.id
+      pure rows
 
 mkInput :: UTCTime -> [DPUS.PersonPTStats] -> OfferSegmentContext -> OfferSegmentInput
 mkInput now rows ctx =
