@@ -57,6 +57,7 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
@@ -88,6 +89,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
 import qualified Tools.Utils as Tools
+import Text.Read (readMaybe)
 import Prelude hiding (id)
 
 -- DeliveryPersonDetailsAPIEntity type (match Ride.hs)
@@ -293,16 +295,21 @@ buildRideEarnings ::
   DRide.Ride ->
   DFareParams.FareParameters ->
   Maybe DFareParams.FareParameters ->
+  HighPrecMoney ->
+  Bool ->
+  Bool ->
   m RideEarnings
-buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam onlinePaymentCharge customerBearsCharge driverBearsCharge = do
   let fare = fromMaybe booking.estimatedFare ride.fare
       discount = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
-      paymentCharge = fromMaybe 0 ride.paymentCharge
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
-      amountPaidByCustomer = fare - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee} = labels
+      -- For a rider-borne payment charge the fare is grossed up by P, so strip it back out here so the
+      -- driver's "amount paid by customer" matches a no-charge ride. Driver/platform fares are not
+      -- grossed up, so nothing is removed in those cases.
+      amountPaidByCustomer = fare - (if customerBearsCharge then onlinePaymentCharge else 0) - discount + tips
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare, lblAirportConvenienceFee, lblPaymentCharge} = labels
       cancellationDues = fromMaybe 0 (finalFareParam >>= (.customerCancellationDues))
       airportConvenienceFee = fromMaybe 0 (finalFareParam >>= (.airportConvenienceFee))
   let mkComp sec key mbLabel value applicable =
@@ -322,7 +329,7 @@ buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = d
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-            mkComp FareBreakup "PAYMENT_CHARGE" Nothing paymentCharge (paymentCharge /= 0),
+            mkComp FareBreakup "PAYMENT_CHARGE" lblPaymentCharge onlinePaymentCharge (driverBearsCharge && onlinePaymentCharge > 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
             mkComp FareBreakup "AIRPORT_CONVENIENCE_FEE" lblAirportConvenienceFee airportConvenienceFee (airportConvenienceFee > 0)
           ]
@@ -427,7 +434,8 @@ data EarningsLabels = EarningsLabels
     lblCommission :: Maybe Text,
     lblNetEarnings :: Maybe Text,
     lblFare :: Maybe Text,
-    lblAirportConvenienceFee :: Maybe Text
+    lblAirportConvenienceFee :: Maybe Text,
+    lblPaymentCharge :: Maybe Text
   }
 
 fetchEarningsLabels ::
@@ -443,6 +451,7 @@ fetchEarningsLabels lang =
     <*> resolveLabel lang "NET_DRIVER_EARNINGS"
     <*> resolveLabel lang "FARE"
     <*> resolveLabel lang "AIRPORT_CONVENIENCE_FEE"
+    <*> resolveLabel lang "PAYMENT_CHARGE"
 
 mkExoPhone :: Maybe DExophone.Exophone -> DRB.Booking -> Text
 mkExoPhone mbExophone booking =
@@ -472,14 +481,26 @@ mkDriverRideRes ::
   m DriverRideRes
 mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
   let estimatedFareParams = booking.fareParams
+      isOnlineRide = maybe False (`notElem` [DMPM.Cash, DMPM.BoothOnline]) booking.paymentInstrument
+      bearerFlags mbT =
+        let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe DTConf.PaymentChargeBearer
+         in ( mb == Just DTConf.PAYMENT_CUSTOMER,
+              mb == Just DTConf.PAYMENT_DRIVER
+            )
+      (customerBearsCharge, driverBearsCharge) = bearerFlags ride.paymentChargeBearer
+      chargeInAppFee = customerBearsCharge || driverBearsCharge
+      ridePaymentCharge = if isOnlineRide then fromMaybe 0 ride.paymentCharge else 0
+      bookingPaymentCharge = if isOnlineRide then fromMaybe 0 booking.paymentCharge else 0
+      rideAppFeeP = if chargeInAppFee then ridePaymentCharge else 0
+      bookingAppFeeP = if chargeInAppFee then bookingPaymentCharge else 0
       estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
-      estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission)
+      estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission - bookingAppFeeP)
       estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
-      estimatedBaseFareV2 = max 0 (estimatedBaseFareGrossV2 - estimatedCommission)
+      estimatedBaseFareV2 = max 0 (estimatedBaseFareGrossV2 - estimatedCommission - bookingAppFeeP)
       rideCommission = fromMaybe 0 ride.commission
       rideTipsAmount = fromMaybe 0 ride.tipAmount
-      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission + rideTipsAmount)) <$> ride.fare
+      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission - rideAppFeeP + rideTipsAmount)) <$> ride.fare
       edcCollectsParking = SL.edcCollectsParking booking.fareSettlementType
       displayParkingCharge = if edcCollectsParking then Nothing else estimatedFareParams.parkingCharge
   finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
@@ -534,18 +555,18 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         case booking.fareSettlementType of
           Just SL.FullPayment ->
             case ride.fare of
-              Just fareAmt -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+              Just fareAmt -> Just $ max 0 (fareAmt - commission - rideAppFeeP + rideTipsAmount)
               Nothing -> Nothing
           Just _ -> Nothing
           Nothing ->
             case booking.paymentInstrument of
               Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
               _ -> case ride.fare of
-                Just fareAmt -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
+                Just fareAmt -> Just $ max 0 (fareAmt - commission - rideAppFeeP + rideTipsAmount)
                 Nothing -> Nothing
 
   mbRideEarningsVal <- case mbEarningsLabels of
-    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams
+    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams ridePaymentCharge customerBearsCharge driverBearsCharge
     Nothing -> pure Nothing
 
   return $
@@ -648,7 +669,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         paymentInstrument = booking.paymentInstrument,
         paymentMode = booking.paymentMode,
         commissionCharges = ride.commission,
-        paymentCharge = ride.paymentCharge,
+        paymentCharge = if driverBearsCharge && ridePaymentCharge > 0 then Just ridePaymentCharge else Nothing,
         discountAmount = ride.discountAmount,
         pickupZoneGateId = booking.pickupGateId,
         pickupZoneGateName = mbGateInfo <&> (.name),
