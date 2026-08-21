@@ -66,8 +66,9 @@ dispatchToGateway merchantId domain action req signedCall unsignedCall = do
       base <- asks (.fabricGatewayBaseUrl)
       mbCfg <- QBC.findByMerchantIdDomainAndBecknProtocol (Just merchant.id) (show domain) (Just Domain.Beckn_V3)
       let mbNetworkId = mbCfg >>= (.networkId)
-          url = base {baseUrlPath = baseUrlPath base <> "/bap/caller/" <> T.unpack merchant.bapId}
-          bapReceiverUri = showBaseUrl $ base {baseUrlPath = baseUrlPath base <> "/bap/receiver/" <> T.unpack merchant.bapId}
+          fabricBapId = maybe merchant.bapId (.subscriberId) mbCfg
+          url = base {baseUrlPath = baseUrlPath base <> "/bap/caller/" <> T.unpack fabricBapId}
+          bapReceiverUri = showBaseUrl $ base {baseUrlPath = baseUrlPath base <> "/bap/receiver/" <> T.unpack fabricBapId}
           mappedAction = BecknContext.fabricActionName action
           jsonReq = A.toJSON req
           mutated = case mbNetworkId of
@@ -120,8 +121,9 @@ dispatchAction merchantId domain action mbPeerSubId req signedCall unsignedCall 
       base <- asks (.fabricGatewayBaseUrl)
       mbCfg <- QBC.findByMerchantIdDomainAndBecknProtocol (Just merchant.id) (show domain) (Just Domain.Beckn_V3)
       let mbNetworkId = mbCfg >>= (.networkId)
-          url = base {baseUrlPath = baseUrlPath base <> "/bap/caller/" <> T.unpack merchant.bapId}
-          bapReceiverUri = showBaseUrl $ base {baseUrlPath = baseUrlPath base <> "/bap/receiver/" <> T.unpack merchant.bapId}
+          fabricBapId = maybe merchant.bapId (.subscriberId) mbCfg
+          url = base {baseUrlPath = baseUrlPath base <> "/bap/caller/" <> T.unpack fabricBapId}
+          bapReceiverUri = showBaseUrl $ base {baseUrlPath = baseUrlPath base <> "/bap/receiver/" <> T.unpack fabricBapId}
           mappedAction = BecknContext.fabricActionName action
           jsonReq = A.toJSON req
           mutated = case mbNetworkId of
