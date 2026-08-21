@@ -97,9 +97,10 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
         void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
         void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just False) booking.id
+        -- The negative recon rows are written on refund success (SharedLogic.Payment.bookingsRefundStatusHandler),
+        -- not here: at this point the refund has only been requested and may still fail.
         whenJust mbPaymentBooking $ \paymentBooking ->
           void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
-        createCounterCancelReconEntries booking bapConfig refundAmount mRiderNumber fareParameters
       else do
         void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
         void $ QTBooking.updateStatusById DFRFSTicketBooking.CANCELLED booking.id

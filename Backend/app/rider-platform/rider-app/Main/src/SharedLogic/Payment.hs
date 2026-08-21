@@ -71,6 +71,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -456,7 +457,20 @@ refundStatusHandler paymentOrder paymentServiceType = do
                 when (booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]) $ do
                   QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
             case refund.status of
-              Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
+              Payment.REFUND_SUCCESS -> do
+                let alreadyRefunded = bookingPayment.status == DFRFSTicketBookingPayment.REFUNDED
+                unless alreadyRefunded $
+                  whenJust mbBooking $ \booking ->
+                    when (booking.status == DFRFSTicketBooking.COUNTER_CANCELLED) $ do
+                      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+                      let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
+                      person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+                      mRiderNumber <- mapM decrypt person.mobileNumber
+                      bapConfig <-
+                        getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
+                          >>= fromMaybeM (InternalError "Beckn Config not found")
+                      FRFSUtils.createCounterCancelReconEntries booking bapConfig refund.refundAmount mRiderNumber fareParameters
+                QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
               Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
               _ -> do
                 case isRefundApiCallSuccess of
