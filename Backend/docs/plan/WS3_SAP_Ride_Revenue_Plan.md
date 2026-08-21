@@ -6,8 +6,8 @@ todos:
     content: Wire BuyerAppSettlement totals + drill-down from WS2 BAP settlement feed
     status: pending
   - id: tds-reimbursement
-    content: Wire TdsReimbursement totals + drill-down when WS8 posts Reimbursed DTT rows
-    status: pending
+    content: Wire TdsReimbursement totals + drill-down from DTT Reimbursed rows (WS3 Credit post)
+    status: completed
 isProject: false
 ---
 
@@ -63,7 +63,7 @@ flowchart LR
 | Existing daily SAP shell patterns (lock, retry, audit) | `SAPDispatchCommon` extract (**done**) |
 | `GET /finance/sapJournals/transactions*` | `description` query + `RevenueRecognition` handler branch (**done**) |
 | Existing BANK / PG / GST mapping from migration `0006` | Ride + MSIL GL keys via migration `0011` merge (**done**) |
-| | BuyerAppSettlement / TdsReimbursement feeds (**remaining** / blocked) |
+| | BuyerAppSettlement feed (**remaining** / blocked on WS2) |
 
 ## Status snapshot
 
@@ -71,15 +71,15 @@ flowchart LR
 |-------|--------|
 | `SAPDispatchCommon` refactor | **Done** |
 | `SAPRideRevenueDispatch` + Allocator handler + dhall enable flag | **Done** |
-| `RideRevenueTotals` aggregates + row twins for drill-down | **Done** (BuyerAppSettlement / TDS reimbursement stubbed) |
+| `RideRevenueTotals` aggregates + row twins for drill-down | **Done** (BuyerAppSettlement still stubbed) |
 | `accountMapping` keys (`0011`) | **Done** |
 | `TransactionType.RevenueRecognition` in finance-kernel | **Done** |
 | `GET /finance/sapJournals` list | **Pre-existing** (works for new txn type) |
-| `GET /finance/sapJournals/transactions` | **Pre-existing**; + `description` query + RevenueRecognition handler (**done**; BuyerAppSettlement / TdsReimbursement empty) |
+| `GET /finance/sapJournals/transactions` | **Pre-existing**; + `description` query + RevenueRecognition handler (**done**; BuyerAppSettlement empty until WS2) |
 | Buyer-app settlement totals feed | **Stub** (depends WS2) |
-| TDS reimbursement totals / drill-down | **Stub** (depends WS8) |
+| TDS reimbursement totals / drill-down | **Done** — `fetchTdsTotals` reads DTT `Reimbursed` via `findByTdsTreatmentAndDateRange`; rows persist to `journal_entry_transaction` on successful `TdsReimbursement` JV post |
 | `GET /finance/payout/list`, settlement-file APIs, `/finance/search` | **Out of scope** (this doc) |
-| Maker-checker / finance RBAC preset | **Out of scope** (Maker-Checker plan) |
+| Maker-checker / finance RBAC preset | **Out of scope** (Maker-Checker plan; Credit post already writes Reimbursed DTT) |
 
 ---
 
@@ -106,17 +106,18 @@ flowchart LR
 | `PayoutToClearing` | `DRIVER_BALANCE` | `PAYOUT_CLEARING` | SETTLED `WalletPayout` legs |
 | `PayoutClearingToBank` | `PAYOUT_CLEARING` | `BANK` | Phase-1: **same** `WalletPayout` total. Intended: `pg_payout_settlement_report` (WS4 file ingest) |
 | `TdsDeduction` | `DRIVER_BALANCE` | `TDS_PAYABLE` | `direct_tax_transaction` `Deducted` |
-| `TdsReimbursement` | `TDS_RECEIVABLE` | `DRIVER_BALANCE` | **Forced 0** until WS8 `Reimbursed` rows |
+| `TdsReimbursement` | `TDS_RECEIVABLE` | `DRIVER_BALANCE` | `direct_tax_transaction` `Reimbursed` (written at WS3 FO TDS-cert Credit post; amount = `tdsCreditReceivable`) |
 | `SubscriptionRideRevenue` | `DEFERRED_REVENUE` | `SUBSCRIPTION_REVENUE` | SETTLED `RideRevenueRecognition` |
 | `SubscriptionExpiryRevenue` | `DEFERRED_REVENUE` | `SUBSCRIPTION_REVENUE` | SETTLED `ExpiryRevenueRecognition` |
 
 Zero amounts skip posting. Ride-fare builders also assert `gross == net + cgst + sgst + igst` before the shared request builder’s Dr==Cr check.
 
+TDS fetch uses generated [`findByTdsTreatmentAndDateRange`](Backend/lib/finance-kernel/spec/Storage/DirectTaxTransaction.yaml) (Deducted + Reimbursed in the same window). Reimbursed DTT rows are created by `postTdsReimbursementAdjustment` alongside the ledger Credit (Dr TDS Receivable / Cr FO wallet).
+
 **Remaining**
 
 1. Implement `fetchBuyerAppSettlementTotals` (+ drill-down) when WS2 settlement feed exists.
-2. Populate TDS reimbursement from WS8 `Reimbursed` DTT rows (builder already present).
-3. Decide whether settlement debit should ever use `BUYER_APP_POOL` instead of / in addition to `BANK`.
+2. Decide whether settlement debit should ever use `BUYER_APP_POOL` instead of / in addition to `BANK`.
 
 ---
 
@@ -130,11 +131,11 @@ Zero amounts skip posting. Ride-fare builders also assert `gross == net + cgst +
         description: Text   # JV label filter; RevenueRecognition only
 ```
 
-**Net-new in handlers:** `transactionType=RevenueRecognition` branch — `description` absent → concat all `rideRevenueJvLabels`; present → one label’s row fetcher (invalid → `InvalidRequest`). `BuyerAppSettlement` / `TdsReimbursement` return empty until WS2/WS8. Keep totals WHERE in sync with row Extra queries.
+**Net-new in handlers:** `transactionType=RevenueRecognition` branch — `description` absent → concat all `rideRevenueJvLabels`; present → one label’s row fetcher (invalid → `InvalidRequest`). `BuyerAppSettlement` stays empty until WS2. `TdsReimbursement` drill-down is populated from `journal_entry_transaction` after a successful daily JV post (source rows come from DTT `Reimbursed`). Keep totals WHERE in sync with row Extra queries.
 
 **Remaining**
 
-1. Fill empty drill-down paths when WS2 / WS8 land.
+1. Fill empty BuyerAppSettlement drill-down when WS2 lands.
 
 ---
 
@@ -151,7 +152,8 @@ Zero amounts skip posting. Ride-fare builders also assert `gross == net + cgst +
 **Done (minimal).**
 
 - [`SapJournalEntry.yaml`](Backend/lib/finance-kernel/spec/Storage/SapJournalEntry.yaml): `TransactionType` += `RevenueRecognition`.
-- Extra queries used by drill-down / aggregates: `DirectTaxTransactionExtra`, `LedgerEntryExtra` (row twins for payout / TDS / ride legs).
+- [`DirectTaxTransaction.yaml`](Backend/lib/finance-kernel/spec/Storage/DirectTaxTransaction.yaml): `findByTdsTreatmentAndDateRange` for Deducted / Reimbursed SAP windows.
+- Extra queries used by drill-down / aggregates: `DirectTaxTransactionExtra` (`findByReferenceIds`), `LedgerEntryExtra` (row twins for payout / ride legs).
 
 No new HTTP in finance-kernel.
 
@@ -160,15 +162,14 @@ No new HTTP in finance-kernel.
 ## Delivery order (remaining)
 
 1. BuyerAppSettlement when WS2 ready
-2. TdsReimbursement when WS8 ready
-3. BANK vs BUYER_APP_POOL product call
+2. BANK vs BUYER_APP_POOL product call
 
 ---
 
 ## Dependencies / risks
 
 - **WS2** — buyer-app settlement amounts (totals + transactions drill-down).
-- **WS8** — TDS reimbursement (`Reimbursed` direct-tax rows).
+- **WS8 + maker-checker** — FO TDS-cert submit + Credit adjustment must post before Reimbursed DTT rows exist for the SAP day window (already implemented; SAP totals only read DTT).
 - **WS4** — payout channel/gating may change eligibility later; phase-1 aggregates SETTLED `WalletPayout` only (commented as intentional).
 - Missing / wrong `accountMapping` key → `mkItem` / post throws for that day’s event.
 - GST mis-split breaks Dr==Cr assertion — keep assertion on every new JV builder.

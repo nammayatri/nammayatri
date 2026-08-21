@@ -34,6 +34,22 @@ findByInvoiceNumber invoiceNumber = do findAllWithKV [Se.Is Beam.invoiceNumber $
 findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction]))
 findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
+findByTdsTreatmentAndDateRange ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.DirectTaxTransaction.TdsTreatment -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m ([Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction]))
+findByTdsTreatmentAndDateRange limit offset merchantOperatingCityId tdsTreatment startTime endTime = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.tdsTreatment $ Se.Eq tdsTreatment,
+          Se.Is Beam.transactionDate $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.transactionDate $ Se.LessThanOrEq endTime
+        ]
+    ]
+    (Se.Desc Beam.transactionDate)
+    limit
+    offset
+
 findByTransactionDate :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.UTCTime -> m ([Lib.Finance.Domain.Types.DirectTaxTransaction.DirectTaxTransaction]))
 findByTransactionDate transactionDate = do findAllWithKV [Se.Is Beam.transactionDate $ Se.Eq transactionDate]
 

@@ -20,9 +20,10 @@ import Kernel.Prelude
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account as AccountDomain
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DDirectTaxTransaction
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerDomain
-import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTaxTransactionExtra
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTaxTransaction
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntryExtra
 import qualified SharedLogic.Finance.Prepaid as Prepaid
 import qualified SharedLogic.Finance.Wallet as Wallet
@@ -83,7 +84,8 @@ data PayoutTotals = PayoutTotals
 
 -- | TDS threshold / reimbursement (WS3 matrix).
 --   deduction* from direct_tax_transaction (tdsTreatment=Deducted);
---   reimbursement* = 0 until WS8 FO TDS-cert reimbursement posts Reimbursed rows.
+--   reimbursement* from DTT Reimbursed rows written at WS3 Credit post
+--   (FO TDS-cert flow: WS8 submit → maker-checker adjustment).
 data TdsTotals = TdsTotals
   { deductionAmount :: HighPrecMoney,
     reimbursementAmount :: HighPrecMoney,
@@ -348,8 +350,8 @@ fetchPayoutTotals merchantOpCityId fromTime toTime = do
 -- TDS
 -- ---------------------------------------------------------------------------
 
--- | TDS deduction: Dr DRIVER_BALANCE / Cr TDS_PAYABLE (from direct_tax_transaction Deducted).
---   Reimbursement (Dr TDS_RECEIVABLE / Cr DRIVER_BALANCE) stays 0 until WS8 FO TDS-cert workflow.
+-- | TDS deduction: Dr DRIVER_BALANCE / Cr TDS_PAYABLE (DTT Deducted).
+--   Reimbursement: Dr TDS_RECEIVABLE / Cr DRIVER_BALANCE (DTT Reimbursed at WS3 Credit post).
 fetchTdsTotals ::
   (RideRevenueTotalsFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -360,25 +362,32 @@ fetchTdsTotals merchantOpCityId fromTime toTime = do
   -- List Deducted TDS from direct_tax_transaction.
   -- No ledger join: unlike RideFare ITT (shared online/cash rows — needs GST/VAT
   -- ref-types to split SAP events), DTT is TDS-only, already filtered by
-  -- tdsTreatment, and created at invoice time from GovtDirect legs that post
-  -- SETTLED. Online/cash share one SAP TDS JV, so payment-mode classification
-  -- via ledger is unnecessary.
-  rawRows <- QDirectTaxTransactionExtra.findDeductedByDateRange merchantOpCityId.getId fromTime toTime Nothing Nothing
-  let (totals, deductionRowsRev) = foldl' go (TdsTotals 0 0 0 0, []) rawRows
-  pure
-    ( totals
-        { -- WS8: FO TDS-certificate reimbursement → tdsTreatment=Reimbursed rows
-          reimbursementAmount = 0,
-          reimbursementCount = 0
-        },
-      reverse deductionRowsRev,
-      []
-    )
+  -- tdsTreatment. Deducted rows are created at invoice time from GovtDirect legs;
+  -- Reimbursed rows are written with the FO TDS-cert Credit adjustment (payable =
+  -- tdsCreditReceivable). Online/cash share one SAP TDS JV, so payment-mode
+  -- classification via ledger is unnecessary.
+  let findByTreatment treatment =
+        QDirectTaxTransaction.findByTdsTreatmentAndDateRange Nothing Nothing merchantOpCityId.getId treatment fromTime toTime
+  deductedRows <- findByTreatment DDirectTaxTransaction.Deducted
+  reimbursedRows <- findByTreatment DDirectTaxTransaction.Reimbursed
+  let (deductionTotals, deductionRowsRev) = foldl' goDeduction (TdsTotals 0 0 0 0, []) deductedRows
+      (totals, reimbursementRowsRev) = foldl' goReimbursement (deductionTotals, []) reimbursedRows
+  pure (totals, reverse deductionRowsRev, reverse reimbursementRowsRev)
   where
-    go (acc, rs) dtt =
+    goDeduction (acc, rs) dtt =
       ( acc {deductionAmount = acc.deductionAmount + dtt.tdsAmount, deductionCount = acc.deductionCount + 1},
-        RevenueRecognitionTransactionRow {amount = dtt.tdsAmount, referenceId = dtt.referenceId, txnStatus = show dtt.tdsTreatment} : rs
+        mkRow dtt : rs
       )
+    goReimbursement (acc, rs) dtt =
+      ( acc {reimbursementAmount = acc.reimbursementAmount + dtt.tdsAmount, reimbursementCount = acc.reimbursementCount + 1},
+        mkRow dtt : rs
+      )
+    mkRow dtt =
+      RevenueRecognitionTransactionRow
+        { amount = dtt.tdsAmount,
+          referenceId = dtt.referenceId,
+          txnStatus = show dtt.tdsTreatment
+        }
 
 -- ---------------------------------------------------------------------------
 -- Subscription revenue recognised (deferred → revenue after ride / expiry)

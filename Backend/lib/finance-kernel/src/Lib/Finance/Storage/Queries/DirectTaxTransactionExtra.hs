@@ -1,6 +1,5 @@
 module Lib.Finance.Storage.Queries.DirectTaxTransactionExtra
   ( findByReferenceIds,
-    findDeductedByDateRange,
   )
 where
 
@@ -22,24 +21,3 @@ findByReferenceIds ::
 findByReferenceIds [] = pure []
 findByReferenceIds referenceIds =
   findAllWithKV [Se.Is Beam.referenceId $ Se.In referenceIds]
-
-findDeductedByDateRange ::
-  (BeamFlow m r) =>
-  Text ->
-  UTCTime ->
-  UTCTime ->
-  Maybe Int -> -- limit
-  Maybe Int -> -- offset
-  m [Domain.DirectTaxTransaction]
-findDeductedByDateRange merchantOperatingCityId startTime endTime limit offset =
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
-          Se.Is Beam.tdsTreatment $ Se.Eq Domain.Deducted,
-          Se.Is Beam.transactionDate $ Se.GreaterThanOrEq startTime,
-          Se.Is Beam.transactionDate $ Se.LessThanOrEq endTime
-        ]
-    ]
-    (Se.Desc Beam.transactionDate)
-    limit
-    offset

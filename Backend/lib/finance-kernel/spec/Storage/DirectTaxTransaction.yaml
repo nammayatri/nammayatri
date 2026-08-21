@@ -75,6 +75,22 @@ DirectTaxTransaction:
       kvFunction: findAllWithKV
       where: invoiceNumber
 
+    # Deducted / Reimbursed share one query; pass TdsTreatment + date window.
+    # Param aliases startTime/endTime avoid duplicate transactionDate args.
+    findByTdsTreatmentAndDateRange:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - tdsTreatment
+          - gte:
+              - transactionDate: startTime
+          - lte:
+              - transactionDate: endTime
+      orderBy:
+        field: transactionDate
+        order: desc
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
