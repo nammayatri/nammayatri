@@ -17,6 +17,7 @@ data Toll = Toll
     isAutoRickshawTollChargeApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isTwoWheelerAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isTwoWheelerTollChargeApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    maxTollCountInRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
     price :: Kernel.Types.Common.Price,
     tollEndGates :: [Toll.Domain.Types.TollGate.TollGate],

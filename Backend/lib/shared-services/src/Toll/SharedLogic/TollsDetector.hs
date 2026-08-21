@@ -38,6 +38,7 @@ import Lib.LocationUpdates.TollTypes
     emptyTollInfo,
     estimatedTollInfoFromCharges,
     hasDetectedTolls,
+    onRideTollIdsRedisKey,
   )
 import Toll.Domain.Types.Toll
 import Toll.Domain.Types.TollGate (TollGate (..), geoPolygonToLatLongRings, lineStringToSegments)
@@ -170,6 +171,7 @@ checkAndValidatePendingTolls ::
   m (Maybe (HighPrecMoney, [Text], [Text]))
 checkAndValidatePendingTolls scope driverId _estimatedTollCharges _estimatedTollNames estimatedTollIds alreadyDetectedCharges alreadyDetectedTollIds = do
   mbPendingTolls :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey scope driverId)
+  chargedTollIds <- getChargedTollIdsInRide driverId
 
   case (mbPendingTolls, estimatedTollIds, alreadyDetectedTollIds) of
     (Just pendingTolls, Just estIds, Just detectedIds) -> do
@@ -183,7 +185,7 @@ checkAndValidatePendingTolls scope driverId _estimatedTollCharges _estimatedToll
           return Nothing
         else do
           -- Find pending tolls that match missing IDs
-          let matchingPendingTolls = filter (\toll -> getId toll.id `elem` missingTollIds) pendingTolls
+          let matchingPendingTolls = filter (\toll -> getId toll.id `elem` missingTollIds && withinMaxTollCountInRide chargedTollIds toll) pendingTolls
 
           if not $ null matchingPendingTolls
             then do
@@ -209,7 +211,7 @@ checkAndValidatePendingTolls scope driverId _estimatedTollCharges _estimatedToll
               return Nothing
     (Just pendingTolls, Just estIds, Nothing) -> do
       -- No tolls detected yet, validate all estimated tolls against pending
-      let matchingPendingTolls = filter (\toll -> getId toll.id `elem` estIds) pendingTolls
+      let matchingPendingTolls = filter (\toll -> getId toll.id `elem` estIds && withinMaxTollCountInRide chargedTollIds toll) pendingTolls
 
       if not $ null matchingPendingTolls
         then do
@@ -266,6 +268,17 @@ addDetectedTollCharge toll@Toll {..} acc =
 addTollCharge :: Toll -> TollChargesAndNamesAndIds -> TollChargesAndNamesAndIds
 addTollCharge = addDetectedTollCharge
 
+withinMaxTollCountInRide :: [Text] -> Toll -> Bool
+withinMaxTollCountInRide chargedTollIds toll =
+  maybe True (length (filter (== getId toll.id) chargedTollIds) <) toll.maxTollCountInRide
+
+addTollChargeWithinMaxCount :: [Text] -> Toll -> TollChargesAndNamesAndIds -> TollChargesAndNamesAndIds
+addTollChargeWithinMaxCount chargedTollIds toll acc =
+  if withinMaxTollCountInRide (chargedTollIds <> acc.tollIds) toll then addTollCharge toll acc else acc
+
+getChargedTollIdsInRide :: (CacheFlow m r) => Text -> m [Text]
+getChargedTollIdsInRide driverId = Hedis.lRange (onRideTollIdsRedisKey driverId) 0 (-1)
+
 tollStartsOnRouteSegment :: Maybe LineSegment -> LineSegment -> Toll -> Bool
 tollStartsOnRouteSegment mbPreviousSegment routeSegment Toll {..} =
   any (gateStartsOnRouteSegment mbPreviousSegment routeSegment) tollStartGates
@@ -299,15 +312,16 @@ getExitTollAndRemainingRoute (p1 : p2 : ps) tolls =
 getAggregatedTollChargesAndNamesOnRoute ::
   (CacheFlow m r) =>
   Maybe TollTracking ->
+  [Text] ->
   Maybe LineSegment ->
   RoutePoints ->
   [Toll] ->
   TollChargesAndNamesAndIds ->
   m TollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute _ _ [] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute _ _ [_] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute _ _ _ [] tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
-getAggregatedTollChargesAndNamesOnRoute mbTracking mbPreviousSegment route@(p1 : p2 : ps) tolls tollChargesAndNamesAndIds = do
+getAggregatedTollChargesAndNamesOnRoute _ _ _ [] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
+getAggregatedTollChargesAndNamesOnRoute _ _ _ [_] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
+getAggregatedTollChargesAndNamesOnRoute _ _ _ _ [] tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
+getAggregatedTollChargesAndNamesOnRoute mbTracking chargedTollIds mbPreviousSegment route@(p1 : p2 : ps) tolls tollChargesAndNamesAndIds = do
   let currentRouteSegment = LineSegment p1 p2
       allTollCombinationsWithStartGates = filter (tollStartsOnRouteSegment mbPreviousSegment currentRouteSegment) tolls
   if not $ null allTollCombinationsWithStartGates
@@ -316,10 +330,11 @@ getAggregatedTollChargesAndNamesOnRoute mbTracking mbPreviousSegment route@(p1 :
         Just (exitSegment, remainingRoute, toll) ->
           getAggregatedTollChargesAndNamesOnRoute
             mbTracking
+            chargedTollIds
             (Just exitSegment)
             remainingRoute
             tolls
-            (addTollCharge toll tollChargesAndNamesAndIds)
+            (addTollChargeWithinMaxCount chargedTollIds toll tollChargesAndNamesAndIds)
         Nothing -> do
           whenJust mbTracking $ \tracking -> do
             let key = tollStartGateTrackingKey tracking.trackingScope tracking.trackingDriverId
@@ -328,7 +343,7 @@ getAggregatedTollChargesAndNamesOnRoute mbTracking mbPreviousSegment route@(p1 :
                 uniquePendingTolls = nubBy (\toll1 toll2 -> getId toll1.id == getId toll2.id) allPendingTolls
             Hedis.setExp key uniquePendingTolls 21600 -- 6 hours
           return tollChargesAndNamesAndIds
-    else getAggregatedTollChargesAndNamesOnRoute mbTracking (Just currentRouteSegment) (p2 : ps) tolls tollChargesAndNamesAndIds
+    else getAggregatedTollChargesAndNamesOnRoute mbTracking chargedTollIds (Just currentRouteSegment) (p2 : ps) tolls tollChargesAndNamesAndIds
 
 {- Author: Khuzema Khomosi
   Best Case Time Complexity - O(No. of points in routes)
@@ -355,7 +370,8 @@ getAggregatedTollChargesAndNamesOnRoute mbTracking mbPreviousSegment route@(p1 :
 -}
 getTollInfoOnRoute :: (BeamFlow m r, EsqDBReplicaFlow m r) => Text -> Maybe TollTracking -> Maybe LineSegment -> RoutePoints -> m (Maybe TollInfo)
 getTollInfoOnRoute merchantOperatingCityId mbTracking previousSegment route = do
-  tolls <- B.runInReplica $ findAllTollsByMerchantOperatingCity merchantOperatingCityId
+  tolls <- filter (\toll -> toll.price.amount > 0) <$> B.runInReplica (findAllTollsByMerchantOperatingCity merchantOperatingCityId)
+  chargedTollIdsInRide <- maybe (pure []) (getChargedTollIdsInRide . (.trackingDriverId)) mbTracking
   if not $ null tolls
     then do
       let boundingBox = getBoundingBox route
@@ -365,24 +381,24 @@ getTollInfoOnRoute merchantOperatingCityId mbTracking previousSegment route = do
           mbTollCombinationsWithStartGatesInPrevBatch :: Maybe [Toll] <-
             Hedis.safeGet (tollStartGateTrackingKey tracking.trackingScope tracking.trackingDriverId)
           case mbTollCombinationsWithStartGatesInPrevBatch of
-            Just tollCombinationsWithStartGatesInPrevBatch -> getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide tracking previousSegment tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute
-            Nothing -> getAggregatedTollCharges previousSegment route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
-        Nothing -> getAggregatedTollCharges previousSegment route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
+            Just tollCombinationsWithStartGatesInPrevBatch -> getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide tracking chargedTollIdsInRide previousSegment tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute
+            Nothing -> getAggregatedTollCharges chargedTollIdsInRide previousSegment route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
+        Nothing -> getAggregatedTollCharges chargedTollIdsInRide previousSegment route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
     else return Nothing
   where
-    getAggregatedTollCharges mbPreviousSegment remainingRoute eligibleTollsThatMaybePresentOnTheRoute initialTollInfo = do
+    getAggregatedTollCharges chargedTollIds mbPreviousSegment remainingRoute eligibleTollsThatMaybePresentOnTheRoute initialTollInfo = do
       aggregatedTollInfo <-
-        getAggregatedTollChargesAndNamesOnRoute mbTracking mbPreviousSegment remainingRoute eligibleTollsThatMaybePresentOnTheRoute initialTollInfo
+        getAggregatedTollChargesAndNamesOnRoute mbTracking chargedTollIds mbPreviousSegment remainingRoute eligibleTollsThatMaybePresentOnTheRoute initialTollInfo
       if hasDetectedTolls aggregatedTollInfo
         then return $ Just aggregatedTollInfo
         else return Nothing
 
-    getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide tracking mbPreviousSegment tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute = do
+    getAggregatedTollChargesConsideringStartSegmentFromPrevBatchWhileOnRide tracking chargedTollIds mbPreviousSegment tollCombinationsWithStartGatesInPrevBatch eligibleTollsThatMaybePresentOnTheRoute = do
       case getExitTollAndRemainingRoute route tollCombinationsWithStartGatesInPrevBatch of
         Just (exitSegment, remainingRoute, toll) -> do
           removeMatchedTollFromCache tracking tollCombinationsWithStartGatesInPrevBatch toll
-          getAggregatedTollCharges (Just exitSegment) remainingRoute eligibleTollsThatMaybePresentOnTheRoute (addTollCharge toll emptyTollInfo)
-        Nothing -> getAggregatedTollCharges mbPreviousSegment route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
+          getAggregatedTollCharges chargedTollIds (Just exitSegment) remainingRoute eligibleTollsThatMaybePresentOnTheRoute (addTollChargeWithinMaxCount chargedTollIds toll emptyTollInfo)
+        Nothing -> getAggregatedTollCharges chargedTollIds mbPreviousSegment route eligibleTollsThatMaybePresentOnTheRoute emptyTollInfo
 
 -- | Filter Google route alternatives down to those that traverse at least one toll
 --   (start gate intersected AND its corresponding exit gate intersected on the same polyline).

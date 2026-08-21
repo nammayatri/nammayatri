@@ -17,6 +17,7 @@ data TollT f = TollT
     isAutoRickshawTollChargeApplicable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isTwoWheelerAllowed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isTwoWheelerTollChargeApplicable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    maxTollCountInRide :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     name :: (B.C f Kernel.Prelude.Text),
     currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
     price :: (B.C f Kernel.Types.Common.HighPrecMoney),

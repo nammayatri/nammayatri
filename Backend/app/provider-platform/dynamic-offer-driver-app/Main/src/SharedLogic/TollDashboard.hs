@@ -50,6 +50,7 @@ tollToAPIEntity Toll.Toll {..} =
       isTwoWheelerAllowed = isTwoWheelerAllowed,
       isAutoRickshawTollChargeApplicable = isAutoRickshawTollChargeApplicable,
       isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
+      maxTollCountInRide = maxTollCountInRide,
       merchantId = merchantId,
       merchantOperatingCityId = merchantOperatingCityId
     }
@@ -95,6 +96,7 @@ mkTollFromUpsertReq req tollId now merchantOpCityId merchantId mbExisting =
       isTwoWheelerAllowed = req.isTwoWheelerAllowed,
       isAutoRickshawTollChargeApplicable = Just $ fromMaybe (maybe False (fromMaybe False . (.isAutoRickshawTollChargeApplicable)) mbExisting) req.isAutoRickshawTollChargeApplicable,
       isTwoWheelerTollChargeApplicable = Just $ fromMaybe (maybe False (fromMaybe False . (.isTwoWheelerTollChargeApplicable)) mbExisting) req.isTwoWheelerTollChargeApplicable,
+      maxTollCountInRide = maybe (mbExisting >>= (.maxTollCountInRide)) Just req.maxTollCountInRide,
       merchantId = Just merchantId,
       merchantOperatingCityId = Just merchantOpCityId,
       createdAt = maybe now (.createdAt) mbExisting,
