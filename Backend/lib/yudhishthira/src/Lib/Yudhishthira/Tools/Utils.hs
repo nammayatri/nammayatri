@@ -5,6 +5,7 @@ import qualified Data.Aeson.Key as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as DBL
 import Data.Either.Extra (mapLeft)
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Text.Lazy as DTE
@@ -237,6 +238,20 @@ removeTagName (Just tags) tag = case parseTagName tag of
   Nothing -> tags
   Just tagName -> filter ((/= Just tagName) . parseTagName) tags
 
+-- | Add-or-replace one (name, value) pair. allowMultipleValues: leave the other values under the
+-- same name alone, replacing the matching pair in place (matched on name#value, expiry ignored)
+-- or appending it. Otherwise: replaceTagNameValue -- drop every value under the name, add this one.
+upsertTagNameValue :: HasTagNameValue tag => Bool -> Maybe [tag] -> tag -> [tag]
+upsertTagNameValue allowMultipleValues tags tag
+  | allowMultipleValues = maybe [tag] replaceInPlace tags
+  | otherwise = replaceTagNameValue tags tag
+  where
+    newTagNameValue = convertToTagNameValue tag
+    replaceInPlace existingTags
+      | any ((== newTagNameValue) . convertToTagNameValue) existingTags =
+        map (\existingTag -> if convertToTagNameValue existingTag == newTagNameValue then tag else existingTag) existingTags
+      | otherwise = existingTags ++ [tag]
+
 parseTagName :: (HasTagNameValue tag) => tag -> Maybe LYT.TagName
 parseTagName tag = case T.splitOn "#" . (.getTagNameValue) $ convertToTagNameValue tag of
   (tagName : _) -> Just (LYT.TagName tagName)
@@ -290,21 +305,34 @@ tagsNameValueToTType = (fmap (.getTagNameValue) <$>)
 tagsNameValueFromTType :: Maybe [Text] -> Maybe [LYT.TagNameValue]
 tagsNameValueFromTType = (fmap LYT.TagNameValue <$>)
 
+-- Entries sharing a tag name are merged into a JSON array under that key, rather than the last
+-- one overwriting the rest.
 convertTags :: HasTagNameValue tag => [tag] -> A.Value
-convertTags input = A.object $ map toObject pairs
+convertTags input = A.object $ map (uncurry (A..=)) mergedPairs
   where
     pairs = map (T.splitOn "#" . LYT.getTagNameValue . convertToTagNameValue) input
+    toObject :: [Text] -> (A.Key, A.Value)
     toObject [name, value] = do
       let valueArr = T.splitOn "&" value
       case valueArr of
-        [element] -> (A.fromText $ T.strip name :: A.Key) A..= fromMaybe A.Null (textToMaybeValue (T.strip element) :: Maybe A.Value)
+        [element] -> (A.fromText $ T.strip name, fromMaybe A.Null (textToMaybeValue (T.strip element) :: Maybe A.Value))
         elements -> do
           let jsonValues = map A.String elements
-          (A.fromText $ T.strip name :: A.Key) A..= A.Array (Vector.fromList jsonValues)
-    toObject [name] = (A.fromText $ T.strip name :: A.Key) A..= A.Null
+          (A.fromText $ T.strip name, A.Array (Vector.fromList jsonValues))
+    toObject [name] = (A.fromText $ T.strip name, A.Null)
     toObject xs = do
       let reconstructed = T.intercalate "#" xs
-      (A.fromText $ T.strip reconstructed :: A.Key) A..= A.Null
+      (A.fromText $ T.strip reconstructed, A.Null)
+    mergedPairs = Map.toList $ Map.fromListWith mergeValues (map toObject pairs)
+    mergeValues new old = case (old, new) of
+      (A.Array oldArr, A.Array newArr) -> A.Array (oldArr <> newArr)
+      (A.Array oldArr, v) -> A.Array (oldArr `Vector.snoc` v)
+      (v, A.Array newArr) -> A.Array (Vector.cons v newArr)
+      (A.Null, v) -> v
+      (v, A.Null) -> v
+      (v1, v2)
+        | v1 == v2 -> v1
+        | otherwise -> A.Array (Vector.fromList [v1, v2])
 
 accessTagKey :: LYT.TagName -> A.Value -> Maybe A.Value
 accessTagKey (LYT.TagName keyValue) (A.Object obj) = KM.lookup (A.fromText keyValue) obj

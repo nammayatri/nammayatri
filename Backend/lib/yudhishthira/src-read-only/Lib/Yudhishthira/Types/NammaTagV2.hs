@@ -12,6 +12,7 @@ import qualified Tools.Beam.UtilsTH
 
 data NammaTagV2 = NammaTagV2
   { actionEngine :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    allowMultipleValues :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     category :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     info :: Lib.Yudhishthira.Types.NammaTagV2.TagInfo,

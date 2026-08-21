@@ -9,6 +9,7 @@ data NammaTagManual = NammaTagManual
     description :: Maybe Text,
     tagName :: Text,
     tagPossibleValues :: TagValues,
-    tagValidity :: Maybe Hours
+    tagValidity :: Maybe Hours,
+    allowMultipleValues :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)

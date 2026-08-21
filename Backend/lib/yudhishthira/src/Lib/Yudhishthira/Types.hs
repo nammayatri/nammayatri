@@ -168,7 +168,8 @@ data UpdateNammaTagRequest = UpdateNammaTagRequest
     resetTagValidity :: Maybe Bool,
     tagStages :: Maybe (NonEmpty ApplicationEvent),
     tagRule :: Maybe TagRule,
-    actionEngine :: Maybe Value
+    actionEngine :: Maybe Value,
+    allowMultipleValues :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

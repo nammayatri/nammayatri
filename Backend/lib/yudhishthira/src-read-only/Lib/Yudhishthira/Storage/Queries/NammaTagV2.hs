@@ -48,6 +48,7 @@ updateByPrimaryKey (Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2 {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.actionEngine actionEngine,
+      Se.Set Beam.allowMultipleValues allowMultipleValues,
       Se.Set Beam.category category,
       Se.Set Beam.description description,
       Se.Set Beam.chakra (getChakra info),

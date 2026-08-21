@@ -2,6 +2,7 @@ module Main (main) where
 
 import KaalChakraJobs (kaalChakraJobsTests)
 import Kernel.Prelude
+import TagMerge (tagMergeTests)
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -15,5 +16,6 @@ specs =
     unitTests =
       testGroup
         "Unit tests"
-        [ kaalChakraJobsTests
+        [ kaalChakraJobsTests,
+          tagMergeTests
         ]

@@ -127,6 +127,7 @@ getDriverProfile withImages person = do
       fetchLegacyProfileImage person.id
   topFeedbacks <- getTopFeedBackForDriver person.id
   let driverTagsJson = convertTags $ fromMaybe [] person.driverTag
+  -- Read as scalars: SafetyScore/SafetyCohort must not be allowMultipleValues tags.
   let mbSafetyScoreFromTag = accessTagKey (TagName "SafetyScore") driverTagsJson
   let mbSafetyCohort = accessTagKey (TagName "SafetyCohort") driverTagsJson
   let driverSafetyScore = mbSafetyScoreFromTag <|> getSafetyScoreFromSafetyCohort mbSafetyCohort

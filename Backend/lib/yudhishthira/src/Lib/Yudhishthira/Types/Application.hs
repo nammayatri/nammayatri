@@ -12,7 +12,8 @@ data NammaTagApplication = NammaTagApplication
     tagPossibleValues :: TagValues,
     tagStages :: NonEmpty ApplicationEvent,
     tagValidity :: Maybe Hours,
-    tagRule :: TagRule
+    tagRule :: TagRule,
+    allowMultipleValues :: Maybe Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

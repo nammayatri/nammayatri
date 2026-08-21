@@ -48,12 +48,20 @@ import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 import Lib.Yudhishthira.Types.TimeBoundConfig
 import qualified System.Environment as Se
 
+-- An action fires on a tag's value change by diffing old against new; a multi-value tag has no
+-- single old value, so the action would misfire. Reject the combination.
+validateAllowMultipleValues :: (MonadThrow m, Log m) => DNTv2.NammaTagV2 -> m ()
+validateAllowMultipleValues nammaTag =
+  when (fromMaybe False nammaTag.allowMultipleValues && isJust nammaTag.actionEngine) $
+    throwError (InvalidRequest "A tag with allowMultipleValues cannot define an actionEngine")
+
 postTagCreate :: forall m r. BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
 postTagCreate merchantOpCityId tagRequest = do
   now <- getCurrentTime
   let nammaTag = mkNammaTag now
   mbNammaTagTriggers <- buildNammaTagTriggers now
   checkForDuplicacy nammaTag.name
+  validateAllowMultipleValues nammaTag
 
   QNTV2.create nammaTag
   QNTTV2.deleteAllByMerchantOperatingCityIdAndTagName merchantOpCityId nammaTag.name -- Just in case if old data persists
@@ -126,6 +134,7 @@ postTagUpdate merchantOpCityId tagRequest = do
 
   let updatedTag = mkUpdateNammaTagEntity tag now
   mbNammaTagTriggers <- buildNammaTagTriggers tag now
+  validateAllowMultipleValues updatedTag
 
   QNTV2.updateByPrimaryKey updatedTag
   whenJust mbNammaTagTriggers \nammaTagTriggers -> do
@@ -146,6 +155,7 @@ postTagUpdate merchantOpCityId tagRequest = do
           rule = fromMaybe tag.rule tagRequest.tagRule,
           description = tagRequest.description <|> tag.description,
           actionEngine = tagRequest.actionEngine <|> tag.actionEngine,
+          allowMultipleValues = tagRequest.allowMultipleValues <|> tag.allowMultipleValues,
           validity,
           createdAt = tag.createdAt,
           updatedAt = now

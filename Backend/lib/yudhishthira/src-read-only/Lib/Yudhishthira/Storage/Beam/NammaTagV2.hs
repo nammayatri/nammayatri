@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 
 data NammaTagV2T f = NammaTagV2T
   { actionEngine :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    allowMultipleValues :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     category :: (B.C f Kernel.Prelude.Text),
     description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chakra :: (B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra)),

@@ -16,3 +16,9 @@ ALTER TABLE atlas_driver_offer_bpp.namma_tag_v2 ADD COLUMN validity integer ;
 ALTER TABLE atlas_driver_offer_bpp.namma_tag_v2 ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.namma_tag_v2 ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.namma_tag_v2 ADD PRIMARY KEY ( merchant_operating_city_id, name);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.namma_tag_v2 ADD COLUMN allow_multiple_values boolean ;

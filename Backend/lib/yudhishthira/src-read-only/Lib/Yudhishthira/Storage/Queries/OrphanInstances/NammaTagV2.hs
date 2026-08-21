@@ -20,6 +20,7 @@ instance FromTType' Beam.NammaTagV2 Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2
       Just
         Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2
           { actionEngine = actionEngine,
+            allowMultipleValues = allowMultipleValues,
             category = category,
             description = description,
             info = mkTagInfo chakra tagType,
@@ -36,6 +37,7 @@ instance ToTType' Beam.NammaTagV2 Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2 w
   toTType' (Lib.Yudhishthira.Types.NammaTagV2.NammaTagV2 {..}) = do
     Beam.NammaTagV2T
       { Beam.actionEngine = actionEngine,
+        Beam.allowMultipleValues = allowMultipleValues,
         Beam.category = category,
         Beam.description = description,
         Beam.chakra = getChakra info,

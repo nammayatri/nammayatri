@@ -99,6 +99,7 @@ NammaTagV2:
     info: TagInfo
     validity: Maybe Hours
     actionEngine: Maybe Value
+    allowMultipleValues: Maybe Bool
   constraints:
     merchantOperatingCityId: PrimaryKey
     name: PrimaryKey

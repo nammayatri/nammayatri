@@ -801,7 +801,8 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
     processDriverTagUpdate merchant merchantOpCityId row = do
       -- Convert driverId to Person ID
       let personId = Id row.driverId
-      driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      -- Read through KV (not the replica) so successive rows for the same driver see each other's writes.
+      driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
       -- Check if driver has a valid merchant ID
       when (driver.merchantId == Id "") $
@@ -821,17 +822,20 @@ postDriverUpdateTagBulk merchantShortId opCity req = do
       tag <-
         case row.operation of
           Dashboard.Common.ADD -> do
-            when (maybe False (Yudhishthira.elemTagName tagNameValue) driver.driverTag) $
-              throwError $ InvalidRequest ("Tag name " <> row.tagName <> " already exists for driver " <> row.driverId)
             mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
+            let allowMultiple = fromMaybe False (mbNammTag >>= (.allowMultipleValues))
+            when (not allowMultiple && maybe False (Yudhishthira.elemTagName tagNameValue) driver.driverTag) $
+              throwError $ InvalidRequest ("Tag name " <> row.tagName <> " already exists for driver " <> row.driverId)
+            when (allowMultiple && maybe False (Yudhishthira.elemTagNameValue tagNameValue) driver.driverTag) $
+              throwError $ InvalidRequest ("Tag " <> row.tagName <> "#" <> row.tagValue <> " already exists for driver " <> row.driverId)
             let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry tagNameValue (mbNammTag >>= (.validity)) now
-            pure $ Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+            pure $ Yudhishthira.upsertTagNameValue allowMultiple driver.driverTag reqDriverTagWithExpiry
           Dashboard.Common.UPDATE -> do
             mbNammTag <- Yudhishthira.verifyTag (cast merchantOpCityId) tagNameValue
             let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry tagNameValue (mbNammTag >>= (.validity)) now
             pure $ Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
           Dashboard.Common.REMOVE ->
-            pure $ Yudhishthira.removeTagName driver.driverTag tagNameValue
+            pure $ Yudhishthira.removeTagNameValue driver.driverTag tagNameValue
 
       -- Update database if tag changed
       unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
@@ -1109,7 +1113,8 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- Read through KV (not the replica) so an add right after a prior write sees it.
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   when (req.isAddingTag && maybe False (Yudhishthira.elemTagNameValue req.driverTag) driver.driverTag) $
     logInfo "Tag already exists, update expiry"
   -- merchant access checking
@@ -1120,7 +1125,7 @@ postDriverUpdateDriverTag merchantShortId opCity driverId req = do
         if req.isAddingTag
           then do
             let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry req.driverTag (mbNammTag >>= (.validity)) now
-            Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+            Yudhishthira.upsertTagNameValue (fromMaybe False (mbNammTag >>= (.allowMultipleValues))) driver.driverTag reqDriverTagWithExpiry
           else Yudhishthira.removeTagNameValue driver.driverTag req.driverTag
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
     QPerson.updateDriverTag (Just tag) personId

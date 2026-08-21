@@ -539,12 +539,13 @@ hasAnyPriorityTag tagNames dp = case dp.driverPoolResult.driverTags of
   Object keymap -> any (\name -> AKM.member (AK.fromText name) keymap) tagNames
   _ -> False
 
--- | driverTags is keyed by bare category (e.g. {"AutoAssign": "COMFY"}), so this checks
--- the value equals the tier name, unlike hasAnyPriorityTag's key-membership check above.
+-- | True if the driver's AutoAssign tag names this tier (value match, vs hasAnyPriorityTag's
+-- key check above). convertTags stores one value as a string, several as an array -- match both.
 hasPriorityTag :: Text -> DriverPoolWithActualDistResult -> Bool
 hasPriorityTag tierName dp = case dp.driverPoolResult.driverTags of
   Object keymap -> case AKM.lookup (AK.fromString "AutoAssign") keymap of
     Just (String v) -> v == tierName
+    Just (Array vs) -> String tierName `elem` vs
     _ -> False
   _ -> False
 
