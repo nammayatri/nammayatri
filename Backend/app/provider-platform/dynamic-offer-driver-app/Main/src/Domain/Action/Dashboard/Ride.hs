@@ -1009,6 +1009,7 @@ buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
       customerCancellationDuesWithCurrency = flip PriceAPIEntity currency <$> customerCancellationDues,
       tollChargesWithCurrency = flip PriceAPIEntity currency <$> tollCharges,
       congestionChargeWithCurrency = flip PriceAPIEntity currency <$> congestionCharge,
+      parkingChargeWithCurrency = flip PriceAPIEntity currency <$> parkingCharge,
       tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
       discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
       discountTaxWithCurrency = flip PriceAPIEntity currency <$> postDiscountTax,
