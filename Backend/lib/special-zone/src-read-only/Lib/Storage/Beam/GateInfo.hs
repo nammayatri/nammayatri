@@ -50,6 +50,6 @@ instance B.Table GateInfoT where
 
 type GateInfo = GateInfoT Identity
 
-$(enableKVPG (''GateInfoT) [('id)] [[('specialLocationId)]])
+$(enableKVPG ''GateInfoT ['id] [['specialLocationId]])
 
-$(mkTableInstancesGenericSchema (''GateInfoT) "gate_info")
+$(mkTableInstancesGenericSchema ''GateInfoT "gate_info")

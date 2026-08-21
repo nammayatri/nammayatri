@@ -23,10 +23,10 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry] -> m ())
 createMany = traverse_ create
 
-findByBatchId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry]))
+findByBatchId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry])
 findByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq batchId]
 
-findByBelnr :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry]))
+findByBelnr :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.SapJournalEntry.SapJournalEntry])
 findByBelnr belnr = do findAllWithKV [Se.Is Beam.belnr $ Se.Eq belnr]
 
 findById ::
