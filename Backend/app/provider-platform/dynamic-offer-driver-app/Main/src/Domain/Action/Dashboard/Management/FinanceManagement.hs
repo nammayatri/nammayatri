@@ -110,6 +110,7 @@ import qualified SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (reconciliationRegistry)
 import qualified SharedLogic.Finance.LedgerAdjustment as LedgerAdjustment
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
+import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
@@ -2003,7 +2004,12 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
         throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not belong to this fleet owner")
       unless (invoice.issuedAt >= periodStart && invoice.issuedAt < periodEnd) $
         throwError (InvalidRequest $ "Invoice " <> line.invoiceId.getId <> " does not fall within " <> show quarter <> " of assessment year " <> req.assessmentYear)
+      pure (line, invoice)
 
+    -- Block invoices already on PENDING/APPROVED mappings or with DirectTax Reimbursed.
+    TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement Nothing (snd <$> invoicesWithLines)
+
+    forM_ invoicesWithLines $ \(line, invoice) -> do
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
       forM_ indirectTaxTxns $ \txn ->
         unless (abs (invoice.subtotal - txn.taxableValue) <= roundingTolerance) $
@@ -2029,7 +2035,6 @@ postFinanceManagementTdsReimbursementRequestSubmit merchantShortId opCity reques
                 <> show expectedTdsAmount
                 <> ")"
           )
-      pure (line, invoice)
 
     let sumTdsAmount = sum $ map ((.tdsAmount) . fst) invoicesWithLines
     when (abs (sumTdsAmount - req.certAmount) > roundingTolerance) $

@@ -603,6 +603,7 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionPurchase
+      SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
       SharedLogic.Finance.WalletAccount
       SharedLogic.Fleet
