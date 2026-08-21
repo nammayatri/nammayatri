@@ -204,6 +204,8 @@ data Role
   | OPERATOR
   | BUS_CONDUCTOR
   | BUS_DRIVER
+  | BUS_CHECKER
+  | BUS_DISPATCHER
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)

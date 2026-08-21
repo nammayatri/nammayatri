@@ -2255,3 +2255,75 @@ instance IsHTTPError LedgerAdjustmentError where
     LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
 
 instance IsAPIError LedgerAdjustmentError
+
+data DepotManagerError
+  = DepotManagerNotFound Text
+  | DepotFleetInfoNotFound Text
+  | DepotManagerDoesNotHaveAccessToFleet Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DepotManagerError
+
+instance IsBaseError DepotManagerError where
+  toMessage = \case
+    DepotManagerNotFound depotManagerId -> Just $ "Depot manager with id: " <> depotManagerId <> " not found."
+    DepotManagerDoesNotHaveAccessToFleet depotManagerId fleetId -> Just $ "Depot manager with id: " <> depotManagerId <> " does not have access to fleet with id: " <> fleetId <> "."
+    DepotFleetInfoNotFound fleetId -> Just $ "Depot fleet info with id: " <> fleetId <> " not found."
+
+instance IsHTTPError DepotManagerError where
+  toErrorCode = \case
+    DepotManagerNotFound _ -> "DEPOT_MANAGER_NOT_FOUND"
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> "DEPOT_MANAGER_DOES_NOT_HAVE_ACCESS_TO_FLEET"
+    DepotFleetInfoNotFound _ -> "DEPOT_FLEET_INFO_NOT_FOUND"
+  toHttpCode = \case
+    DepotManagerNotFound _ -> E400
+    DepotManagerDoesNotHaveAccessToFleet _ _ -> E401
+    DepotFleetInfoNotFound _ -> E400
+
+instance IsAPIError DepotManagerError
+
+data PublicTransportBlockError
+  = BusBlocked Text
+  | BusBlockNotAllowed Text
+  | BusBlockLimitExceeded Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PublicTransportBlockError
+
+instance IsBaseError PublicTransportBlockError where
+  toMessage = \case
+    BusBlocked vehicleNumber -> Just $ "Bus with vehicle number " <> vehicleNumber <> " is already blocked."
+    BusBlockNotAllowed personId -> Just $ "Person " <> personId <> " is not allowed to block/unblock buses."
+    BusBlockLimitExceeded maxLimit -> Just $ "Bus block limit exceeded (max " <> show maxLimit <> ")."
+
+instance IsHTTPError PublicTransportBlockError where
+  toErrorCode = \case
+    BusBlocked _ -> "BUS_BLOCKED"
+    BusBlockNotAllowed _ -> "BUS_BLOCK_NOT_ALLOWED"
+    BusBlockLimitExceeded _ -> "BUS_BLOCK_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    BusBlocked _ -> E403
+    BusBlockNotAllowed _ -> E403
+    BusBlockLimitExceeded _ -> E403
+
+instance IsAPIError PublicTransportBlockError
+
+-- | Carries an upstream (rider-app) HTTP status and error envelope verbatim
+-- through the ticket-verify proxy: a rider-app 400 INVALID_REQUEST stays a
+-- 400 INVALID_REQUEST for the anna-checker client, instead of being flattened
+-- into 500 BAP_INTERNAL_API_ERROR. Fields mirror APIError so a parsed
+-- upstream envelope round-trips unchanged.
+data BapProxyError = BapProxyResponseError HttpCode Text (Maybe Text) Value
+  deriving (Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''BapProxyError
+
+instance IsBaseError BapProxyError where
+  toMessage (BapProxyResponseError _ _ msg _) = msg
+
+instance IsHTTPError BapProxyError where
+  toErrorCode (BapProxyResponseError _ code _ _) = code
+  toHttpCode (BapProxyResponseError code _ _ _) = code
+
+instance IsAPIError BapProxyError where
+  toPayload (BapProxyResponseError _ _ _ payload) = payload

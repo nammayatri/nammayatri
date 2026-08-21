@@ -378,6 +378,15 @@ updatePersonName (Id personId) mbFirstName mbLastName = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
+updatePersonRole :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Role -> m ()
+updatePersonRole (Id personId) role = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.role role,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime
@@ -634,16 +643,6 @@ updatePersonMobileByFleetRole personId encMobileNumber = do
     ]
     [ Se.Is BeamP.id $ Se.Eq personId,
       Se.Is BeamP.role $ Se.Eq Person.FLEET_OWNER
-    ]
-
-updatePersonRole :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Role -> m ()
-updatePersonRole personId role = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamP.role role,
-      Se.Set BeamP.updatedAt now
-    ]
-    [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
 updateMerchantIdAndCityId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
