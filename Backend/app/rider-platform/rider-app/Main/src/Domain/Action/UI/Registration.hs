@@ -810,6 +810,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         updatedAt = now,
         blockedAt = if useFraudDetection then personWithSameDeviceToken >>= (.blockedAt) else Nothing,
         blockedByRuleId = if useFraudDetection then personWithSameDeviceToken >>= (.blockedByRuleId) else Nothing,
+        blockedReason = Nothing,
         aadhaarVerified = False,
         clientSdkVersion = clientSdkVersion,
         clientBundleVersion = clientBundleVersion,
@@ -958,7 +959,7 @@ verify tokenId req mbClientId mbXForwardedFor = do
   cleanCachedTokens person.id
   when isBlockedBySameDeviceToken $ do
     merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound $ "merchantOperatingCityId:- " <> person.merchantOperatingCityId.getId)
-    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken)
+    when merchantConfig.useFraudDetection $ SMC.blockCustomer person.id ((.blockedByRuleId) =<< personWithSameDeviceToken) (Just "Blocked due to fraud detection (blocked device token)")
   void $ RegistrationToken.setVerified True tokenId
   fork "Decrement Auth IP Counter" $ do
     mbClientIP <- extractClientIP mbXForwardedFor

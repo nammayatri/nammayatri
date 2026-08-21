@@ -1353,7 +1353,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
         logDebug "No ride found for the booking."
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
+    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id) (Just "Blocked by fraud detection")
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
   QPFS.updateStatus booking.riderId DPFS.IDLE
   otherParties <- Notify.getAllOtherRelatedPartyPersons booking
@@ -1490,7 +1490,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
           let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
           when (totalRides > minRides && rate > threshold) $ do
-            SMC.blockCustomer booking.riderId Nothing
+            SMC.blockCustomer booking.riderId Nothing (Just "Blocked due to high cancellation rate")
         _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)

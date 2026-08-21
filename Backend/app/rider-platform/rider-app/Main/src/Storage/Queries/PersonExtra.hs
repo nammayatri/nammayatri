@@ -240,8 +240,8 @@ findBlockedByDeviceToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow 
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
-updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
-updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
+updatingEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> Maybe Text -> m ()
+updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked blockedReason = do
   person <- findByPId (Id personId)
   case person of
     Nothing -> pure ()
@@ -251,6 +251,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
         ( [ Se.Set BeamP.enabled (not isBlocked),
             Se.Set BeamP.blocked isBlocked,
             Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+            Se.Set BeamP.blockedReason blockedReason,
             Se.Set BeamP.updatedAt now,
             Se.Set BeamP.blockedCount $
               if isBlocked
@@ -260,6 +261,20 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
             <> [Se.Set BeamP.blockedAt (Just $ T.utcToLocalTime T.utc now) | isBlocked]
         )
         [Se.Is BeamP.id (Se.Eq personId)]
+
+unblockIfExpired :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m ()
+unblockIfExpired (Id personId) = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.enabled True,
+      Se.Set BeamP.blocked False,
+      Se.Set BeamP.blockedReason Nothing,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id (Se.Eq personId),
+      Se.Is BeamP.blocked (Se.Eq True),
+      Se.Is BeamP.blockedUntil (Se.LessThan (Just now))
+    ]
 
 updatingAuthEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Bool -> Maybe UTCTime -> m ()
 updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blockedUntil = do

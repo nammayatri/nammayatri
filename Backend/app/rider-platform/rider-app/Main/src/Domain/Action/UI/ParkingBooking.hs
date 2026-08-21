@@ -189,6 +189,7 @@ postMultimodalParkingMarshalCreate mbApiKey req = do
                   blocked = False,
                   blockedAt = Nothing,
                   blockedByRuleId = Nothing,
+                  blockedReason = Nothing,
                   aadhaarVerified = False,
                   clientSdkVersion = Nothing,
                   clientBundleVersion = Nothing,

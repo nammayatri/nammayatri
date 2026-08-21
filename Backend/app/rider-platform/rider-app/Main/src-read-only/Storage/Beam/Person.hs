@@ -31,6 +31,7 @@ data PersonT f = PersonT
     blockedAt :: B.C f (Kernel.Prelude.Maybe Data.Time.LocalTime),
     blockedByRuleId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blockedCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    blockedReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blockedUntil :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     businessEmailEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     businessEmailHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),

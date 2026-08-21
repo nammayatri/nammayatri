@@ -30,8 +30,8 @@ getCustomerList a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domai
 deleteCustomerDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteCustomerDelete a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Customer.deleteCustomerDelete a3 a2 a1
 
-postCustomerBlock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postCustomerBlock a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Customer.postCustomerBlock a3 a2 a1
+postCustomerBlock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.BlockCustomerReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postCustomerBlock a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Customer.postCustomerBlock a4 a3 a2 a1
 
 postCustomerUnblock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCustomerUnblock a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Customer.postCustomerUnblock a3 a2 a1
