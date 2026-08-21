@@ -64,6 +64,15 @@ getBusTripSchedule integratedBPPConfig waybillNo tripNumber routeId = IM.withInM
   baseUrl <- getGimsBaseUrl integratedBPPConfig
   Flow.getBusTripSchedule baseUrl (integratedBPPConfig.feedKey) waybillNo tripNumber routeId
 
+getVehicleOperationInfo ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe VehicleOperationInfo)
+getVehicleOperationInfo integratedBPPConfig fleetNo = do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getVehicleOperationInfo baseUrl fleetNo
+
 -- Parse Functions
 
 parseRouteStopMappingInMemoryServer ::
