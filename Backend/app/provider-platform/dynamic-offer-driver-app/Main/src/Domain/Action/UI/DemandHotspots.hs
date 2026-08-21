@@ -11,6 +11,7 @@ import Data.Aeson (withArray)
 import qualified Data.Aeson as Ae
 import qualified Data.Geohash as Geohash
 import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
@@ -20,9 +21,12 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.VehicleCategory as DVC
+import Domain.Types.VehicleVariant (castVehicleVariantToVehicleCategory)
 import Environment
-import EulerHS.Prelude hiding (foldr', id, length, map, mapM_, sum, whenJust)
+import EulerHS.Prelude hiding (foldr', id, length, map, mapM_, maximumBy, null, sum, whenJust)
 import GHC.Num.Integer (integerToInt)
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -36,7 +40,10 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.FarePolicy (getSyntheticCongestionMultiplier)
+import SharedLogic.Pricing (getDistanceBin)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Vehicle as QVehicle
 
 -- What it is:
 -- Entire city is divided into geohashes, whenever we encounter a search, we increase the frequency and whenver a booking happens
@@ -51,23 +58,37 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 -- On Search - We add a uuid to the sorted set of that city and geohash
 -- On Booking - We reomve the uuid with highest score from sorted set of that city and geohash
 
-newtype HotspotObject = HotspotObject (Text, Double, Double) -- (first 6 chars of SearchRequestId, Lat, Long)
+newtype HotspotObject = HotspotObject (Text, Double, Double, Maybe Int, Maybe Int)
+  -- (first 6 chars of SearchRequestId, Lat, Long, distanceMeters, durationSeconds)
   deriving (Show)
 
 instance ToJSON HotspotObject where
-  toJSON (HotspotObject (name, lat, long)) =
-    toJSON [toJSON name, toJSON lat, toJSON long]
+  toJSON (HotspotObject (name, lat, long, mbDistanceMeters, mbDurationSeconds)) =
+    toJSON [toJSON name, toJSON lat, toJSON long, toJSON mbDistanceMeters, toJSON mbDurationSeconds]
 
 instance FromJSON HotspotObject where
   parseJSON = withArray "HotspotObject" $ \vec ->
-    if V.length vec == 3
-      then
+    case V.length vec of
+      5 ->
         HotspotObject
-          <$> ( (,,) <$> parseJSON (vec V.! 0)
+          <$> ( (,,,,) <$> parseJSON (vec V.! 0)
                   <*> parseJSON (vec V.! 1)
                   <*> parseJSON (vec V.! 2)
+                  <*> parseJSON (vec V.! 3)
+                  <*> parseJSON (vec V.! 4)
               )
-      else fail "Expected an array of exactly three elements"
+      -- Legacy entries written before distance/duration tracking was added.
+      -- Must stay accepted until they age out of the sorted set's own TTL/pruning,
+      -- otherwise a single legacy member fails the whole geohash's decode.
+      3 ->
+        HotspotObject
+          <$> ( (,,,,) <$> parseJSON (vec V.! 0)
+                  <*> parseJSON (vec V.! 1)
+                  <*> parseJSON (vec V.! 2)
+                  <*> pure Nothing
+                  <*> pure Nothing
+              )
+      _ -> fail "Expected an array of 3 (legacy) or 5 elements"
 
 getDriverDemandHotspots ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -76,7 +97,7 @@ getDriverDemandHotspots ::
     ) ->
     Flow GetDemandHotspotsResp
   )
-getDriverDemandHotspots (_, _, merchantOpCityId) = do
+getDriverDemandHotspots (mbPersonId, _, merchantOpCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
@@ -84,7 +105,7 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
         then do
           let cachedResultKey = mkDemandHotspotCachedKey merchantOpCityId.getId
           cachedResult :: Maybe GetDemandHotspotsResp <- Redis.safeGet cachedResultKey
-          case cachedResult of
+          res <- case cachedResult of
             Just res -> do
               fork "Calculating demand hotpspots" $ do
                 expirySec <- Redis.ttl cachedResultKey
@@ -92,10 +113,17 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
                   void $ calculateDemandHotspots configs cachedResultKey True
               return res
             Nothing -> calculateDemandHotspots configs cachedResultKey False
+          overlayCongestionMultiplier configs transporterConfig.timeDiffFromUtc res
         else do
           throwError $ InvalidRequest "Demand Hotspots is not enabled"
     _ -> throwError $ InvalidRequest "Demand Hotspots feature configs not set"
   where
+    -- 'frequency'/'location' are shared across every driver in the city (cached
+    -- under a single per-city key), but the congestion multiplier is per
+    -- VehicleCategory. So the shared, locked, TTL-cached computation below only
+    -- ever produces 'multiplier = Nothing' placeholders — the real value is
+    -- overlaid fresh per request in 'overlayCongestionMultiplier', after the
+    -- calling driver's own vehicle category is known.
     calculateDemandHotspots configs cachedResultKey forceRecal =
       Redis.withWaitAndLockRedis (mkHotspotsCalculationLockKey merchantOpCityId.getId) 10 10000 $ do
         --1e4 microseconds
@@ -114,7 +142,7 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
                   GetDemandHotspotsResp
                     { createdAt = now,
                       expiryAt = T.addUTCTime (60 * fromIntegral configs.resultDurationMinutes) now,
-                      hotspotsDetails = map (uncurry HotspotsDetails) finalResults
+                      hotspotsDetails = map (\(freq, loc) -> HotspotsDetails {frequency = freq, location = loc, multiplier = Nothing}) finalResults
                     }
             Redis.setExp cachedResultKey resp (60 * configs.resultDurationMinutes)
             return resp
@@ -129,12 +157,91 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
       res <- Redis.zRange sortedSetKey 0 1000000
       members :: [HotspotObject] <- mapM (\a -> fromMaybeM (HedisDecodeError $ cs a) . Ae.decode $ cs a) res
       let freq = fromIntegral $ length members
-          (sumLat, sumLong) = foldr' (\(HotspotObject (_, lat, long)) (accLat, accLong) -> (accLat + lat, accLong + long)) (0, 0) members
+          (sumLat, sumLong) = foldr' (\(HotspotObject (_, lat, long, _, _)) (accLat, accLong) -> (accLat + lat, accLong + long)) (0, 0) members
           avgLatLong = LatLong (sumLat / freq) (sumLong / freq)
       return (floor freq, avgLatLong)
 
-updateDemandHotspotsOnSearch :: Id SearchRequest -> Id MerchantOperatingCity -> TransporterConfig -> Maps.LatLong -> Flow ()
-updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latlong = do
+    -- Resolves the calling driver's own vehicle category and overlays a
+    -- congestion multiplier onto each returned hotspot. Cheap on the common
+    -- path (one DB/replica read + up to noOfGeohashesToReturn short-TTL Redis
+    -- GETs); the expensive part (deriving a representative trip + calling the
+    -- pricing rule engine) only runs on a per-(geohash,category) cache miss,
+    -- at most once per 'congestionMultiplierCacheTTLInMin' window.
+    overlayCongestionMultiplier configs timeDiffFromUtc res = do
+      vehicleCategory <- resolveDriverVehicleCategory
+      hotspotsWithMultiplier <- mapM (attachMultiplier configs timeDiffFromUtc vehicleCategory) res.hotspotsDetails
+      return res {hotspotsDetails = hotspotsWithMultiplier}
+
+    resolveDriverVehicleCategory = case mbPersonId of
+      Nothing -> pure Nothing
+      Just personId -> do
+        mbVehicle <- B.runInReplica $ QVehicle.findById personId
+        pure $ (\v -> fromMaybe (castVehicleVariantToVehicleCategory v.variant) v.category) <$> mbVehicle
+
+    attachMultiplier configs timeDiffFromUtc vehicleCategory hotspot = do
+      multiplier <- lookupCongestionMultiplier configs timeDiffFromUtc vehicleCategory hotspot.location
+      return hotspot {multiplier = multiplier}
+
+    -- Cache-first, then compute-and-cache under a lock. Deliberately a NEW,
+    -- separate Redis namespace (not the old CongestionChargeAvg job's keys) —
+    -- this value comes from a synthetic representative trip derived from
+    -- recent search activity at this geohash, not a real booking, and we don't
+    -- want it silently mixing into the (unused, but still-shipped) job's cache.
+    lookupCongestionMultiplier configs timeDiffFromUtc vehicleCategory latlong = do
+      let mbGeohash = T.pack <$> Geohash.encode configs.precisionOfGeohash (latlong.lat, latlong.lon)
+      case mbGeohash of
+        Nothing -> pure Nothing
+        Just geohash -> do
+          let cacheKey = mkHotspotCongestionCacheKey merchantOpCityId.getId geohash vehicleCategory
+          mbCached :: Maybe Double <- Redis.safeGet cacheKey
+          case mbCached of
+            Just _ -> pure mbCached
+            Nothing ->
+              Redis.withWaitAndLockRedis (mkHotspotCongestionLockKey merchantOpCityId.getId geohash vehicleCategory) 5 5000 $ do
+                mbCachedAgain :: Maybe Double <- Redis.safeGet cacheKey
+                case mbCachedAgain of
+                  Just _ -> pure mbCachedAgain
+                  Nothing -> do
+                    mbTrip <- deriveRepresentativeTrip configs (mkDemandHotspotSortedSetKey merchantOpCityId.getId geohash)
+                    case mbTrip of
+                      Nothing -> pure Nothing
+                      Just (distanceMeters, durationSeconds) -> do
+                        mbMultiplier <- getSyntheticCongestionMultiplier merchantOpCityId timeDiffFromUtc geohash latlong vehicleCategory distanceMeters durationSeconds
+                        whenJust mbMultiplier $ \m -> Redis.setExp cacheKey m (60 * fromMaybe 15 configs.congestionMultiplierCacheTTLInMin)
+                        pure mbMultiplier
+
+    -- Buckets a geohash's recent (already-pruned) HotspotObjects by real
+    -- observed distance (reusing the same 2km bins the live fare-pricing path
+    -- uses), picks the bin with the most members, and averages the *real*
+    -- distanceMeters/durationSeconds of members in that bin — a genuine
+    -- "typical trip from here" signal, not an assumption. Only falls back to
+    -- 'fallbackAvgSpeedKmph' if the winning bin has distance data but no
+    -- member in it has duration data at all.
+    deriveRepresentativeTrip configs sortedSetKey = do
+      res <- Redis.zRange sortedSetKey 0 1000000
+      members :: [HotspotObject] <- mapM (\a -> fromMaybeM (HedisDecodeError $ cs a) . Ae.decode $ cs a) res
+      let withDistance = [(getDistanceBin d, d, dur) | HotspotObject (_, _, _, Just d, dur) <- members]
+          binCounts = Map.fromListWith (+) [(bin, 1 :: Int) | (bin, _, _) <- withDistance]
+      if null binCounts
+        then pure Nothing
+        else do
+          let winningBin = fst $ maximumBy (comparing snd) (Map.toList binCounts)
+              inWinningBin = [(d, dur) | (bin, d, dur) <- withDistance, bin == winningBin]
+              avgDistance = sum (map fst inWinningBin) `div` length inWinningBin
+              durationsWithValue = mapMaybe snd inWinningBin
+              avgDuration
+                | null durationsWithValue = round (fromIntegral avgDistance / 1000 / fromMaybe 30.0 configs.fallbackAvgSpeedKmph * 3600)
+                | otherwise = sum durationsWithValue `div` length durationsWithValue
+          pure $ Just (avgDistance, avgDuration)
+
+mkHotspotCongestionCacheKey :: Text -> Text -> Maybe DVC.VehicleCategory -> Text
+mkHotspotCongestionCacheKey cityId geohash vehicleCategory = "DH:CongestionMultiplier:cityId:" <> cityId <> ":geohash:" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
+
+mkHotspotCongestionLockKey :: Text -> Text -> Maybe DVC.VehicleCategory -> Text
+mkHotspotCongestionLockKey cityId geohash vehicleCategory = "DH:CongestionLock:cityId:" <> cityId <> ":geohash:" <> geohash <> "_vehicleCategory_" <> show vehicleCategory
+
+updateDemandHotspotsOnSearch :: Id SearchRequest -> Id MerchantOperatingCity -> TransporterConfig -> Maps.LatLong -> Maybe Meters -> Maybe Seconds -> Flow ()
+updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latlong mbDistance mbDuration = do
   now <- getCurrentTime
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
@@ -144,7 +251,7 @@ updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latl
           let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
               geohashSetKey = mkGeohashSetKey merchantOpCityId.getId
               expirationSecond = 60 * configs.analysisDurationMinutes
-              object = HotspotObject (T.take 6 searchReqId.getId, latlong.lat, latlong.lon)
+              object = HotspotObject (T.take 6 searchReqId.getId, latlong.lat, latlong.lon, (.getMeters) <$> mbDistance, (.getSeconds) <$> mbDuration)
           Redis.zAdd sortedSetKey [(utcToMilliseconds now, object)]
           Redis.expire sortedSetKey expirationSecond
           Redis.sAddExp geohashSetKey [geohash] expirationSecond
@@ -158,15 +265,19 @@ updateDemandHotspotsOnBooking ::
   Id MerchantOperatingCity ->
   TransporterConfig ->
   Maps.LatLong ->
+  Maybe Meters ->
+  Maybe Seconds ->
   m ()
-updateDemandHotspotsOnBooking searchReqId merchantOpCityId transporterConfig latlong = do
+updateDemandHotspotsOnBooking searchReqId merchantOpCityId transporterConfig latlong mbDistance mbDuration = do
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
       when configs.enableDemandHotspots $ do
         let mbGeohash = Geohash.encode configs.precisionOfGeohash (latlong.lat, latlong.lon)
         whenJust mbGeohash $ \geohash -> do
           let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
-              object = HotspotObject (T.take 6 searchReqId.getId, latlong.lat, latlong.lon)
+              -- Must match the object stored at search-time byte-for-byte (same
+              -- distance/duration), or ZREM won't find it to remove on booking.
+              object = HotspotObject (T.take 6 searchReqId.getId, latlong.lat, latlong.lon, (.getMeters) <$> mbDistance, (.getSeconds) <$> mbDuration)
           res <- Redis.zRem' sortedSetKey [object]
           logDebug $ "deleted members count " <> show res
     _ -> logDebug "Demand hotspots not enabled or configs not set on booking"
@@ -204,7 +315,7 @@ getActiveSearchLocations merchantOpCityId center radiusMeters cutoffScore geohas
     processGeohash geohash = do
       let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
       rawItems <- Redis.zRangeByScore sortedSetKey cutoffScore (1 / 0 :: Double)
-      pure $ mapMaybe (\r -> fmap (\(HotspotObject t) -> t) (Ae.decode $ cs r)) rawItems
+      pure $ mapMaybe (\r -> (\(HotspotObject (name, lat, lon, _, _)) -> (name, lat, lon)) <$> (Ae.decode $ cs r)) rawItems
 
     isWithinRadius cl r (_, slat, slon) =
       highPrecMetersToMeters (distanceBetweenInMeters cl (Maps.LatLong slat slon)) <= fromIntegral r

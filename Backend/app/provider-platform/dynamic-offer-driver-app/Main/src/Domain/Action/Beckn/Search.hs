@@ -375,7 +375,7 @@ handler ValidatedDSearchReq {..} sReq = do
               }
       addNammaTags tagData
     fork "Updating Demand Hotspots on search" $ do
-      DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
+      DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation mbDistance mbDuration
 
   -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
   -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
