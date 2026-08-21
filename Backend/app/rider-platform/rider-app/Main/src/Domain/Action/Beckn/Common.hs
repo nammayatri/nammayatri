@@ -1564,6 +1564,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
           && case booking.tripCategory of
             Just (Trip.OneWay Trip.OneWayRideOtp) -> True
             Just (Trip.InterCity Trip.OneWayRideOtp _) -> True
+            Just (Trip.Rental Trip.RideOtp) -> True
             Just (Trip.CrossCity Trip.OneWayRideOtp _) -> True
             Just (Trip.Ambulance Trip.OneWayRideOtp) -> True
             Just (Trip.Delivery Trip.OneWayRideOtp) -> True
