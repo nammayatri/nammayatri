@@ -42,6 +42,7 @@ import TransactionLogs.Types
 triggerSubscriptionSearch ::
   ( SearchRequestFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Redis.HedisFlow m r,
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
@@ -52,6 +53,7 @@ triggerSubscriptionSearch ::
     CacheFlow m r,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     EsqDBFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]

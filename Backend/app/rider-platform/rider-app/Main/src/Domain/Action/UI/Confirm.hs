@@ -56,6 +56,7 @@ confirm ::
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EventStreamFlow m r,

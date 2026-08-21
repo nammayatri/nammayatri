@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnCancel (API, handler) where
+module API.Beckn.OnCancel (API, handler, onCancelWebhook) where
 
 import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -26,9 +26,12 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -38,24 +41,37 @@ type API = OnCancel.OnCancelAPIV2
 handler :: SignatureAuthResult -> FlowServer API
 handler = onCancel
 
+onCancelWebhook :: OnCancel.OnCancelReqV2 -> FlowHandler AckResponse
+onCancelWebhook = onCancel (error "OnCancel webhook: SignatureAuthResult not present (verified upstream by onix)")
+
 onCancel ::
   SignatureAuthResult ->
   OnCancel.OnCancelReqV2 ->
   FlowHandler AckResponse
 onCancel _ req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId req.onCancelReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "onCancel API Flow" $ "Received onCancel request:-" <> show req
-    cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidBecknSchema "Missing message in on_cancel")
-    cancelStatus' <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidBecknSchema "Missing order.status in on_cancel message")
-    logDebug $ "cancelStatus in bpp " <> cancelStatus'
-    cancelStatus <- readMaybe (T.unpack cancelStatus') & fromMaybeM (InvalidBecknSchema $ "Invalid order.status:-" <> cancelStatus')
-    case cancelStatus of
-      Enums.CANCELLED -> processCancellationRequest DOnCancel.onCancel
-      Enums.SOFT_CANCEL -> processCancellationRequest DOnCancel.onSoftCancel
-      _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED|SOFT_CANCEL, received:-" <> cancelStatus'
-  pure Ack
+  drop' <- do
+    mbMerchant <- case req.onCancelReqContext.contextBapId of
+      Nothing -> pure Nothing
+      Just bapId -> CQMerchant.findBySubscriberId (ShortId bapId)
+    case mbMerchant of
+      Nothing -> pure False
+      Just merchant -> InboundGate.shouldDropSigned "on_cancel" merchant.id (req.onCancelReqContext.contextBppId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId req.onCancelReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "onCancel API Flow" $ "Received onCancel request:-" <> show req
+        cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidBecknSchema "Missing message in on_cancel")
+        cancelStatus' <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidBecknSchema "Missing order.status in on_cancel message")
+        logDebug $ "cancelStatus in bpp " <> cancelStatus'
+        cancelStatus <- readMaybe (T.unpack cancelStatus') & fromMaybeM (InvalidBecknSchema $ "Invalid order.status:-" <> cancelStatus')
+        case cancelStatus of
+          Enums.CANCELLED -> processCancellationRequest DOnCancel.onCancel
+          Enums.SOFT_CANCEL -> processCancellationRequest DOnCancel.onSoftCancel
+          _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED|SOFT_CANCEL, received:-" <> cancelStatus'
+      pure Ack
   where
     processCancellationRequest ::
       (DOnCancel.ValidatedOnCancelReq -> Flow ()) ->

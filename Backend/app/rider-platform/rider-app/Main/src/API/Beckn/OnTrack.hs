@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnTrack (API, handler) where
+module API.Beckn.OnTrack (API, handler, onTrackWebhook) where
 
 import qualified Beckn.ACL.OnTrack as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -24,9 +24,12 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
@@ -37,21 +40,34 @@ type API = OnTrack.OnTrackAPIV2
 handler :: SignatureAuthResult -> FlowServer API
 handler = onTrack
 
+onTrackWebhook :: OnTrack.OnTrackReqV2 -> FlowHandler AckResponse
+onTrackWebhook = onTrack (error "OnTrack webhook: SignatureAuthResult not present (verified upstream by onix)")
+
 onTrack ::
   SignatureAuthResult ->
   OnTrack.OnTrackReqV2 ->
   FlowHandler AckResponse
 onTrack _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "onTrackAPIV2" $ "Received onTrack API call:-" <> show reqV2
-    mbDOnTrackReq <- ACL.buildOnTrackReqV2 reqV2
-    whenJust mbDOnTrackReq $ \onTrackReq -> do
-      validatedReq <- DOnTrack.validateRequest onTrackReq
-      fork "on track processing" $
-        DOnTrack.onTrack validatedReq
-      fork "on track received pushing ondc logs" do
-        booking <- QBookingLite.findByIdLite validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
-        void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
-    pure Ack
+  drop' <- do
+    mbMerchant <- case reqV2.onTrackReqContext.contextBapId of
+      Nothing -> pure Nothing
+      Just bapId -> CQMerchant.findBySubscriberId (ShortId bapId)
+    case mbMerchant of
+      Nothing -> pure False
+      Just merchant -> InboundGate.shouldDropSigned "on_track" merchant.id (reqV2.onTrackReqContext.contextBppId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "onTrackAPIV2" $ "Received onTrack API call:-" <> show reqV2
+        mbDOnTrackReq <- ACL.buildOnTrackReqV2 reqV2
+        whenJust mbDOnTrackReq $ \onTrackReq -> do
+          validatedReq <- DOnTrack.validateRequest onTrackReq
+          fork "on track processing" $
+            DOnTrack.onTrack validatedReq
+          fork "on track received pushing ondc logs" do
+            booking <- QBookingLite.findByIdLite validatedReq.ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BookingId:-" <> validatedReq.ride.bookingId.getId)
+            void $ pushLogs "on_track" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
+        pure Ack

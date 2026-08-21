@@ -42,6 +42,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.Cancel
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -62,57 +63,61 @@ init ::
   Init.InitReqV2 ->
   FlowHandler AckResponse
 init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.initReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "Init APIV2 Flow" "Reached"
-    (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri) <- do
-      let context = reqV2.initReqContext
-      callbackUrl <- Utils.getContextBapUri context
-      bppUri <- Utils.getContextBppUri context
-      messageId <- Utils.getMessageId context
-      bapId <- Utils.getContextBapId context
-      city <- Utils.getContextCity context
-      country <- Utils.getContextCountry context
-      isValueAddNP <- CQVAN.isValueAddNP bapId
-      dInitReq <- ACL.buildInitReqV2 subscriber reqV2 isValueAddNP
-      pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri)
+  drop' <- InboundGate.shouldDropSigned "init" transporterId (reqV2.initReqContext.contextBapId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.initReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "Init APIV2 Flow" "Reached"
+        (dInitReq, bapUri, bapId, msgId, city, country, bppId, bppUri) <- do
+          let context = reqV2.initReqContext
+          callbackUrl <- Utils.getContextBapUri context
+          bppUri <- Utils.getContextBppUri context
+          messageId <- Utils.getMessageId context
+          bapId <- Utils.getContextBapId context
+          city <- Utils.getContextCity context
+          country <- Utils.getContextCountry context
+          isValueAddNP <- CQVAN.isValueAddNP bapId
+          dInitReq <- ACL.buildInitReqV2 subscriber reqV2 isValueAddNP
+          pure (dInitReq, callbackUrl, bapId, messageId, city, country, context.contextBppId, bppUri)
 
-    let txnId = Just transactionId
-        initFulfillmentId =
-          case dInitReq.fulfillmentId of
-            DInit.DriverQuoteId (Id fId) -> fId
-            DInit.QuoteId (Id fId) -> fId
-    Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
-      mbProcessed :: Maybe Text <- Redis.withMasterRedis $ Redis.get (initProcessedKey initFulfillmentId)
-      unless (isJust mbProcessed) $ do
-        validatedRes <- DInit.validateRequest transporterId dInitReq
-        fork "init request processing" $ do
-          Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
-            dInitRes <-
-              callWithErrorHandling validatedRes.searchRequest.transactionId $ do
-                DInit.handler transporterId dInitReq validatedRes
-            internalEndPointHashMap <- asks (.internalEndPointHashMap)
-            let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
-            bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+        let txnId = Just transactionId
+            initFulfillmentId =
+              case dInitReq.fulfillmentId of
+                DInit.DriverQuoteId (Id fId) -> fId
+                DInit.QuoteId (Id fId) -> fId
+        Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
+          mbProcessed :: Maybe Text <- Redis.withMasterRedis $ Redis.get (initProcessedKey initFulfillmentId)
+          unless (isJust mbProcessed) $ do
+            validatedRes <- DInit.validateRequest transporterId dInitReq
+            fork "init request processing" $ do
+              Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
+                dInitRes <-
+                  callWithErrorHandling validatedRes.searchRequest.transactionId $ do
+                    DInit.handler transporterId dInitReq validatedRes
+                internalEndPointHashMap <- asks (.internalEndPointHashMap)
+                let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
+                bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
 
-            fork "init received pushing ondc logs" do
-              void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
-            ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-            context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
-            void . handle (errHandler dInitRes.booking dInitRes.transporter) $
-              Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
-                mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
-                let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
-                pure $
-                  Spec.OnInitReq
-                    { onInitReqContext = context,
-                      onInitReqError = Nothing,
-                      onInitReqMessage = Just onInitMessage
-                    }
-            Redis.setExp (initProcessedKey initFulfillmentId) ("PROCESSED" :: Text) 300
+                fork "init received pushing ondc logs" do
+                  void $ pushLogs "init" (toJSON reqV2) transporterId.getId "MOBILITY"
+                ttl <- bppConfig.onInitTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+                context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country (Just ttl)
+                void . handle (errHandler dInitRes.booking dInitRes.transporter) $
+                  Callback.withCallback dInitRes.transporter "on_init" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
+                    mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dInitRes.booking.quoteId
+                    let onInitMessage = ACL.mkOnInitMessageV2 dInitRes bppConfig mbFarePolicy
+                    pure $
+                      Spec.OnInitReq
+                        { onInitReqContext = context,
+                          onInitReqError = Nothing,
+                          onInitReqMessage = Just onInitMessage
+                        }
+                Redis.setExp (initProcessedKey initFulfillmentId) ("PROCESSED" :: Text) 300
 
-    pure Ack
+        pure Ack
   where
     errHandler booking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking Nothing transporter >> pure Ack

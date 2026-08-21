@@ -455,6 +455,7 @@ onUpdate ::
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r,

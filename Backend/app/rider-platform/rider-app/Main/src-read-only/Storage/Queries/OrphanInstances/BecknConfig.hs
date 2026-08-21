@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.BecknConfig where
 
+import qualified Domain.Types
 import qualified Domain.Types.BecknConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -17,12 +18,13 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   fromTType' (Beam.BecknConfigT {..}) = do
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
-    staticTermsUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) staticTermsUrl
+    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
     subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
           { bapIFSC = bapIFSC,
+            becknProtocol = becknProtocol,
             buyerFinderFee = buyerFinderFee,
             cancelTTLSec = cancelTTLSec,
             collectedBy = collectedBy,
@@ -32,6 +34,7 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
             initTTLSec = initTTLSec,
+            networkId = networkId,
             paymentParamsJson = paymentParamsJson,
             ratingTTLSec = ratingTTLSec,
             registryUrl = registryUrl',
@@ -56,6 +59,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' (Domain.Types.BecknConfig.BecknConfig {..}) = do
     Beam.BecknConfigT
       { Beam.bapIFSC = bapIFSC,
+        Beam.becknProtocol = becknProtocol,
         Beam.buyerFinderFee = buyerFinderFee,
         Beam.cancelTTLSec = cancelTTLSec,
         Beam.collectedBy = collectedBy,
@@ -65,6 +69,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.initTTLSec = initTTLSec,
+        Beam.networkId = networkId,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.ratingTTLSec = ratingTTLSec,
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
@@ -72,7 +77,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.selectTTLSec = selectTTLSec,
         Beam.settlementType = settlementType,
         Beam.settlementWindow = settlementWindow,
-        Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
+        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
         Beam.statusTTLSec = statusTTLSec,
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,

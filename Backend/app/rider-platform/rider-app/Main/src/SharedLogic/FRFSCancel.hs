@@ -89,7 +89,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
     -- Must be fetched before any state mutation: on a config miss this has to fail while the callback is still retryable,
     -- otherwise the booking is left cancelled and the idempotency guard above blocks the retry from ever writing recon rows.
     bapConfig <-
-      getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
+      getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId booking.merchantId (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)))
         >>= fromMaybeM (InternalError "Beckn Config not found")
     if isCounterCancellation
       then do

@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 
@@ -48,17 +49,21 @@ update ::
   Update.UpdateReqV2 ->
   FlowHandler AckResponse
 update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId req.updateReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "updateAPI" "Received update API call."
-    dUpdateReq <- ACL.buildUpdateReq merchantId subscriber req
-    let bookingId = DUpdate.getBookingId dUpdateReq
-    Redis.whenWithLockRedis (updateLockKey bookingId.getId) 60 $ do
-      fork "update request processing" $
-        Redis.whenWithLockRedis (updateProcessingLockKey bookingId.getId) 60 $
-          DUpdate.handler dUpdateReq
-    pure Ack
+  drop' <- InboundGate.shouldDropSigned "update" merchantId (req.updateReqContext.contextBapId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId req.updateReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "updateAPI" "Received update API call."
+        dUpdateReq <- ACL.buildUpdateReq merchantId subscriber req
+        let bookingId = DUpdate.getBookingId dUpdateReq
+        Redis.whenWithLockRedis (updateLockKey bookingId.getId) 60 $ do
+          fork "update request processing" $
+            Redis.whenWithLockRedis (updateProcessingLockKey bookingId.getId) 60 $
+              DUpdate.handler dUpdateReq
+        pure Ack
 
 updateLockKey :: Text -> Text
 updateLockKey id = "Driver:Update:BookingId-" <> id

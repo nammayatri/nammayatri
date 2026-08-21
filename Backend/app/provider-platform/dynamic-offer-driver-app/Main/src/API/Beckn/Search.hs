@@ -42,6 +42,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Servant hiding (throwError)
+import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.GatewayDispatch as GatewayDispatch
+import qualified SharedLogic.InboundGate as InboundGate
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -95,34 +98,43 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
     Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2
     _ -> do
       -- Process locally
-      transactionId <- Utils.getTransactionId reqV2.searchReqContext
-      L.setOptionLocal TxnIdKey transactionId
-      Utils.withTransactionIdLogTag transactionId $ do
-        logTagInfo "SearchV2 API Flow Local Processing" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
-        let context = reqV2.searchReqContext
-            txnId = Just transactionId
-        city <- Utils.getContextCity context
-        merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
-        unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
-        moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-        void $ Utils.validateSearchContext context transporterId moc.id
-        dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
-        msgId <- Utils.getMessageId context
-        country <- Utils.getContextCountry context
+      drop' <- InboundGate.shouldDropSigned "search" transporterId (reqV2.searchReqContext.contextBapId)
+      if drop'
+        then pure Ack
+        else do
+          transactionId <- Utils.getTransactionId reqV2.searchReqContext
+          L.setOptionLocal TxnIdKey transactionId
+          Utils.withTransactionIdLogTag transactionId $ do
+            logTagInfo "SearchV2 API Flow Local Processing" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
+            let context = reqV2.searchReqContext
+                txnId = Just transactionId
+            city <- Utils.getContextCity context
+            merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
+            unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
+            moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
+            void $ Utils.validateSearchContext context transporterId moc.id
+            dSearchReq <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
+            msgId <- Utils.getMessageId context
+            country <- Utils.getContextCountry context
 
-        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
-        when isFirst $
-          Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
-            fork "search request processing" $
-              Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-                (dSearchRes, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
-                internalEndPointHashMap <- asks (.internalEndPointHashMap)
-                let context' = onSearchReq.onSearchReqContext
-                logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-                void $
-                  Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ do
-                    pure onSearchReq
-        pure Ack
+            isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
+            when isFirst $
+              Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
+                fork "search request processing" $
+                  Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+                    (dSearchRes, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                    internalEndPointHashMap <- asks (.internalEndPointHashMap)
+                    let context' = onSearchReq.onSearchReqContext
+                    logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+                    void $
+                      GatewayDispatch.dispatchAction dSearchRes.provider.id
+                        Domain.MOBILITY
+                        "on_search"
+                        (onSearchReq.onSearchReqContext.contextBapId)
+                        onSearchReq
+                        (Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ pure onSearchReq)
+                        (\url mappedAction jsonBody -> withShortRetry $ CallBAP.callBecknAPIUnsigned mappedAction url jsonBody)
+            pure Ack
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId

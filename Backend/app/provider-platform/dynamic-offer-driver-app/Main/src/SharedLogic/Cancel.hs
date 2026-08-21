@@ -93,6 +93,7 @@ reAllocateBookingIfPossible ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     TranslateFlow m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],

@@ -4,6 +4,7 @@ imports:
   ShortId: Kernel.Types.Id
   Subscriber: Kernel.Types.Registry
   Domain: Kernel.Types.Beckn.Domain
+  BecknProtocol: Domain.Types
 
 WhiteListOrg:
   tableName: white_list_org
@@ -15,6 +16,7 @@ WhiteListOrg:
     merchantId : Id Merchant
     domain : Domain
     merchantOperatingCityId : Id MerchantOperatingCity
+    supportedBecknProtocols : Maybe [BecknProtocol]
     createdAt: UTCTime
     updatedAt: UTCTime
   derives: "Generic,Show,'UsageSafety"

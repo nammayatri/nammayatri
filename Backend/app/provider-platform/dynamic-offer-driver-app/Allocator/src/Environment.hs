@@ -117,6 +117,7 @@ data HandlerEnv = HandlerEnv
     kvConfigUpdateFrequency :: Int,
     nwAddress :: BaseUrl,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
+    fabricGatewayBaseUrl :: BaseUrl,
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,

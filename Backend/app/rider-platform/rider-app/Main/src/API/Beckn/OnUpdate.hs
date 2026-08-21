@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnUpdate (API, handler) where
+module API.Beckn.OnUpdate (API, handler, onUpdateWebhook) where
 
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -24,9 +24,12 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
@@ -37,60 +40,73 @@ type API = OnUpdate.OnUpdateAPIV2
 handler :: SignatureAuthResult -> FlowServer API
 handler = onUpdate
 
+onUpdateWebhook :: OnUpdate.OnUpdateReqV2 -> FlowHandler AckResponse
+onUpdateWebhook = onUpdate (error "OnUpdate webhook: SignatureAuthResult not present (verified upstream by onix)")
+
 onUpdate ::
   SignatureAuthResult ->
   OnUpdate.OnUpdateReqV2 ->
   FlowHandler AckResponse
 onUpdate _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.onUpdateReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "onUpdateAPIV2" $ "Received onUpdate API call:-" <> show reqV2
-    mbDOnUpdateReq <- ACL.buildOnUpdateReqV2 reqV2
-    messageId <- Utils.getMessageIdText reqV2.onUpdateReqContext
+  drop' <- do
+    mbMerchant <- case reqV2.onUpdateReqContext.contextBapId of
+      Nothing -> pure Nothing
+      Just bapId -> CQMerchant.findBySubscriberId (ShortId bapId)
+    case mbMerchant of
+      Nothing -> pure False
+      Just merchant -> InboundGate.shouldDropSigned "on_update" merchant.id (reqV2.onUpdateReqContext.contextBppId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.onUpdateReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "onUpdateAPIV2" $ "Received onUpdate API call:-" <> show reqV2
+        mbDOnUpdateReq <- ACL.buildOnUpdateReqV2 reqV2
+        messageId <- Utils.getMessageIdText reqV2.onUpdateReqContext
 
-    whenJust mbDOnUpdateReq $ \onUpdateReq ->
-      Redis.whenWithLockRedis (onUpdateLockKey messageId) 60 $ do
-        validatedOnUpdateReq <- DOnUpdate.validateRequest onUpdateReq
-        let onUpdateProcessAction =
-              Redis.whenWithLockRedis (onUpdateProcessngLockKey messageId) 60 $
-                DOnUpdate.onUpdate validatedOnUpdateReq
-        case validatedOnUpdateReq of
-          DOnUpdate.OUValidatedRideAssignedReq req -> do
-            -- Have made Ride assigned as Synchronous as for Ride OTP Flow for On Us,
-            -- the Ride Assigned and Ride Started is triggered together, it assumes that Ride Assigned should be synchronous.
-            if req.isSynchronousOnUpdateProcessing
-              then onUpdateProcessAction
-              else fork "on update processing" $ onUpdateProcessAction
-          _ -> fork "on update processing" $ onUpdateProcessAction
-        fork "on update received pushing ondc logs" do
-          booking <- case validatedOnUpdateReq of
-            DOnUpdate.OUValidatedScheduledRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.OUValidatedRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.OUValidatedRideStartedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.OUValidatedRideCompletedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.OUValidatedBookingCancelledReq req -> QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bppBookingId.getId)
-            DOnUpdate.OUValidatedBookingReallocationReq req -> return req.booking
-            DOnUpdate.OUValidatedDriverArrivedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
-            DOnUpdate.OUValidatedEstimateRepetitionReq req -> return req.booking
-            DOnUpdate.OUValidatedQuoteRepetitionReq req -> return req.booking
-            DOnUpdate.OUValidatedNewMessageReq req -> return req.booking
-            DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
-            DOnUpdate.OUValidatedPhoneCallRequestEventReq req -> return req.booking
-            DOnUpdate.OUValidatedPhoneCallCompletedEventReq req -> return req.booking
-            DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
-            DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
-            DOnUpdate.OUValidatedEditDestSoftUpdateReq req -> return req.booking
-            DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
-            DOnUpdate.OUValidatedTollCrossedEventReq req -> return req.booking
-            DOnUpdate.OUValidatedDestinationReachedReq req -> return req.booking
-            DOnUpdate.OUValidatedEstimatedEndTimeRangeReq req -> return req.booking
-            DOnUpdate.OUValidatedParcelImageFileUploadReq req -> return req.booking
-            DOnUpdate.OUValidatedChangeServiceTierReq req -> return req.booking
-            DOnUpdate.OUValidatedAddBaggageReq req -> return req.booking
-            DOnUpdate.OUValidatedEditDestError _ -> throwError $ InternalError "Error request is not supported for network observability"
-          void $ pushLogs "on_update" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
-  pure Ack
+        whenJust mbDOnUpdateReq $ \onUpdateReq ->
+          Redis.whenWithLockRedis (onUpdateLockKey messageId) 60 $ do
+            validatedOnUpdateReq <- DOnUpdate.validateRequest onUpdateReq
+            let onUpdateProcessAction =
+                  Redis.whenWithLockRedis (onUpdateProcessngLockKey messageId) 60 $
+                    DOnUpdate.onUpdate validatedOnUpdateReq
+            case validatedOnUpdateReq of
+              DOnUpdate.OUValidatedRideAssignedReq req -> do
+                -- Have made Ride assigned as Synchronous as for Ride OTP Flow for On Us,
+                -- the Ride Assigned and Ride Started is triggered together, it assumes that Ride Assigned should be synchronous.
+                if req.isSynchronousOnUpdateProcessing
+                  then onUpdateProcessAction
+                  else fork "on update processing" $ onUpdateProcessAction
+              _ -> fork "on update processing" $ onUpdateProcessAction
+            fork "on update received pushing ondc logs" do
+              booking <- case validatedOnUpdateReq of
+                DOnUpdate.OUValidatedScheduledRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+                DOnUpdate.OUValidatedRideAssignedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+                DOnUpdate.OUValidatedRideStartedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+                DOnUpdate.OUValidatedRideCompletedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+                DOnUpdate.OUValidatedBookingCancelledReq req -> QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bppBookingId.getId)
+                DOnUpdate.OUValidatedBookingReallocationReq req -> return req.booking
+                DOnUpdate.OUValidatedDriverArrivedReq req -> QRB.findByBPPBookingId req.bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> req.bookingDetails.bppBookingId.getId)
+                DOnUpdate.OUValidatedEstimateRepetitionReq req -> return req.booking
+                DOnUpdate.OUValidatedQuoteRepetitionReq req -> return req.booking
+                DOnUpdate.OUValidatedNewMessageReq req -> return req.booking
+                DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
+                DOnUpdate.OUValidatedPhoneCallRequestEventReq req -> return req.booking
+                DOnUpdate.OUValidatedPhoneCallCompletedEventReq req -> return req.booking
+                DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
+                DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
+                DOnUpdate.OUValidatedEditDestSoftUpdateReq req -> return req.booking
+                DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
+                DOnUpdate.OUValidatedTollCrossedEventReq req -> return req.booking
+                DOnUpdate.OUValidatedDestinationReachedReq req -> return req.booking
+                DOnUpdate.OUValidatedEstimatedEndTimeRangeReq req -> return req.booking
+                DOnUpdate.OUValidatedParcelImageFileUploadReq req -> return req.booking
+                DOnUpdate.OUValidatedChangeServiceTierReq req -> return req.booking
+                DOnUpdate.OUValidatedAddBaggageReq req -> return req.booking
+                DOnUpdate.OUValidatedEditDestError _ -> throwError $ InternalError "Error request is not supported for network observability"
+              void $ pushLogs "on_update" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
+      pure Ack
 
 onUpdateLockKey :: Text -> Text
 onUpdateLockKey id = "Customer:OnUpdate:MessageId-" <> id

@@ -105,5 +105,5 @@ postChangeServiceTierConfirm (_personId, merchantId) bookingId req = do
   -- BAP booking update happens in on_update handler after BPP confirms the change.
   -- No optimistic update here to avoid inconsistency if BPP rejects.
   updateMsg <- ACL.buildUpdateReq updateBuildReq
-  void $ CallBPP.updateV2 booking.providerUrl updateMsg
+  void $ CallBPP.updateV2 booking.merchantId booking.providerUrl updateMsg
   pure Success

@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
@@ -49,20 +50,24 @@ rating ::
   Rating.RatingReqV2 ->
   FlowHandler AckResponse
 rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.ratingReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2
-    dRatingReq <- ACL.buildRatingReqV2 subscriber reqV2
+  drop' <- InboundGate.shouldDropSigned "rating" merchantId (reqV2.ratingReqContext.contextBapId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.ratingReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2
+        dRatingReq <- ACL.buildRatingReqV2 subscriber reqV2
 
-    Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
-      ride <- DRating.validateRequest dRatingReq
-      fork "rating request processing" $
-        Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
-          DRating.handler merchantId dRatingReq ride
-      fork "rating received pushing ondc logs" do
-        void $ pushLogs "rating" (toJSON reqV2) merchantId.getId "MOBILITY"
-    pure Ack
+        Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
+          ride <- DRating.validateRequest dRatingReq
+          fork "rating request processing" $
+            Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
+              DRating.handler merchantId dRatingReq ride
+          fork "rating received pushing ondc logs" do
+            void $ pushLogs "rating" (toJSON reqV2) merchantId.getId "MOBILITY"
+        pure Ack
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id

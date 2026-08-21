@@ -107,6 +107,7 @@ type LocationUpdateFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg),
     Finance.HasActorInfo m r
   )

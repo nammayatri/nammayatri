@@ -510,6 +510,7 @@ in  { esqDBCfg
     , ondcGatewayUrl = common.ondcGatewayUrl
     , nyRegistryUrl = common.nyRegistryUrl
     , nyGatewayUrl = common.nyGatewayUrl
+    , fabricGatewayBaseUrl = common.fabricGatewayBaseUrl
     , ltsCfg = LocationTrackingeServiceConfig
     , nammayatriRegistryConfig = common.nammayatriRegistryConfig
     , googleSAPrivateKey = sec.googleSAPrivateKey
