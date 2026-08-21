@@ -140,7 +140,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
               Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
                 (dSearchRes, onSearchReq') <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
                 -- Same pilot check, applied to the already-built on_search reply
-                -- (Beckn.OnDemand.Transformer.MSIL.OnSearch.msilOnSearchConverter) instead
+                -- (Beckn.OnDemand.Transformer.MSIL.OnSearch.msilOnSearchMessageBuild) instead
                 -- of touching anything inside SRP.processSearchRequest's own builder chain.
                 -- Building: BPP_TERMS goes on message.catalog.tags -- on_search has no
                 -- Order (Catalog -> Provider only), so it can't use order.tags like
@@ -149,10 +149,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
                   if isMsilPilotMerchant
                     then do
                       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" Enums.CAB >>= fromMaybeM (InternalError "Beckn Config not found")
-                      pure $
-                        MSILOnSearch.msilPatchCatalogCompliance $
-                          MSILOnSearch.msilPatchScheduledLocations dSearchRes $
-                            MSILOnSearch.msilPatchProviderFulfillmentTypes (MSILOnSearch.msilAddBppTerms bppConfig (MSILOnSearch.msilOnSearchConverter dSearchRes onSearchReq'))
+                      pure $ MSILOnSearch.msilOnSearchMessageBuild bppConfig dSearchRes onSearchReq'
                     else pure onSearchReq'
                 internalEndPointHashMap <- asks (.internalEndPointHashMap)
                 let context' = onSearchReq.onSearchReqContext

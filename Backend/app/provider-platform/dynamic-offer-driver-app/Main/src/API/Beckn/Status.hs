@@ -19,9 +19,7 @@ import qualified Beckn.ACL.Status as ACL
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
-import qualified Beckn.OnDemand.Utils.MSIL.Category as MSILCategory
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILCommon
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
 import qualified BecknV2.OnDemand.Types as Spec
@@ -87,9 +85,9 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = dStatusRes.booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist dStatusRes.booking.merchantOperatingCityId.getId)
       let isMsilPilotMerchant = fromMaybe False transporterConfig.enableScheduledCategorySignal
           fixOrder =
-            MSILTerms.dropNonConformingOrderTags
-              . MSILFulfillmentType.patchOrderFulfillmentTypes
-              . MSILCategory.overrideOrderCategoryIds dStatusRes.booking.isScheduled
+            MSILCommon.dropNonConformingOrderTags
+              . MSILCommon.patchOrderFulfillmentTypes
+              . MSILCommon.overrideOrderCategoryIds dStatusRes.booking.isScheduled
               . MSILBreakup.overrideOrderBreakupTitles
           onStatusReq =
             if isMsilPilotMerchant

@@ -7,14 +7,14 @@
 -- category descriptor code -- independent of the pickupTime-vs-now/buffer heuristic
 -- Domain.Action.Beckn.Search.getPossibleTripOption uses for every other merchant.
 -- In the same pass, it also verifies (parses + stores) the BAP's declared
--- BAP_TERMS.STATIC_TERMS, if any -- see Beckn.OnDemand.Utils.MSIL.Terms.
+-- BAP_TERMS.STATIC_TERMS, if any -- see Beckn.OnDemand.Utils.MSIL.Common.
 module Beckn.OnDemand.Transformer.MSIL.Search
   ( msilParser,
     isScheduledCategoryCode,
   )
 where
 
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILTerms
 import qualified Beckn.OnDemand.Utils.Search as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Search as DSearch

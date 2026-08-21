@@ -19,7 +19,7 @@ import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.OnDemand.Transformer.MSIL.OnConfirm as MSILOnConfirm
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILTerms
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2

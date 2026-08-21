@@ -20,7 +20,7 @@ import qualified Beckn.OnDemand.Transformer.MSIL.Init as MSILInit
 import qualified Beckn.OnDemand.Transformer.MSIL.OnInit as MSILOnInit
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILTerms
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
@@ -97,7 +97,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
     -- Verifying: Layer 1's echo-based fulfillment-id parse (QuoteId vs
     -- DriverQuoteId) is unreliable for MSIL, since our own fulfillment.type
     -- override on /on_select collapses the signal it depends on -- see
-    -- Beckn.OnDemand.Utils.MSIL.FulfillmentType.correctFulfillmentId.
+    -- Beckn.OnDemand.Transformer.MSIL.Init.correctFulfillmentId.
     dInitReq' <-
       if isMsilPilotMerchant
         then do

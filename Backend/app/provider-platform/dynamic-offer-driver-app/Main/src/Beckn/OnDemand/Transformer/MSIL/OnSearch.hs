@@ -13,7 +13,8 @@
 -- would otherwise find no match for a Layer-1-built ON_DEMAND_TRIP item id
 -- once the provider-level category itself has been rewritten to SCHEDULED_TRIP.
 module Beckn.OnDemand.Transformer.MSIL.OnSearch
-  ( msilOnSearchConverter,
+  ( msilOnSearchMessageBuild,
+    msilOnSearchConverter,
     msilAddBppTerms,
     msilPatchProviderFulfillmentTypes,
     msilPatchScheduledLocations,
@@ -21,9 +22,7 @@ module Beckn.OnDemand.Transformer.MSIL.OnSearch
   )
 where
 
-import Beckn.OnDemand.Utils.MSIL.Category (scheduledCategoryCode)
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
-import qualified Beckn.OnDemand.Utils.MSIL.Terms as MSILTerms
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILCommon
 import qualified Beckn.OnDemand.Utils.OnSearch as Utils
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
@@ -32,6 +31,25 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.BecknConfig as DBC
 import EulerHS.Prelude
 import qualified Kernel.Types.Beckn.Gps as Gps
+
+-- | Layer 2, in one pass: takes the already-built on_search reply from Layer
+-- 1 (plus the domain result Layer 1 returns alongside it, and beckn_config)
+-- and applies every MSIL patch API.Beckn.Search.search used to chain by hand
+-- -- scheduled category-code rewrite (msilOnSearchConverter), BPP_TERMS
+-- (msilAddBppTerms), catalog.providers[*].fulfillments[*].type
+-- (msilPatchProviderFulfillmentTypes), the scheduled-search location fallback
+-- (msilPatchScheduledLocations), and the TRV10 catalog-compliance fixes
+-- (msilPatchCatalogCompliance) -- in that order, since msilOnSearchConverter's
+-- provider-level category ids and msilPatchScheduledLocations' item
+-- location_ids both need to see Layer 1's original, unpatched provider
+-- shape first.
+msilOnSearchMessageBuild :: DBC.BecknConfig -> DSearch.DSearchRes -> Spec.OnSearchReq -> Spec.OnSearchReq
+msilOnSearchMessageBuild bppConfig dSearchRes =
+  msilPatchCatalogCompliance
+    . msilPatchScheduledLocations dSearchRes
+    . msilPatchProviderFulfillmentTypes
+    . msilAddBppTerms bppConfig
+    . msilOnSearchConverter dSearchRes
 
 -- | Layer 2: takes the already-built on_search reply from Layer 1, plus the domain
 -- result Layer 1 returns alongside it, and returns the reply with provider.categories
@@ -42,54 +60,54 @@ import qualified Kernel.Types.Beckn.Gps as Gps
 msilOnSearchConverter :: DSearch.DSearchRes -> Spec.OnSearchReq -> Spec.OnSearchReq
 msilOnSearchConverter dSearchRes onSearchReq
   | not isScheduled = onSearchReq
-  | otherwise = onSearchReq {Spec.onSearchReqMessage = fixMessage <$> Spec.onSearchReqMessage onSearchReq}
+  | otherwise = onSearchReq {Spec.onSearchReqMessage = fixMessage <$> onSearchReq.onSearchReqMessage}
   where
     isScheduled =
       any (\(estimate, _, _, _) -> estimate.isScheduled) dSearchRes.estimates
         || any (\(quote, _, _, _) -> quote.isScheduled) dSearchRes.quotes
 
-    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog (Spec.onSearchReqMessageCatalog msg)}
-    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> Spec.catalogProviders cat}
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog msg.onSearchReqMessageCatalog}
+    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> cat.catalogProviders}
     fixProvider provider =
       provider
-        { Spec.providerCategories = map fixCategory <$> Spec.providerCategories provider,
-          Spec.providerItems = map fixItem <$> Spec.providerItems provider
+        { Spec.providerCategories = map fixCategory <$> provider.providerCategories,
+          Spec.providerItems = map fixItem <$> provider.providerItems
         }
     fixCategory category =
       category
-        { Spec.categoryId = scheduledCategoryCode <$> Spec.categoryId category,
-          Spec.categoryDescriptor = fixDescriptor <$> Spec.categoryDescriptor category
+        { Spec.categoryId = MSILCommon.scheduledCategoryCode <$> category.categoryId,
+          Spec.categoryDescriptor = fixDescriptor <$> category.categoryDescriptor
         }
-    fixDescriptor descriptor = case Spec.descriptorCode descriptor of
+    fixDescriptor descriptor = case descriptor.descriptorCode of
       Just code ->
         descriptor
-          { Spec.descriptorCode = Just (scheduledCategoryCode code),
-            Spec.descriptorName = Just (Utils.categoryCodeToName (scheduledCategoryCode code))
+          { Spec.descriptorCode = Just (MSILCommon.scheduledCategoryCode code),
+            Spec.descriptorName = Just (Utils.categoryCodeToName (MSILCommon.scheduledCategoryCode code))
           }
       Nothing -> descriptor
-    fixItem item = item {Spec.itemCategoryIds = map scheduledCategoryCode <$> Spec.itemCategoryIds item}
+    fixItem item = item {Spec.itemCategoryIds = map MSILCommon.scheduledCategoryCode <$> item.itemCategoryIds}
 
 -- | Building: adds BPP_TERMS (STATIC_TERMS + OFFLINE_CONTRACT) to
 -- message.catalog.tags on the already-built on_search reply, additive
 -- alongside whatever's already there.
 msilAddBppTerms :: DBC.BecknConfig -> Spec.OnSearchReq -> Spec.OnSearchReq
 msilAddBppTerms bppConfig onSearchReq =
-  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> Spec.onSearchReqMessage onSearchReq}
+  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> onSearchReq.onSearchReqMessage}
   where
-    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = MSILTerms.patchCatalogTags bppConfig (Spec.onSearchReqMessageCatalog msg)}
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = MSILCommon.patchCatalogTags bppConfig msg.onSearchReqMessageCatalog}
 
 -- | Building: overrides catalog.providers[*].fulfillments[*].type the same
 -- way order.fulfillments is overridden for on_select/on_init/on_confirm --
--- see Beckn.OnDemand.Utils.MSIL.FulfillmentType.patchProviderFulfillmentTypes.
+-- see Beckn.OnDemand.Utils.MSIL.Common.patchProviderFulfillmentTypes.
 -- Unconditional (not isScheduled-gated), matching those other call sites:
 -- the DELIVERY/SELF_PICKUP restriction applies to every MSIL catalog, not
 -- just scheduled ones.
 msilPatchProviderFulfillmentTypes :: Spec.OnSearchReq -> Spec.OnSearchReq
 msilPatchProviderFulfillmentTypes onSearchReq =
-  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> Spec.onSearchReqMessage onSearchReq}
+  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> onSearchReq.onSearchReqMessage}
   where
-    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog (Spec.onSearchReqMessageCatalog msg)}
-    fixCatalog cat = cat {Spec.catalogProviders = map MSILFulfillmentType.patchProviderFulfillmentTypes <$> Spec.catalogProviders cat}
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog msg.onSearchReqMessageCatalog}
+    fixCatalog cat = cat {Spec.catalogProviders = map MSILCommon.patchProviderFulfillmentTypes <$> cat.catalogProviders}
 
 -- | Building, MSIL pilot + scheduled searches only: catalog.providers[*].locations
 -- and items[*].location_ids are normally derived from currently-online nearby
@@ -104,7 +122,7 @@ msilPatchProviderFulfillmentTypes onSearchReq =
 msilPatchScheduledLocations :: DSearch.DSearchRes -> Spec.OnSearchReq -> Spec.OnSearchReq
 msilPatchScheduledLocations dSearchRes onSearchReq
   | not isScheduled = onSearchReq
-  | otherwise = onSearchReq {Spec.onSearchReqMessage = fixMessage <$> Spec.onSearchReqMessage onSearchReq}
+  | otherwise = onSearchReq {Spec.onSearchReqMessage = fixMessage <$> onSearchReq.onSearchReqMessage}
   where
     isScheduled =
       any (\(estimate, _, _, _) -> estimate.isScheduled) dSearchRes.estimates
@@ -113,16 +131,16 @@ msilPatchScheduledLocations dSearchRes onSearchReq
     pickupGps :: Maybe Text
     pickupGps = A.decode $ A.encode Gps.Gps {lat = dSearchRes.fromLocation.lat, lon = dSearchRes.fromLocation.lon}
 
-    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog (Spec.onSearchReqMessageCatalog msg)}
-    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> Spec.catalogProviders cat}
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog msg.onSearchReqMessageCatalog}
+    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> cat.catalogProviders}
 
     fixProvider provider =
       provider
         { Spec.providerLocations = providerLocations',
-          Spec.providerItems = map patchItem <$> Spec.providerItems provider
+          Spec.providerItems = map patchItem <$> provider.providerItems
         }
       where
-        pickupLocationId = maybe "scheduled-pickup" (<> "-scheduled-pickup") (Spec.providerId provider)
+        pickupLocationId = maybe "scheduled-pickup" (<> "-scheduled-pickup") provider.providerId
         pickupLocation =
           Spec.Location
             { locationAddress = Nothing,
@@ -134,12 +152,12 @@ msilPatchScheduledLocations dSearchRes onSearchReq
               locationUpdatedAt = Nothing,
               locationState = Nothing
             }
-        hasRealLocations = maybe False (not . null) (Spec.providerLocations provider)
+        hasRealLocations = maybe False (not . null) provider.providerLocations
         providerLocations'
-          | hasRealLocations = Spec.providerLocations provider
+          | hasRealLocations = provider.providerLocations
           | otherwise = Just [pickupLocation]
         patchItem item
-          | maybe True null (Spec.itemLocationIds item) = item {Spec.itemLocationIds = Just [pickupLocationId]}
+          | maybe True null item.itemLocationIds = item {Spec.itemLocationIds = Just [pickupLocationId]}
           | otherwise = item
 
 -- | ONDC v2.1.0's TRV10 schema restricts three catalog fields to small fixed
@@ -163,21 +181,21 @@ msilPatchScheduledLocations dSearchRes onSearchReq
 --     in the allow-list.
 msilPatchCatalogCompliance :: Spec.OnSearchReq -> Spec.OnSearchReq
 msilPatchCatalogCompliance onSearchReq =
-  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> Spec.onSearchReqMessage onSearchReq}
+  onSearchReq {Spec.onSearchReqMessage = fixMessage <$> onSearchReq.onSearchReqMessage}
   where
-    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog (Spec.onSearchReqMessageCatalog msg)}
-    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> Spec.catalogProviders cat}
+    fixMessage msg = msg {Spec.onSearchReqMessageCatalog = fixCatalog msg.onSearchReqMessageCatalog}
+    fixCatalog cat = cat {Spec.catalogProviders = map fixProvider <$> cat.catalogProviders}
     fixProvider provider =
       provider
-        { Spec.providerItems = map fixItem <$> Spec.providerItems provider,
-          Spec.providerFulfillments = map fixFulfillment <$> Spec.providerFulfillments provider
+        { Spec.providerItems = map fixItem <$> provider.providerItems,
+          Spec.providerFulfillments = map fixFulfillment <$> provider.providerFulfillments
         }
 
-    isRental item = maybe False (any ("RENTAL" `isInfixOf`)) (Spec.itemCategoryIds item)
+    isRental item = maybe False (any ("RENTAL" `isInfixOf`)) item.itemCategoryIds
     fixItem item =
       item
-        { Spec.itemDescriptor = fixItemDescriptor <$> Spec.itemDescriptor item,
-          Spec.itemTags = filter isAllowedTagGroup <$> Spec.itemTags item
+        { Spec.itemDescriptor = fixItemDescriptor <$> item.itemDescriptor,
+          Spec.itemTags = filter isAllowedTagGroup <$> item.itemTags
         }
       where
         fixItemDescriptor descriptor = descriptor {Spec.descriptorCode = Just (if isRental item then "RENTAL" else "RIDE")}
@@ -200,7 +218,7 @@ msilPatchCatalogCompliance onSearchReq =
         "FEATURE_LIST"
       ]
     isAllowedTagGroup tagGroup =
-      maybe False (`elem` allowedTagGroupCodes) (Spec.tagGroupDescriptor tagGroup >>= Spec.descriptorCode)
+      maybe False (`elem` allowedTagGroupCodes) (tagGroup.tagGroupDescriptor >>= (.descriptorCode))
 
     allowedVehicleVariants :: [Text]
     allowedVehicleVariants = ["SEDAN", "SUV", "HATCHBACK", "TWO_WHEELER", "AUTO_RICKSHAW"]
@@ -211,5 +229,5 @@ msilPatchCatalogCompliance onSearchReq =
       | variant == "EV_HATCHBACK" = "HATCHBACK"
       | variant `elem` ["SUV_PLUS", "EV_SUV"] = "SUV"
       | otherwise = "SEDAN"
-    fixFulfillment fulfillment = fulfillment {Spec.fulfillmentVehicle = fixVehicle <$> Spec.fulfillmentVehicle fulfillment}
-    fixVehicle vehicle = vehicle {Spec.vehicleVariant = overrideVehicleVariant <$> Spec.vehicleVariant vehicle}
+    fixFulfillment fulfillment = fulfillment {Spec.fulfillmentVehicle = fixVehicle <$> fulfillment.fulfillmentVehicle}
+    fixVehicle vehicle = vehicle {Spec.vehicleVariant = overrideVehicleVariant <$> vehicle.vehicleVariant}

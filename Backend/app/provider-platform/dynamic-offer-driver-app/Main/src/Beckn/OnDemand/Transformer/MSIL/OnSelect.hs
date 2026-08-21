@@ -17,10 +17,7 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.MSIL.Breakup as MSILBreakup
-import Beckn.OnDemand.Utils.MSIL.Category (scheduledCategoryCode)
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
-import qualified Beckn.OnDemand.Utils.MSIL.RouteInfo as MSILRouteInfo
-import qualified Beckn.OnDemand.Utils.MSIL.VehicleEnergyType as MSILVehicleEnergyType
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILCommon
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
@@ -43,12 +40,11 @@ import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 -- | Building: also adds ROUTE_INFO (WAYPOINTS + ENCODED_POLYLINE, from the
 -- fallback route cached at search time) to the fulfillment's tags, overrides
--- fulfillment.type per the RIDE_OTP->SELF_PICKUP/otherwise->DELIVERY rule
--- (Beckn.OnDemand.Utils.MSIL.FulfillmentType), and overrides
--- vehicle.energy_type to a valid ONDC v2.1.0 code
--- (Beckn.OnDemand.Utils.MSIL.VehicleEnergyType). This whole function only
--- ever runs for pilot merchants (gated at the API/Beckn/Select.hs dispatch
--- level), so this applies unconditionally -- no separate gate needed.
+-- fulfillment.type per the RIDE_OTP->SELF_PICKUP/otherwise->DELIVERY rule and
+-- overrides vehicle.energy_type to a valid ONDC v2.1.0 code (both
+-- Beckn.OnDemand.Utils.MSIL.Common). This whole function only ever runs for
+-- pilot merchants (gated at the API/Beckn/Select.hs dispatch level), so this
+-- applies unconditionally -- no separate gate needed.
 mkOnSelectMessageV2FromQuote ::
   (CacheFlow m r, MonadFlow m) =>
   DBC.BecknConfig ->
@@ -63,15 +59,14 @@ mkOnSelectMessageV2FromQuote bppConfig merchant searchRequest quote vehicleServi
   let fulfillment = mkFulfillmentFromQuote searchRequest quote
       paymentV2 = mkPaymentFromQuote bppConfig merchant quote
       order =
-        MSILVehicleEnergyType.patchOrderVehicleEnergyType . MSILFulfillmentType.patchOrderFulfillmentTypes $
-          emptyOrder
-            { Spec.orderFulfillments = Just [fulfillment],
-              Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy],
-              Spec.orderQuote = Just $ mkQuoteFromQuote quote now,
-              Spec.orderPayments = Just [paymentV2],
-              Spec.orderProvider = mkProviderFromQuote bppConfig
-            }
-  patchedOrder <- MSILRouteInfo.patchOrderRouteInfo searchRequest.transactionId order
+        emptyOrder
+          { Spec.orderFulfillments = Just [fulfillment],
+            Spec.orderItems = Just [mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy (not $ null searchRequest.stops)],
+            Spec.orderQuote = Just $ mkQuoteFromQuote quote now,
+            Spec.orderPayments = Just [paymentV2],
+            Spec.orderProvider = mkProviderFromQuote bppConfig
+          }
+  patchedOrder <- MSILCommon.applyOnSelectOrderOverrides searchRequest.transactionId order
   pure $ Spec.OnSelectReqMessage (Just patchedOrder)
 
 mkFulfillmentFromQuote :: SearchRequest -> DQuote.Quote -> Spec.Fulfillment
@@ -97,8 +92,8 @@ mkPaymentFromQuote bppConfig merchant quote = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
 
-mkItemFromQuote :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.Quote -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
-mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy = do
+mkItemFromQuote :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.Quote -> Maybe FarePolicyD.FullFarePolicy -> Bool -> Spec.Item
+mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy hasStops = do
   let fulfillmentId = fulfillment.fulfillmentId & fromMaybe (error $ "It should never happen as we have created fulfillment:-" <> show fulfillment)
   emptyItem
     { -- Quote has no separate estimateId the way DriverQuote does -- item.id and
@@ -106,7 +101,7 @@ mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy = do
       Spec.itemId = Just quote.id.getId,
       Spec.itemFulfillmentIds = Just [fulfillmentId],
       Spec.itemPrice = Just $ mkPriceFromQuote quote,
-      Spec.itemTags = mkItemTagsFromQuote quote mbFarePolicy,
+      Spec.itemTags = mkItemTagsFromQuote quote mbFarePolicy hasStops,
       Spec.itemDescriptor = mkItemDescriptorFromQuote quote vehicleServiceTierItem,
       -- Must agree with the provider-level category id on_search declared for
       -- this catalog (Beckn.OnDemand.Transformer.MSIL.OnSearch): scheduled
@@ -118,7 +113,7 @@ mkItemFromQuote fulfillment vehicleServiceTierItem quote mbFarePolicy = do
 mkQuoteCategoryId :: DQuote.Quote -> Text
 mkQuoteCategoryId quote =
   let baseCode = Utils.tripCategoryToCategoryCode quote.tripCategory
-   in if quote.isScheduled then scheduledCategoryCode baseCode else baseCode
+   in if quote.isScheduled then MSILCommon.scheduledCategoryCode baseCode else baseCode
 
 -- | ONDC v2.1.0's TRV10 schema restricts items[*].descriptor.code to "RIDE" or
 -- "RENTAL" -- the vehicle service tier (e.g. "COMFY") that used to be here
@@ -145,9 +140,9 @@ mkPriceFromQuote quote =
       Spec.priceValue = Just $ show quote.estimatedFare
     }
 
-mkItemTagsFromQuote :: DQuote.Quote -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.TagGroup]
-mkItemTagsFromQuote quote mbFarePolicy =
-  Utils.mkRateCardTag quote.distance quote.fareParams.customerCancellationDues Nothing quote.estimatedFare quote.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing
+mkItemTagsFromQuote :: DQuote.Quote -> Maybe FarePolicyD.FullFarePolicy -> Bool -> Maybe [Spec.TagGroup]
+mkItemTagsFromQuote quote mbFarePolicy hasStops =
+  Utils.mkRateCardTag quote.distance quote.fareParams.customerCancellationDues Nothing quote.estimatedFare quote.fareParams.congestionChargeViaDp (Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy) Nothing Nothing Nothing hasStops
 
 mkQuoteFromQuote :: DQuote.Quote -> UTCTime -> Spec.Quotation
 mkQuoteFromQuote quote now = do

@@ -4,8 +4,8 @@
 -- fulfillment id should be parsed as a QuoteId or a DriverQuoteId -- from the
 -- fulfillment.type the BAP echoes back, for any "value-add" BAP. That echo is
 -- only trustworthy if fulfillment.type round-trips unchanged; MSIL's own
--- override on /on_select (Beckn.OnDemand.Utils.MSIL.FulfillmentType) collapses
--- it to just SELF_PICKUP/DELIVERY, so a real Quote-based scheduled trip's
+-- override on /on_select (Beckn.OnDemand.Utils.MSIL.Common.overrideFulfillmentType)
+-- collapses it to just SELF_PICKUP/DELIVERY, so a real Quote-based scheduled trip's
 -- echo can no longer be trusted to recover its original trip category: Layer
 -- 1 misreads DELIVERY as OneWay OneWayOnDemandDynamicOffer
 -- (EstimateBased/DriverQuoteId) and fails the lookup with
@@ -16,10 +16,10 @@
 -- the fulfillment.type round-trip) instead of trusting Layer 1's echo-based
 -- parse.
 --
--- Kept separate from Beckn.OnDemand.Utils.MSIL.FulfillmentType (which builds
+-- Kept separate from Beckn.OnDemand.Utils.MSIL.Common (which builds
 -- the override this corrects for) to avoid an import cycle: this needs
 -- Domain.Action.Beckn.Init, which SharedLogic.CallBAP (a caller of the
--- Utils.MSIL.FulfillmentType override) transitively imports.
+-- Utils.MSIL.Common override) transitively imports.
 module Beckn.OnDemand.Transformer.MSIL.Init
   ( correctFulfillmentId,
   )

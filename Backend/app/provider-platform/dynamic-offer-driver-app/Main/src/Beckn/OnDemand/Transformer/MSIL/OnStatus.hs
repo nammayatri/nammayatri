@@ -16,18 +16,16 @@
 -- Maybe ConfirmReqMessage) -- only the context's action differs -- so the
 -- relabeling itself is not a rebuild. In the same pass, this also overrides
 -- every fulfillment's type code per MSIL's RIDE_OTP->SELF_PICKUP/
--- otherwise->DELIVERY rule (Beckn.OnDemand.Utils.MSIL.FulfillmentType) and
--- every fulfillment's vehicle.energy_type to a valid ONDC v2.1.0 code
--- (Beckn.OnDemand.Utils.MSIL.VehicleEnergyType) -- both applied only on this
--- pilot-routed on_status message; the on_update fallback for non-pilot
--- merchants is untouched.
+-- otherwise->DELIVERY rule and every fulfillment's vehicle.energy_type to a
+-- valid ONDC v2.1.0 code (both Beckn.OnDemand.Utils.MSIL.Common) -- both
+-- applied only on this pilot-routed on_status message; the on_update
+-- fallback for non-pilot merchants is untouched.
 module Beckn.OnDemand.Transformer.MSIL.OnStatus
   ( msilOnStatusMessageBuild,
   )
 where
 
-import qualified Beckn.OnDemand.Utils.MSIL.FulfillmentType as MSILFulfillmentType
-import qualified Beckn.OnDemand.Utils.MSIL.VehicleEnergyType as MSILVehicleEnergyType
+import qualified Beckn.OnDemand.Utils.MSIL.Common as MSILCommon
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import Kernel.Prelude
@@ -45,4 +43,4 @@ msilOnStatusMessageBuild req =
       onStatusReqMessage = patchOrder <$> req.onUpdateReqMessage
     }
   where
-    patchOrder msg = msg {Spec.confirmReqMessageOrder = MSILVehicleEnergyType.patchOrderVehicleEnergyType (MSILFulfillmentType.patchOrderFulfillmentTypes msg.confirmReqMessageOrder)}
+    patchOrder msg = msg {Spec.confirmReqMessageOrder = MSILCommon.applyOnStatusOrderOverrides msg.confirmReqMessageOrder}
