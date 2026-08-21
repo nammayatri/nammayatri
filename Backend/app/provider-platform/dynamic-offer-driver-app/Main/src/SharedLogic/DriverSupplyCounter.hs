@@ -18,7 +18,9 @@
 -- publisher and its metrics/ClickHouse dependencies.
 module SharedLogic.DriverSupplyCounter
   ( onlineCountKey,
+    onRideCountKey,
     recordDriverActiveChange,
+    recordOnRideChange,
   )
 where
 
@@ -31,9 +33,18 @@ import Kernel.Utils.Common
 onlineCountKey :: Text -> Text
 onlineCountKey cityId = "driverSupply:onlineCount:" <> cityId
 
+onRideCountKey :: Text -> Text
+onRideCountKey cityId = "driverSupply:onRideCount:" <> cityId
+
+-- | incr/decr throw, so every mutation is wrapped -- a Redis blip must never fail the
+-- business flow that triggered it.
+bumpCounter :: (Redis.HedisFlow m r, MonadFlow m) => (Text -> Text) -> Bool -> Id DMOC.MerchantOperatingCity -> m ()
+bumpCounter mkKey up cityId =
+  void $ withTryCatch "driverSupplyCounter" $ (if up then Redis.incr else Redis.decr) (mkKey cityId.getId)
+
 -- | Only moves on a real change: updateDriverModeAndFlowStatus is called on every ride
 -- start and end with `active` unchanged, so an unguarded incr/decr would track ride
--- volume, not supply. incr/decr throw (unlike sAddExp), hence withTryCatch.
+-- volume, not supply.
 recordDriverActiveChange ::
   (Redis.HedisFlow m r, MonadFlow m) =>
   Maybe (Id DMOC.MerchantOperatingCity) ->
@@ -42,5 +53,9 @@ recordDriverActiveChange ::
   m ()
 recordDriverActiveChange mbCityId wasActive nowActive =
   when (wasActive /= nowActive) $
-    whenJust mbCityId $ \cityId ->
-      void $ withTryCatch "driverSupplyCounter" $ (if nowActive then Redis.incr else Redis.decr) (onlineCountKey cityId.getId)
+    whenJust mbCityId $ bumpCounter onlineCountKey nowActive
+
+-- | Ride start increments, completion/cancellation decrements. Callers must only
+-- decrement for a ride that actually started, or the counter drifts below true.
+recordOnRideChange :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Bool -> m ()
+recordOnRideChange cityId started = bumpCounter onRideCountKey started cityId

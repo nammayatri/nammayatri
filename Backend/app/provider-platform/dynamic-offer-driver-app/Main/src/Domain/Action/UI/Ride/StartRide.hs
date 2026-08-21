@@ -71,6 +71,7 @@ import qualified SharedLogic.ActiveDriversList as ADL
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -266,6 +267,7 @@ startRideHandler ServiceHandle {..} rideId req = do
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
         else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
 
+      DSC.recordOnRideChange booking.merchantOperatingCityId True
       fork "Push Start Ride Metric" $ do
         incrementRideStartCounter "startRide"
         (merchantLabel, cityLabel) <- SML.getMetricsLabels booking.providerId booking.merchantOperatingCityId
