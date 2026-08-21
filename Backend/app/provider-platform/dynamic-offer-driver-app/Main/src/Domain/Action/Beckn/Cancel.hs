@@ -53,6 +53,7 @@ import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationOrchestrator as Orchestrator
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.MetricsLabels as SML
@@ -113,6 +114,7 @@ cancel req merchant booking mbActiveSearchTry = do
       Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
       void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
       QRide.updateStatus ride.id SRide.CANCELLED
+      when (ride.status == SRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
       when (booking.isScheduled) $
         -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
         CS.withDriverScheduledHoldLock ride.driverId $ do
