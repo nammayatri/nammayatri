@@ -85,9 +85,12 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               source = SBCR.ByDriver,
               reasonCode = Nothing,
               additionalInfo = Nothing,
+              ondcCancellationReasonId = Nothing,
               driverCancellationLocation = Just req.point,
               driverDistToPickup = mbDriverDistToPickup,
-              distanceUnit = booking.distanceUnit
+              distanceUnit = booking.distanceUnit,
+              createdAt = Just now,
+              updatedAt = Just now
             }
         tagData =
           TY.CancelRideTagData

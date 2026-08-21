@@ -54,6 +54,7 @@ mkCancelMessageV2 :: DCancel.CancelRes -> Maybe Bool -> Spec.CancelReqMessage
 mkCancelMessageV2 res reallocate =
   Spec.CancelReqMessage
     { cancelReqMessageCancellationReasonId = Just $ mapCancellationReasonId res.cancellationReason,
+      cancelReqMessageCancellation = Nothing,
       cancelReqMessageOrderId = res.bppBookingId.getId,
       cancelReqMessageReallocate = reallocate,
       cancelReqMessageDescriptor =
@@ -100,6 +101,7 @@ mkCancelSearchMessageV2 :: DCancel.CancelSearch -> Spec.CancelReqMessage
 mkCancelSearchMessageV2 res =
   Spec.CancelReqMessage
     { cancelReqMessageCancellationReasonId = Just (show Enums.CANCELLED_BY_CUSTOMER),
+      cancelReqMessageCancellation = Nothing,
       cancelReqMessageReallocate = Nothing,
       cancelReqMessageOrderId = res.searchReqId.getId,
       cancelReqMessageDescriptor = Nothing

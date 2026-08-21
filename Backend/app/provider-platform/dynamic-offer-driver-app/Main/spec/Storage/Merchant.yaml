@@ -1080,6 +1080,13 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
       enum: "DAILY, WEEKLY, MONTHLY"
+    CancellationConfig:
+      carryForwardEnabled: Maybe Bool
+      cancellationGracePeriodSeconds: Maybe Int
+      noShowAcceptableWaitPeriodSeconds: Maybe Int
+      consumeRideCreditOnCancellation: Maybe Bool
+      preferOndcCancellationReasonId: Maybe Bool
+      derive': Generic, Show, ToJSON, FromJSON, Eq
     InvoiceConfig:
       driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
@@ -1256,6 +1263,7 @@ TransporterConfig:
     canAddCancellationFee: Bool
     cancellationFeePaymentMethodExceptions: "Maybe [PaymentInstrument]"
     validCancellationPenaltyReasons: "Maybe [Text]"
+    cancellationConfig: Maybe CancellationConfig
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
@@ -1532,6 +1540,8 @@ TransporterConfig:
       subscriptionConfig: Maybe Value
     taxConfig:
       taxConfig: Maybe Value
+    cancellationConfig:
+      cancellationConfig: Maybe Value
     invoiceConfig:
       invoiceConfig: Maybe Value
     knowledgeCenterSopTypes:
@@ -1615,6 +1625,7 @@ TransporterConfig:
     driverWalletConfig: Just . Data.Aeson.toJSON|I
     subscriptionConfig: Just . Data.Aeson.toJSON|I
     taxConfig: Just . Data.Aeson.toJSON|I
+    cancellationConfig: Data.Aeson.toJSON <$> cancellationConfig|E
     invoiceConfig: Data.Aeson.toJSON <$> invoiceConfig|E
     knowledgeCenterSopTypes: Just . Data.Aeson.toJSON|I
     feedbackNotificationConfig: Data.Aeson.toJSON <$> feedbackNotificationConfig|E
@@ -1742,6 +1753,9 @@ TransporterConfig:
       merchantOperatingCityId|IM
     taxConfig: Storage.Queries.Transformers.TransporterConfig.parseTaxConfig
       merchantOperatingCityId|IM
+    cancellationConfig:
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x ->
+      Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationConfig|E
     invoiceConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x ->
       Just x; Data.Aeson.Error _ -> Nothing) =<< invoiceConfig|E
@@ -1831,6 +1845,7 @@ TransporterConfig:
     subscriptionConfig: json
     feedbackNotificationConfig: json
     taxConfig: json
+    cancellationConfig: json
     invoiceConfig: json
     knowledgeCenterSopTypes: json
     vehicleCategoryExcludedFromVerification: "text[]"

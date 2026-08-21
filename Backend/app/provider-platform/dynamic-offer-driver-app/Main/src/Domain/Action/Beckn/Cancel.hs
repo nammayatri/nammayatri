@@ -56,12 +56,15 @@ import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.Booking
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationConfig as SCC
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.Wallet (splitCancellationGross)
 import qualified SharedLogic.MetricsLabels as SML
+import qualified SharedLogic.OndcCancellationReason as SOCR
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -94,7 +97,9 @@ data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
     userReallocationEnabled :: Maybe Bool,
-    cancellationReason :: Maybe Text
+    cancellationReason :: Maybe Text,
+    ondcCancellationReasonId :: Maybe Text,
+    cancellationReasonLongDesc :: Maybe Text
   }
   deriving (Show)
 
@@ -108,7 +113,10 @@ cancel ::
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
-  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride)
+  -- | Reallocated, cancellation fee, updated ride, and the resolved internal reason code.
+  -- The reason code is returned so on_cancel echoes what we actually stored rather than the
+  -- raw short_desc off the wire, which is Nothing when a BAP sends only cancellation_reason_id.
+  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride, Maybe Text)
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
@@ -125,8 +133,9 @@ cancel req merchant booking mbActiveSearchTry = do
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
-    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
+    bookingCR <- buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
+    let resolvedReasonCode = (\(DTCR.CancellationReasonCode code) -> code) <$> bookingCR.reasonCode
     cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
     Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCR.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
     QRB.updateStatus booking.id SRB.CANCELLED
@@ -174,7 +183,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     if isReallocated
       then do
-        return (isReallocated, Nothing, Nothing)
+        return (isReallocated, Nothing, Nothing, resolvedReasonCode)
       else do
         cancellationCharges <- withTryCatch "cancellationCharges" $ do
           case mbRide of
@@ -198,11 +207,14 @@ cancel req merchant booking mbActiveSearchTry = do
                       QRD.updateValidCancellationsCount riderId.getId
                       mbExistingCancellationDuesDetails <- QCDD.findByRideId ride.id
                       chargesOutcome <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges ->
+                        Just cancelCharges -> do
+                          let (derivedBase, derivedTax) = splitCancellationGross (fromMaybe False booking.fareParams.isVatTaxType) transporterConfig.taxConfig cancelCharges
+                              mbStoredTax = mbExistingCancellationDuesDetails >>= (.cancellationFeeTax)
+                              mbStoredFee = mbExistingCancellationDuesDetails >>= (.cancellationFee)
                           return
                             CancellationChargesOutcome
-                              { fee = Just cancelCharges,
-                                tax = mbExistingCancellationDuesDetails >>= (.cancellationFeeTax),
+                              { fee = Just $ fromMaybe derivedBase mbStoredFee,
+                                tax = Just $ fromMaybe derivedTax mbStoredTax,
                                 overdueFee = mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge),
                                 overdueTax = mbExistingCancellationDuesDetails >>= (.overdueCancellationTax),
                                 commission = mbExistingCancellationDuesDetails >>= (.cancellationCommission),
@@ -228,7 +240,8 @@ cancel req merchant booking mbActiveSearchTry = do
                             overdueCancellationCharge = chargesOutcome.overdueFee,
                             overdueCancellationTax = chargesOutcome.overdueTax,
                             cancellationCommission = chargesOutcome.commission,
-                            overdueCancellationCommission = chargesOutcome.overdueCommission
+                            overdueCancellationCommission = chargesOutcome.overdueCommission,
+                            carryForwardEnabled = SCC.carryForwardEnabled transporterConfig
                           }
                       when (totalCharges > 0) $
                         QRD.updateCancellationDueRidesCount riderId.getId
@@ -270,22 +283,43 @@ cancel req merchant booking mbActiveSearchTry = do
         updatedRide <- case mbRide of
           Just ride -> QRide.findById ride.id
           Nothing -> pure Nothing
-        return (isReallocated, cancelCharges, updatedRide)
+        return (isReallocated, cancelCharges, updatedRide, resolvedReasonCode)
   where
-    buildBookingCancellationReason disToPickup currentLocation mbRide = do
+    buildAdditionalInfo =
+      case catMaybes
+        [ ("ondcReasonId=" <>) <$> req.ondcCancellationReasonId,
+          ("shortDesc=" <>) <$> req.cancellationReason,
+          ("longDesc=" <>) <$> req.cancellationReasonLongDesc
+        ] of
+        [] -> Nothing
+        parts -> Just $ Text.intercalate "; " parts
+
+    buildBookingCancellationReason transporterConfig disToPickup currentLocation mbRide = do
+      when (isNothing req.cancellationReason && isNothing req.ondcCancellationReasonId) $
+        logError $
+          "No cancellation reason received for bookingId-" <> req.bookingId.getId
+      resolvedReasonCode <-
+        SOCR.resolveCancellationReasonCode
+          (Just transporterConfig)
+          req.ondcCancellationReasonId
+          req.cancellationReason
+      now <- getCurrentTime
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
             rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
-            reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
+            reasonCode = DTCR.CancellationReasonCode <$> resolvedReasonCode,
             driverId = (.driverId) <$> mbRide,
-            additionalInfo = Nothing,
+            additionalInfo = buildAdditionalInfo,
+            ondcCancellationReasonId = req.ondcCancellationReasonId,
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
             merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now,
             ..
           }
 

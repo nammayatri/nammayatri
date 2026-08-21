@@ -87,6 +87,7 @@ data TransporterConfig = TransporterConfig
     canSuvDowngradeToTaxi :: Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
+    cancellationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationConfig,
     cancellationDistDiff :: Kernel.Prelude.Int,
     cancellationFee :: Kernel.Types.Common.HighPrecMoney,
     cancellationFeeCycle :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -399,6 +400,15 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data CallingOption = AnonymousCall | DirectCall | DualCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationConfig = CancellationConfig
+  { cancellationGracePeriodSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    carryForwardEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    consumeRideCreditOnCancellation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    noShowAcceptableWaitPeriodSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    preferOndcCancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,

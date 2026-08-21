@@ -82,6 +82,7 @@ data TransporterConfigT f = TransporterConfigT
     canSuvDowngradeToTaxi :: B.C f Kernel.Prelude.Bool,
     canSwitchToInterCity :: B.C f Kernel.Prelude.Bool,
     canSwitchToRental :: B.C f Kernel.Prelude.Bool,
+    cancellationConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationDistDiff :: B.C f Kernel.Prelude.Int,
     cancellationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationFeeCycle :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

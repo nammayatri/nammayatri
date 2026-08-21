@@ -73,6 +73,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -83,12 +84,14 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationConfig as SCC
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
@@ -271,7 +274,16 @@ cancelRideTransaction ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     EncFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
     Metrics.HasBPPMetrics m r,
     Finance.HasActorInfo m r
   ) =>
@@ -321,7 +333,8 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy mbCharges
             overdueCancellationCharge = mbChargesOutcome >>= (.overdueFee),
             overdueCancellationTax = mbChargesOutcome >>= (.overdueTax),
             cancellationCommission = mbChargesOutcome >>= (.commission),
-            overdueCancellationCommission = mbChargesOutcome >>= (.overdueCommission)
+            overdueCancellationCommission = mbChargesOutcome >>= (.overdueCommission),
+            carryForwardEnabled = SCC.carryForwardEnabled transporterConfig
           }
       -- Customer cancellation ledger entries (wallet path)
       when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && totalCancellation > 0) $
@@ -537,7 +550,9 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             timeSinceBooking = fromMaybe 0 signals.timeSinceBooking,
             pickupStallCase = signals.pickupStallCase,
             faultVerdict = (\v -> show v.atFault) <$> mbFaultVerdict,
-            faultRule = (.rule) <$> mbFaultVerdict
+            faultRule = (.rule) <$> mbFaultVerdict,
+            cancellationGracePeriodSeconds = SCC.cancellationGracePeriodSeconds transporterConfig,
+            noShowAcceptableWaitPeriodSeconds = SCC.noShowAcceptableWaitPeriodSeconds transporterConfig
           }
   if transporterConfig.canAddCancellationFee && not isCancellationFeeExemptPaymentMethod
     then do
@@ -554,12 +569,20 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
           case (A.fromJSON resp.result :: Result UserCancellationDues.UserCancellationDuesResult) of
             A.Success result -> do
               logTagInfo ("bookingId-" <> getId booking.id) ("result.cancellationCharges: " <> show result.cancellationCharges <> " tax: " <> show result.cancellationChargesTax <> " overdue: " <> show result.overdueCancellationCharge <> " overdueTax: " <> show result.overdueCancellationTax <> " commission: " <> show result.cancellationCommission <> " overdueCommission: " <> show result.overdueCancellationCommission)
+              let splitGross = splitCancellationGross (fromMaybe False booking.fareParams.isVatTaxType) transporterConfig.taxConfig
+                  (feeBase, feeTax) = case result.cancellationChargesTax of
+                    Just ruleTax -> (result.cancellationCharges, ruleTax)
+                    Nothing -> splitGross result.cancellationCharges
+                  (mbOverdueBase, mbOverdueTax) = case (result.overdueCancellationCharge, result.overdueCancellationTax) of
+                    (Just overdueGross, Nothing) ->
+                      let (b, t) = splitGross overdueGross in (Just b, Just t)
+                    (mbCharge, mbTax) -> (mbCharge, mbTax)
               return
                 CancellationChargesOutcome
-                  { fee = Just result.cancellationCharges,
-                    tax = result.cancellationChargesTax,
-                    overdueFee = result.overdueCancellationCharge,
-                    overdueTax = result.overdueCancellationTax,
+                  { fee = Just feeBase,
+                    tax = Just feeTax,
+                    overdueFee = mbOverdueBase,
+                    overdueTax = mbOverdueTax,
                     commission = result.cancellationCommission,
                     overdueCommission = result.overdueCancellationCommission
                   }
@@ -639,13 +662,19 @@ getCancellationCharges booking ride cancellationType reasonCode mbContext legacy
             else return (Nothing, Nothing)
         else return (Nothing, Nothing)
 
--- | Create BPP-side finance ledger entries + invoice for a customer cancellation charge.
--- Extracted so it can be called from both cancelRideTransaction (driver-cancel path)
--- and Domain.Action.Beckn.Cancel (rider-cancel via Beckn path).
 createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
     Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
@@ -712,11 +741,7 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
       result <- runFinance ctx $ do
         mapM_
-          ( \(amt, ref, dest) -> do
-              -- Two legs through BuyerExternal (nets to 0), mirroring the online ride-payment ledger.
-              void $ transferPending BuyerAsset BuyerExternal amt ref
-              void $ transferPending BuyerExternal dest amt ref
-          )
+          (\(amt, ref, dest) -> void $ transferPending BuyerAsset dest amt ref)
           cancellationComponents
         whenJust mbTdsAmount $ \tdsAmount ->
           void $ transferPending OwnerLiability GovtDirect tdsAmount walletReferenceTDSDeductionCancellation
@@ -777,6 +802,9 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
         Right _ -> pure ()
       logInfo $ "Created customer cancellation ledger entries for bookingId: " <> booking.id.getId <> " base=" <> show baseCancellation <> " gst=" <> show gstOnCancellation <> " tds=" <> show mbTdsAmount
+      -- Consume the driver's prepaid ride credit: the rider was charged, so the slot is used.
+      when (SCC.consumeRideCreditOnCancellation transporterConfig) $
+        SubscriptionConsumption.consumeCancellationRideCredit booking ride baseCancellation transporterConfig
 
 buildCancellationFinanceCtx ::
   ( EsqDBFlow m r,
@@ -855,11 +883,9 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
             ctx <- buildCancellationFinanceCtx booking ride transporterConfig
             result <- runFinance ctx $ do
               when (baseCancellation > 0) $ do
-                transfer_ BuyerAsset BuyerExternal baseCancellation walletReferenceCustomerCancellationCharges
-                transfer_ BuyerExternal OwnerLiability baseCancellation walletReferenceCustomerCancellationCharges
+                transfer_ BuyerAsset OwnerLiability baseCancellation walletReferenceCustomerCancellationCharges
               when (gstCancellation > 0) $ do
-                transfer_ BuyerAsset BuyerExternal gstCancellation walletReferenceCustomerCancellationGST
-                transfer_ BuyerExternal cancellationTaxDest gstCancellation walletReferenceCustomerCancellationGST
+                transfer_ BuyerAsset cancellationTaxDest gstCancellation walletReferenceCustomerCancellationGST
             case result of
               Left err -> logError $ "Failed to book settled cancellation charge after overdue for bookingId: " <> refId <> " - " <> show err
               Right _ -> logInfo $ "Reversed overdue and booked settled cancellation charge for bookingId: " <> refId <> " base=" <> show baseCancellation <> " tax=" <> show gstCancellation
@@ -942,18 +968,14 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
           ctx <- buildCancellationFinanceCtx booking ride transporterConfig
           result <- runFinance ctx $ do
             when (overdueCharge > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueCharge walletReferenceOverdueCancellationCharge
-              transfer_ BuyerExternal OwnerLiability overdueCharge walletReferenceOverdueCancellationCharge
+              transfer_ BuyerAsset OwnerLiability overdueCharge walletReferenceOverdueCancellationCharge
             when (overdueTax > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueTax walletReferenceOverdueCancellationTax
-              transfer_ BuyerExternal cancellationTaxDest overdueTax walletReferenceOverdueCancellationTax
-            -- Platform keeps (cancellation - overdue) as SellerRevenue; funded by the customer (BuyerExternal nets to 0).
+              transfer_ BuyerAsset cancellationTaxDest overdueTax walletReferenceOverdueCancellationTax
+            -- Platform keeps (cancellation - overdue) as SellerRevenue; funded by the customer.
             when (overdueBenefit > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueBenefit walletReferenceCancellationOverdueBenefit
-              transfer_ BuyerExternal SellerRevenue overdueBenefit walletReferenceCancellationOverdueBenefit
+              transfer_ BuyerAsset SellerRevenue overdueBenefit walletReferenceCancellationOverdueBenefit
             when (overdueBenefitTax > 0) $ do
-              transfer_ BuyerAsset BuyerExternal overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
-              transfer_ BuyerExternal overdueBenefitTaxDest overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
+              transfer_ BuyerAsset overdueBenefitTaxDest overdueBenefitTax walletReferenceCancellationOverdueBenefitTax
           case result of
             Left err -> logError $ "Failed to create overdue cancellation ledger entries: " <> show err
             Right _ -> logInfo $ "Created overdue cancellation ledger entries for bookingId: " <> refId <> " charge=" <> show overdueCharge <> " tax=" <> show overdueTax <> " benefit=" <> show overdueBenefit <> " benefitTax=" <> show overdueBenefitTax

@@ -1373,6 +1373,17 @@ getRiderName req = do
 getCancellationReason :: Spec.CancelReq -> Maybe Text
 getCancellationReason req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorShortDesc)
 
+-- | TRV10 2.1.0 carries the buyer's reason at @message.cancellation.reason.descriptor.code@ and
+-- comments out @message.cancellation_reason_id@ in every published example. Read the current
+-- location first and keep the old field as a fallback so buyers on the older shape still work.
+getOndcCancellationReasonId :: Spec.CancelReq -> Maybe Text
+getOndcCancellationReasonId req =
+  (req.cancelReqMessage.cancelReqMessageCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode))
+    <|> req.cancelReqMessage.cancelReqMessageCancellationReasonId
+
+getCancellationReasonLongDesc :: Spec.CancelReq -> Maybe Text
+getCancellationReasonLongDesc req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorLongDesc)
+
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState = mkFulfillmentStateCode . show
 

@@ -534,6 +534,7 @@ library
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
+      SharedLogic.CancellationConfig
       SharedLogic.CancellationDues
       SharedLogic.CancellationFault
       SharedLogic.CancellationSignals
@@ -591,6 +592,7 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
+      SharedLogic.Finance.SubscriptionConsumption
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet
@@ -614,6 +616,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
+      SharedLogic.OndcCancellationReason
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person
@@ -625,6 +628,7 @@ library
       SharedLogic.Ride
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
+      SharedLogic.RiderCancellationReason
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications

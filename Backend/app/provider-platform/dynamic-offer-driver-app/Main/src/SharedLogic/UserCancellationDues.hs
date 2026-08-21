@@ -37,7 +37,11 @@ data UserCancellationDuesData = UserCancellationDuesData
     -- CustomerAtFault / SharedFault / NoFault) and the self-reported name of the rule
     -- that decided it; Nothing when the city has no fault rules configured.
     faultVerdict :: Maybe Text,
-    faultRule :: Maybe Text
+    faultRule :: Maybe Text,
+    -- Merchant cancellation policy, surfaced so fee rules can gate on it instead of
+    -- hardcoding thresholds. Both are 0 when the merchant has not configured them.
+    cancellationGracePeriodSeconds :: Int,
+    noShowAcceptableWaitPeriodSeconds :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -67,7 +71,9 @@ instance Default UserCancellationDuesData where
         timeSinceBooking = 0,
         pickupStallCase = Nothing,
         faultVerdict = Nothing,
-        faultRule = Nothing
+        faultRule = Nothing,
+        cancellationGracePeriodSeconds = 0,
+        noShowAcceptableWaitPeriodSeconds = 0
       }
 
 data UserCancellationDuesResult = UserCancellationDuesResult

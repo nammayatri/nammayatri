@@ -88,14 +88,19 @@ getOrCreateAccount input = do
           Just existing -> pure $ Right existing
           Nothing -> createAccount input
   where
+    -- Scoped by merchant: counterpartyId holds the merchant itself for most roles, but
+    -- for BUYER it holds the counterparty, which two merchants can share.
     findExisting =
-      QAccount.findByCounterpartyAndTypeAndSubLedger
+      QAccount.findByMerchantCounterpartyAndTypeAndSubLedger
+        input.merchantId
         input.counterpartyType
         input.counterpartyId
         input.accountType
         input.subLedger
     lockKey =
       "finance:getOrCreateAccount:"
+        <> input.merchantId
+        <> ":"
         <> show input.counterpartyType
         <> ":"
         <> fromMaybe "" input.counterpartyId

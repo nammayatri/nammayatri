@@ -5098,10 +5098,13 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             source = SBCR.ByFleetOwner,
             reasonCode = Nothing,
             additionalInfo = Nothing,
+            ondcCancellationReasonId = Nothing,
             driverCancellationLocation = Nothing,
             driverDistToPickup = Nothing,
             distanceUnit = oldBooking.distanceUnit,
-            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
+            merchantOperatingCityId = Just oldBooking.merchantOperatingCityId,
+            createdAt = Just now,
+            updatedAt = Just now
           }
   RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing transporterConfig oldDriver
 

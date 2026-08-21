@@ -248,16 +248,83 @@ tfContact phoneNum =
       { contactPhone = phoneNum
       }
 
+-- Emits a descriptor when *either* field is present. Reasons with no honest ONDC code still
+-- need to carry their free-text description, so keying this on the code alone would silence them.
 mkReason :: Maybe Text -> Maybe Text -> Maybe Spec.Reason
 mkReason mbCode mbShortDesc =
-  mbCode <&> \code ->
-    Spec.Reason
-      { reasonDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just code,
-                descriptorName = Nothing,
-                descriptorShortDesc = mbShortDesc,
-                descriptorLongDesc = Nothing
-              }
-      }
+  if isNothing mbCode && isNothing mbShortDesc
+    then Nothing
+    else
+      Just $
+        Spec.Reason
+          { reasonDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = mbCode,
+                    descriptorName = Nothing,
+                    descriptorShortDesc = mbShortDesc,
+                    descriptorLongDesc = Nothing
+                  }
+          }
+
+-- | Translate an internal cancellation reason code into what ONDC puts on the wire.
+--
+-- ONDC's seller enum is closed: 011 NO_DRIVERS_AVAILABLE, 012 COULD_NOT_FIND_CUSTOMER,
+-- 013 RIDE_ACCEPTED_MISTAKENLY, 014 UNABLE_TO_CONTACT_RIDER, 015 STOPPED_BY_TRAFFIC_OFFICIALS,
+-- 016 VEHICLE_ISSUE, 017 CUSTOMER_MISCONDUCT_OR_SAFETY_CONCERN. Five of our eight driver reasons
+-- have an honest equivalent; 015 has none — no MSIL reason means "stopped by traffic officials".
+-- The rest omit the code rather than assert something false.
+--
+-- Rider cancellations are echoed back with the buyer-side code they arrived as (ONDC's own
+-- consumer-initiated on_cancel example does this). MSIL's five reasons with no ONDC code carry a
+-- description only — a provisional 9xxx must never reach a third party.
+--
+-- The short_desc is restricted to reasons we recognise, so unvalidated values cannot reach the
+-- wire (production has carried `aliquip` and `string` in this field). English by design: the
+-- rider's language is the buyer app's concern, and it localises from the code.
+ondcCancellationReason :: Text -> (Maybe Text, Maybe Text)
+ondcCancellationReason = \case
+  "DRIVER_CANCEL_CUSTOMER_NO_SHOW" -> (Just "012", Just "Customer did not show up")
+  "DRIVER_CANCEL_PASSENGER_UNREACHABLE" -> (Just "014", Just "Passenger unreachable after multiple attempts")
+  "DRIVER_CANCEL_INVALID_BOOKING" -> (Just "013", Just "Incorrect, duplicate or cancelled booking")
+  "DRIVER_CANCEL_SAFETY_OR_MISCONDUCT" -> (Just "017", Just "Customer misconduct or safety concern")
+  "DRIVER_CANCEL_UNSAFE_RIDE_REQUEST" -> (Nothing, Just "Unsafe or non-compliant ride request")
+  "DRIVER_CANCEL_EMERGENCY_OR_UNFORESEEN" -> (Nothing, Just "Accident, medical emergency or unforeseen event")
+  "DRIVER_CANCEL_VEHICLE_BREAKDOWN" -> (Just "016", Just "Vehicle breakdown or mechanical issue")
+  "DRIVER_CANCEL_LOCATION_INACCESSIBLE" -> (Nothing, Just "Pickup or drop location inaccessible")
+  -- Rider cancellations: ONDC's own consumer-initiated example echoes the buyer code back on
+  -- on_cancel, so a rider reason resolved from the wire is returned as the code it came from.
+  -- The ONDC_ internal codes are a lossless encoding of 000-007, so this is exact.
+  "ONDC_TECHNICAL_CANCELLATION" -> (Just "000", Just "Technical cancellation")
+  "ONDC_DRIVER_NOT_MOVING" -> (Just "001", Just "Driver was not moving")
+  "ONDC_DRIVER_NOT_REACHABLE" -> (Just "002", Just "Customer was unable to contact the driver")
+  "ONDC_DRIVER_ASKED_TO_CANCEL" -> (Just "003", Just "Driver asked the customer to cancel")
+  "ONDC_INCORRECT_PICKUP_LOCATION" -> (Just "004", Just "Pickup location was incorrect")
+  "ONDC_BOOKED_BY_MISTAKE" -> (Just "005", Just "Customer booked the ride by mistake")
+  "ONDC_SAFETY_CONCERN_WITH_DRIVER_OR_RIDE" -> (Just "006", Just "Safety concern with the driver or ride")
+  "ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT" -> (Just "007", Just "Vehicle appeared unsafe or non-compliant")
+  -- MSIL's five reasons with no ONDC code: description only. Emitting a provisional 9xxx would
+  -- put an invented code in front of a third party.
+  "RIDER_CANCEL_MEDICAL_EMERGENCY" -> (Nothing, Just "Medical emergency or accident")
+  "RIDER_CANCEL_UNEXPECTED_EVENT" -> (Nothing, Just "Unexpected event prevented the ride")
+  "RIDER_CANCEL_NO_LONGER_REQUIRED" -> (Nothing, Just "Ride was no longer required")
+  "RIDER_CANCEL_FOUND_ANOTHER_RIDE" -> (Nothing, Just "Customer found another ride")
+  "RIDER_CANCEL_OTHER" -> (Nothing, Just "Other reason")
+  _ -> (Nothing, Nothing)
+
+-- | Resolve what goes into @order.cancellation.reason@ for a merchant.
+--
+-- Deliberately *not* keyed on @value_add_np@: that marks BAPs which have integrated our private tag
+-- extensions, which is a different property from parsing our private cancellation vocabulary. MSIL
+-- needs to be value-add (reallocation, tracking url, fulfillment tags) while still needing
+-- spec-valid codes, so the two must be decided independently.
+--
+-- Off (the default) reproduces today's payload byte-for-byte: the internal code in both fields on
+-- the on_status path, and code-only on on_cancel. Callers pass their own legacy shape as
+-- @mbLegacyShortDesc@ so this stays the single decision point.
+mkCancellationReason :: Bool -> Maybe Text -> Maybe Text -> Maybe Spec.Reason
+mkCancellationReason sendOndcCodes mbInternalCode mbLegacyShortDesc
+  | not sendOndcCodes = mkReason mbInternalCode mbLegacyShortDesc
+  | otherwise = case ondcCancellationReason <$> mbInternalCode of
+    Nothing -> Nothing
+    Just (mbCode, mbShortDesc) -> mkReason mbCode mbShortDesc

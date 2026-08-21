@@ -63,3 +63,8 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN multimodal_on_search_
 
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN network_id text ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN beckn_protocol text  default 'Beckn_V2';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN send_ondc_cancellation_codes boolean ;
