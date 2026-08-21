@@ -31,7 +31,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
@@ -46,8 +48,18 @@ onSearch ::
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
 onSearch _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  void $ processOnSearchPayload reqV2 ProcessAsync
-  pure Ack
+  drop' <- do
+    mbMerchant <- case reqV2.onSearchReqContext.contextBapId of
+      Nothing -> pure Nothing
+      Just bapId -> CQMerchant.findBySubscriberId (ShortId bapId)
+    case mbMerchant of
+      Nothing -> pure False
+      Just merchant -> InboundGate.shouldDropSigned "on_search" merchant.id (reqV2.onSearchReqContext.contextBppId)
+  if drop'
+    then pure Ack
+    else do
+      void $ processOnSearchPayload reqV2 ProcessAsync
+      pure Ack
 
 data ProcessingMode = ProcessSync | ProcessAsync
 

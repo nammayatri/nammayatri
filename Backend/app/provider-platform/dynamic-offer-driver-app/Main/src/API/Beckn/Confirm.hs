@@ -43,6 +43,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.InboundGate as InboundGate
 import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -66,47 +67,51 @@ confirm ::
   Confirm.ConfirmReqV2 ->
   FlowHandler AckResponse
 confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.confirmReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "Confirm APIV2 Flow" "Reached"
-    let context = reqV2.confirmReqContext
-        bppId = context.contextBppId
-        txnId = Just transactionId
-    bapId <- Utils.getContextBapId context
-    callbackUrl <- Utils.getContextBapUri context
-    bppUri <- Utils.getContextBppUri context
-    msgId <- Utils.getMessageId context
-    city <- Utils.getContextCity context
-    country <- Utils.getContextCountry context
-    isValueAddNP <- CQVAN.isValueAddNP bapId
-    dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
-    Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
-      now <- getCurrentTime
-      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
-      fork "confirm" $ do
-        Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
-          dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-          fork "confirm received pushing ondc logs" do
-            void $ pushLogs "confirm" (toJSON reqV2) dConfirmRes.transporter.id.getId "MOBILITY"
-          case dConfirmRes.rideInfo of
-            Just rideInfo' -> do
-              fork "on_confirm with rideInfo" $ do
-                handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
-                  void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context
-                  when (isMeterRide dConfirmRes.booking.tripCategory) $ do
-                    let startRideReq =
-                          RAPI.StartRideReq
-                            { rideOtp = "", -- doesn't matter for meter ride, not sure why this is not made Maybe, but not changing now as its not in scope of this PR. will do seperately later.
-                              point = LatLong {lat = dConfirmRes.fromLocation.lat, lon = dConfirmRes.fromLocation.lon},
-                              odometer = Nothing
-                            }
-                    void $ RAPI.startRide' (rideInfo'.driver.id, transporter.id, dConfirmRes.booking.merchantOperatingCityId) rideInfo'.ride.id startRideReq
-            Nothing -> do
-              fork "on_confirm on-us" $ do
-                handle (errHandler dConfirmRes transporter Nothing) $ do
-                  callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country
-    pure Ack
+  drop' <- InboundGate.shouldDropSigned "confirm" transporterId (reqV2.confirmReqContext.contextBapId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.confirmReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "Confirm APIV2 Flow" "Reached"
+        let context = reqV2.confirmReqContext
+            bppId = context.contextBppId
+            txnId = Just transactionId
+        bapId <- Utils.getContextBapId context
+        callbackUrl <- Utils.getContextBapUri context
+        bppUri <- Utils.getContextBppUri context
+        msgId <- Utils.getMessageId context
+        city <- Utils.getContextCity context
+        country <- Utils.getContextCountry context
+        isValueAddNP <- CQVAN.isValueAddNP bapId
+        dConfirmReq <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
+        Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
+          now <- getCurrentTime
+          (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now
+          fork "confirm" $ do
+            Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
+              dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
+              fork "confirm received pushing ondc logs" do
+                void $ pushLogs "confirm" (toJSON reqV2) dConfirmRes.transporter.id.getId "MOBILITY"
+              case dConfirmRes.rideInfo of
+                Just rideInfo' -> do
+                  fork "on_confirm with rideInfo" $ do
+                    handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
+                      void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context
+                      when (isMeterRide dConfirmRes.booking.tripCategory) $ do
+                        let startRideReq =
+                              RAPI.StartRideReq
+                                { rideOtp = "", -- doesn't matter for meter ride, not sure why this is not made Maybe, but not changing now as its not in scope of this PR. will do seperately later.
+                                  point = LatLong {lat = dConfirmRes.fromLocation.lat, lon = dConfirmRes.fromLocation.lon},
+                                  odometer = Nothing
+                                }
+                        void $ RAPI.startRide' (rideInfo'.driver.id, transporter.id, dConfirmRes.booking.merchantOperatingCityId) rideInfo'.ride.id startRideReq
+                Nothing -> do
+                  fork "on_confirm on-us" $ do
+                    handle (errHandler dConfirmRes transporter Nothing) $ do
+                      callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country
+        pure Ack
   where
     isMeterRide = \case
       DTC.OneWay DTC.MeterRide -> True

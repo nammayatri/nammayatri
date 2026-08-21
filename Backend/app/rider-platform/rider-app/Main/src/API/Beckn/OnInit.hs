@@ -30,11 +30,14 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
 import qualified Tools.Metrics as Metrics
@@ -53,35 +56,45 @@ onInit ::
   OnInit.OnInitReqV2 ->
   FlowHandler AckResponse
 onInit _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Common.getTransactionId reqV2.onInitReqContext
-  Utils.withTransactionIdLogTag transactionId $ do
-    mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
-    if isJust mbDOnInitReq
-      then do
-        let onInitReq = fromJust mbDOnInitReq -- safe to use here, because of above check
-        Redis.whenWithLockRedis (onInitLockKey onInitReq.bookingId.getId) 60 $
-          fork "on_init request processing" $ do
-            (onInitRes, booking) <- DOnInit.onInit onInitReq
-            fork "on init received pushing ondc logs" do
-              void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId "MOBILITY"
-            -- Paytm EDC (BoothOnline): when requiresPaymentBeforeConfirm and paymentInstrument is BoothOnline,
-            -- create payment order and do NOT send confirm to BPP until payment succeeds.
-            -- Client must send paymentInstrument=BoothOnline (typed) in the confirm request.
-            let isPaytmEdcPaymentBeforeConfirm =
-                  booking.requiresPaymentBeforeConfirm
-                    && booking.paymentInstrument == Just DMPM.BoothOnline
-            if isPaytmEdcPaymentBeforeConfirm
-              then void $ DPayment.createRideBookingPaymentOrder booking
-              else handle (errHandler booking) . void . withShortRetry $ do
-                confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
-                Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
-                CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
-      else do
-        let cancellationReason = "on_init API failure"
-            cancelReq = buildCancelReq cancellationReason OnInit
-        booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound $ "transactionId:-" <> transactionId)
-        errHandlerAction booking cancelReq
-    pure Ack
+  drop' <- do
+    mbMerchant <- case reqV2.onInitReqContext.contextBapId of
+      Nothing -> pure Nothing
+      Just bapId -> CQMerchant.findBySubscriberId (ShortId bapId)
+    case mbMerchant of
+      Nothing -> pure False
+      Just merchant -> InboundGate.shouldDropSigned "on_init" merchant.id (reqV2.onInitReqContext.contextBppId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Common.getTransactionId reqV2.onInitReqContext
+      Utils.withTransactionIdLogTag transactionId $ do
+        mbDOnInitReq <- TaxiACL.buildOnInitReqV2 reqV2
+        if isJust mbDOnInitReq
+          then do
+            let onInitReq = fromJust mbDOnInitReq -- safe to use here, because of above check
+            Redis.whenWithLockRedis (onInitLockKey onInitReq.bookingId.getId) 60 $
+              fork "on_init request processing" $ do
+                (onInitRes, booking) <- DOnInit.onInit onInitReq
+                fork "on init received pushing ondc logs" do
+                  void $ pushLogs "on_init" (toJSON reqV2) onInitRes.merchant.id.getId "MOBILITY"
+                -- Paytm EDC (BoothOnline): when requiresPaymentBeforeConfirm and paymentInstrument is BoothOnline,
+                -- create payment order and do NOT send confirm to BPP until payment succeeds.
+                -- Client must send paymentInstrument=BoothOnline (typed) in the confirm request.
+                let isPaytmEdcPaymentBeforeConfirm =
+                      booking.requiresPaymentBeforeConfirm
+                        && booking.paymentInstrument == Just DMPM.BoothOnline
+                if isPaytmEdcPaymentBeforeConfirm
+                  then void $ DPayment.createRideBookingPaymentOrder booking
+                  else handle (errHandler booking) . void . withShortRetry $ do
+                    confirmBecknReq <- ACL.buildConfirmReqV2 onInitRes
+                    Metrics.startMetricsBap Metrics.CONFIRM onInitRes.merchant.name transactionId booking.merchantOperatingCityId.getId
+                    CallBPP.confirmV2 onInitRes.bppUrl confirmBecknReq onInitRes.merchant.id
+          else do
+            let cancellationReason = "on_init API failure"
+                cancelReq = buildCancelReq cancellationReason OnInit
+            booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound $ "transactionId:-" <> transactionId)
+            errHandlerAction booking cancelReq
+        pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do

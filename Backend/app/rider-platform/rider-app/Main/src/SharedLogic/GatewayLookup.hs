@@ -101,12 +101,11 @@ dispatchAction merchantId domain action mbPeerSubId req signedCall unsignedCall 
   where
     fabricPath merchant peerSubId = do
       protocols <- lookupPeerProtocols peerSubId merchant.id
-      case protocols of
+      case nub protocols of
         [] -> signedCall
         (primary : rest) -> do
-          forM_ rest $ \case
-            Domain.Beckn_V3 -> void $ fork "shadow-fire-V3" (void $ fireFabric merchant)
-            Domain.Beckn_V2 -> pure ()
+          forM_ rest $ \p ->
+            void $ fork ("shadow-fire-" <> show p) (void $ dispatchOne merchant p)
           dispatchOne merchant primary
 
     dispatchOne merchant Domain.Beckn_V3 = fireFabric merchant

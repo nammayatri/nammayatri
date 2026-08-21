@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Tools.ActorInfo as ActorInfo
@@ -56,38 +57,42 @@ track ::
   Track.TrackReqV2 ->
   FlowHandler AckResponse
 track transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.trackReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "track APIV2 Flow" $ "Reached:-" <> show reqV2
-    let txnId = Just transactionId
-        trackContext = reqV2.trackReqContext
-        bppId = trackContext.contextBppId
-    dTrackReq <- ACL.buildTrackReqV2 subscriber reqV2
-    callbackUrl <- Utils.getContextBapUri trackContext
-    bppUri <- Utils.getContextBppUri trackContext
-    msgId <- Utils.getMessageId trackContext
-    bapId <- Utils.getContextBapId trackContext
-    city <- Utils.getContextCity trackContext
-    country <- Utils.getContextCountry trackContext
+  drop' <- InboundGate.shouldDropSigned "track" transporterId (reqV2.trackReqContext.contextBapId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.trackReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "track APIV2 Flow" $ "Reached:-" <> show reqV2
+        let txnId = Just transactionId
+            trackContext = reqV2.trackReqContext
+            bppId = trackContext.contextBppId
+        dTrackReq <- ACL.buildTrackReqV2 subscriber reqV2
+        callbackUrl <- Utils.getContextBapUri trackContext
+        bppUri <- Utils.getContextBppUri trackContext
+        msgId <- Utils.getMessageId trackContext
+        bapId <- Utils.getContextBapId trackContext
+        city <- Utils.getContextCity trackContext
+        country <- Utils.getContextCountry trackContext
 
-    dTrackRes <- DTrack.track transporterId bapId dTrackReq
+        dTrackRes <- DTrack.track transporterId bapId dTrackReq
 
-    internalEndPointHashMap <- asks (.internalEndPointHashMap)
-    let becknOnTrackMessage = ACL.mkOnTrackMessageV2 dTrackRes
-    logTagInfo "track APIV2 Flow" $ "Sending OnTrack APIV2" <> show becknOnTrackMessage
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) dTrackRes.vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
-    fork "track received pushing ondc logs" do
-      void $ pushLogs "track" (toJSON reqV2) transporterId.getId "MOBILITY"
-    ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-    onTrackContext <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
-    Callback.withCallback dTrackRes.transporter "on_track" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler onTrackContext) $
-      pure
-        Spec.OnTrackReq
-          { onTrackReqContext = onTrackContext,
-            onTrackReqError = Nothing,
-            onTrackReqMessage = Just becknOnTrackMessage
-          }
+        internalEndPointHashMap <- asks (.internalEndPointHashMap)
+        let becknOnTrackMessage = ACL.mkOnTrackMessageV2 dTrackRes
+        logTagInfo "track APIV2 Flow" $ "Sending OnTrack APIV2" <> show becknOnTrackMessage
+        bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporterId (show Context.MOBILITY) dTrackRes.vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+        fork "track received pushing ondc logs" do
+          void $ pushLogs "track" (toJSON reqV2) transporterId.getId "MOBILITY"
+        ttl <- bppConfig.onTrackTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+        onTrackContext <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
+        Callback.withCallback dTrackRes.transporter "on_track" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler onTrackContext) $
+          pure
+            Spec.OnTrackReq
+              { onTrackReqContext = onTrackContext,
+                onTrackReqError = Nothing,
+                onTrackReqMessage = Just becknOnTrackMessage
+              }
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnTrackReq
 errHandler context (BecknAPIError err) =

@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
@@ -49,20 +50,24 @@ select ::
   Select.SelectReqV2 ->
   FlowHandler AckResponse
 select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.selectReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "SelectV2 API Flow" "Reached"
-    dSelectReq <- ACL.buildSelectReqV2 subscriber reqV2
+  drop' <- InboundGate.shouldDropSigned "select" transporterId (reqV2.selectReqContext.contextBapId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.selectReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        logTagInfo "SelectV2 API Flow" "Reached"
+        dSelectReq <- ACL.buildSelectReqV2 subscriber reqV2
 
-    Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
-      (merchant, searchRequest, estimates) <- DSelect.validateRequest transporterId dSelectReq
-      fork "select request processing" $ do
-        Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
-          DSelect.handler merchant dSelectReq searchRequest estimates
-      fork "select received pushing ondc logs" do
-        void $ pushLogs "select" (toJSON reqV2) merchant.id.getId "MOBILITY"
-    pure Ack
+        Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $ do
+          (merchant, searchRequest, estimates) <- DSelect.validateRequest transporterId dSelectReq
+          fork "select request processing" $ do
+            Redis.whenWithLockRedis (selectProcessingLockKey dSelectReq.messageId) 60 $
+              DSelect.handler merchant dSelectReq searchRequest estimates
+          fork "select received pushing ondc logs" do
+            void $ pushLogs "select" (toJSON reqV2) merchant.id.getId "MOBILITY"
+        pure Ack
 
 selectLockKey :: Text -> Text
 selectLockKey id = "Driver:Select:MessageId-" <> id

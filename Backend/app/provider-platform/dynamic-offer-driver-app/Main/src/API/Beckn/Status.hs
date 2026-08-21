@@ -35,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo as ActorInfo
 import TransactionLogs.PushLogs
@@ -54,25 +55,29 @@ status ::
   FlowHandler AckResponse
 status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel "bpp-status-api" $ do
-    txnId <- Utils.getTransactionId reqV2.statusReqContext
-    L.setOptionLocal TxnIdKey txnId
-    Utils.withTransactionIdLogTag txnId $ do
-      logDebug $ "BPP_STATUS_API_DEBUG: Received status request for transactionId: " <> txnId
-      logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2
-      dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
-      let context = reqV2.statusReqContext
-      callbackUrl <- Utils.getContextBapUri context
-      logDebug $ "BPP_STATUS_API_DEBUG: Built status request, callback URL: " <> show callbackUrl
-      dStatusRes <- DStatus.handler transporterId dStatusReq
-      logDebug $ "BPP_STATUS_API_DEBUG: Status handler completed for booking: " <> dStatusRes.booking.id.getId
-      fork "status received pushing ondc logs" do
-        void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId "MOBILITY"
-      internalEndPointHashMap <- asks (.internalEndPointHashMap)
-      msgId <- Utils.getMessageId context
-      onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
-      logDebug $ "BPP_STATUS_API_DEBUG: Built on_status request with messageId: " <> msgId <> " for booking: " <> dStatusRes.booking.id.getId
-      Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
-        pure onStatusReq
+    drop' <- InboundGate.shouldDropSigned "status" transporterId (reqV2.statusReqContext.contextBapId)
+    if drop'
+      then pure Ack
+      else do
+        txnId <- Utils.getTransactionId reqV2.statusReqContext
+        L.setOptionLocal TxnIdKey txnId
+        Utils.withTransactionIdLogTag txnId $ do
+          logDebug $ "BPP_STATUS_API_DEBUG: Received status request for transactionId: " <> txnId
+          logTagInfo "Status APIV2 Flow" $ "Reached:-" <> show reqV2
+          dStatusReq <- ACL.buildStatusReqV2 subscriber reqV2
+          let context = reqV2.statusReqContext
+          callbackUrl <- Utils.getContextBapUri context
+          logDebug $ "BPP_STATUS_API_DEBUG: Built status request, callback URL: " <> show callbackUrl
+          dStatusRes <- DStatus.handler transporterId dStatusReq
+          logDebug $ "BPP_STATUS_API_DEBUG: Status handler completed for booking: " <> dStatusRes.booking.id.getId
+          fork "status received pushing ondc logs" do
+            void $ pushLogs "status" (toJSON reqV2) dStatusRes.booking.providerId.getId "MOBILITY"
+          internalEndPointHashMap <- asks (.internalEndPointHashMap)
+          msgId <- Utils.getMessageId context
+          onStatusReq <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
+          logDebug $ "BPP_STATUS_API_DEBUG: Built on_status request with messageId: " <> msgId <> " for booking: " <> dStatusRes.booking.id.getId
+          Callback.withCallback dStatusRes.transporter "on_status" OnStatus.onStatusAPIV2 callbackUrl internalEndPointHashMap (errHandler onStatusReq.onStatusReqContext) $
+            pure onStatusReq
 
 errHandler :: Spec.Context -> BecknAPIError -> Spec.OnStatusReq
 errHandler context (BecknAPIError err) =

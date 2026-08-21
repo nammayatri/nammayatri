@@ -28,9 +28,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.InboundGate as InboundGate
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Tools.ActorInfo as ActorInfo
@@ -50,33 +53,43 @@ onConfirm ::
   OnConfirm.OnConfirmReqV2 ->
   FlowHandler AckResponse
 onConfirm _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
-  L.setOptionLocal TxnIdKey transactionId
-  Utils.withTransactionIdLogTag transactionId $ do
-    bppSubscriberId <- Utils.getContextBppId reqV2.onConfirmReqContext
-    isValueAddNP <- CQVAN.isValueAddNP bppSubscriberId
-    mbDOnConfirmReq <- ACL.buildOnConfirmReqV2 reqV2 isValueAddNP
-    whenJust mbDOnConfirmReq $ \onConfirmReq -> do
-      let bppBookingId = case onConfirmReq of
-            DOnConfirm.RideAssigned rideAssignedReq -> rideAssignedReq.bppBookingId
-            DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
-      Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
-        validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId isValueAddNP
-        merchantOperatingCityId <- case validatedReq of
-          DOnConfirm.ValidatedRideAssigned rideAssignedReq -> pure $ rideAssignedReq.booking.merchantOperatingCityId.getId
-          DOnConfirm.ValidatedBookingConfirmed bookingConfirmedReq -> pure $ bookingConfirmedReq.booking.merchantOperatingCityId.getId
-        Metrics.finishMetricsBap Metrics.CONFIRM "" transactionId merchantOperatingCityId
-        fork "on confirm received pushing ondc logs" do
-          booking <- QBookingLite.findByBPPBookingIdLite bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-          void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
-        runInForkWithCheck
-          "onConfirm request processing"
-          ( pure $ case validatedReq of
-              DOnConfirm.ValidatedRideAssigned rideAssignedReq -> rideAssignedReq.booking.tripCategory /= Just (OneWay MeterRide)
-              _ -> True
-          )
-          (Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $ DOnConfirm.onConfirm validatedReq)
-    pure Ack
+  drop' <- do
+    mbMerchant <- case reqV2.onConfirmReqContext.contextBapId of
+      Nothing -> pure Nothing
+      Just bapId -> CQMerchant.findBySubscriberId (ShortId bapId)
+    case mbMerchant of
+      Nothing -> pure False
+      Just merchant -> InboundGate.shouldDropSigned "on_confirm" merchant.id (reqV2.onConfirmReqContext.contextBppId)
+  if drop'
+    then pure Ack
+    else do
+      transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
+      L.setOptionLocal TxnIdKey transactionId
+      Utils.withTransactionIdLogTag transactionId $ do
+        bppSubscriberId <- Utils.getContextBppId reqV2.onConfirmReqContext
+        isValueAddNP <- CQVAN.isValueAddNP bppSubscriberId
+        mbDOnConfirmReq <- ACL.buildOnConfirmReqV2 reqV2 isValueAddNP
+        whenJust mbDOnConfirmReq $ \onConfirmReq -> do
+          let bppBookingId = case onConfirmReq of
+                DOnConfirm.RideAssigned rideAssignedReq -> rideAssignedReq.bppBookingId
+                DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
+          Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
+            validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId isValueAddNP
+            merchantOperatingCityId <- case validatedReq of
+              DOnConfirm.ValidatedRideAssigned rideAssignedReq -> pure $ rideAssignedReq.booking.merchantOperatingCityId.getId
+              DOnConfirm.ValidatedBookingConfirmed bookingConfirmedReq -> pure $ bookingConfirmedReq.booking.merchantOperatingCityId.getId
+            Metrics.finishMetricsBap Metrics.CONFIRM "" transactionId merchantOperatingCityId
+            fork "on confirm received pushing ondc logs" do
+              booking <- QBookingLite.findByBPPBookingIdLite bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+              void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
+            runInForkWithCheck
+              "onConfirm request processing"
+              ( pure $ case validatedReq of
+                  DOnConfirm.ValidatedRideAssigned rideAssignedReq -> rideAssignedReq.booking.tripCategory /= Just (OneWay MeterRide)
+                  _ -> True
+              )
+              (Redis.whenWithLockRedis (onConfirmProcessingLockKey bppBookingId.getId) 60 $ DOnConfirm.onConfirm validatedReq)
+        pure Ack
   where
     runInForkWithCheck message checkShouldFork action = do
       shouldFork <- checkShouldFork
