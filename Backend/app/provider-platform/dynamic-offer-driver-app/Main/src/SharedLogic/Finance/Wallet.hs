@@ -873,8 +873,6 @@ paymentBearerToFunder bearer = case bearer of
   DTC.PAYMENT_PLATFORM -> FundByPlatform
   DTC.PAYMENT_CUSTOMER -> FundByCustomer
   DTC.PAYMENT_DRIVER -> FundByDriver
-  -- Driver funds P here; the full-fare-to-driver gross-up is a BAP-side follow-up.
-  DTC.PAYMENT_CUSTOMER_AND_DRIVER -> FundByDriver
 
 payoutBearerToFunder :: DTC.PayoutChargeBearer -> StripeChargeFunder
 payoutBearerToFunder bearer = case bearer of
