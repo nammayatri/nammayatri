@@ -28,6 +28,7 @@ import qualified Domain.Types.SavedReqLocation as SavedReqLocation
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -64,9 +65,9 @@ newtype SavedReqLocationsListRes = SavedReqLocationsListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-createSavedReqLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
+createSavedReqLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Metrics.CoreMetrics m) => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
 createSavedReqLocation riderId sreq = do
-  savedLocations <- QSavedReqLocation.findAllByRiderIdAndTag riderId sreq.tag
+  savedLocations <- QSavedReqLocation.findAllByRiderIdAndTagOutageTolerant riderId sreq.tag
   when (sreq.tag == pack "") $ throwError $ InvalidRequest "Location tag cannot be empty"
   unless (null savedLocations) $ throwError $ InvalidRequest "Location with this tag already exists"
   now <- getCurrentTime

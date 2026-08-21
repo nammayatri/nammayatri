@@ -215,6 +215,7 @@ import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -352,6 +353,7 @@ import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
 import Utils.Common.Cac.KeyNameConstants
+import Utils.Common.Fallback (withFallback)
 
 data OperatorInfo = OperatorInfo
   { id :: Text,
@@ -1871,17 +1873,27 @@ getNearbySearchRequests ::
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    CoreMetrics.CoreMetrics m
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DST.SearchTry) ->
   m GetNearbySearchRequestsRes
 getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
-  nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
+  nearbyReqs <- runInReplica $ QSRD.findByDriverOutageTolerant driverId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
   cancellationRatio <- DP.getLatestCancellationRatio cancellationScoreRelatedConfig merchantOpCityId (cast driverId)
-  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig) nearbyReqs
+  searchRequestForDriverAPIEntity <-
+    catMaybes
+      <$> mapM
+        ( \nearbyReq ->
+            withFallback
+              "buildSearchRequestForDriverAPIEntity"
+              (Just <$> buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq)
+              (pure Nothing)
+        )
+        nearbyReqs
   case searchTryIdReq of
     Just stid -> do
       let filteredSearchRequestForDriverAPIEntity = filter (\srfd -> srfd.searchTryId == stid) searchRequestForDriverAPIEntity

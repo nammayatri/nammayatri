@@ -12,6 +12,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -23,6 +24,7 @@ import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.SearchRequestForDriver ()
 import qualified Storage.Queries.Person as QP
+import Utils.Common.Fallback (withFallback)
 
 -- Extra code goes here --
 
@@ -113,6 +115,9 @@ findByDriver (Id driverId) = do
       findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.id $ Se.In (map TE.decodeUtf8 srfdIds), Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
     else do
       findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
+
+findByDriverOutageTolerant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r, Metrics.CoreMetrics m) => Id Person -> m [SearchRequestForDriver]
+findByDriverOutageTolerant driverId = withFallback "findByDriverOutageTolerant" (findByDriver driverId) (pure [])
 
 findByDriverAndSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
