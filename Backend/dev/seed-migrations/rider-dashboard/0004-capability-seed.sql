@@ -1044,7 +1044,7 @@ INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name,
     ('city-operations.booth_booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/GET_SELECT_RESULT'),
     ('city-operations.booth_booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_CANCEL_SEARCH'),
     ('city-operations.booth_booking.execute', 'DASHBOARD', 'RIDER_RIDE_BOOKING/SELECT/POST_SELECT_ESTIMATE')
-ON CONFLICT (server_name, endpoint_id, capability_id) DO NOTHING;
+ON CONFLICT (server_name, endpoint_id) DO NOTHING;
 -- Create curated roles that exist on NEITHER dashboard (idempotent, by name).
 -- dashboard_access_type DASHBOARD_USER: none of these are admin tiers;
 -- admin tiering now lives in person.admin_tier, not this column.

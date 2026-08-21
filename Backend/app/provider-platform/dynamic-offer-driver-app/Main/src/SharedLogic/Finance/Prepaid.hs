@@ -9,6 +9,7 @@ module SharedLogic.Finance.Prepaid
     subscriptionRideReferenceType,
     expiryRevenueRecognitionReferenceType,
     expiryCreditTransferReferenceType,
+    tdsReimbursementReferenceType,
     prepaidSubLedger,
     resolvePrepaidScope,
     getPrepaidAccountByOwner,
