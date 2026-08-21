@@ -31,7 +31,9 @@ data PickupProgressState = PickupProgressState
     consecutiveBadTicks :: Int,
     activeCase :: Maybe Text,
     caseStartedAt :: Maybe UTCTime,
-    firedStageCount :: Int
+    firedStageCount :: Int,
+    -- Consecutive ticks the scheduled-ride ETA has been infeasible (A > pickup+grace); debounces OSRM noise.
+    consecutiveEtaBreaches :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -43,7 +45,8 @@ emptyPickupProgressState =
       consecutiveBadTicks = 0,
       activeCase = Nothing,
       caseStartedAt = Nothing,
-      firedStageCount = 0
+      firedStageCount = 0,
+      consecutiveEtaBreaches = 0
     }
 
 pickupProgressStateKey :: Id DRide.Ride -> Text

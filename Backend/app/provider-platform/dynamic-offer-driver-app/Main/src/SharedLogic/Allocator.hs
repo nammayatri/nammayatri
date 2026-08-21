@@ -424,7 +424,8 @@ data ScheduledRideNotificationsToDriverJobData = ScheduledRideNotificationsToDri
     notificationKey :: Text,
     onlyIfOffline :: Bool,
     bookingId :: Id DB.Booking,
-    driverId :: Id DP.Person
+    driverId :: Id DP.Person,
+    repeatInterval :: Maybe Seconds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
