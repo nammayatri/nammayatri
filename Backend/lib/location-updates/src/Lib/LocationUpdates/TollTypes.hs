@@ -16,6 +16,7 @@ module Lib.LocationUpdates.TollTypes
     emptyTollInfo,
     estimatedTollInfoFromCharges,
     hasDetectedTolls,
+    onRideTollIdsRedisKey,
   )
 where
 
@@ -67,6 +68,9 @@ estimatedTollInfoFromCharges charges names ids =
           autoRickshawTollChargeDetails = details,
           twoWheelerTollChargeDetails = details
         }
+
+onRideTollIdsRedisKey :: Text -> Text
+onRideTollIdsRedisKey driverId = "OnRideTollIds:" <> driverId
 
 hasDetectedTolls :: TollInfo -> Bool
 hasDetectedTolls TollInfo {..} = tollCharges > 0 && not (null tollNames)
