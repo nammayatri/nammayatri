@@ -48,3 +48,10 @@ ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN merchant_id TYPE text;
 
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_two_wheeler_toll_charge_applicable boolean ;
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_auto_rickshaw_toll_charge_applicable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN is_two_wheeler_toll_charge_applicable SET DEFAULT false;
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN is_auto_rickshaw_toll_charge_applicable SET DEFAULT false;
+ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN max_toll_count_in_ride integer ;
