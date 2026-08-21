@@ -6,6 +6,8 @@ SavedReqLocation:
   tableName: saved_location
   derives: Generic,Show,FromJSON,ToJSON
   types:
+    LocationType:
+      enum: "PLACE, BUS_STOP, METRO_STATION, SUBURBAN_STATION" # absent on rows saved before favourite stops shipped; read those as PLACE
     SavedReqLocationAPIEntity:
       lat: Double
       lon: Double
@@ -21,6 +23,8 @@ SavedReqLocation:
       placeId: Maybe Text
       ward: Maybe Text
       locationName : Maybe Text
+      locationType: Maybe LocationType
+      stopCode: Maybe Text
       derive': Generic,FromJSON,ToJSON,Show,ToSchema
   fields:
     id: Id SavedReqLocation
@@ -42,6 +46,8 @@ SavedReqLocation:
     placeId: Maybe Text
     ward: Maybe Text
     locationName: Maybe Text
+    locationType: Maybe LocationType
+    stopCode: Maybe Text
 
   sqlType:
     ward: character varying(255)
@@ -56,6 +62,8 @@ SavedReqLocation:
     tag: character varying(255)
     placeId: text
     locationName: character varying(500)
+    locationType: character varying(255)
+    stopCode: character varying(255)
 
   excludedFields:
     - merchantId

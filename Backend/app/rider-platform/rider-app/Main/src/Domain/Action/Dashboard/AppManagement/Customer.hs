@@ -48,9 +48,11 @@ getCustomerSavedLocations merchantShortId _opCity personId = do
           door = loc.door,
           lat = loc.lat,
           locationName = loc.locationName,
+          locationType = loc.locationType,
           lon = loc.lon,
           placeId = loc.placeId,
           state = loc.state,
+          stopCode = loc.stopCode,
           street = loc.street,
           tag = loc.tag,
           ward = loc.ward
@@ -75,7 +77,9 @@ postCustomerSavedLocations merchantShortId _opCity personId req = do
             placeId = req.placeId,
             ward = req.ward,
             isMoved = req.isMoved,
-            locationName = req.locationName
+            locationName = req.locationName,
+            locationType = Nothing,
+            stopCode = Nothing
           }
   DSavedReqLocation.createSavedReqLocation personId createReq
 

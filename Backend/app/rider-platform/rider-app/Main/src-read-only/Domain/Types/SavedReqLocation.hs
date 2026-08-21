@@ -21,16 +21,20 @@ data SavedReqLocation = SavedReqLocation
     isMoved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lat :: Kernel.Prelude.Double,
     locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    locationType :: Kernel.Prelude.Maybe Domain.Types.SavedReqLocation.LocationType,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tag :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     ward :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data LocationType = PLACE | BUS_STOP | METRO_STATION | SUBURBAN_STATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
   { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -41,11 +45,15 @@ data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
     door :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lat :: Kernel.Prelude.Double,
     locationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    locationType :: Kernel.Prelude.Maybe Domain.Types.SavedReqLocation.LocationType,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tag :: Kernel.Prelude.Text,
     ward :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LocationType)
