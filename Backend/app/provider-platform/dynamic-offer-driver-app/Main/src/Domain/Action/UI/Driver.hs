@@ -234,6 +234,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
@@ -251,12 +252,14 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
+import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..), SendSearchRequestToDriverJobData (..))
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
@@ -345,6 +348,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
+import qualified Tools.DynamicLogic as TDL
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -1985,6 +1989,24 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       -- bt: QUOTE_RESPONSE_REJECT, anchored to the committed response (same series the
       -- POOLING ruleset reads via getSrdStatsCountersBulk).
       DP.recordQuoteResponseCounters merchantOpCityId driverId Reject
+      -- Judge the reject against per-city QUOTE_RESPONSE_BEHAVIOR JsonLogic rules (snapshot →
+      -- rules → consequences). Forked so rule evaluation never adds latency to the respond path.
+      fork "quoteResponseBehavior" $ do
+        snapshot <- DP.buildQuoteResponseSnapshot merchantOpCityId driverId Reject
+        let fetchRules = \dom -> do
+              localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+              TDL.getAppDynamicLogic (cast merchantOpCityId) dom localTime Nothing Nothing
+        output <- BEOrch.orchestrate snapshot LYDL.Driver (cast merchantOpCityId) LYT.QUOTE_RESPONSE_BEHAVIOR fetchRules
+        when (not (null output.consequences) || not (null output.communications)) $ do
+          let dispatchCtx =
+                BehaviorDispatch.DispatchContext
+                  { merchantId = merchantId,
+                    merchantOperatingCityId = merchantOpCityId,
+                    counterConfig = Nothing,
+                    actionEvent = Nothing
+                  }
+          BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
+          BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId

@@ -26,6 +26,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.BehaviorTracker.Visibility as BTV
+import qualified SharedLogic.DriverPool as DP
 
 -- | Default domain config for driver-app visibility.
 defaultDriverDomainConfig :: BTT.BehaviorDomainConfig
@@ -39,16 +40,9 @@ defaultDriverDomainConfig =
                 periods = [BTT.mkPeriodConfig "window" 15]
               }
           ),
-          ( "RIDE_CANCELLATION",
-            BTT.CounterConfig
-              { windowSizeDays = 7,
-                counters = [BTT.ACTION_COUNT, BTT.ELIGIBLE_COUNT],
-                periods =
-                  [ BTT.mkPeriodConfig "daily" 1,
-                    BTT.mkPeriodConfig "weekly" 7
-                  ]
-              }
-          ),
+          -- window/periods come from the SAME config the writers and snapshots use,
+          -- so registry and machinery can never drift apart
+          (DP.rideCancellationActionType, DP.rideCancellationCounterConfig),
           ( "ISSUE_BREACH_EXTRA_FARE",
             BTT.CounterConfig
               { windowSizeDays = 30, -- default; actual value comes from TransporterConfig.issueBreachConfig.ibCountWindowSizeInDays
@@ -90,7 +84,10 @@ defaultDriverDomainConfig =
                     BTT.mkPeriodConfig "monthly" 30
                   ]
               }
-          )
+          ),
+          (DP.quoteResponseAcceptActionType, DP.quoteResponseCounterConfig),
+          (DP.quoteResponseRejectActionType, DP.quoteResponseCounterConfig),
+          (DP.quoteResponseEligibleActionType, DP.quoteResponseCounterConfig)
         ],
       blockReasonTags =
         [ "TOLL_ROUTES",
@@ -106,7 +103,8 @@ defaultDriverDomainConfig =
           "PickupStall",
           "PICKUP_STALL_FEE",
           "PICKUP_STALL_BLOCK"
-        ],
+        ]
+          <> DP.quoteResponseCooldownTags,
       blockTypes = [BTT.HARD_BLOCK, BTT.SOFT_BLOCK, BTT.FEATURE_BLOCK, BTT.PERMANENT_BLOCK]
     }
 

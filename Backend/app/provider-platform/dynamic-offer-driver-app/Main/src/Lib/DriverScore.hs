@@ -77,10 +77,10 @@ driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HAND
 eventPayloadHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EncFlow m r, CoreMetrics m, Redis.HedisLTSFlowEnv r, HasLocationService m r, MonadFlow m, JobCreator r m, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasShortDurationRetryCfg r c, HasKafkaProducer r, ClickhouseFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler _merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchReqId
+  -- Quote-response counting (accept + reject) lives at the respond site
+  -- (Domain.Action.UI.Driver); this handler only keeps pool bookkeeping.
   case response of
     SRD.Accept -> do
-      -- bt: QUOTE_RESPONSE_ACCEPT — this handler is fired from the accept flow right after
-      -- updateDriverResponse, so this counts each committed accept exactly once.
       -- withdraw the accepted request from every other batch driver's open-requests map
       -- (capacity bookkeeping; the old decrementTotalQuotesCount was an alias of this same call)
       forM_ restDriverIds $ \restDriverId ->
@@ -154,7 +154,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
               actionEvent = Just actionEvent
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-    BehaviorDispatch.handleCommunications driverId output.communications
+    BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   driverStats <- getDriverStats currency distanceUnit mbDriverStats driverId rideFare

@@ -20,12 +20,15 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
 where
 
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -263,39 +266,95 @@ sendOverlayByKey ctx driverId overlayKey = do
 handleCommunications ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
+  DispatchContext ->
   Id DP.Person ->
   [CMT.CommunicationDirective] ->
   m ()
-handleCommunications driverId directives = do
+handleCommunications ctx driverId directives = do
   let (actions, errors) = CMParser.parseDirectives directives
   unless (null errors) $
     logError $ "Communication parse errors for driver " <> driverId.getId <> ": " <> show errors
   forM_ actions $ \action -> do
-    result <- try @_ @SomeException $ dispatchCommunicationAction driverId action
+    result <- try @_ @SomeException $ dispatchCommunicationAction ctx driverId action
     case result of
       Right () -> logDebug $ "Communication dispatched for driver " <> driverId.getId <> ": " <> show action
       Left err -> logError $ "Communication failed for driver " <> driverId.getId <> ": " <> show err
 
 -- | Dispatch a single parsed communication action.
+--
+-- Title/body text comes from the RULE's templateParams (dynamic logic), not from
+-- DB templates: templateParams: {"title": "...", "body": "...", "okButtonText": "..."}
 dispatchCommunicationAction ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    Redis.HedisLTSFlowEnv r
   ) =>
+  DispatchContext ->
   Id DP.Person ->
   CMT.CommunicationAction ->
   m ()
-dispatchCommunicationAction driverId = \case
+dispatchCommunicationAction ctx driverId = \case
   CMT.NoCommunication -> pure ()
-  CMT.FcmNotification params ->
-    logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey
+  CMT.FcmNotification params -> do
+    let title = fromMaybe params.templateKey (textFromParams "title" params.templateParams)
+        body = fromMaybe "" (textFromParams "body" params.templateParams)
+    withDriver $ \driver -> do
+      logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey
+      Notify.notifyDriver ctx.merchantOperatingCityId FCM.DRIVER_NOTIFY title body driver driver.deviceToken
   CMT.InAppOverlay params ->
-    logInfo $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
-  CMT.InAppMessage params ->
-    logInfo $ "In-app message for driver " <> driverId.getId <> ": " <> params.messageKey
+    withDriver $ \driver -> do
+      logInfo $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
+      Notify.sendOverlay ctx.merchantOperatingCityId driver (mkRuleOverlayReq params)
+  CMT.InAppMessage params -> do
+    -- Interim: delivered as an FCM push. Persistent message-center delivery
+    -- (message table + translations) is a follow-up.
+    let title = fromMaybe params.messageKey (textFromParams "title" params.templateParams)
+        body = fromMaybe "" (textFromParams "body" params.templateParams)
+    withDriver $ \driver -> do
+      logInfo $ "In-app message (as FCM) for driver " <> driverId.getId <> ": " <> params.messageKey
+      Notify.notifyDriver ctx.merchantOperatingCityId FCM.DRIVER_NOTIFY title body driver driver.deviceToken
   CMT.SmsCommunication params ->
-    logInfo $ "SMS for driver " <> driverId.getId <> ": " <> params.templateKey
+    logInfo $ "SMS (not yet handled) for driver " <> driverId.getId <> ": " <> params.templateKey
   CMT.BadgeCommunication params ->
-    logInfo $ "Badge for driver " <> driverId.getId <> ": " <> params.badgeKey
+    logInfo $ "Badge (not yet handled) for driver " <> driverId.getId <> ": " <> params.badgeKey
+  where
+    withDriver actionFn = do
+      mbDriver <- QPerson.findById driverId
+      case mbDriver of
+        Just driver -> actionFn driver
+        Nothing -> logWarning $ "Communication skipped, driver not found: " <> driverId.getId
+
+-- | Extract a text field from the rule-provided templateParams object.
+textFromParams :: Text -> A.Value -> Maybe Text
+textFromParams key (A.Object o) = case AKM.lookup (AK.fromText key) o of
+  Just (A.String t) -> Just t
+  _ -> Nothing
+textFromParams _ _ = Nothing
+
+-- | Overlay built entirely from the rule's params (no DB overlay template).
+mkRuleOverlayReq :: CMT.InAppOverlayParams -> FCM.FCMOverlayReq
+mkRuleOverlayReq params =
+  FCM.FCMOverlayReq
+    { title = textFromParams "title" params.templateParams,
+      description = textFromParams "body" params.templateParams,
+      imageUrl = Nothing,
+      okButtonText = textFromParams "okButtonText" params.templateParams,
+      cancelButtonText = if params.showCloseButton then Just "Close" else Nothing,
+      actions = [],
+      actions2 = [],
+      secondaryActions2 = Nothing,
+      link = Nothing,
+      endPoint = Nothing,
+      method = Nothing,
+      reqBody = A.Null,
+      delay = Nothing,
+      contactSupportNumber = Nothing,
+      toastMessage = Nothing,
+      secondaryActions = Nothing,
+      socialMediaLinks = Nothing,
+      showPushNotification = Nothing
+    }
