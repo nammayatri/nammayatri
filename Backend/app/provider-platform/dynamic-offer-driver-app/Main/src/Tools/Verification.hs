@@ -82,7 +82,7 @@ import Kernel.External.Verification as Reexport hiding
   )
 import qualified Kernel.External.Verification as Verification
 import qualified Kernel.External.Verification.Digilocker.Types as DigiTypes
-import Kernel.External.Verification.Interface.InternalScripts
+import Kernel.External.Verification.Interface.InternalScripts hiding (validateImage)
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
