@@ -15,6 +15,7 @@
 module Tools.Error (module Tools.Error) where
 
 import Data.Aeson (Value (Null), object, (.=))
+import qualified Data.Text as T
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -2169,3 +2170,47 @@ instance IsHTTPError CustomAuthError where
     IpHitsLimitExceeded -> E429
 
 instance IsAPIError CustomAuthError
+
+data LedgerAdjustmentError
+  = LedgerAdjustmentDoesNotExist Text
+  | LedgerAdjustmentAlreadyExists Text
+  | LedgerAdjustmentInProgress
+  | LedgerAdjustmentCategoryNotSupported Text
+  | LedgerAdjustmentReferenceTypeNotSupported Text Text [Text]
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LedgerAdjustmentError
+
+instance IsBaseError LedgerAdjustmentError where
+  toMessage (LedgerAdjustmentDoesNotExist adjustmentRequestId) =
+    Just $ "Ledger adjustment request \"" <> adjustmentRequestId <> "\" does not exist."
+  toMessage (LedgerAdjustmentAlreadyExists referenceId) =
+    Just $ "Ledger adjustment request for reference \"" <> referenceId <> "\" already exists."
+  toMessage LedgerAdjustmentInProgress =
+    Just "Ledger adjustment request is already in progress. Please try again."
+  toMessage (LedgerAdjustmentCategoryNotSupported category) =
+    Just $ "Ledger adjustment category \"" <> category <> "\" is not supported."
+  toMessage (LedgerAdjustmentReferenceTypeNotSupported category referenceType supportedReferenceTypes) =
+    Just $
+      "Invalid reference type: "
+        <> referenceType
+        <> ". Supported reference types for category "
+        <> category
+        <> ": "
+        <> T.intercalate ", " supportedReferenceTypes
+
+instance IsHTTPError LedgerAdjustmentError where
+  toErrorCode = \case
+    LedgerAdjustmentDoesNotExist _ -> "LEDGER_ADJUSTMENT_DOES_NOT_EXIST"
+    LedgerAdjustmentAlreadyExists _ -> "LEDGER_ADJUSTMENT_ALREADY_EXISTS"
+    LedgerAdjustmentInProgress -> "LEDGER_ADJUSTMENT_IN_PROGRESS"
+    LedgerAdjustmentCategoryNotSupported _ -> "LEDGER_ADJUSTMENT_CATEGORY_NOT_SUPPORTED"
+    LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> "LEDGER_ADJUSTMENT_REFERENCE_TYPE_NOT_SUPPORTED"
+  toHttpCode = \case
+    LedgerAdjustmentDoesNotExist _ -> E400
+    LedgerAdjustmentAlreadyExists _ -> E400
+    LedgerAdjustmentInProgress -> E409
+    LedgerAdjustmentCategoryNotSupported _ -> E400
+    LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
+
+instance IsAPIError LedgerAdjustmentError

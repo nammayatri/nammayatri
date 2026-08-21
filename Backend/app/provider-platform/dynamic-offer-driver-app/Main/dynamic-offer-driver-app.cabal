@@ -578,6 +578,7 @@ library
       SharedLogic.FareProduct
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.InvoiceRegeneration
+      SharedLogic.Finance.LedgerAdjustment
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation.EntitySync
       SharedLogic.Finance.Reconciliation.Recipes.PostpaidDriverFeeVsPaymentOrder
@@ -885,6 +886,7 @@ library
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
       Storage.Queries.KioskLocationExtra
+      Storage.Queries.LedgerAdjustmentRequestExtra
       Storage.Queries.LocationExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MandateExtra
@@ -1321,6 +1323,7 @@ library
       Domain.Types.KioskLocationTranslation
       Domain.Types.KnowledgeCenter
       Domain.Types.LeaderBoardConfigs
+      Domain.Types.LedgerAdjustmentRequest
       Domain.Types.LlmPrompt
       Domain.Types.LmsCertificate
       Domain.Types.LmsModule
@@ -1511,6 +1514,7 @@ library
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.KnowledgeCenter
       Storage.Beam.LeaderBoardConfigs
+      Storage.Beam.LedgerAdjustmentRequest
       Storage.Beam.LlmPrompt
       Storage.Beam.LmsCertificate
       Storage.Beam.LmsModule
@@ -1706,6 +1710,7 @@ library
       Storage.Queries.KioskLocationTranslation
       Storage.Queries.KnowledgeCenter
       Storage.Queries.LeaderBoardConfigs
+      Storage.Queries.LedgerAdjustmentRequest
       Storage.Queries.LlmPrompt
       Storage.Queries.LmsCertificate
       Storage.Queries.LmsModule
@@ -1789,6 +1794,7 @@ library
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
       Storage.Queries.OrphanInstances.KnowledgeCenter
+      Storage.Queries.OrphanInstances.LedgerAdjustmentRequest
       Storage.Queries.OrphanInstances.Location
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Mandate

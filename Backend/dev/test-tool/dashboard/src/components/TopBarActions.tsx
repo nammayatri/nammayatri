@@ -385,23 +385,32 @@ export const TopBarActions: React.FC = () => {
               </div>
             </div>
 
-            {/* Group 2: Data Pipeline */}
-            {syncEnvs.length > 0 && (
-              <div className="tb-floating-section" title="Data Pipeline">
-                <div className="tb-floating-section-label">Data Pipeline</div>
-                <div className="tb-floating-section-row">
-                  <button
-                    className={`tb-btn tb-sync${syncStatus === 'done' ? ' tb-ok' : syncStatus === 'error' ? ' tb-err' : ''}${syncRunning ? ' tb-running' : ''}`}
-                    onClick={handleSyncBarClick}
-                    title={syncRunning
+            {/* Group 2: Data Pipeline — always visible. Hidden-until-ready made
+                the button look missing while test-context-api (7082) was down. */}
+            <div className="tb-floating-section" title="Data Pipeline">
+              <div className="tb-floating-section-label">Data Pipeline</div>
+              <div className="tb-floating-section-row">
+                <button
+                  className={`tb-btn tb-sync tb-sync-span${syncEnvs.length === 0 ? ' tb-waiting' : ''}${syncStatus === 'done' ? ' tb-ok' : syncStatus === 'error' ? ' tb-err' : ''}${syncRunning ? ' tb-running' : ''}`}
+                  onClick={handleSyncBarClick}
+                  disabled={syncEnvs.length === 0}
+                  title={syncEnvs.length === 0
+                    ? `Waiting for test-context-api at ${CONTEXT_API} (GET /api/config-sync/envs). Retrying every 5s.`
+                    : syncRunning
                       ? `Sync from ${syncFrom} in progress — click to view logs / change source`
                       : `Open Sync Data modal (current source: ${syncFrom}). Imports data from the S3 bundle, applies local-testing-data + feature-migrations, then restarts services.`}
-                  >
-                    ⚡ {syncRunning ? `Sync · ${syncFrom} · ${elapsed}s` : syncStatus === 'done' ? 'Synced' : syncStatus === 'error' ? 'Sync Error' : `Sync Data`}
-                  </button>
-                </div>
+                >
+                  ⚡ {syncEnvs.length === 0
+                    ? 'Sync Data · waiting'
+                    : syncRunning ? `Sync · ${syncFrom} · ${elapsed}s` : syncStatus === 'done' ? 'Synced' : syncStatus === 'error' ? 'Sync Error' : `Sync Data`}
+                </button>
               </div>
-            )}
+              {syncEnvs.length === 0 && (
+                <div className="tb-floating-hint">
+                  Waiting for <code>test-context-api</code> at <code>{CONTEXT_API}</code>. Retrying every 5s.
+                </div>
+              )}
+            </div>
 
             {/* Group 3: Visualizations */}
             <div className="tb-floating-section" title="Visualizations">
