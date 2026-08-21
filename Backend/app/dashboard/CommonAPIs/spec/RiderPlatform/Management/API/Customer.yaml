@@ -41,6 +41,8 @@ apis:
       auth: ApiAuthV2
       params:
         customerId: Id Customer
+      request:
+        type: BlockCustomerReq
       response:
         type: APISuccess
       migrate:
@@ -158,12 +160,16 @@ types:
     - enabled: Bool
     - blocked: Bool
     - paymentMode: Maybe PaymentMode
+  BlockCustomerReq:
+    - blockReason: Maybe Text
+    - derive: "'HideSecrets"
   CustomerInfoRes:
     - numberOfRides: Int
     - falseSafetyAlarmCount: Int
     - safetyCenterDisabledOnDate: Maybe UTCTime
     - totalSosCount: Int
     - paymentMode: Maybe PaymentMode
+    - blockedReason: Maybe Text
   CancellationDuesDetailsRes:
     - cancellationDues: PriceAPIEntity
     - cancellationDuesPaid: HighPrecMoney

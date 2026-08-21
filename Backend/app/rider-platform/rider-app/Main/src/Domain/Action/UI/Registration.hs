@@ -810,6 +810,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         updatedAt = now,
         blockedAt = if useFraudDetection then personWithSameDeviceToken >>= (.blockedAt) else Nothing,
         blockedByRuleId = if useFraudDetection then personWithSameDeviceToken >>= (.blockedByRuleId) else Nothing,
+        blockedReason = Nothing,
         aadhaarVerified = False,
         clientSdkVersion = clientSdkVersion,
         clientBundleVersion = clientBundleVersion,

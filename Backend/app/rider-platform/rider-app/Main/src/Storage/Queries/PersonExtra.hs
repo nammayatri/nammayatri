@@ -261,6 +261,15 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
         )
         [Se.Is BeamP.id (Se.Eq personId)]
 
+updateBlockedReason :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Text -> m ()
+updateBlockedReason (Id personId) blockedReason = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.blockedReason blockedReason,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 updatingAuthEnabledAndBlockedState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Maybe Bool -> Maybe UTCTime -> m ()
 updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blockedUntil = do
   person <- findByPId (Id personId)

@@ -307,3 +307,9 @@ ALTER TABLE atlas_app.person ADD COLUMN has_pass_till date ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN blocked_reason text ;
