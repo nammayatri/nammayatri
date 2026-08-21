@@ -36,15 +36,14 @@ import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest as DTdsReq
 import qualified Lib.Finance.Domain.Types.LedgerEntry as DLE
-import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementInvoiceMapping as QTdsMap
 import qualified Lib.Finance.Storage.Queries.FinanceTdsReimbursementRequest as QTdsReq
-import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
+import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -436,6 +435,9 @@ validateTdsReimbursementAdjustment merchantOpCity personId direction req = do
   postedAdjustmentEntries <- getSettledTdsReimbursementAdjustmentEntries referenceId
   unless (null postedAdjustmentEntries) $
     throwError (InvalidRequest "TDS reimbursement already has a posted ledger adjustment for this request")
+
+  mappingsWithInvoices <- TdsReimbursement.findInvoiceMappings tdsRequest.id
+  TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement (Just tdsRequest.id) (snd <$> mappingsWithInvoices)
 
 -- | Frozen payable from WS8 submit: Σ invoice-mapping tdsCreditReceivable.
 sumTdsCreditReceivableForRequest ::
@@ -981,23 +983,8 @@ postTdsReimbursementAdjustment transporterConfig adjustmentRequest = do
   unless (null postedAdjustmentEntries) $
     throwError (InvalidRequest "TDS reimbursement already has a posted ledger adjustment for this request")
 
-  mappings <- QTdsMap.findAllByRequestId tdsRequest.id
-  when (null mappings) $
-    throwError (InvalidRequest $ "No invoice mappings for TDS reimbursement request: " <> referenceId)
-
-  existingDirectTax <- QDirectTax.findByReferenceId referenceId
-  let existingReimbursedInvoiceNumbers =
-        [ invoiceNumber
-          | txn <- existingDirectTax,
-            txn.tdsTreatment == DirectTax.Reimbursed,
-            Just invoiceNumber <- [txn.invoiceNumber]
-        ]
-
-  mappingsWithInvoices <- forM mappings $ \mapping -> do
-    invoice <-
-      QFinanceInvoice.findById mapping.invoiceId
-        >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> mapping.invoiceId.getId)
-    pure (mapping, invoice)
+  mappingsWithInvoices <- TdsReimbursement.findInvoiceMappings tdsRequest.id
+  TdsReimbursement.assertInvoicesNotAlreadyClaimedForTdsReimbursement (Just tdsRequest.id) (snd <$> mappingsWithInvoices)
 
   let directTaxConfigs =
         [ Finance.DirectTaxConfig
@@ -1015,8 +1002,7 @@ postTdsReimbursementAdjustment transporterConfig adjustmentRequest = do
               invoiceNumber = Just invoice.invoiceNumber
             }
           | (mapping, invoice) <- mappingsWithInvoices,
-            mapping.tdsCreditReceivable > 0,
-            invoice.invoiceNumber `notElem` existingReimbursedInvoiceNumbers
+            mapping.tdsCreditReceivable > 0
         ]
 
   let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
