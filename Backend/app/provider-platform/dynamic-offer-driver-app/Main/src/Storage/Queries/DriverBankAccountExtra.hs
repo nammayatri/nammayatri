@@ -21,11 +21,13 @@ import Storage.Queries.OrphanInstances.DriverBankAccount ()
 getDriverBankAccounts :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.DriverBankAccount.DriverBankAccount])
 getDriverBankAccounts driverIds = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds)]]
 
--- | Active Stripe connect accounts (charges enabled) in an operating city — used by
---   the connect-account maintenance-charge scheduled job.
-findActiveConnectAccountsByCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [DriverBankAccount]
-findActiveConnectAccountsByCity cityId =
-  findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just cityId.getId), Se.Is Beam.chargesEnabled $ Se.Eq True]]
+findActiveConnectAccountsByCity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Int -> Int -> m [DriverBankAccount]
+findActiveConnectAccountsByCity cityId limit offset =
+  findAllWithOptionsKV
+    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just cityId.getId), Se.Is Beam.chargesEnabled $ Se.Eq True]]
+    (Se.Asc Beam.driverId)
+    (Just limit)
+    (Just offset)
 
 -- Wrapper for src-read-only function with LTS sync
 

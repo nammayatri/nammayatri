@@ -904,7 +904,7 @@ paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
 paymentChargeForAppFee mbCharge mbBearer =
   case mbBearer of
     Just bearer
-      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER", "PAYMENT_CUSTOMER_AND_DRIVER"] -> fromMaybe 0 mbCharge
+      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER"] -> fromMaybe 0 mbCharge
     _ -> 0
 
 makePaymentIntent ::

@@ -434,7 +434,7 @@ data BecknTag
   | FIXED_CARD_CHARGE
   | COMMISSION
   | PAYMENT_CHARGE -- Stripe payment-gateway charge amount (settlement detail, like COMMISSION)
-  | PAYMENT_CHARGE_BEARER -- who bears the payment charge: PAYMENT_CUSTOMER / PAYMENT_DRIVER / PAYMENT_PLATFORM / PAYMENT_CUSTOMER_AND_DRIVER
+  | PAYMENT_CHARGE_BEARER
   | -- Info tags
     SPECIAL_LOCATION_TAG
   | SPECIAL_LOCATION_NAME
