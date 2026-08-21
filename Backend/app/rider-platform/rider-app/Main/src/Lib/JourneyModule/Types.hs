@@ -119,6 +119,8 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
