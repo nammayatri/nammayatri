@@ -45,6 +45,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import qualified SharedLogic.SearchTryLocker as CS
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
@@ -165,7 +167,11 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           cancelOrReallocate ride cReason True (RideCancel.MerchantRequestorId (merchantId, merchantOperatingCityId))
                           return $ Terminate "Job is Terminated and Ride is Reallocated because driver can't reach pickup of its scheduled booking on time."
                         else do
-                          void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
+                          -- activation releases this hold: re-point the gate at the earliest remaining one (single-slot -> clear)
+                          -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
+                          CS.withDriverScheduledHoldLock driverId $ do
+                            mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig driverId bookingId
+                            void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True (fst <$> mbNextHold) (snd <$> mbNextHold) driverId
                           whenJust (booking.toLocation) $ \toLoc -> do
                             QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
                           void $ QRide.updateStatus ride.id DRide.NEW

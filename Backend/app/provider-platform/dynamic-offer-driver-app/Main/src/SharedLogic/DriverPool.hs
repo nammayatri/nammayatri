@@ -126,6 +126,7 @@ import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -1145,7 +1146,11 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
   let minimumScheduledBookingLeadTimeInSecs = KP.intToNominalDiffTime (transporterConfig.minmRentalAndScheduledBookingLeadTimeHours.getHours * 3600)
       scheduledRideFilterExclusionThresholdInSecs = KP.intToNominalDiffTime (transporterConfig.scheduledRideFilterExclusionThresholdHours.getHours * 3600)
       haveScheduled = isJust driverInfo.latestScheduledBooking
+      avgSpeedKmph = fromMaybe 25.0 transporterConfig.scheduledRideAvgSpeedKmph
   if
+      -- the new ride is itself scheduled: interval feasibility against the driver's committed set (Case 2);
+      -- the arms below assume an ad-hoc ride running now (Case 1) and stay unchanged
+      | currentSearchInfo.searchTry.isScheduled -> scheduledCandidateFilter now driverInfo
       | haveScheduled && isIntercity -> return False
       | haveScheduled && isRental -> return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
       | isScheduledRideUnderFilterExclusionThresholdHours driverInfo.latestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs -> do
@@ -1163,7 +1168,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
             let destToPickupDistance = currentDroptoScheduledPickupDistance.distance
                 totalDistanceinM = routeDistance + destToPickupDistance + driverPoolWithActualDistResult.actualDistanceToPickup
                 totalDistanceinKM = (fromIntegral (totalDistanceinM.getMeters) :: Double) / 1000
-                totalTimeinDoubleHr = (totalDistanceinKM / 25.0) :: Double -- consider 25 kmph as avg speed, can do it properly later
+                totalTimeinDoubleHr = (totalDistanceinKM / avgSpeedKmph) :: Double -- per-city configurable avg speed; defaults to the legacy 25 kmph
                 totalTimeInSeconds = realToFrac (totalTimeinDoubleHr * 3600) :: NominalDiffTime
                 expectedEndTime = addUTCTime totalTimeInSeconds now
                 isRidePossible = case driverInfo.latestScheduledBooking of
@@ -1175,6 +1180,22 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
           (_, _, _) -> return False
       | otherwise -> return True
   where
+    -- no commitment -> surface; else cap on holds + feasibility vs committed set (in-progress counts as a predecessor)
+    scheduledCandidateFilter now driverInfo
+      | not (isJust driverInfo.latestScheduledBooking) && driverInfo.onRide /= Just True = return True
+      | otherwise = do
+        committed <- SBOC.getDriverCommittedRides (cast driverInfo.driverId)
+        if SBOC.countActiveHolds committed >= transporterConfig.maxScheduledHoldsPerDriver
+          then return False
+          else do
+            let candidate =
+                  SBOC.ScheduledCandidate
+                    { candidateStart = currentSearchInfo.searchTry.startTime,
+                      candidateEnd = addUTCTime (maybe 0 Kernel.Utils.Common.secondsToNominalDiffTime currentSearchInfo.estimatedDuration) currentSearchInfo.searchTry.startTime,
+                      candidatePickup = currentSearchInfo.pickupLocation,
+                      candidateDrop = currentSearchInfo.dropLocation
+                    }
+            SBOC.isCandidateFeasible merchantId merchantOpCityId transporterConfig candidate (SBOC.mkCommittedIntervals now Nothing committed)
     canTakeRental :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
     canTakeRental mbLatestScheduledBooking now minimumScheduledBookingLeadTimeInSecs =
       case mbLatestScheduledBooking of

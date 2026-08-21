@@ -289,6 +289,7 @@ import qualified SharedLogic.MetricsLabels as SML
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Pricing
 import SharedLogic.Ride
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
@@ -338,7 +339,6 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import Storage.Queries.Ride as Ride
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -2270,6 +2270,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
+  when booking.isScheduled $ ensureNoScheduledOverlap transporterConfig booking
   when booking.isScheduled $ removeBookingFromRedis booking
   isBookingCancelled' <- CS.isBookingCancelled booking.id
   when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
@@ -2281,7 +2282,25 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
     QST.updateStatus DST.COMPLETED searchTry.id
     mSReqFD <- QSRD.findByDriverAndSearchTryId driver.id searchTry.id
     whenJust mSReqFD $ \sReqFD -> QBooking.updateDqDurationToPickup booking.id sReqFD.durationToPickup
-  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
+  (ride, _, vehicle) <-
+    if booking.isScheduled
+      then -- per-driver lock: two overlapping scheduled accepts hold different per-booking locks, so serialize
+      -- here; 60s TTL covers the worst-case critical section (feasibility legs + initializeRide)
+      Redis.withWaitAndLockRedis (CS.driverScheduledHoldLockKey driver.id) 60 5000 $ do
+        -- authoritative re-check; a conflict here means we lost a race after the pre-flight passed,
+        -- so restore the side effects the prefix above already performed before rejecting
+        recheck <- withTryCatch "acceptScheduledOverlapLocked" $ ensureNoScheduledOverlap transporterConfig booking
+        case recheck of
+          Right _ -> pure ()
+          Left exc -> do
+            CS.markBookingAssignmentCompleted booking.id
+            void $ addScheduledBookingInRedis booking
+            throwM exc
+        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
+        -- gate write stays under the lock so concurrent accepts/releases cannot lose the min
+        updateLatestScheduledAsMin booking
+        pure res
+      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
@@ -2290,10 +2309,6 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
   when uBooking.isScheduled $ do
     now <- getCurrentTime
-    let scheduledPickup = uBooking.fromLocation
-        scheduledTime = uBooking.startTime
-        pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
-    void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
     let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
     createJobIn @_ @'ScheduledRideAssignedOnUpdate (Just merchant.id) (Just booking.merchantOperatingCityId) jobScheduledTime $
       ScheduledRideAssignedOnUpdateJobData
@@ -2304,6 +2319,29 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   CS.markBookingAssignmentCompleted uBooking.id
   return driverFCMPulledList
   where
+    -- gate column keeps the earliest future hold (min); first hold collapses to today's overwrite
+    updateLatestScheduledAsMin booking = do
+      now <- getCurrentTime
+      driverInfo <- QDriverInformation.findById driver.id >>= fromMaybeM DriverInfoNotFound
+      let scheduledTime = booking.startTime
+          pickupPos = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+          keepExisting = maybe False (\existing -> existing > now && existing <= scheduledTime) driverInfo.latestScheduledBooking
+      unless keepExisting $ void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
+    -- single accept guard for board + broadcast: cap on scheduled holds + feasibility vs committed set; Maps failure fails closed
+    ensureNoScheduledOverlap schedulingCfg booking = do
+      committed <- SBOC.getDriverCommittedRides driver.id
+      let activeHolds = SBOC.countActiveHolds committed
+      -- trigger on any commitment (hold or in-progress); cap counts holds only, in-progress enters feasibility as a predecessor
+      unless (null committed) $ do
+        when (activeHolds >= schedulingCfg.maxScheduledHoldsPerDriver) $
+          throwError ScheduledRideOverlapConflict
+        now <- getCurrentTime
+        feasibleRes <-
+          withTryCatch "acceptScheduledOverlap" $
+            SBOC.isCandidateFeasible merchant.id booking.merchantOperatingCityId schedulingCfg (SBOC.mkCandidateFromBooking booking) (SBOC.mkCommittedIntervals now (Just booking.id) committed)
+        case feasibleRes of
+          Right True -> pure ()
+          _ -> throwError ScheduledRideOverlapConflict
     errHandler uBooking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelBooking uBooking (Just driver) merchant >> throwM exc
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelBooking uBooking (Just driver) merchant >> throwM exc
@@ -3247,9 +3285,19 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       case (mbFromDay, mbToDay, mbDLoc') of
         (Just from, Just to, Just dLoc) -> do
           when (from > to) $ throwError (InvalidRequest "From date should be less than to date")
-          case driverInfo.latestScheduledBooking of
-            Just _ -> pure $ ScheduledBookingRes []
-            Nothing -> do
+          -- no commitment -> full board; at hold cap -> empty; else filter per-booking feasibility vs committed set
+          mbCommittedForBoard <-
+            if isNothing driverInfo.latestScheduledBooking && not driverInfo.onRide
+              then pure (Just [])
+              else do
+                committed <- SBOC.getDriverCommittedRides personId
+                pure $
+                  if SBOC.countActiveHolds committed >= transporterConfig.maxScheduledHoldsPerDriver
+                    then Nothing
+                    else Just committed
+          case mbCommittedForBoard of
+            Nothing -> pure $ ScheduledBookingRes []
+            Just committed -> do
               serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) Nothing Nothing Nothing personId cityId
               let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
@@ -3263,7 +3311,16 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                       offset = fromMaybe 0 mbOffset
                       safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
                   scheduledBookings <- getScheduledBookings from cityId vehicleVariants (Just dLoc) transporterConfig (Just availableServiceTiers) tripCategory limit offset safelimit
-                  bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
+                  feasibleBookings <-
+                    if null committed
+                      then pure (catMaybes scheduledBookings)
+                      else do
+                        now <- getCurrentTime
+                        let intervals = SBOC.mkCommittedIntervals now Nothing committed
+                        filterM
+                          (\bkg -> either (const False) identity <$> withTryCatch "boardScheduledOverlap" (SBOC.isCandidateFeasible driver.merchantId cityId transporterConfig (SBOC.mkCandidateFromBooking bkg) intervals))
+                          (catMaybes scheduledBookings)
+                  bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) feasibleBookings
                   let sortedBookings = sortBookingsByDistance (catMaybes bookings)
                   return $ ScheduledBookingRes sortedBookings
                 else return $ ScheduledBookingRes []
@@ -3396,8 +3453,7 @@ acceptScheduledBookingWithPreFetched ::
   Maybe DRB.Booking ->
   Flow APISuccess
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking = do
-  upcomingOrActiveRide <- runInReplica $ QRide.getUpcomingOrActiveByDriverId driver.id
-  unless (isNothing upcomingOrActiveRide) $ throwError (RideInvalidStatus "Cannot accept booking during active or already having upcoming ride.")
+  -- overlap enforced by the shared accept guard (ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking
   pure Success
@@ -3409,6 +3465,8 @@ acceptScheduledBooking ::
   Flow APISuccess
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  -- the list-disable flag also gates assignment, so one switch turns the board feature fully off
+  when transporterConfig.disableListScheduledBookingAPI $ throwError (InvalidRequest "Scheduled booking assignment is disabled")
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
