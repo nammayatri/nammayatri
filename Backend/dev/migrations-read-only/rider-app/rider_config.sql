@@ -814,3 +814,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_aversion double 
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_walk_pct_of_ride double precision ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_min_saving_pct_of_ride double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN bus_tracking_notification_tiers TYPE text [];
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_auto_check_in boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_check_in_required_consecutive_pings integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_check_in_max_ping_age_seconds double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_check_in_match_radius_in_meters double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN auto_check_in_bearing_tolerance_degrees double precision ;

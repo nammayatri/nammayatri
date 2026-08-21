@@ -1785,6 +1785,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
   return $
     DJL.JourneyLeg
       { agency = leg.agency,
+        autoCheckInPredictionCorrect = Nothing,
         distance = Just leg.distance,
         duration = Just leg.duration,
         groupCode,

@@ -25,6 +25,10 @@ import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
   { appUrl :: B.C f Kernel.Prelude.Text,
+    autoCheckInBearingToleranceDegrees :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    autoCheckInMatchRadiusInMeters :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    autoCheckInMaxPingAgeSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    autoCheckInRequiredConsecutivePings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     autoSendBookingDetailsViaWhatsapp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Kilometers),
@@ -67,6 +71,7 @@ data RiderConfigT f = RiderConfigT
     emailBusinessVerificationConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig),
     emailMagicLinkConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig),
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableAutoCheckIn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableAutoJourneyRefund :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBetterRoutePointSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBusFiltering :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

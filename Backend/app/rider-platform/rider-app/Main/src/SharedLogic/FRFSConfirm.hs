@@ -920,6 +920,7 @@ buildJourneyAndLeg booking fareParameters = do
     let journeyLeg =
           DJL.JourneyLeg
             { id = journeyLegGuid,
+              autoCheckInPredictionCorrect = Nothing,
               mode = mapVehicleCategoryToTripMode booking.vehicleType,
               groupCode = Nothing,
               startLocation = LatLngV2 fromLocation.lat fromLocation.lon,

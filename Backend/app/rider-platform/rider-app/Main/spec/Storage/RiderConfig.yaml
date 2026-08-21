@@ -221,6 +221,11 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
+    enableAutoCheckIn: Maybe Bool
+    autoCheckInMatchRadiusInMeters: Maybe Double
+    autoCheckInRequiredConsecutivePings: Maybe Int
+    autoCheckInBearingToleranceDegrees: Maybe Double
+    autoCheckInMaxPingAgeSeconds: Maybe Double
     busTierSortingConfig: "Maybe [BusTierSortingConfig]"
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int

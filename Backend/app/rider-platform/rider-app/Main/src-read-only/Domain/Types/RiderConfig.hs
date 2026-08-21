@@ -27,6 +27,10 @@ import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
   { appUrl :: Kernel.Prelude.Text,
+    autoCheckInBearingToleranceDegrees :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    autoCheckInMatchRadiusInMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    autoCheckInMaxPingAgeSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    autoCheckInRequiredConsecutivePings :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
@@ -69,6 +73,7 @@ data RiderConfig = RiderConfig
     emailBusinessVerificationConfig :: Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig,
     emailMagicLinkConfig :: Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
+    enableAutoCheckIn :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableAutoJourneyRefund :: Kernel.Prelude.Bool,
     enableBetterRoutePointSuggestion :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableBusFiltering :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

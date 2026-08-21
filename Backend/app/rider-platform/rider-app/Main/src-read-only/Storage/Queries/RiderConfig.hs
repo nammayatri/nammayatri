@@ -49,6 +49,10 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.appUrl appUrl,
+      Se.Set Beam.autoCheckInBearingToleranceDegrees autoCheckInBearingToleranceDegrees,
+      Se.Set Beam.autoCheckInMatchRadiusInMeters autoCheckInMatchRadiusInMeters,
+      Se.Set Beam.autoCheckInMaxPingAgeSeconds autoCheckInMaxPingAgeSeconds,
+      Se.Set Beam.autoCheckInRequiredConsecutivePings autoCheckInRequiredConsecutivePings,
       Se.Set Beam.autoSendBookingDetailsViaWhatsapp autoSendBookingDetailsViaWhatsapp,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
       Se.Set Beam.avgSpeedInKmPerHr (Just avgSpeedInKmPerHr),
@@ -91,6 +95,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.emailBusinessVerificationConfig emailBusinessVerificationConfig,
       Se.Set Beam.emailMagicLinkConfig emailMagicLinkConfig,
       Se.Set Beam.emailOtpConfig emailOtpConfig,
+      Se.Set Beam.enableAutoCheckIn enableAutoCheckIn,
       Se.Set Beam.enableAutoJourneyRefund (Just enableAutoJourneyRefund),
       Se.Set Beam.enableBetterRoutePointSuggestion enableBetterRoutePointSuggestion,
       Se.Set Beam.enableBusFiltering enableBusFiltering,
@@ -247,6 +252,10 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
       Just
         Domain.Types.RiderConfig.RiderConfig
           { appUrl = appUrl,
+            autoCheckInBearingToleranceDegrees = autoCheckInBearingToleranceDegrees,
+            autoCheckInMatchRadiusInMeters = autoCheckInMatchRadiusInMeters,
+            autoCheckInMaxPingAgeSeconds = autoCheckInMaxPingAgeSeconds,
+            autoCheckInRequiredConsecutivePings = autoCheckInRequiredConsecutivePings,
             autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
             avgSpeedInKmPerHr = fromMaybe 20 avgSpeedInKmPerHr,
@@ -289,6 +298,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             emailBusinessVerificationConfig = emailBusinessVerificationConfig,
             emailMagicLinkConfig = emailMagicLinkConfig,
             emailOtpConfig = emailOtpConfig,
+            enableAutoCheckIn = enableAutoCheckIn,
             enableAutoJourneyRefund = fromMaybe False enableAutoJourneyRefund,
             enableBetterRoutePointSuggestion = enableBetterRoutePointSuggestion,
             enableBusFiltering = enableBusFiltering,
@@ -442,6 +452,10 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' (Domain.Types.RiderConfig.RiderConfig {..}) = do
     Beam.RiderConfigT
       { Beam.appUrl = appUrl,
+        Beam.autoCheckInBearingToleranceDegrees = autoCheckInBearingToleranceDegrees,
+        Beam.autoCheckInMatchRadiusInMeters = autoCheckInMatchRadiusInMeters,
+        Beam.autoCheckInMaxPingAgeSeconds = autoCheckInMaxPingAgeSeconds,
+        Beam.autoCheckInRequiredConsecutivePings = autoCheckInRequiredConsecutivePings,
         Beam.autoSendBookingDetailsViaWhatsapp = autoSendBookingDetailsViaWhatsapp,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
         Beam.avgSpeedInKmPerHr = Just avgSpeedInKmPerHr,
@@ -484,6 +498,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.emailBusinessVerificationConfig = emailBusinessVerificationConfig,
         Beam.emailMagicLinkConfig = emailMagicLinkConfig,
         Beam.emailOtpConfig = emailOtpConfig,
+        Beam.enableAutoCheckIn = enableAutoCheckIn,
         Beam.enableAutoJourneyRefund = Just enableAutoJourneyRefund,
         Beam.enableBetterRoutePointSuggestion = enableBetterRoutePointSuggestion,
         Beam.enableBusFiltering = enableBusFiltering,

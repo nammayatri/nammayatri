@@ -395,3 +395,8 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN user_preferred_service_tier text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_tag_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN auto_check_in_prediction_correct boolean ;

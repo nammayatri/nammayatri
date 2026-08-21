@@ -333,6 +333,7 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
           journeyLeg =
             DJL.JourneyLeg
               { id = journeyLegGuid,
+                autoCheckInPredictionCorrect = Nothing,
                 mode = mode,
                 groupCode = Nothing,
                 startLocation = LatLngV2 fromLat fromLon,
