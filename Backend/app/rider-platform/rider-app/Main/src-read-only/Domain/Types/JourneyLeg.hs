@@ -20,6 +20,7 @@ import qualified Tools.Beam.UtilsTH
 
 data JourneyLeg = JourneyLeg
   { agency :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalAgency,
+    autoCheckInPredictionCorrect :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busConductorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     busDriverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     busLocationData :: [API.Types.UI.RiderLocation.BusLocation],

@@ -62,6 +62,76 @@ topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> 
 resultKeyFRFS :: Text -> Text
 resultKeyFRFS journeyLegId = "journeyLegResult:" <> journeyLegId
 
+autoCheckInConsecutiveMatchKeyFRFS :: Text -> Text
+autoCheckInConsecutiveMatchKeyFRFS journeyLegId = "autoCheckInConsecutiveMatch:" <> journeyLegId
+
+-- Initial bearing (degrees, 0-360) from fromPoint to toPoint.
+bearingBetweenFRFS :: LatLong -> LatLong -> Double
+bearingBetweenFRFS fromPoint toPoint =
+  let toRad d = d * pi / 180
+      lat1 = toRad fromPoint.lat
+      lat2 = toRad toPoint.lat
+      dLon = toRad (toPoint.lon - fromPoint.lon)
+      y = sin dLon * cos lat2
+      x = cos lat1 * sin lat2 - sin lat1 * cos lat2 * cos dLon
+      thetaDeg = atan2 y x * 180 / pi
+   in if thetaDeg < 0 then thetaDeg + 360 else thetaDeg
+
+angleDifferenceFRFS :: Double -> Double -> Double
+angleDifferenceFRFS a b = let d = abs (a - b) in min d (360 - d)
+
+-- For a pre-assigned vehicle (e.g. Kolkata shuttle bookings, where booking.vehicleNumber is
+-- already known): checks the rider's ping is within radius of that vehicle's live position and,
+-- when both bearings are available, moving the same direction as it. Tracks a running match score
+-- (incremented on a match, decremented on a miss, left alone when the vehicle's telemetry is simply
+-- unavailable) and reports true once it crosses the configured threshold.
+checkKnownVehicleMatchFRFS ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
+  Text ->
+  APITypes.RiderLocationReq ->
+  Maybe APITypes.RiderLocationReq ->
+  DJourneyLeg.JourneyLeg ->
+  DomainRiderConfig.RiderConfig ->
+  DIBC.IntegratedBPPConfig ->
+  m Bool
+checkKnownVehicleMatchFRFS vehicleNumber riderLocationReq mbPrevRiderPoint journeyLeg riderConfig integratedBppConfig = do
+  mbBusData <- getBusLiveInfo vehicleNumber integratedBppConfig
+  let key = autoCheckInConsecutiveMatchKeyFRFS journeyLeg.id.getId
+  case mbBusData of
+    Nothing -> pure False
+    Just busData -> do
+      let pingAgeSeconds = abs (Time.diffUTCTime riderLocationReq.currTime (posixSecondsToUTCTime (fromIntegral busData.timestamp)))
+      -- A binary trust gate for one specific pre-assigned vehicle, feeding an action that marks a
+      -- ticket used -- deliberately tighter than busTrackingConfig.thresholdSeconds (30s), which
+      -- exists for the voting system's relative ranking across many candidate buses and tolerates
+      -- more slop than a moving bus's position staying meaningfully close to autoCheckInMatchRadius.
+      let maxPingAgeSeconds = fromMaybe 10.0 riderConfig.autoCheckInMaxPingAgeSeconds
+      let isStale = pingAgeSeconds >= realToFrac maxPingAgeSeconds
+      if isStale
+        then -- Stale telemetry (tracker lost signal, etc.) isn't evidence either way, so it's left alone
+        -- like the no-data case rather than counted as a miss.
+          pure False
+        else do
+          let busLoc = LatLong busData.latitude busData.longitude
+          let distanceMeters :: Double = realToFrac (highPrecMetersToMeters (distanceBetweenInMeters riderLocationReq.latLong busLoc))
+          let matchRadius = fromMaybe 30.0 riderConfig.autoCheckInMatchRadiusInMeters
+          let bearingOk = fromMaybe True $ do
+                busBearing <- busData.bearing
+                prevPoint <- mbPrevRiderPoint
+                let riderBearing = bearingBetweenFRFS prevPoint.latLong riderLocationReq.latLong
+                let tolerance = fromMaybe 45.0 riderConfig.autoCheckInBearingToleranceDegrees
+                pure (angleDifferenceFRFS busBearing riderBearing <= tolerance)
+          if distanceMeters <= matchRadius && bearingOk
+            then do
+              matchScore <- Hedis.incr key
+              Hedis.expire key 300
+              let requiredPings = fromMaybe 3 riderConfig.autoCheckInRequiredConsecutivePings
+              pure (matchScore >= fromIntegral requiredPings)
+            else do
+              void $ Hedis.decr key
+              Hedis.expire key 300
+              pure False
+
 isYetToReachStop :: Text -> UTCTime -> FullBusData -> Bool
 isYetToReachStop stopCode now bus =
   case bus.busData.eta_data of

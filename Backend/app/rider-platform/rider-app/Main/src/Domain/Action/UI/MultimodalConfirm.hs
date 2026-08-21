@@ -42,6 +42,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalRouteAvailability,
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
+    postMultimodalOrderAutoCheckInFeedback,
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
     postStoreTowerInfo,
@@ -2834,8 +2835,93 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
     API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder _subLegOrder req = do
-  let vehicleNumber = req.vehicleNumber
+postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder req =
+  if req.verifyProximityOnly == Just True
+    then verifyProximityAndSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder req
+    else do
+      vehicleNumber <- req.vehicleNumber & fromMaybeM (InvalidRequest "vehicleNumber is required")
+      setOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder vehicleNumber DJourneyLeg.UserActivated
+
+-- Client-triggered check: it already knows (from its own GPS and the last routeServiceability poll)
+-- that the rider looks close to the booked vehicle, so it asks the server to verify and, only on a
+-- real match against booking.vehicleNumber's live position, actually check the rider in.
+verifyProximityAndSetOnboardedVehicleDetails ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Int ->
+  Kernel.Prelude.Int ->
+  API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq ->
+  Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+verifyProximityAndSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder req = do
+  latLong <- req.latLong & fromMaybeM (InvalidRequest "latLong is required when verifyProximityOnly is set")
+  journey <- JM.getJourney journeyId
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  let alreadyCheckedIn = case journeyLeg.finalBoardedBusNumberSource of
+        Just DJourneyLeg.UserActivated -> True
+        Just DJourneyLeg.Detected -> True
+        _ -> False
+  if alreadyCheckedIn
+    then currentJourneyInfo journey
+    else do
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
+      legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
+      booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
+      -- booking.vehicleNumber is the pre-assigned bus (Kolkata shuttle bookings); nothing to verify without it.
+      case booking.vehicleNumber of
+        Nothing -> currentJourneyInfo journey
+        Just vehicleNumber -> do
+          vehicleType <- case journeyLeg.mode of
+            DTrip.Bus -> return Enums.BUS
+            DTrip.Metro -> return Enums.METRO
+            DTrip.Subway -> return Enums.SUBWAY
+            _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
+          integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+          -- Prefer the client's own capture time over server-receive time: on a slow/retried upload the
+          -- two can drift by several seconds, which would otherwise skew the bus-ping staleness check.
+          now <- getCurrentTime
+          let riderLocationReq = ApiTypes.RiderLocationReq {latLong, currTime = fromMaybe now req.timestamp}
+          isMatch <- JLCF.checkKnownVehicleMatchFRFS vehicleNumber riderLocationReq Nothing journeyLeg riderConfig integratedBPPConfig
+          if isMatch
+            then setOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder subLegOrder vehicleNumber DJourneyLeg.Detected
+            else currentJourneyInfo journey
+  where
+    currentJourneyInfo journey = do
+      updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+      generateJourneyInfoResponse journey updatedLegs
+
+-- Ground-truth feedback on an auto check-in. "Was this Detected leg's prediction right?" — only
+-- meaningful, and only settable once, for a leg that's actually auto-checked-in and unanswered;
+-- Detected + Nothing means auto-checked-in and pending, Detected + Just _ means already answered.
+postMultimodalOrderAutoCheckInFeedback ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.AutoCheckInFeedbackReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postMultimodalOrderAutoCheckInFeedback (_mbPersonId, _merchantId) journeyId legOrder req = do
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  let pendingAutoCheckIn = journeyLeg.finalBoardedBusNumberSource == Just DJourneyLeg.Detected && isNothing journeyLeg.autoCheckInPredictionCorrect
+  when pendingAutoCheckIn $
+    QJourneyLeg.updateByPrimaryKey $
+      journeyLeg {DJourneyLeg.autoCheckInPredictionCorrect = Just req.confirmed}
+  pure Kernel.Types.APISuccess.Success
+
+setOnboardedVehicleDetails ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Int ->
+  Kernel.Prelude.Int ->
+  Kernel.Prelude.Text ->
+  DJourneyLeg.BusBoardingMethod ->
+  Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+setOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder _subLegOrder vehicleNumber boardingMethod = do
   mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
   journey <- JM.getJourney journeyId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
@@ -2906,7 +2992,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
       { DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber,
-        DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
+        DJourneyLeg.finalBoardedBusNumberSource = Just boardingMethod,
         DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
         DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
         DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
@@ -2916,7 +3002,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
   fork "FRFS Analytics: sync vehicle data to ticket booking" $
     QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
       (Just vehicleNumber)
-      (Just DJourneyLeg.UserActivated)
+      (Just boardingMethod)
       vehicleLiveRouteInfo.waybillId
       vehicleLiveRouteInfo.scheduleNo
       vehicleLiveRouteInfo.depot

@@ -48,6 +48,10 @@ data AlternateRouteDetails = AlternateRouteDetails {isLive :: Kernel.Prelude.Boo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AutoCheckInFeedbackReq = AutoCheckInFeedbackReq {confirmed :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AvailableRoute = AvailableRoute
   { quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote),
     routeCode :: Kernel.Prelude.Text,
@@ -288,7 +292,12 @@ data MultimodalUserPreferences = MultimodalUserPreferences
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: Kernel.Prelude.Text}
+data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq
+  { latLong :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verifyProximityOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

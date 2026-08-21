@@ -18,6 +18,7 @@ import Tools.Beam.UtilsTH
 data JourneyLegT f = JourneyLegT
   { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    autoCheckInPredictionCorrect :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     busConductorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     busDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

@@ -57,6 +57,15 @@ updateFRFSTicketBookingVehicleDataById
       ]
       [Se.Is Beam.id $ Se.Eq bookingId.getId]
 
+updateFRFSTicketBookingVehicleNumberById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
+updateFRFSTicketBookingVehicleNumberById vehicleNumber bookingId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.vehicleNumber vehicleNumber,
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.id $ Se.Eq bookingId.getId]
+
 updateBookingAuthCodeById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Text -> Id FRFSTicketBooking -> m ()
 updateBookingAuthCodeById bookingAuthCode id = do
   now <- getCurrentTime

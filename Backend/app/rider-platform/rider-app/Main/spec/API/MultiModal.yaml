@@ -430,7 +430,13 @@ types:
     shortName: Text
 
   OnboardedVehicleDetailsReq:
-    vehicleNumber: Text
+    vehicleNumber: Maybe Text
+    latLong: Maybe LatLong
+    verifyProximityOnly: Maybe Bool
+    timestamp: Maybe UTCTime
+
+  AutoCheckInFeedbackReq:
+    confirmed: Bool
 
   TowerInfo:
     networkType: Text
@@ -707,6 +713,16 @@ apis:
         type: OnboardedVehicleDetailsReq
       response:
         type: JourneyInfoResp
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/autoCheckInFeedback
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: AutoCheckInFeedbackReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
       endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatus/{status}
