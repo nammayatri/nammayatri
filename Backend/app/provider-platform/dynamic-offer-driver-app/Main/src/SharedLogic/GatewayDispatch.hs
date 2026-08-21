@@ -76,9 +76,9 @@ dispatchAction merchantId domain action mbPeerSubId req signedCall unsignedCall 
       base <- asks (.fabricGatewayBaseUrl)
       mbCfg <- QBC.findByMerchantIdDomainAndBecknProtocol (Just merchant.id) (show domain) (Just Domain.Beckn_V3)
       let mbNetworkId = mbCfg >>= (.networkId)
-          subId = merchant.subscriberId.getShortId
-          url = base {baseUrlPath = baseUrlPath base <> "/bpp/caller/" <> T.unpack subId}
-          bppReceiverUri = showBaseUrl $ base {baseUrlPath = baseUrlPath base <> "/bpp/receiver/" <> T.unpack subId}
+          fabricBppId = maybe (merchant.subscriberId.getShortId) (.subscriberId) mbCfg
+          url = base {baseUrlPath = baseUrlPath base <> "/bpp/caller/" <> T.unpack fabricBppId}
+          bppReceiverUri = showBaseUrl $ base {baseUrlPath = baseUrlPath base <> "/bpp/receiver/" <> T.unpack fabricBppId}
           mappedAction = BecknContext.fabricActionName action
           jsonReq = A.toJSON req
           mutated = case mbNetworkId of
