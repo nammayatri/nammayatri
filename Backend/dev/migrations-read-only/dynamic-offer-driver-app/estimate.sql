@@ -184,3 +184,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN area text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN navigation_instruction text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN tip_module_config json ;

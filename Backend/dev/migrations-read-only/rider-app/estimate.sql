@@ -700,3 +700,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN navigation_instruction text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN driver_cancellation_not_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN tip_module_config json ;

@@ -15,12 +15,14 @@
 module Domain.Action.UI.Estimate where
 
 import qualified BecknV2.OnDemand.Enums as Enums
+import Control.Applicative ((<|>))
 import Data.Aeson
 import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
 import Domain.Types.EstimateStatus
 import qualified Domain.Types.ServiceTierType as DVST
+import Domain.Types.TipModuleConfig (TipModuleConfig)
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
@@ -82,7 +84,9 @@ data EstimateAPIEntity = EstimateAPIEntity
     insuredAmount :: Maybe Text,
     offer :: Maybe SOffer.CumulativeOfferResp,
     area :: Maybe Text,
-    navigationInstruction :: Maybe Text
+    navigationInstruction :: Maybe Text,
+    tipModuleConfig :: Maybe TipModuleConfig,
+    qar :: Maybe Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -104,8 +108,8 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
 -- Use this when the caller has a preloaded provider lookup so per-estimate
 -- Redis hits (CQBppDetails.findBySubscriberIdAndDomain + QNP.isValueAddNP)
 -- can be skipped.
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> BppDetails -> Bool -> Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}) = do
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> BppDetails -> Bool -> Maybe TipModuleConfig -> Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes mbDefaultTipModuleConfig (Estimate {..}) = do
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
       mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
   return
@@ -138,6 +142,7 @@ mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}
         serviceTierType = vehicleServiceTierType,
         vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
         isInsured = Just isInsured,
+        tipModuleConfig = tipModuleConfig <|> mbDefaultTipModuleConfig,
         ..
       }
   where

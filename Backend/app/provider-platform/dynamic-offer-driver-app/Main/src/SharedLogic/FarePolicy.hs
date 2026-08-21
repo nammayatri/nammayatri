@@ -32,6 +32,7 @@ import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFee
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.TipModuleConfig as DTMC
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -302,7 +303,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           Nothing -> pure (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier mbDriverExtraFeeBounds
       logDebug $ "farePolicy after updating driverExtraFeeBounds: " <> show farePolicy <> " and mbDriverExtraFeeBounds: " <> show mbDriverExtraFeeBounds
-      let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity
+      let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason (congestionChargeMultiplierFromModel >>= (.tipModuleConfig)) mbActualQARFromLocGeohash mbActualQARCity
       mbFareSettlementType <- getFareSettlementTypeForSpecialZone mbSpecialZoneId
       -- Driver cancellation block needs a double opt-in: the service tier enables it,
       -- and the fare policy can explicitly opt out with Just False for finer scopes.
@@ -353,6 +354,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
                 congestionChargePerMin = Nothing,
                 smartTipSuggestion = Nothing,
                 smartTipReason = Nothing,
+                tipModuleConfig = Nothing,
                 mbActualQARFromLocGeohash = Nothing,
                 mbActualQARCity = Nothing
               }
@@ -1215,6 +1217,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                           congestionChargePerMin = Just congestionFee,
                           smartTipSuggestion = smartTip,
                           smartTipReason = result.smartTipReason,
+                          tipModuleConfig = result.tipModuleConfig,
                           congestionChargeMultiplier = Nothing,
                           driverExtraFeeBounds = result.driverExtraFeeBounds,
                           congestionChargeData = FarePolicyD.CongestionChargeData {..},
@@ -1229,6 +1232,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                           congestionChargePerMin = Nothing,
                           smartTipSuggestion = smartTip,
                           smartTipReason = result.smartTipReason,
+                          tipModuleConfig = result.tipModuleConfig,
                           congestionChargeMultiplier = Just congestionChargeMultiplier,
                           congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           driverExtraFeeBounds = result.driverExtraFeeBounds,
@@ -1243,6 +1247,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                           congestionChargePerMin = Nothing,
                           smartTipSuggestion = Just smartTipSuggestion,
                           smartTipReason = result.smartTipReason,
+                          tipModuleConfig = result.tipModuleConfig,
                           congestionChargeMultiplier = Nothing,
                           congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           driverExtraFeeBounds = result.driverExtraFeeBounds,
@@ -1256,6 +1261,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                           congestionChargePerMin = Nothing,
                           smartTipSuggestion = Nothing,
                           smartTipReason = Nothing,
+                          tipModuleConfig = result.tipModuleConfig,
                           congestionChargeMultiplier = Nothing,
                           congestionChargeData = FarePolicyD.CongestionChargeData {..},
                           driverExtraFeeBounds = result.driverExtraFeeBounds,
@@ -1270,6 +1276,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs mbDropQARConfig timeDiffFromU
                       congestionChargePerMin = Nothing,
                       smartTipSuggestion = Nothing,
                       smartTipReason = Nothing,
+                      tipModuleConfig = Nothing,
                       congestionChargeMultiplier = Nothing,
                       congestionChargeData = FarePolicyD.CongestionChargeData {..},
                       driverExtraFeeBounds = Nothing,
@@ -1284,6 +1291,7 @@ data CongestionChargeDetailsModel = CongestionChargeDetailsModel
     congestionChargePerMin :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
+    tipModuleConfig :: Maybe DTMC.TipModuleConfig,
     mbActualQARFromLocGeohash :: Maybe Double,
     mbActualQARCity :: Maybe Double,
     congestionChargeData :: FarePolicyD.CongestionChargeData,

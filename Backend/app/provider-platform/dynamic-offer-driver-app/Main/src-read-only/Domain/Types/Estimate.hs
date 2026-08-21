@@ -11,6 +11,7 @@ import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.TipModuleConfig
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -61,6 +62,7 @@ data Estimate = Estimate
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    tipModuleConfig :: Kernel.Prelude.Maybe Domain.Types.TipModuleConfig.TipModuleConfig,
     tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     tollIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

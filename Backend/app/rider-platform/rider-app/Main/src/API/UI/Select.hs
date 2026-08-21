@@ -116,6 +116,10 @@ select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv
 select2' (personId, merchantId) estimateId req mbJourneyLegData = withPersonIdLogTag personId $ do
   -- Note: This `cancelSearch` only handles cancelling the currently selected estimate's previous searches. If any another estimate was selected previously that UI has to ensure to call cancelSearch for that and then call select upon it's success.
   journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
+    when (isNothing mbJourneyLegData) $ do
+      now <- getCurrentTime
+      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      when (estimate.validTill < now) $ throwError (InvalidRequest $ "Estimate expired " <> show estimate.id)
     void $ cancelSearchUtil (personId, merchantId) estimateId
     dSelectReq <- DSelect.select2 personId estimateId req mbJourneyLegData
     becknReq <- ACL.buildSelectReqV2 dSelectReq

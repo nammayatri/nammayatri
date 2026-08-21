@@ -20,6 +20,7 @@ imports:
   TripCategory: Domain.Types.Common
   VehicleCategory : BecknV2.OnDemand.Enums
   Value: Data.Aeson
+  TipModuleConfig: Domain.Types.TipModuleConfig
   FareSettlementType: Lib.Types.SpecialLocation
 
 Estimate:
@@ -136,6 +137,7 @@ Estimate:
     smartTipReason: Maybe Text
     isInsured: Bool
     qar : Maybe Double
+    tipModuleConfig: Maybe TipModuleConfig
     insuredAmount: Maybe Text
     selectedOfferId: Maybe Text
     isMultimodalSearch: Maybe Bool
@@ -191,6 +193,7 @@ Estimate:
       estimateBreakupListJson: Maybe Value
 
   beamType:
+    tipModuleConfig: Maybe Value
     discount: Maybe HighPrecMoney
     estimatedTotalFare: HighPrecMoney
     estimatedFare: HighPrecMoney
@@ -206,6 +209,7 @@ Estimate:
     isInsured: Maybe Bool
 
   fromTType:
+    tipModuleConfig: tipModuleConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     totalFareRange: mkFareRange
     nightShiftInfo: mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart oldNightShiftCharge currency|E
     businessDiscountInfo: mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency|E
@@ -228,6 +232,7 @@ Estimate:
     isInsured: Kernel.Prelude.fromMaybe False isInsured|E
 
   toTType:
+    tipModuleConfig: tipModuleConfig >>= Just . Data.Aeson.toJSON|E
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
     minTotalFare:  (mkMinTotalFare totalFareRange)|E
     waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amountInt))|E
@@ -264,6 +269,7 @@ Estimate:
     estimateBreakupListJson: Storage.Queries.Transformers.Estimate.encodeEstimateBreakupList estimateBreakupList|E
 
   sqlType:
+    tipModuleConfig: "json"
     estimatedFare: numeric(30,10)
     vehicleIconUrl: character varying(255)
     estimatedTotalFare: numeric(30,2)

@@ -130,6 +130,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
       let tipOptions = Beckn.OnDemand.Utils.OnSearch.getTipOptions item
       let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
+      let tipModuleConfig = Beckn.OnDemand.Utils.OnSearch.getTipModuleConfig item
       pure $
         Left $
           Domain.Action.Beckn.OnSearch.EstimateInfo
@@ -170,6 +171,7 @@ tfQuotesInfo provider fulfillments validTill item = do
               smartTipSuggestion,
               qar = qar_,
               smartTipReason,
+              tipModuleConfig,
               area = area_,
               navigationInstruction = navigationInstruction_
             }

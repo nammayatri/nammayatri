@@ -68,6 +68,7 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
+import qualified Domain.Types.TipModuleConfig as DTMC
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -176,6 +177,7 @@ data EstimateInfo = EstimateInfo
     vehicleIconUrl :: Maybe BaseUrl,
     tipOptions :: Maybe [Int],
     qar :: Maybe Double,
+    tipModuleConfig :: Maybe DTMC.TipModuleConfig,
     -- petCharges :: Maybe Price,
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,

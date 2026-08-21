@@ -242,6 +242,7 @@ library
       Domain.Types.RideStatus
       Domain.Types.ServiceTierType
       Domain.Types.StationType
+      Domain.Types.TipModuleConfig
       Domain.Types.Trip
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant

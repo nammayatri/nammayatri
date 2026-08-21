@@ -1,0 +1,1486 @@
+{
+ "info": {
+  "name": "NY Tip Module Config Flow",
+  "description": "tipModuleConfig from the BPP DYNAMIC-PRICING-UNIFIED domain: verify QAR bands on the provider dashboard, author+rollout a pricing-neutral test version, assert tipModuleConfig/qar on /rideSearch/{id}/results (rules path, poll stability, RiderConfig fallback at 0% rollout), select2 unknown-estimate 400, restore the pre-test rollout. Local env only.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "event": [
+  {
+   "listen": "prerequest",
+   "script": {
+    "exec": [
+     "(function () { var t = pm.environment.get('envType') || 'Local'; if (t !== 'Local' && pm.execution && typeof pm.execution.skipRequest === 'function') { console.log('[skip] TipModuleConfigFlow is Local-only (envType=' + t + ')'); pm.execution.skipRequest(); } })();",
+     "(function () {",
+     "  var envType = pm.environment.get('envType') || 'Local';",
+     "  if (envType === 'Local') return;",
+     "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+     "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+     "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+     "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+     "      pm.execution.skipRequest();",
+     "    }",
+     "  }",
+     "})();",
+     "",
+     "if (!pm.collectionVariables.get(\"_test_driver_number\")) {",
+     "    var dNum = \"9\" + Math.floor(100000000 + Math.random() * 899999999);",
+     "    var rNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+     "    var regNo = \"KA\" + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+     "    pm.collectionVariables.set(\"_test_driver_number\", dNum);",
+     "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
+     "    pm.collectionVariables.set(\"_test_reg_no\", regNo);",
+     "    console.log(\"Test driver:\", dNum, \"rider:\", rNum, \"reg:\", regNo);",
+     "}"
+    ],
+    "type": "text/javascript"
+   }
+  }
+ ],
+ "item": [
+  {
+   "name": "Driver Auth",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('driver_authId', d.authId);",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+    },
+    "url": {
+     "raw": "{{baseURL_namma_P}}/auth",
+     "host": [
+      "{{baseURL_namma_P}}"
+     ],
+     "path": [
+      "auth"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Driver OTP",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('driver_token', d.token);",
+       "pm.environment.set('driver_id', d.person.id);",
+       "console.log('Driver ID:', d.person.id);",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+    },
+    "url": {
+     "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+     "host": [
+      "{{baseURL_namma_P}}"
+     ],
+     "path": [
+      "auth",
+      "{{driver_authId}}",
+      "verify"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Switch City (Dashboard)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('dashboard_token', d.authToken);",
+       "console.log('Switched to', d.merchantId, d.city);",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+    },
+    "url": {
+     "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+     "host": [
+      "{{dashboard_base_url}}"
+     ],
+     "path": [
+      "user",
+      "switchMerchantAndCity"
+     ]
+    }
+   },
+   "response": []
+  },
+  {
+   "name": "Add Vehicle (Dashboard)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+       "console.log('AddVehicle:', pm.response.text());"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+    },
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "driver",
+      "{{driver_id}}",
+      "addVehicle"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Enable Driver (Dashboard)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+       "console.log('Enable:', pm.response.text());"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": ""
+    },
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "driver",
+      "{{driver_id}}",
+      "enable"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Subscribe Plan",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Plan subscribed', function () { pm.expect(pm.response.code).to.be.oneOf([200, 500]); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{driver_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": ""
+    },
+    "url": {
+     "raw": "{{baseURL_namma_P}}/plan/18911beb-28ba-456d-8cca-4d019461d2b0/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
+     "host": [
+      "{{baseURL_namma_P}}"
+     ],
+     "path": [
+      "plan",
+      "18911beb-28ba-456d-8cca-4d019461d2b0",
+      "subscribe"
+     ],
+     "query": [
+      {
+       "key": "serviceName",
+       "value": "%22YATRI_SUBSCRIPTION%22"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Driver Set Location",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{driver_token}}"
+     },
+     {
+      "key": "vt",
+      "value": "AUTO_RICKSHAW"
+     },
+     {
+      "key": "dm",
+      "value": "ONLINE"
+     },
+     {
+      "key": "mId",
+      "value": "{{driver_merchant_id}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+    },
+    "url": {
+     "raw": "{{baseUrl_lts}}/driver/location",
+     "host": [
+      "{{baseUrl_lts}}"
+     ],
+     "path": [
+      "driver",
+      "location"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Driver Set Online",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{driver_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": ""
+    },
+    "url": {
+     "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+     "host": [
+      "{{baseURL_namma_P}}"
+     ],
+     "path": [
+      "driver",
+      "setActivity"
+     ],
+     "query": [
+      {
+       "key": "active",
+       "value": "true"
+      },
+      {
+       "key": "mode",
+       "value": "%22ONLINE%22"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "Rider Auth",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('rider_authId', d.authId);",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+    },
+    "url": {
+     "raw": "{{baseUrl_app}}/auth",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "auth"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Rider OTP",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('rider_token', d.token);",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}"
+    },
+    "url": {
+     "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "auth",
+      "{{rider_authId}}",
+      "verify"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Switch City (Rider Dashboard)",
+   "request": {
+    "method": "POST",
+    "url": {
+     "raw": "{{baseURL_BAP_Dashboard}}/user/switchMerchantAndCity",
+     "host": [
+      "{{baseURL_BAP_Dashboard}}"
+     ],
+     "path": [
+      "user",
+      "switchMerchantAndCity"
+     ]
+    },
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_dashboard_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.collectionVariables.set('_rider_dashboard_token', d.authToken);",
+       "console.log('Rider dashboard switched to', d.merchantId, d.city);",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Get Domain Schema (DYNAMIC-PRICING-UNIFIED)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getDomainSchema?domain=DYNAMIC-PRICING-UNIFIED",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "getDomainSchema"
+     ],
+     "query": [
+      {
+       "key": "domain",
+       "value": "DYNAMIC-PRICING-UNIFIED"
+      }
+     ]
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('DynamicPricingData sample exposes actualQAR', function () { pm.expect(d.defaultValue).to.have.property('actualQAR'); pm.expect(d.schema, 'schema').to.be.an('object'); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Capture Current DP Rollout (BPP)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/getLogicRollout?domain=DYNAMIC-PRICING-UNIFIED&activeOnly=true",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "getLogicRollout"
+     ],
+     "query": [
+      {
+       "key": "domain",
+       "value": "DYNAMIC-PRICING-UNIFIED"
+      },
+      {
+       "key": "activeOnly",
+       "value": "true"
+      }
+     ]
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('Rollout list is an array', function () { pm.expect(d).to.be.an('array'); });",
+       "pm.collectionVariables.set('_test_dp_prev_rollout', JSON.stringify(d));",
+       "console.log('Pre-test DYNAMIC-PRICING-UNIFIED rollout:', JSON.stringify(d));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Capture RiderConfig tipModuleConfig default (BAP)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{_rider_dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BAP_Dashboard}}/bap/{{bap_short_id}}/{{city}}/nammaTag/configPilot/getTableData?tableName=RiderConfig",
+     "host": [
+      "{{baseURL_BAP_Dashboard}}"
+     ],
+     "path": [
+      "bap",
+      "{{bap_short_id}}",
+      "{{city}}",
+      "nammaTag",
+      "configPilot",
+      "getTableData"
+     ],
+     "query": [
+      {
+       "key": "tableName",
+       "value": "RiderConfig"
+      }
+     ]
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('RiderConfig row present', function () { pm.expect(d.configs, 'configs').to.be.an('array').that.is.not.empty; });",
+       "var rc = (d.configs || [])[0] || {};",
+       "var def = (rc.tipModuleConfig === undefined) ? null : rc.tipModuleConfig;",
+       "pm.collectionVariables.set('_test_tip_rc_default', JSON.stringify(def));",
+       "console.log('RiderConfig.tipModuleConfig default:', JSON.stringify(def));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Verify QAR Bands (actualQAR 0.2 -> low)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "verify"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"domain\": {\"tag\": \"DYNAMIC_PRICING_UNIFIED\"}, \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"qarPct\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, null, {\"*\": [100, {\"var\": \"actualQAR\"}]}]}}]}, {\"cat\": [{\"var\": \"\"}, {\"tipModuleConfig\": {\"cat\": [{\"showAfterSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 45, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 15, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 30, 60]}]}]}}, {\"repeatIntervalSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 60, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 30, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 45, 0]}]}]}}, {\"maxPrompts\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 1, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 3, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 2, 1]}]}]}}]}}]}], \"inputData\": [{\"actualQAR\": 0.2, \"serviceTier\": \"AUTO_RICKSHAW\", \"distanceInKm\": 3.0, \"speedKmh\": 20.0}], \"shouldUpdateRule\": false, \"verifyOutput\": true}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('No rule errors', function () { pm.expect(d.errors, 'errors').to.be.an('array').that.is.empty; });",
+       "pm.test('actualQAR=0.2 -> tipModuleConfig {15,30,3}', function () {",
+       "    pm.expect(d.result.tipModuleConfig, 'tipModuleConfig').to.be.an('object');",
+       "    pm.expect(d.result.tipModuleConfig.showAfterSec).to.eql(15);",
+       "    pm.expect(d.result.tipModuleConfig.repeatIntervalSec).to.eql(30);",
+       "    pm.expect(d.result.tipModuleConfig.maxPrompts).to.eql(3);",
+       "});",
+       "pm.test('Rule not persisted (verify only)', function () { pm.expect(d.isRuleUpdated).to.eql(false); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Verify QAR Bands (actualQAR 0.45 -> mid)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "verify"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"domain\": {\"tag\": \"DYNAMIC_PRICING_UNIFIED\"}, \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"qarPct\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, null, {\"*\": [100, {\"var\": \"actualQAR\"}]}]}}]}, {\"cat\": [{\"var\": \"\"}, {\"tipModuleConfig\": {\"cat\": [{\"showAfterSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 45, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 15, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 30, 60]}]}]}}, {\"repeatIntervalSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 60, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 30, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 45, 0]}]}]}}, {\"maxPrompts\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 1, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 3, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 2, 1]}]}]}}]}}]}], \"inputData\": [{\"actualQAR\": 0.45, \"serviceTier\": \"AUTO_RICKSHAW\", \"distanceInKm\": 3.0, \"speedKmh\": 20.0}], \"shouldUpdateRule\": false, \"verifyOutput\": true}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('No rule errors', function () { pm.expect(d.errors, 'errors').to.be.an('array').that.is.empty; });",
+       "pm.test('actualQAR=0.45 -> tipModuleConfig {30,45,2}', function () {",
+       "    pm.expect(d.result.tipModuleConfig, 'tipModuleConfig').to.be.an('object');",
+       "    pm.expect(d.result.tipModuleConfig.showAfterSec).to.eql(30);",
+       "    pm.expect(d.result.tipModuleConfig.repeatIntervalSec).to.eql(45);",
+       "    pm.expect(d.result.tipModuleConfig.maxPrompts).to.eql(2);",
+       "});",
+       "pm.test('Rule not persisted (verify only)', function () { pm.expect(d.isRuleUpdated).to.eql(false); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Verify QAR Bands (actualQAR 0.7 -> high)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "verify"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"domain\": {\"tag\": \"DYNAMIC_PRICING_UNIFIED\"}, \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"qarPct\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, null, {\"*\": [100, {\"var\": \"actualQAR\"}]}]}}]}, {\"cat\": [{\"var\": \"\"}, {\"tipModuleConfig\": {\"cat\": [{\"showAfterSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 45, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 15, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 30, 60]}]}]}}, {\"repeatIntervalSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 60, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 30, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 45, 0]}]}]}}, {\"maxPrompts\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 1, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 3, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 2, 1]}]}]}}]}}]}], \"inputData\": [{\"actualQAR\": 0.7, \"serviceTier\": \"AUTO_RICKSHAW\", \"distanceInKm\": 3.0, \"speedKmh\": 20.0}], \"shouldUpdateRule\": false, \"verifyOutput\": true}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('No rule errors', function () { pm.expect(d.errors, 'errors').to.be.an('array').that.is.empty; });",
+       "pm.test('actualQAR=0.7 -> tipModuleConfig {60,0,1}', function () {",
+       "    pm.expect(d.result.tipModuleConfig, 'tipModuleConfig').to.be.an('object');",
+       "    pm.expect(d.result.tipModuleConfig.showAfterSec).to.eql(60);",
+       "    pm.expect(d.result.tipModuleConfig.repeatIntervalSec).to.eql(0);",
+       "    pm.expect(d.result.tipModuleConfig.maxPrompts).to.eql(1);",
+       "});",
+       "pm.test('Rule not persisted (verify only)', function () { pm.expect(d.isRuleUpdated).to.eql(false); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Verify QAR Bands (actualQAR null -> default)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "verify"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"domain\": {\"tag\": \"DYNAMIC_PRICING_UNIFIED\"}, \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"qarPct\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, null, {\"*\": [100, {\"var\": \"actualQAR\"}]}]}}]}, {\"cat\": [{\"var\": \"\"}, {\"tipModuleConfig\": {\"cat\": [{\"showAfterSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 45, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 15, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 30, 60]}]}]}}, {\"repeatIntervalSec\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 60, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 30, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 45, 0]}]}]}}, {\"maxPrompts\": {\"if\": [{\"==\": [{\"var\": \"qarPct\"}, null]}, 1, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 30]}, 3, {\"if\": [{\"<\": [{\"var\": \"qarPct\"}, 60]}, 2, 1]}]}]}}]}}]}], \"inputData\": [{\"actualQAR\": null, \"serviceTier\": \"AUTO_RICKSHAW\", \"distanceInKm\": 3.0, \"speedKmh\": 20.0}], \"shouldUpdateRule\": false, \"verifyOutput\": true}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('No rule errors', function () { pm.expect(d.errors, 'errors').to.be.an('array').that.is.empty; });",
+       "pm.test('actualQAR=null -> tipModuleConfig {45,60,1}', function () {",
+       "    pm.expect(d.result.tipModuleConfig, 'tipModuleConfig').to.be.an('object');",
+       "    pm.expect(d.result.tipModuleConfig.showAfterSec).to.eql(45);",
+       "    pm.expect(d.result.tipModuleConfig.repeatIntervalSec).to.eql(60);",
+       "    pm.expect(d.result.tipModuleConfig.maxPrompts).to.eql(1);",
+       "});",
+       "pm.test('Rule not persisted (verify only)', function () { pm.expect(d.isRuleUpdated).to.eql(false); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Create Test DP Version (tipModuleConfig only)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "verify"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"domain\": {\"tag\": \"DYNAMIC_PRICING_UNIFIED\"}, \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"tipModuleConfig\": {\"cat\": [{\"showAfterSec\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, 7, 70]}}, {\"repeatIntervalSec\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, 8, 80]}}, {\"maxPrompts\": {\"if\": [{\"==\": [{\"var\": \"actualQAR\"}, null]}, 9, 90]}}]}}]}], \"inputData\": [{\"actualQAR\": null}], \"shouldUpdateRule\": true, \"verifyOutput\": true, \"updatePassword\": \"{{bpp_dynamic_logic_password}}\", \"description\": \"integration-test TipModuleConfigFlow: tipModuleConfig 7/8/9 (actualQAR null) or 70/80/90; pricing untouched\"}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('Rule saved as a new version', function () { pm.expect(d.isRuleUpdated).to.eql(true); pm.expect(d.version, 'version').to.be.a('number'); });",
+       "pm.test('Sample run (actualQAR null) yields 7/8/9', function () { pm.expect(d.result.tipModuleConfig).to.eql({showAfterSec: 7, repeatIntervalSec: 8, maxPrompts: 9}); });",
+       "pm.collectionVariables.set('_test_dp_version', String(d.version));",
+       "console.log('Test DP version:', d.version);"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Rollout Test DP Version at 100% (rules path)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "upsertLogicRollout"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "[{\"domain\":{\"tag\":\"DYNAMIC_PRICING_UNIFIED\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{_test_dp_version}},\"versionDescription\":\"integration-test tip module\"}]}]"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Rollout upsert 200', function () { pm.response.to.have.status(200); });",
+       "const _s = Date.now(); while (Date.now() - _s < 1000) {}"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Driver Location Update",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{driver_token}}"
+     },
+     {
+      "key": "vt",
+      "value": "AUTO_RICKSHAW"
+     },
+     {
+      "key": "dm",
+      "value": "ONLINE"
+     },
+     {
+      "key": "mId",
+      "value": "{{driver_merchant_id}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+    },
+    "url": {
+     "raw": "{{baseUrl_lts}}/driver/location",
+     "host": [
+      "{{baseUrl_lts}}"
+     ],
+     "path": [
+      "driver",
+      "location"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Ride Search",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "setTimeout(function(){}, 2000);"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('searchId', d.searchId);",
+       "console.log('Search ID:', d.searchId);",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+    },
+    "url": {
+     "raw": "{{baseUrl_app}}/rideSearch",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "rideSearch"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Get Search Results (rules path -> 7/8/9)",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "setTimeout(function(){}, 5000);"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('Has estimates', function () { pm.expect(d.estimates, 'estimates').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });",
+       "if (d.estimates && d.estimates.length > 0) { pm.environment.set('estimateId', d.estimates[0].id); }",
+       "pm.test('Every estimate has qar and tipModuleConfig from the DP test version (qar null locally -> 7/8/9)', function () {",
+       "    d.estimates.forEach(function (e) {",
+       "        pm.expect(e, 'estimate').to.have.property('qar');",
+       "        pm.expect(e.tipModuleConfig, 'tipModuleConfig').to.be.an('object');",
+       "        var exp = (e.qar === null || e.qar === undefined) ? {showAfterSec: 7, repeatIntervalSec: 8, maxPrompts: 9} : {showAfterSec: 70, repeatIntervalSec: 80, maxPrompts: 90};",
+       "        pm.expect(e.tipModuleConfig).to.eql(exp);",
+       "    });",
+       "});",
+       "pm.collectionVariables.set('_test_tip_cfg_first_poll', JSON.stringify((d.estimates || []).map(function (e) { return [e.id, e.tipModuleConfig]; })));"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "rideSearch",
+      "{{searchId}}",
+      "results"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Get Search Results (again -> same values)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('Has estimates', function () { pm.expect(d.estimates, 'estimates').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });",
+       "pm.test('tipModuleConfig identical across polls of the same search', function () {",
+       "    var first = JSON.parse(pm.collectionVariables.get('_test_tip_cfg_first_poll') || '[]');",
+       "    var second = (d.estimates || []).map(function (e) { return [e.id, e.tipModuleConfig]; });",
+       "    pm.expect(second).to.eql(first);",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "rideSearch",
+      "{{searchId}}",
+      "results"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Rollout Test DP Version at 0% (fallback path)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "upsertLogicRollout"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "[{\"domain\":{\"tag\":\"DYNAMIC_PRICING_UNIFIED\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":0,\"version\":{{_test_dp_version}},\"versionDescription\":\"integration-test tip module\"}]}]"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Rollout upsert 200', function () { pm.response.to.have.status(200); });",
+       "const _s = Date.now(); while (Date.now() - _s < 1000) {}"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  },
+  {
+   "name": "Ride Search (fallback path)",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "setTimeout(function(){}, 2000);"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.environment.set('searchId', d.searchId);",
+       "console.log('Search ID:', d.searchId);",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+    },
+    "url": {
+     "raw": "{{baseUrl_app}}/rideSearch",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "rideSearch"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Get Search Results (fallback -> RiderConfig default)",
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "setTimeout(function(){}, 5000);"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var d = pm.response.json();",
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "pm.test('Has estimates', function () { pm.expect(d.estimates, 'estimates').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });",
+       "var def = JSON.parse(pm.collectionVariables.get('_test_tip_rc_default') || 'null');",
+       "pm.test('With no DP rollout, tipModuleConfig equals RiderConfig.tipModuleConfig (' + JSON.stringify(def) + ')', function () {",
+       "    d.estimates.forEach(function (e) {",
+       "        if (def === null) { pm.expect(e.tipModuleConfig, 'tipModuleConfig').to.be.null; }",
+       "        else { pm.expect(e.tipModuleConfig).to.eql(def); }",
+       "    });",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "rideSearch",
+      "{{searchId}}",
+      "results"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Select2 on expired estimate is rejected",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('unknown estimate -> 400 (EstimateDoesNotExist)', function () { pm.response.to.have.status(400); });",
+       "pm.test('errorCode is ESTIMATE_DOES_NOT_EXIST', function () { pm.expect(pm.response.json().errorCode).to.eql('ESTIMATE_DOES_NOT_EXIST'); });"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ],
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "body": {
+     "mode": "raw",
+     "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
+    },
+    "url": {
+     "raw": "{{baseUrl_app}}/estimate/00000000-0000-0000-0000-000000000000/select2",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "estimate",
+      "00000000-0000-0000-0000-000000000000",
+      "select2"
+     ]
+    }
+   }
+  },
+  {
+   "name": "Restore Pre-test DP Rollout (BPP)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{dashboard_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+     "host": [
+      "{{baseURL_BPP_Dashboard_Internal}}"
+     ],
+     "path": [
+      "{{dashboard_merchant_id}}",
+      "{{dashboard_city}}",
+      "nammaTag",
+      "appDynamicLogic",
+      "upsertLogicRollout"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{{_test_dp_restore_body}}"
+    }
+   },
+   "event": [
+    {
+     "listen": "prerequest",
+     "script": {
+      "exec": [
+       "var prev = JSON.parse(pm.collectionVariables.get('_test_dp_prev_rollout') || '[]');",
+       "if (!Array.isArray(prev) || prev.length === 0) { prev = [{domain: {tag: 'DYNAMIC_PRICING_UNIFIED'}, timeBounds: 'Unbounded', rollout: []}]; }",
+       "pm.collectionVariables.set('_test_dp_restore_body', JSON.stringify(prev));"
+      ],
+      "type": "text/javascript"
+     }
+    },
+    {
+     "listen": "test",
+     "script": {
+      "exec": [
+       "pm.test('Rollout restored', function () { pm.response.to.have.status(200); });",
+       "console.log('Restored DYNAMIC-PRICING-UNIFIED rollout to:', pm.collectionVariables.get('_test_dp_restore_body'));"
+      ],
+      "type": "text/javascript"
+     }
+    }
+   ]
+  }
+ ],
+ "variable": [
+  {
+   "key": "_test_driver_number",
+   "value": ""
+  },
+  {
+   "key": "_test_rider_number",
+   "value": ""
+  },
+  {
+   "key": "_test_reg_no",
+   "value": ""
+  },
+  {
+   "key": "_rider_dashboard_token",
+   "value": ""
+  },
+  {
+   "key": "_test_dp_prev_rollout",
+   "value": ""
+  },
+  {
+   "key": "_test_tip_rc_default",
+   "value": ""
+  },
+  {
+   "key": "_test_dp_version",
+   "value": ""
+  },
+  {
+   "key": "_test_tip_cfg_first_poll",
+   "value": ""
+  },
+  {
+   "key": "_test_dp_restore_body",
+   "value": ""
+  }
+ ]
+}

@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.TipModuleConfig
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -74,6 +75,7 @@ data Estimate = Estimate
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.EstimateStatus.EstimateStatus,
+    tipModuleConfig :: Kernel.Prelude.Maybe Domain.Types.TipModuleConfig.TipModuleConfig,
     tipOptions :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo,
     totalFareRange :: Domain.Types.Estimate.FareRange,

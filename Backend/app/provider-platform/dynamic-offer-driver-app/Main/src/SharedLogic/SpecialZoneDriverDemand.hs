@@ -239,6 +239,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           congestionChargePerMin = Nothing,
           smartTipSuggestion = Nothing,
           smartTipReason = Nothing,
+          tipModuleConfig = Nothing,
           mbActualQARFromLocGeohash = Nothing,
           mbActualQARCity = Nothing
         }
