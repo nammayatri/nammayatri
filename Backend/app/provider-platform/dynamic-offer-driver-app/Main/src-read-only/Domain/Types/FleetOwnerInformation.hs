@@ -38,6 +38,7 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     disabledReasonFlag :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag,
     docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
+    enableCashRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -77,9 +78,9 @@ data FleetOwnerInformationE e = FleetOwnerInformation
   }
   deriving (Generic)
 
-type FleetOwnerInformation = FleetOwnerInformationE 'AsEncrypted
+type FleetOwnerInformation = FleetOwnerInformationE ('AsEncrypted)
 
-type DecryptedFleetOwnerInformation = FleetOwnerInformationE 'AsUnencrypted
+type DecryptedFleetOwnerInformation = FleetOwnerInformationE ('AsUnencrypted)
 
 instance EncryptedItem FleetOwnerInformation where
   type Unencrypted FleetOwnerInformation = (DecryptedFleetOwnerInformation, HashSalt)
@@ -108,6 +109,7 @@ instance EncryptedItem FleetOwnerInformation where
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           disabledReasonFlag = disabledReasonFlag entity,
           docsVerificationStatus = docsVerificationStatus entity,
+          enableCashRide = enableCashRide entity,
           enabled = enabled entity,
           fleetDob = fleetDob entity,
           fleetName = fleetName entity,
@@ -170,6 +172,7 @@ instance EncryptedItem FleetOwnerInformation where
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             disabledReasonFlag = disabledReasonFlag entity,
             docsVerificationStatus = docsVerificationStatus entity,
+            enableCashRide = enableCashRide entity,
             enabled = enabled entity,
             fleetDob = fleetDob entity,
             fleetName = fleetName entity,
@@ -229,12 +232,12 @@ data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET deriving (Eq, Ord,
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
 
-$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FleetType))
 
-$(mkHttpInstancesForEnum ''FleetType)
+$(mkHttpInstancesForEnum (''FleetType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))

@@ -18,6 +18,7 @@ import qualified SharedLogic.DriverPool.DriverPoolMigrations as Migrations
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 
@@ -67,9 +68,22 @@ getOrBuildDriverPoolDataBatch onlinePayment isPrepaidEnabled driverIds = do
 -- Conditionally fetches:
 --   - driver_bank_account when @onlinePayment@ is true (its fields are only read
 --     downstream inside the online-payment branch of GetNearestDrivers).
---   - fleet_driver_association when @isPrepaidEnabled@ is true (fleetOwnerId is
---     only consumed by the prepaid wallet filter). The fleet-account lookup that
---     redirects bankAccount to the fleet owner only fires when both flags are on.
+--   - fleet_driver_association (as @fleetAssocs@/@faMap@, populating the
+--     'DriverPoolData.fleetOwnerId' field) when @isPrepaidEnabled@ is true
+--     (fleetOwnerId is only consumed by the prepaid wallet filter). The
+--     fleet-account lookup that redirects bankAccount to the fleet owner
+--     only fires when both flags are on. Other consumers of this field
+--     (e.g. wallet-hold owner resolution in SendSearchRequestToDrivers)
+--     rely on it being 'Nothing' for merchants with neither flag set, so
+--     this fetch must stay gated exactly as before.
+--   - fleet_driver_association AGAIN, separately and always (as
+--     @cashFleetAssocs@): cash-ride eligibility must fold in the fleet
+--     owner's flag on every build regardless of the online-payment/prepaid
+--     flags, so it can't rely on the gated fetch above, which is
+--     deliberately empty for merchants with neither flag set. The driver's
+--     own cash-ride flag comes from driver_information (already fetched
+--     above); the fleet owner's comes from fleet_owner_information (fetched
+--     here, keyed off cashFleetAssocs).
 buildDriverPoolDataFromDB ::
   (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Bool ->
@@ -102,10 +116,16 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
       else pure []
   let baMap = HashMap.fromList $ map (\ba -> (ba.driverId, ba)) bankAccounts
 
+  cashFleetAssocs <- QFDA.findAllByDriverIds personIds
+  let cashFaMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa)) cashFleetAssocs
+      cashFleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) cashFleetAssocs
+  cashFleetOwnerInfos <- if null cashFleetOwnerPersonIds then pure [] else QFOI.findAllByPrimaryKeys cashFleetOwnerPersonIds
+  let cashFleetOwnerFOIMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, foi)) cashFleetOwnerInfos
+
   now <- getClockTimeInMs
-  pure $ mapMaybe (buildOne now diMap vMap pMap baMap faMap) driverIds
+  pure $ mapMaybe (buildOne now diMap vMap pMap baMap faMap cashFaMap cashFleetOwnerFOIMap) driverIds
   where
-    buildOne now diMap vMap pMap baMap faMap did = do
+    buildOne now diMap vMap pMap baMap faMap cashFaMap cashFleetOwnerFOIMap did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
@@ -113,6 +133,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
       let effectiveBa = case fa of
             Just assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) baMap
             Nothing -> HashMap.lookup (cast did :: Id Person.Person) baMap
+      let fleetOwnerEnableCashRide = HashMap.lookup did cashFaMap >>= \assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) cashFleetOwnerFOIMap >>= (.enableCashRide)
       Just
         DriverPoolData
           { driverId = did,
@@ -145,6 +166,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             tripDistanceMaxThreshold = di.tripDistanceMaxThreshold,
             maxPickupRadius = di.maxPickupRadius,
             isPetModeEnabled = di.isPetModeEnabled,
+            enableCashRide = fromMaybe True di.enableCashRide && fromMaybe True fleetOwnerEnableCashRide,
             chargesEnabled = maybe False (.chargesEnabled) effectiveBa,
             bankAccountPaymentMode = (.paymentMode) =<< effectiveBa,
             language = p.language,
