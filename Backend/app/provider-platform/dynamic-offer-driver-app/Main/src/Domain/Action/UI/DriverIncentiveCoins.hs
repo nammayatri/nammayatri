@@ -293,10 +293,11 @@ isRidesCompletedFunction = \case
 ridesThresholdFromEventFunction :: DCT.DriverCoinsFunctionType -> Maybe Int
 ridesThresholdFromEventFunction = \case
   DCT.DriverIncentiveCohortRidesCompleted n -> Just n
+  DCT.DriverIncentiveCohortRidesCompletedSlot _ n -> Just n
   DCT.RidesCompleted n -> Just n
   _ -> Nothing
 
--- | All DriverIncentiveCohortRidesCompleted segments after Incentive# (split on "&").
+-- | All DriverIncentiveCohortRidesCompleted / Slot segments after Incentive# (split on "&").
 parseAllIncentiveRidesCompletedThresholds :: Maybe [LYT.TagNameValueExpiry] -> [(DCT.DriverCoinsFunctionType, Int)]
 parseAllIncentiveRidesCompletedThresholds =
   mapMaybe asRidesCompleted . concatMap parseIncentiveSegments . fromMaybe []
@@ -310,4 +311,5 @@ parseAllIncentiveRidesCompletedThresholds =
         _ -> []
     asRidesCompleted = \case
       DCT.DriverIncentiveCohortRidesCompleted n -> Just (DCT.DriverIncentiveCohortRidesCompleted n, n)
+      ef@(DCT.DriverIncentiveCohortRidesCompletedSlot _ n) -> Just (ef, n)
       _ -> Nothing
