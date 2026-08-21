@@ -241,6 +241,16 @@ reSchedule (Id jobId) newScheduleTime = do
     ]
     [Se.Is BeamST.id (Se.Eq jobId)]
 
+reviveJobs :: forall m r. (JobMonad r m) => [Id AnyJob] -> m ()
+reviveJobs jobIds = do
+  now <- getCurrentTime
+  updateWithKVScheduler
+    [ Se.Set BeamST.status Pending,
+      Se.Set BeamST.scheduledAt (T.utcToLocalTime T.utc now),
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+    ]
+    [Se.Is BeamST.id (Se.In (getId <$> jobIds))]
+
 updateFailureCount :: forall m r. (JobMonad r m) => Id AnyJob -> Int -> m ()
 updateFailureCount (Id jobId) newCountValue = do
   now <- getCurrentTime

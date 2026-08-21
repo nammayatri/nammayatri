@@ -35,6 +35,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
     postMerchantSchedulerTrigger,
+    postMerchantSchedulerRevive,
     postMerchantConfigOperatingCityWhiteList,
     getMerchantConfigSpecialLocationList,
     getMerchantConfigGeometryList,
@@ -118,7 +119,9 @@ import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
@@ -1994,6 +1997,15 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           createJobIn @_ @'PassExpiryReminderMaster (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Nothing -> throwError $ InternalError "invalid job name"
+
+postMerchantSchedulerRevive :: ShortId DM.Merchant -> Context.City -> Common.ReviveSchedulerJobsReq -> Flow Common.ReviveSchedulerJobsRes
+postMerchantSchedulerRevive merchantShortId _opCity req = do
+  void $ findMerchantByShortId merchantShortId
+  let jobIds = Id <$> req.jobIds
+  existingJobs :: [AnyJob RiderJobType] <- QDBJ.getTasksById jobIds
+  let existingIds = map (\(AnyJob j) -> j.id.getId) existingJobs
+  unless (null existingIds) $ QDBJ.reviveJobs (Id <$> existingIds)
+  pure $ Common.ReviveSchedulerJobsRes {list = map (\jid -> if jid.getId `elem` existingIds then Right jid.getId else Left jid.getId) jobIds}
 
 -- create the EP here
 

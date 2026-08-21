@@ -303,6 +303,15 @@ apis:
         type: SchedulerTriggerReq
       response:
         type: APISuccess
+  - POST: # ReviveSchedulerJobsAPI
+      endpoint: /scheduler/revive
+      auth: ApiAuthV2
+      request:
+        type: ReviveSchedulerJobsReq
+      response:
+        type: ReviveSchedulerJobsRes
+      migrate:
+        capability: system-config.scheduler.execute
   - POST: # whiteListOperatingCityAPI
       endpoint: /config/operatingCity/whiteList
       auth: ApiAuthV2
@@ -387,6 +396,14 @@ types:
     - scheduledAt: Maybe UTCTime
     - jobName: Maybe JobName
     - jobData: Text
+    - derive: "'HideSecrets"
+  ReviveSchedulerJobsReq:
+    - recordType: NewType
+    - jobIds: [Text]
+    - derive: "'HideSecrets"
+  ReviveSchedulerJobsRes:
+    - recordType: NewType
+    - list: [Either Text Text]
     - derive: "'HideSecrets"
   TollListResp:
     - recordType: Type
