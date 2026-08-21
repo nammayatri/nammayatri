@@ -1415,3 +1415,41 @@ updateGeometry merchant city region newGeom newGeomGeoJson = do
   let req = GeometryUpdateReq region newGeom newGeomGeoJson
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (geometryUpdateClient merchantId city req) "GeometryUpdate" geometryUpdateApi
+
+data VehicleServiceTierInfo = VehicleServiceTierInfo
+  { serviceTierType :: ServiceTierType,
+    serviceTierName :: Text,
+    vehicleIconUrl :: Maybe Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type GetVehicleServiceTiersAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "merchantCity" Context.City
+    :> "vehicleServiceTiers"
+    :> Header "token" Text
+    :> Get '[JSON] [VehicleServiceTierInfo]
+
+getVehicleServiceTiersClient :: Text -> Context.City -> Maybe Text -> EulerClient [VehicleServiceTierInfo]
+getVehicleServiceTiersClient = client getVehicleServiceTiersApi
+
+getVehicleServiceTiersApi :: Proxy GetVehicleServiceTiersAPI
+getVehicleServiceTiersApi = Proxy
+
+getVehicleServiceTiers ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  m [VehicleServiceTierInfo]
+getVehicleServiceTiers merchant city = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getVehicleServiceTiersClient merchantId city (Just apiKey)) "GetVehicleServiceTiers" getVehicleServiceTiersApi

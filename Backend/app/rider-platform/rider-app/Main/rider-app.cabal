@@ -119,6 +119,7 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
+      API.UI.VehicleServiceTier
       API.UI.Whatsapp
       API.UnifiedDashboard
       App
@@ -366,6 +367,7 @@ library
       Domain.Action.UI.TransitOperator
       Domain.Action.UI.TransitOperator.Validation
       Domain.Action.UI.TriggerFCM
+      Domain.Action.UI.VehicleServiceTier
       Domain.Action.UI.Whatsapp
       Domain.Action.UI.XyneWebhook
       Domain.Action.UI.ZendeskSdkToken
