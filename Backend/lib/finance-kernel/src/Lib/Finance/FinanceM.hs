@@ -46,6 +46,7 @@ module Lib.Finance.FinanceM
     account,
     transfer,
     transfer_,
+    adjustment,
     transferPending,
     transferAllowZero,
     transferWithoutAttribution,
@@ -570,7 +571,32 @@ transfer ::
   Text -> -- Reference type
   Maybe LE.LedgerEntryMetadata -> -- Optional typed ledger metadata (e.g. a reason)
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transfer fromRole toRole amount refType mbMetadata = do
+transfer = transferWithEntryType LE.Expense
+
+-- | Manual adjustment transfer. Positive amounts use @fromRole -> toRole@;
+--   negative amounts reverse the account direction. Collects the entry ID.
+adjustment ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+adjustment fromRole toRole amount refType
+  | amount > 0 = transferWithEntryType LE.Adjustment fromRole toRole amount refType Nothing
+  | amount < 0 = transferWithEntryType LE.Adjustment toRole fromRole (negate amount) refType Nothing
+  | otherwise = pure Nothing
+
+transferWithEntryType ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  LE.EntryType ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  Maybe LE.LedgerEntryMetadata -> -- Optional typed ledger metadata (e.g. a reason)
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferWithEntryType entryType fromRole toRole amount refType mbMetadata = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -584,7 +610,7 @@ transfer fromRole toRole amount refType mbMetadata = do
                 concernedIndividualId = ctx.concernedIndividualId,
                 amount = amount,
                 currency = ctx.currency,
-                entryType = LE.Expense,
+                entryType,
                 status = LE.SETTLED,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
@@ -871,7 +897,8 @@ data DirectTaxConfig = DirectTaxConfig
     panType :: Maybe Text,
     tdsRateReason :: Maybe TdsRateReason,
     tanOfDeductee :: Maybe Text,
-    tdsSection :: Maybe Text
+    tdsSection :: Maybe Text,
+    invoiceNumber :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -942,7 +969,7 @@ recordDirectTax config = do
             tdsRateReason = config.tdsRateReason,
             tanOfDeductee = config.tanOfDeductee,
             tdsSection = config.tdsSection,
-            invoiceNumber = Nothing,
+            invoiceNumber = config.invoiceNumber,
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId
           }
