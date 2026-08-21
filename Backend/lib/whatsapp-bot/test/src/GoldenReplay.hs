@@ -74,6 +74,7 @@ import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime, diffUTCTime)
 import qualified Kernel.External.Meta as Meta
 import Kernel.Prelude
+import StaticI18nData (staticNonEnglish)
 import System.Timeout (timeout)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertEqual, assertFailure, testCase)
@@ -81,11 +82,6 @@ import WhatsappBot.Engine (handleMessage)
 import WhatsappBot.Env
 import WhatsappBot.Handles
 import WhatsappBot.I18n.En (en)
-import WhatsappBot.I18n.Gu (gu)
-import WhatsappBot.I18n.Hi (hi)
-import WhatsappBot.I18n.Kn (kn)
-import WhatsappBot.I18n.Ta (ta)
-import WhatsappBot.I18n.Te (te)
 import WhatsappBot.I18n.Types (LanguageStrings, SupportedLanguage (..))
 import WhatsappBot.Inbound (parseInbound)
 import WhatsappBot.Tracker (TrackerDeps (..), trackerTick)
@@ -625,7 +621,7 @@ fixtureConfig m =
 -- copy it always has — a real proof that threading the translations map
 -- through the engine didn't change any behaviour.
 staticTranslations :: Map.Map SupportedLanguage LanguageStrings
-staticTranslations = Map.fromList [(En, en), (Hi, hi), (Gu, gu), (Kn, kn), (Ta, ta), (Te, te)]
+staticTranslations = Map.insert En en staticNonEnglish
 
 -- ===========================================================================
 -- World builder.

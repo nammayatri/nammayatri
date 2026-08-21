@@ -254,7 +254,7 @@ handleChooseLanguage env ev ctx input = do
             btn s.moreLanguages "more_languages"
           ]
       | input == "more_languages" ->
-        replyButtons env to s.selectLanguage [btn (li.nativeName <> " (" <> li.name <> ")") ("lang:" <> languageCode li.code) | li <- getAllLanguages]
+        replyButtons env to s.selectLanguage [btn (li.nativeName <> " (" <> li.name <> ")") ("lang:" <> languageCode li.code) | li <- getAllLanguages env.cfg.translations]
       | otherwise -> pure ()
 
 -- | A @lang:<code>@ command is anchored to word-chars after the prefix; @lang:@
