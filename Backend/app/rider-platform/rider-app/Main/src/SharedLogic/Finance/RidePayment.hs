@@ -323,7 +323,8 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
       fromLocationAddress = fromLocationAddress,
-      issuedToName = Nothing
+      issuedToName = Nothing,
+      initialSettlementStatus = Nothing
     }
 
 applyBookingProviderFieldsToCtx :: DRB.Booking -> FinanceCtx -> FinanceCtx

@@ -24,7 +24,7 @@ LedgerEntry:
       derive: "HttpInstance"
 
     SettlementStatus:
-      enum: "UNSETTLED,PROCESSING,PAID_OUT"
+      enum: "UNSETTLED,PROCESSING,PAID_OUT,EXTERNAL_PENDING"
       derive: "HttpInstance"
 
     # Sub-domain entity an entry belongs to, when referenceId (the ride) is not selective

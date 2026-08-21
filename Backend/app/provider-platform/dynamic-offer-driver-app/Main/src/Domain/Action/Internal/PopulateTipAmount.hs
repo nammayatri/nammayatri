@@ -85,7 +85,7 @@ populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ d
             -- A tip on an online ride is platform-mediated via the rider's card; on a cash ride
             -- the rider hands it to the driver directly. Derive the mode the same way EndRide does.
             isOnline <- isOnlineBooking booking transporterConfig
-            ctx <- Wallet.buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline
+            ctx <- Wallet.buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig isOnline Nothing
             -- Step 1a: reverse any prior Tips entries (handles multi-tip-update edge case)
             let priorTipsEntries = List.filter (\e -> e.referenceType == Wallet.walletReferenceTips) priorCtx.priorEntries
             forM_ priorTipsEntries $ \e -> do

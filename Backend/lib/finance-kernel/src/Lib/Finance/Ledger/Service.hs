@@ -704,11 +704,16 @@ findCreditsByAccountAfterTime accountId from to =
     [ Se.And
         [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
           Se.Is BeamLE.status $ Se.Eq SETTLED,
-          Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
-          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
           Se.Or
-            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
-              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            [ Se.And
+                [ Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
+                  Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+                  Se.Or
+                    [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+                      Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+                    ]
+                ],
+              Se.Is BeamLE.settlementStatus $ Se.Eq (Just EXTERNAL_PENDING)
             ]
         ]
     ]

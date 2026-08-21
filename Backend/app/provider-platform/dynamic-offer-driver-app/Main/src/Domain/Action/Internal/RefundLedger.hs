@@ -89,7 +89,7 @@ refundLedger rideId req apiKey = do
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)
     -- online cab only; driver-deducted clawback legs debit OwnerLiability (the driver wallet), reducing payout.
-    ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
+    ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True Nothing
     -- When the approval doesn't specify who bears the refund, the merchant config decides;
     -- with no config either, the platform absorbs.
     cancellationCommissionGross <- cancellationCommissionFromLedger ride

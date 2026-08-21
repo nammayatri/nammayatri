@@ -92,9 +92,10 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferPending, transferWithoutAttribution, transfer_)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -125,6 +126,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -527,6 +529,19 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
            in (postTax, max 0 (rawBaseFare - customerDiscountAmount), vatAbsorbed)
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+    mbPaymentMethodForBap <- forM booking.paymentMethodId $ \paymentMethodId ->
+      do
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+
+    isExternalBap <- not <$> CQVAN.isValueAddNP booking.bapId
+    let requireBapConfirm = fromMaybe False transporterConfig.driverWalletConfig.requireBapSettlementConfirmation
+        isCollectedByBap = case mbPaymentMethodForBap of
+          Just pm -> pm.collectedBy == BAP
+          Nothing -> False
+        shouldSetBapPending = requireBapConfirm && isCollectedByBap && isExternalBap
+        initialSettlementStatus = if shouldSetBapPending then Just LE.EXTERNAL_PENDING else Nothing
+
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       -- Persist the computed ledger write mode on the booking for reconciliation
@@ -534,11 +549,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       if forceOnline
         then pure True
         else do
-          mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-            do
-              CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-              >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-          case mbPaymentMethod of
+          case mbPaymentMethodForBap of
             Nothing -> pure False -- Considering OFFLINE
             Just paymentMethod -> do
               case paymentMethod.paymentInstrument of
@@ -600,7 +611,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
             _ -> HighPrecMoney 0.0
 
     merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
-    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
+    ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline initialSettlementStatus
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
     let mkRideLineItems clubVatInclusive issuedToType =
@@ -750,7 +761,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       let postEarning (amt, ref) =
             if isOnline
               then do
-                transfer_ BuyerAsset BuyerExternal amt ref
+                if shouldSetBapPending
+                  then void $ transferPending BuyerAsset BuyerExternal amt ref
+                  else transfer_ BuyerAsset BuyerExternal amt ref
                 void $ transfer BuyerExternal OwnerLiability amt ref Nothing
               else void $ transfer BuyerControl OwnerControl amt ref Nothing
       if isVat
@@ -773,7 +786,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           --          cash   → driver remits cash-collected GST from wallet.
           if isOnline
             then do
-              transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
+              if shouldSetBapPending
+                then void $ transferPending BuyerAsset BuyerExternal taxAmount taxRefOnline
+                else transfer_ BuyerAsset BuyerExternal taxAmount taxRefOnline
               void $ transfer BuyerExternal GovtIndirect taxAmount taxRefOnline Nothing
             else void $ transfer OwnerLiability GovtIndirect taxAmount taxRefCash Nothing
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
@@ -784,7 +799,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
-        transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+        if shouldSetBapPending
+          then void $ transferPending BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+          else transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
         void $ transfer BuyerExternal OwnerLiability customerDiscountAmount discountsRef Nothing
       -- Tip — online: BuyerAsset → OwnerLiability (1 leg). Cash: Control.
       when (tipAmount > 0) $

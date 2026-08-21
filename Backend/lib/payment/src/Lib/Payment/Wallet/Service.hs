@@ -174,7 +174,8 @@ mkLoyaltyFinanceCtx wallet refId =
       panOfParty = Nothing,
       panType = Nothing,
       tdsRateReason = Nothing,
-      emitLedgerEntries = True
+      emitLedgerEntries = True,
+      initialSettlementStatus = Nothing
     }
 
 data LedgerWriteOutcome

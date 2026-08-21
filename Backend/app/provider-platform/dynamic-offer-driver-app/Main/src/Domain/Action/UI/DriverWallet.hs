@@ -833,7 +833,8 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         tdsRateReason = Nothing,
         emitLedgerEntries = True,
         fromLocationAddress = Nothing,
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        initialSettlementStatus = Nothing
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)

@@ -127,7 +127,8 @@ data FinanceCtx = FinanceCtx
     tdsRateReason :: Maybe TdsRateReason,
     emitLedgerEntries :: Bool,
     fromLocationAddress :: Maybe Text,
-    issuedToName :: Maybe Text
+    issuedToName :: Maybe Text,
+    initialSettlementStatus :: Maybe LE.SettlementStatus
   }
   deriving (Eq, Show, Generic)
 
@@ -549,7 +550,7 @@ transfer fromRole toRole amount refType mbMetadata = do
                 metadata = mbMetadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = ctx.initialSettlementStatus
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -585,7 +586,7 @@ transferWithoutAttribution fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = ctx.initialSettlementStatus
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
@@ -622,7 +623,7 @@ transfer_ fromRole toRole amount refType = do
               metadata = Nothing,
               merchantId = ctx.merchantId,
               merchantOperatingCityId = ctx.merchantOpCityId,
-              settlementStatus = Nothing
+              settlementStatus = ctx.initialSettlementStatus
             }
     _ <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
     pure ()
@@ -661,7 +662,7 @@ transferPending fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = ctx.initialSettlementStatus
               }
       result <- liftFinanceM (createEntry entryInput)
       collectEntryId result.id
@@ -699,7 +700,7 @@ transferAllowZero fromRole toRole amount refType = do
                 metadata = Nothing,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
-                settlementStatus = Nothing
+                settlementStatus = ctx.initialSettlementStatus
               }
       result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
       collectEntryId result.id
