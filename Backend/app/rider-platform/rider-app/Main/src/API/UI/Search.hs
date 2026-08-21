@@ -92,6 +92,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -236,46 +237,47 @@ search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfig
 -- it's only ever True when the WhatsApp bot calls search' directly, in-process
 -- (WhatsappBot/Adapter/Backend.hs), bypassing this HTTP entry point entirely.
 search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow SearchResp
-search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbIsWhatsappRequest mbHasPasses = withPersonIdLogTag personId $ do
-  let isDashboardRequest = fromMaybe False mbIsDashboardRequest
-  unless isDashboardRequest $ checkSearchRateLimit personId
-  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
-  merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  -- TODO : remove this code after multiple search req issue get fixed from frontend
-  --BEGIN
-  whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
-    mbSReq <- QSearchRequestLite.findLastSearchRequestInKVLite personId
-    shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
-    when shouldCancelPrevSearch $ do
-      fork "handle multiple search request issue" $ do
-        case mbSReq of
-          Just sReq -> do
-            mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
-            case mbEstimate of
-              Just estimate -> do
-                resp <- withTryCatch "cancelSearch:search" $ CancelSearch.cancelSearch' (personId, merchantId) estimate.id
-                case resp of
-                  Left _ -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
-                  Right _ -> pure ()
-              Nothing -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
-          _ -> pure ()
-  -- TODO : remove this code after multiple search req issue get fixed from frontend
-  --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch mbIsWhatsappRequest
-  inlineResults <- dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
-  fork "Multimodal Search" $ do
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
-    let mbDoMultimodalSearch = getDoMultimodalSearch req
-    if riderConfig.makeMultiModalSearch && (isNothing mbDoMultimodalSearch || fromMaybe False mbDoMultimodalSearch)
-      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses)
-      else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
-  return $
-    SearchResp
-      { searchId = dSearchRes.searchRequest.id,
-        searchExpiry = dSearchRes.searchRequestExpiry,
-        routeInfo = dSearchRes.shortestRouteInfo,
-        results = inlineResults
-      }
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch mbIsWhatsappRequest mbHasPasses = withPersonIdLogTag personId $
+  withTimeAPI "rideSearch" "total" $ do
+    let isDashboardRequest = fromMaybe False mbIsDashboardRequest
+    unless isDashboardRequest $ checkSearchRateLimit personId
+    fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+    merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    -- TODO : remove this code after multiple search req issue get fixed from frontend
+    --BEGIN
+    whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
+      mbSReq <- QSearchRequestLite.findLastSearchRequestInKVLite personId
+      shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
+      when shouldCancelPrevSearch $ do
+        fork "handle multiple search request issue" $ do
+          case mbSReq of
+            Just sReq -> do
+              mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
+              case mbEstimate of
+                Just estimate -> do
+                  resp <- withTryCatch "cancelSearch:search" $ CancelSearch.cancelSearch' (personId, merchantId) estimate.id
+                  case resp of
+                    Left _ -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
+                    Right _ -> pure ()
+                Nothing -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
+            _ -> pure ()
+    -- TODO : remove this code after multiple search req issue get fixed from frontend
+    --END
+    dSearchRes <- withTimeAPI "rideSearch" "domainSearch" $ DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch mbIsWhatsappRequest
+    inlineResults <- withTimeAPI "rideSearch" "dispatchSearchToBpp" $ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
+    fork "Multimodal Search" $ do
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+      let mbDoMultimodalSearch = getDoMultimodalSearch req
+      if riderConfig.makeMultiModalSearch && (isNothing mbDoMultimodalSearch || fromMaybe False mbDoMultimodalSearch)
+        then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses)
+        else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
+    return $
+      SearchResp
+        { searchId = dSearchRes.searchRequest.id,
+          searchExpiry = dSearchRes.searchRequestExpiry,
+          routeInfo = dSearchRes.shortestRouteInfo,
+          results = inlineResults
+        }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
     --BEGIN
@@ -290,7 +292,7 @@ syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
 dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> Maybe Bool -> Flow (Maybe DQuote.GetQuotesRes)
 dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing
+  mbRiderConfig <- withTimeAPI "rideSearch" "getRiderConfigForDispatch" $ getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing
   shouldSync <-
     if fromMaybe False mbEnableSyncSearch
       then do
@@ -303,7 +305,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   -- and never replaces what the customer asked for.
   mbSuggestedRes <- case mbRiderConfig of
     Just riderConfig ->
-      withTryCatch "betterRoutePointSearch" (JMU.measureLatency (BRPS.buildSuggestedSearchRes riderConfig dSearchRes) "betterRoutePoint.total") >>= \case
+      withTryCatch "betterRoutePointSearch" (withTimeAPI "rideSearch" "betterRoutePointBuild" $ JMU.measureLatency (BRPS.buildSuggestedSearchRes riderConfig dSearchRes) "betterRoutePoint.total") >>= \case
         Right res -> pure res
         Left e -> do
           logError $ "better_route_point: shadow search build failed, continuing without it: " <> T.pack (show e)
@@ -312,16 +314,16 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedRes
   if shouldSync
     then do
-      becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+      becknTaxiReqV2 <- withTimeAPI "rideSearch" "buildBecknSearchReqV2" $ TaxiACL.buildSearchReqV2 dSearchRes
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
       fork "search cabs" $
         void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-      mbQuotesRes <- awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
+      mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
       -- Both searches were dispatched together; only now do we join on the suggestion, so
       -- its latency overlaps the real search's instead of adding to it.
       case (mbQuotesRes, suggestedAwaitable) of
         (Just quotesRes, Just awaitable) -> do
-          mbSuggested <- awaitSuggestedSearch dSearchRes awaitable
+          mbSuggested <- withTimeAPI "rideSearch" "awaitBetterRoutePointSearch" $ awaitSuggestedSearch dSearchRes awaitable
           pure . Just $ quotesRes {DQuote.suggestedEstimates = mbSuggested}
         _ -> pure mbQuotesRes
     else do
@@ -340,24 +342,25 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
 dispatchSuggestedSearch :: DSearch.SearchRes -> DSearch.SearchRes -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
 dispatchSuggestedSearch parentRes suggestedRes =
   awaitableFork "betterRoutePointSearchDispatch" $ do
-    becknReq <- TaxiACL.buildSearchReqV2 suggestedRes
+    becknReq <- withTimeAPI "rideSearch" "betterRoutePointBuildBecknReq" $ TaxiACL.buildSearchReqV2 suggestedRes
     eRes <-
       withTryCatch "betterRoutePointSearch:syncSearch" $
-        JMU.measureLatency
-          ( CallBPP.searchV2Sync
-              parentRes.merchant.driverOfferBaseUrl
-              parentRes.merchant.driverOfferMerchantId
-              parentRes.merchant.driverOfferApiKey
-              True
-              becknReq
-          )
-          "betterRoutePoint.bppSyncSearch"
+        withTimeAPI "rideSearch" "betterRoutePointBppSyncSearch" $
+          JMU.measureLatency
+            ( CallBPP.searchV2Sync
+                parentRes.merchant.driverOfferBaseUrl
+                parentRes.merchant.driverOfferMerchantId
+                parentRes.merchant.driverOfferApiKey
+                True
+                becknReq
+            )
+            "betterRoutePoint.bppSyncSearch"
     case eRes of
       Left e -> do
         logWarning $ "better_route_point: sync_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
         pure Nothing
       Right onSearchReq ->
-        withTryCatch "betterRoutePointSearch:processOnSearch" (JMU.measureLatency (BeckOnSearch.processOnSearchInline onSearchReq) "betterRoutePoint.inlineOnSearch") >>= \case
+        withTryCatch "betterRoutePointSearch:processOnSearch" (withTimeAPI "rideSearch" "betterRoutePointInlineOnSearch" $ JMU.measureLatency (BeckOnSearch.processOnSearchInline onSearchReq) "betterRoutePoint.inlineOnSearch") >>= \case
           Right (Just onSearchResult) ->
             DQuote.mkSuggestedEstimates suggestedRes.searchRequest onSearchResult.estimates
           Right Nothing -> pure Nothing
@@ -398,15 +401,15 @@ trySyncSearch dSearchRes becknTaxiReqV2 = do
       bppUrl = dSearchRes.merchant.driverOfferBaseUrl
       bppMerchantId = dSearchRes.merchant.driverOfferMerchantId
       token = dSearchRes.merchant.driverOfferApiKey
-  eRes <- withTryCatch "syncSearchDispatch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token False becknTaxiReqV2
+  eRes <- withTryCatch "syncSearchDispatch" $ withTimeAPI "rideSearch" "bppSyncSearch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token False becknTaxiReqV2
   case eRes of
     Right onSearchReq -> do
       logInfo $ "sync_search succeeded for txn " <> txnId <> "; processing inline"
-      eProc <- withTryCatch "processOnSearchInline" $ BeckOnSearch.processOnSearchInline onSearchReq
+      eProc <- withTryCatch "processOnSearchInline" $ withTimeAPI "rideSearch" "processOnSearchInline" $ BeckOnSearch.processOnSearchInline onSearchReq
       case eProc of
         Right (Just onSearchResult) -> do
           let DOnSearch.OnSearchResult {searchRequest, estimates, quotes, riderConfig} = onSearchResult
-          eQuotes <- withTryCatch "getQuotesInline" $ DQuote.getQuotesFromInMemory searchRequest estimates quotes riderConfig
+          eQuotes <- withTryCatch "getQuotesInline" $ withTimeAPI "rideSearch" "getQuotesFromInMemory" $ DQuote.getQuotesFromInMemory searchRequest estimates quotes riderConfig
           case eQuotes of
             Right quotesRes -> pure (Just quotesRes)
             Left e -> do
@@ -462,16 +465,17 @@ handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer s
 
 multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> FlowHandler MultimodalSearchResp
 multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses = withFlowHandlerAPIPersonId personId $
-  withPersonIdLogTag personId $ do
-    checkSearchRateLimit personId
-    fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
-    whenJust mbImeiNumber $ \imeiNumber -> do
-      encryptedImeiNumber <- encrypt imeiNumber
-      Person.updateImeiNumber (Just encryptedImeiNumber) personId
-    dSearchRes <- JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing Nothing Nothing) "DSearch.search multimodalSearchHandler"
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
-    let initiateJourney = fromMaybe False mbInitiateJourney
-    JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses) "multiModalSearch"
+  withPersonIdLogTag personId $
+    withTimeAPI "multimodalSearch" "total" $ do
+      checkSearchRateLimit personId
+      fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+      whenJust mbImeiNumber $ \imeiNumber -> do
+        encryptedImeiNumber <- encrypt imeiNumber
+        Person.updateImeiNumber (Just encryptedImeiNumber) personId
+      dSearchRes <- withTimeAPI "multimodalSearch" "domainSearch" $ JMU.measureLatency (DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) True Nothing Nothing Nothing) "DSearch.search multimodalSearchHandler"
+      riderConfig <- withTimeAPI "multimodalSearch" "getRiderConfig" $ getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+      let initiateJourney = fromMaybe False mbInitiateJourney
+      withTimeAPI "multimodalSearch" "multiModalSearch" $ JMU.measureLatency (multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId mbDepartureTime mbFilterServiceAndJrnyType mbNewServiceTiers mbHasPasses) "multiModalSearch"
 
 multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Maybe UTCTime -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Flow MultimodalSearchResp
 multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId mbDepartureTime filterServiceAndJrnyType mbNewServiceTiers mbHasPasses = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
