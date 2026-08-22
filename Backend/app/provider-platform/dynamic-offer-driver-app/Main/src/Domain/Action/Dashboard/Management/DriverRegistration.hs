@@ -1254,6 +1254,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
             let newRC =
                   DRC.VehicleRegistrationCertificate
                     { DRC.id = rcId,
+                      DRC.isNew = Nothing,
                       DRC.documentImageId = imageId,
                       DRC.documentImageId2 = Nothing,
                       DRC.certificateNumber = encryptedRC,

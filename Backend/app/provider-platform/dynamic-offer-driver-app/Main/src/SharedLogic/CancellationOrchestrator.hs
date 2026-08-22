@@ -186,6 +186,7 @@ applyImmediateConsequences ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasFlowEnv m r '["cloudType" ::: Maybe CloudType],

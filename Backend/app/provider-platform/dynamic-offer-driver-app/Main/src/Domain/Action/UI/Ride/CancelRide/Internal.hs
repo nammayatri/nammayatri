@@ -253,7 +253,7 @@ cancelRideTransaction ::
   DTC.TransporterConfig ->
   SP.Person ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchant rideEndedBy _transporterConfig _driver = do
+cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig _driver = do
   let driverId = cast ride.driverId
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   when isPrepaidSubscriptionAndWalletEnabled $ releaseLien booking ride
