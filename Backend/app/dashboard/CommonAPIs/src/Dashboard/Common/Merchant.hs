@@ -611,6 +611,7 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     primaryLanguage :: Maybe Language,
     supportNumber :: Maybe Text,
     cityStdCode :: Maybe Text,
+    countryDialCode :: Maybe Text,
     enableForMerchant :: Bool,
     exophone :: Text,
     callService :: CallService,
@@ -643,6 +644,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "primaryLanguage" form
       <*> parseMaybeInput "supportNumber" form
       <*> parseMaybeInput "cityStdCode" form
+      <*> parseMaybeInput "countryDialCode" form
       <*> parseInput "enableForMerchant" form
       <*> parseInput "exophone" form
       <*> parseInput "callService" form
@@ -694,6 +696,7 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     primaryLanguage :: Maybe Language,
     supportNumber :: Maybe Text,
     cityStdCode :: Maybe Text,
+    countryDialCode :: Maybe Text,
     enableForMerchant :: Bool,
     exophone :: Text,
     callService :: CallService,

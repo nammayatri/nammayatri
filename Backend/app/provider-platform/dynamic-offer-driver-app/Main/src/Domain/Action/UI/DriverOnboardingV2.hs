@@ -763,7 +763,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       then pure (Documents.VALID, Nothing)
       else case mbPanVerificationService of
         Just VI.HyperVerge -> callHyperVerge
-        Just VI.Idfy -> callIdfy person.id.getId
+        Just VI.Idfy -> callIdfy transporterConfig person.id.getId
         _ -> pure (Documents.VALID, Nothing)
 
   let updatedReq = req {API.Types.UI.DriverOnboardingV2.nameOnGovtDB = mbNameFromGovtDB <|> req.nameOnGovtDB}
@@ -864,8 +864,8 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     callHyperVerge = do
       mbNameFromGovtDB <- checkIfGenuineReq req
       pure (Documents.VALID, mbNameFromGovtDB)
-    callIdfy :: Text -> Flow (Documents.VerificationStatus, Maybe Text)
-    callIdfy personId = do
+    callIdfy :: TransporterConfig -> Text -> Flow (Documents.VerificationStatus, Maybe Text)
+    callIdfy transporterConfig personId = do
       image1 <- getImage req.imageId1
       resp <-
         Verification.extractPanImage merchantId merchantOpCityId $
@@ -945,7 +945,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       throwError $ DocumentAlreadyValidated "GSTIN"
   verificationStatus <- case mbGstVerificationService of
     Just VI.Idfy -> do
-      callIdfy person.id.getId
+      callIdfy transporterConfig person.id.getId
     _ -> pure Documents.VALID
 
   QDGTIN.upsertGstinRecord =<< buildGstCard merchantId person req verificationStatus (Just merchantOpCityId)
@@ -959,8 +959,8 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
         throwError (ImageInvalidType (show DTO.GSTCertificate) "")
       Redis.withLockRedisAndReturnValue (SDO.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
-    callIdfy :: Text -> Flow Documents.VerificationStatus
-    callIdfy personId = do
+    callIdfy :: TransporterConfig -> Text -> Flow Documents.VerificationStatus
+    callIdfy transporterConfig personId = do
       image1 <- getImage req.imageId1
       resp <-
         Verification.extractGSTImage merchantId merchantOpCityId $

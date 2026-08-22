@@ -39,7 +39,6 @@ module SharedLogic.DriverOnboarding.Status
     runRefreshOnboardingFlagsDriverVehicle,
     runRefreshOnboardingFlagsFleetAndVehicle,
     runRefreshOnboardingFlagsVehicle,
-    runRefreshOnboardingFlagsVehicleWithOverrideInspectionHubAsValid,
     runRefreshOnboardingFlagsVehicleWithBotApproval,
     ensureNoActiveRidesUnderFleet,
   )
