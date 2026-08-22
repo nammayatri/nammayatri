@@ -16,6 +16,7 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
   ( DispatchContext (..),
     handleConsequences,
     handleCommunications,
+    sendOverlayByKey,
   )
 where
 

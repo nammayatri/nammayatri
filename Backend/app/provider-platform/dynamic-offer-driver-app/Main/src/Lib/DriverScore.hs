@@ -64,7 +64,6 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as RQ
-import Tools.Constants
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import Tools.MarketingEvents as TM
@@ -106,7 +105,7 @@ eventPayloadHandler _merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let driverId = driver.id
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (validDriverCancellation `elem` rideTags) $ do
+  when countsTowardCancellationRate $ do
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -133,7 +132,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
               flowContext = A.object [],
               eventData =
                 A.object
-                  [ "validDriverCancellation" A..= (validDriverCancellation `elem` rideTags),
+                  [ "validDriverCancellation" A..= countsTowardCancellationRate,
                     "onRide" A..= driverInfo.onRide
                   ],
               timestamp = eventTime

@@ -30,3 +30,9 @@ ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN overdue_
 
 ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN overdue_cancellation_commission double precision ;
 ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_commission double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_consequence_row_id text ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_collection_mode text ;

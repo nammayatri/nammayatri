@@ -1,6 +1,5 @@
 module Domain.Action.Internal.CancellationDues where
 
-import qualified Data.Aeson as A
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.Merchant as DMerchant
@@ -13,16 +12,13 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
-import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
-import Tools.DynamicLogic
 import Tools.Error
 
 data CustomerCancellationDuesWaiveOffReq = CustomerCancellationDuesWaiveOffReq
@@ -51,6 +47,12 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
     Just duesDetails -> do
       when (duesDetails.paymentStatus /= DCDD.PENDING) $
         throwError $ InvalidRequest $ "Cancellation dues for rideId " <> req.rideId <> " are already " <> show duesDetails.paymentStatus <> ". Cannot waive off."
+      -- The consequence-matrix row that produced this charge can forbid waive-off outright.
+      whenJust duesDetails.cancellationConsequenceRowId $ \rowId -> do
+        mbConsequenceRow <- QCCM.findByPrimaryKey (Id rowId)
+        whenJust mbConsequenceRow $ \row ->
+          unless row.waiveOffAllowed $
+            throwError $ InvalidRequest $ "Waive-off is not allowed for this cancellation charge (consequence matrix row " <> rowId <> "), rideId: " <> req.rideId
     Nothing -> logWarning $ "No CancellationDuesDetails entry found for rideId: " <> req.rideId <> ". Proceeding with legacy flow."
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel
@@ -59,39 +61,38 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
     throwError $ InvalidRequest $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel <> " and riderDetails.cancellationDues " <> show riderDetails.cancellationDues
   when (riderDetails.cancellationDues < req.waiveOffAmount) $
     throwError $ InvalidRequest $ "Cancellation Due Amount is less than the waived off amount for riderId " <> riderDetails.id.getId
-  let logicInput =
-        UserCancellationDues.UserCancellationDuesWaiveOffData
-          { cancellationDues = riderDetails.cancellationDues,
-            cancelledRides = riderDetails.cancelledRides,
-            totalBookings = riderDetails.totalBookings,
-            completedRides = riderDetails.completedRides,
-            validCancellations = riderDetails.validCancellations,
-            cancellationDueRides = riderDetails.cancellationDueRides,
-            cancellationDuesPaid = riderDetails.cancellationDuesPaid,
-            noOfTimesWaiveOffUsed = riderDetails.noOfTimesWaiveOffUsed,
-            noOfTimesCanellationDuesPaid = riderDetails.noOfTimesCanellationDuesPaid,
-            waivedOffAmount = riderDetails.waivedOffAmount,
-            currentWaivingOffAmount = req.waiveOffAmount
-          }
+  -- Waive-off decision is matrix-driven (the USER_CANCELLATION_DUES_WAIVE_OFF JsonLogic
+  -- is retired): the row must allow it (hard-checked above) and the rider must be within
+  -- the row's maxWaiveOffsPerPeriod over waiveOffPeriodDays (default 30), counted from
+  -- WAIVED dues rows in that window.
   canWaiveOffResult <-
     if transporterConfig.canAddCancellationFee
-      then do
-        localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-        (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime Nothing Nothing
-        response <- withTryCatch "runLogics:canWaiveOffResult" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF (Just booking.transactionId) allLogics logicInput
-        case response of
-          Left e -> do
-            logError $ "Error in running UserCancellationDuesWaiveOffLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
-            return False
-          Right resp -> do
-            case (A.fromJSON resp.result :: A.Result UserCancellationDues.UserCancellationDuesWaiveOffResult) of
-              A.Success result -> do
-                logTagInfo ("bookingId-" <> getId booking.id) ("result.waiveOff: " <> show result.canWaiveOff)
-                return result.canWaiveOff
-              A.Error e -> do
-                logError $ "Error in parsing UserCancellationDuesWaiveOffResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
-                return False
-      else return False
+      then case mbCancellationDuesDetails >>= (.cancellationConsequenceRowId) of
+        Nothing -> do
+          -- pre-matrix dues row: no row to consult; the amount + PENDING checks above
+          -- still guard the operation
+          logWarning $ "Waive-off on a pre-matrix dues row (no consequence row id), allowing: rideId " <> req.rideId
+          pure True
+        Just consequenceRowId -> do
+          mbConsequenceRow <- QCCM.findByPrimaryKey (Id consequenceRowId)
+          case mbConsequenceRow of
+            Nothing -> do
+              logError $ "Consequence matrix row " <> consequenceRowId <> " not found for waive-off, rideId " <> req.rideId
+              pure False
+            Just row
+              | not row.waiveOffAllowed -> pure False
+              | otherwise -> case row.maxWaiveOffsPerPeriod of
+                Nothing -> pure True
+                Just maxWaives -> do
+                  now <- getCurrentTime
+                  let periodDays = fromMaybe 30 row.waiveOffPeriodDays
+                      since = addUTCTime (negate $ fromIntegral periodDays * 86400) now
+                  waivedRows <- QCDD.findAllWaivedByRiderId riderDetails.id
+                  let waivesInPeriod = length $ filter (\d -> d.updatedAt >= since) waivedRows
+                  when (waivesInPeriod >= maxWaives) $
+                    logWarning $ "Waive-off limit reached (" <> show waivesInPeriod <> "/" <> show maxWaives <> " in last " <> show periodDays <> " days) for riderId " <> riderDetails.id.getId
+                  pure (waivesInPeriod < maxWaives)
+      else pure False
 
   when canWaiveOffResult $ do
     QRD.updateWaivedOffAmount req.waiveOffAmount riderDetails.id.getId

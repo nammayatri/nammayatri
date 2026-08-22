@@ -78,6 +78,7 @@ library
       API.Types.ProviderPlatform.Management
       API.Types.ProviderPlatform.Management.Account
       API.Types.ProviderPlatform.Management.Booking
+      API.Types.ProviderPlatform.Management.CancellationConsequence
       API.Types.ProviderPlatform.Management.CoinsConfig
       API.Types.ProviderPlatform.Management.Communication
       API.Types.ProviderPlatform.Management.DomainDiscountConfig
@@ -89,6 +90,7 @@ library
       API.Types.ProviderPlatform.Management.DriverVehicleQuality
       API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
+      API.Types.ProviderPlatform.Management.Endpoints.CancellationConsequence
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
       API.Types.ProviderPlatform.Management.Endpoints.Communication
       API.Types.ProviderPlatform.Management.Endpoints.DomainDiscountConfig

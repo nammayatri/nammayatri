@@ -46,12 +46,6 @@ data FaultParty = DriverAtFault | CustomerAtFault | SharedFault | NoFault
 isCustomerAtFault :: Maybe FaultVerdict -> Bool
 isCustomerAtFault = maybe False ((== CustomerAtFault) . (.atFault))
 
--- | Charge-eligibility with legacy fallback: when fault rules are configured the verdict
--- alone decides; when they aren't (verdict is Nothing) the caller's legacy tag-based
--- decision applies, so cities migrate to verdict gating one at a time.
-customerAtFaultOrLegacy :: Bool -> Maybe FaultVerdict -> Bool
-customerAtFaultOrLegacy legacyEligible = maybe legacyEligible ((== CustomerAtFault) . (.atFault))
-
 isDriverAtFault :: Maybe FaultVerdict -> Bool
 isDriverAtFault = maybe False ((== DriverAtFault) . (.atFault))
 
@@ -86,6 +80,10 @@ data FaultVerdictData = FaultVerdictData
     callAttemptCount :: Int,
     actualCoveredDistance :: Maybe Meters,
     expectedCoveredDistance :: Maybe Meters,
+    initialDistanceToPickup :: Maybe Meters,
+    currentDistanceToPickup :: Maybe Meters,
+    isAdvanceBooking :: Bool,
+    isPickupOrDestinationEdited :: Bool,
     pickupStallCase :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -103,6 +101,10 @@ instance Default FaultVerdictData where
         callAttemptCount = 0,
         actualCoveredDistance = Nothing,
         expectedCoveredDistance = Nothing,
+        initialDistanceToPickup = Nothing,
+        currentDistanceToPickup = Nothing,
+        isAdvanceBooking = False,
+        isPickupOrDestinationEdited = False,
         pickupStallCase = Nothing
       }
 
@@ -119,6 +121,10 @@ mkFaultVerdictData signals cancelledBy reasonCode =
       callAttemptCount = signals.callAttemptCount,
       actualCoveredDistance = signals.actualCoveredDistance,
       expectedCoveredDistance = signals.expectedCoveredDistance,
+      initialDistanceToPickup = signals.initialDistanceToPickup,
+      currentDistanceToPickup = signals.currentDistanceToPickup,
+      isAdvanceBooking = signals.isAdvanceBooking,
+      isPickupOrDestinationEdited = signals.isPickupOrDestinationEdited,
       pickupStallCase = signals.pickupStallCase
     }
 
@@ -148,6 +154,17 @@ getOrComputeFaultVerdict ride mbEntityTxnId timeDiffFromUtc faultData = do
           Redis.setExp (faultVerdictKey ride.id) verdict faultVerdictTtl
           QRide.updateCancellationFaultVerdict (Just $ show verdict.atFault) (Just verdict.rule) ride.id
           pure (Just verdict)
+
+-- | Dry-run twin of 'getOrComputeFaultVerdict' for previews: fetches the same rules and
+-- computes the same verdict, but touches NO state — no Redis cache, no ride-row persist
+-- (the cancellation may never happen). Nothing when the city has no fault rules.
+computeFaultVerdictDryRun :: FaultFlow m r => DRide.Ride -> Maybe Text -> Seconds -> FaultVerdictData -> m (Maybe FaultVerdict)
+computeFaultVerdictDryRun ride mbEntityTxnId timeDiffFromUtc faultData = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  (logics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.CANCELLATION_FAULT_VERDICT localTime Nothing Nothing
+  if null logics
+    then pure Nothing
+    else Just <$> computeFaultVerdict ride mbEntityTxnId logics faultData
 
 computeFaultVerdict :: FaultFlow m r => DRide.Ride -> Maybe Text -> [A.Value] -> FaultVerdictData -> m FaultVerdict
 computeFaultVerdict ride mbEntityTxnId logics faultData = do

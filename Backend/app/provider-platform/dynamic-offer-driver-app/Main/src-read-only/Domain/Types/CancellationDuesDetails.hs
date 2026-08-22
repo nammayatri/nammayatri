@@ -15,7 +15,9 @@ import qualified Tools.Beam.UtilsTH
 
 data CancellationDuesDetails = CancellationDuesDetails
   { cancellationAmount :: Kernel.Types.Common.HighPrecMoney,
+    cancellationCollectionMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationConsequenceRowId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancellationFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,

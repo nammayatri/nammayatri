@@ -195,6 +195,7 @@ library
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Account
       Domain.Action.Dashboard.Management.Booking
+      Domain.Action.Dashboard.Management.CancellationConsequence
       Domain.Action.Dashboard.Management.CoinsConfig
       Domain.Action.Dashboard.Management.Communication
       Domain.Action.Dashboard.Management.DomainDiscountConfig
@@ -415,6 +416,7 @@ library
       Domain.Types.DriverWallet
       Domain.Types.Event.RideEndedEvent
       Domain.Types.External.LiveEKD
+      Domain.Types.Extra.CancellationConsequenceMatrix
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
@@ -533,9 +535,10 @@ library
       SharedLogic.CallIGMBAP
       SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
-      SharedLogic.CancellationCoins
+      SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
       SharedLogic.CancellationFault
+      SharedLogic.CancellationOrchestrator
       SharedLogic.CancellationSignals
       SharedLogic.DeleteDriver
       SharedLogic.DriverCancellationPenalty
@@ -638,7 +641,6 @@ library
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type
-      SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
       SharedLogic.VehicleServiceTierAreaRestriction
       SharedLogic.WMB
@@ -703,6 +705,7 @@ library
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BlockedRoute
+      Storage.CachedQueries.CancellationConsequenceMatrix
       Storage.CachedQueries.CoinsConfig
       Storage.CachedQueries.DocumentVerificationConfig
       Storage.CachedQueries.DocumentVerificationStagesConfig
@@ -1051,6 +1054,7 @@ library
       API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Account
       API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.CancellationConsequence
       API.Action.Dashboard.Management.CoinsConfig
       API.Action.Dashboard.Management.Communication
       API.Action.Dashboard.Management.DomainDiscountConfig
@@ -1252,6 +1256,7 @@ library
       Domain.Types.CallFeedbackOptions
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
+      Domain.Types.CancellationConsequenceMatrix
       Domain.Types.CancellationDuesDetails
       Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
@@ -1442,6 +1447,7 @@ library
       Storage.Beam.CallFeedbackOptions
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
+      Storage.Beam.CancellationConsequenceMatrix
       Storage.Beam.CancellationDuesDetails
       Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
@@ -1637,6 +1643,7 @@ library
       Storage.Queries.CallFeedbackOptions
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
+      Storage.Queries.CancellationConsequenceMatrix
       Storage.Queries.CancellationDuesDetails
       Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason

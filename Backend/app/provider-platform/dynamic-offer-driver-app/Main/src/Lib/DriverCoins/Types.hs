@@ -32,11 +32,12 @@ import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
 import qualified Text.Show (show)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnumAndList)
 
 data CancellationType
   = CancellationByCustomer
   | CancellationByDriver
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, Eq, Ord, Read)
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
@@ -67,6 +68,8 @@ driverCoinsEventTypeToString = \case
 instance Show CancellationType where
   show CancellationByCustomer = "CancellationByCustomer"
   show CancellationByDriver = "CancellationByDriver"
+
+$(mkBeamInstancesForEnumAndList ''CancellationType)
 
 instance Show DriverCoinsEventType where
   show = driverCoinsEventTypeToString

@@ -58,6 +58,7 @@ library
       Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Account
       Domain.Action.ProviderPlatform.Management.Booking
+      Domain.Action.ProviderPlatform.Management.CancellationConsequence
       Domain.Action.ProviderPlatform.Management.CoinsConfig
       Domain.Action.ProviderPlatform.Management.Communication
       Domain.Action.ProviderPlatform.Management.DomainDiscountConfig
@@ -175,6 +176,7 @@ library
       API.Action.ProviderPlatform.Management
       API.Action.ProviderPlatform.Management.Account
       API.Action.ProviderPlatform.Management.Booking
+      API.Action.ProviderPlatform.Management.CancellationConsequence
       API.Action.ProviderPlatform.Management.CoinsConfig
       API.Action.ProviderPlatform.Management.Communication
       API.Action.ProviderPlatform.Management.DomainDiscountConfig

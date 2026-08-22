@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Management where
 
 import qualified API.Types.ProviderPlatform.Management.Account
 import qualified API.Types.ProviderPlatform.Management.Booking
+import qualified API.Types.ProviderPlatform.Management.CancellationConsequence
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
 import qualified API.Types.ProviderPlatform.Management.Communication
 import qualified API.Types.ProviderPlatform.Management.DomainDiscountConfig
@@ -46,6 +47,7 @@ import qualified Text.Show
 data ManagementUserActionType
   = ACCOUNT API.Types.ProviderPlatform.Management.Account.AccountUserActionType
   | BOOKING API.Types.ProviderPlatform.Management.Booking.BookingUserActionType
+  | CANCELLATION_CONSEQUENCE API.Types.ProviderPlatform.Management.CancellationConsequence.CancellationConsequenceUserActionType
   | COINS_CONFIG API.Types.ProviderPlatform.Management.CoinsConfig.CoinsConfigUserActionType
   | COMMUNICATION API.Types.ProviderPlatform.Management.Communication.CommunicationUserActionType
   | DOMAIN_DISCOUNT_CONFIG API.Types.ProviderPlatform.Management.DomainDiscountConfig.DomainDiscountConfigUserActionType
@@ -84,6 +86,7 @@ instance Text.Show.Show ManagementUserActionType where
   show = \case
     ACCOUNT e -> "ACCOUNT/" <> show e
     BOOKING e -> "BOOKING/" <> show e
+    CANCELLATION_CONSEQUENCE e -> "CANCELLATION_CONSEQUENCE/" <> show e
     COINS_CONFIG e -> "COINS_CONFIG/" <> show e
     COMMUNICATION e -> "COMMUNICATION/" <> show e
     DOMAIN_DISCOUNT_CONFIG e -> "DOMAIN_DISCOUNT_CONFIG/" <> show e
@@ -127,6 +130,15 @@ instance Text.Read.Read ManagementUserActionType where
                  )
                  | r1 <- stripPrefix "BOOKING/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( CANCELLATION_CONSEQUENCE v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "CANCELLATION_CONSEQUENCE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( COINS_CONFIG v1,
                    r2
@@ -412,4 +424,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])

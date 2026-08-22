@@ -40,6 +40,12 @@ data CancellationSignals = CancellationSignals
     callAttemptCount :: Int,
     actualCoveredDistance :: Maybe Meters,
     expectedCoveredDistance :: Maybe Meters,
+    -- raw distances (also exposed to the fault rules: e.g. "driver within
+    -- max(10% of initial, 100m) of pickup" style conditions)
+    initialDistanceToPickup :: Maybe Meters,
+    currentDistanceToPickup :: Maybe Meters,
+    isAdvanceBooking :: Bool,
+    isPickupOrDestinationEdited :: Bool,
     pickupStallCase :: Maybe Text
   }
   deriving (Generic, Show)
@@ -75,6 +81,10 @@ buildCancellationSignals req = do
       isDistanceArrived = maybe False (< highPrecMetersToMeters req.arrivedPickupThreshold) req.cancellationDisToPickup
       isArrivedAtPickup = isJust req.ride.driverArrivalTime || isDistanceArrived
       timeSinceBooking = req.bookingCreatedAt <&> \createdAt -> round $ diffUTCTime now createdAt
+      initialDistanceToPickup = req.initialDisToPickup
+      currentDistanceToPickup = req.cancellationDisToPickup
+      isAdvanceBooking = req.ride.isAdvanceBooking
+      isPickupOrDestinationEdited = fromMaybe False req.ride.isPickupOrDestinationEdited
   pure CancellationSignals {..}
 
 -- | The one definition of "the driver attempted to call the rider" — every cancellation

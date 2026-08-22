@@ -24,6 +24,15 @@ findAllPendingByRiderId riderId = do
         ]
     ]
 
+findAllWaivedByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id.Id DRD.RiderDetails -> m [DCDD.CancellationDuesDetails]
+findAllWaivedByRiderId riderId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.riderId $ Se.Eq (Id.getId riderId),
+          Se.Is Beam.paymentStatus $ Se.Eq DCDD.WAIVED
+        ]
+    ]
+
 updateStatusByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DCDD.CancellationDuesPaymentStatus -> [Id.Id DCDD.CancellationDuesDetails] -> m ()
 updateStatusByIds status ids = do
   _now <- getCurrentTime

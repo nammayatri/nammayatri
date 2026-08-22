@@ -92,6 +92,8 @@ data TripTransaction
 
 data CoinsConfig
 
+data CancellationConsequenceMatrix
+
 data IncentiveJourney
 
 data IncentiveJourneyMilestone

@@ -6,7 +6,6 @@ import qualified API.Types.UI.Penalty
 import Data.Either.Extra (eitherToMaybe)
 import Data.OpenApi (ToSchema)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import qualified Domain.Action.UI.Ride.CancelRide.Internal as CancelRideInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant
@@ -21,10 +20,12 @@ import qualified Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
-import qualified Lib.Yudhishthira.Types as YT
 import qualified Lib.Yudhishthira.Types.Application as YA
+import qualified SharedLogic.CancellationConsequence as CancellationConsequence
+import qualified SharedLogic.CancellationOrchestrator as Orchestrator
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -53,28 +54,24 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   unless (ride.status == DRide.NEW) $
     throwError (InvalidRequest "Ride cannot be cancelled in current state")
 
-  (isApplicable, penaltyAmount) <- case booking.fareParams.driverCancellationPenaltyAmount of
-    Just penaltyAmount -> do
-      tagData <- CancelRideInternal.buildPenaltyCheckContext booking ride req.point
-      tagsE <- withTryCatch "computeNammaTags:PenaltyCheck" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) YA.PenaltyCheck (Just booking.transactionId) tagData
-      let tags = fromMaybe [] $ eitherToMaybe tagsE
-          isPenaltyApplicable = validCancellationPenaltyApplicable `elem` tags
-          existingTags = fromMaybe [] ride.rideTags
-          updatedTags = if isPenaltyApplicable && validCancellationPenaltyApplicable `notElem` existingTags then validCancellationPenaltyApplicable : existingTags else if not isPenaltyApplicable then filter (/= validCancellationPenaltyApplicable) existingTags else existingTags
-      QRide.updateRideTags (Just updatedTags) ride.id
-      return (isPenaltyApplicable, Just penaltyAmount)
-    Nothing -> do
-      return (False, Nothing)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  (mbDriverDistToPickup, _) <- Orchestrator.getDistanceToPickup booking (Just ride)
+  -- The SAME decision pipeline as a real driver cancel (signals → fault verdict →
+  -- matrix row), via the orchestrator's dry-run entry: no Redis caches, no ride-row
+  -- persistence — the cancellation may never happen.
+  decision <- Orchestrator.previewCancellationConsequences booking ride transporterConfig DCT.CancellationByDriver Nothing mbDriverDistToPickup
+  let signals = decision.signals
+      mbFaultVerdict = decision.faultVerdict
+      penaltyAmount = (\row -> CancellationConsequence.driverMoneyDeduction row booking.estimatedFare) =<< decision.consequenceRow
+      isApplicable = isJust penaltyAmount
 
   cancellationValidity <- do
     now <- getCurrentTime
-    mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
-    let callAtemptByDriver = isJust mbCallStatus
+    let callAtemptByDriver = signals.callAttemptByDriver
         currentTime = floor $ utcTimeToPOSIXSeconds now
         rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
         bookingCreatedTime = floor $ utcTimeToPOSIXSeconds booking.createdAt
         driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
-    (mbDriverDistToPickup, _) <- CancelRideInternal.getDistanceToPickup booking (Just ride)
     let simulatedCancellationReason =
           SBCR.BookingCancellationReason
             { bookingId = booking.id,
@@ -100,11 +97,8 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
               bookingCreatedTime = bookingCreatedTime,
               driverArrivalTime = driverArrivalTime,
               merchantOperatingCityId = booking.merchantOperatingCityId,
-              -- Preview-only simulation: computing the fault verdict here would cache it in
-              -- Redis and persist it on the ride row for a cancellation that may never
-              -- happen, so the simulated tag context runs without one (legacy behaviour).
-              faultVerdict = Nothing,
-              faultRule = Nothing
+              faultVerdict = (\v -> show v.atFault) <$> mbFaultVerdict,
+              faultRule = (.rule) <$> mbFaultVerdict
             }
     tagsE <- withTryCatch "computeNammaTags:RideCancel" $ LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) YA.RideCancel (Just booking.transactionId) tagData
     let tags = fromMaybe [] $ eitherToMaybe tagsE

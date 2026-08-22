@@ -32,7 +32,7 @@ import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (whenJust)
 import Kernel.Prelude hiding (any, elem, map)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,7 +42,6 @@ import Kernel.Utils.Common
 import Lib.Finance
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -51,7 +50,6 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.Ride as QRide
-import Tools.Constants
 import Tools.Error
 import Tools.Metrics as Metrics
 import TransactionLogs.Types
@@ -160,57 +158,72 @@ accumulateCancellationPenalty ::
   Bool -> -- isWalletEnabled
   SRB.Booking ->
   DRide.Ride ->
-  [LYT.TagNameValue] ->
+  -- penalty amount from the CancellationConsequenceMatrix row's driverDeduction (MONEY
+  -- variant); Nothing means no penalty. Replaces the CancellationPenaltyApplicable tag
+  -- gate and farePolicy.driverCancellationPenaltyAmount.
+  Maybe HighPrecMoney ->
   DTC.TransporterConfig ->
   DP.Person ->
   m ()
-accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterConfig driver = do
-  when (validCancellationPenaltyApplicable `elem` rideTags && isJust booking.fareParams.driverCancellationPenaltyAmount) $ do
-    case booking.fareParams.driverCancellationPenaltyAmount of
-      Just penaltyAmount ->
-        if isWalletEnabled
-          then do
-            mbPanCard <- QPanCard.findByDriverId ride.driverId
-            mbDriverInfo <- QDI.findById (cast ride.driverId)
-            ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
-            result <- runFinance ctx $ do
-              _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
-              invoice
-                InvoiceConfig
-                  { invoiceType = RideCancellation,
-                    issuedToType = InvType.DRIVER,
-                    issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
-                    issuedToName = Nothing,
-                    issuedToAddress = Nothing,
-                    referenceId = Just booking.id.getId,
-                    gstBreakdown = Nothing,
-                    lineItems =
-                      [ InvoiceLineItem {description = "Driver Cancellation Penalty", descriptionType = Just DriverCancellationPenalty, quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False, groupId = Just "g-penalty", itemType = Just Fare}
-                      ],
-                    isVat = False,
-                    issuedToTaxNo = Nothing,
-                    issuedByTaxNo = Nothing,
-                    paymentMode = Nothing,
-                    periodStart = Nothing,
-                    periodEnd = Nothing
-                  }
-            case result of
-              Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)
-              Right _ -> pure ()
-            logInfo $
-              "Created DriverCancellationCharges ledger entry for ₹"
-                <> show penaltyAmount
-                <> " bookingId: "
-                <> booking.id.getId
-            QRide.updateDriverCancellationPenalty Nothing (Just penaltyAmount) ride.id
-          else do
-            -- Legacy path: create/update DriverFee
-            feeId <- chargeDriverPenaltyFee booking.providerId booking.merchantOperatingCityId ride.driverId penaltyAmount booking.currency transporterConfig
-            QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penaltyAmount) ride.id
-      Nothing ->
-        logError $
-          "Penalty tag present but driverCancellationPenaltyAmount is Nothing for ride "
-            <> ride.id.getId
+accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount transporterConfig driver = do
+  whenJust mbPenaltyAmount $ \signedAmount -> do
+    -- Signed amount from the consequence ADAPTER (the matrix itself stores positive
+    -- amounts with direction in the MoneyDeduction/MoneyAddition constructor;
+    -- CancellationConsequence.driverMoneyDeduction emits + for a penalty, − for an
+    -- addition). Positive = penalty (fee/wallet debit), negative = compensation, which
+    -- rides the wallet only — the legacy DriverFee rail cannot pay out.
+    when (signedAmount < 0) $
+      if isWalletEnabled
+        then do
+          mbPanCard <- QPanCard.findByDriverId ride.driverId
+          mbDriverInfo <- QDI.findById (cast ride.driverId)
+          ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+          creditResult <- runFinance ctx $ void $ transfer OwnerExpense OwnerLiability (abs signedAmount) walletReferenceDriverCancellationCharges Nothing
+          case creditResult of
+            Left err -> logError $ "Failed to credit driver cancellation compensation: " <> show err <> " bookingId: " <> booking.id.getId
+            Right _ -> logInfo $ "Credited driver cancellation compensation ₹" <> show (abs signedAmount) <> " bookingId: " <> booking.id.getId
+        else logError $ "Driver cancellation compensation (negative matrix amount) requires the wallet; skipped for ride " <> ride.id.getId
+    when (signedAmount > 0) $ do
+      let penaltyAmount = signedAmount
+      if isWalletEnabled
+        then do
+          mbPanCard <- QPanCard.findByDriverId ride.driverId
+          mbDriverInfo <- QDI.findById (cast ride.driverId)
+          ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
+          result <- runFinance ctx $ do
+            _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
+            invoice
+              InvoiceConfig
+                { invoiceType = RideCancellation,
+                  issuedToType = InvType.DRIVER,
+                  issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
+                  issuedToName = Nothing,
+                  issuedToAddress = Nothing,
+                  referenceId = Just booking.id.getId,
+                  gstBreakdown = Nothing,
+                  lineItems =
+                    [ InvoiceLineItem {description = "Driver Cancellation Penalty", descriptionType = Just DriverCancellationPenalty, quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False, groupId = Just "g-penalty", itemType = Just Fare}
+                    ],
+                  isVat = False,
+                  issuedToTaxNo = Nothing,
+                  issuedByTaxNo = Nothing,
+                  paymentMode = Nothing,
+                  periodStart = Nothing,
+                  periodEnd = Nothing
+                }
+          case result of
+            Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)
+            Right _ -> pure ()
+          logInfo $
+            "Created DriverCancellationCharges ledger entry for ₹"
+              <> show penaltyAmount
+              <> " bookingId: "
+              <> booking.id.getId
+          QRide.updateDriverCancellationPenalty Nothing (Just penaltyAmount) ride.id
+        else do
+          -- Legacy path: create/update DriverFee
+          feeId <- chargeDriverPenaltyFee booking.providerId booking.merchantOperatingCityId ride.driverId penaltyAmount booking.currency transporterConfig
+          QRide.updateDriverCancellationPenalty (Just feeId.getId) (Just penaltyAmount) ride.id
 
 -- | Create or top up the driver's ongoing CANCELLATION_PENALTY fee. Shared by the
 -- per-ride cancellation penalty (accumulateCancellationPenalty) and the behavior

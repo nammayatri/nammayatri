@@ -128,3 +128,125 @@ One per-city fault computation, evaluated **once per cancellation**, whose *outp
 
 Template migration: extend `dev/feature-migrations/0034-cancellation-fee-consolidated.sql` with the
 verdict logic rows, or add a sibling `00XX-cancellation-fault-verdict.sql`.
+
+## Appendix: reference CANCELLATION_FAULT_VERDICT rule (legacy parity)
+
+Combined from the legacy CANCELLATION_COIN_POLICY amounts rule and the legacy
+driver-cancellation-penalty (Valid/Invalid) tag rule. Amounts live in the consequence
+matrix, keyed by these rule names; precedence is top-down. Single order:
+
+```json
+{"if":[
+  {"and":[{"==":[{"var":"cancelledBy"},"CancellationByDriver"]},
+          {"or":[{"var":"isAdvanceBooking"},
+                 {"var":"isPickupOrDestinationEdited"},
+                 {"<":[{"var":"timeOfCancellation"},20]}]}]},
+  {"cat":[{"var":""},{"atFault":"NoFault"},{"rule":"driver_excused_cancel"}]},
+  {"if":[
+    {"!=":[{"var":"pickupStallCase"},null]},
+    {"cat":[{"var":""},{"atFault":"DriverAtFault"},{"rule":"pickup_stall"}]},
+    {"if":[
+      {"and":[{"==":[{"var":"cancelledBy"},"CancellationByCustomer"]},
+              {"<":[{"var":"timeOfCancellation"},30]}]},
+      {"cat":[{"var":""},{"atFault":"NoFault"},{"rule":"early_customer_cancel"}]},
+      {"if":[
+        {"and":[{"==":[{"var":"cancelledBy"},"CancellationByCustomer"]},
+                {"or":[{"var":"isArrivedAtPickup"},
+                       {"!=":[{"var":"driverWaitingTime"},null]}]}]},
+        {"cat":[{"var":""},{"atFault":"CustomerAtFault"},{"rule":"customer_cancelled_driver_arrived"}]},
+        {"if":[
+          {"and":[{"==":[{"var":"cancelledBy"},"CancellationByCustomer"]},
+                  {"or":[{"==":[{"var":"cancellationReasonSelected"},"DRIVER_NOT_MOVING"]},
+                         {"==":[{"var":"cancellationReasonSelected"},"WAIT_TIME_TOO_LONG"]}]},
+                  {"<":[{"if":[{"==":[{"var":"actualCoveredDistance"},null]},-1000000,{"var":"actualCoveredDistance"}]},
+                        {"max":[{"*":[{"if":[{"==":[{"var":"expectedCoveredDistance"},null]},0,{"var":"expectedCoveredDistance"}]},0.5]},150]}]},
+                  {">":[{"var":"timeOfCancellation"},60]}]},
+          {"cat":[{"var":""},{"atFault":"DriverAtFault"},{"rule":"driver_not_moving_complaint"}]},
+          {"if":[
+            {"and":[{"==":[{"var":"cancelledBy"},"CancellationByCustomer"]},
+                    {">":[{"if":[{"==":[{"var":"actualCoveredDistance"},null]},0,{"var":"actualCoveredDistance"}]},500]}]},
+            {"cat":[{"var":""},{"atFault":"CustomerAtFault"},{"rule":"customer_late_cancel_driver_moved"}]},
+            {"if":[
+              {"and":[{"==":[{"var":"cancelledBy"},"CancellationByDriver"]},
+                      {"or":[{"<":[{"if":[{"==":[{"var":"currentDistanceToPickup"},null]},999999999,{"var":"currentDistanceToPickup"}]},
+                                   {"max":[{"*":[{"if":[{"==":[{"var":"initialDistanceToPickup"},null]},0,{"var":"initialDistanceToPickup"}]},0.1]},100]}]},
+                             {">":[{"if":[{"==":[{"var":"driverWaitingTime"},null]},0,{"var":"driverWaitingTime"}]},180]}]}]},
+              {"cat":[{"var":""},{"atFault":"CustomerAtFault"},{"rule":"customer_no_show"}]},
+              {"if":[
+                {"and":[{"==":[{"var":"cancelledBy"},"CancellationByDriver"]},
+                        {"<":[{"var":"timeOfCancellation"},90]}]},
+                {"if":[
+                  {">":[{"if":[{"==":[{"var":"actualCoveredDistance"},null]},0,{"var":"actualCoveredDistance"}]},50]},
+                  {"cat":[{"var":""},{"atFault":"DriverAtFault"},{"rule":"driver_avoidable_cancel_early_moving_toward"}]},
+                  {"if":[
+                    {"<":[{"if":[{"==":[{"var":"actualCoveredDistance"},null]},0,{"var":"actualCoveredDistance"}]},-50]},
+                    {"cat":[{"var":""},{"atFault":"DriverAtFault"},{"rule":"driver_avoidable_cancel_early_moving_away"}]},
+                    {"cat":[{"var":""},{"atFault":"DriverAtFault"},{"rule":"driver_avoidable_cancel_early_stationary"}]}
+                  ]}]},
+                {"if":[
+                  {"==":[{"var":"cancelledBy"},"CancellationByDriver"]},
+                  {"cat":[{"var":""},{"atFault":"DriverAtFault"},{"rule":"driver_avoidable_cancel"}]},
+                  {"cat":[{"var":""},{"atFault":"NoFault"},{"rule":"no_fault_default"}]}
+                ]}]}]}]}]}]}]}]}]}
+```
+
+Legacy-parity matrix rows per rule name (amounts from the two legacy rules):
+
+Coin values use the matrix constructors (2026-08-22 schema): `CoinDeduction n` takes n
+coins from the driver, `CoinAddition n` gives n — counts always positive, direction in
+the constructor (never a sign).
+
+| rule | verdict | driver coins | driver money | customer charge |
+|---|---|---|---|---|
+| driver_excused_cancel | NoFault | — | — | — |
+| pickup_stall | DriverAtFault | (suggest CoinDeduction 30) | per city | — |
+| early_customer_cancel (<30s) | NoFault | — | — | — |
+| driver_not_moving_complaint | DriverAtFault | 0 (legacy) | legacy penalty amount | — |
+| customer_cancelled_driver_arrived | CustomerAtFault | CoinAddition 50 | — | dues amount |
+| customer_late_cancel_driver_moved | CustomerAtFault | CoinAddition 30 | — | dues amount |
+| customer_no_show | CustomerAtFault | CoinAddition 50 | — | no-show amount |
+| driver_avoidable_cancel_early_moving_toward (20-90s, covered > 50m) | DriverAtFault | 0 (legacy) | legacy penalty amount | — |
+| driver_avoidable_cancel_early_moving_away (20-90s, covered < -50m) | DriverAtFault | 0 (legacy) | legacy penalty amount | — |
+| driver_avoidable_cancel_early_stationary (20-90s, |covered| <= 50m or unknown) | DriverAtFault | 0 (legacy) | legacy penalty amount | — |
+| driver_avoidable_cancel (>=90s) | DriverAtFault | CoinDeduction 30 | legacy penalty amount | — |
+| no_fault_default | NoFault | — | — | — |
+
+Notes on legacy reconciliation:
+- The two legacy systems disagreed on the driver "early" boundary (20s for money, 90s for
+  coins). The split `driver_avoidable_cancel_early` / `driver_avoidable_cancel` rules
+  preserve BOTH via matrix rows (money-only vs money+coins).
+- 2026-08-22 tuning from production distribution: customer free window cut 90s → 30s
+  (side effect: `driver_not_moving_complaint` (>60s) is now reachable for 61-90s customer
+  cancels, which the 90s window used to swallow; 30-90s customer cancels without other
+  signals fall to `no_fault_default` — same NoFault outcome, different label).
+  `driver_avoidable_cancel_early` split three ways by movement state at cancel, using net
+  covered distance with a ±50m GPS dead-band: `_moving_toward` (covered > 50m),
+  `_moving_away` (covered < -50m), `_stationary` (|covered| <= 50m or location unknown).
+  Unknown location folds into stationary; give it its own bucket if the distinction
+  matters operationally.
+- The legacy penalty rule required a call attempt to excuse a driver's no-show cancel;
+  per product decision (2026-08-21) `customer_no_show` does NOT require a call — being at
+  the pickup (within max(10%, 100m)) or having waited > 180s suffices.
+  `callAttemptByDriver` / `callAttemptCount` remain available as inputs for cities that
+  want the stricter variant.
+- The legacy not-moving corroboration (`distanceToPickup >= driverDistToPickup`, i.e.
+  covered >= 0) was WRONG: it also holds when the driver made excellent progress, so the
+  combined rule replaces it with a progress-DEFICIT check —
+  `actualCoveredDistance < max(expectedCoveredDistance * 0.5, 150)` (driver covered less
+  than half of what the ETA predicted by now, with a 150m absolute floor when no ETA).
+  Retreating drivers (negative covered) satisfy it trivially.
+- **The jsonLogic engine (json-logic-hs) is FULLY EAGER and strict about nulls**: only
+  filter/sort/map/var are special-cased — every other operator, INCLUDING `if`, has all
+  its arguments evaluated before dispatch, and numeric ops throw "expected number, got
+  Null". Therefore guard-`if`s AROUND arithmetic do NOT help (the guarded branch still
+  evaluates). The working idiom is OPERAND COALESCING:
+  `{"if":[{"==":[{"var":"x"},null]}, <literal>, {"var":"x"}]}` inside the arithmetic —
+  branches are literals/vars so eager evaluation is safe, and the outer op always gets a
+  number. Sentinels chosen: covered→-1000000 in the deficit check (null = corroborated,
+  legacy-loose; use +1000000 to fail-safe instead), covered→0 in the >500 check (fail
+  closed), currentDistance→999999999 (fail closed), expected/initial→0 (floor applies),
+  wait→0 (fail closed).
+- Branch ORDER fix for the same failure mode: `customer_cancelled_driver_arrived` is
+  checked BEFORE `driver_not_moving_complaint`, so a customer citing DRIVER_NOT_MOVING /
+  WAIT_TIME_TOO_LONG when the driver has actually arrived (or is waiting) resolves to
+  CustomerAtFault instead of blaming the driver.

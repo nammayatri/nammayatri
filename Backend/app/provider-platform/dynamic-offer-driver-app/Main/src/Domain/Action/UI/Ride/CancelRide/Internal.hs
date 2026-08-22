@@ -18,17 +18,16 @@ module Domain.Action.UI.Ride.CancelRide.Internal
     createCancellationLedgerEntries,
     applyCancellationLedgerAction,
     updateNammaTagsForCancelledRide,
+    -- re-exported from SharedLogic.CancellationOrchestrator for existing callers
     driverDistanceToPickup,
     buildCancellationContext,
     getCancellationCharges,
     customerCancellationChargesCalculation,
     CancellationChargesOutcome (..),
     getDistanceToPickup,
-    buildPenaltyCheckContext,
   )
 where
 
-import Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -41,14 +40,11 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 
 import qualified Domain.Types.CancellationDuesDetails as DCDD
-import qualified Domain.Types.CancellationReason as DTCR
-import Domain.Types.DriverLocation
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleVariant as Veh
 import qualified Domain.Types.Yudhishthira as TY
@@ -65,12 +61,8 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Version as Version
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
-import qualified Lib.DriverScore as DS
-import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
@@ -85,8 +77,8 @@ import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
+import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.CancellationSignals as CancellationSignals
-import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Wallet
@@ -95,7 +87,6 @@ import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
-import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -111,16 +102,12 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
-import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Constants
-import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
-import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
@@ -192,21 +179,11 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
             transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
             (cancellationDisToPickup, _mbDriverLocation) <- getDistanceToPickup booking (Just ride)
-            (signals, mbFaultVerdict) <- buildCancellationContext booking ride transporterConfig DCT.CancellationByDriver bookingCReason.reasonCode cancellationDisToPickup
-            rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig mbFaultVerdict
-            -- Driver cancelled: the customer is charged only when the fault rules attribute
-            -- the cancellation to the customer (no-show); cities without fault rules fall
-            -- back to the legacy tag gate. Gate lives in getCancellationCharges.
-            noShowCharges <-
-              withTryCatch "noShowCharges:cancelRideImpl" $
-                getCancellationCharges booking ride DCT.CancellationByDriver bookingCReason.reasonCode (Just (signals, mbFaultVerdict)) (any (`elem` rideTags) [validCustomerCancellation, validUserNoShowCancellation])
-            userNoShowCharges <- case noShowCharges of
-              Left e -> do
-                logError $ "Error in getting no show charges - " <> show e
-                return (Nothing, Nothing)
-              Right charges -> return charges
-            logDebug $ "userNoShowCharges: " <> show userNoShowCharges
-            let (userNoShowOutcome, userNoShowChargesLogicVersion) = userNoShowCharges
+            -- ONE decision (signals → fault verdict → consequence-matrix row) feeds every
+            -- consequence below through the orchestrator; nothing re-derives it.
+            decision <- decideCancellationConsequences booking ride transporterConfig DCT.CancellationByDriver bookingCReason.reasonCode cancellationDisToPickup
+            let consequenceCtx = ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCReason.source, decision = decision}
+            void $ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig decision.faultVerdict
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             mbVehicle <- QVeh.findById ride.driverId
             vehicle <- case mbVehicle of
@@ -218,7 +195,12 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                   pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
                 | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
-            cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowOutcome userNoShowChargesLogicVersion transporterConfig driver
+            cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig driver
+            -- Matrix-row-driven consequences (SharedLogic.CancellationOrchestrator):
+            -- blacklist, driver overlay, coin event, driver money, rate counting — then
+            -- the customer-side charge (dues + counters + ledger entries).
+            applyImmediateConsequences consequenceCtx doCancellationRateBasedBlocking
+            chargesOutcome <- applyTerminalConsequences consequenceCtx (\base gst -> createCancellationLedgerEntries booking ride base gst transporterConfig)
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
             -- Release pickup-zone counters (idempotent). ByDriver triggers reallocation,
             -- so demand stays live for the next match; every other source terminates the booking.
@@ -231,28 +213,16 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
                 (Just ride.driverId)
 
-            fork "DriverRideCancelledCoin Event : " $ do
-              mbLocation <- do
-                driverLocations <- LF.driversLocationByCloudType [ride.driverId] driver.cloudType
-                return $ listToMaybe driverLocations
-              disToPickup <- forM mbLocation $ \location -> do
-                driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
-              when (bookingCReason.source == SBCR.ByDriver) $
-                DC.driverCoinsEvent ride.driverId Nothing driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
-
             fork "cancelRide - Notify driver" $ do
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-              when (bookingCReason.source == SBCR.ByDriver) $ do
-                DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
-                DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId ride.id booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
               unless isReallocated $ do
                 -- Reload ride to get persisted cancellationFee/cancellationFeeTax
                 updatedRide <- QRide.findById ride.id
-                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source (userNoShowOutcome >>= (.fee)) (userNoShowOutcome >>= (.tax)) updatedRide
+                BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source (chargesOutcome >>= (.fee)) (chargesOutcome >>= (.tax)) updatedRide
             computeEligibleUpgradeTiers ride transporterConfig
         )
         ( do
@@ -280,12 +250,10 @@ cancelRideTransaction ::
   SBCR.BookingCancellationReason ->
   DMerc.Merchant ->
   DRide.RideEndedBy ->
-  Maybe CancellationChargesOutcome ->
-  Maybe Int ->
   DTC.TransporterConfig ->
   SP.Person ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchant rideEndedBy mbChargesOutcome cancellationChargesLogicVersion transporterConfig _driver = do
+cancelRideTransaction booking ride bookingCReason merchant rideEndedBy _transporterConfig _driver = do
   let driverId = cast ride.driverId
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   when isPrepaidSubscriptionAndWalletEnabled $ releaseLien booking ride
@@ -299,35 +267,6 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy mbCharges
   Metrics.incrementRideCancelledCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (show bookingCReason.source) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance)
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
-  case (mbChargesOutcome >>= (.fee), booking.riderId) of
-    (Just fee, Just rid) -> do
-      -- Persist charges-on-cancel total + logic version on ride; the fee/tax/overdue
-      -- breakdown lives on CancellationDuesDetails. fee is the base (tax-exclusive).
-      let gstOnCancellation = fromMaybe 0 (mbChargesOutcome >>= (.tax))
-          baseCancellation = fee
-          totalCancellation = baseCancellation + gstOnCancellation
-      QRide.updateCancellationChargesOnCancel (Just totalCancellation) cancellationChargesLogicVersion ride.id
-      riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
-      QRiderDetails.updateValidCancellationsCount rid.getId
-      SCD.applyCancellationCharge
-        SCD.ApplyCancellationChargeReq
-          { ride = ride,
-            riderId = rid,
-            currentDues = riderDetails.cancellationDues,
-            totalCharges = totalCancellation,
-            currency = booking.currency,
-            cancellationFee = Just baseCancellation,
-            cancellationFeeTax = Just gstOnCancellation,
-            overdueCancellationCharge = mbChargesOutcome >>= (.overdueFee),
-            overdueCancellationTax = mbChargesOutcome >>= (.overdueTax),
-            cancellationCommission = mbChargesOutcome >>= (.commission),
-            overdueCancellationCommission = mbChargesOutcome >>= (.overdueCommission)
-          }
-      -- Customer cancellation ledger entries (wallet path)
-      when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && totalCancellation > 0) $
-        createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation transporterConfig
-    _ -> do
-      logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
 
 updateNammaTagsForCancelledRide ::
   ( EsqDBFlow m r,
@@ -371,273 +310,6 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig mb
     logError $ "Customer no show tag was not applied: rideId: " <> ride.id.getId
   Analytics.updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason
   return $ fromMaybe [] allTags
-
-driverDistanceToPickup ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos,
-    ToJSON tripStartPos,
-    ToJSON tripEndPos,
-    HasKafkaProducer r
-  ) =>
-  SRB.Booking ->
-  tripStartPos ->
-  tripEndPos ->
-  m Meters
-driverDistanceToPickup booking tripStartPos tripEndPos = do
-  distRes <-
-    Maps.getDistanceForCancelRide booking.providerId booking.merchantOperatingCityId (Just booking.id.getId) $
-      Maps.GetDistanceReq
-        { origin = tripStartPos,
-          destination = tripEndPos,
-          travelMode = Just Maps.CAR,
-          distanceUnit = booking.distanceUnit,
-          sourceDestinationMapping = Nothing
-        }
-  return $ distRes.distance
-
-getDistanceToPickup ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    HasField "shortDurationRetryCfg" r RetryCfg,
-    EncFlow m r,
-    HasKafkaProducer r,
-    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
-    Esq.EsqDBReplicaFlow m r
-  ) =>
-  SRB.Booking ->
-  Maybe DRide.Ride ->
-  m (Maybe Meters, Maybe DriverLocation)
-getDistanceToPickup booking mbRide = do
-  case mbRide of
-    Just ride -> do
-      mbDriver <- QPerson.findById ride.driverId
-      mbLocation <- do
-        driverLocations <- withTryCatch "driversLocation:getDistanceToPickup" $ LF.driversLocationByCloudType [ride.driverId] (mbDriver >>= (.cloudType))
-        case driverLocations of
-          Left err -> do
-            logError ("Failed to fetch Driver Location with error : " <> show err)
-            return Nothing
-          Right locations -> return $ listToMaybe locations
-      case mbLocation of
-        Just location -> do
-          distance <- driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
-          return (Just distance, Just location)
-        Nothing -> return (Nothing, Nothing)
-    _ -> return (Nothing, Nothing)
-
--- | Cancellation charge outcome from the USER_CANCELLATION_DUES logic: the fee/tax pair, the
---   reduced overdue variants, and the platform's commission on each. Every field is optional —
---   a rule that emits no value for a field decodes to Nothing, and a Nothing fee means no charge
---   applies (downstream skips the dues/counter writes).
-data CancellationChargesOutcome = CancellationChargesOutcome
-  { fee :: Maybe HighPrecMoney,
-    tax :: Maybe HighPrecMoney,
-    overdueFee :: Maybe HighPrecMoney,
-    overdueTax :: Maybe HighPrecMoney,
-    commission :: Maybe HighPrecMoney,
-    overdueCommission :: Maybe HighPrecMoney
-  }
-  deriving (Generic, Show)
-
--- | Build the canonical cancellation signals and the (cached, once-per-ride) fault
--- verdict for a cancel flow. Callers fetch the driver's current distance to pickup
--- themselves so flows that already have it don't pay for a second LTS call.
-buildCancellationContext ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    ClickhouseFlow m r
-  ) =>
-  SRB.Booking ->
-  DRide.Ride ->
-  DTC.TransporterConfig ->
-  DCT.CancellationType ->
-  Maybe DTCR.CancellationReasonCode ->
-  Maybe Meters ->
-  m (CancellationSignals.CancellationSignals, Maybe CancellationFault.FaultVerdict)
-buildCancellationContext booking ride transporterConfig cancelledBy reasonCode cancellationDisToPickup = do
-  signals <-
-    CancellationSignals.buildCancellationSignals
-      CancellationSignals.CancellationSignalsReq
-        { ride = ride,
-          quoteId = booking.quoteId,
-          bookingCreatedAt = Just booking.createdAt,
-          fallbackDurationToPickup = booking.dqDurationToPickup,
-          initialDisToPickup = booking.distanceToPickup,
-          cancellationDisToPickup = cancellationDisToPickup,
-          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
-        }
-  mbFaultVerdict <-
-    CancellationFault.getOrComputeFaultVerdict ride (Just booking.transactionId) transporterConfig.timeDiffFromUtc $
-      CancellationFault.mkFaultVerdictData signals cancelledBy reasonCode
-  pure (signals, mbFaultVerdict)
-
-customerCancellationChargesCalculation ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    EncFlow m r,
-    HasKafkaProducer r,
-    HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
-    Esq.EsqDBReplicaFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
-  ) =>
-  SRB.Booking ->
-  DRide.Ride ->
-  RiderDetails.RiderDetails ->
-  DCT.CancellationType ->
-  Maybe DTCR.CancellationReasonCode ->
-  Maybe Int ->
-  CancellationSignals.CancellationSignals ->
-  Maybe CancellationFault.FaultVerdict ->
-  m (Maybe CancellationChargesOutcome, Maybe Int)
-customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode mbExistingVersion signals mbFaultVerdict = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  mbSearchRequest <- QSRLite.findByTransactionIdAndMerchantIdLite booking.transactionId booking.providerId
-  let userSdkVersionText = Version.versionToText <$> (mbSearchRequest >>= (.userSdkVersion))
-  mbPaymentMethod <- forM booking.paymentMethodId $ \pmId ->
-    CQMPM.findByIdAndMerchantOpCityId pmId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound pmId.getId)
-  let isCashPayment = case mbPaymentMethod of
-        Nothing -> True
-        Just pm -> pm.paymentInstrument == DMPM.Cash
-      -- Payment-method exception: skip the cancellation fee entirely for configured instruments (e.g. Cash).
-      -- A booking without a payment method is treated as Cash, matching isCashPayment above.
-      bookingPaymentInstrument = maybe DMPM.Cash (.paymentInstrument) mbPaymentMethod
-      isCancellationFeeExemptPaymentMethod = bookingPaymentInstrument `elem` fromMaybe [] transporterConfig.cancellationFeePaymentMethodExceptions
-  let logicInput =
-        UserCancellationDues.UserCancellationDuesData
-          { cancelledBy = cancellationType,
-            timeOfDriverCancellation = signals.timeOfCancellation,
-            timeOfCustomerCancellation = signals.timeOfCancellation,
-            isArrivedAtPickup = signals.isArrivedAtPickup,
-            driverWaitingTime = fromMaybe 0 signals.driverWaitingTime,
-            callAttemptByDriver = signals.callAttemptByDriver,
-            actualCoveredDistance = fromMaybe 0 signals.actualCoveredDistance,
-            expectedCoveredDistance = fromMaybe 0 signals.expectedCoveredDistance,
-            cancellationDues = riderDetails.cancellationDues,
-            cancelledRides = riderDetails.cancelledRides,
-            totalBookings = riderDetails.totalBookings,
-            completedRides = riderDetails.completedRides,
-            estimatedBookingFare = booking.estimatedFare,
-            validCancellations = riderDetails.validCancellations,
-            cancellationDueRides = riderDetails.cancellationDueRides,
-            serviceTier = booking.vehicleServiceTier,
-            tripCategory = booking.tripCategory,
-            cancellationReasonSelected = reasonCode,
-            userSdkVersion = userSdkVersionText,
-            isCashPayment = isCashPayment,
-            timeSinceBooking = fromMaybe 0 signals.timeSinceBooking,
-            pickupStallCase = signals.pickupStallCase,
-            faultVerdict = (\v -> show v.atFault) <$> mbFaultVerdict,
-            faultRule = (.rule) <$> mbFaultVerdict
-          }
-  if transporterConfig.canAddCancellationFee && not isCancellationFeeExemptPaymentMethod
-    then do
-      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      (allLogics, mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES localTime mbExistingVersion Nothing
-      logDebug $ "allLogics: for cancellation charges calculation" <> show allLogics
-      logDebug $ "logicInput: for cancellation charges calculation" <> show logicInput
-      response <- withTryCatch "runLogics:UserCancellationDues" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES (Just booking.transactionId) allLogics logicInput
-      outcome <- case response of
-        Left e -> do
-          logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
-          return CancellationChargesOutcome {fee = Just 0, tax = Just 0, overdueFee = Nothing, overdueTax = Nothing, commission = Nothing, overdueCommission = Nothing}
-        Right resp -> do
-          case (A.fromJSON resp.result :: Result UserCancellationDues.UserCancellationDuesResult) of
-            A.Success result -> do
-              logTagInfo ("bookingId-" <> getId booking.id) ("result.cancellationCharges: " <> show result.cancellationCharges <> " tax: " <> show result.cancellationChargesTax <> " overdue: " <> show result.overdueCancellationCharge <> " overdueTax: " <> show result.overdueCancellationTax <> " commission: " <> show result.cancellationCommission <> " overdueCommission: " <> show result.overdueCancellationCommission)
-              return
-                CancellationChargesOutcome
-                  { fee = Just result.cancellationCharges,
-                    tax = result.cancellationChargesTax,
-                    overdueFee = result.overdueCancellationCharge,
-                    overdueTax = result.overdueCancellationTax,
-                    commission = result.cancellationCommission,
-                    overdueCommission = result.overdueCancellationCommission
-                  }
-            A.Error e -> do
-              logError $ "Error in parsing UserCancellationDuesResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
-              return CancellationChargesOutcome {fee = Just 0, tax = Nothing, overdueFee = Nothing, overdueTax = Nothing, commission = Nothing, overdueCommission = Nothing}
-      when (maybe False (`elem` validCancellationPenaltyReasonCodes transporterConfig) reasonCode && fromMaybe 0 outcome.fee <= 0) $
-        logError $ "User no show charges was not applied: " <> show outcome.fee <> ": rideId: " <> ride.id.getId <> ". Please check dynamic logic"
-      -- Commission outputs are controlled by the JsonLogic (Maybe commission /
-      -- overdueCommission) directly — no separate enable flag needed.
-      pure (Just outcome, mbVersion)
-    else return (Nothing, Nothing)
-
--- | Default no-show cancellation reason, used when transporter_config leaves the penalty reasons unset.
-userNoShowCancellationReason :: DTCR.CancellationReasonCode
-userNoShowCancellationReason = DTCR.CancellationReasonCode "CUSTOMER_NO_SHOW"
-
--- | Cancellation reason codes that qualify a driver cancellation as a penalizable no-show.
--- Configurable per operating city via transporter_config.validCancellationPenaltyReasons;
--- falls back to CUSTOMER_NO_SHOW when unset.
-validCancellationPenaltyReasonCodes :: DTC.TransporterConfig -> [DTCR.CancellationReasonCode]
-validCancellationPenaltyReasonCodes transporterConfig =
-  maybe [userNoShowCancellationReason] (map DTCR.CancellationReasonCode) transporterConfig.validCancellationPenaltyReasons
-
-getCancellationCharges ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    EncFlow m r,
-    HasKafkaProducer r,
-    Esq.EsqDBReplicaFlow m r,
-    HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
-  ) =>
-  SRB.Booking ->
-  DRide.Ride ->
-  DCT.CancellationType ->
-  Maybe DTCR.CancellationReasonCode ->
-  Maybe (CancellationSignals.CancellationSignals, Maybe CancellationFault.FaultVerdict) ->
-  -- legacy charge-eligibility decision (tag-based), applied only when the city has no
-  -- CANCELLATION_FAULT_VERDICT rules; soft-cancel preview passes True (its legacy
-  -- behaviour is to always quote)
-  Bool ->
-  m (Maybe CancellationChargesOutcome, Maybe Int)
-getCancellationCharges booking ride cancellationType reasonCode mbContext legacyChargeEligible = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  case booking.riderId of
-    Nothing -> return (Nothing, Nothing)
-    Just rid -> do
-      riderDetails <- QRiderDetails.findById rid >>= fromMaybeM (RiderDetailsNotFound rid.getId)
-      if transporterConfig.canAddCancellationFee
-        then do
-          (signals, mbFaultVerdict) <- case mbContext of
-            Just ctx -> pure ctx
-            Nothing -> do
-              (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
-              buildCancellationContext booking ride transporterConfig cancellationType reasonCode cancellationDisToPickup
-          when (isNothing mbFaultVerdict) $
-            logWarning $ "No CANCELLATION_FAULT_VERDICT rules configured for city " <> booking.merchantOperatingCityId.getId <> " — falling back to legacy charge gating, rideId: " <> ride.id.getId
-          -- Charge eligibility: the verdict decides when fault rules are configured;
-          -- otherwise the caller's legacy tag-based decision applies.
-          if CancellationFault.customerAtFaultOrLegacy legacyChargeEligible mbFaultVerdict
-            then do
-              (mbOutcome, mbVersion) <- customerCancellationChargesCalculation booking ride riderDetails cancellationType reasonCode ride.cancellationChargesLogicVersion signals mbFaultVerdict
-              -- A computed-but-zero total charge means "nothing to collect": drop the fee (and with it
-              -- the commission) so downstream skips the dues/counter writes, but keep the overdue fields.
-              let dropZeroCharge o = case o.fee of
-                    Just charges
-                      | charges + fromMaybe 0 o.tax == 0 ->
-                        CancellationChargesOutcome {fee = Nothing, tax = Nothing, overdueFee = o.overdueFee, overdueTax = o.overdueTax, commission = Nothing, overdueCommission = o.overdueCommission}
-                    _ -> o
-              return (dropZeroCharge <$> mbOutcome, mbVersion)
-            else return (Nothing, Nothing)
-        else return (Nothing, Nothing)
 
 -- | Create BPP-side finance ledger entries + invoice for a customer cancellation charge.
 -- Extracted so it can be called from both cancelRideTransaction (driver-cancel path)
@@ -809,7 +481,7 @@ applyCancellationLedgerAction ::
   ) =>
   SRB.Booking ->
   DRide.Ride ->
-  UserCancellationDues.CancellationLedgerAction ->
+  SCD.CancellationLedgerAction ->
   DTC.TransporterConfig ->
   m ()
 applyCancellationLedgerAction booking ride action transporterConfig = do
@@ -835,7 +507,7 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
   overdueEntries <- concat <$> mapM (`getEntriesByReference` refId) overdueAllRefs
   let alreadyOverdue = not (Kernel.Prelude.null overdueEntries)
   case action of
-    UserCancellationDues.SettleCancellationLedger -> do
+    SCD.SettleCancellationLedger -> do
       -- Decide once whether the settled charge is the actual cancellation fee (reversed overdue / never overdue)
       -- or the overdue charge that still stands; this single choice drives fare params + service VAT.
       let alreadyReversed = not (Kernel.Prelude.null (filter (\e -> isJust e.reversalOf) overdueEntries))
@@ -933,7 +605,7 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
         case commissionResult of
           Left err -> logError $ "Failed to book cancellation commission for bookingId: " <> refId <> " - " <> show err
           Right _ -> logInfo $ "Booked cancellation commission for bookingId: " <> refId <> " gross=" <> show cancellationCommissionGross
-    UserCancellationDues.OverdueCancellationLedger ->
+    SCD.OverdueCancellationLedger ->
       unless alreadyOverdue $ do
         entries <- concat <$> mapM (`getEntriesByReference` refId) cancellationLedgerRefs
         Kernel.Prelude.forM_ entries $ \e ->
@@ -958,50 +630,5 @@ applyCancellationLedgerAction booking ride action transporterConfig = do
             Left err -> logError $ "Failed to create overdue cancellation ledger entries: " <> show err
             Right _ -> logInfo $ "Created overdue cancellation ledger entries for bookingId: " <> refId <> " charge=" <> show overdueCharge <> " tax=" <> show overdueTax <> " benefit=" <> show overdueBenefit <> " benefitTax=" <> show overdueBenefitTax
 
-buildPenaltyCheckContext ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    HasShortDurationRetryCfg r c,
-    EncFlow m r,
-    LT.HasLocationService m r,
-    HasKafkaProducer r
-  ) =>
-  SRB.Booking ->
-  DRide.Ride ->
-  LatLong ->
-  m TY.PenaltyCheckTagData
-buildPenaltyCheckContext booking ride point = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  driverDistanceFromPickupNow <- do
-    distRes <- withTryCatch "driverDistanceToPickup:buildPenaltyCheckContext" $ driverDistanceToPickup booking (getCoordinates point) (getCoordinates booking.fromLocation)
-    either
-      ( \err -> do
-          logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)
-          return Nothing
-      )
-      (\d -> return $ Just d)
-      distRes
-  signals <-
-    CancellationSignals.buildCancellationSignals
-      CancellationSignals.CancellationSignalsReq
-        { ride = ride,
-          quoteId = booking.quoteId,
-          bookingCreatedAt = Just booking.createdAt,
-          fallbackDurationToPickup = booking.dqDurationToPickup,
-          initialDisToPickup = booking.distanceToPickup,
-          cancellationDisToPickup = driverDistanceFromPickupNow,
-          arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold
-        }
-  return $
-    TY.PenaltyCheckTagData
-      { ride = ride,
-        booking = booking,
-        currentTime = floor $ utcTimeToPOSIXSeconds signals.computedAt,
-        rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt,
-        driverArrivedAtPickup = signals.isArrivedAtPickup,
-        driverDistanceFromPickupNow,
-        driverDistanceFromPickupAtAcceptance = booking.distanceToPickup,
-        numberOfCallAttempts = signals.callAttemptCount
-      }
+-- buildPenaltyCheckContext was removed: the driver penalty preview (postPenaltyCheck)
+-- now resolves the consequence matrix directly instead of simulating PenaltyCheck tags.

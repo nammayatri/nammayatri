@@ -33,12 +33,11 @@ module Lib.DriverCoins.Coins
     incrementIncentiveMetricsForRide,
     incrementValidRideCountForTimeBoundCohort,
     EventFlow,
-    runCancellationLogic,
     updateEventAndGetCoinsvalue,
   )
 where
 
-import qualified Data.Aeson as A
+import Control.Applicative ((<|>))
 import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
@@ -72,9 +71,8 @@ import Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.CancellationCoins as CancellationCoins
+import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
@@ -92,7 +90,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Translations as MTQuery
-import qualified Tools.DynamicLogic as TDL
 import qualified Tools.Notifications as Notify
 import Tools.Utils
 
@@ -541,7 +538,9 @@ hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpira
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-validateCancellation :: EventFlow m r => Maybe Text -> UTCTime -> Maybe Meters -> Maybe Meters -> TransporterConfig -> DCT.CancellationType -> DTCR.CancellationReasonCode -> m Int
+-- | Returns the coin delta and the matrix row's expiry override (both from the row's
+-- driverDeduction CoinDeduction variant; a MONEY deduction or matrix miss yields 0).
+validateCancellation :: EventFlow m r => Maybe Text -> UTCTime -> Maybe Meters -> Maybe Meters -> TransporterConfig -> DCT.CancellationType -> DTCR.CancellationReasonCode -> m (Int, Maybe Int)
 validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason = do
   rideIdText <- fromMaybeM (RideNotFound "RideId is not present") rideId
   ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
@@ -560,41 +559,27 @@ validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToP
   mbFaultVerdict <-
     CancellationFault.getOrComputeFaultVerdict ride (Just booking.transactionId) transporterConfig.timeDiffFromUtc $
       CancellationFault.mkFaultVerdictData signals cancelledBy (Just cancellationReason)
-  let logicInput =
-        CancellationCoins.CancellationCoinData
-          { cancelledBy = cancelledBy,
-            timeOfDriverCancellation = signals.timeOfCancellation,
-            timeOfCustomerCancellation = signals.timeOfCancellation,
-            isArrivedAtPickup = signals.isArrivedAtPickup,
-            driverWaitingTime = signals.driverWaitingTime,
-            callAttemptByDriver = signals.callAttemptByDriver,
-            actualCoveredDistance = signals.actualCoveredDistance,
-            expectedCoveredDistance = signals.expectedCoveredDistance,
-            pickupStallCase = signals.pickupStallCase,
-            faultVerdict = (\v -> show v.atFault) <$> mbFaultVerdict,
-            faultRule = (.rule) <$> mbFaultVerdict
-          }
-  runCancellationLogic ride.merchantOperatingCityId (Just booking.transactionId) logicInput
-
-runCancellationLogic :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Maybe Text -> CancellationCoins.CancellationCoinData -> m Int
-runCancellationLogic merchantOpCityId mbEntityTransactionId logicInput = do
-  now <- getCurrentTime
-  (logics, _) <- TDL.getAppDynamicLogic (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY now Nothing Nothing
-
-  if null logics
-    then do
-      logInfo "No cancellation logic found, using default logic"
-      pure 0
-    else do
-      logInfo $ "Running cancellation logic with " <> show (length logics) <> " rules"
-      result <- LYDL.runLogicsWithDebugLog LYDL.Driver (cast merchantOpCityId) LYT.CANCELLATION_COIN_POLICY mbEntityTransactionId logics logicInput
-      case A.fromJSON result.result :: A.Result CancellationCoins.CancellationCoinResult of
-        A.Success logicResult -> do
-          logInfo $ "Cancellation logic result: " <> show logicResult
-          pure logicResult.coins
-        A.Error err -> do
-          logError $ "Failed to parse cancellation logic result: " <> show err
-          pure 0
+  -- Coin amount comes from the (once-per-ride cached) consequence matrix row, replacing
+  -- the CANCELLATION_COIN_POLICY JsonLogic. The main cancel flow resolves first with the
+  -- full booking context (area, payment instrument); this fork then reads that cached
+  -- decision, so both apply the SAME row. Matrix miss => no coins (logged in resolver).
+  mbRow <-
+    CancellationConsequence.getOrResolveConsequence ride.id $
+      CancellationConsequence.ConsequenceInput
+        { merchantOperatingCityId = ride.merchantOperatingCityId,
+          faultVerdict = mbFaultVerdict,
+          cancelledBy = cancelledBy,
+          tripCategory = booking.tripCategory,
+          vehicleServiceTier = booking.vehicleServiceTier,
+          area = Nothing,
+          paymentInstrument = Nothing,
+          isDashboardBooking = False
+        }
+  let mbCoinDeduction = CancellationConsequence.driverCoinDeduction =<< mbRow
+      coins = maybe 0 fst mbCoinDeduction
+      mbExpiry = snd =<< mbCoinDeduction
+  logInfo $ "Cancellation coins from consequence matrix row " <> show ((.id.getId) <$> mbRow) <> ": " <> show coins <> " expiryOverride=" <> show mbExpiry
+  pure (coins, mbExpiry)
 
 hCancellation :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.CancellationType -> DTCR.CancellationReasonCode -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
 hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy cancellationReason eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType = do
@@ -603,11 +588,11 @@ hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPick
     DCT.BookingCancellation -> do
       runActionWhenValidConditions [pure False] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType -- To be deprecated
     DCT.BookingCancellationPenalisaton -> do
-      numCoinValue <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
-      runActionWhenValidConditions [pure (numCoinValue < 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
+      (numCoinValue, mbRowExpiry) <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
+      runActionWhenValidConditions [pure (numCoinValue < 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction (mbRowExpiry <|> mbexpirationTime) numCoinValue entityId vehCategory mbServiceTierType
     DCT.BookingCancellationCompensation -> do
-      numCoinValue <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
-      runActionWhenValidConditions [pure (numCoinValue > 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
+      (numCoinValue, mbRowExpiry) <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
+      runActionWhenValidConditions [pure (numCoinValue > 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction (mbRowExpiry <|> mbexpirationTime) numCoinValue entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 runActionWhenValidConditions :: EventFlow m r => [m Bool] -> m Int -> m Int

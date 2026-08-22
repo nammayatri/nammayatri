@@ -29,7 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
-import qualified SharedLogic.UserCancellationDues as UserCancellationDues
+import qualified SharedLogic.CancellationDues as SCD
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -70,7 +70,7 @@ data CancellationDueBreakup = CancellationDueBreakup
 data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   { customerMobileNumber :: Text,
     customerMobileCountryCode :: Text,
-    cancellationLedgerAction :: UserCancellationDues.CancellationLedgerAction,
+    cancellationLedgerAction :: SCD.CancellationLedgerAction,
     bppRideId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
