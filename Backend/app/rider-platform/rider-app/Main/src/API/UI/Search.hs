@@ -22,6 +22,9 @@ module API.UI.Search
     DSearch.SearchReqLocation (..),
     API,
     SearchAPI,
+    SuggestedFareAPI,
+    SuggestedFareReq (..),
+    SuggestedFarePoint (..),
     search',
     search,
     handler,
@@ -57,6 +60,7 @@ import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MultimodalPreferences as DMP
@@ -102,6 +106,7 @@ import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
+import qualified SharedLogic.BetterRoutePointCache as BRPC
 import qualified SharedLogic.BetterRoutePointSearch as BRPS
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.GatewayLookup as GatewayLookup
@@ -167,6 +172,7 @@ data MultimodalSearchResp = MultimodalSearchResp
 
 type API =
   SearchAPI
+    :<|> SuggestedFareAPI
     :<|> "multimodalSearch"
       :> TokenAuth
       :> ReqBody '[JSON] DSearch.SearchReq
@@ -202,8 +208,41 @@ type SearchAPI =
     :> QueryParam "hasPasses" Bool
     :> Post '[JSON] SearchResp
 
+-- | Prices one walk-and-save shape the customer asked for.
+--
+-- /rideSearch/ lists the shapes it found but only prices the one it would pick; this is
+-- how the rest get a fare, and equally how a shape the customer invented gets one, by
+-- nudging a suggested marker somewhere they would rather be picked up. Either way it is
+-- the same thing: a point a short walk from where they said, priced as a search of its own
+-- against the route the parent search already resolved.
+type SuggestedFareAPI =
+  "rideSearch"
+    :> "suggestedFare"
+    :> TokenAuth
+    :> ReqBody '[JSON] SuggestedFareReq
+    :> Post '[JSON] DQuote.SuggestedEstimates
+
+-- | An endpoint the customer chose, with what their own geocoder calls it. The address is
+-- optional because the app does not always have one to hand; when it is missing the
+-- backend reverse-geocodes the point rather than leaving the parent's address on a
+-- location that is no longer there.
+data SuggestedFarePoint = SuggestedFarePoint
+  { gps :: MapsTypes.LatLong,
+    address :: Maybe LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- | At least one of the two ends has to move -- with neither, this is just the search the
+-- customer already has.
+data SuggestedFareReq = SuggestedFareReq
+  { parentSearchId :: Id SearchRequest.SearchRequest,
+    suggestedPickup :: Maybe SuggestedFarePoint,
+    suggestedDrop :: Maybe SuggestedFarePoint
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 handler :: FlowServer API
-handler = search :<|> multimodalSearchHandler
+handler = search :<|> suggestedFare :<|> multimodalSearchHandler
 
 allRoutesLoadedKey :: Text -> Text
 allRoutesLoadedKey searchReqId = "allRoutesLoaded:" <> searchReqId
@@ -305,7 +344,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   -- Look for a point on the resolved route that would cut a detour out of the ride. On a
   -- hit this persists a shadow search request; it is priced by the BPP in parallel below,
   -- and never replaces what the customer asked for.
-  mbSuggestedRes <- case mbRiderConfig of
+  mbSuggestedBuild <- case mbRiderConfig of
     Just riderConfig ->
       withTryCatch "betterRoutePointSearch" (withTimeAPI "rideSearch" "betterRoutePointBuild" $ JMU.measureLatency (BRPS.buildSuggestedSearchRes riderConfig dSearchRes) "betterRoutePoint.total") >>= \case
         Right res -> pure res
@@ -313,7 +352,16 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           logError $ "better_route_point: shadow search build failed, continuing without it: " <> T.pack (show e)
           pure Nothing
     Nothing -> pure Nothing
-  suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedRes
+  suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedBuild
+  -- The alternates are never waited on: their fares are for a decision the customer has
+  -- not made yet, so they must not sit in front of the estimates they are shown beside.
+  -- Each one's on_search persists its own estimates, which /alternateSuggestion/{id}/result
+  -- collects whenever the app asks.
+  whenJust mbSuggestedBuild $ \build ->
+    unless (null build.alternateSearchRes) $
+      fork "betterRoutePointAlternates" $
+        forM_ build.alternateSearchRes $ \alternateRes ->
+          void $ priceSuggestedSearch dSearchRes alternateRes []
   let dispatch reqV =
         GatewayLookup.dispatchToGateway
           dSearchRes.merchant.id
@@ -348,34 +396,73 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
 -- | Fires the shadow search at the BPP's internal sync endpoint, in parallel with the real
 -- search. Not routed through the gateway: this is a second price lookup for one customer
 -- intent, and it must not look like a second market-wide search.
-dispatchSuggestedSearch :: DSearch.SearchRes -> DSearch.SearchRes -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
-dispatchSuggestedSearch parentRes suggestedRes =
-  awaitableFork "betterRoutePointSearchDispatch" $ do
-    becknReq <- withTimeAPI "rideSearch" "betterRoutePointBuildBecknReq" $ TaxiACL.buildSearchReqV2 suggestedRes
-    eRes <-
-      withTryCatch "betterRoutePointSearch:syncSearch" $
-        withTimeAPI "rideSearch" "betterRoutePointBppSyncSearch" $
-          JMU.measureLatency
-            ( CallBPP.searchV2Sync
-                parentRes.merchant.driverOfferBaseUrl
-                parentRes.merchant.driverOfferMerchantId
-                parentRes.merchant.driverOfferApiKey
-                True
-                becknReq
-            )
-            "betterRoutePoint.bppSyncSearch"
-    case eRes of
-      Left e -> do
-        logWarning $ "better_route_point: sync_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
-        pure Nothing
-      Right onSearchReq ->
-        withTryCatch "betterRoutePointSearch:processOnSearch" (withTimeAPI "rideSearch" "betterRoutePointInlineOnSearch" $ JMU.measureLatency (BeckOnSearch.processOnSearchInline onSearchReq) "betterRoutePoint.inlineOnSearch") >>= \case
-          Right (Just onSearchResult) ->
-            DQuote.mkSuggestedEstimates suggestedRes.searchRequest onSearchResult.estimates
-          Right Nothing -> pure Nothing
-          Left e -> do
-            logError $ "better_route_point: inline on_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
-            pure Nothing
+dispatchSuggestedSearch :: DSearch.SearchRes -> BRPS.SuggestedSearchBuild -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
+dispatchSuggestedSearch parentRes build =
+  awaitableFork "betterRoutePointSearchDispatch" $
+    priceSuggestedSearch parentRes build.shadowSearchRes (DQuote.mkSuggestedOption <$> build.alternates)
+
+-- | Sends one shadow search to the BPP and reads its answer back as the customer-facing
+-- suggestion. 'Nothing' whenever the BPP does not answer with estimates: a suggestion is
+-- an extra, so failing to price one is never allowed to fail the thing it sits beside.
+priceSuggestedSearch :: DSearch.SearchRes -> DSearch.SearchRes -> [DQuote.SuggestedOption] -> Flow (Maybe DQuote.SuggestedEstimates)
+priceSuggestedSearch parentRes suggestedRes alternatives = do
+  becknReq <- withTimeAPI "rideSearch" "betterRoutePointBuildBecknReq" $ TaxiACL.buildSearchReqV2 suggestedRes
+  eRes <-
+    withTryCatch "betterRoutePointSearch:syncSearch" $
+      withTimeAPI "rideSearch" "betterRoutePointBppSyncSearch" $
+        JMU.measureLatency
+          ( CallBPP.searchV2Sync
+              parentRes.merchant.driverOfferBaseUrl
+              parentRes.merchant.driverOfferMerchantId
+              parentRes.merchant.driverOfferApiKey
+              True
+              becknReq
+          )
+          "betterRoutePoint.bppSyncSearch"
+  case eRes of
+    Left e -> do
+      logWarning $ "better_route_point: sync_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
+      pure Nothing
+    Right onSearchReq ->
+      withTryCatch "betterRoutePointSearch:processOnSearch" (withTimeAPI "rideSearch" "betterRoutePointInlineOnSearch" $ JMU.measureLatency (BeckOnSearch.processOnSearchInline onSearchReq) "betterRoutePoint.inlineOnSearch") >>= \case
+        Right (Just onSearchResult) ->
+          DQuote.mkSuggestedEstimates suggestedRes.searchRequest onSearchResult.estimates alternatives
+        Right Nothing -> pure Nothing
+        Left e -> do
+          logError $ "better_route_point: inline on_search failed for shadow " <> suggestedRes.searchRequest.id.getId <> ": " <> T.pack (show e)
+          pure Nothing
+
+suggestedFare :: (Id Person.Person, Id Merchant.Merchant) -> SuggestedFareReq -> FlowHandler DQuote.SuggestedEstimates
+suggestedFare (personId, merchantId) req = withFlowHandlerAPIPersonId personId $ suggestedFare' (personId, merchantId) req
+
+suggestedFare' :: (Id Person.Person, Id Merchant.Merchant) -> SuggestedFareReq -> Flow DQuote.SuggestedEstimates
+suggestedFare' (personId, merchantId) req = withPersonIdLogTag personId $
+  withTimeAPI "suggestedFare" "total" $ do
+    -- Each call here is a real provider search, so it draws on the same allowance a
+    -- /rideSearch does rather than being a free way around it.
+    checkSearchRateLimit personId
+    when (isNothing req.suggestedPickup && isNothing req.suggestedDrop) $
+      throwError (InvalidRequest "A suggested fare needs a moved pickup, a moved drop, or both")
+    parent <- QSearchRequest.findById req.parentSearchId >>= fromMaybeM (SearchRequestDoesNotExist req.parentSearchId.getId)
+    -- The parent search is the customer's own; nobody else gets to spawn searches off it.
+    unless (parent.riderId == personId) $ throwError AccessDenied
+    now <- getCurrentTime
+    when (parent.validTill < now) $ throwError (InvalidRequest "Search request expired")
+    -- Without the context there is no route to trim and no way to know this search ever
+    -- had a suggestion, so there is nothing to price.
+    ctx <- BRPC.getSuggestedSearchCtx req.parentSearchId >>= fromMaybeM (InvalidRequest "No walk-and-save suggestion is available for this search")
+    merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = parent.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound parent.merchantOperatingCityId.getId)
+    parentRes <- BRPC.restoreSearchRes ctx parent merchant
+    betterRoute <- BRPS.resolveBetterRoute riderConfig parentRes ((.gps) <$> req.suggestedPickup) ((.gps) <$> req.suggestedDrop)
+    -- Whatever name the app already has for the point, and no lookup when it has none:
+    -- naming costs a reverse-geocode, and select is where that is worth paying, for the
+    -- one point the customer actually chose.
+    shadowRes <- BRPS.buildShadowSearchRes parentRes betterRoute ((.address) =<< req.suggestedPickup) ((.address) =<< req.suggestedDrop)
+    -- The other shapes stay on offer: pricing one is not choosing it, and the customer
+    -- should still be able to go back and price another.
+    priceSuggestedSearch parentRes shadowRes (DQuote.mkSuggestedOption <$> ctx.alternates)
+      >>= fromMaybeM (InvalidRequest "No fare could be fetched for the suggested pickup or drop")
 
 -- | Joins on the shadow search. It shares the real search's timeout budget, so a slow
 -- suggestion degrades to no suggestion rather than delaying the estimates the customer

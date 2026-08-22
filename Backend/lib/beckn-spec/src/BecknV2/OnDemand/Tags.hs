@@ -51,6 +51,9 @@ data Taggings = Taggings
     orderTags :: TagList,
     paymentTags :: TagList
   }
+  -- JSON so the BAP can park a search's taggings in Redis and rebuild the same
+  -- Beckn request later (see SharedLogic.BetterRoutePointCache).
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance Default Taggings where
   def = Taggings [] [] [] [] [] [] [] [] []
