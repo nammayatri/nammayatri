@@ -539,6 +539,16 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     upwardsRecomputeBufferWithUnit :: Kernel.Types.Common.Distance,
     approxRideDistanceDiffThresholdWithUnit :: Kernel.Types.Common.Distance,
     minLocationAccuracy :: Kernel.Prelude.Double,
+    graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
+    scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
+    scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
+    scheduledRideSearchRepeatLimit :: Kernel.Prelude.Int,
+    enableScheduleReallocation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    disableListScheduledBookingAPI :: Kernel.Prelude.Bool,
+    maxScheduledHoldsPerDriver :: Kernel.Prelude.Int,
+    scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    scheduledRideMinLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -578,7 +588,17 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     orderAndNotificationStatusCheckTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.NominalDiffTime),
     orderAndNotificationStatusCheckTimeLimit :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.NominalDiffTime),
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Double),
-    useWithSnapToRoadFallback :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Bool)
+    useWithSnapToRoadFallback :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Bool),
+    graceTimeForScheduledRidePickup :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.NominalDiffTime),
+    scheduleRideBufferTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.NominalDiffTime),
+    scheduledRideJobRescheduleTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.NominalDiffTime),
+    scheduledRideSearchRepeatLimit :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Int),
+    enableScheduleReallocation :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Bool),
+    disableListScheduledBookingAPI :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Bool),
+    maxScheduledHoldsPerDriver :: Kernel.Prelude.Maybe (Kernel.Types.Value.MandatoryValue Kernel.Prelude.Int),
+    scheduledRideAvgSpeedKmph :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Double),
+    scheduledRideMinLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
+    scheduledRideMaxLeadTime :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -365,7 +365,11 @@ getMerchantConfigCommon merchantShortId opCity = do
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
 mkMerchantCommonConfigRes DTC.TransporterConfig {..} =
   Common.MerchantCommonConfigRes
-    { pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
+    { maxScheduledHoldsPerDriver = scheduledRideConfig.maxHoldsPerDriver,
+      scheduledRideAvgSpeedKmph = scheduledRideConfig.avgSpeedKmph,
+      scheduledRideMinLeadTime = scheduledRideConfig.minLeadTime,
+      scheduledRideMaxLeadTime = scheduledRideConfig.maxLeadTime,
+      pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
       dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
       actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit actualRideDistanceDiffThreshold,
       upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit upwardsRecomputeBuffer,
@@ -423,8 +427,23 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                orderAndNotificationStatusCheckTime = fromMaybe config.orderAndNotificationStatusCheckTime (req.orderAndNotificationStatusCheckTime >>= (.value)),
                orderAndNotificationStatusCheckTimeLimit = fromMaybe config.orderAndNotificationStatusCheckTimeLimit (req.orderAndNotificationStatusCheckTimeLimit >>= (.value)),
                snapToRoadConfidenceThreshold = maybe config.snapToRoadConfidenceThreshold (.value) req.snapToRoadConfidenceThreshold,
-               useWithSnapToRoadFallback = maybe config.useWithSnapToRoadFallback (.value) req.useWithSnapToRoadFallback
+               useWithSnapToRoadFallback = maybe config.useWithSnapToRoadFallback (.value) req.useWithSnapToRoadFallback,
+               graceTimeForScheduledRidePickup = maybe config.graceTimeForScheduledRidePickup (.value) req.graceTimeForScheduledRidePickup,
+               scheduleRideBufferTime = maybe config.scheduleRideBufferTime (.value) req.scheduleRideBufferTime,
+               scheduledRideJobRescheduleTime = maybe config.scheduledRideJobRescheduleTime (.value) req.scheduledRideJobRescheduleTime,
+               scheduledRideSearchRepeatLimit = maybe config.scheduledRideSearchRepeatLimit (.value) req.scheduledRideSearchRepeatLimit,
+               enableScheduleReallocation = maybe config.enableScheduleReallocation (.value) req.enableScheduleReallocation,
+               disableListScheduledBookingAPI = maybe config.disableListScheduledBookingAPI (.value) req.disableListScheduledBookingAPI,
+               scheduledRideConfig =
+                 DTC.ScheduledRideConfig
+                   { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,
+                     avgSpeedKmph = maybe config.scheduledRideConfig.avgSpeedKmph (.value) req.scheduledRideAvgSpeedKmph,
+                     minLeadTime = maybe config.scheduledRideConfig.minLeadTime (.value) req.scheduledRideMinLeadTime,
+                     maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime
+                   }
               }
+  whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
+    when (mn >= mx) $ throwError (InvalidRequest "scheduledRideMaxLeadTime must be greater than scheduledRideMinLeadTime")
   _ <- CQTC.update updConfig
   CQTC.clearCache merchantOpCityId
   invalidateConfigInMem LYT.TransporterConfig
