@@ -35,6 +35,7 @@ import qualified Data.HashMap.Strict as HMS
 import Data.OpenApi hiding (name)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
+import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking
 import Domain.Types.BookingStatus
@@ -46,6 +47,9 @@ import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.Location as DLoc
+import Domain.Types.LocationAddress (LocationAddress)
+import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -78,6 +82,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.LocationAddressEnrichment as LAE
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
@@ -103,6 +108,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
+import qualified Tools.Maps as TMaps
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -142,7 +148,12 @@ data DSelectReq = DSelectReq
     billingCategory :: Maybe BillingCategory,
     preferSafetyPlus :: Maybe Bool,
     driverPreference :: Maybe [Text],
-    selectedOfferId :: Maybe Text
+    selectedOfferId :: Maybe Text,
+    -- | What the app's own geocoder calls a walk-and-save pickup/drop the customer is
+    -- selecting. Ignored for an ordinary estimate, whose locations the customer named
+    -- themselves when they searched. See 'updateSuggestedLocationAddresses'.
+    suggestedPickupAddress :: Maybe LocationAddress,
+    suggestedDropAddress :: Maybe LocationAddress
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -248,6 +259,10 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
+  -- Do this before anything is dispatched to the provider: from here on the address is
+  -- what the driver is sent to.
+  when (isJust searchRequest.parentSearchRequestId) $
+    updateSuggestedLocationAddresses personId person.merchantId searchRequest req
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
@@ -342,6 +357,49 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
     getPhoneNo :: EncFlow m r => DPerson.Person -> m (Maybe (UnencryptedItem (EncryptedHashed Text)))
     getPhoneNo person = do
       mapM decrypt person.mobileNumber
+
+-- | Names the endpoints of a walk-and-save search the customer has just committed to.
+--
+-- A shadow search's moved endpoint starts out carrying the address of the customer's own
+-- pickup or drop. That is deliberate: the point is a short walk away, so the address is
+-- close enough to show next to a fare, and naming it properly would have put a
+-- reverse-geocode on /rideSearch, which the suggestion has to stay out of the way of.
+--
+-- Selecting is where that stops being good enough — the address is about to become where a
+-- driver is sent and what the receipt says. The app geocodes the markers it draws, so it
+-- normally sends the names in with the selection; when it does not, they are resolved here.
+-- Only the end that actually moved is touched, since the other is still exactly what the
+-- customer typed.
+updateSuggestedLocationAddresses ::
+  forall m r c.
+  SelectFlow m r c =>
+  Id DPerson.Person ->
+  Id DM.Merchant ->
+  DSearchReq.SearchRequest ->
+  DSelectReq ->
+  m ()
+updateSuggestedLocationAddresses personId merchantId searchRequest req = do
+  when (isJust searchRequest.betterPointWalkToPickup) $
+    setAddress searchRequest.fromLocation req.suggestedPickupAddress
+  whenJust ((,) <$> searchRequest.betterPointWalkFromDrop <*> searchRequest.toLocation) $ \(_, toLocation) ->
+    setAddress toLocation req.suggestedDropAddress
+  where
+    setAddress location mbAddress = do
+      mbResolved <- maybe (reverseGeocode location) (pure . Just) mbAddress
+      whenJust mbResolved $ \address ->
+        -- Carry over what the customer attached to the ride rather than to the place: a
+        -- note for the driver is about this booking, and no geocoder knows it.
+        QLoc.updateAddress address {DLA.instructions = location.address.instructions, DLA.extras = location.address.extras} location.id
+
+    reverseGeocode :: SelectFlow m r c => DLoc.Location -> m (Maybe LocationAddress)
+    reverseGeocode location =
+      withTryCatch "select:suggestedPlaceName" (DMaps.getPlaceName (personId, merchantId) Nothing TMaps.GetPlaceNameReq {getBy = TMaps.ByLatLong (TMaps.LatLong location.lat location.lon), sessionToken = Nothing, language = Nothing}) >>= \case
+        Right placeNames -> pure $ LAE.mkLocationAddressFromPlaceName <$> listToMaybe placeNames
+        Left e -> do
+          -- The parent's address is still on the location and is a short walk out; leaving
+          -- it there is a worse name, not a wrong place.
+          logWarning $ "better_route_point: could not resolve a place name at select for " <> searchRequest.id.getId <> ": " <> show e
+          pure Nothing
 
 --DEPRECATED
 selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
