@@ -2,6 +2,7 @@
 
 module API.Types.UI.DriverOnboardingV2 where
 
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Common
@@ -176,11 +177,14 @@ data DriverPanReq = DriverPanReq
 data DriverVehicleServiceTier = DriverVehicleServiceTier
   { airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    instantAcceptMode :: Kernel.Prelude.Maybe Dashboard.Common.AutoAcceptanceMode,
     isDefault :: Kernel.Prelude.Bool,
+    isInstantAcceptSelected :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSelected :: Kernel.Prelude.Bool,
     isUsageRestricted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minWalletBalanceRequired :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     name :: Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

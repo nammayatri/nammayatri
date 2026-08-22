@@ -759,6 +759,7 @@ buildVehicleFromRideDetailsSnapshot booking ride rideDetails =
       variant = fromMaybe (Variant.castServiceTierToVariant booking.vehicleServiceTier) rideDetails.vehicleVariant,
       capacity = ride.vehicleServiceTierSeatingCapacity,
       selectedServiceTiers = [booking.vehicleServiceTier],
+      selectedAutoAcceptTiers = Nothing,
       airConditioned = Nothing,
       category = Nothing,
       downgradeReason = Nothing,

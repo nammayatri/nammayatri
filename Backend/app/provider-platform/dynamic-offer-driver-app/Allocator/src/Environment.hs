@@ -159,7 +159,10 @@ data HandlerEnv = HandlerEnv
     enableLtsPoolDataForPooling :: Bool,
     cloudType :: Maybe CloudType,
     rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg,
-    actorInfo :: Finance.ActorInfo
+    actorInfo :: Finance.ActorInfo,
+    driverQuoteExpirationSeconds :: NominalDiffTime,
+    quoteRespondCoolDown :: Int,
+    driverUnlockDelay :: Seconds
   }
   deriving (Generic)
 
@@ -222,7 +225,8 @@ buildHandlerEnv HandlerCfg {..} = do
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in job handler
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, ..}
+  let driverQuoteExpirationSeconds' = fromIntegral appCfg.driverQuoteExpirationSeconds
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, driverQuoteExpirationSeconds = driverQuoteExpirationSeconds', quoteRespondCoolDown = appCfg.quoteRespondCoolDown, driverUnlockDelay = appCfg.driverUnlockDelay, ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

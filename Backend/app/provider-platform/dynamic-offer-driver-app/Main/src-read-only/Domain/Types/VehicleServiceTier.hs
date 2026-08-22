@@ -22,6 +22,7 @@ data VehicleServiceTier = VehicleServiceTier
     allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
+    autoAcceptanceConfig :: Kernel.Prelude.Maybe Dashboard.Common.AutoAcceptanceConfig,
     autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     availabilityCheckConfig :: Kernel.Prelude.Maybe Dashboard.Common.AvailabilityCheckConfig,
     baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

@@ -68,6 +68,7 @@ data ServiceTierType
   | EV_HATCHBACK
   | EV_SEDAN
   | EV_SUV
+  | INSTANT_AUTO
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]

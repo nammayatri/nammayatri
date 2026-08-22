@@ -67,6 +67,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             payoutFee = Nothing,
             onlineCommissionPaidOutDirectly = Nothing,
             fetchWalletTransactionsFromClickhouse = Nothing,
+            enableWalletGatedTierCheck = Nothing,
             paymentChargeBearer = Nothing,
             paymentChargeRate = Nothing,
             connectAccountCharge = Nothing,

@@ -1044,6 +1044,7 @@ TransporterConfig:
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
+      enableWalletGatedTierCheck: Maybe Bool
       # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double

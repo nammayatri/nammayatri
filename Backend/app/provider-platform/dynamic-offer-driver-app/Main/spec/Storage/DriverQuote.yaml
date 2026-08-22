@@ -69,6 +69,7 @@ DriverQuote:
     updatedAt : UTCTime
     coinsRewardedOnGoldTierRide: Maybe Int
     commissionCharges: Maybe HighPrecMoney
+    isAutoAccepted: Maybe Bool
 
   beamType:
     tripCategory: Maybe TripCategory

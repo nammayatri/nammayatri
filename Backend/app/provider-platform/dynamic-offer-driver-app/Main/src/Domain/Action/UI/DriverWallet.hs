@@ -91,6 +91,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
@@ -844,6 +845,7 @@ recordAirportCashRecharge ::
   ( BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r
   ) =>
@@ -896,10 +898,11 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
                 subscriptionAllocations = Nothing
               }
     result <-
-      runFinance ctx $
-        if isReversal
-          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType mbLedgerMetadata
-          else do
-            _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
-            void $ invoice cashRechargeInvoiceConfig
+      if isReversal
+        then do
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+          runFinance ctx $ void $ SVST.deductOwnerLiability transporterConfig driverId PlatformAsset absAmount referenceType mbLedgerMetadata
+        else runFinance ctx $ do
+          _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
+          void $ invoice cashRechargeInvoiceConfig
     void $ fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result

@@ -45,6 +45,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.Wallet
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -150,6 +151,7 @@ accumulateCancellationPenalty ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasShortDurationRetryCfg r c,
@@ -191,7 +193,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
           result <- runFinance ctx $ do
-            _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
+            _ <- SVST.deductOwnerLiability transporterConfig ride.driverId OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges Nothing
             invoice
               InvoiceConfig
                 { invoiceType = RideCancellation,

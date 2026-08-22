@@ -469,8 +469,6 @@ getNonRedeemableBalance accountId timeDiff cutOffDays now = do
   credits <- findCreditsByAccountAfterTime accountId cutoff now
   pure $ sum $ map (.amount) credits
 
--- Account helpers (these are still needed for non-FinanceM callers like balance queries)
-
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
   CounterpartyType ->
@@ -790,14 +788,17 @@ data StripeChargeFunder = FundByPlatform | FundByCustomer | FundByDriver
 --     Platform:        transfer BuyerAsset SellerExpense amount        (platform absorbs; single entry)
 --   The ctx MUST carry a DRIVER/FLEET_OWNER counterparty so the driver funding leg
 --   hits the driver's OwnerLiability account (Seller*/Buyer* roles are hardwired).
+--   onDriverDebit runs only when funder is FundByDriver and the charge succeeded --
+--   callers pass the wallet-gated-tier re-check here (or 'pure ()' if not applicable).
 recordStripeChargeLedger ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
+  (MonadFlow m, BeamFlow m r, Lib.Finance.HasActorInfo m r) =>
   FinanceCtx ->
+  m () -> -- action to run iff this charge succeeds and debits OwnerLiability (e.g. the wallet-gated-tier re-check); caller decides what it does, this function only decides whether to run it
   StripeChargeFunder ->
   HighPrecMoney ->
   Text ->
   m (Either FinanceError ())
-recordStripeChargeLedger ctx funder amount refType
+recordStripeChargeLedger ctx onDriverDebit funder amount refType
   | amount <= 0 = pure (Right ())
   | otherwise = do
     result <- runFinance ctx $ case funder of
@@ -808,6 +809,9 @@ recordStripeChargeLedger ctx funder amount refType
       FundByDriver -> do
         transfer_ SellerExpense SellerLiability amount refType
         void $ transfer OwnerLiability SellerRevenue amount refType Nothing
+    when (funder == FundByDriver) $ case result of
+      Right _ -> onDriverDebit
+      Left _ -> pure ()
     pure (void result)
 
 -- | Minimal FinanceCtx for posting a driver-side Stripe charge (payout / connect),

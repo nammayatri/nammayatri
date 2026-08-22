@@ -33,11 +33,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, logInfo, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
-  ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
+  ( AccountRole (GovtIndirect, ParkingFeeRecipient),
     CounterpartyType (DRIVER),
     FinanceCtx (..),
     runFinance,
-    transfer,
   )
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
@@ -45,6 +44,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import Tools.Error
@@ -111,7 +111,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
-  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r) =>
+  (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
   DRide.Ride ->
   SRB.Booking ->
@@ -161,8 +161,8 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
     result <-
       runFinance ctx $
         do
-          void $ transfer OwnerLiability GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
-          void $ transfer OwnerLiability ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
+          void $ SVST.deductOwnerLiability transporterConfig ride.driverId GovtIndirect gstAmount Wallet.walletReferenceAirportEntryFeeGST Nothing
+          void $ SVST.deductOwnerLiability transporterConfig ride.driverId ParkingFeeRecipient airportPortion Wallet.walletReferenceAirportEntryFee Nothing
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Airport entry fee deduction failed: " <> show e)) (Left err)
       Right _ -> pure ()

@@ -65,6 +65,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     fromLocGeohash :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     goHomeRequestId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     id :: (B.C f Kernel.Prelude.Text),
+    isAutoAccepted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isFavourite :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isForwardRequest :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isPartOfIntelligentPool :: (B.C f Kernel.Prelude.Bool),

@@ -75,6 +75,7 @@ import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Ride as SharedRide
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -475,7 +476,12 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
             whenJust payoutFeeCfg.feeBearer $ \payoutBearer -> do
               let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
                   chargeCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutOrder.id.getId
-              recordStripeChargeLedger chargeCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges
+              recordStripeChargeLedger
+                chargeCtx
+                (when (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) $ SVST.checkAndAutoDisableWalletGatedTiers driverId)
+                (payoutBearerToFunder payoutBearer)
+                payoutChargeAmount
+                walletReferencePGPayoutCharges
                 >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
 
           whenJust mbPayoutReq $ \payoutReq -> do

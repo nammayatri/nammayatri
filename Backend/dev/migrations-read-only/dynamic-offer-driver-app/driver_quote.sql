@@ -76,3 +76,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN commission_charges do
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN special_location_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN is_auto_accepted boolean ;
