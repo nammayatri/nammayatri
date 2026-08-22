@@ -1,9 +1,12 @@
 module SharedLogic.LocationAddressEnrichment
   ( enrichLocationAddress,
+    mkLocationAddressFromPlaceName,
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Geohash as DG
+import qualified Data.HashMap.Strict as HM
 import Data.Text (pack)
 import qualified Data.Text as T
 import qualified Domain.Types.Extra.PlaceNameCache as DTM
@@ -42,6 +45,37 @@ enrichLocationAddress merchantId merchantOperatingCityId gps address = do
   case mbAreaCode of
     Just areaCode -> pure address {areaCode = nonEmptyAreaCode (Just areaCode)}
     Nothing -> pure address {areaCode = Nothing}
+
+-- | Reads a maps-provider result into the shape a location's address is stored in.
+--
+-- Only a fallback: the app geocodes the points it puts on the map and sends the names back
+-- with them, and this fills in for the times it does not. Mirrors the component mapping
+-- the driver app uses in @SharedLogic.GoogleMaps@, so the same point resolves to the same
+-- address on both sides.
+mkLocationAddressFromPlaceName :: Maps.PlaceName -> LocationAddress
+mkLocationAddressFromPlaceName placeName =
+  LocationAddress
+    { street = firstOfTypes ["route", "street_address"],
+      door = Nothing,
+      city = firstOfTypes ["locality"],
+      state = firstOfTypes ["administrative_area_level_1"],
+      country = firstOfTypes ["country"],
+      building = firstOfTypes ["premise", "sub_premise"],
+      areaCode = nonEmptyAreaCode $ firstOfTypes ["postal_code"],
+      area = firstOfTypes ["sublocality_level_5", "sublocality_level_4", "sublocality_level_3", "sublocality_level_2", "sublocality_level_1"] <|> firstOfTypes ["sublocality"],
+      ward = firstOfTypes ["ward"],
+      placeId = placeName.placeId,
+      instructions = Nothing,
+      -- The leading component of the formatted address: the building or road, rather than
+      -- the locality, city and country trailing it. That is what a customer reads as the
+      -- name of the place they are being picked up from.
+      title = placeName.formattedAddress >>= (fmap T.strip . listToMaybe . T.splitOn ","),
+      extras = Nothing
+    }
+  where
+    -- Later components win, matching how the provider orders them narrowest-last.
+    byType = HM.fromList [(componentType, component.longName) | component <- placeName.addressComponents, componentType <- component.types]
+    firstOfTypes types = listToMaybe $ mapMaybe (`HM.lookup` byType) types
 
 nonEmptyAreaCode :: Maybe Text -> Maybe Text
 nonEmptyAreaCode = \case

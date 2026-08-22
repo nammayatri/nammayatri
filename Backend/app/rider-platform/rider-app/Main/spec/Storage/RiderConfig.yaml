@@ -292,6 +292,11 @@ RiderConfig:
     # the absolute floor and ceiling around these.
     betterPointMaxWalkPctOfRide: Maybe Double
     betterPointMinSavingPctOfRide: Maybe Double
+    # How far off the parent's route a customer-chosen point may sit and still be priced by
+    # trimming that route. Beyond this the trim would describe a ride that does not pass
+    # through the point at all, so a fresh route is resolved instead -- one map call, on a
+    # path the customer is explicitly waiting on.
+    betterPointMaxOffRouteDistance: Maybe Meters
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

@@ -414,7 +414,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 billingCategory = Nothing,
                 preferSafetyPlus = Nothing,
                 driverPreference = Nothing,
-                selectedOfferId = Nothing
+                selectedOfferId = Nothing,
+                -- A reserved ride is never a walk-and-save shadow: its standing pickup is
+                -- one the customer already committed to, so no endpoint has moved to name.
+                suggestedPickupAddress = Nothing,
+                suggestedDropAddress = Nothing
               }
       void $ DSelect.select2' (personId, merchant.id) estimateId selectReq Nothing
     {- Author: Hemant Mangla

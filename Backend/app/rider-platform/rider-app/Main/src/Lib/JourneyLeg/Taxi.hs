@@ -141,7 +141,11 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     billingCategory = Nothing,
                     preferSafetyPlus = Nothing,
                     driverPreference = Nothing,
-                    selectedOfferId = Nothing
+                    selectedOfferId = Nothing,
+                    -- A multimodal taxi leg is never a walk-and-save shadow, so there is
+                    -- no moved endpoint here to name.
+                    suggestedPickupAddress = Nothing,
+                    suggestedDropAddress = Nothing
                   }
           mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just req.searchId)
           mbJourneyLegData <- case mbJourneyLeg of
