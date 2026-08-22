@@ -257,7 +257,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   -- fleet-scoped counter key.
   mbFleetAssoc <-
     if effectiveOnboardingAs == DI.FLEET_DRIVER || useUnifiedOnboardingFlagsRecompute
-      then QFDA.findByDriverIdAndFleetOwnerIdWithStatus person.id
+      then QFDA.findOneByDriverIdWithStatus person.id
       else pure Nothing
   if justEnabled
     then do

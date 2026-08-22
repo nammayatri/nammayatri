@@ -3983,6 +3983,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           city = req.city,
           state = req.state,
           country = req.country,
+          countryDialCode = req.countryDialCode <|> baseCity.countryDialCode,
           supportNumber = req.supportNumber <|> baseCity.supportNumber,
           stdCode = Just cityStdCode,
           language = fromMaybe baseCity.language req.primaryLanguage,

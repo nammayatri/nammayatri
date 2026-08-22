@@ -175,7 +175,7 @@ getOCRResultRC personId merchantOpCityId mbImageId = do
     Just rc ->
       pure $
         (emptyValidateDocumentImageResponse resolvedImageId)
-          { documentNumber = removeSpaceAndDash <$> rc.rcNumber,
+          { documentNumber = preProcessDocumentIdentifier transporterConfig <$> rc.rcNumber,
             vehicleClass = rc.vehicleClass,
             manufacturer = rc.manufacturer,
             vehicleModel = rc.model,

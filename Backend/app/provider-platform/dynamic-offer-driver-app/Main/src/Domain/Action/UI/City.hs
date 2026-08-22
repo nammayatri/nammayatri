@@ -36,6 +36,7 @@ listCities mId = do
         DTC.CityRes
           { code = city,
             name = show city,
+            countryDialCode = fromMaybe "+91" countryDialCode,
             subscription = maybe False (.subscription) mbTransporterConfig,
             ..
           }

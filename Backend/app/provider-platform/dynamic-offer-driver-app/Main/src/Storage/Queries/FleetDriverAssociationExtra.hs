@@ -112,6 +112,14 @@ findAllByDriverIdWithStatus driverId = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) Nothing Nothing
 
+findOneByDriverIdWithStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person ->
+  m (Maybe FleetDriverAssociation)
+findOneByDriverIdWithStatus driverId = do
+  now <- getCurrentTime
+  findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) (Just 0) <&> listToMaybe
+
 findAllByDriverIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [Id Person] ->

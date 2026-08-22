@@ -19,6 +19,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     cloudBaseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     country :: Kernel.Types.Beckn.Context.Country,
+    countryDialCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     id :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
