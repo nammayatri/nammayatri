@@ -66,6 +66,7 @@ FleetOwnerInformation:
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType
     approved: Maybe Bool
+    isNew: Maybe Bool
     disabledReasonFlag: Maybe DisabledReasonFlag
     initiatedBy: Maybe InitiatedBy
 
@@ -142,6 +143,10 @@ FleetOwnerInformation:
     fleetOwnerPersonId : PrimaryKey
 
   queries:
+    updateIsNew:
+      kvFunction: updateOneWithKV
+      params: [isNew]
+      where: fleetOwnerPersonId
     updateFleetOwnerVerifiedStatus:
       kvFunction: updateOneWithKV
       params: [verified, updatedAt]

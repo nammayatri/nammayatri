@@ -142,6 +142,9 @@ updateIsInteroperable isInteroperable driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIsNew isNew driverId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateIssueBreachCooldownTimes ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -310,6 +313,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.isBlockedForScheduledPayout isBlockedForScheduledPayout,
       Se.Set Beam.isHighAccuracyLocationEnabled isHighAccuracyLocationEnabled,
       Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable),
+      Se.Set Beam.isNew isNew,
       Se.Set Beam.isPetModeEnabled (Kernel.Prelude.Just isPetModeEnabled),
       Se.Set Beam.isSilentModeEnabled isSilentModeEnabled,
       Se.Set Beam.isSpecialLocWarrior (Kernel.Prelude.Just isSpecialLocWarrior),
