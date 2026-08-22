@@ -292,7 +292,7 @@ handleGpsTollBehavior ev = withRideAndBooking ev $ \ride booking -> do
                 actionEvent = Just actionEvent
               }
       BehaviorDispatch.handleConsequences dispatchCtx (cast ride.driverId) output.consequences
-      BehaviorDispatch.handleCommunications (cast ride.driverId) output.communications
+      BehaviorDispatch.handleCommunications dispatchCtx (cast ride.driverId) output.communications
 
 ------------------------------------------------------------
 -- P1b-6 : RC stats + reminders

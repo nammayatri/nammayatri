@@ -16,6 +16,7 @@ module Lib.BehaviorTracker.Recorder
   ( recordAndSnapshot,
     recordAction,
     incrementCounterOnly,
+    decrementCounterOnly,
   )
 where
 
@@ -97,6 +98,26 @@ incrementCounterOnly ::
   m ()
 incrementCounterOnly config entityType entityId actionType counterType =
   incrementCounter entityType actionType counterType entityId config.windowSizeDays
+
+-- | Decrement a specific counter in the bucket of the original event time.
+--
+-- Counterpart of incrementCounterOnly for retroactive corrections: pass the time
+-- the reversed event was originally counted at (e.g. a request's sentAt when a
+-- customer cancel voids it), so the decrement lands in that day's bucket.
+decrementCounterOnly ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  CounterConfig ->
+  EntityType ->
+  Text -> -- entityId
+  Text -> -- actionType
+  CounterType ->
+  UTCTime -> -- when the event being reversed was originally counted
+  m ()
+decrementCounterOnly config entityType entityId actionType counterType eventTime =
+  decrementCounterInTimeBucket entityType actionType counterType entityId eventTime config.windowSizeDays
 
 -- Internal helpers
 
