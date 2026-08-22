@@ -2113,6 +2113,7 @@ types:
     - middleName: Maybe Text
     - lastName: Maybe Text
     - mobileNo: Maybe Text
+    - mobileCountryCode: Maybe Text
     - email: Maybe Text
     - blocked: Bool
     - enabled: Bool

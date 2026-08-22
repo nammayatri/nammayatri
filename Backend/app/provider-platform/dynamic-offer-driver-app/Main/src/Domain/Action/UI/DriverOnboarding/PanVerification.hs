@@ -144,7 +144,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   let gstPanLinkCheckRequired = DCommon.checkFleetOwnerRole person.role && fromMaybe False transporterConfig.isGstPanLinkCheckRequired
   let runBody = do
         when gstPanLinkCheckRequired $
-          GstVerification.assertUploadedPanLinkedToExistingGst person req.panNumber (Id req.imageId)
+          GstVerification.assertUploadedPanLinkedToExistingGst transporterConfig person req.panNumber (Id req.imageId)
         mdriverPanInformation <- DPQuery.findByDriverId person.id
         whenJust mdriverPanInformation $ \driverPanInformation -> do
           let verificationStatus = driverPanInformation.verificationStatus
@@ -202,9 +202,9 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
 
       let validateExtractedPan resp = case resp.extractedPan of
             Just extractedPan -> do
-              let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+              let extractedPanNo = preProcessDocumentIdentifier transporterConfig <$> extractedPan.id_number
               when (verifyBy /= DPan.FRONTEND_SDK) $
-                unless (extractedPanNo == (Just $ removeSpaceAndDash req.panNumber)) $
+                unless (extractedPanNo == (Just $ preProcessDocumentIdentifier transporterConfig req.panNumber)) $
                   throwImageError (Id req.imageId) $
                     ImageDocumentNumberMismatch
                       (maybe "null" maskText extractedPanNo)

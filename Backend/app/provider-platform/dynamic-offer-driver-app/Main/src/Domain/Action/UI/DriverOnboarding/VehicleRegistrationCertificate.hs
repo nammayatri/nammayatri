@@ -36,7 +36,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     mkMorthVerificationEntity,
     validateRCResponse,
     VerificationReqRecord (..),
-    normalizeDocumentNumber,
   )
 where
 
@@ -190,12 +189,9 @@ validateDriverRCReqRegexFlow DriverRCReq {..} =
 prefixMatchedResult :: Text -> [Text] -> Bool
 prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
 
-normalizeDocumentNumber :: Text -> Text
-normalizeDocumentNumber = T.toUpper . removeSpaceAndDash
-
-isRCNumberFormatValid :: ODC.DocumentVerificationConfig -> Text -> Flow Bool
-isRCNumberFormatValid documentVerificationConfig normalizedRCNumber = do
-  let normalizedPrefixList = normalizeDocumentNumber <$> documentVerificationConfig.rcNumberPrefixList
+isRCNumberFormatValid :: DTC.TransporterConfig -> ODC.DocumentVerificationConfig -> Text -> Flow Bool
+isRCNumberFormatValid transporterConfig documentVerificationConfig normalizedRCNumber = do
+  let normalizedPrefixList = normalizeDocumentIdentifier transporterConfig <$> documentVerificationConfig.rcNumberPrefixList
       rcLength = T.length normalizedRCNumber
       isLegacyCertNumFormatValid =
         rcLength >= 5
@@ -230,8 +226,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
     if hasRegexRules
       then runRequestValidation validateDriverRCReqRegexFlow req
       else runRequestValidation validateDriverRCReq req
-    let normalizedRCNumber = normalizeDocumentNumber req.vehicleRegistrationCertNumber
-    checkRCFormat <- isRCNumberFormatValid documentVerificationConfig normalizedRCNumber
+    let normalizedRCNumber = normalizeDocumentIdentifier transporterConfig req.vehicleRegistrationCertNumber
+    checkRCFormat <- isRCNumberFormatValid transporterConfig documentVerificationConfig normalizedRCNumber
     unless checkRCFormat $ do
       if hasRegexRules
         then throwError (InvalidRequest "RC number format is not valid")
@@ -273,8 +269,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         unless (resp.provider == Just VT.InternalOCR) $
           case resp.extractedRC of
             Just extractedRC -> do
-              let extractRCNumber = removeSpaceAndDash <$> extractedRC.rcNumber
-              let rcNumber = removeSpaceAndDash <$> Just req.vehicleRegistrationCertNumber
+              let extractRCNumber = preProcessDocumentIdentifier transporterConfig <$> extractedRC.rcNumber
+              let rcNumber = preProcessDocumentIdentifier transporterConfig <$> Just req.vehicleRegistrationCertNumber
               -- disable this check for debugging with mock-idfy
               unless (extractRCNumber == rcNumber) $
                 throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
@@ -287,7 +283,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
       whenJust existingRC.fleetOwnerId $ \existingFleetId ->
         when (existingFleetId /= fleetOwnerId.getId) $
           throwError VehicleBelongsToAnotherFleet
-    Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
+    Redis.set (makeFleetOwnerKey transporterConfig req.vehicleRegistrationCertNumber) fleetOwnerId.getId
     -- Optionally update existing RC's fleetOwnerId in DB if enabled via transporterConfig
     updateExistingRCFleetOwnerIfEnabled transporterConfig req.vehicleRegistrationCertNumber fleetOwnerId
   whenJust req.previousRcNumber $ \prevRcNo ->
@@ -482,9 +478,9 @@ onVerifyRCHandler :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Se
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbDocumentImageId2 mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator mbRemPriorityList mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus' = do
   let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
-  mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
-  now <- getCurrentTime
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey transporterConfig) rcVerificationResponse.registrationNumber
+  now <- getCurrentTime
   rcValidationRules <- findByCityId person.merchantOperatingCityId
   let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer, model = rcVerificationResponse.manufacturerModel}
   let lang = fromMaybe ENGLISH person.language
@@ -699,7 +695,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
                     let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
                     VQuery.upsert updatedVehicle
-              whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
+              whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey transporterConfig num
         Nothing -> pure ()
 
 validateRCResponse :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => RCValidationReq -> RCValidationRules -> Language -> m [Text]
@@ -917,5 +913,5 @@ getAllLinkedRCs (driverId, _, _) = do
             isValid = Nothing
           }
 
-makeFleetOwnerKey :: Text -> Text
-makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> removeSpaceAndDash vehicleNo
+makeFleetOwnerKey :: DTC.TransporterConfig -> Text -> Text
+makeFleetOwnerKey transporterConfig vehicleNo = "FleetOwnerId:PersonId-" <> preProcessDocumentIdentifier transporterConfig vehicleNo

@@ -229,7 +229,7 @@ getDriverDetailsByReferralCode :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantO
 getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole = withFlowHandlerAPI $ DriverOnboarding.getDriverDetailsByReferralCode (personId, merchantId, merchantOpCityId) value mbRole
 
 getOCRResultRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
-getOCRResultRC (personId, _, _) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultRC personId mbImageId
+getOCRResultRC (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultRC personId merchantOpCityId mbImageId
 
 getOCRResultDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Text -> FlowHandler DocumentRegistration.ValidateDocumentImageResponse
 getOCRResultDL (personId, _, merchantOpCityId) mbImageId = withFlowHandlerAPI $ DocumentRegistration.getOCRResultDL personId merchantOpCityId mbImageId

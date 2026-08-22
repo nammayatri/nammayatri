@@ -2486,7 +2486,7 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
     Just cn -> do
       enc <- encrypt cn
       when ((enc & hash) /= (rc.certificateNumber & hash)) $ do
-        mbDup <- VRCQuery.findByCertificateNumberHash (enc & hash)
+        mbDup <- VRCQuery.findLastVehicleRCWrapper cn
         whenJust mbDup $ \existingRC ->
           when (existingRC.id /= rc.id) $
             throwError (InvalidRequest "RC with this certificate number already exists")
@@ -2662,6 +2662,7 @@ getFleetOrOperatorInfo person = do
         Common.FleetOwnerInfoRes
           { id = person.id.getId,
             mobileNo = contact,
+            mobileCountryCode = person.mobileCountryCode,
             email = person.email,
             name = Just name,
             firstName = person.firstName,
@@ -2802,6 +2803,7 @@ getFleetOrOperatorInfo person = do
             middleName = fleetOwner.middleName,
             lastName = fleetOwner.lastName,
             mobileNo = mobileNo',
+            mobileCountryCode = fleetOwner.mobileCountryCode,
             email = fleetOwner.email,
             roleName = Just (show fleetOwner.role),
             isEligibleForSubscription = Just isEligibleForSubscription,
@@ -4694,7 +4696,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     unless isValid $ throwError AccessDenied
 
   -- Update basic profile fields (name, email, mobile) in one go
-  when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo) $ do
+  when (isJust req.firstName || isJust req.lastName || isJust req.email || isJust req.mobileNo || isJust req.mobileCountryCode) $ do
     -- Email uniqueness
     whenJust req.email $ \reqEmail -> do
       existingPerson <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
@@ -4704,7 +4706,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
     -- Mobile uniqueness + encryption (if provided)
     (newMobileCountryCode, newMobileNumber) <-
       case req.mobileNo of
-        Nothing -> pure (driver.mobileCountryCode, driver.mobileNumber)
+        Nothing -> pure (DCommon.appendPlusInMobileCountryCode req.mobileCountryCode <|> driver.mobileCountryCode, driver.mobileNumber)
         Just reqMobileNo -> do
           mobileNumberHash <- getDbHash reqMobileNo
           let countryCode =
@@ -5192,7 +5194,7 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
           { total = counts.ocTotal,
             verified = counts.ocVerified,
             approved = counts.ocApproved,
-            pending = counts.ocPending,
+            pending = counts.ocVerified,
             rejected = counts.ocRejected
           }
     else legacyStatusSummary merchantOpCity mbRequestor

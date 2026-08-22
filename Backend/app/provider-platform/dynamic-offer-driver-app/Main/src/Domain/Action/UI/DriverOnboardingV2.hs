@@ -877,7 +877,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       logDebug $ show resp
       case resp.extractedPan of
         Just extractedPan -> do
-          let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+          let extractedPanNo = preProcessDocumentIdentifier transporterConfig <$> extractedPan.id_number
           unless (extractedPanNo == Just req.panNumber) $
             throwError $ InvalidRequest "Invalid Image, PAN number not matching."
           pure (Documents.VALID, extractedPan.name_on_card)
@@ -972,7 +972,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       logDebug $ show resp
       case resp.extractedGST of
         Just extractedGst -> do
-          let extractedGstNo = removeSpaceAndDash <$> extractedGst.gstin
+          let extractedGstNo = preProcessDocumentIdentifier transporterConfig <$> extractedGst.gstin
           unless (extractedGstNo == Just req.gstNumber) $
             throwError $ InvalidRequest "Inavlid Image, gst number not matching."
           pure Documents.VALID
@@ -1337,8 +1337,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
       throwError $ InvalidRequest $ "TDS Certificate validation failed: " <> errorJson
 
   mbVehicleRcId <- forM registrationNo $ \rcNo -> do
-    rcNoEnc <- encrypt rcNo
-    rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for registrationNo: " <> rcNo)
+    rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (InvalidRequest $ "RC not found for registrationNo: " <> rcNo)
     pure rc.id
 
   -- Create the common document entry

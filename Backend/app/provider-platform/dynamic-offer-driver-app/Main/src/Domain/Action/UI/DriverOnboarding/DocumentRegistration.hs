@@ -35,10 +35,11 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import SharedLogic.DriverOnboarding (convertUTCTimetoDate, parseDateTime, removeSpaceAndDash)
+import SharedLogic.DriverOnboarding (convertUTCTimetoDate, parseDateTime, preProcessDocumentIdentifier)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import qualified Tools.Verification as Verification
@@ -77,6 +78,7 @@ validateDocument ::
   Flow ValidateDocumentImageResponse
 validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDocumentImageRequest {..} = do
   logDebug $ "DocumentRegistration.validateDocument: Starting validation for personId=" <> show personId <> ", imageType=" <> show imageType
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   imageResponse <- Image.validateImage isDashboard Nothing Nothing (personId, merchantId, merchantOpCityId) Image.ImageValidateRequest {image = image, imageType = imageType, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
   let imageId :: Id Domain.Image = imageResponse.imageId
   let imageData = image
@@ -105,7 +107,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
             else case resp.extractedDL of
               Just extractedDL -> do
-                let documentNumber = removeSpaceAndDash <$> extractedDL.dlNumber
+                let documentNumber = preProcessDocumentIdentifier transporterConfig <$> extractedDL.dlNumber
                 let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedDL.dateOfBirth)
                 let nameOnCard = extractedDL.nameOnCard
                 DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
@@ -120,7 +122,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
             then return $ (emptyValidateDocumentImageResponse imageId) {ocrProvider = Just VT.InternalOCR}
             else case resp.extractedRC of
               Just extractedRC -> do
-                let documentNumber = removeSpaceAndDash <$> extractedRC.rcNumber
+                let documentNumber = preProcessDocumentIdentifier transporterConfig <$> extractedRC.rcNumber
                 logDebug $ "DocumentRegistration.validateDocument: RC OCR completed, rcNumber=" <> show documentNumber
                 pure $
                   (emptyValidateDocumentImageResponse imageId)
@@ -161,9 +163,11 @@ emptyValidateDocumentImageResponse imageId =
 
 getOCRResultRC ::
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   Maybe Text ->
   Flow ValidateDocumentImageResponse
-getOCRResultRC personId mbImageId = do
+getOCRResultRC personId merchantOpCityId mbImageId = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbRC <- Verification.getOCRResultRC personId.getId
   let resolvedImageId = maybe (Id "") Id mbImageId
   case mbRC of
@@ -190,13 +194,14 @@ getOCRResultDL ::
   Maybe Text ->
   Flow ValidateDocumentImageResponse
 getOCRResultDL personId merchantOpCityId mbImageId = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbDL <- Verification.getOCRResultDL personId.getId
   let resolvedImageId = maybe (Id "") Id mbImageId
   case mbDL of
     Nothing -> pure $ emptyValidateDocumentImageResponse resolvedImageId
     Just dl -> do
       operatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      let documentNumber = removeSpaceAndDash <$> dl.dlNumber
+      let documentNumber = preProcessDocumentIdentifier transporterConfig <$> dl.dlNumber
       let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< dl.dateOfBirth)
       let nameOnCard = dl.nameOnCard
       DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
