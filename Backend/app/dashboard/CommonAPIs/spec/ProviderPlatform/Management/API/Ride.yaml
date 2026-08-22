@@ -105,6 +105,30 @@ apis:
       auth: ApiAuthV2
       response:
         type: RideListResV2
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/listV2
+            params:
+              requestorId: Text
+            query:
+              limit: Int
+              offset: Int
+              rideStatus: RideStatus
+              rideShortId: ShortId Ride
+              rideId: Id Ride
+              driverId: Id Driver
+              paymentMode: PaymentMode
+              fromAmount: HighPrecMoney
+              toAmount: HighPrecMoney
+              customerPhoneNo: Text
+              driverPhoneNo: Text
+              currency: Currency
+              from: UTCTime
+              to: UTCTime
+              fleetOwnerId: Text
+            auth: ApiAuthV2
+            response:
+              type: RideListResV2
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST_V2
   - POST: # MultipleRideEndAPI
@@ -314,6 +338,8 @@ types:
     - driverPhoneNo: Maybe Text
     - rideStatus: RideStatus
     - rideCreatedAt: UTCTime
+    - cancelledBy: Maybe CancellationSource
+    - cancellationReasonCode: Maybe CancellationReasonCode
   WaiverRideCancellationPenaltyReq:
     - reason: Text
   NearbyResp:

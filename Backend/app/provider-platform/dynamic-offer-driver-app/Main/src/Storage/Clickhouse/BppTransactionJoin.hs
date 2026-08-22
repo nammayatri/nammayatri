@@ -402,8 +402,9 @@ findAllRideItemsV2 ::
   UTCTime ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe Text ->
   m [QRE.RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount mbFleetOwnerId = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -424,6 +425,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                     CH.&&. CH.whenJust_ mbFromAmount (\fa -> bppTransaction.rideFareAmount CH.>=. fa)
                     CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
                     CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
+                    CH.&&. CH.whenJust_ mbFleetOwnerId (\foid -> bppTransaction.rideFleetOwnerId CH.==. Just foid)
                     CH.&&. CH.whenJust_ mbPaymentMode (`mkPaymentModeCond` bppTransaction)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)

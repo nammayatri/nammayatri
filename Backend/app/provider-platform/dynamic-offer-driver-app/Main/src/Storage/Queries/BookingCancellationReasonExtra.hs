@@ -6,6 +6,7 @@ import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Person
+import Domain.Types.Ride (Ride)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding (null, (^.))
 import Kernel.Beam.Functions
@@ -51,3 +52,6 @@ upsert cancellationReason = do
 
 findAllBookingIdsCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Id Booking]
 findAllBookingIdsCancelledByDriverId driverId = findAllWithDb [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
+
+findAllByRideIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> m [BookingCancellationReason]
+findAllByRideIds rideIds = findAllWithKV [Se.Is BeamBCR.rideId $ Se.In (Just . getId <$> rideIds)]

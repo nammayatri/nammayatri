@@ -782,6 +782,12 @@ types:
     - upwardsRecomputeBufferWithUnit: Distance
     - approxRideDistanceDiffThresholdWithUnit: Distance
     - minLocationAccuracy: Double
+    - graceTimeForScheduledRidePickup: NominalDiffTime
+    - scheduleRideBufferTime: NominalDiffTime
+    - scheduledRideJobRescheduleTime: NominalDiffTime
+    - scheduledRideSearchRepeatLimit: Int
+    - enableScheduleReallocation: Maybe Bool
+    - disableListScheduledBookingAPI: Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -818,6 +824,12 @@ types:
     - orderAndNotificationStatusCheckTimeLimit: Maybe (OptionalValue NominalDiffTime)
     - snapToRoadConfidenceThreshold: Maybe (MandatoryValue Double)
     - useWithSnapToRoadFallback: Maybe (MandatoryValue Bool)
+    - graceTimeForScheduledRidePickup: Maybe (MandatoryValue NominalDiffTime)
+    - scheduleRideBufferTime: Maybe (MandatoryValue NominalDiffTime)
+    - scheduledRideJobRescheduleTime: Maybe (MandatoryValue NominalDiffTime)
+    - scheduledRideSearchRepeatLimit: Maybe (MandatoryValue Int)
+    - enableScheduleReallocation: Maybe (OptionalValue Bool)
+    - disableListScheduledBookingAPI: Maybe (MandatoryValue Bool)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type
