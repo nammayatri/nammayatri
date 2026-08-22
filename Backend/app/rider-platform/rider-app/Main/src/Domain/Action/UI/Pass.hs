@@ -33,7 +33,7 @@ import qualified API.Types.UI.Pass as PassAPI
 import qualified AWS.S3 as S3
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Monad.Extra (mapMaybeM, whenJustM)
+import Control.Monad.Extra (anyM, mapMaybeM, whenJustM)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
@@ -285,7 +285,10 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   unless isDashboard $ do
     otherTypePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId pass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
     let isOtherActivePass p = maybe True (\samePass -> p.id /= samePass.id) mbSamePass
-    whenJust (listToMaybe (filter isOtherActivePass otherTypePasses)) $ \otherPass -> do
+    -- An exhausted pass on the other device is nothing to switch back to, so it must not stand
+    -- between the rider and a new one.
+    blockingOtherPasses <- filterM (passHasTripsLeft startDate endDate) (filter isOtherActivePass otherTypePasses)
+    whenJust (listToMaybe blockingOtherPasses) $ \otherPass -> do
       passes <- CQPass.findAllByPassTypeIdAndEnabled pass.passTypeId True
       let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
             Just pc -> pc.maxSwitchCount
@@ -299,12 +302,12 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   purchasedPassId <-
     case mbSamePass of
       Just samePass -> do
+        overlappingPayments <- overlappingLivePayments startDate endDate samePass.id
+        usablePayments <- filterM paymentHasTripsLeft overlappingPayments
         let passOverlaps = hasDateOverlap (samePass.startDate, samePass.endDate) (startDate, endDate)
-        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps) $
+        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps && (null overlappingPayments || not (null usablePayments))) $
           throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
-        futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
-        let futureRenewalsOverlap = any (\futurePass -> hasDateOverlap (futurePass.startDate, futurePass.endDate) (startDate, endDate)) futureRenewals
-        when futureRenewalsOverlap $
+        unless (null usablePayments) $
           throwError (InvalidRequest "You already have a future renewal of this pass in the selected dates")
         return samePass.id
       Nothing -> do
@@ -516,6 +519,39 @@ hasDocument mbProfilePicture mbPassPhotoMediaId person docType = case docType of
 -- Check if two date ranges overlap
 hasDateOverlap :: (DT.Day, DT.Day) -> (DT.Day, DT.Day) -> Bool
 hasDateOverlap (aStart, aEnd) (bStart, bEnd) = not (aEnd < bStart || bEnd < aStart)
+
+-- | Does this payment still have trips a rider could spend?
+--
+-- The purchase guards use this to decide whether an existing pass may block a re-buy. A metered
+-- override pass with no trips left must not: only endDate ends a pass, so a rider who spent every
+-- trip on day two would otherwise be locked out for the rest of the validity window.
+--
+-- Anything we cannot price as a metered override -- no passId, an unknown pass, a pass that is not
+-- override-applicable, an unlimited benefit (remainingTrips is Nothing) -- counts as usable, so
+-- those keep blocking exactly as they did before.
+paymentHasTripsLeft :: (CacheFlow m r, EsqDBFlow m r) => DPurchasedPassPayment.PurchasedPassPayment -> m Bool
+paymentHasTripsLeft payment = do
+  mbBenefit <- case payment.passId of
+    Nothing -> pure Nothing
+    Just passId -> CQPass.findById passId >>= maybe (pure Nothing) FRFSPassOverride.benefitFromPass
+  case mbBenefit of
+    Nothing -> pure True
+    Just benefit -> maybe True (> 0) <$> FRFSPassOverride.remainingTrips payment benefit
+
+-- | Live payments of this pass overlapping the requested dates.
+overlappingLivePayments :: (CacheFlow m r, EsqDBFlow m r) => DT.Day -> DT.Day -> Id.Id DPurchasedPass.PurchasedPass -> m [DPurchasedPassPayment.PurchasedPassPayment]
+overlappingLivePayments startDate endDate purchasedPassId =
+  filter (\payment -> hasDateOverlap (payment.startDate, payment.endDate) (startDate, endDate))
+    <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing purchasedPassId [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
+
+-- | True when the pass still holds a spendable trip. A pass carrying no live payment row at all is
+-- reported as blocking: keep the old behaviour rather than open a re-buy off the back of a data gap.
+passHasTripsLeft :: (CacheFlow m r, EsqDBFlow m r) => DT.Day -> DT.Day -> DPurchasedPass.PurchasedPass -> m Bool
+passHasTripsLeft startDate endDate purchasedPass = do
+  overlapping <- overlappingLivePayments startDate endDate purchasedPass.id
+  if null overlapping
+    then pure True
+    else anyM paymentHasTripsLeft overlapping
 
 -- Calculate end date for a pass based on start date and maxValidDays
 calculatePassEndDate :: DT.Day -> Maybe Int -> DT.Day
