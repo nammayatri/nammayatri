@@ -535,6 +535,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
   pure
     VehicleRegistrationCertificate
       { id,
+        isNew = Nothing,
         documentImageId = input.documentImageId,
         documentImageId2 = input.documentImageId2,
         certificateNumber,

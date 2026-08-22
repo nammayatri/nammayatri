@@ -566,6 +566,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
+            isNew = Nothing,
             documentImageId = input.documentImageId,
             documentImageId2 = input.documentImageId2,
             certificateNumber,

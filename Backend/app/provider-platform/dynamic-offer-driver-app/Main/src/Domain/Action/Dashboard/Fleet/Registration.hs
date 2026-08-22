@@ -206,6 +206,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
+            isNew = Nothing,
             merchantId = merchantId,
             fleetType = fleetType,
             fleetName = mbFleetName,

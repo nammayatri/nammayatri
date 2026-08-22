@@ -441,6 +441,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
+            isNew = Nothing,
             adminId = Nothing,
             merchantId = Just merchantId,
             active = False,

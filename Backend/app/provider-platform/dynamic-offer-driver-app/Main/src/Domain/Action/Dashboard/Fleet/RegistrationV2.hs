@@ -376,6 +376,7 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
       fleetOwnerInfo =
         FOI.FleetOwnerInformation
           { fleetOwnerPersonId = personId,
+            isNew = Nothing,
             merchantId = merchantId,
             fleetType = NORMAL_FLEET, -- overwrite in register
             fleetName = Nothing,

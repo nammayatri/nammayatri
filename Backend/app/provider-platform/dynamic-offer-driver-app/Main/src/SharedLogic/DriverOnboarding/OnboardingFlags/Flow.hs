@@ -275,12 +275,13 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
   when (newDocsVerificationStatus /= driverInfo.docsVerificationStatus) $
     DIQueryExtra.updateDocsVerificationStatus newDocsVerificationStatus (cast person.id)
+  unless (driverInfo.isNew == Just False) $ DIQuery.updateIsNew (Just False) (cast person.id)
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
     CounterDriver
     merchantOpCityId
     mbFleetOwnerId
-    (bucketsOfFlags' driverInfo.verified driverInfo.approved driverInfo.enabled driverInfo.blocked (isJust driverInfo.disabledReasonFlag))
+    (asAlreadyCounted driverInfo.isNew $ bucketsOfFlags' driverInfo.verified driverInfo.approved driverInfo.enabled driverInfo.blocked (isJust driverInfo.disabledReasonFlag))
     (bucketsOfFlags' verifiedToWrite approvedToWrite shouldEnable driverInfo.blocked (isJust effectiveDisabledReasonFlag))
   pure shouldEnable
 
@@ -321,12 +322,13 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
   let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus driverDocuments
   when (newDocsVerificationStatus /= fleetOwnerInfo.docsVerificationStatus) $
     QFOI.updateDocsVerificationStatus newDocsVerificationStatus person.id
+  unless (fleetOwnerInfo.isNew == Just False) $ QFOI.updateIsNew (Just False) person.id
   adjustOnboardingCounters
     useUnifiedOnboardingFlagsRecompute
     CounterFleetOwner
     person.merchantOperatingCityId
     (Just person.id.getId)
-    (bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
+    (asAlreadyCounted fleetOwnerInfo.isNew $ bucketsOfFlags' fleetOwnerInfo.verified fleetOwnerInfo.approved fleetOwnerInfo.enabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
     (bucketsOfFlags' allFleetMandatoryDocsValid newApproved newEnabled fleetOwnerInfo.blocked (isJust fleetOwnerInfo.disabledReasonFlag))
   pure newEnabled
 
@@ -357,13 +359,14 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
         when (newVerified /= rc.verified || newApproved /= rc.approved) $
           VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
         -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
+        unless (rc.isNew == Just False) $ RCQuery.updateIsNew (Just False) rc.id
         whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
           adjustOnboardingCounters
             useUnifiedOnboardingFlagsRecompute
             CounterVehicle
             rcMerchantOpCityId
             rc.fleetOwnerId
-            (bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
+            (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
             (bucketsOfFlags allVehicleMandatoryDocsValid newApproved False)
     else RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
 
@@ -380,7 +383,8 @@ counterEntityTag = \case
 --   onboarding grids. The buckets deliberately overlap -- `enabled` is a subset of `approved` --
 --   so each is its own counter rather than a slot in a single bucket.
 data OnboardingBuckets = OnboardingBuckets
-  { obVerified :: Bool,
+  { obTotal :: Bool,
+    obVerified :: Bool,
     obApproved :: Bool,
     obRejected :: Bool,
     obEnabled :: Bool,
@@ -391,12 +395,16 @@ data OnboardingBuckets = OnboardingBuckets
 bucketsOfFlags :: Bool -> Maybe Bool -> Bool -> OnboardingBuckets
 bucketsOfFlags verified approved enabled = (bucketsOfFlags' verified approved enabled False False)
 
+asAlreadyCounted :: Maybe Bool -> OnboardingBuckets -> OnboardingBuckets
+asAlreadyCounted mbIsNew buckets = buckets {obTotal = mbIsNew == Just False}
+
 -- | Full bucket set, including the two post-onboarding states. `blocked` and `disabled` are
 --   independent of the document-derived buckets, so an entity can be counted in both.
 bucketsOfFlags' :: Bool -> Maybe Bool -> Bool -> Bool -> Bool -> OnboardingBuckets
 bucketsOfFlags' verified approved enabled blocked disabled =
   OnboardingBuckets
-    { obVerified = verified && isNothing approved,
+    { obTotal = True,
+      obVerified = verified && isNothing approved,
       obApproved = approved == Just True,
       obRejected = approved == Just False,
       obEnabled = enabled,
@@ -440,7 +448,8 @@ adjustOnboardingCounters useUnifiedOnboardingFlagsRecompute entity merchantOpCit
       | otherwise = -1
     changed =
       filter ((/= 0) . snd) $
-        [ ("verified", step old.obVerified new.obVerified),
+        [ ("total", step old.obTotal new.obTotal),
+          ("verified", step old.obVerified new.obVerified),
           ("approved", step old.obApproved new.obApproved),
           ("rejected", step old.obRejected new.obRejected),
           ("enabled", step old.obEnabled new.obEnabled),
@@ -551,6 +560,7 @@ readOnboardingCounts ::
   Maybe Text ->
   m OnboardingCounts
 readOnboardingCounts entity merchantOpCityId mbFleetOwnerId = do
+  total <- readBucket "total"
   verified <- readBucket "verified"
   approved <- readBucket "approved"
   rejected <- readBucket "rejected"
@@ -559,7 +569,7 @@ readOnboardingCounts entity merchantOpCityId mbFleetOwnerId = do
   disabled <- readBucket "disabled"
   pure $
     OnboardingCounts
-      { ocTotal = verified + approved + rejected,
+      { ocTotal = total,
         ocVerified = verified,
         ocApproved = approved,
         ocRejected = rejected,
