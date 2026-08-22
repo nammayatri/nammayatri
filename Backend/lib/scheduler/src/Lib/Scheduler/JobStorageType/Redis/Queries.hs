@@ -187,7 +187,7 @@ reSchedule j byTime = do
   key <- getShardKey
   case toJSON byTime of
     A.String newScheduleTime -> do
-      let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
+      let newJOB = updateKey "status" "Pending" $ updateKey "scheduledAt" newScheduleTime jobJson
       Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB)]
     jsonTime -> logError $ "got unsupported scheduleTime type: " <> show jsonTime
 
