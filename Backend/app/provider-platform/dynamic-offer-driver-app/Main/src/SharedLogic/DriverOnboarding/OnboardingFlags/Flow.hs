@@ -257,7 +257,7 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
   -- fleet-scoped counter key.
   mbFleetAssoc <-
     if effectiveOnboardingAs == DI.FLEET_DRIVER || useUnifiedOnboardingFlagsRecompute
-      then QFDA.findByDriverId person.id True
+      then QFDA.findByDriverIdAndFleetOwnerIdWithStatus person.id
       else pure Nothing
   if justEnabled
     then do
@@ -382,7 +382,6 @@ counterEntityTag = \case
 data OnboardingBuckets = OnboardingBuckets
   { obVerified :: Bool,
     obApproved :: Bool,
-    obPending :: Bool,
     obRejected :: Bool,
     obEnabled :: Bool,
     obBlocked :: Bool,
@@ -397,11 +396,10 @@ bucketsOfFlags verified approved enabled = (bucketsOfFlags' verified approved en
 bucketsOfFlags' :: Bool -> Maybe Bool -> Bool -> Bool -> Bool -> OnboardingBuckets
 bucketsOfFlags' verified approved enabled blocked disabled =
   OnboardingBuckets
-    { obVerified = verified,
-      obApproved = verified && approved == Just True,
-      obPending = isNothing approved,
-      obRejected = not verified && approved == Just False,
-      obEnabled = verified && approved == Just True && enabled,
+    { obVerified = verified && isNothing approved,
+      obApproved = approved == Just True,
+      obRejected = approved == Just False,
+      obEnabled = enabled,
       obBlocked = blocked,
       obDisabled = disabled
     }
@@ -444,7 +442,6 @@ adjustOnboardingCounters useUnifiedOnboardingFlagsRecompute entity merchantOpCit
       filter ((/= 0) . snd) $
         [ ("verified", step old.obVerified new.obVerified),
           ("approved", step old.obApproved new.obApproved),
-          ("pending", step old.obPending new.obPending),
           ("rejected", step old.obRejected new.obRejected),
           ("enabled", step old.obEnabled new.obEnabled),
           ("blocked", step old.obBlocked new.obBlocked),
@@ -541,7 +538,6 @@ data OnboardingCounts = OnboardingCounts
   { ocTotal :: Int,
     ocVerified :: Int,
     ocApproved :: Int,
-    ocPending :: Int,
     ocRejected :: Int,
     ocEnabled :: Int,
     ocBlocked :: Int,
@@ -557,17 +553,15 @@ readOnboardingCounts ::
 readOnboardingCounts entity merchantOpCityId mbFleetOwnerId = do
   verified <- readBucket "verified"
   approved <- readBucket "approved"
-  pending <- readBucket "pending"
   rejected <- readBucket "rejected"
   enabled <- readBucket "enabled"
   blocked <- readBucket "blocked"
   disabled <- readBucket "disabled"
   pure $
     OnboardingCounts
-      { ocTotal = verified + approved + pending + rejected,
+      { ocTotal = verified + approved + rejected,
         ocVerified = verified,
         ocApproved = approved,
-        ocPending = pending,
         ocRejected = rejected,
         ocEnabled = enabled,
         ocBlocked = blocked,

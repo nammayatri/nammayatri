@@ -15,6 +15,7 @@
 module SharedLogic.DriverOnboarding
   ( module SharedLogic.DriverOnboarding,
     module Reexport,
+    module SharedLogic.DriverOnboarding.DocumentIdentifier,
   )
 where
 
@@ -76,6 +77,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
+import SharedLogic.DriverOnboarding.DocumentIdentifier
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
@@ -689,9 +691,6 @@ compareVehicles a b =
 -- Function to sort list of Maybe values
 sortMaybe :: [DVC.VehicleClassVariantMap] -> [DVC.VehicleClassVariantMap]
 sortMaybe = DL.sortBy compareVehicles
-
-removeSpaceAndDash :: Text -> Text
-removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
 convertTextToDay :: Maybe Text -> Maybe Day
 convertTextToDay a = do
@@ -1427,7 +1426,7 @@ isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
 validateIndividualPANCheck :: OnboardingFlow m r => DTC.TransporterConfig -> Person.Person -> Text -> m ()
 validateIndividualPANCheck transporterConfig person panNumber =
   when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
-    when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
+    when (inferPanTypeFromNumber (preProcessDocumentIdentifier transporterConfig panNumber) /= Just DPan.INDIVIDUAL) $
       throwError (InvalidRequest "Business PAN card not be accepted please upload individual PAN")
   where
     isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER

@@ -150,7 +150,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let normalizedDLNumber = VC.normalizeDocumentNumber driverLicenseNumber
+  let normalizedDLNumber = normalizeDocumentIdentifier transporterConfig driverLicenseNumber
   checkDLFormat <- isDLNumberFormatValid documentVerificationConfig normalizedDLNumber
   unless checkDLFormat $
     throwError (InvalidRequest "DL number format is not valid")
@@ -175,8 +175,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                   then return (Nothing, Nothing)
                   else case resp.extractedDL of
                     Just extractedDL -> do
-                      let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
-                      let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+                      let extractDLNumber = preProcessDocumentIdentifier transporterConfig <$> extractedDL.dlNumber
+                      let dlNumber = preProcessDocumentIdentifier transporterConfig <$> Just driverLicenseNumber
                       let _nameOnCard = extractedDL.nameOnCard
                       -- disable this check for debugging with mock-idfy
                       cacheExtractedDl person.id extractDLNumber operatingCity

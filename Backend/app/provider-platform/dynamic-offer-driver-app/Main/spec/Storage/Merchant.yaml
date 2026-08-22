@@ -1337,6 +1337,7 @@ TransporterConfig:
     unifiedOnboardingFlagsRecompute: Maybe Bool
     forceEnabledBypassingDocsUponDisableTakesToOnboarding: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
+    preProcessDocumentIdentifiers: Bool
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool
@@ -1504,6 +1505,7 @@ TransporterConfig:
     fleetUpiPayoutEnabled: Maybe Bool
     fleetBankPayoutEnabled: Maybe Bool
     bulkWaiveOffLimit: Maybe Int
+    preProcessDocumentIdentifiers: Maybe Bool
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
     isDriverNameMandatoryInBulkUpload: Maybe Bool
@@ -1604,6 +1606,7 @@ TransporterConfig:
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
+    preProcessDocumentIdentifiers: Just preProcessDocumentIdentifiers|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: Just isDriverNameMandatoryInBulkUpload|E
@@ -1721,6 +1724,7 @@ TransporterConfig:
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
     bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
+    preProcessDocumentIdentifiers: fromMaybe True preProcessDocumentIdentifiers|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isDriverNameMandatoryInBulkUpload: fromMaybe True isDriverNameMandatoryInBulkUpload|E
@@ -1863,6 +1867,7 @@ TransporterConfig:
     timeDiffFromUtc: "19800"
     subscription: "false"
     aadhaarVerificationRequired: "false"
+    preProcessDocumentIdentifiers: "true"
     rcLimit: "3"
     driverAutoPayNotificationTime: "32400"
     driverAutoPayExecutionTime: "104400"

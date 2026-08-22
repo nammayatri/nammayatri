@@ -281,6 +281,7 @@ data TransporterConfig = TransporterConfig
     pickupStallMonitoringConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallMonitoringConfig,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    preProcessDocumentIdentifiers :: Kernel.Prelude.Bool,
     qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcChangeThresholdDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

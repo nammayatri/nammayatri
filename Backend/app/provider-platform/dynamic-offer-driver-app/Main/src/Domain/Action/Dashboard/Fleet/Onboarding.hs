@@ -37,7 +37,7 @@ import Domain.Types.Person
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Environment
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (decrypt, encrypt, hash)
+import Kernel.External.Encryption (decrypt)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -463,8 +463,7 @@ getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId enableDocumen
     Just rcId -> RCQuery.findById (Id rcId) >>= fromMaybeM (InvalidRequest $ "RC not found by id: " <> rcId)
     Nothing -> case mbRcNo of
       Just rcNo -> do
-        rcNoEnc <- encrypt rcNo
-        RCQuery.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for number: " <> rcNo)
+        RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (InvalidRequest $ "RC not found for number: " <> rcNo)
       Nothing -> throwError (InvalidRequest "Either rcNo or rcId must be provided")
   -- Dashboard callers are merchant/city-scoped by ApiAuthV2; the resolved RC must belong to the same operating city.
   whenJust rc.merchantOperatingCityId $ \rcOpCityId ->

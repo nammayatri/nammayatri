@@ -730,8 +730,7 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   mbDocConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType documentType), vehicleCategory = Just (fromMaybe DVCat.CAR vehicleCategory)}) Nothing
   let isVehicleDoc = ((.documentCategory) =<< mbDocConfig) == Just DVC.Vehicle
   mbVehicleRcId <- forM registrationNo $ \rcNo -> do
-    rcNoEnc <- encrypt rcNo
-    rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InvalidRequest $ "RC not found for registrationNo: " <> rcNo)
+    rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (InvalidRequest $ "RC not found for registrationNo: " <> rcNo)
     pure rc.id
   when (isVehicleDoc && isNothing mbVehicleRcId) $
     throwError $ InvalidRequest $ "registrationNo is required for vehicle document type " <> show documentType
@@ -1198,16 +1197,14 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
     mbRcResolved <- case mbRc of
       Just _ -> pure mbRc
       Nothing -> case req.vehicleNumberPlate of
-        Just plate -> do
-          enc <- encrypt plate
-          QRC.findByCertificateNumberHash (enc & hash)
+        Just plate -> QRC.findLastVehicleRCWrapper plate
         Nothing -> pure Nothing
     case mbRcResolved of
       Just rc -> do
         certificateNumber <- mapM encrypt req.vehicleNumberPlate
         -- Check for duplicate vehicle number plate if being changed
-        whenJust certificateNumber $ \encNum -> do
-          mbExistingRC <- QRC.findByCertificateNumberHash (encNum & hash)
+        whenJust req.vehicleNumberPlate $ \plate -> do
+          mbExistingRC <- QRC.findLastVehicleRCWrapper plate
           whenJust mbExistingRC $ \existingRC ->
             when (existingRC.id /= rc.id) $
               throwError (InvalidRequest "RC with this vehicle number plate already exists")
@@ -1249,7 +1246,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
             fitnessExpiry <- req.fitnessExpiry & fromMaybeM (InvalidRequest "fitnessExpiry is required for creating RC document")
             encryptedRC <- encrypt vehicleNumberPlate
             -- Check if RC already exists for this number plate
-            mbExistingRC <- QRC.findByCertificateNumberHash (encryptedRC & hash)
+            mbExistingRC <- QRC.findLastVehicleRCWrapper vehicleNumberPlate
             whenJust mbExistingRC $ \_ ->
               throwError (InvalidRequest "RC with this vehicle number plate already exists")
             now <- getCurrentTime
@@ -1370,8 +1367,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
       case (req.policyNumber, req.policyExpiry, req.policyProvider, req.rcNumber) of
         (Just policyNum, Just policyExp, Just provider, Just rcNo) -> do
           insuranceImage <- findApproveImage DVC.VehicleInsurance imageId
-          rcNoEnc <- encrypt rcNo
-          rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+          rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (InternalError "RC not found by RC number")
           policyNo <- encrypt policyNum
           let insurance =
                 DVI.VehicleInsurance
@@ -1413,8 +1409,7 @@ approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
   vpuc <- QVPUC.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
-  rcNoEnc <- encrypt rcNumber
-  rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+  rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (InternalError "RC not found by RC number")
   pucNoEnc <- encrypt req.pucNumber
   case vpuc of
     Just puc -> do
@@ -1470,8 +1465,7 @@ approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
   vPremit <- QVPermit.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
-  rcNoEnc <- encrypt rcNumber
-  rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+  rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (InternalError "RC not found by RC number")
   permitNumEnc <- encrypt req.permitNumber
   case vPremit of
     Just permit -> do
@@ -1560,8 +1554,7 @@ approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOp
         Nothing
     Nothing -> do
       certificateImage <- findApproveImage DVC.VehicleFitnessCertificate imageId
-      rcNoEnc <- encrypt rcNumber
-      rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by rc number")
+      rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (InternalError "RC not found by rc number")
       let fitnessCert =
             DFC.VehicleFitnessCertificate
               { applicationNumber = applicationNo,
@@ -1802,8 +1795,7 @@ approveAndUpdateNOC req@Common.NOCApproveDetails {..} mId mOpCityId = do
   vnoc <- QVNOC.findByImageId imageId
   now <- getCurrentTime
   uuid <- generateGUID
-  rcNoEnc <- encrypt rcNumber
-  rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+  rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (InternalError "RC not found by RC number")
   nocNoEnc <- encrypt req.nocNumber
   case vnoc of
     Just noc -> do

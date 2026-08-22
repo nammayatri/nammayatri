@@ -80,8 +80,6 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
-import qualified SharedLogic.DriverOnboarding.Common as SCommonOnb
-import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
@@ -294,22 +292,10 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       when allVehicleDocsVerified $ do
         if enableBotFlow
           then -- BOT: mark RC verified now, then reconcile in the fork.
-          whenJust mbVehicleDocs $ \(vehicleDocItem, allDocumentVerificationConfigs) -> do
-            fork "botApproveVehicle: recompute vehicle flags" $
-              void $
-                SFlags.recomputeOnboardingFlags
-                  SFlags.OnboardingFlagsInput
-                    { ofiPerson = Nothing,
-                      ofiVehicles =
-                        [ SFlags.VehicleDocsEntry
-                            { vdeRegistrationNo = registrationNo,
-                              vdeItem = vehicleDocItem {VDocs.documents = map SCommonOnb.overrideInspectionHubAsValid vehicleDocItem.documents},
-                              vdeConfigs = allDocumentVerificationConfigs,
-                              vdeMakeSelfieAadhaarPanMandatory = Nothing
-                            }
-                        ]
-                    }
-                  (transporterConfig.unifiedOnboardingFlagsRecompute == Just True)
+
+            when (isJust mbVehicleDocs) $
+              fork "botApproveVehicle: recompute vehicle flags" $
+                void $ SStatus.runRefreshOnboardingFlagsVehicleWithBotApproval (Just transporterConfig) False True rc.id
           else QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
@@ -1066,7 +1052,7 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         if isDocReqEmpty
           then do
             if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-              then void $ SStatus.runRefreshOnboardingFlagsVehicleWithBotApproval (Just transporterConfig) True rcId
+              then void $ SStatus.runRefreshOnboardingFlagsVehicleWithBotApproval (Just transporterConfig) True False rcId
               else unless (rcInfo.approved == Just True) $ QVRC.updateApproved (Just True) rcId
             pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
           else do
