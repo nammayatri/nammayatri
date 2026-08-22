@@ -172,7 +172,7 @@ selectVersionForUnboundedConfigs merchantOpCityId domain mbToss =
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
     configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
     let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") $ filterActiveRollouts configs
-    mbSelectedConfig <- chooseLogicWithGroups applicapleConfigs mbToss
+    mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
 
 dynamicLogicVersionStickyTtlSec :: Int
@@ -231,7 +231,7 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
               if null boundedConfigs
                 then unboundedConfigs activeConfigs
                 else boundedConfigs
-    mbSelectedConfig <- chooseLogicWithGroups applicapleConfigs mbToss
+    mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
   where
     unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
@@ -244,6 +244,12 @@ filterActiveRollouts =
         r.experimentStatus /= Just DISCARDED
           && r.experimentStatus /= Just REVERTED
     )
+
+ungroupBaseRollouts :: [AppDynamicLogicRollout] -> [AppDynamicLogicRollout]
+ungroupBaseRollouts = map go
+  where
+    go :: AppDynamicLogicRollout -> AppDynamicLogicRollout
+    go r = if r.isBaseVersion == Just True then r {experimentGroup = Nothing} else r
 
 cumulativeRollout :: [AppDynamicLogicRollout] -> [(AppDynamicLogicRollout, Int)]
 cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageRollout) logics)
