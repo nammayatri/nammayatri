@@ -312,20 +312,108 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       maybeM
         (buildAndCreateBooking rider quote fareParameters mbIsMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType isSpotBooking' mbPurchasedPassPaymentId)
         ( \booking -> do
+            booking' <- reapplyPassOverride isMultiInitAllowed firstTripId rider fareParameters booking
             updatedBooking <-
               if isMultiInitAllowed
                 then do
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                       totalPrice = fareParameters.totalPrice
                       mbNewServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
-                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-                  void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking.id
-                  void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.serviceTierType = mbNewServiceTierType}
-                else return booking
+                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking'.id
+                  void $ QFRFSTicketBooking.updateQuoteBppItemIdRouteStationsAndServiceTierById quote.id quote.bppItemId quote.routeStationsJson mbNewServiceTierType booking'.id
+                  void $ QFRFSTicketBooking.updateIsFareChangedById Nothing booking'.id
+                  void $ QFRFSTicketBooking.updateTotalPriceById totalPrice booking'.id
+                  return $ booking' {DFRFSTicketBooking.quoteId = quote.id, DFRFSTicketBooking.bppItemId = quote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.totalPrice = totalPrice, DFRFSTicketBooking.serviceTierType = mbNewServiceTierType}
+                else return booking'
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
+
+    reapplyPassOverride :: (CallExternalBPP.FRFSConfirmFlow m r c) => Bool -> Maybe Text -> Domain.Types.Person.Person -> FRFSUtils.FRFSFareParameters -> DFRFSTicketBooking.FRFSTicketBooking -> m DFRFSTicketBooking.FRFSTicketBooking
+    reapplyPassOverride isMultiInitAllowed' mbFirstTripId rider fareParameters booking = do
+      let repriceable = booking.status == DFRFSTicketBooking.NEW || isMultiInitAllowed'
+      case mbPurchasedPassPaymentId of
+        Nothing -> dropOverride repriceable
+        Just paymentId
+          | not repriceable && booking.overrideAppliedEntityId == Just paymentId.getId -> pure booking
+          | otherwise -> do
+            now <- getCurrentTime
+            let mbAdultUnitPriceForOverride =
+                  find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)
+                mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
+            adultUnitPriceForOverride <-
+              mbAdultUnitPriceForOverride
+                & fromMaybeM (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
+            tripTime <- resolvedTripTime now
+            mbResolved <-
+              FRFSPassOverride.resolvePassOverride
+                integratedBppConfig
+                rider
+                quote.vehicleType
+                tripTime
+                mbServiceTierType
+                adultUnitPriceForOverride
+                (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems)
+                paymentId
+            passOption <-
+              (snd <$> mbResolved)
+                & fromMaybeM (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
+            let overriddenAmount = passOption.overriddenTotalPrice.amount
+                overrideEntityId = passOption.purchasedPassPaymentId.getId
+                alreadyApplied =
+                  booking.overrideAppliedEntityId == Just overrideEntityId
+                    && booking.overriddenAmount == Just overriddenAmount
+            if alreadyApplied
+              then pure booking
+              else do
+                unless repriceable $ do
+                  logInfo $
+                    "FRFSConfirm:reapplyPassOverride booking past NEW with no multi-init, refusing to re-price bookingId="
+                      <> booking.id.getId
+                      <> " status="
+                      <> show booking.status
+                      <> " purchasedPassPaymentId="
+                      <> paymentId.getId
+                  throwError (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
+                QFRFSTicketBooking.updatePassOverrideById (Just DFRFSTicketBooking.PassOverride) (Just overriddenAmount) (Just overrideEntityId) booking.id
+                when (booking.status /= DFRFSTicketBooking.NEW) $
+                  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW booking.id
+                logInfo $
+                  "FRFSConfirm:reapplyPassOverride applied on existing booking bookingId="
+                    <> booking.id.getId
+                    <> " purchasedPassPaymentId="
+                    <> paymentId.getId
+                    <> " overriddenAmount="
+                    <> show overriddenAmount
+                pure
+                  booking
+                    { DFRFSTicketBooking.overrideType = Just DFRFSTicketBooking.PassOverride,
+                      DFRFSTicketBooking.overriddenAmount = Just overriddenAmount,
+                      DFRFSTicketBooking.overrideAppliedEntityId = Just overrideEntityId,
+                      DFRFSTicketBooking.status = DFRFSTicketBooking.NEW
+                    }
+      where
+        dropOverride repriceable = case booking.overrideAppliedEntityId of
+          Nothing -> pure booking
+          Just _
+            | not repriceable -> pure booking
+            | otherwise -> do
+              logInfo $ "FRFSConfirm:reapplyPassOverride no pass on this confirm, dropping the stamped override bookingId=" <> booking.id.getId
+              QFRFSTicketBooking.updatePassOverrideById Nothing Nothing Nothing booking.id
+              pure
+                booking
+                  { DFRFSTicketBooking.overrideType = Nothing,
+                    DFRFSTicketBooking.overriddenAmount = Nothing,
+                    DFRFSTicketBooking.overrideAppliedEntityId = Nothing
+                  }
+
+        resolvedTripTime now = do
+          let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+              mbRouteCode = listToMaybe (fromMaybe [] routeStations) <&> (.code)
+          mbScheduled <- case (mbFirstTripId, mbRouteCode) of
+            (Just tripId, Just routeCode) -> getScheduledTripStartTime tripId routeCode quote.fromStationCode integratedBppConfig
+            _ -> pure Nothing
+          pure $ fromMaybe now (mbScheduled <|> booking.startTime)
 
     validateQuota :: Int -> Int -> Maybe Seat.Seat -> Either GenericError ()
     validateQuota fromIdx toIdx mbSeat =
