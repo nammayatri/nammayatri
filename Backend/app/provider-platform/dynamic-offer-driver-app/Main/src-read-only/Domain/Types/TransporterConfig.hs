@@ -440,7 +440,9 @@ data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Pr
 
 data DemandHotspotsConfig = DemandHotspotsConfig
   { analysisDurationMinutes :: Kernel.Prelude.Int,
+    congestionMultiplierCacheTTLInMin :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     enableDemandHotspots :: Kernel.Prelude.Bool,
+    fallbackAvgSpeedKmph :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     nearbyRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     nearbySearchStalenessMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
