@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -283,6 +284,10 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
+  -- Blocking writes `active` too. Keyed on the driver's own city, which is the bucket
+  -- the supply counter is kept per.
+  Kernel.Prelude.whenJust driverInfo $ \di ->
+    DSC.recordDriverActiveChange di.merchantOperatingCityId di.active (fromMaybe True (mbActive <|> activeState))
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.blocked = LTSSync.Set isBlocked,

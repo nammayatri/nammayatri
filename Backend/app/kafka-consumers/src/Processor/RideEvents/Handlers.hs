@@ -73,6 +73,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import qualified "dynamic-offer-driver-app" SharedLogic.DriverSupplyCounter as DSC
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
 import "dynamic-offer-driver-app" SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
@@ -482,7 +483,15 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
 
         -- --- operational tables: sync directly, no gating. Document tables are
         -- intentionally excluded -- nothing reads their city column. ---
+        -- A city move relocates an online driver between supply buckets without touching
+        -- `active`, so the counter needs an explicit move. Read before the write, and
+        -- keyed on driver_information's own city -- that is the bucket it was counted in.
+        mbDriverInfo <- QDriverInfo.findById (cast ride.driverId)
         QDriverInfo.updateMerchantIdAndCityIdByDriverId ride.driverId booking.providerId targetOpCityId
+        whenJust mbDriverInfo $ \di ->
+          when di.active $ do
+            DSC.recordDriverActiveChange di.merchantOperatingCityId True False
+            DSC.recordDriverActiveChange (Just targetOpCityId) False True
         QVehicleExtra.updateMerchantIdAndCityIdByDriverId ride.driverId booking.providerId (Just targetOpCityId.getId)
         QDailyStats.updateMerchantIdAndCityIdByDriverId (Just booking.providerId) (Just targetOpCityId) ride.driverId
         QDriverReferral.updateMerchantIdAndCityIdByDriverId (Just booking.providerId) (Just targetOpCityId) ride.driverId
