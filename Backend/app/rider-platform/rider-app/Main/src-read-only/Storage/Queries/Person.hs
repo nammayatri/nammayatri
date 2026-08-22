@@ -187,6 +187,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.blockedAt (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
       Se.Set Beam.blockedByRuleId (Kernel.Types.Id.getId <$> blockedByRuleId),
       Se.Set Beam.blockedCount blockedCount,
+      Se.Set Beam.blockedReason blockedReason,
       Se.Set Beam.blockedUntil blockedUntil,
       Se.Set Beam.businessEmailEncrypted (businessEmail <&> unEncrypted . (.encrypted)),
       Se.Set Beam.businessEmailHash (businessEmail <&> (.hash)),
