@@ -36,6 +36,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.CallBAP
@@ -148,7 +149,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                  responseArray <- errorCatchAndHandle [req1] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
+                  responseArray <- getDistancesWithRetry scheduledActivationDistanceRetries [req1] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
                   if isAPIError responseArray
                     then do
                       let cReason = "Ride is Reallocated due to getDistance API failure"
@@ -171,6 +172,15 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           void $ QRide.updateStatus ride.id DRide.NEW
                           void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
                           void $ sendRideAssignedUpdateToBAP booking ride driver vehicle True -- TODO: handle error
+                          -- SWS-5: start the post-activation pickup monitor (distance + ETA) when a scheduled check is enabled.
+                          whenJust transporterConfig.pickupStallMonitoringConfig $ \monitoringConfig ->
+                            when (monitoringConfig.runDistanceMonitorForScheduled == Just True || isJust monitoringConfig.etaFeasibilityConfig) $
+                              createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just merchantOperatingCityId) (fromIntegral monitoringConfig.tickIntervalSec) $
+                                CheckDriverPickupProgressJobData
+                                  { bookingId = booking.id,
+                                    rideId = ride.id,
+                                    driverId = driverId
+                                  }
                           return Complete
                 _ -> do
                   let cReason = "Ride is Reallocated current driver location not found"
@@ -226,7 +236,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                  responseArray <- errorCatchAndHandle [req1, req2] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
+                  responseArray <- getDistancesWithRetry scheduledActivationDistanceRetries [req1, req2] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
                   if isAPIError responseArray
                     then do
                       let cReason = "Ride is Reallocated due to getDistance API failure"
@@ -325,6 +335,33 @@ cancelOrReallocate ride cReason isForceReallocation req = do
   pure ()
 
 data Result a b = APIFailed | DistanceResp (GetDistanceResp a b)
+
+-- The one-shot activation gate is deadline-boxed: retry the distance call a bounded number of times
+-- (immediate, no backoff) so a transient maps blip doesn't fail-closed reallocate, then fall through.
+scheduledActivationDistanceRetries :: Int
+scheduledActivationDistanceRetries = 3
+
+getDistancesWithRetry ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Int ->
+  [TMaps.GetDistanceReq a b] ->
+  ( TMaps.GetDistanceReq a b ->
+    m (GetDistanceResp a b)
+  ) ->
+  m [Result a b]
+getDistancesWithRetry attemptsLeft reqs func = do
+  responseArray <- errorCatchAndHandle reqs func
+  if any isResultFailed responseArray && attemptsLeft > 1
+    then do
+      logWarning $ "scheduled activation getDistance failed, retrying (" <> show (attemptsLeft - 1) <> " attempts left)"
+      getDistancesWithRetry (attemptsLeft - 1) reqs func
+    else pure responseArray
+  where
+    isResultFailed APIFailed = True
+    isResultFailed _ = False
 
 errorCatchAndHandle ::
   ( ServiceFlow m r,

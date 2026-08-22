@@ -522,10 +522,12 @@ data PickupStallCaseConfig = PickupStallCaseConfig {stages :: [Domain.Types.Tran
 
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
   { badTickDebounce :: Kernel.Prelude.Int,
+    etaFeasibilityConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
     gracePeriodSec :: Kernel.Prelude.Int,
     locationDarkConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
     progressThresholdMeters :: Kernel.Prelude.Int,
     retreatingConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
+    runDistanceMonitorForScheduled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     stalledConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
     tickIntervalSec :: Kernel.Prelude.Int
   }
@@ -534,7 +536,7 @@ data PickupStallMonitoringConfig = PickupStallMonitoringConfig
 data PickupStallStage = PickupStallStage {afterStallSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text, terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY | REALLOCATE_SCHEDULED_RIDE | REALLOCATE_ALL_RIDES deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

@@ -438,6 +438,18 @@ isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip (Delivery OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
 
+-- Categories that SharedLogic.Cancel.reAllocateBookingIfPossible actually reallocates (anything else it
+-- cancels). Keep in sync with that dispatch. The pickup monitor uses this to warn-only (never cancel)
+-- categories a reallocation attempt would just cancel.
+isReallocatableCategory :: TripCategory -> Bool
+isReallocatableCategory (OneWay OneWayOnDemandDynamicOffer) = True
+isReallocatableCategory (Ambulance OneWayOnDemandDynamicOffer) = True
+isReallocatableCategory (Delivery OneWayOnDemandDynamicOffer) = True
+isReallocatableCategory (OneWay OneWayOnDemandStaticOffer) = True
+isReallocatableCategory (Rental OnDemandStaticOffer) = True
+isReallocatableCategory (InterCity OneWayOnDemandStaticOffer _) = True
+isReallocatableCategory _ = False
+
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isTollApplicableForTrip AUTO_RICKSHAW _ = False
 isTollApplicableForTrip AUTO_PLUS _ = False

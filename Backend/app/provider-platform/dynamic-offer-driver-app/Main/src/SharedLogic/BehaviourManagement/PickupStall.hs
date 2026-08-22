@@ -48,6 +48,46 @@ import Tools.DynamicLogic (getAppDynamicLogic)
 pickupStallActionType :: Text
 pickupStallActionType = "PICKUP_STALL"
 
+-- Distance-progress helpers shared by the ad-hoc and scheduled monitors (identical logic).
+
+-- Nothing = progressing; Just = bad tick. A road detour can transiently raise straight-line
+-- distance, so RETREATING relies on advanceCase's debounce before it activates.
+classifyTick :: Maybe Double -> Maybe Double -> Double -> Maybe Text
+classifyTick _ Nothing _ = Just caseLocationDark
+classifyTick Nothing (Just _) _ = Nothing
+classifyTick (Just lastD) (Just currentD) threshold
+  | lastD - currentD >= threshold = Nothing
+  | currentD - lastD >= threshold = Just caseRetreating
+  | otherwise = Just caseStalled
+
+advanceCase :: Int -> Text -> UTCTime -> PickupProgressState -> PickupProgressState
+advanceCase debounce detectedCase now state
+  | state.activeCase == Just detectedCase = state
+  | state.candidateCase == Just detectedCase =
+    let count = state.consecutiveBadTicks + 1
+     in if count >= debounce
+          then state {activeCase = Just detectedCase, caseStartedAt = Just now, firedStageCount = 0, candidateCase = Nothing, consecutiveBadTicks = 0}
+          else state {consecutiveBadTicks = count}
+  | otherwise = state {candidateCase = Just detectedCase, consecutiveBadTicks = 1, activeCase = Nothing, caseStartedAt = Nothing, firedStageCount = 0}
+
+stagesForCase :: DTC.PickupStallMonitoringConfig -> Text -> [DTC.PickupStallStage]
+stagesForCase monitoringConfig caseName
+  | caseName == caseStalled = maybe [] (.stages) monitoringConfig.stalledConfig
+  | caseName == caseRetreating = maybe [] (.stages) monitoringConfig.retreatingConfig
+  | caseName == caseLocationDark = maybe [] (.stages) monitoringConfig.locationDarkConfig
+  | otherwise = []
+
+-- Does a stage's terminal action authorize reallocation for this ride? Replaces the old
+-- ScheduledReallocationOwner enum: the terminal action scopes reallocation to ad-hoc (REALLOCATE_RIDE),
+-- scheduled *intracity* (REALLOCATE_SCHEDULED_RIDE — InterCity/Rental excluded, since isScheduled =
+-- startTime>now lumps them in), or every ride (REALLOCATE_ALL_RIDES). Args: action, isScheduled, isInterCityOrRental.
+-- Category reallocatability is checked separately (Domain.Types.Trip.isReallocatableCategory).
+terminalActionReallocates :: DTC.PickupStallTerminalAction -> Bool -> Bool -> Bool
+terminalActionReallocates DTC.RECORD_ONLY _ _ = False
+terminalActionReallocates DTC.REALLOCATE_RIDE isScheduled _ = not isScheduled
+terminalActionReallocates DTC.REALLOCATE_SCHEDULED_RIDE isScheduled isInterCityOrRental = isScheduled && not isInterCityOrRental
+terminalActionReallocates DTC.REALLOCATE_ALL_RIDES _ _ = True
+
 -- Cooldown tags exposed to rules (e.g. {"var": "cooldowns.PICKUP_STALL_FEE"}) so a
 -- fee/block consequence fires at most once per cooldown window.
 pickupStallCooldownTags :: [Text]
