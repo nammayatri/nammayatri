@@ -51,6 +51,7 @@ let schedulerConfig =
       , reclaimBatch = +200
       , heartbeatIntervalSec = +60
       , deadConsumerThresholdSec = +1200
+      , runConsumerCleanupThreads = True
       }
 
 in  { appCfg =
