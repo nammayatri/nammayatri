@@ -2065,6 +2065,11 @@ TransporterConfig:
         - checkImageExtractionForDashboard
         - searchRepeatLimit
         - scheduledRideSearchRepeatLimit
+        - graceTimeForScheduledRidePickup
+        - scheduleRideBufferTime
+        - scheduledRideJobRescheduleTime
+        - enableScheduleReallocation
+        - disableListScheduledBookingAPI
         - driverPaymentCycleStartTime
         - timeDiffFromUtc
         - defaultOnboardingAs

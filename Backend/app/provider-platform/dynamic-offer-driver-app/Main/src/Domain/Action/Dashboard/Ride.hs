@@ -202,9 +202,10 @@ withRideListCommonParams ::
   Maybe Text ->
   Maybe Common.BookingStatus ->
   Maybe Common.PaymentMode ->
+  Bool ->
   (RideListCommonParams -> Flow a) ->
   Flow a
-withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId mbBookingStatus mbPaymentMode cont = do
+withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId mbBookingStatus mbPaymentMode additionalFilterPresent cont = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do
@@ -229,6 +230,7 @@ withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDri
           || isJust mbFleetOwnerId
           || isJust mbBookingStatus
           || isJust mbPaymentMode
+          || additionalFilterPresent
   unless hasAnyFilter $
     throwError $ InvalidRequest "At least one filter is required"
   when (isNothing mbShortRideId && isNothing mbResolvedRideId && isNothing mbfrom && isNothing mbto) $ throwError $ InvalidRequest "from and to date are required"
@@ -271,8 +273,8 @@ getRideListUtil ::
   Maybe Text ->
   Flow Common.RideListRes
 getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode $ \RideListCommonParams {..} -> do
-    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode False $ \RideListCommonParams {..} -> do
+    (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbRequestorId mbFleetOwnerId
     rideItems <-
       if useClickhouse
         then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
@@ -289,50 +291,55 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
     -- totalCount <- runInReplica $ QRide.countRides merchant.id
     let summary = Common.Summary {totalCount = 10000, count}
     pure Common.RideListRes {totalItems = count, summary, rides = rideListItems'}
-  where
-    -- Resolve (show customer info?, effective fleet filter). Fleet owner/operator: only their fleet, no customer info; other roles: may filter by any fleet, show customer info.
-    resolveFleetAndCustomerVisibility :: Maybe Text -> Flow (Bool, Maybe Text)
-    resolveFleetAndCustomerVisibility (Just fleetOwnerId) = do
-      isFleetOrOp <- isRequestorFleetOwnerOrOperator
-      if isFleetOrOp
-        then do
-          void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
-          pure (False, Just fleetOwnerId)
-        else pure (True, Just fleetOwnerId)
-    resolveFleetAndCustomerVisibility Nothing = resolveRoleAndEffectiveFleet
 
-    isRequestorFleetOwnerOrOperator :: Flow Bool
-    isRequestorFleetOwnerOrOperator = case mbRequestorId of
-      Nothing -> pure False
-      Just requestorId -> do
-        mbRequestor <- runInReplica $ QP.findById (Id requestorId)
-        pure $ maybe False (\r -> DCommon.checkFleetOwnerRole r.role || r.role == DP.OPERATOR) mbRequestor
+-- Resolve (show customer info?, effective fleet filter) from requestor role + optional fleet filter. Fleet owner/operator: only their fleet, no customer info; other roles: any fleet, show customer info.
+resolveFleetAndCustomerVisibility :: Maybe Text -> Maybe Text -> Flow (Bool, Maybe Text)
+resolveFleetAndCustomerVisibility mbRequestorId (Just fleetOwnerId) = do
+  isFleetOrOp <- isRequestorFleetOwnerOrOperator mbRequestorId
+  if isFleetOrOp
+    then do
+      void $ FleetAccess.checkRequestorAccessToFleet True mbRequestorId fleetOwnerId
+      pure (False, Just fleetOwnerId)
+    else pure (True, Just fleetOwnerId)
+resolveFleetAndCustomerVisibility mbRequestorId Nothing = resolveRoleAndEffectiveFleet mbRequestorId
 
-    -- When no fleetOwnerId in request: fleet owner => their fleet only, no customer info; operator => must pass fleetOwnerId; other roles => no fleet filter, show customer info.
-    resolveRoleAndEffectiveFleet :: Flow (Bool, Maybe Text)
-    resolveRoleAndEffectiveFleet = case mbRequestorId of
+isRequestorFleetOwnerOrOperator :: Maybe Text -> Flow Bool
+isRequestorFleetOwnerOrOperator mbRequestorId = case mbRequestorId of
+  Nothing -> pure False
+  Just requestorId -> do
+    mbRequestor <- runInReplica $ QP.findById (Id requestorId)
+    pure $ maybe False (\r -> DCommon.checkFleetOwnerRole r.role || r.role == DP.OPERATOR) mbRequestor
+
+-- No fleetOwnerId in request: fleet owner => own fleet, no customer info; operator => access denied; other roles => no fleet filter, show customer info.
+resolveRoleAndEffectiveFleet :: Maybe Text -> Flow (Bool, Maybe Text)
+resolveRoleAndEffectiveFleet mbRequestorId = case mbRequestorId of
+  Nothing -> pure (True, Nothing)
+  Just requestorId -> do
+    mbRequestor <- runInReplica $ QP.findById (Id requestorId)
+    case mbRequestor of
       Nothing -> pure (True, Nothing)
-      Just requestorId -> do
-        mbRequestor <- runInReplica $ QP.findById (Id requestorId)
-        case mbRequestor of
-          Nothing -> pure (True, Nothing)
-          Just requestor ->
-            case requestor.role of
-              DP.FLEET_OWNER -> pure (False, Just requestorId)
-              DP.FLEET_BUSINESS -> pure (False, Just requestorId)
-              DP.OPERATOR -> throwError AccessDenied
-              _ -> pure (True, Nothing)
+      Just requestor ->
+        case requestor.role of
+          DP.FLEET_OWNER -> pure (False, Just requestorId)
+          DP.FLEET_BUSINESS -> pure (False, Just requestorId)
+          DP.OPERATOR -> throwError AccessDenied
+          _ -> pure (True, Nothing)
 
-getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Flow Common.RideListResV2
-getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId = do
+getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Text -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId requestorId = do
   let mbDriverIdText = getId <$> _mbDriverId
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing _mbPaymentMode $ \RideListCommonParams {..} -> do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing _mbPaymentMode (isJust mbRideStatus) $ \RideListCommonParams {..} -> do
+    -- Role-scope: fleet owner => own fleet, admin => all city, operator => denied (mirrors V1 getRideList).
+    (_, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility (Just requestorId) mbFleetOwnerId
     rideItems <-
       if useClickhouse
-        then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount
-        else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId mbDriverPhone now mbfrom mbto mbFromAmount mbToAmount
+        then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount effectiveFleetOwnerId
+        else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId mbDriverPhone now mbfrom mbto mbFromAmount mbToAmount effectiveFleetOwnerId
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
-    rideListItems <- traverse buildRideListItemV2 rideItems
+    -- Batch cancellation attribution for cancelled rides only (BCR by rideId).
+    let cancelledRideIds = map (.rideId) (filter (\i -> i.rideStatus == DRide.CANCELLED) rideItems)
+    bcrs <- if null cancelledRideIds then pure [] else runInReplica $ QBCReason.findAllByRideIds cancelledRideIds
+    rideListItems <- traverse (buildRideListItemV2 bcrs) rideItems
     let count = length rideListItems
     let summary = Common.Summary {totalCount = 10000, count}
     pure Common.RideListResV2 {totalItems = count, summary, rides = rideListItems}
@@ -379,9 +386,11 @@ buildRideListItem QRide.RideItem {..} = do
         rideTags = rideTags
       }
 
-buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2
-buildRideListItemV2 QRide.RideItemV2 {..} = do
+buildRideListItemV2 :: EncFlow m r => [DBCReason.BookingCancellationReason] -> QRide.RideItemV2 -> m Common.RideListItemV2
+buildRideListItemV2 bcrs QRide.RideItemV2 {..} = do
   driverPhoneNumber <- mapM decrypt driverPhoneNo
+  -- Attribute cancellation (driver vs rider vs fleet) from the batched BCR lookup by rideId.
+  let mbBcr = find (\bcr -> bcr.rideId == Just rideId) bcrs
   pure
     Common.RideListItemV2
       { rideId = cast @DRide.Ride @Common.Ride rideId,
@@ -389,7 +398,9 @@ buildRideListItemV2 QRide.RideItemV2 {..} = do
         rideCreatedAt = rideCreatedAt,
         rideStatus = castRideStatus' rideStatus,
         driverName = driverName,
-        driverPhoneNo = driverPhoneNumber
+        driverPhoneNo = driverPhoneNumber,
+        cancelledBy = castCancellationSource . (.source) <$> mbBcr,
+        cancellationReasonCode = (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBcr <&> (.reasonCode)
       }
 
 castRideStatus' :: DRide.RideStatus -> Common.RideStatus

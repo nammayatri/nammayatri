@@ -10,6 +10,7 @@ import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -62,6 +63,11 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.checkImageExtractionForDashboard checkImageExtractionForDashboard,
       Se.Set Beam.searchRepeatLimit searchRepeatLimit,
       Se.Set Beam.scheduledRideSearchRepeatLimit (Just scheduledRideSearchRepeatLimit),
+      Se.Set Beam.graceTimeForScheduledRidePickup (Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds graceTimeForScheduledRidePickup),
+      Se.Set Beam.scheduleRideBufferTime (Kernel.Utils.Common.nominalDiffTimeToSeconds scheduleRideBufferTime),
+      Se.Set Beam.scheduledRideJobRescheduleTime (Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds scheduledRideJobRescheduleTime),
+      Se.Set Beam.enableScheduleReallocation enableScheduleReallocation,
+      Se.Set Beam.disableListScheduledBookingAPI (Just disableListScheduledBookingAPI),
       Se.Set Beam.driverPaymentCycleStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleStartTime),
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.defaultOnboardingAs defaultOnboardingAs,
