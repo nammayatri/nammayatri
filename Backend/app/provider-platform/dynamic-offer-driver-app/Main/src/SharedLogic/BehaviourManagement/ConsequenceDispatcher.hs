@@ -22,6 +22,7 @@ where
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.Text as T
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
@@ -302,9 +303,12 @@ dispatchCommunicationAction ctx driverId = \case
   CMT.FcmNotification params -> do
     let title = fromMaybe params.templateKey (textFromParams "title" params.templateParams)
         body = fromMaybe "" (textFromParams "body" params.templateParams)
+        notifType =
+          fromMaybe FCM.TRIGGER_FCM $
+            textFromParams "notificationType" params.templateParams >>= readMaybe . T.unpack
     withDriver $ \driver -> do
-      logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey
-      Notify.notifyDriver ctx.merchantOperatingCityId FCM.DRIVER_NOTIFY title body driver driver.deviceToken
+      logInfo $ "FCM notification for driver " <> driverId.getId <> ": " <> params.templateKey <> " as " <> show notifType
+      Notify.notifyDriver ctx.merchantOperatingCityId notifType title body driver driver.deviceToken
   CMT.InAppOverlay params ->
     withDriver $ \driver -> do
       logInfo $ "In-app overlay for driver " <> driverId.getId <> ": " <> params.overlayKey
