@@ -65,11 +65,14 @@ handler :: forall t. (HasSchemaName BeamSC.SystemConfigsT, JobProcessor t, FromJ
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
+  runConsumerCleanupThreads <- asks (.runConsumerCleanupThreads)
   case schedulerType of
-    RedisBased ->
+    RedisBased -> do
+      let consumerCleanupThreads = if runConsumerCleanupThreads then [heartbeatLoop, reclaimerLoop hnd, sweeperLoop hnd] else []
+      unless runConsumerCleanupThreads $ logInfo "CONSUMER_CLEANUP_THREADS_DISABLED: skipping heartbeat, reclaimer and sweeper loops"
       loopGracefully $
         replicate maxThreads (runnerIterationRedis hnd runTask)
-          <> [heartbeatLoop, reclaimerLoop hnd, sweeperLoop hnd]
+          <> consumerCleanupThreads
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
