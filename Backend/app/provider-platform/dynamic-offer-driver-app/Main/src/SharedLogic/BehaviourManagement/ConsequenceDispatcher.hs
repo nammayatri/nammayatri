@@ -341,7 +341,7 @@ mkRuleOverlayReq params =
   FCM.FCMOverlayReq
     { title = textFromParams "title" params.templateParams,
       description = textFromParams "body" params.templateParams,
-      imageUrl = Nothing,
+      imageUrl = Just $ fromMaybe "" (textFromParams "imageUrl" params.templateParams),
       okButtonText = textFromParams "okButtonText" params.templateParams,
       cancelButtonText = if params.showCloseButton then Just "Close" else Nothing,
       actions = [],
