@@ -932,8 +932,9 @@ findAllRideItemsV2 ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe Text ->
   m [RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverIdParam mbDriverPhoneNo now mbFrom mbTo mbFromAmount mbToAmount mbFleetOwnerId = do
   mbDriver <- case mbDriverPhoneDBHash of
     Just _driverPhoneDBHash ->
       findOneWithKV
@@ -967,6 +968,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                         <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
                         <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
                         <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
+                        <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just foid)]) mbFleetOwnerId
                     )
                 ]
                 (Se.Desc BeamR.createdAt)
@@ -991,6 +993,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                     [ Se.And
                         ( [Se.Is BeamR.bookingId $ Se.In (getId . Booking.id <$> bookings)]
                             <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                            <> maybe [] (\foid -> [Se.Is BeamR.fleetOwnerId $ Se.Eq (Just foid)]) mbFleetOwnerId
                         )
                     ]
                     Nothing
@@ -1020,6 +1023,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\foid -> ride.fleetOwnerId B.==?. B.val_ (Just foid)) mbFleetOwnerId
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount

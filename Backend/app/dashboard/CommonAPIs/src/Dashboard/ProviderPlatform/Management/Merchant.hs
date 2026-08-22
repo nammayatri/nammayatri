@@ -86,7 +86,15 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
       validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ InValue $ Min @Int 0,
       validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ InValue $ Min @Int 0,
       validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ InValue $ Min @Int 0,
-      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0
+      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0,
+      validateField "graceTimeForScheduledRidePickup" graceTimeForScheduledRidePickup $ InMaybe $ InValue $ Min @NominalDiffTime 0,
+      validateField "scheduleRideBufferTime" scheduleRideBufferTime $ InMaybe $ InValue $ Min @NominalDiffTime 0,
+      validateField "scheduledRideJobRescheduleTime" scheduledRideJobRescheduleTime $ InMaybe $ InValue $ Min @NominalDiffTime 0,
+      validateField "scheduledRideSearchRepeatLimit" scheduledRideSearchRepeatLimit $ InMaybe $ InValue $ Min @Int 0,
+      validateField "maxScheduledHoldsPerDriver" maxScheduledHoldsPerDriver $ InMaybe $ InValue $ Min @Int 1,
+      validateField "scheduledRideAvgSpeedKmph" scheduledRideAvgSpeedKmph $ InMaybe $ InValue $ Min @Double 1,
+      validateField "scheduledRideMinLeadTime" scheduledRideMinLeadTime $ InMaybe $ InValue $ Min @Seconds 0,
+      validateField "scheduledRideMaxLeadTime" scheduledRideMaxLeadTime $ InMaybe $ InValue $ Min @Seconds 0
       -- validateField "driverPaymentCycleDuration" driverPaymentCycleDuration $ InMaybe $ InValue $ Min @NominalDiffTime 86400,
       -- validateField "driverPaymentCycleStartTime" driverPaymentCycleStartTime $ InMaybe $ InValue $ InRange @NominalDiffTime 0 86399,
       -- validateField "timeDiffFromUtc" timeDiffFromUtc $ InMaybe $ InValue $ InRange @Seconds maxWestWardTimeDiff maxEastWardTimeDiff, --Set -12 hrs to 14 hrs as the max time diff from UTC is -12 Hrs to 14 Hrs
