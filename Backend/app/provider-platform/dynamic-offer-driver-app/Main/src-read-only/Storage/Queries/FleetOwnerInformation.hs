@@ -58,6 +58,11 @@ updateFleetType fleetType fleetOwnerPersonId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.fleetType fleetType, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateIsNew :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIsNew isNew fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isNew isNew, Se.Set Beam.updatedAt _now] [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateLocalAddressDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())

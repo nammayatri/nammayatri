@@ -392,3 +392,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enabled_reason_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_new boolean;

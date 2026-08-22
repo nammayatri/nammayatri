@@ -146,7 +146,7 @@ driverInfoMatches f driverInfo =
     B.&&. (if isFleetSeeker f then driverInfo.onboardingAs B.==. B.val_ (Just DriverInfo.FLEET_DRIVER) else B.val_ True)
     B.&&. ( case f.dlfApproval of
               Nothing -> B.val_ True
-              Just Nothing -> B.isNothing_ driverInfo.approved
+              Just Nothing -> B.isNothing_ driverInfo.approved B.&&. driverInfo.verified B.==. B.val_ True
               Just (Just approved) -> driverInfo.approved B.==. B.val_ (Just approved)
           )
 

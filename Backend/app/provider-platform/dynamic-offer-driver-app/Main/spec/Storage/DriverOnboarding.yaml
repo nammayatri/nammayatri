@@ -335,6 +335,7 @@ VehicleRegistrationCertificate:
     rejectReason: Maybe Text
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
+    isNew: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
@@ -357,6 +358,10 @@ VehicleRegistrationCertificate:
   queries:
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateIsNew:
+      kvFunction: updateOneWithKV
+      params: [isNew]
       where: id
     updateFleetOwnerId:
       kvFunction: updateWithKV

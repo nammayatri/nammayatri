@@ -171,6 +171,7 @@ DriverInformation:
     weeklyExtraKms: Maybe HighPrecMeters
     onboardingAs: Maybe OnboardingAs
     approved: Maybe Bool
+    isNew: Maybe Bool
     preferredMapProvider: Maybe MapProvider
     docsVerificationStatus: Maybe DocsVerificationStatus
     address: Maybe Text # deprecated: moved to driver_identity_info;
@@ -304,6 +305,10 @@ DriverInformation:
     - EXTRA_QUERY_FILE
 
   queries:
+    updateIsNew:
+      kvFunction: updateOneWithKV
+      params: [isNew]
+      where: driverId
     updateAadhaarVerifiedState:
       kvFunction: updateOneWithKV
       params: [aadhaarVerified]
