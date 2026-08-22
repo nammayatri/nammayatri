@@ -318,7 +318,11 @@ mkBackendHandle merchantId mocId ctx =
           billingCategory = Nothing,
           preferSafetyPlus = Nothing,
           driverPreference = Nothing,
-          selectedOfferId = Nothing
+          selectedOfferId = Nothing,
+          -- The bot books what the customer asked for over chat; there is no map to move a
+          -- marker on, so no walk-and-save endpoint to name.
+          suggestedPickupAddress = Nothing,
+          suggestedDropAddress = Nothing
         }
 
     updateProfileReq upd =
