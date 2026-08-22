@@ -73,6 +73,7 @@ data NearestDriversResult = NearestDriversResult
     tripDistanceMinThreshold :: Maybe Meters,
     tripDistanceMaxThreshold :: Maybe Meters,
     maxPickupDistance :: Maybe Meters,
+    isPetModeEnabled :: Bool,
     isTollRouteEligible :: Bool, -- True if tollRouteBlockedTill is Nothing or < now
     driverGender :: Person.Gender,
     vehicleNumber :: Maybe Text,
@@ -306,6 +307,7 @@ mkResultHelper now dpd location dist mbDefaultServiceTierForDriver cityServiceTi
         tripDistanceMinThreshold = dpd.tripDistanceMinThreshold,
         tripDistanceMaxThreshold = dpd.tripDistanceMaxThreshold,
         maxPickupDistance = dpd.maxPickupRadius,
+        isPetModeEnabled = dpd.isPetModeEnabled,
         isTollRouteEligible = tollRouteEligible,
         driverGender = dpd.gender,
         previousRideDropLat = mbPrevDropLat,

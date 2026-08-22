@@ -1,0 +1,53 @@
+imports:
+  LatLong: Kernel.External.Maps
+  Meters: Kernel.Types.Common
+
+module: DriverAreaPreference
+
+types:
+  RadiusAreaSelection:
+    center: LatLong
+    radiusMeters: Meters
+
+  # The two selection methods are mutually exclusive by product decision, so the
+  # request carries a sum type: "both at once" is unrepresentable on the wire and
+  # the handler never has to reconcile a contradictory pair.
+  AreaPreferenceSelection:
+    enum: "SelectGeohashCells [Text], SelectRadiusArea RadiusAreaSelection"
+
+  # Nothing clears any existing preference.
+  AreaPreferenceUpdateReq:
+    selection: Maybe AreaPreferenceSelection
+
+  SelectedGeohashArea:
+    geohash: Text
+    areaName: Maybe Text
+
+  AreaPreferenceInfoRes:
+    selectedGeohashAreas: "[SelectedGeohashArea]"
+    radiusArea: Maybe RadiusAreaSelection
+
+  GeohashAreaItem:
+    geohash: Text
+    areaName: Text
+
+apis:
+  - GET:
+      endpoint: /driver/areaPreference/getInfo
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
+
+  - POST:
+      endpoint: /driver/areaPreference/updateInfo
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.DriverAreaPreference.AreaPreferenceUpdateReq
+      response:
+        type: API.Types.UI.DriverAreaPreference.AreaPreferenceInfoRes
+
+  - GET:
+      endpoint: /driver/areaPreference/list
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[API.Types.UI.DriverAreaPreference.GeohashAreaItem]"
