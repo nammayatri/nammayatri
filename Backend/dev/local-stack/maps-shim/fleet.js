@@ -64,7 +64,8 @@ const DEFAULT_RADIUS = 8000;
  * out, which needs no extension and is exact enough at city scale.
  */
 const SQL = `
-  SELECT p.first_name                                        AS name,
+  SELECT p.id                                                AS id,
+         p.first_name                                        AS name,
          p.rating,
          v.make,
          v.model,
@@ -165,6 +166,12 @@ async function nearby({ url, res, pool, riderUrl, token }) {
     drivers: rows
       .filter((r) => r.metres <= radius)
       .map((r) => ({
+        // The handle the passenger's choice is made of. Safe to hand out in a
+        // way the plate is not: it is a UUID, it identifies nobody to someone
+        // who does not already have it, and every driver endpoint still wants
+        // that driver's own token. The plate is a thing you read off a car in
+        // the street, which is exactly why it waits until one is coming.
+        id: r.id,
         name: (r.name || '').trim() || null,
         // A driver nobody has rated is not a driver rated zero. Null travels.
         rating: r.rating === null ? null : Number(r.rating),

@@ -26,6 +26,10 @@ BACKEND = "Backend"
 RIDER_SRC = f"{BACKEND}/app/rider-platform/rider-app/Main/src"
 DRIVER_SRC = f"{BACKEND}/app/provider-platform/dynamic-offer-driver-app/Main/src"
 RIDER = f"{RIDER_SRC}/Domain/Action/UI"
+RIDER_API = f"{RIDER_SRC}/API/UI"
+# Shared by both apps. Only ever touched with a field that is optional on
+# the wire, so the two binaries can be deployed in either order.
+BECKN_SPEC = f"{BACKEND}/lib/beckn-spec/src/Beckn/Types/Core/Taxi"
 DRIVER = f"{DRIVER_SRC}/Domain/Action"
 
 # (path, documented line number, old text, new text, note)
@@ -361,6 +365,257 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
       vehicleDesc Text Maybe
       Primary id""",
         "rider: persist the vehicle description",
+    ),
+    # ── The passenger picks who gets the request ────────────────────────────
+    #
+    # Today every driver the pool finds is asked, in batches, and the first to
+    # answer wins. The client asked for the other thing: the passenger sees the
+    # cars near him and sends the request to the one, two or three he wants.
+    #
+    # ── The channel already exists ──────────────────────────────────────────
+    # `select` carries a rider decision to the provider already: a Bool called
+    # `auto_assign_enabled`, in `order.fulfillment.tags`, which the provider
+    # stores on the search request and the allocator reads back. Nothing new is
+    # invented here — a second field rides in the same tags, is stored in the
+    # same row and is read at the same moment.
+    #
+    # `Maybe Text`, comma-separated, and `Maybe` is what makes this deployable
+    # in either order: an old provider ignores a JSON key it does not know, and
+    # a new provider reading an old rider's payload parses `Nothing`, which
+    # means "he did not choose" and asks everyone exactly as before.
+    #
+    # ── What it deliberately does NOT do ────────────────────────────────────
+    # There is no fallback to the full pool. If the two drivers he chose never
+    # answer, he gets no offers — and that is the honest outcome of choosing.
+    # Quietly widening the search would mean a third driver arriving at his door
+    # after he specifically did not pick him. The waiting screen already runs
+    # its own clock, so the app is where the "ask everyone" offer belongs.
+    (
+        f"{BECKN_SPEC}/Select/Fulfillment.hs",
+        36,
+        """newtype Tags = Tags
+  { auto_assign_enabled :: Bool
+  }
+  deriving (Generic, Show)""",
+        """data Tags = Tags
+  { auto_assign_enabled :: Bool,
+    -- Algeria: comma-separated driver ids the passenger picked, or Nothing
+    -- when he did not pick. Optional on purpose -- see apply-patches.py.
+    chosen_drivers :: Maybe Text
+  }
+  deriving (Generic, Show)""",
+        "spec: the select tags carry the passenger's shortlist",
+    ),
+    (
+        f"{BECKN_SPEC}/Select/Fulfillment.hs",
+        59,
+        """    { fieldLabelModifier = \\case
+        "auto_assign_enabled" -> "./komn/auto_assign_enabled"
+        a -> a
+    }""",
+        """    { fieldLabelModifier = \\case
+        "auto_assign_enabled" -> "./komn/auto_assign_enabled"
+        "chosen_drivers" -> "./komn/chosen_drivers"
+        a -> a
+    }""",
+        "spec: name the new tag the way the old one is named",
+    ),
+    (
+        f"{RIDER_SRC}/Domain/Action/UI/Select.hs",
+        55,
+        """newtype DEstimateSelectReq = DEstimateSelect
+  { autoAssignEnabled :: Bool
+  }""",
+        """data DEstimateSelectReq = DEstimateSelect
+  { autoAssignEnabled :: Bool,
+    -- Algeria: comma-separated person ids, joined by the app. Text rather than
+    -- a list so the shape is identical at every hop -- request body, BECKN tag
+    -- and database column -- and there is exactly one place that splits it.
+    chosenDrivers :: Maybe Text
+  }""",
+        "rider: the select body accepts a shortlist",
+    ),
+    (
+        f"{RIDER_API}/Select.hs",
+        69,
+        """  let req = DSelect.DEstimateSelect {autoAssignEnabled = False}
+  dSelectReq <- DSelect.select personId estimateId
+  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled""",
+        """  let req = DSelect.DEstimateSelect {autoAssignEnabled = False, chosenDrivers = Nothing}
+  dSelectReq <- DSelect.select personId estimateId
+  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled req.chosenDrivers""",
+        "rider: the bodyless /select asks everyone, as it always did",
+    ),
+    (
+        f"{RIDER_API}/Select.hs",
+        76,
+        """select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  dSelectReq <- DSelect.select personId estimateId
+  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled""",
+        """select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  dSelectReq <- DSelect.select personId estimateId
+  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled req.chosenDrivers""",
+        "rider: /select2 forwards the shortlist",
+    ),
+    (
+        f"{RIDER_SRC}/Beckn/ACL/Select.hs",
+        31,
+        """  DSelect.DSelectRes ->
+  Bool ->
+  m (BecknReq Select.SelectMessage)
+buildSelectReq dSelectReq autoAssignEnabled = do""",
+        """  DSelect.DSelectRes ->
+  Bool ->
+  Maybe Text ->
+  m (BecknReq Select.SelectMessage)
+buildSelectReq dSelectReq autoAssignEnabled chosenDrivers = do""",
+        "rider ACL: take the shortlist",
+    ),
+    (
+        f"{RIDER_SRC}/Beckn/ACL/Select.hs",
+        41,
+        "  let order = mkOrder dSelectReq autoAssignEnabled",
+        "  let order = mkOrder dSelectReq autoAssignEnabled chosenDrivers",
+        "rider ACL: pass it to the order",
+    ),
+    (
+        f"{RIDER_SRC}/Beckn/ACL/Select.hs",
+        50,
+        """mkOrder :: DSelect.DSelectRes -> Bool -> Select.Order
+mkOrder req autoAssignEnabled = do""",
+        """mkOrder :: DSelect.DSelectRes -> Bool -> Maybe Text -> Select.Order
+mkOrder req autoAssignEnabled chosenDrivers = do""",
+        "rider ACL: mkOrder takes it too",
+    ),
+    (
+        f"{RIDER_SRC}/Beckn/ACL/Select.hs",
+        74,
+        """              Select.Tags
+                { auto_assign_enabled = autoAssignEnabled
+                },""",
+        """              Select.Tags
+                { auto_assign_enabled = autoAssignEnabled,
+                  chosen_drivers = chosenDrivers
+                },""",
+        "rider ACL: put the shortlist in the tags",
+    ),
+    (
+        f"{DRIVER_SRC}/Beckn/ACL/Select.hs",
+        64,
+        "        autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled\n      }",
+        """        autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled,
+        chosenDrivers = order.fulfillment.tags.chosen_drivers
+      }""",
+        "provider ACL: read the shortlist off the tags",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/Beckn/Select.hs",
+        57,
+        """    variant :: Variant,
+    autoAssignEnabled :: Bool
+  }""",
+        """    variant :: Variant,
+    autoAssignEnabled :: Bool,
+    -- Algeria: comma-separated person ids, or Nothing when the passenger did
+    -- not choose. Read in the allocator, not here.
+    chosenDrivers :: Maybe Text
+  }""",
+        "provider: the select request carries the shortlist",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/Beckn/Select.hs",
+        151,
+        """        status = DSearchReq.ACTIVE,
+        updatedAt = now,
+        autoAssignEnabled = sReq.autoAssignEnabled
+      }""",
+        """        status = DSearchReq.ACTIVE,
+        updatedAt = now,
+        autoAssignEnabled = sReq.autoAssignEnabled,
+        -- Stored rather than passed along, because the allocator job that
+        -- actually builds the batches runs later and re-reads this row.
+        chosenDrivers = sReq.chosenDrivers
+      }""",
+        "provider: store the shortlist on the search request",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Types/SearchRequest.hs",
+        47,
+        """    status :: SearchRequestStatus,
+    autoAssignEnabled :: Bool
+  }
+  deriving (Generic, PrettyShow, Show)""",
+        """    status :: SearchRequestStatus,
+    autoAssignEnabled :: Bool,
+    -- Algeria: comma-separated person ids the passenger picked. Nothing means
+    -- he did not pick, and every driver in the pool is asked as before.
+    chosenDrivers :: Maybe Text
+  }
+  deriving (Generic, PrettyShow, Show)""",
+        "provider: the shortlist on the domain type",
+    ),
+    (
+        f"{DRIVER_SRC}/Storage/Tabular/SearchRequest.hs",
+        55,
+        """      Primary id
+      autoAssignEnabled Bool
+      deriving Generic""",
+        """      Primary id
+      autoAssignEnabled Bool
+      chosenDrivers Text Maybe
+      deriving Generic""",
+        "provider: persist the shortlist",
+    ),
+    (
+        f"{DRIVER_SRC}/SharedLogic/Allocator/Jobs/SendSearchRequestToDrivers/Handle/Internal/DriverPool.hs",
+        25,
+        "import qualified Data.HashMap as HM\nimport Domain.Types.Merchant (Merchant)",
+        "import qualified Data.HashMap as HM\nimport qualified Data.Text as T\nimport Domain.Types.Merchant (Merchant)",
+        "provider: Data.Text, for the one split",
+    ),
+    (
+        f"{DRIVER_SRC}/SharedLogic/Allocator/Jobs/SendSearchRequestToDrivers/Handle/Internal/DriverPool.hs",
+        62,
+        "prepareDriverPoolBatch ::\n  ( EncFlow m r,",
+        """-- | Algeria: keep only the drivers the passenger actually picked.
+--
+-- `chosenDrivers` is a comma-separated list of person ids, put on the search
+-- request by the rider. `Nothing` -- and an empty list, which is the same thing
+-- said differently -- means he did not choose, and the pool is returned whole.
+-- That is the ordinary case and must stay the cheap one.
+--
+-- An id that is not in the pool is simply absent from the result. He may have
+-- gone offline, taken a ride, or moved out of radius between the app listing
+-- him and this request going out. That is deliberately not an error: the pool
+-- is allowed to come back empty, the search then finds nobody, and the app --
+-- which runs its own clock on the waiting screen -- is where the passenger is
+-- offered the choice of asking everyone. Widening it here would put a driver
+-- he specifically did not pick at his door.
+onlyChosen :: DSR.SearchRequest -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
+onlyChosen searchReq pool =
+  case searchReq.chosenDrivers of
+    Nothing -> pool
+    Just raw -> do
+      let wanted = filter (not . T.null) . map T.strip $ T.splitOn "," raw
+      if null wanted
+        then pool
+        else filter (\\dpr -> getId dpr.driverPoolResult.driverId `elem` wanted) pool
+
+prepareDriverPoolBatch ::
+  ( EncFlow m r,""",
+        "provider: the filter itself",
+    ),
+    (
+        f"{DRIVER_SRC}/SharedLogic/Allocator/Jobs/SendSearchRequestToDrivers/Handle/Internal/DriverPool.hs",
+        106,
+        """      radiusStep <- getPoolRadiusStep searchReq.id
+      allNearbyDrivers <- calcDriverPool radiusStep""",
+        """      radiusStep <- getPoolRadiusStep searchReq.id
+      -- The one line this whole change exists for. Everything below works off
+      -- `allNearbyDrivers`, so filtering here filters the batching, the
+      -- sorting, the fill and the radius expansion at once.
+      allNearbyDrivers <- onlyChosen searchReq <$> calcDriverPool radiusStep""",
+        "provider: filter the pool to the passenger's shortlist",
     ),
 ]
 
