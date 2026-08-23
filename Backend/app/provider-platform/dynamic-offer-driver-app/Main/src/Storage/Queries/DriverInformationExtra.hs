@@ -135,9 +135,9 @@ updateVerifiedAndApprovedState driverId isVerified isApproved = do
   now <- getCurrentTime
   updateOneWithKV
     ( [ Se.Set BeamDI.verified isVerified,
-        Se.Set BeamDI.updatedAt now
+        Se.Set BeamDI.updatedAt now,
+        Se.Set BeamDI.approved isApproved
       ]
-        <> ([Se.Set BeamDI.approved isApproved | isJust isApproved])
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
   when isVerified $ stampFirstVerifiedAtIfNull driverId
