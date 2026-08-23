@@ -79,7 +79,7 @@ getFare integrationBPPConfig config _riderId fareReq = do
   logDebug $ "[CMRLV2:GetFare] Request params - operatorNameId: " <> show fareReq.operatorNameId <> ", ticketTypeId: " <> show fareReq.ticketTypeId <> ", fareTypeId: " <> show fareReq.fareTypeId
 
   -- Get encryption key
-  encKey <- decrypt config.encryptionKey
+  (encKey, encKeyIndex) <- getEncryptionKey config
 
   -- Prepare payload and encrypt
   logDebug $ "[CMRLV2:GetFare] Payload JSON (before encryption): " <> T.pack (show fareReq)
@@ -93,7 +93,7 @@ getFare integrationBPPConfig config _riderId fareReq = do
           getFareAPI
           (Just $ "Bearer " <> accessToken)
           (Just "AES_CBC_PKCS5")
-          (Just $ T.pack $ show config.encKeyIndex)
+          (Just $ T.pack $ show encKeyIndex)
           (EncryptedReq encryptedPayload)
 
   -- Call API
@@ -157,7 +157,8 @@ getFare integrationBPPConfig config _riderId fareReq = do
                         serviceTierLongName = "ORDINARY",
                         isAirConditioned = Just False
                       },
-                  fareQuoteType = Nothing
+                  fareQuoteType = Nothing,
+                  fareQuoteId = Just fareItem.fareQuotIdforOneTicket
                 }
             ]
         else do
