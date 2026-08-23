@@ -233,3 +233,13 @@ finishMetrics' bmContainer action merchantName version txnId merchantOperatingCi
         void $ Redis.del (durationKey txnId action)
         putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()
+
+incrementExternalProviderFailure ::
+  (Redis.HedisFlow m r, HasBAPMetrics m r) =>
+  Text ->
+  Text ->
+  Text ->
+  m ()
+incrementExternalProviderFailure provider operation failureKind = do
+  bmContainer <- asks (.bapMetrics)
+  liftIO $ P.withLabel bmContainer.externalProviderFailureCounter (provider, operation, failureKind) P.incCounter

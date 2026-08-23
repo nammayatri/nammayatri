@@ -130,23 +130,11 @@ onStatus _merchant booking (Booking dOrder) = do
           bppFulfillmentId = Nothing,
           ticketNumber = ticket.ticketNumber,
           validTill = ticket.validTill,
-          status = (mapFRFSStatusToDTicketStatus ticket.status),
+          status = Utils.wireTicketStatus ticket.status,
           qrRefreshAt = ticket.qrRefreshAt,
           commencingHours = ticket.commencingHours,
           isReturnTicket = ticket.isReturnTicket
         }
-
-    mapFRFSStatusToDTicketStatus :: Ticket.FRFSTicketStatus -> Text
-    mapFRFSStatusToDTicketStatus = \case
-      Ticket.ACTIVE -> "UNCLAIMED"
-      Ticket.INPROGRESS -> "UNCLAIMED"
-      Ticket.EXPIRED -> "EXPIRED"
-      Ticket.USED -> "CLAIMED"
-      Ticket.CANCELLED -> "CANCELLED"
-      Ticket.COUNTER_CANCELLED -> "CANCELLED"
-      Ticket.CANCEL_INITIATED -> "CANCELLED"
-      Ticket.TECHNICAL_CANCEL_REJECTED -> "UNCLAIMED"
-      Ticket.RESCHEDULED -> "CANCELLED"
 
     updateTicketStatuses :: [Utils.TicketStatus] -> [Utils.TicketStatus]
     updateTicketStatuses = fmap (\ts@Utils.TicketStatus {} -> ts {Utils.status = Ticket.USED})

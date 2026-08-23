@@ -56,7 +56,7 @@ fareByOriginDestAPI = Proxy
 
 getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasMasterCloudForwarder r) => IntegratedBPPConfig -> CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
 getFareByOriginDest integrationBPPConfig config fareReq = do
-  let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType cmrlAppType
+  let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType (cmrlAppType config)
   fareByODRes <- callCMRLAPI config eulerClient "getFareByOriginDest" fareByOriginDestAPI
   logDebug $ "CMRL Get Fares API Response : " <> show fareByODRes
   ticketCategoryMetadataConfig <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT (becknVehicleCategoryToFrfsVehicleCategory integrationBPPConfig.vehicleCategory) integrationBPPConfig.merchantOperatingCityId
@@ -103,6 +103,7 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                       serviceTierLongName = "ORDINARY",
                       isAirConditioned = Just False
                     },
+                fareQuoteId = Nothing,
                 fareQuoteType = Nothing
               }
           ]

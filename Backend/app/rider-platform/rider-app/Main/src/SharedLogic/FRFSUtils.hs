@@ -159,6 +159,7 @@ getProviderName integrationBPPConfig =
     (_, DIBC.DIRECT _) -> "Direct Multimodal Services"
     (_, DIBC.ONDC _) -> "ONDC Services"
     (_, DIBC.CRIS _) -> "CRIS Subway"
+    (_, DIBC.KMRL _) -> "Kochi Metro Rail Limited"
 
 getQREncoding :: DIBC.IntegratedBPPConfig -> Maybe DIBC.QREncoding
 getQREncoding integratedBPPConfig = case integratedBPPConfig.providerConfig of
@@ -382,7 +383,8 @@ data FRFSFare = FRFSFare
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier,
-    fareQuoteType :: Maybe Quote.FRFSQuoteType
+    fareQuoteType :: Maybe Quote.FRFSQuoteType,
+    fareQuoteId :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -473,6 +475,7 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
               serviceTierLongName = vehicleServiceTier.longName,
               isAirConditioned = vehicleServiceTier.isAirConditioned
             },
+        fareQuoteId = Nothing,
         fareQuoteType = Nothing
       }
 
@@ -527,6 +530,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                             serviceTierLongName = vehicleServiceTier.longName,
                             isAirConditioned = vehicleServiceTier.isAirConditioned
                           },
+                      fareQuoteId = Nothing,
                       fareQuoteType = Nothing
                     }
             _ -> return [] -- No stage information available
