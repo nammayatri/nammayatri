@@ -23,8 +23,10 @@ import sys
 from pathlib import Path
 
 BACKEND = "Backend"
-RIDER = f"{BACKEND}/app/rider-platform/rider-app/Main/src/Domain/Action/UI"
-DRIVER = f"{BACKEND}/app/provider-platform/dynamic-offer-driver-app/Main/src/Domain/Action"
+RIDER_SRC = f"{BACKEND}/app/rider-platform/rider-app/Main/src"
+DRIVER_SRC = f"{BACKEND}/app/provider-platform/dynamic-offer-driver-app/Main/src"
+RIDER = f"{RIDER_SRC}/Domain/Action/UI"
+DRIVER = f"{DRIVER_SRC}/Domain/Action"
 
 # (path, documented line number, old text, new text, note)
 #
@@ -73,6 +75,161 @@ PATCHES = [
         'Person.findByMobileNumber "+91" mobileNumberHash',
         'Person.findByMobileNumber "+213" mobileNumberHash',
         "driver: onboarding document lookup by phone",
+    ),
+    # ── The car, on the driver's offer ──────────────────────────────────────
+    #
+    # The client asked, repeatedly, for the passenger to see which car is
+    # coming *while he is choosing between drivers*, not after. Today an offer
+    # carries driverName, rating, distance, duration and validTill, and nothing
+    # about the vehicle: `DriverQuote` has a `vehicleVariant` and no model, and
+    # the BPP never looks the vehicle up when it builds on_select.
+    #
+    # These three patches carry "Renault|Clio|Grey" from the BPP to the BAP.
+    #
+    # ── Why `descriptor.name` and not a new BECKN field ─────────────────────
+    # `OS.ItemDescriptor` already has a `name` that this baseline sets to "" and
+    # the rider never reads. Using it means **no change to the shared Beckn
+    # types**, which are compiled into the gateway and the registry as well as
+    # both apps — so this cannot desynchronise the three binaries. A new field
+    # would have been cleaner and far riskier.
+    #
+    # Pipe-separated rather than JSON so the parse on the far side cannot throw:
+    # worst case a field is empty and the passenger sees one less word.
+    (
+        f"{DRIVER_SRC}/Beckn/ACL/OnSelect.hs",
+        27,
+        """data DOnSelectReq = DOnSelectReq
+  { transporterInfo :: TransporterInfo,
+    searchRequest :: SearchRequest,
+    quotes :: [DQuote.DriverQuote],
+    now :: UTCTime
+  }""",
+        """data DOnSelectReq = DOnSelectReq
+  { transporterInfo :: TransporterInfo,
+    searchRequest :: SearchRequest,
+    quotes :: [DQuote.DriverQuote],
+    -- Algeria: "make|model|colour" for the one driver this offer is from.
+    -- Text rather than a Vehicle so this module needs no new import.
+    vehicleDesc :: Maybe Text,
+    now :: UTCTime
+  }""",
+        "driver: carry the vehicle description on the on_select request",
+    ),
+    (
+        f"{DRIVER_SRC}/Beckn/ACL/OnSelect.hs",
+        101,
+        """mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
+mkQuoteEntities dReq quote = do
+  let fulfillment = mkFulfillment dReq quote
+      category = driverOfferCategory
+      offer = Nothing
+      item = mkItem category.id fulfillment.id quote
+  QuoteEntities {..}""",
+        """mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
+mkQuoteEntities dReq quote = do
+  let fulfillment = mkFulfillment dReq quote
+      category = driverOfferCategory
+      offer = Nothing
+      item = mkItem category.id fulfillment.id quote dReq.vehicleDesc
+  QuoteEntities {..}""",
+        "driver: pass the vehicle description down to the item",
+    ),
+    (
+        f"{DRIVER_SRC}/Beckn/ACL/OnSelect.hs",
+        133,
+        """mkItem :: OS.FareProductType -> Text -> DQuote.DriverQuote -> OS.Item
+mkItem categoryId fulfillmentId q =
+  OS.Item
+    { id = q.id.getId,
+      category_id = categoryId,
+      fulfillment_id = fulfillmentId,
+      offer_id = Nothing,
+      price = price_,
+      descriptor =
+        OS.ItemDescriptor
+          { name = "",""",
+        """mkItem :: OS.FareProductType -> Text -> DQuote.DriverQuote -> Maybe Text -> OS.Item
+mkItem categoryId fulfillmentId q mbVehicleDesc =
+  OS.Item
+    { id = q.id.getId,
+      category_id = categoryId,
+      fulfillment_id = fulfillmentId,
+      offer_id = Nothing,
+      price = price_,
+      descriptor =
+        OS.ItemDescriptor
+          { name = fromMaybe "" mbVehicleDesc,""",
+        "driver: put the vehicle description in the item descriptor",
+    ),
+    # The lookup itself. `QVeh` and the `EsqDBFlow` pattern are both already in
+    # this file — `sendRideAssignedUpdateToBAP` twenty lines above does exactly
+    # this — so nothing new is imported and the constraint added is one this
+    # module already satisfies elsewhere.
+    (
+        f"{DRIVER_SRC}/SharedLogic/CallBAP.hs",
+        225,
+        """sendDriverOffer ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m,
+    HasPrettyLogger m r
+  ) =>""",
+        """sendDriverOffer ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasPrettyLogger m r
+  ) =>""",
+        "driver: sendDriverOffer may read the database",
+    ),
+    (
+        f"{DRIVER_SRC}/SharedLogic/CallBAP.hs",
+        240,
+        """    buildOnSelectReq ::
+      (MonadTime m, HasPrettyLogger m r) =>
+      DM.Merchant ->
+      DSR.SearchRequest ->
+      [DDQ.DriverQuote] ->
+      m ACL.DOnSelectReq
+    buildOnSelectReq org searchRequest quotes = do
+      now <- getCurrentTime""",
+        """    buildOnSelectReq ::
+      (MonadTime m, HasPrettyLogger m r, EsqDBFlow m r) =>
+      DM.Merchant ->
+      DSR.SearchRequest ->
+      [DDQ.DriverQuote] ->
+      m ACL.DOnSelectReq
+    buildOnSelectReq org searchRequest quotes = do
+      now <- getCurrentTime
+      -- Algeria: the car the passenger will actually get into. Absent is fine
+      -- and stays absent -- a missing vehicle must never fail an offer that is
+      -- otherwise good, so this is a lookup and not a `fromMaybeM`.
+      mbVeh <- QVeh.findById driverQuote.driverId
+      let vehicleDesc =
+            mbVeh <&> \\veh ->
+              T.intercalate "|" [fromMaybe "" veh.make, veh.model, veh.color]""",
+        "driver: look the vehicle up when building the offer",
+    ),
+    (
+        f"{DRIVER_SRC}/SharedLogic/CallBAP.hs",
+        267,
+        """        ACL.DOnSelectReq
+          { transporterInfo,
+            quotes,
+            now,
+            searchRequest
+          }""",
+        """        ACL.DOnSelectReq
+          { transporterInfo,
+            quotes,
+            vehicleDesc,
+            now,
+            searchRequest
+          }""",
+        "driver: pass the vehicle description into the on_select request",
     ),
 ]
 

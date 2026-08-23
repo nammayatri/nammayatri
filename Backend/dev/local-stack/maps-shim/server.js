@@ -20,10 +20,13 @@
 // No dependencies: Node's built-in http plus global fetch.
 
 const http = require('http');
+const fleet = require('./fleet');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
 const MOCK_GOOGLE_URL= (process.env.MOCK_GOOGLE_URL || 'http://localhost:8019').replace(/\/$/, '');
+// Where to check that a caller is a signed-in passenger, for /fleet/nearby.
+const RIDER_URL      = (process.env.RIDER_URL || 'http://localhost:8013').replace(/\/$/, '');
 
 // Where the place index lives. Unset means "no search": the three geocoding
 // paths fall through to mock-google exactly as before, which is what the stack
@@ -370,6 +373,20 @@ http.createServer((req, res) => {
     return send(res, 200, { ok: true, osrm: OSRM_URL, mockGoogle: MOCK_GOOGLE_URL, search: Boolean(pool) });
   }
   if (url.pathname === '/directions/json') return directions(url.searchParams, res);
+
+  // Who is nearby and what they drive. Nothing to do with Google, and kept in
+  // its own file for that reason -- this shim answers as Google for the
+  // backend, and this one route answers to the passenger app directly. See
+  // fleet.js for why it exists and what it deliberately withholds.
+  if (url.pathname === '/fleet/nearby') {
+    return fleet.nearby({
+      url,
+      res,
+      pool,
+      riderUrl: RIDER_URL,
+      token: req.headers.token || '',
+    });
+  }
 
   // Without an index configured these fall through to mock-google, which is
   // the behaviour the stack had before search existed.
