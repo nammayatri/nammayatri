@@ -1089,7 +1089,7 @@ getNearby merchantShortId opCity driverId = do
         (loc : _) -> pure $ KEMT.LatLong loc.lat loc.lon
         [] -> throwError $ InvalidRequest "Driver location not found"
       -- Get nearby idle (not on ride) drivers from LTS, excluding the requesting driver
-      nearbyLocs <- LF.nearBy driverLatLong.lat driverLatLong.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing
+      nearbyLocs <- LF.nearBy driverLatLong.lat driverLatLong.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing Nothing
       let nearbyDriverCount = Just $ length $ filter (\loc -> loc.driverId /= cast driverId) nearbyLocs
       -- Compute cutoff score once and pass to helper (avoids repeated getCurrentTime)
       now <- getCurrentTime

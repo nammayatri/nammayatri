@@ -113,7 +113,8 @@ data NearestDriversReq = NearestDriversReq
     applyParallelRequestFilter :: Bool,
     maxParallelSearchRequests :: Int,
     airportEntryFee :: Maybe HighPrecMoney,
-    isAirportRequest :: Bool
+    isAirportRequest :: Bool,
+    searchTryId :: Maybe Text
   }
 
 -- | A driver location candidate sorted by straight-line distance, with the
@@ -138,7 +139,7 @@ fetchSortedLTSCandidates ::
 fetchSortedLTSCandidates NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
-  driverLocsRaw <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
+  driverLocsRaw <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant)) searchTryId
   let afterExclude = if null excludeDriverIds then driverLocsRaw else filter (\dl -> dl.driverId `notElem` excludeDriverIds) driverLocsRaw
       prevSet = prevAttemptedDriverIds
       mkCandidate dl =
