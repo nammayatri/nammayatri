@@ -307,7 +307,9 @@ recomputeFleetFlagsArm person allDocVerificationConfigs driverDocuments vehicleC
       derivedApproved = computeApprovedFromDocs Nothing allDocVerificationConfigs person.role driverDocuments
       newApproved =
         if useUnifiedOnboardingFlagsRecompute
-          then derivedApproved
+          then case derivedApproved of
+            Just True | not allFleetMandatoryDocsValid -> Nothing
+            other -> other
           else if allFleetMandatoryDocsValid then Nothing else Just False -- Keeping this for now so that MSIL works, should not be needed but will see later :)
   when (allFleetMandatoryDocsValid /= fleetOwnerInfo.verified || (useUnifiedOnboardingFlagsRecompute && newApproved /= fleetOwnerInfo.approved)) $
     QFOI.updateFleetOwnerVerifiedAndApprovedStatus allFleetMandatoryDocsValid newApproved person.id
@@ -355,7 +357,10 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
       let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
       whenJust mbRc $ \rc -> do
         let newVerified = Just allVehicleMandatoryDocsValid
-            newApproved = if allVehicleMandatoryDocsValid then derivedApproved else Just False
+            newApproved =
+              case derivedApproved of
+                Just True | not allVehicleMandatoryDocsValid -> Nothing
+                other -> other
         when (newVerified /= rc.verified || newApproved /= rc.approved) $
           VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
         -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
