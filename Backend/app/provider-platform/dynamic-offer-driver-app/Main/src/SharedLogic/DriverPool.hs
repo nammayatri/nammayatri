@@ -933,6 +933,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = poolStage == DriverSelection,
             maxParallelSearchRequests = driverPoolCfg.maxParallelSearchRequests,
+            searchTryId = Nothing,
             ..
           }
         fetchPoolData
@@ -1033,7 +1034,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             isValueAddNP,
             onlinePayment,
             now,
-            paymentMode
+            paymentMode,
+            searchTryId = Just currentSearchInfo.searchTry.id.getId
           }
   sortedCandidates <- withTimeAPI "driverPooling" "fetchSortedLTSCandidates" $ QPG.fetchSortedLTSCandidates ltsReq
   let totalCandidates = length sortedCandidates

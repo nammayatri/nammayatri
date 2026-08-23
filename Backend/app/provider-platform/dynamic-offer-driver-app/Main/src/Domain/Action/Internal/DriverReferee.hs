@@ -99,7 +99,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
       (4, Just refereeLocation') -> do
         if transporterConfig.dynamicReferralCodeEnabled
           then do
-            driverIds <- map (.driverId) <$> DLInternal.getDriverLocsWithCond merchantId Nothing refereeLocation' 50 Nothing -- checking nearby drivers within 50 m radius (after that they wont be matched)
+            driverIds <- map (.driverId) <$> DLInternal.getDriverLocsWithCond merchantId Nothing refereeLocation' 50 Nothing Nothing -- checking nearby drivers within 50 m radius (after that they wont be matched)
             fmap (,True) $ QDR.findByDynamicReferralCodeAndMerchantCityIdAndDriversIn (Just $ merchOpCityId) (Just referralCode.getId) driverIds >>= fromMaybeM (InvalidRequest $ "Failed to find referralLink using dyanmicCode in nearby drivers, dynamic-code: " <> referralCode.getId <> "drivers:" <> show driverIds)
           else throwError . InvalidRequest $ "Dynamic referral code not enabled for city: " <> merchOpCityId.getId
       _ -> fmap (,False) $ QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest $ "Invalid referral code." <> referralCode.getId)

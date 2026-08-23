@@ -3857,7 +3857,7 @@ postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -
 postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   let vehicleVariantList = Just $ maybe [DV.BUS_NON_AC, DV.BUS_AC] (map DCommon.castDashboardVehicleVariantToDomain) (req.vehicleVariantList)
-  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing vehicleVariantList req.radius merchant.id (Just fleetOwnerId) Nothing
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing vehicleVariantList req.radius merchant.id (Just fleetOwnerId) Nothing Nothing
   return $
     Common.NearbyDriverResp $
       catMaybes $
@@ -4299,7 +4299,7 @@ postDriverFleetGetNearbyDriversV2 ::
   Environment.Flow Common.NearbyDriversRespV2
 postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
-  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just $ map DCommon.castDashboardVehicleVariantToDomain req.vehicleVariantList) req.radius merchant.id (Just fleetOwnerId) Nothing
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just $ map DCommon.castDashboardVehicleVariantToDomain req.vehicleVariantList) req.radius merchant.id (Just fleetOwnerId) Nothing Nothing
   return $
     Common.NearbyDriversRespV2 $
       mapMaybe (filterByVehicleType req.vehicleVariantList) nearbyDriverLocations

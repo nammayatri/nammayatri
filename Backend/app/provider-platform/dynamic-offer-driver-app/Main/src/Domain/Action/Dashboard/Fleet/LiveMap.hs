@@ -60,7 +60,7 @@ getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mb
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) Nothing
   let allDriversAllowed = maybe False (\tc -> tc.allowNonFleetDriverLiveMap == Just True) mbTransporterConfig
   (mbFleetOwnerId, mbOperatorId) <- resolveScope allDriversAllowed
-  filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId
+  filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId Nothing
   driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
   let mbPositionAndDriverInfoLs = mkTuple <$> filtredNearbyDriverLocations
       driverIdDriverInfoMap = fromList [(di.driverId, di) | di <- driverInfoList]
