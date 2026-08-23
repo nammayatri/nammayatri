@@ -95,7 +95,8 @@ nack errorCode errorMessage =
           Spec.Error
             { errorCode = Just errorCode,
               errorMessage = Just errorMessage,
-              errorPaths = Nothing
+              errorPaths = Nothing,
+              errorDescription = Nothing
             },
       ackResponseMessage =
         Spec.AckMessage
