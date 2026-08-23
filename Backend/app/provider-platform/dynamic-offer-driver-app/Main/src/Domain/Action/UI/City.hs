@@ -21,13 +21,20 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Auth
 
 listCities :: Id DM.Merchant -> Flow [DTC.CityRes]
 listCities mId = do
-  merchantOperatingCities <- CQMOC.findAllByMerchantId (merchantIdFallback mId)
+  let merchantId = merchantIdFallback mId
+  merchantOperatingCities <-
+    CQMOC.findAllByMerchantId merchantId >>= \case
+      [] -> do
+        mbMerchant <- CQM.findById merchantId
+        maybe (pure []) (CQMOC.findAllByMerchantShortId . (.shortId)) mbMerchant
+      cities -> pure cities
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
