@@ -1,8 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Types.Extra.IntegratedBPPConfig where
 
 import Data.Aeson
+import qualified Data.HashMap.Strict as HM
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Base64
@@ -62,6 +64,7 @@ data CMRLV2Config = CMRLV2Config
     operatorNameId :: Int,
     merchantId :: Text,
     ticketTypeId :: Int,
+    ticketTypeIds :: Maybe (HM.HashMap Text Int),
     fareTypeId :: Int,
     encKeyIndex :: Int,
     encryptionKey :: EncryptedField 'AsEncrypted Text
@@ -71,6 +74,38 @@ data CMRLV2Config = CMRLV2Config
 
 instance Show CMRLV2Config where
   show _ = "CMRLV2Config"
+
+data KMRLConfig = KMRLConfig
+  { tokenUrl :: BaseUrl,
+    fareUrl :: BaseUrl,
+    bookTicketUrl :: BaseUrl,
+    ticketStatusUrl :: BaseUrl,
+    softCancelUrl :: BaseUrl,
+    hardCancelUrl :: BaseUrl,
+    stationListUrl :: BaseUrl,
+    ibmClientId :: Text,
+    ibmClientSecret :: EncryptedField 'AsEncrypted Text,
+    fapiChannelId :: Text,
+    kmrlAuthUserId :: Text,
+    kmrlAuthPassword :: EncryptedField 'AsEncrypted Text,
+    kmrlChannelId :: Text,
+    clientCertPem :: EncryptedField 'AsEncrypted Text,
+    operatorPublicCertPem :: Text,
+    signingPrivateKeyPem :: EncryptedField 'AsEncrypted Text,
+    serverCaPem :: Maybe Text,
+    -- | @kochi_bap_orderid_prefix@: ONDC @order.id@ prefix keyed by the lowercased buyer
+    -- domain. KMRL reconciles settlement against @order.id@, so each buyer app needs its
+    -- own prefix here; an unmapped buyer keeps the default.
+    bapOrderIdPrefixes :: Maybe (HM.HashMap Text Text),
+    bapTransactionIdPrefixes :: Maybe (HM.HashMap Text Text),
+    defaultTransactionIdPrefix :: Text,
+    metroType :: Int
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Show KMRLConfig where
+  show _ = "KMRLConfig"
 
 data ONDCBecknConfig = ONDCBecknConfig
   { networkHostUrl :: Maybe BaseUrl,
@@ -135,3 +170,51 @@ data ProviderLevelInfo = ProviderLevelInfo
     bookingStartTime :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, Eq)
+
+data OperatorCancellation = OperatorCancellation
+  { termsUrl :: Text,
+    isAllowed :: Bool
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data OperatorRecon = OperatorRecon
+  { domain :: Text,
+    coreVersion :: Text,
+    ttl :: Text
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data OperatorCatalog = OperatorCatalog
+  { brandName :: Text,
+    brandLogoUrl :: Text
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data OperatorQuoteCache = OperatorQuoteCache
+  { ttlSeconds :: Int,
+    heldTtlSeconds :: Int
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data OperatorConfig = OperatorConfig
+  { businessTermsUrl :: Text,
+    courtJurisdiction :: Text,
+    cancellation :: OperatorCancellation,
+    maxPaidAreaMinutes :: Maybe Int,
+    oneWayTicketLimit :: Int,
+    roundTripTicketLimit :: Int,
+    ticketValidityLabel :: Text,
+    ticketValidityDuration :: Text,
+    recon :: OperatorRecon,
+    catalog :: OperatorCatalog,
+    quoteCache :: OperatorQuoteCache,
+    defaultOrderIdPrefix :: Text,
+    sellerEntityInfo :: Maybe Value,
+    serviceableBapIds :: Maybe (HM.HashMap Text [Text])
+  }
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)

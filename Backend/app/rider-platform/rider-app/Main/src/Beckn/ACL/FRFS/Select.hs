@@ -104,7 +104,8 @@ tfProvider :: DQuote.FRFSQuote -> Maybe Spec.Provider
 tfProvider quote =
   Just $
     Spec.Provider
-      { providerCategories = Nothing,
+      { providerCancellationTerms = Nothing,
+        providerCategories = Nothing,
         providerDescriptor = Nothing,
         providerFulfillments = Nothing,
         providerId = Just quote.providerId,

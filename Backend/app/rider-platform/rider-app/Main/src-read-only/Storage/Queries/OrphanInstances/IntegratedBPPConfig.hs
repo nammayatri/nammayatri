@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.IntegratedBPPConfig where
 
+import qualified Data.Aeson
 import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -10,6 +11,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.IntegratedBPPConfig as Beam
 import qualified Storage.Queries.Transformers.IntegratedBPPConfig
 
@@ -26,6 +28,9 @@ instance FromTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.In
             isTicketValidOnMultipleRoutes = isTicketValidOnMultipleRoutes,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            ondcEncryptionPrivateKey = ondcEncryptionPrivateKey,
+            ondcRegistryPublicKey = ondcRegistryPublicKey,
+            operatorConfig = Kernel.Utils.JSON.valueToMaybe =<< operatorConfig,
             passOverrideApplicable = passOverrideApplicable,
             platformType = platformType,
             providerConfig = providerConfig',
@@ -45,6 +50,9 @@ instance ToTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.Inte
         Beam.isTicketValidOnMultipleRoutes = isTicketValidOnMultipleRoutes,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.ondcEncryptionPrivateKey = ondcEncryptionPrivateKey,
+        Beam.ondcRegistryPublicKey = ondcRegistryPublicKey,
+        Beam.operatorConfig = Data.Aeson.toJSON <$> operatorConfig,
         Beam.passOverrideApplicable = passOverrideApplicable,
         Beam.platformType = platformType,
         Beam.configJSON = Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig,

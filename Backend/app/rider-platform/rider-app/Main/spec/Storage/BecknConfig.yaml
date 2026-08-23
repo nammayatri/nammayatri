@@ -1,4 +1,6 @@
 imports:
+  OperatorConfig: Domain.Types.Extra.IntegratedBPPConfig
+  Value: Data.Aeson
   Base64: Kernel.Types.Base64
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
@@ -14,6 +16,7 @@ imports:
   CMRLV2Config: Domain.Types.Extra.IntegratedBPPConfig
   ONDCBecknConfig: Domain.Types.Extra.IntegratedBPPConfig
   CRISConfig: Domain.Types.Extra.IntegratedBPPConfig
+  KMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -116,10 +119,16 @@ IntegratedBPPConfig:
     providerName: Maybe Text
     isTicketValidOnMultipleRoutes: Maybe Bool
     passOverrideApplicable: Maybe Bool
+    operatorConfig: Maybe OperatorConfig
+    ondcRegistryPublicKey: Maybe Text
+    ondcEncryptionPrivateKey: Maybe Text
 
   beamFields:
     providerConfig:
       configJSON: Data.Aeson.Value
+
+  beamType:
+    operatorConfig: Maybe Value
 
   default:
     isTicketValidOnMultipleRoutes: "true"
@@ -130,7 +139,7 @@ IntegratedBPPConfig:
       enum: "MULTIMODAL, PARTNERORG, APPLICATION"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     ProviderConfig:
-      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig"
+      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig, KMRL KMRLConfig"
       derive': "Generic, FromJSON, ToJSON, Eq, Show"
 
   domainInstance:
@@ -140,14 +149,17 @@ IntegratedBPPConfig:
 
   fromTType:
     providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
+    operatorConfig: Kernel.Utils.JSON.valueToMaybe =<< operatorConfig|E
 
 
   toTType:
     configJSON: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig|E
+    operatorConfig: Data.Aeson.toJSON <$> operatorConfig|E
 
   sqlType:
     configJSON: json
     platformType: text
+    operatorConfig: jsonb
 
   constraints:
     id: PrimaryKey

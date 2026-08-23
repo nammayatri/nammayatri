@@ -39,3 +39,14 @@ ALTER TABLE atlas_app.integrated_bpp_config DROP CONSTRAINT integrated_bpp_confi
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN pass_override_applicable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN operator_config jsonb ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN ondc_registry_public_key text ;
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN ondc_encryption_private_key text ;

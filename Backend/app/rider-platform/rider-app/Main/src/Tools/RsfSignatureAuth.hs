@@ -1,0 +1,79 @@
+{-# LANGUAGE UndecidableInstances #-}
+
+module Tools.RsfSignatureAuth (RsfSignatureAuth) where
+
+import Data.List (lookup)
+import Data.Maybe (listToMaybe)
+import Data.Singletons.TH
+import qualified Data.Text as T
+import Environment (AppEnv)
+import EulerHS.Prelude
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import qualified Kernel.Types.Beckn.Domain as Domain
+import Kernel.Types.Error
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Utils.Common
+import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
+import Kernel.Utils.Servant.Server (HasEnvEntry, getEnvEntry, runFlowRDelayedIO)
+import qualified Kernel.Utils.Servant.SignatureAuth as SA
+import Kernel.Utils.SignatureAuth (bodyHashHeader)
+import qualified Network.Wai as Wai
+import Servant hiding (throwError)
+import Servant.Server.Internal.Delayed (addAuthCheck)
+import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
+import qualified SharedLogic.FRFSSeller.Common as Common
+import qualified Storage.CachedQueries.Merchant as CQM
+
+data RsfSignatureAuth (domain :: Domain.Domain) (header :: Symbol)
+
+instance
+  ( HasServer api ctx,
+    HasEnvEntry AppEnv ctx,
+    KnownSymbol header,
+    SingI domain
+  ) =>
+  HasServer (RsfSignatureAuth domain header :> api) ctx
+  where
+  type
+    ServerT (RsfSignatureAuth domain header :> api) m =
+      SA.SignatureAuthResult -> ServerT api m
+
+  route _ ctx subserver =
+    route (Proxy @api) ctx $
+      subserver `addAuthCheck` withRequest authCheck'
+    where
+      authCheck' :: Wai.Request -> DelayedIO SA.SignatureAuthResult
+      authCheck' req = runFlowRDelayedIO env . becknApiHandler . withLogTag "rsfAuthCheck" $ do
+        let headers = Wai.requestHeaders req
+            pathInfo = decodeUtf8 (Wai.rawPathInfo req)
+        operatorSlug <-
+          firstSegment pathInfo
+            & fromMaybeM (InternalError $ "RSF path has no operator segment: " <> show pathInfo)
+        merchant <-
+          CQM.findByShortId (Common.operatorMerchantShortId operatorSlug)
+            >>= fromMaybeM (MerchantDoesNotExist operatorSlug)
+        let subscriberType = Subscriber.BAP
+            domain = fromSing (sing @domain)
+        SA.authCheck
+          headerName
+          (lookup headerName headers)
+          (lookup bodyHashHeader headers)
+          merchant.id.getId
+          subscriberType
+          domain
+
+      headerName :: IsString a => a
+      headerName = fromString (symbolVal (Proxy @header))
+      env = getEnvEntry ctx
+
+  hoistServerWithContext _ ctxp hst serv =
+    hoistServerWithContext (Proxy @api) ctxp hst . serv
+
+instance
+  SanitizedUrl (subroute :: Type) =>
+  SanitizedUrl (RsfSignatureAuth domain h :> subroute)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
+
+firstSegment :: Text -> Maybe Text
+firstSegment = listToMaybe . filter (not . T.null) . T.splitOn "/"

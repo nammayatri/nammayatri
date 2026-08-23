@@ -24,6 +24,9 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     isTicketValidOnMultipleRoutes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    ondcEncryptionPrivateKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ondcRegistryPublicKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    operatorConfig :: Kernel.Prelude.Maybe Domain.Types.Extra.IntegratedBPPConfig.OperatorConfig,
     passOverrideApplicable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
@@ -43,6 +46,7 @@ data ProviderConfig
   | CMRLV2 Domain.Types.Extra.IntegratedBPPConfig.CMRLV2Config
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
+  | KMRL Domain.Types.Extra.IntegratedBPPConfig.KMRLConfig
   deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
