@@ -1841,6 +1841,55 @@ The app side ships in the same APK as the backend that honours it, so there is
 no feature flag to forget: an APK without the picking screen cannot send a
 shortlist, and one with it is only handed out after the swap.
 
+#### The workflow builds two binaries, not twenty — check the one you changed
+
+The image carries every executable in the upstream repo, but our workflow only
+builds **`rider-app`** and **`dynamic-offer-driver-app`**. Everything else in
+`/opt/app` is the 2023 binary that came with the base image.
+
+Caught on 2026-08-23, and worth the paranoia that caught it: the build reported
+success in **9 minutes** after a change to a type in `beckn-spec` that both apps
+depend on, which should force a wide recompile. `strings` on the binaries
+settled it:
+
+| binary | | |
+|---|---|---|
+| `rider-app-exe` | rebuilt 15:26 | has `chosen_drivers`, `vehicle_desc` |
+| `dynamic-offer-driver-app-exe` | rebuilt 15:26 | has `chosen_drivers` |
+| `driver-offer-allocator-exe` | **dated 2023-03-02** | byte-identical to the old image |
+
+So the fast build was a genuinely warm stack cache, *and* the allocator was
+never ours to begin with.
+
+**Why that did not matter, and when it would.** `driver-offer-allocator-exe`
+runs the scheduled `SendSearchRequestToDriver` job — batches 2 and later.
+**There is no allocator container in this compose.** `ny-driver` runs
+`dynamic-offer-driver-app-exe` and nothing else, so those scheduled jobs are
+written to the database and never picked up:
+
+> **Dispatch in this deployment is one batch only.** The first batch runs
+> inline inside the select handler; `createAllocatorSendSearchRequestToDriverJob`
+> then queues a job nothing executes. `driverBatchSize` is therefore the total
+> number of drivers a search ever reaches, not the size of the first wave.
+
+That is why the shortlist cannot leak: there is no later batch to leak into. If
+an allocator container is ever added, **it must be built by the workflow first**
+— otherwise a 2023 binary would run the old `prepareDriverPoolBatch`, batch 1
+would honour the passenger's choice and every batch after it would ask
+everyone. Silently.
+
+`beckn-gateway-exe` is stale for the same reason (step 16 takes 0 seconds) and
+is harmless for a different one: `select` goes BAP → BPP directly, so the
+gateway never deserialises the tags the shortlist rides in.
+
+```bash
+python3 probe-shortlist.py   # two searches, one shortlisted; reads who was
+                             # actually asked out of search_request_for_driver
+```
+
+Measured 2026-08-23 against the live stack: control asked 4 drivers, a
+shortlist of one asked exactly that one.
+
 ## Backups — `./backup.sh`
 
 ```bash
