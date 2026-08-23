@@ -231,6 +231,137 @@ mkItem categoryId fulfillmentId q mbVehicleDesc =
           }""",
         "driver: pass the vehicle description into the on_select request",
     ),
+    # ── The rider half of the same chain ────────────────────────────────────
+    #
+    # The BPP patches above write "Renault|Clio|Grey" into the item descriptor.
+    # The rider *already receives it*: `ItemDescriptor` is `{ name, code }` and
+    # `buildQuoteInfo` reads only `code`, so upstream parses the field and drops
+    # it on the floor. Nothing below widens the BECKN payload; it stops the drop.
+    #
+    # ── Why a column and not a spare field ──────────────────────────────────
+    # `DriverOffer.driverName` was the tempting place — it needs no migration,
+    # and it is safe in the narrow sense: `Ride.driverName` comes from
+    # `on_update`'s `fulfillment.agent.name`, a different path entirely, so a
+    # composite here would never reach the passenger's ride screen. It was
+    # rejected anyway. A `driver_name` column reading "Ahmed|Renault|Clio|Grey"
+    # is a trap for whoever next opens that table, and this project has been
+    # bitten by hidden encodings more than once.
+    #
+    # The migration is `dev/local-stack/driver-offer-vehicle.sql`, and it is
+    # ordinary: add a nullable column, then swap the image. The old binary
+    # ignores an extra nullable column, so rollback stays a straight image swap.
+    (
+        f"{RIDER_SRC}/Beckn/ACL/OnSelect.hs",
+        112,
+        """  let rating = item.rating
+  let bppQuoteId = item.id
+  pure $
+    DOnSelect.DriverOfferQuoteDetails""",
+        """  let rating = item.rating
+  let bppQuoteId = item.id
+  -- Algeria: "make|model|colour", written by our own BPP a few hundred lines
+  -- up this file's mirror image. Upstream sets this descriptor to "" and never
+  -- reads it, so empty is the ordinary case and has to stay `Nothing` rather
+  -- than become an empty string the app would draw as a blank line under the
+  -- driver's name.
+  --
+  -- Compared with (==) rather than matched against a literal pattern: a Text
+  -- literal *pattern* needs OverloadedStrings to be on in this module, and
+  -- losing a 36-minute build to a language extension is not a trade worth
+  -- making for two fewer lines. No import is needed either way.
+  let descName = item.descriptor.name
+  let vehicleDesc = if descName == "" then Nothing else Just descName
+  pure $
+    DOnSelect.DriverOfferQuoteDetails""",
+        "rider: read the vehicle out of the on_select item descriptor",
+    ),
+    (
+        f"{RIDER_SRC}/Domain/Action/Beckn/OnSelect.hs",
+        65,
+        """data DriverOfferQuoteDetails = DriverOfferQuoteDetails
+  { driverName :: Text,
+    durationToPickup :: Int, -- Seconds?
+    distanceToPickup :: HighPrecMeters,
+    validTill :: UTCTime,
+    rating :: Maybe Centesimal,
+    bppDriverQuoteId :: Id DDriverOffer.BPPQuote
+  }""",
+        """data DriverOfferQuoteDetails = DriverOfferQuoteDetails
+  { driverName :: Text,
+    durationToPickup :: Int, -- Seconds?
+    distanceToPickup :: HighPrecMeters,
+    validTill :: UTCTime,
+    rating :: Maybe Centesimal,
+    -- Algeria: "make|model|colour". `buildDriverOffer` below builds its result
+    -- with RecordWildCards, so naming it here is the whole of the wiring.
+    vehicleDesc :: Maybe Text,
+    bppDriverQuoteId :: Id DDriverOffer.BPPQuote
+  }""",
+        "rider: carry the vehicle through the on_select action",
+    ),
+    (
+        f"{RIDER_SRC}/Domain/Types/DriverOffer.hs",
+        25,
+        """data DriverOffer = DriverOffer
+  { id :: Id DriverOffer,
+    estimateId :: Id DEstimate.Estimate,
+    driverName :: Text,
+    durationToPickup :: Int, -- Seconds?
+    distanceToPickup :: HighPrecMeters,
+    validTill :: UTCTime,
+    bppQuoteId :: Id BPPQuote,
+    rating :: Maybe Centesimal
+  }
+  deriving (Generic, Show, PrettyShow)
+
+data DriverOfferAPIEntity = DriverOfferAPIEntity
+  { driverName :: Text,
+    durationToPickup :: Int, -- Seconds?
+    distanceToPickup :: HighPrecMeters,
+    validTill :: UTCTime,
+    rating :: Maybe Centesimal
+  }""",
+        """data DriverOffer = DriverOffer
+  { id :: Id DriverOffer,
+    estimateId :: Id DEstimate.Estimate,
+    driverName :: Text,
+    durationToPickup :: Int, -- Seconds?
+    distanceToPickup :: HighPrecMeters,
+    validTill :: UTCTime,
+    bppQuoteId :: Id BPPQuote,
+    rating :: Maybe Centesimal,
+    -- Algeria: "make|model|colour", or Nothing when the BPP did not send one --
+    -- an older provider, or a driver with no vehicle attached. The app must
+    -- treat absence as ordinary and simply show one line less.
+    vehicleDesc :: Maybe Text
+  }
+  deriving (Generic, Show, PrettyShow)
+
+data DriverOfferAPIEntity = DriverOfferAPIEntity
+  { driverName :: Text,
+    durationToPickup :: Int, -- Seconds?
+    distanceToPickup :: HighPrecMeters,
+    validTill :: UTCTime,
+    rating :: Maybe Centesimal,
+    -- The one field the passenger's screen is being rebuilt for. Quote.hs
+    -- converts between these two records with RecordWildCards, so adding the
+    -- name to both is the entire change.
+    vehicleDesc :: Maybe Text
+  }""",
+        "rider: put the vehicle on the offer the app reads",
+    ),
+    (
+        f"{RIDER_SRC}/Storage/Tabular/DriverOffer.hs",
+        40,
+        """      bppQuoteId Text
+      rating Centesimal Maybe
+      Primary id""",
+        """      bppQuoteId Text
+      rating Centesimal Maybe
+      vehicleDesc Text Maybe
+      Primary id""",
+        "rider: persist the vehicle description",
+    ),
 ]
 
 
