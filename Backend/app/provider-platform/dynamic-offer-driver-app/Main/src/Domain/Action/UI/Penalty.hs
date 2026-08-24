@@ -18,6 +18,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationOrchestrator as Orchestrator
+import SharedLogic.DriverCancellationPenalty (applyCancellationPenaltyGst)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -51,7 +52,14 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   -- matrix row), via the orchestrator's dry-run entry: no Redis caches, no ride-row
   -- persistence — the cancellation may never happen.
   decision <- Orchestrator.previewCancellationConsequences booking ride transporterConfig SBCR.ByDriver Nothing mbDriverDistToPickup
-  let penaltyAmount = (\row -> CancellationConsequence.driverMoneyDeduction row booking.estimatedFare) =<< decision.consequenceRow
+  let rawPenaltyAmount = (\row -> CancellationConsequence.driverMoneyDeduction row booking.estimatedFare) =<< decision.consequenceRow
+      -- The matrix stores the driver penalty GST-exclusive; the real charge
+      -- (SharedLogic.DriverCancellationPenalty.applyCancellationPenaltyGst, applied once the
+      -- DriverFee moves to PAYMENT_PENDING) grosses it up. Apply the same multiplier here so
+      -- this preview matches what the driver is actually charged. Only positive amounts (an
+      -- actual charge) are grossed up — a negative amount is compensation credited via the
+      -- wallet, which never carries GST.
+      penaltyAmount = rawPenaltyAmount <&> \amt -> if amt > 0 then applyCancellationPenaltyGst amt else amt
       isApplicable = isJust penaltyAmount
       -- Verdict-based validity (the RideCancel tag rules are retired). "Valid" follows
       -- the legacy DriverCancellation#Valid convention: the cancellation VALIDLY COUNTS
