@@ -29,10 +29,10 @@ getClusterRoutesBetweenStops baseUrl gtfsId fromStopCode toStopCode = do
         logError $ "Error getting cluster routes between stops (from=" <> fromStopCode <> ", to=" <> toStopCode <> "): " <> show err
         pure Nothing
 
-getRouteByRouteId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> m (Maybe RouteInfoNandi)
-getRouteByRouteId baseUrl gtfsId routeId = do
+getRouteByRouteId :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Maybe Bool -> m (Maybe RouteInfoNandi)
+getRouteByRouteId baseUrl gtfsId routeId mbReturnApplicableServiceTypes = do
   withShortRetry $
-    callAPI baseUrl (NandiAPI.getNandiRouteByRouteId gtfsId routeId) "getRouteByRouteId" NandiAPI.nandiRouteByRouteIdAPI >>= \case
+    callAPI baseUrl (NandiAPI.getNandiRouteByRouteId gtfsId routeId mbReturnApplicableServiceTypes) "getRouteByRouteId" NandiAPI.nandiRouteByRouteIdAPI >>= \case
       Right route -> pure (Just route)
       Left err -> do
         logError $ "Error getting route by route id: " <> show err

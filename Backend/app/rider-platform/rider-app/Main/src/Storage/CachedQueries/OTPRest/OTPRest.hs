@@ -35,14 +35,42 @@ getRouteByRouteId ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe Route.Route)
-getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRouteId", integratedBPPConfig.id.getId, routeId] 43200 $ do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  route <- Flow.getRouteByRouteId baseUrl integratedBPPConfig.feedKey routeId
-  case route of
-    Just route' -> Just <$> parseRouteFromInMemoryServer route' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-    Nothing -> do
-      logError $ "Route not found in OTPRest: " <> show routeId
-      pure Nothing
+getRouteByRouteId integratedBPPConfig routeId = getRouteByRouteId' integratedBPPConfig routeId False
+
+-- | 'getRouteByRouteId', plus the tiers the route has actually been operated in
+-- recently - but only when this config filters quotes on them, since the field
+-- costs the in-memory server a database round trip per route. With the flag off
+-- this is exactly 'getRouteByRouteId'.
+getRouteByRouteIdForQuoteFiltering ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Route.Route)
+getRouteByRouteIdForQuoteFiltering integratedBPPConfig routeId =
+  getRouteByRouteId' integratedBPPConfig routeId (integratedBPPConfig.filterQuotesOnApplicableServiceTypes == Just True)
+
+-- The flag is in the cache key: the two variants carry different payloads, so
+-- sharing an entry would let whichever caller missed first decide what everyone
+-- else sees. They also expire differently - route metadata is static, while
+-- 'applicableServiceTypes' decides whether a tier is bookable, so the day a
+-- route first gets an AC bus, 30 minutes is the longest a warm pod can keep
+-- suppressing its AC quotes. InMem is per-pod with no invalidation, so that is
+-- also how long two pods can disagree.
+getRouteByRouteId' ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  Bool ->
+  m (Maybe Route.Route)
+getRouteByRouteId' integratedBPPConfig routeId withApplicableServiceTypes =
+  IM.withInMemCache ["RouteByRouteId", integratedBPPConfig.id.getId, routeId, show withApplicableServiceTypes] (if withApplicableServiceTypes then 1800 else 43200) $ do
+    baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+    route <- Flow.getRouteByRouteId baseUrl integratedBPPConfig.feedKey routeId (if withApplicableServiceTypes then Just True else Nothing)
+    case route of
+      Just route' -> Just <$> parseRouteFromInMemoryServer route' integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      Nothing -> do
+        logError $ "Route not found in OTPRest: " <> show routeId
+        pure Nothing
 
 getRouteBusSchedule ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -340,6 +368,7 @@ parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOp
               vehicleType = route.mode,
               stopCount = route.stopCount,
               serviceTierType = route.serviceTierType,
+              applicableServiceTypes = route.applicableServiceTypes,
               timeBounds = Unbounded,
               createdAt = now,
               updatedAt = now

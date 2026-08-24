@@ -20,6 +20,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   { agencyKey :: Kernel.Prelude.Text,
     domain :: Kernel.Prelude.Text,
     feedKey :: Kernel.Prelude.Text,
+    filterQuotesOnApplicableServiceTypes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isTicketValidOnMultipleRoutes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

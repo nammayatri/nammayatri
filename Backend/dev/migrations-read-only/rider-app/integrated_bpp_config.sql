@@ -39,3 +39,8 @@ ALTER TABLE atlas_app.integrated_bpp_config DROP CONSTRAINT integrated_bpp_confi
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN pass_override_applicable boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN filter_quotes_on_applicable_service_types boolean ;

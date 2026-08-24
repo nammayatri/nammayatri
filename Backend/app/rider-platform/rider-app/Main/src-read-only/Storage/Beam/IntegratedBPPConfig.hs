@@ -17,6 +17,7 @@ data IntegratedBPPConfigT f = IntegratedBPPConfigT
   { agencyKey :: B.C f Kernel.Prelude.Text,
     domain :: B.C f Kernel.Prelude.Text,
     feedKey :: B.C f Kernel.Prelude.Text,
+    filterQuotesOnApplicableServiceTypes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isTicketValidOnMultipleRoutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,

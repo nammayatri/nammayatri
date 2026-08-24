@@ -214,55 +214,68 @@ data RouteStopInfo = RouteStopInfo
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
-getPossibleRoutesBetweenTwoStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
-getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = IM.withInMemCache ["POSSIBLEROUTES", startStationCode, endStationCode, integratedBPPConfig.id.getId] 7200 $ do
-  routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
-  let routeCodes = nub $ map (.routeCode) routesWithStop
-  routeStops <-
-    concatMapM
-      (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig)
-      routeCodes
-  currentTime <- getCurrentTime
-  let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
-      groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
-      possibleRoutes =
-        nub $
-          catMaybes $
-            map
-              ( \stops ->
-                  let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) stops
-                      mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stopsSortedBySequenceNumber
-                   in find
-                        ( \stop ->
-                            maybe
-                              False
-                              (\startStopSequence -> stop.stopCode == endStationCode && stop.sequenceNum > startStopSequence)
-                              mbStartStopSequence
-                        )
-                        stopsSortedBySequenceNumber
-                        <&> ( \endStop -> do
-                                case mbStartStopSequence of
-                                  Just startStopSequence ->
-                                    let intermediateStops = filter (\stop -> stop.sequenceNum >= startStopSequence && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
-                                        totalStops = endStop.sequenceNum - startStopSequence
-                                        totalTravelTime =
-                                          foldr
-                                            ( \stop acc ->
-                                                if stop.sequenceNum > startStopSequence && stop.sequenceNum <= endStop.sequenceNum
-                                                  then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
-                                                    (Just acc', Just travelTime) -> Just (acc' + travelTime)
-                                                    _ -> Nothing
-                                                  else acc
-                                            )
-                                            (Just $ Seconds 0)
-                                            stops
-                                     in (endStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops)
-                                  Nothing -> (endStop.routeCode, Nothing, Nothing, Nothing)
-                            )
-              )
-              groupedStops
+-- | The routes serving both stops, with each route's document attached.
+--
+-- 'hasOverrideServiceTier' means the caller has already settled which tier it
+-- wants, so the tiers the route ran recently cannot change its answer - a pinned
+-- tier is not filtered on, and the listing has no tier dimension at all. Those
+-- callers skip the round trip the field costs.
+--
+-- Only the stop-derived part is cached. The route documents are attached after,
+-- so their freshness is governed by their own cache alone rather than ageing a
+-- second time in here - and so this entry does not vary by caller.
+getPossibleRoutesBetweenTwoStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> Bool -> m [RouteStopInfo]
+getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig hasOverrideServiceTier = do
+  possibleRoutes <- IM.withInMemCache ["POSSIBLEROUTES", startStationCode, endStationCode, integratedBPPConfig.id.getId] 7200 $ do
+    routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
+    let routeCodes = nub $ map (.routeCode) routesWithStop
+    routeStops <-
+      concatMapM
+        (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig)
+        routeCodes
+    currentTime <- getCurrentTime
+    let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+        groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
+        possibleRoutes =
+          nub $
+            catMaybes $
+              map
+                ( \stops ->
+                    let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) stops
+                        mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stopsSortedBySequenceNumber
+                     in find
+                          ( \stop ->
+                              maybe
+                                False
+                                (\startStopSequence -> stop.stopCode == endStationCode && stop.sequenceNum > startStopSequence)
+                                mbStartStopSequence
+                          )
+                          stopsSortedBySequenceNumber
+                          <&> ( \endStop -> do
+                                  case mbStartStopSequence of
+                                    Just startStopSequence ->
+                                      let intermediateStops = filter (\stop -> stop.sequenceNum >= startStopSequence && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
+                                          totalStops = endStop.sequenceNum - startStopSequence
+                                          totalTravelTime =
+                                            foldr
+                                              ( \stop acc ->
+                                                  if stop.sequenceNum > startStopSequence && stop.sequenceNum <= endStop.sequenceNum
+                                                    then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
+                                                      (Just acc', Just travelTime) -> Just (acc' + travelTime)
+                                                      _ -> Nothing
+                                                    else acc
+                                              )
+                                              (Just $ Seconds 0)
+                                              stops
+                                       in (endStop.routeCode, Just totalStops, totalTravelTime, Just intermediateStops)
+                                    Nothing -> (endStop.routeCode, Nothing, Nothing, Nothing)
+                              )
+                )
+                groupedStops
+    pure possibleRoutes
+
   let mappedRouteCodes = map (\(routeCode, _, _, _) -> routeCode) possibleRoutes
-  routes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound $ "RouteCode:" +|| routeCode ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")) mappedRouteCodes
+  routes <- mapM (\routeCode -> fetchRoute integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound $ "RouteCode:" +|| routeCode ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")) mappedRouteCodes
 
   return $
     map
@@ -278,9 +291,16 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
                 }
       )
       routes
+  where
+    fetchRoute cfg routeCode =
+      if hasOverrideServiceTier
+        then OTPRest.getRouteByRouteId cfg routeCode
+        else OTPRest.getRouteByRouteIdForQuoteFiltering cfg routeCode
 
-getPossibleRoutesBetweenTwoParentStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
-getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode integratedBPPConfig = do
+-- | 'getPossibleRoutesBetweenTwoStops' over parent stops. See it for what
+-- 'hasOverrideServiceTier' means; this one is not cached.
+getPossibleRoutesBetweenTwoParentStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> Bool -> m [RouteStopInfo]
+getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode integratedBPPConfig hasOverrideServiceTier = do
   -- Get all child station codes for both parent stops
   startStops <- OTPRest.getChildrenStationsCodes integratedBPPConfig startParentStopCode
   endStops <- OTPRest.getChildrenStationsCodes integratedBPPConfig endParentStopCode
@@ -306,7 +326,7 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
 
   -- Build route info for valid routes
   let mappedRouteCodes = map (\(routeCode, _, _, _, _, _) -> routeCode) possibleRoutes
-  routes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound $ "RouteCode:" +|| routeCode ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")) mappedRouteCodes
+  routes <- mapM (\routeCode -> fetchRoute integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound $ "RouteCode:" +|| routeCode ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")) mappedRouteCodes
 
   return $
     map
@@ -323,6 +343,11 @@ getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode int
       )
       routes
   where
+    fetchRoute cfg routeCode =
+      if hasOverrideServiceTier
+        then OTPRest.getRouteByRouteId cfg routeCode
+        else OTPRest.getRouteByRouteIdForQuoteFiltering cfg routeCode
+
     -- Helper function to find valid routes between parent stops
     findValidRouteForParentStops :: [Text] -> [Text] -> [RouteStopMapping.RouteStopMapping] -> Maybe (Text, Maybe Int, Maybe Seconds, Maybe [RouteStopMapping.RouteStopMapping], Text, Text)
     findValidRouteForParentStops startStopCodes endStopCodes stops =

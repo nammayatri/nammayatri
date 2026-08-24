@@ -31,6 +31,11 @@ data Route = Route
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    -- | Tiers this route was actually operated in recently, as reported by the
+    -- in-memory server. Populated only when fetched through
+    -- 'getRouteByRouteIdForQuoteFiltering' with the config opted in; 'Nothing'
+    -- everywhere else, and whenever the server could not determine it.
+    applicableServiceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

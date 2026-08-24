@@ -953,7 +953,12 @@ data RouteInfoNandi = RouteInfoNandi
     endPoint :: Kernel.External.Maps.Types.LatLong,
     stopCount :: Maybe Int,
     serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    color :: Maybe Text
+    color :: Maybe Text,
+    -- | Tiers this route was actually operated in over the in-memory server's
+    -- recent lookback window, derived from waybills rather than from GTFS.
+    -- Only sent when the request asks for it, and never an empty list: absent
+    -- means "not known", which callers must not read as "runs no tiers".
+    applicableServiceTypes :: Maybe [BecknV2.FRFS.Enums.ServiceTierType]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

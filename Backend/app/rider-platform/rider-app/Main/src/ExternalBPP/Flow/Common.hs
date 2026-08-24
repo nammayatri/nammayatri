@@ -95,7 +95,10 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
     buildSingleTransitRouteQuote FRFSRouteDetails {..} = do
       case routeCode of
         Just routeCode' -> do
-          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          -- A pinned tier short-circuits the filter, so only ask for the
+          -- operational tiers when there is none to pin.
+          let getRoute = bool OTPRest.getRouteByRouteId OTPRest.getRouteByRouteIdForQuoteFiltering (isNothing serviceTier)
+          route <- getRoute integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
           let routeInfo =
                 RouteStopInfo
                   { route,
@@ -107,10 +110,13 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                   }
           mkQuote serviceTier searchReq.vehicleType [routeInfo]
         Nothing -> do
-          routesInfo <- bool getPossibleRoutesBetweenTwoStops getPossibleRoutesBetweenTwoParentStops (fromMaybe False searchReq.searchAsParentStops) startStationCode endStationCode integratedBPPConfig
+          routesInfo <- bool getPossibleRoutesBetweenTwoStops getPossibleRoutesBetweenTwoParentStops (fromMaybe False searchReq.searchAsParentStops) startStationCode endStationCode integratedBPPConfig (isJust serviceTier)
           quotes <-
             mapM
               ( \routeInfo -> do
+                  -- Still quoting every tier, as before. A pinned tier is
+                  -- honoured by not fetching the route's applicable types just
+                  -- above, which is what leaves the filter nothing to narrow on.
                   mkQuote Nothing searchReq.vehicleType [routeInfo]
               )
               routesInfo
@@ -222,7 +228,16 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
       let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode, color = routeInfo.route.color}) routesInfo
           fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
       stations <- CallAPI.buildStations segments integratedBPPConfig
-      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
+      (_, allFares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
+      let fares = filterFaresOnApplicableServiceTypes serviceTier routesInfo allFares
+      when (length fares /= length allFares) $
+        logInfo $
+          "Dropped quotes for tiers not operated on route "
+            <> show (map (.route.code) routesInfo)
+            <> ": kept "
+            <> show (map (.vehicleServiceTier.serviceTierType) fares)
+            <> " out of "
+            <> show (map (.vehicleServiceTier.serviceTierType) allFares)
       return $
         map
           ( \FRFSFare {..} ->
@@ -258,6 +273,38 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                     }
           )
           fares
+
+    -- Drops quotes for tiers this route has not actually been operated in
+    -- recently. It can only ever narrow a list that would otherwise be "every
+    -- tier configured for the city", and every uncertain case leaves the fares
+    -- untouched:
+    --
+    --   * off unless the provider config opts in;
+    --   * skipped when the caller already pinned a tier - one read off a live
+    --     vehicle has to win over history, or the first AC bus put on a
+    --     long-standing ordinary route would be unbookable;
+    --   * skipped for multi-leg quotes, where a single fare spans several
+    --     routes and no one route's history governs it;
+    --   * skipped when the route's applicable set is unknown or empty, so an
+    --     in-memory-server outage or a newly onboarded route changes nothing;
+    --   * skipped unless every operated tier maps onto some offered fare tier.
+    --     A tier the fare config cannot name means the two sources disagree
+    --     about vocabulary, not that the route is unserved, and narrowing on a
+    --     set we only half understand makes a tier that does run unbookable.
+    filterFaresOnApplicableServiceTypes :: Maybe Spec.ServiceTierType -> [RouteStopInfo] -> [FRFSFare] -> [FRFSFare]
+    filterFaresOnApplicableServiceTypes mbServiceTier routesInfo fares =
+      case (integratedBPPConfig.filterQuotesOnApplicableServiceTypes, mbServiceTier, routesInfo) of
+        (Just True, Nothing, [routeInfo]) ->
+          case routeInfo.route.applicableServiceTypes of
+            Just applicableServiceTypes@(_ : _) ->
+              let normalize = CallAPI.normalizeServiceTierType integratedBPPConfig.providerConfig
+                  applicable = map normalize applicableServiceTypes
+                  fareTiers = map (normalize . (.vehicleServiceTier.serviceTierType)) fares
+               in if all (`elem` fareTiers) applicable
+                    then filter (\fare -> normalize fare.vehicleServiceTier.serviceTierType `elem` applicable) fares
+                    else fares
+            _ -> fares
+        _ -> fares
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 

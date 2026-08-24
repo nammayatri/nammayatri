@@ -10,7 +10,7 @@ type RouteStopMappingByRouteIdAPI = "route-stop-mapping" :> Capture "gtfs_id" Te
 
 type RouteStopMappingByStopCodeAPI = "route-stop-mapping" :> Capture "gtfs_id" Text :> "stop" :> Capture "stop_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
-type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] RouteInfoNandi
+type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> QueryParam "returnApplicableServiceTypes" Bool :> Get '[JSON] RouteInfoNandi
 
 type ClusterRoutesBetweenStopsAPI = "cluster" :> Capture "gtfs_id" Text :> "routes" :> Capture "from_stop_code" Text :> Capture "to_stop_code" Text :> Get '[JSON] [ClusterRouteConnectionNandi]
 
@@ -167,7 +167,7 @@ getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRoute
 getNandiGetRouteStopMappingByStopCode :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByStopCode = ET.client nandiGetRouteStopMappingByStopCodeAPI
 
-getNandiRouteByRouteId :: Text -> Text -> ET.EulerClient RouteInfoNandi
+getNandiRouteByRouteId :: Text -> Text -> Maybe Bool -> ET.EulerClient RouteInfoNandi
 getNandiRouteByRouteId = ET.client nandiRouteByRouteIdAPI
 
 getNandiClusterRoutesBetweenStops :: Text -> Text -> Text -> ET.EulerClient [ClusterRouteConnectionNandi]

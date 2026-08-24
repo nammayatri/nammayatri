@@ -89,6 +89,23 @@ data SubwayFareDetail = SubwayFareDetail
   }
   deriving (Show)
 
+-- | Collapses a tier to the granularity the given provider actually quotes at.
+--
+-- EBIX reports every AC variant as plain AC, so any tier compared against an
+-- EBIX fare - for instance one read out of the operator's own waybill data -
+-- has to be collapsed the same way first or it will never match.
+normalizeServiceTierType :: ProviderConfig -> Spec.ServiceTierType -> Spec.ServiceTierType
+normalizeServiceTierType providerConfig serviceTierType =
+  case providerConfig of
+    EBIX _ -> case serviceTierType of
+      Spec.ASHOK_LEYLAND_AC -> Spec.AC
+      Spec.MIDI_AC -> Spec.AC
+      Spec.VOLVO_AC -> Spec.AC
+      Spec.ELECTRIC_V -> Spec.AC
+      Spec.ELECTRIC_V_PMI -> Spec.AC
+      a -> a
+    _ -> serviceTierType
+
 getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
 getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
@@ -129,14 +146,7 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
                in FRFSUtils.FRFSFare
                     { vehicleServiceTier =
                         FRFSUtils.FRFSVehicleServiceTier
-                          { serviceTierType =
-                              case serviceTierType of
-                                Spec.ASHOK_LEYLAND_AC -> Spec.AC
-                                Spec.MIDI_AC -> Spec.AC
-                                Spec.VOLVO_AC -> Spec.AC
-                                Spec.ELECTRIC_V -> Spec.AC
-                                Spec.ELECTRIC_V_PMI -> Spec.AC
-                                a -> a,
+                          { serviceTierType = normalizeServiceTierType integrationBPPConfig.providerConfig serviceTierType,
                             ..
                           },
                       ..

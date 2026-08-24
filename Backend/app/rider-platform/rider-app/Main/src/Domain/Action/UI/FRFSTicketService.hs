@@ -154,7 +154,9 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbPlatformType mbStartStationCo
   SIBC.fetchAllIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig ->
     case (mbStartStationCode, mbEndStationCode) of
       (Just startStationCode, Just endStationCode) -> do
-        routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
+        -- The listing carries no service tier and never reads applicableServiceTypes,
+        -- so it opts out of the waybill round trip the field costs.
+        routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig True
         return $
           map
             ( \routeInfo ->
