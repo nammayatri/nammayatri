@@ -77,6 +77,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     pickupZone :: Kernel.Prelude.Bool,
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    preferenceMatchScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     previousDropGeoHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     renderedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

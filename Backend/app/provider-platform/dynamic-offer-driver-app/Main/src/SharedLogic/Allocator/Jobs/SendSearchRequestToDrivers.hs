@@ -131,6 +131,7 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         driverAvailableTime = Nothing,
         driverSpeed = Nothing,
         rideFrequencyScore = Nothing,
+        preferenceMatchScore = Nothing,
         coinsRewardedOnGoldTierRide = Nothing,
         conditionalCharges = [],
         isPartOfIntelligentPool = False,

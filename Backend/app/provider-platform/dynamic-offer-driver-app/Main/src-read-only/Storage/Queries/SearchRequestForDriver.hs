@@ -116,6 +116,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.pickupZone pickupZone,
       Se.Set Beam.poolingConfigVersion poolingConfigVersion,
       Se.Set Beam.poolingLogicVersion poolingLogicVersion,
+      Se.Set Beam.preferenceMatchScore preferenceMatchScore,
       Se.Set Beam.previousDropGeoHash previousDropGeoHash,
       Se.Set Beam.reactBundleVersion reactBundleVersion,
       Se.Set Beam.renderedAt renderedAt,

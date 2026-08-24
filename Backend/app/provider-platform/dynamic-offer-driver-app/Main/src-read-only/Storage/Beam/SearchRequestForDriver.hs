@@ -83,6 +83,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     pickupZone :: (B.C f Kernel.Prelude.Bool),
     poolingConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     poolingLogicVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    preferenceMatchScore :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     previousDropGeoHash :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     reactBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     renderedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),

@@ -46,6 +46,7 @@ data DriverQuote = DriverQuote
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    preferenceMatchScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,

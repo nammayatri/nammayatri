@@ -273,3 +273,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN estimated_static_duration 
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_charge_bearer text ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN payment_charge double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN preference_match_score double precision ;

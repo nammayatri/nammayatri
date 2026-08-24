@@ -2170,7 +2170,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             vehicleServiceTierName = sd.vehicleServiceTierName,
             coinsRewardedOnGoldTierRide = sd.coinsRewardedOnGoldTierRide,
             reactBundleVersion = driver.reactBundleVersion <|> mbReactBundleVersion',
-            commissionCharges = sd.commissionCharges
+            commissionCharges = sd.commissionCharges,
+            preferenceMatchScore = sd.preferenceMatchScore
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
