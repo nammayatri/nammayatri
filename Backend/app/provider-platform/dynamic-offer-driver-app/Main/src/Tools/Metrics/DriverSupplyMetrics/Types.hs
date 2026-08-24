@@ -52,10 +52,9 @@ data DriverSupplyMetricsContainer = DriverSupplyMetricsContainer
 
 registerDriverSupplyMetricsContainer :: IO DriverSupplyMetricsContainer
 registerDriverSupplyMetricsContainer = do
-  -- "active" is the same predicate the dispatch filter uses -- dispatch-eligible drivers,
-  -- which spans ONLINE and SILENT mode and INCLUDES drivers currently on a ride.
+  -- Dispatch-eligible drivers: mode ONLINE or SILENT, INCLUDING those currently on a ride.
   -- Free supply = BPP_drivers_online - BPP_drivers_on_ride.
-  driversOnlineGauge <- reg "BPP_drivers_online" "Current dispatch-eligible drivers (driver_information.active, spans ONLINE/SILENT and includes on-ride)"
+  driversOnlineGauge <- reg "BPP_drivers_online" "Drivers online (driver_information.mode ONLINE or SILENT, includes on-ride)"
   driversOnRideGauge <- reg "BPP_drivers_on_ride" "Drivers currently on a ride (incremented at ride start, decremented at completion or cancellation)"
   return $ DriverSupplyMetricsContainer {..}
   where

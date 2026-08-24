@@ -186,8 +186,6 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   rideDetails <- buildRideDetails booking ride driver vehicle
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
-  -- scheduled bookings assign a driver hours before the trip - not on-ride supply
-  let rideDistanceBucket = SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone
