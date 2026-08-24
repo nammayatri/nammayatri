@@ -1725,17 +1725,33 @@ buildPurchasedPassPaymentAPIEntities ::
   m [PassAPI.PurchasedPassTransactionAPIEntity]
 buildPurchasedPassPaymentAPIEntities payments = do
   refundMap <- fetchRefundsForPayments payments
-  return $ map (mkPurchasedPassPaymentAPIEntity refundMap) payments
+  forM payments $ \payment -> do
+    availableTripCount <- availableTripCountForPayment payment
+    return $ mkPurchasedPassPaymentAPIEntity refundMap availableTripCount payment
+
+-- Trips left on this payment's own override benefit. Nothing when the pass carries
+-- no override config or grants unlimited trips -- same rule as the parent pass entity.
+availableTripCountForPayment ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m (Maybe Int)
+availableTripCountForPayment payment = do
+  mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
+  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbPass
+  maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
 
 mkPurchasedPassPaymentAPIEntity ::
   Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
+  Maybe Int ->
   DPurchasedPassPayment.PurchasedPassPayment ->
   PassAPI.PurchasedPassTransactionAPIEntity
-mkPurchasedPassPaymentAPIEntity refundMap purchasedPassPayment =
+mkPurchasedPassPaymentAPIEntity refundMap availableTripCount purchasedPassPayment =
   let refunds = Map.findWithDefault [] purchasedPassPayment.orderId refundMap
       computedStatus = computePassStatusFromRefunds purchasedPassPayment.status refunds
    in PassAPI.PurchasedPassTransactionAPIEntity
         { id = purchasedPassPayment.id,
+          purchasedPassPaymentId = purchasedPassPayment.id,
+          availableTripCount = availableTripCount,
           startDate = purchasedPassPayment.startDate,
           endDate = purchasedPassPayment.endDate,
           status = computedStatus,
