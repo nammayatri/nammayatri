@@ -45,6 +45,7 @@ WhiteListOrg:
   sqlType:
     subscriberId: character varying(255)
     domain: character varying(255)
+    supportedBecknProtocols: "text[]"
 
   default:
     merchantId: "''"
