@@ -103,6 +103,9 @@ buildSuggestedSearchRes riderConfig parentRes = do
       alternateSearchRes <- traverse (\route -> buildShadowSearchRes parentRes route Nothing Nothing) plan.alternatives
       let alternates = zipWith (\res route -> BRPC.AlternateShadow {searchId = res.searchRequest.id, route}) alternateSearchRes plan.alternatives
       BRPC.cacheSuggestedSearchCtx parentRes.searchRequest.id parentRes alternates
+      -- Tells the readers there is something here to fetch. Every other search leaves this
+      -- unset, which is what lets them skip the lookup entirely.
+      QSearchRequest.updateHasBetterPointSuggestion parentRes.searchRequest.id
       pure SuggestedSearchBuild {shadowSearchRes, alternateSearchRes, alternates}
 
 -- | Persists a shadow search request for one better-route shape and returns the
