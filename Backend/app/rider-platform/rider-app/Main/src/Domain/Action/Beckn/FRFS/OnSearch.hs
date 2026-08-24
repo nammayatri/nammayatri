@@ -538,7 +538,16 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.toStationAddress = quotesFromOnSearch.toStationAddress,
       Quote.toStationName = quotesFromOnSearch.toStationName,
       Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
-      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber
+      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber,
+      Quote.tripCategory = quotesFromOnSearch.tripCategory,
+      Quote.providerServiceId = quotesFromOnSearch.providerServiceId,
+      Quote.providerLayoutId = quotesFromOnSearch.providerLayoutId,
+      Quote.providerClassId = quotesFromOnSearch.providerClassId,
+      Quote.providerTripCode = quotesFromOnSearch.providerTripCode,
+      Quote.departureTime = quotesFromOnSearch.departureTime,
+      Quote.arrivalTime = quotesFromOnSearch.arrivalTime,
+      Quote.arrivalDate = quotesFromOnSearch.arrivalDate,
+      Quote.availableSeats = quotesFromOnSearch.availableSeats
     }
   where
     toJsonText :: FRFSCachedQuote -> Text

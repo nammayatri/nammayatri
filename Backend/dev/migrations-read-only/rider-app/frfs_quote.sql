@@ -160,3 +160,30 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN vehicle_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN offer_segment text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN trip_category text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_trip_code text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_service_id text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_layout_id text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN provider_class_id text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN departure_time text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN available_seats integer ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN arrival_time text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN arrival_date text ;
+
+
+------- SQL updates -------
+

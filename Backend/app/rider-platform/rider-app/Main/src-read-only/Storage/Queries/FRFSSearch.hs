@@ -58,6 +58,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
       Se.Set Beam.isSingleMode isSingleMode,
+      Se.Set Beam.journeyDate journeyDate,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,

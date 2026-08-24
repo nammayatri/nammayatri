@@ -26,11 +26,13 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import Domain.Types.StationType (StationType (..))
 import qualified Domain.Types.Trip as DTrip
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Types
 import qualified ExternalBPP.Flow.Fare as Flow
 import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..), LocationV2 (..), WayPointV2 (..))
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -68,7 +70,9 @@ multimodalDiscoverySearch = searchImpl True
 
 searchImpl :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Bool -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m DOnSearch
 searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
-  quotes <- bool buildQuotes buildMultimodalDiscoveryQuotes useMultimodalDiscovery routeDetails
+  quotes <- case integratedBPPConfig.providerConfig of
+    TNSTC _ -> buildTnstcQuotes
+    _ -> bool buildQuotes buildMultimodalDiscoveryQuotes useMultimodalDiscovery routeDetails
   logDebug $ "Route Details Debug: " <> show routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -86,6 +90,85 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
         bppDelayedInterest = Nothing
       }
   where
+    buildTnstcQuotes = do
+      let segment =
+            CallAPI.BasicRouteDetail
+              { routeCode = "",
+                startStopCode = searchReq.fromStationCode,
+                endStopCode = searchReq.toStationCode,
+                color = Nothing
+              }
+          fareRoute = CallAPI.FareRoute {segments = segment NE.:| [], mbProviderRouteId}
+      (_, fares) <-
+        Flow.getFares
+          searchReq.riderId
+          merchant.id
+          merchantOperatingCity.id
+          integratedBPPConfig
+          fareRoute
+          searchReq.vehicleType
+          (listToMaybe routeDetails >>= (.serviceTier))
+          searchReq.multimodalSearchRequestId
+          blacklistedServiceTiers
+          blacklistedFareQuoteTypes
+          False
+          isSingleMode
+          (CallAPI.TnstcSearchDetail <$> searchReq.journeyDate <*> pure searchReq.quantity)
+      return $ map mkTnstcQuote fares
+
+    mkTnstcQuote FRFSFare {..} =
+      let adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) categories)
+          mkStation code mbName mbPoint sType =
+            DStation
+              { stationCode = code,
+                stationName = fromMaybe code mbName,
+                stationLat = (.lat) <$> mbPoint,
+                stationLon = (.lon) <$> mbPoint,
+                stationType = sType,
+                stopSequence = Nothing,
+                towards = Nothing,
+                color = Nothing
+              }
+          tnstcStations =
+            [ mkStation searchReq.fromStationCode searchReq.fromStationName searchReq.fromStationPoint START,
+              mkStation searchReq.toStationCode searchReq.toStationName searchReq.toStationPoint END
+            ]
+          itemId = maybe (CallAPI.getProviderName integratedBPPConfig) (.bppItemId) (find (\category -> category.category == ADULT) categories)
+          d = providerServiceDetails
+       in DQuote
+            { tripCategory = Just DFRFSQuote.INTERCITY,
+              providerServiceId = (.providerServiceId) <$> d,
+              providerLayoutId = (.providerLayoutId) <$> d,
+              providerClassId = (.providerClassId) <$> d,
+              providerTripCode = (.providerTripCode) <$> d,
+              departureTime = (.departureTime) <$> d,
+              arrivalTime = (.arrivalTime) <$> d,
+              arrivalDate = (.arrivalDate) <$> d,
+              availableSeats = d >>= (.availableSeats),
+              bppItemId = itemId,
+              routeCode = "",
+              vehicleType = searchReq.vehicleType,
+              routeStations =
+                [ DRouteStation
+                    { routeCode = "",
+                      routeLongName = vehicleServiceTier.serviceTierLongName,
+                      routeShortName = vehicleServiceTier.serviceTierShortName,
+                      routeStartPoint = fromMaybe (LatLong 0 0) searchReq.fromStationPoint,
+                      routeEndPoint = fromMaybe (LatLong 0 0) searchReq.toStationPoint,
+                      routeStations = tnstcStations,
+                      routeTravelTime = Nothing,
+                      routeServiceTier = Just (mkDVehicleServiceTier vehicleServiceTier),
+                      routePrice = adultPrice,
+                      routeSequenceNum = Just 1,
+                      routeColor = Nothing
+                    }
+                ],
+              stations = tnstcStations,
+              categories = map mkDCategory categories,
+              fareDetails = fareDetails,
+              _type = DFRFSQuote.SingleJourney
+            }
+
     -- Build Single Transit Route Quote
     buildQuotes [routeDetail] = buildSingleTransitRouteQuote routeDetail
     -- Build Multiple Transit Routes Quotes
@@ -222,7 +305,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
       let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode, color = routeInfo.route.color}) routesInfo
           fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
       stations <- CallAPI.buildStations segments integratedBPPConfig
-      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode
+      (_, fares) <- Flow.getFares searchReq.riderId merchant.id merchantOperatingCity.id integratedBPPConfig fareRoute vehicleType serviceTier searchReq.multimodalSearchRequestId blacklistedServiceTiers blacklistedFareQuoteTypes False isSingleMode (CallAPI.TnstcSearchDetail <$> searchReq.journeyDate <*> pure searchReq.quantity)
       return $
         map
           ( \FRFSFare {..} ->
@@ -248,7 +331,16 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                       [1 ..]
                       routesInfo
                in DQuote
-                    { bppItemId = adultBppItemId,
+                    { tripCategory = Just DFRFSQuote.INTRACITY,
+                      providerServiceId = Nothing,
+                      providerLayoutId = Nothing,
+                      providerClassId = Nothing,
+                      providerTripCode = Nothing,
+                      departureTime = Nothing,
+                      arrivalTime = Nothing,
+                      arrivalDate = Nothing,
+                      availableSeats = Nothing,
+                      bppItemId = adultBppItemId,
                       routeCode = (NE.head fareRoute.segments).routeCode,
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,

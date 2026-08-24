@@ -1,9 +1,11 @@
 imports:
   Text: Data.Text
+  Day: Data.Time.Calendar
   Maybe: Data.Maybe
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSTripCategory: Domain.Types.FRFSQuote
   FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
@@ -54,6 +56,8 @@ types:
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
+    journeyDate: Maybe Day
+    tripCategory: Maybe FRFSTripCategory
     routeCode: Maybe Text
     serviceTier: Maybe ServiceTierType
     quantity: Int
@@ -89,6 +93,15 @@ types:
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
     applicablePasses: "[FRFSPassOptionAPIEntity]"
+    tripCategory: Maybe FRFSTripCategory
+    providerServiceId: Maybe Text
+    providerLayoutId: Maybe Text
+    providerClassId: Maybe Text
+    providerTripCode: Maybe Text
+    departureTime: Maybe Text
+    arrivalTime: Maybe Text
+    arrivalDate: Maybe Text
+    availableSeats: Maybe Int
 
     derive: "Show"
 
