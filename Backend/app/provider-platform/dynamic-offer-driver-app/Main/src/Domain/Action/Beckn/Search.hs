@@ -30,6 +30,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
+import Data.Char (isDigit)
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
 import Data.List (sortBy)
@@ -1223,13 +1224,27 @@ getAddressByGetPlaceName merchantId merchantOpCityId sessionToken latLong = do
 
 decodeAddress :: BA.Address -> Maybe Text
 decodeAddress BA.Address {..} = do
-  let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
-  if null strictFields
+  let raw = catMaybes [door, building, street, locality, city, state, country]
+      tokens = filter (not . T.null) $ map (T.strip . stripPincode) $ concatMap (T.splitOn ",") raw
+      deduped = dedupCI tokens
+  if null deduped
     then Nothing
-    else Just $ T.intercalate ", " strictFields
+    else Just $ T.intercalate ", " deduped
 
-isEmpty :: Maybe Text -> Bool
-isEmpty = maybe True (T.null . T.replace " " "")
+stripPincode :: Text -> Text
+stripPincode = T.strip . T.unwords . filter (not . isPincode) . T.words
+  where
+    isPincode t = T.length t == 6 && T.all isDigit t
+
+dedupCI :: [Text] -> [Text]
+dedupCI = go []
+  where
+    go _ [] = []
+    go seen (x : xs)
+      | key `elem` seen = go seen xs
+      | otherwise = x : go (key : seen) xs
+      where
+        key = T.toLower x
 
 transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => DBppEstimate.BppEstimate -> m DEst.Estimate
 transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
