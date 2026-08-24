@@ -201,7 +201,11 @@ data AlternateSuggestion = AlternateSuggestion
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- | Alternates are priced in the background, so this is a poll: 'allLoaded' is False while
--- at least one is still outstanding, and the list grows across calls.
+-- any of them is still outstanding, and the list grows across calls.
+--
+-- 'allLoaded' means nothing further is coming, not that everything succeeded -- a shape the
+-- provider declined to price settles the same as one it answered, it is simply missing from
+-- the list. Callers should render what is there and stop polling.
 data AlternateSuggestionsRes = AlternateSuggestionsRes
   { alternates :: [AlternateSuggestion],
     allLoaded :: Bool
@@ -422,11 +426,14 @@ loadAlternateSuggestions parent = do
         shadow <- MaybeT $ QSR.findById alternate.searchId
         estimateList <- lift $ QEstimate.findAllBySRId shadow.id
         MaybeT $ mkAlternateSuggestion shadow alternate.route alternate.isDefault estimateList
+      -- Settled either because every shape came back with a fare, or because the background
+      -- pass has finished and whatever is missing is not coming.
+      dispatched <- BRPC.alternatesDispatched parent.id
       let loaded = catMaybes resolved
       pure
         AlternateSuggestionsRes
           { alternates = loaded,
-            allLoaded = length loaded == length ctx.alternates
+            allLoaded = dispatched || length loaded == length ctx.alternates
           }
 
 mkAlternateSuggestion :: SSR.SearchRequest -> BRP.BetterRoute -> Bool -> [DEstimate.Estimate] -> Flow (Maybe AlternateSuggestion)
