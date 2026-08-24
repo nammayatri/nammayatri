@@ -185,9 +185,22 @@ buildShadowSearchRes parentRes betterRoute mbPickupAddress mbDropAddress = do
         -- parent's alternatives to pick a cheaper one from.
         SLS.multipleRoutes = (: []) <$> childRouteInfo,
         SLS.origin = SLS.SearchReqLocation {gps = LatLong childFrom.lat childFrom.lon, address = childFrom.address},
+        -- The drop the provider is told about is the last of these, not the search
+        -- request's toLocation (see mkStops in Beckn.OnDemand.Utils.Common). Miss it and a
+        -- moved drop never reaches the BPP: it prices the parent's route while the customer
+        -- is shown a saving, which is silently wrong rather than merely unhelpful.
+        SLS.stops = withChildDrop childTo parentRes.stops,
         SLS.taggings = overrideRouteTaggings betterRoute childRouteInfo parentRes.taggings
       }
   where
+    -- Replaces the destination while keeping any intermediate stops. Writes the same
+    -- coordinates back when the drop did not move, so it is safe to apply unconditionally.
+    withChildDrop mbChildTo stops = case mbChildTo of
+      Nothing -> stops
+      Just toLoc ->
+        let dropStop = SLS.SearchReqLocation {gps = LatLong toLoc.lat toLoc.lon, address = toLoc.address}
+         in take (max 0 (length stops - 1)) stops <> [dropStop]
+
     relocate loc mbAddress latLong = do
       locId <- generateGUID
       pure (loc {DL.id = locId, DL.lat = latLong.lat, DL.lon = latLong.lon, DL.address = fromMaybe loc.address mbAddress} :: DL.Location)

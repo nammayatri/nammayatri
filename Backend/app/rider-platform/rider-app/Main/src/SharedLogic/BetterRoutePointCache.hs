@@ -30,6 +30,8 @@ module SharedLogic.BetterRoutePointCache
     AlternateShadow (..),
     cacheSuggestedSearchCtx,
     getSuggestedSearchCtx,
+    markAlternatesDispatched,
+    alternatesDispatched,
     restoreSearchRes,
   )
 where
@@ -121,6 +123,33 @@ getSuggestedSearchCtx ::
   Id DSearchReq.SearchRequest ->
   m (Maybe SuggestedSearchCtx)
 getSuggestedSearchCtx = Redis.safeGet . suggestedSearchCtxKey
+
+alternatesDispatchedKey :: Id DSearchReq.SearchRequest -> Text
+alternatesDispatchedKey parentSearchId = "betterRoutePoint:dispatched:" <> parentSearchId.getId
+
+-- | Records that every alternate for this search has been through the provider, however it
+-- went. This is what lets the reader say the list is final: a shape the provider declined
+-- to price is settled, not still coming, and the customer's app should stop waiting for it.
+--
+-- Written once, after the whole background pass, so a partly-finished pass still reads as
+-- unfinished.
+markAlternatesDispatched ::
+  (MonadFlow m, Redis.HedisFlow m r) =>
+  Id DSearchReq.SearchRequest ->
+  -- | When the search itself stops being answerable
+  UTCTime ->
+  m ()
+markAlternatesDispatched parentSearchId expiry = do
+  now <- getCurrentTime
+  let ttl = round $ diffUTCTime expiry now
+  when (ttl > 0) $ Redis.setExp (alternatesDispatchedKey parentSearchId) True ttl
+
+alternatesDispatched ::
+  (MonadFlow m, Redis.HedisFlow m r) =>
+  Id DSearchReq.SearchRequest ->
+  m Bool
+alternatesDispatched parentSearchId =
+  fromMaybe False <$> Redis.safeGet (alternatesDispatchedKey parentSearchId)
 
 -- | Rebuilds the parent's 'SLS.SearchRes' so a suggestion can be dispatched to the BPP by
 -- the same code path the original search used.
