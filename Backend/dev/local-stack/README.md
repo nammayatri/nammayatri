@@ -1891,24 +1891,72 @@ opens that table.
 ./apply-migration.sh driver-offer-vehicle.sql   # atlas_app.driver_offer.vehicle_desc
 ```
 
-**It carries exactly three fields, and the plate is not one of them.** Verified
-2026-08-24 against every distinct value the rider has stored:
-`Renault|Symbol|White`, `Skoda|Octavia|Black`, `Hyundai|Accent|Blanc`,
-`Hyundai|Tucson|Black`, `Dacia|Duster|Grey`. Make, model, colour.
+**It carried three fields until 24 August and now carries five:**
 
-This matters because of what it blocks. The client asked on 2026-08-24 for the
-propositions screen to show each car's **year** in place of the word *Voiture* —
-and there is no year column anywhere in `atlas_driver_offer_bpp.vehicle`. The
-year exists only inside the registration, where an Algerian plate keeps it as
-the middle group: `04217 118 16` is a 2018 car, `02456 122 16` a 2022 one. The
-fleet's plates are real and correctly shaped, so the number is there for the
-taking — but the plate stops at the driver backend. The passenger only learns it
-after `confirm`, on the tracking screen.
+    make|model|colour|registrationNo|driverId
 
-So the feature is a fourth field on this pipe string and nothing more: one edit
-to the patch that builds it, then a rebuild. The rider binary needs no change —
-it stores whatever arrives. **Parked at the client's instruction on 2026-08-24**
-pending his decision on when to spend a rebuild; nothing has been staged.
+**The plate is there for the year.** The client asked for the propositions
+screen to show each car's year in place of the word *Voiture*, and there is no
+year column anywhere in `atlas_driver_offer_bpp.vehicle` — but an Algerian plate
+keeps the year in its middle group. `04217 118 16` is a 2018 car, `02456 122 16`
+a 2022 one, and the fleet's plates are real and correctly shaped. The lookup is
+by **driver**, not by variant, so a scooter and a fourgon carry it exactly as a
+voiture does.
+
+**The driver id is there for his photograph.** It is what lets the passenger's
+app find his avatar with no extra route, no extra column and no extra lookup:
+`maps-shim` serves the picture under that id, and the offer now names it. That
+is the whole of the backend's involvement in the photograph — it carries a
+string and never learns what an image is.
+
+The rider binary needed no change for either. It stores whatever arrives in a
+`varchar(255)`, and five fields fit comfortably.
+
+### 2b. Drivers can rate passengers — `./apply-migration.sh passenger-rating.sql`
+
+> **Applied and deployed 2026-08-24.** Build #5, image
+> `ghcr.io/mohagnpro/ny-backend:latest`, digest `41cbe406…`.
+
+This was refused three times before it was built, and the refusals were honest:
+**the backend could not do it.** The only rating route in the entire driver API
+is `/beckn/{merchantId}/rating` — the provider *receiving* a rating from the
+rider app over BECKN — and `rider_details` had five columns with nowhere to put
+one. That is why the driver's history screen ships a star that points one way
+and deliberately no *Noter* pill.
+
+What exists now, all on the provider side, so nothing crosses BECKN and neither
+the gateway nor the rider binary is involved:
+
+| | |
+|---|---|
+| `rider_details.rating` | the average, 1–5, NULL until somebody rates |
+| `rider_details.total_ratings` | how many drivers have |
+| `rider_details.total_rating_score` | their sum |
+| `POST /ui/driver/ride/{rideId}/rateCustomer` | `{ "ratingValue": 1..5 }` |
+| `DriverRideRes.riderRating` | what comes back out, on the list the app polls |
+
+**Why three columns and not one.** A driver's own average is rebuilt by reading
+every row of the `rating` table (`calculateAverageRating`). Passengers have no
+such table and are not getting one, so there would be nothing to recompute an
+average *from* — keeping the count and the running sum makes the next average
+one addition, and the average can never drift from the ratings that produced it.
+
+**The ride he drove is the authorisation.** The action checks the ride was his
+and that it is `COMPLETED` before writing anything; the token only proves who is
+asking.
+
+**One stated limitation.** There is no per-ride record of a passenger rating, so
+a second POST for the same ride counts twice. A driver's own rating is protected
+by a `rating` row keyed on the ride; giving passengers the same means a second
+table. The app disables the control after use. If it is ever abused, that table
+is the fix — not a flag on the ride.
+
+**The trap this cost 34 minutes to learn.** Adding fields to a record means
+patching **every place the record is constructed**, and this backend compiles
+with `-Werror=missing-fields`. Build #4 died on one such site —
+`Confirm.hs:213`, where a passenger first becomes known at confirm — with every
+other patched module already compiled. `grep` for the constructor before
+widening a record.
 
 ### 3. The passenger picks who gets the request — one build, one line
 
