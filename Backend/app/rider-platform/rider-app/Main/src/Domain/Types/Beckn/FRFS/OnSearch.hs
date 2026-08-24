@@ -56,7 +56,16 @@ data DVehicleServiceTier = DVehicleServiceTier
   deriving (Show)
 
 data DQuote = DQuote
-  { bppItemId :: Text,
+  { tripCategory :: Maybe Quote.FRFSTripCategory,
+    providerServiceId :: Maybe Text,
+    providerLayoutId :: Maybe Text,
+    providerClassId :: Maybe Text,
+    providerTripCode :: Maybe Text,
+    departureTime :: Maybe Text,
+    arrivalTime :: Maybe Text,
+    arrivalDate :: Maybe Text,
+    availableSeats :: Maybe Int,
+    bppItemId :: Text,
     routeCode :: Text,
     vehicleType :: Spec.VehicleCategory,
     routeStations :: [DRouteStation],

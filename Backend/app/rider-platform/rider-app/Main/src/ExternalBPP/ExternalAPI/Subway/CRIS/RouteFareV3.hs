@@ -116,7 +116,8 @@ getRouteFare config merchantOperatingCityId request getAllFares = do
         serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "[V3] Failed to find service tier: " <> show classCode)
         return $
           FRFSUtils.FRFSFare
-            { categories =
+            { providerServiceDetails = Nothing,
+              categories =
                 [ FRFSUtils.FRFSTicketCategory
                     { category = ADULT,
                       price =

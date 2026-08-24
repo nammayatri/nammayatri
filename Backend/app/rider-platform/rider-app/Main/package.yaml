@@ -144,6 +144,8 @@ dependencies:
   - transformers
   - morpheus-graphql-client
   - xml-conduit
+  - soap
+  - xml-conduit-writer
   - servant-xml
   - xmlbf
 

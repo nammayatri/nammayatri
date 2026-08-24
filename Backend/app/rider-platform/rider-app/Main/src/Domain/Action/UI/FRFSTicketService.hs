@@ -15,6 +15,7 @@ import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy
 import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text
+import Data.Time (addDays, utctDay)
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.BecknConfig
@@ -670,6 +671,19 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             withTryCatch "postFrfsSearchHandler:checkHasPass" (FRFSPassOverride.localTripDay person (fromMaybe now tripTime) >>= FRFSPassOverride.checkHasPass person) >>= \case
               Right hasPass -> pure (Just hasPass)
               Left _ -> pure Nothing
+
+  let mbIntercityConfig = case integratedBPPConfig.providerConfig of
+        DIBC.TNSTC cfg -> Just cfg
+        _ -> Nothing
+  whenJust mbIntercityConfig $ \tnstcConfig -> do
+    jDate <- journeyDate & fromMaybeM (InvalidRequest "journeyDate is required for an intercity search")
+    let istToday = utctDay (addUTCTime 19800 now)
+    when (jDate < istToday) $
+      throwError (InvalidRequest "journeyDate cannot be in the past")
+    let maxDate = addDays (fromIntegral $ fromMaybe 60 tnstcConfig.maxAdvanceBookingDays) istToday
+    when (jDate > maxDate) $
+      throwError (InvalidRequest $ "journeyDate is beyond the advance booking window; latest bookable date is " <> show maxDate)
+
   let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       searchReq =
         DFRFSSearch.FRFSSearch
@@ -826,7 +840,16 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
           adultQuantity <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.quantity)) & fromMaybeM (InternalError "Adult Ticket Quantity not found.")
           return $
             FRFSTicketService.FRFSQuoteAPIRes
-              { quoteId = quote.id,
+              { tripCategory = quote.tripCategory,
+              providerServiceId = quote.providerServiceId,
+              providerLayoutId = quote.providerLayoutId,
+              providerClassId = quote.providerClassId,
+              providerTripCode = quote.providerTripCode,
+              departureTime = quote.departureTime,
+              arrivalTime = quote.arrivalTime,
+              arrivalDate = quote.arrivalDate,
+              availableSeats = quote.availableSeats,
+              quoteId = quote.id,
                 _type = quote._type,
                 applicablePasses =
                   map FRFSPassOverride.mkPassOptionAPIEntity $

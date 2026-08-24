@@ -437,6 +437,10 @@ library
       ExternalBPP.ExternalAPI.Bus.EBIX.Order
       ExternalBPP.ExternalAPI.Bus.EBIX.Payment
       ExternalBPP.ExternalAPI.Bus.EBIX.Status
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Client
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Error
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Services
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Types
       ExternalBPP.ExternalAPI.CallAPI
       ExternalBPP.ExternalAPI.Direct.Order
       ExternalBPP.ExternalAPI.Direct.Status
@@ -1820,6 +1824,7 @@ library
     , shared-services
     , singletons
     , singletons-th
+    , soap
     , special-zone
     , special-zone-a
     , split
@@ -1842,6 +1847,7 @@ library
     , whatsapp-bot
     , x509
     , xml-conduit
+    , xml-conduit-writer
     , xmlbf
     , yudhishthira
   default-language: Haskell2010
@@ -1963,6 +1969,7 @@ executable rider-app-exe
     , servant-xml
     , singletons
     , singletons-th
+    , soap
     , split
     , string-conversions
     , template-haskell
@@ -1982,6 +1989,7 @@ executable rider-app-exe
     , whatsapp-bot
     , x509
     , xml-conduit
+    , xml-conduit-writer
     , xmlbf
     , yudhishthira
   default-language: Haskell2010
@@ -2105,6 +2113,7 @@ test-suite rider-app-test
     , servant-xml
     , singletons
     , singletons-th
+    , soap
     , split
     , string-conversions
     , tasty
@@ -2127,6 +2136,7 @@ test-suite rider-app-test
     , whatsapp-bot
     , x509
     , xml-conduit
+    , xml-conduit-writer
     , xmlbf
     , yudhishthira
   default-language: Haskell2010
