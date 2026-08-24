@@ -39,6 +39,20 @@ findByCounterpartyAndTypeAndSubLedger counterpartyType counterpartyId accountTyp
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m (Maybe Lib.Finance.Domain.Types.Account.Account))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByMerchantCounterpartyAndTypeAndSubLedger ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Finance.Domain.Types.Account.AccountType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Account.Account))
+findByMerchantCounterpartyAndTypeAndSubLedger merchantId counterpartyType counterpartyId accountType subLedger = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.counterpartyType $ Se.Eq counterpartyType,
+          Se.Is Beam.counterpartyId $ Se.Eq counterpartyId,
+          Se.Is Beam.accountType $ Se.Eq accountType,
+          Se.Is Beam.subLedger $ Se.Eq subLedger
+        ]
+    ]
+
 updateBalance :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ())
 updateBalance balance id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.balance balance, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

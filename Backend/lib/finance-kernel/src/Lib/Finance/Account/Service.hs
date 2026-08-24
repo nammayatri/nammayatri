@@ -89,13 +89,16 @@ getOrCreateAccount input = do
           Nothing -> createAccount input
   where
     findExisting =
-      QAccount.findByCounterpartyAndTypeAndSubLedger
+      QAccount.findByMerchantCounterpartyAndTypeAndSubLedger
+        input.merchantId
         input.counterpartyType
         input.counterpartyId
         input.accountType
         input.subLedger
     lockKey =
       "finance:getOrCreateAccount:"
+        <> input.merchantId
+        <> ":"
         <> show input.counterpartyType
         <> ":"
         <> fromMaybe "" input.counterpartyId

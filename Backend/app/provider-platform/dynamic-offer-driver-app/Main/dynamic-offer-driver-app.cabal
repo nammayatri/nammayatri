@@ -645,6 +645,7 @@ library
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest
       SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
+      SharedLogic.Finance.SubscriptionConsumption
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
@@ -672,6 +673,7 @@ library
       SharedLogic.MetricsLabels
       SharedLogic.MobileNumberValidation
       SharedLogic.OneShotAssign
+      SharedLogic.OndcCancellationReason
       SharedLogic.OTP
       SharedLogic.Payment
       SharedLogic.Person

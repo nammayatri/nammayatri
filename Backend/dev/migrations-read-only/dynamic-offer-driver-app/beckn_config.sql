@@ -68,3 +68,4 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN beckn_protocol text  
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_support_ttl_sec integer ;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN send_ondc_cancellation_codes boolean ;
