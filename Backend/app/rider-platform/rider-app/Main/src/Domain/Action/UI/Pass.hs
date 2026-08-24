@@ -299,13 +299,15 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   purchasedPassId <-
     case mbSamePass of
       Just samePass -> do
-        let passOverlaps = hasDateOverlap (samePass.startDate, samePass.endDate) (startDate, endDate)
-        when (samePass.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] && passOverlaps) $
-          throwError (InvalidRequest "You already have an active pass of this type in the selected dates")
-        futureRenewals <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
-        let futureRenewalsOverlap = any (\futurePass -> hasDateOverlap (futurePass.startDate, futurePass.endDate) (startDate, endDate)) futureRenewals
-        when futureRenewalsOverlap $
-          throwError (InvalidRequest "You already have a future renewal of this pass in the selected dates")
+        livePayments <- QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus Nothing Nothing samePass.id [DPurchasedPass.PreBooked, DPurchasedPass.Active] startDate
+        let overlappingPayments = filter (\livePayment -> hasDateOverlap (livePayment.startDate, livePayment.endDate) (startDate, endDate)) livePayments
+        exhaustedFlags <- mapM isExhaustedPayment overlappingPayments
+        let blockingPayments = [livePayment | (livePayment, exhausted) <- zip overlappingPayments exhaustedFlags, not exhausted]
+        whenJust (listToMaybe blockingPayments) $ \blockingPayment ->
+          throwError . InvalidRequest $
+            if blockingPayment.startDate > DT.utctDay istTime
+              then "You already have a future renewal of this pass in the selected dates"
+              else "You already have an active pass of this type in the selected dates"
         return samePass.id
       Nothing -> do
         newPurchasedPassId <- generateGUID
@@ -1739,6 +1741,12 @@ availableTripCountForPayment payment = do
   mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
   mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbPass
   maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
+
+isExhaustedPayment ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DPurchasedPassPayment.PurchasedPassPayment ->
+  m Bool
+isExhaustedPayment payment = maybe False (<= 0) <$> availableTripCountForPayment payment
 
 mkPurchasedPassPaymentAPIEntity ::
   Map.Map (Id.Id DOrder.PaymentOrder) [PassAPI.RefundAPIEntity] ->
