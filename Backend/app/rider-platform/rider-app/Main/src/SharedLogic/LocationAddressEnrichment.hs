@@ -1,6 +1,7 @@
 module SharedLogic.LocationAddressEnrichment
   ( enrichLocationAddress,
     mkLocationAddressFromPlaceName,
+    reverseGeocodeAddress,
   )
 where
 
@@ -9,10 +10,12 @@ import qualified Data.Geohash as DG
 import qualified Data.HashMap.Strict as HM
 import Data.Text (pack)
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Extra.PlaceNameCache as DTM
 import Domain.Types.LocationAddress
 import Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import Domain.Types.PlaceNameCache
 import Kernel.External.Maps as Maps
 import Kernel.External.Types (ServiceFlow)
@@ -45,6 +48,27 @@ enrichLocationAddress merchantId merchantOperatingCityId gps address = do
   case mbAreaCode of
     Just areaCode -> pure address {areaCode = nonEmptyAreaCode (Just areaCode)}
     Nothing -> pure address {areaCode = Nothing}
+
+-- | The provider's address for a point, or 'Nothing' if it cannot be resolved.
+--
+-- Goes through 'DMaps.getPlaceName' rather than the maps client directly, so a point that
+-- has been named before is answered from the place-name cache instead of costing a call.
+-- Never throws: a caller reverse-geocoding a location already has an address on it, and a
+-- worse name beats failing whatever it was doing.
+reverseGeocodeAddress ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r, EventStreamFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  LatLong ->
+  m (Maybe LocationAddress)
+reverseGeocodeAddress personId merchantId latLong =
+  withTryCatch "reverseGeocodeAddress" (DMaps.getPlaceName (personId, merchantId) Nothing req) >>= \case
+    Right placeNames -> pure $ mkLocationAddressFromPlaceName <$> listToMaybe placeNames
+    Left err -> do
+      logWarning $ "reverseGeocodeAddress: could not resolve a place name at " <> show latLong <> ": " <> show err
+      pure Nothing
+  where
+    req = TMaps.GetPlaceNameReq {getBy = TMaps.ByLatLong latLong, sessionToken = Nothing, language = Nothing}
 
 -- | Reads a maps-provider result into the shape a location's address is stored in.
 --

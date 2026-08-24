@@ -35,7 +35,6 @@ import qualified Data.HashMap.Strict as HMS
 import Data.OpenApi hiding (name)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
-import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking
 import Domain.Types.BookingStatus
@@ -47,7 +46,6 @@ import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
-import qualified Domain.Types.Location as DLoc
 import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant as DM
@@ -62,6 +60,7 @@ import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -108,7 +107,6 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
-import qualified Tools.Maps as TMaps
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -371,7 +369,6 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
 -- Only the end that actually moved is touched, since the other is still exactly what the
 -- customer typed.
 updateSuggestedLocationAddresses ::
-  forall m r c.
   SelectFlow m r c =>
   Id DPerson.Person ->
   Id DM.Merchant ->
@@ -385,21 +382,15 @@ updateSuggestedLocationAddresses personId merchantId searchRequest req = do
     setAddress toLocation req.suggestedDropAddress
   where
     setAddress location mbAddress = do
-      mbResolved <- maybe (reverseGeocode location) (pure . Just) mbAddress
+      -- Falls back to the provider's name for the point. 'reverseGeocodeAddress' answers
+      -- from the place-name cache when it can and returns Nothing rather than throwing --
+      -- the parent's address is still on the location, and a worse name beats failing the
+      -- selection.
+      mbResolved <- maybe (LAE.reverseGeocodeAddress personId merchantId (LatLong location.lat location.lon)) (pure . Just) mbAddress
       whenJust mbResolved $ \address ->
         -- Carry over what the customer attached to the ride rather than to the place: a
         -- note for the driver is about this booking, and no geocoder knows it.
         QLoc.updateAddress address {DLA.instructions = location.address.instructions, DLA.extras = location.address.extras} location.id
-
-    reverseGeocode :: SelectFlow m r c => DLoc.Location -> m (Maybe LocationAddress)
-    reverseGeocode location =
-      withTryCatch "select:suggestedPlaceName" (DMaps.getPlaceName (personId, merchantId) Nothing TMaps.GetPlaceNameReq {getBy = TMaps.ByLatLong (TMaps.LatLong location.lat location.lon), sessionToken = Nothing, language = Nothing}) >>= \case
-        Right placeNames -> pure $ LAE.mkLocationAddressFromPlaceName <$> listToMaybe placeNames
-        Left e -> do
-          -- The parent's address is still on the location and is a short walk out; leaving
-          -- it there is a worse name, not a wrong place.
-          logWarning $ "better_route_point: could not resolve a place name at select for " <> searchRequest.id.getId <> ": " <> show e
-          pure Nothing
 
 --DEPRECATED
 selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
