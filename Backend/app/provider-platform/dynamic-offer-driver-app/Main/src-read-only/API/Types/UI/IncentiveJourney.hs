@@ -8,6 +8,7 @@ import qualified Domain.Types.IncentiveJourney
 import qualified Domain.Types.IncentiveJourneyMilestone
 import qualified Domain.Types.IncentiveJourneyStats
 import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -51,7 +52,8 @@ data IncentiveJourneyListItem = IncentiveJourneyListItem
     name :: Data.Text.Text,
     startDate :: Kernel.Prelude.UTCTime,
     timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

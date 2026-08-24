@@ -3,6 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   TimeBound: Kernel.Types.TimeBound
   VehicleCategory: Domain.Types.VehicleCategory
+  VehicleVariant: Domain.Types.VehicleVariant
 
 IncentiveJourney:
   tableName: incentive_journey
@@ -28,6 +29,7 @@ IncentiveJourney:
     startDate: UTCTime
     endDate: UTCTime
     vehicleCategory: Maybe VehicleCategory
+    vehicleVariant: Maybe VehicleVariant|NoRelation
     enabled: Bool
     createdAt: UTCTime
     updatedAt: UTCTime

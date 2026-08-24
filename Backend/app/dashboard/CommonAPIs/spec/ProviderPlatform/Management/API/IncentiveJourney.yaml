@@ -3,6 +3,7 @@ imports:
   IncentiveJourneyMilestone: Dashboard.Common
   CoinsConfig: Dashboard.Common
   VehicleCategory: Domain.Types.VehicleCategory
+  VehicleVariant: Domain.Types.VehicleVariant
   TimeBound: Kernel.Types.TimeBound
 
 module: IncentiveJourney
@@ -18,6 +19,8 @@ apis:
         - driverTag: Text
       response:
         type: IncentiveJourneyListRes
+      migrate:
+        capability: system-config.coins.read
 
   - POST:
       endpoint: /create
@@ -26,6 +29,8 @@ apis:
         type: CreateIncentiveJourneyReq
       response:
         type: CreateIncentiveJourneyRes
+      migrate:
+        capability: system-config.coins.write
 
   - PUT:
       endpoint: /update
@@ -34,6 +39,8 @@ apis:
         type: UpdateIncentiveJourneyReq
       response:
         type: APISuccess
+      migrate:
+        capability: system-config.coins.write
 
   - GET:
       endpoint: /milestone/list
@@ -45,6 +52,8 @@ apis:
         - offset: Int
       response:
         type: IncentiveJourneyMilestoneListRes
+      migrate:
+        capability: system-config.coins.read
 
   - POST:
       endpoint: /milestone/create
@@ -53,6 +62,8 @@ apis:
         type: CreateIncentiveJourneyMilestoneReq
       response:
         type: CreateIncentiveJourneyMilestoneRes
+      migrate:
+        capability: system-config.coins.write
 
   - PUT:
       endpoint: /milestone/update
@@ -61,6 +72,8 @@ apis:
         type: UpdateIncentiveJourneyMilestoneReq
       response:
         type: APISuccess
+      migrate:
+        capability: system-config.coins.write
 
 types:
   MilestoneConditionType:
@@ -84,6 +97,7 @@ types:
     - startDate: UTCTime
     - endDate: UTCTime
     - vehicleCategory: Maybe VehicleCategory
+    - vehicleVariant: Maybe VehicleVariant
     - enabled: Bool
     - derive: "'HideSecrets"
 
@@ -100,6 +114,7 @@ types:
     - startDate: Maybe UTCTime
     - endDate: Maybe UTCTime
     - vehicleCategory: Maybe VehicleCategory
+    - vehicleVariant: Maybe VehicleVariant
     - enabled: Maybe Bool
     - derive: "'HideSecrets"
 
@@ -113,6 +128,7 @@ types:
     - startDate: UTCTime
     - endDate: UTCTime
     - vehicleCategory: Maybe VehicleCategory
+    - vehicleVariant: Maybe VehicleVariant
     - enabled: Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
