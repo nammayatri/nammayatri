@@ -345,7 +345,10 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
 -- and the BPP has answered. Absent is the normal case.
 loadSuggestedEstimates :: SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
 loadSuggestedEstimates searchRequest
-  -- A shadow never has a shadow of its own; asking would be a pointless read.
+  -- The overwhelmingly common case: no suggestion was ever found for this search, and the
+  -- flag on the row we already hold says so. A shadow never has a shadow of its own, so it
+  -- is out too -- either way, no lookup.
+  | searchRequest.hasBetterPointSuggestion /= Just True = pure Nothing
   | isJust searchRequest.parentSearchRequestId = pure Nothing
   | otherwise =
     QSR.findFirstByParentSearchRequestId searchRequest.id >>= \case
@@ -393,6 +396,10 @@ mkSuggestedEstimates shadow estimateList alternatives = do
 -- on, so this is a poll: an alternate the provider has not answered for yet is simply
 -- absent, and 'allLoaded' stays False until every one of them is in.
 loadAlternateSuggestions :: SSR.SearchRequest -> Flow AlternateSuggestionsRes
+loadAlternateSuggestions parent
+  -- Nothing was ever offered for this search, so nothing is still coming.
+  | parent.hasBetterPointSuggestion /= Just True =
+    pure AlternateSuggestionsRes {alternates = [], allLoaded = True}
 loadAlternateSuggestions parent = do
   BRPC.getSuggestedSearchCtx parent.id >>= \case
     -- No context means no suggestion was ever found for this search, or it has expired.

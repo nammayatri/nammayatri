@@ -520,3 +520,9 @@ CREATE INDEX CONCURRENTLY search_request_idx_parent_search_request_id ON atlas_a
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN has_better_point_suggestion boolean ;
