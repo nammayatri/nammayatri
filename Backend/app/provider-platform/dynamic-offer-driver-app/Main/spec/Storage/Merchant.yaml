@@ -706,7 +706,6 @@ MerchantServiceUsageConfig:
 
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   sqlType:
     getDistances: character varying(30)
     getRoutes: character varying(30)
@@ -2041,7 +2040,6 @@ TransporterConfig:
     forceDirectCalling: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
-    - updateByPrimaryKey
   queries:
     findByMerchantOpCityId:
       kvFunction: findOneWithKV
