@@ -21,3 +21,10 @@ ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN distan
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN ondc_cancellation_reason_id text ;
+ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD COLUMN created_at timestamp with time zone  default CURRENT_TIMESTAMP;

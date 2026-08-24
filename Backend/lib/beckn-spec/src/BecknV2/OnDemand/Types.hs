@@ -305,8 +305,8 @@ optionsCancelReq =
 -- |
 -- |
 data CancelReqMessage = CancelReqMessage
-  { -- |
-    cancelReqMessageCancellationReasonId :: Maybe Text,
+  { cancelReqMessageCancellationReasonId :: Maybe Text,
+    cancelReqMessageCancellation :: Maybe Cancellation,
     -- |
     cancelReqMessageReallocate :: Maybe Bool,
     -- |
@@ -331,6 +331,7 @@ optionsCancelReqMessage =
   where
     table =
       [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
+        ("cancelReqMessageCancellation", "cancellation"),
         ("cancelReqMessageReallocate", "reallocate"),
         ("cancelReqMessageDescriptor", "descriptor"),
         ("cancelReqMessageOrderId", "order_id")
