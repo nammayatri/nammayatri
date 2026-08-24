@@ -249,3 +249,16 @@ the header of that script.
   swallows the whole script. Write the file, then run the file. Same for
   `python3 - <<EOF`: it may run and still no-op, because `str.replace` that
   matches nothing is silent. **Assert `count == 1` on every scripted edit.**
+- **Backslash escapes and pipes are rewritten on the same hop**, and both
+  failures lie about their cause. `sed -i "s/\r$//"` arrives as `s/r$//` and
+  **deletes a trailing letter `r` from every line** — it turned `FROM …ride r`
+  into `FROM …ride` and the error read *missing FROM-clause entry for table
+  "r"*, which looks like a bad query. That sed was never needed anyway: files
+  written from the editor are already LF, and `file x.sh` says so. `grep -E
+  "a|b"` splits at the pipe and tries to run `b` as a command. Same fix as
+  above: put it in a file and run the file. `<` is worse — it is reserved in
+  PowerShell and never reaches bash at all, so `ssh ny "bash -s" < script.sh`
+  silently does nothing. Wrap that in a script too.
+- **A lone connection timeout from the laptop is not a result** — but two in a
+  row, while `ssh` to the same box still works, means the guard in front is
+  rate-limiting you. Run the probe *on* the VPS instead of against it.

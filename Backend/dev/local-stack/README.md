@@ -1043,6 +1043,40 @@ published schema**.
 real, so the app may call an offer lost on its own clock, which it has to,
 because losing is silent (see below).
 
+### A bare search already reaches drivers — measured 2026-08-24
+
+**`POST /v2/rideSearch` puts a request on drivers' phones by itself.** Nothing
+needs to be selected afterwards. With 19 drivers online carrying fresh
+positions, one search created three `search_request_for_driver` rows **0.49 s
+later**; across five searches the first row landed at 0.25, 0.30, 0.31, 0.49 and
+2.72 seconds. Dispatch happens at *search* time, not at *select* time.
+
+That is worth knowing before any client is made to search more often than a
+person asks it to. The passenger app's pickup screen prices itself now instead
+of waiting for a tap, and because panning the pin invalidates the price, it
+would re-search on every pan — so it waits 900 ms for the map to settle and
+ignores a pin that moved less than 30 m. Without those two guards one
+indecisive rider notifies every driver in range once per nudge: invisible in
+testing with one driver, unbearable with forty.
+
+Proving this took three attempts and the first two were unreadable, which is the
+lesson worth keeping: a before/after row count is only evidence if nothing else
+touched the table in the window, and two probe runs a minute apart both did.
+**Take a `now()` watermark immediately before the request** and count rows after
+it. Also check that drivers were actually online first — `driver_information`
+and a fresh `driver_location` — or a zero measures an empty stack rather than a
+quiet route.
+
+### The pickup threshold the server keeps for itself
+
+`transporter_config.pickup_loc_threshold` is **500 m**, alongside
+`drop_loc_threshold` 500. That is the distance the backend still treats as being
+at the pickup. There is **no arrival threshold and no `TOO_FAR` error code
+anywhere in the driver binary**, so how close a driver must be before *Je suis
+arrivé* lights up is the app's own choice — it was 100 m, raised to 300 on
+2026-08-24 after the client watched it stay dead at 114 m. Anything past 500
+would start arguing with the server.
+
 ### The answer window — and how this line was wrong twice
 
 This row said **16,3 s** on 18 August and **10 s, no exception** on 19 August.
@@ -1856,6 +1890,25 @@ opens that table.
 ```bash
 ./apply-migration.sh driver-offer-vehicle.sql   # atlas_app.driver_offer.vehicle_desc
 ```
+
+**It carries exactly three fields, and the plate is not one of them.** Verified
+2026-08-24 against every distinct value the rider has stored:
+`Renault|Symbol|White`, `Skoda|Octavia|Black`, `Hyundai|Accent|Blanc`,
+`Hyundai|Tucson|Black`, `Dacia|Duster|Grey`. Make, model, colour.
+
+This matters because of what it blocks. The client asked on 2026-08-24 for the
+propositions screen to show each car's **year** in place of the word *Voiture* —
+and there is no year column anywhere in `atlas_driver_offer_bpp.vehicle`. The
+year exists only inside the registration, where an Algerian plate keeps it as
+the middle group: `04217 118 16` is a 2018 car, `02456 122 16` a 2022 one. The
+fleet's plates are real and correctly shaped, so the number is there for the
+taking — but the plate stops at the driver backend. The passenger only learns it
+after `confirm`, on the tracking screen.
+
+So the feature is a fourth field on this pipe string and nothing more: one edit
+to the patch that builds it, then a rebuild. The rider binary needs no change —
+it stores whatever arrives. **Parked at the client's instruction on 2026-08-24**
+pending his decision on when to spend a rebuild; nothing has been staged.
 
 ### 3. The passenger picks who gets the request — one build, one line
 
