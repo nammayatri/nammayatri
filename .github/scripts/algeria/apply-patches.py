@@ -669,6 +669,42 @@ prepareDriverPoolBatch ::
   }""",
         "driver: the passenger record can hold a rating",
     ),
+    # Every record construction of RiderDetails has to name the new fields, and
+    # there is exactly one: `buildRiderDetails`, where a passenger first becomes
+    # known to the provider at confirm.
+    #
+    # This is not optional tidiness. The backend builds with
+    # `-Werror=missing-fields`, so leaving it out is a hard failure rather than
+    # a warning — build #4 died here after 34 minutes with every other patched
+    # module already compiled. The lesson is cheap to state and was not cheap to
+    # learn: **adding a field to a record means patching everywhere it is
+    # built**, and `grep` for the constructor is the check.
+    (
+        f"{DRIVER}/Beckn/Confirm.hs",
+        210,
+        """        DRD.RiderDetails
+          { id = id,
+            mobileCountryCode = customerMobileCountryCode,
+            mobileNumber = customerPhoneNumber,
+            createdAt = now,
+            updatedAt = now
+          }""",
+        """        DRD.RiderDetails
+          { id = id,
+            mobileCountryCode = customerMobileCountryCode,
+            mobileNumber = customerPhoneNumber,
+            -- Algeria: a passenger nobody has rated yet. `Nothing`, never 0 --
+            -- the scale starts at one, and a zero would announce to the first
+            -- driver who collects her that she is the worst there is. The two
+            -- counters start empty because the average is built from them.
+            rating = Nothing,
+            totalRatings = 0,
+            totalRatingScore = 0,
+            createdAt = now,
+            updatedAt = now
+          }""",
+        "driver: a new passenger starts unrated",
+    ),
     (
         f"{DRIVER_SRC}/Storage/Tabular/RiderDetails.hs",
         36,
