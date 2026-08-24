@@ -20,3 +20,8 @@ ALTER TABLE atlas_driver_offer_bpp.incentive_journey ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.incentive_journey ADD COLUMN journey_type text  default 'Daily';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.incentive_journey ADD COLUMN vehicle_variant text ;

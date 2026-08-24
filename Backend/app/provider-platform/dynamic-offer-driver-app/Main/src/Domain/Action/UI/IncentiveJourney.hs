@@ -87,10 +87,9 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
       Nothing
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  vehCategory <-
-    QVeh.findById driverId
-      >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
-      <&> (\vehicle -> VecVariant.castVehicleVariantToVehicleCategory vehicle.variant)
+  vehicle <- QVeh.findById driverId >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+  let vehCategory = VecVariant.castVehicleVariantToVehicleCategory vehicle.variant
+      mbVehicleVariant = Just vehicle.variant
   localTime <- case mbDate >>= parseDateText of
     Just day -> pure $ UTCTime day 0
     Nothing -> getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -107,7 +106,8 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
                   { merchantOperatingCityId = merchantOpCityId.getId,
                     journeyId = Nothing,
                     enabled = Just True,
-                    vehicleCategory = Nothing
+                    vehicleCategory = Nothing,
+                    vehicleVariant = Nothing
                   }
               )
               (Just $ CQJourney.findEnabledByMerchantOperatingCityId merchantOpCityId)
@@ -117,7 +117,8 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
                   { merchantOperatingCityId = merchantOpCityId.getId,
                     journeyId = Nothing,
                     enabled = Nothing,
-                    vehicleCategory = Nothing
+                    vehicleCategory = Nothing,
+                    vehicleVariant = Nothing
                   }
               )
               (Just $ CQJourney.findByMerchantOperatingCityId merchantOpCityId)
@@ -126,7 +127,7 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
               ( \j ->
                   j.merchantId == merchantId
                     && j.driverTag `elem` journeyTags
-                    && (isNothing j.vehicleCategory || j.vehicleCategory == Just vehCategory)
+                    && SLJourney.matchesJourneyVehicle j vehCategory mbVehicleVariant
               )
               enabledJourneys
       -- Prefer currently-active journey; else first match for "come back later". Return at most 1.
@@ -150,6 +151,7 @@ getIncentiveJourneyList (mbPersonId, merchantId, merchantOpCityId) mbActive mbDa
                         startDate = journey.startDate,
                         endDate = journey.endDate,
                         vehicleCategory = journey.vehicleCategory,
+                        vehicleVariant = journey.vehicleVariant,
                         enabled = journey.enabled,
                         milestones = items
                       }
@@ -214,7 +216,8 @@ getIncentiveJourneyHistory (mbPersonId, _merchantId, merchantOpCityId) mbDate mb
                     { merchantOperatingCityId = merchantOpCityId.getId,
                       journeyId = Just journeyId,
                       enabled = Nothing,
-                      vehicleCategory = Nothing
+                      vehicleCategory = Nothing,
+                      vehicleVariant = Nothing
                     }
                 )
                 (Just $ CQJourney.findById journeyId >>= maybe (pure []) (pure . (: [])))

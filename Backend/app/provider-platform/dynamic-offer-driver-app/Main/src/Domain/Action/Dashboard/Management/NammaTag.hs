@@ -1041,7 +1041,7 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity req = do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.IncentiveJourneyConfig -> do
-      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
+      cfgs <- getConfig (IncentiveJourneyDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, enabled = dimLookup "enabled" dims, vehicleCategory = dimLookup "vehicleCategory" dims, vehicleVariant = dimLookup "vehicleVariant" dims}) (Just (SQIJ.findByMerchantOperatingCityId Nothing Nothing merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.IncentiveJourneyMilestoneConfig -> do
       cfgs <- getConfig (IncentiveJourneyMilestoneDimensions {merchantOperatingCityId = mocId, journeyId = dimLookup "journeyId" dims, milestoneId = dimLookup "milestoneId" dims}) Nothing

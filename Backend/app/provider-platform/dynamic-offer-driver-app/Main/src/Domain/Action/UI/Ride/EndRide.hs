@@ -706,6 +706,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                   thresholdConfig
                   driverTag
                   vehCategory
+                  ride.vehicleVariant
                   (Just booking.vehicleServiceTier)
                   (Just ride.id.getId)
                   mbPickupSpecialLocationId

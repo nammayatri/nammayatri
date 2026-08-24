@@ -55,7 +55,8 @@ getIncentiveJourneyList merchantShortId opCity mbLimit mbOffset mbEnabled mbDriv
               { merchantOperatingCityId = merchantOpCityId.getId,
                 journeyId = Nothing,
                 enabled = Just True,
-                vehicleCategory = Nothing
+                vehicleCategory = Nothing,
+                vehicleVariant = Nothing
               }
           )
           (Just $ CQJourney.findEnabledByMerchantOperatingCityId merchantOpCityId)
@@ -66,7 +67,8 @@ getIncentiveJourneyList merchantShortId opCity mbLimit mbOffset mbEnabled mbDriv
                 { merchantOperatingCityId = merchantOpCityId.getId,
                   journeyId = Nothing,
                   enabled = Nothing,
-                  vehicleCategory = Nothing
+                  vehicleCategory = Nothing,
+                  vehicleVariant = Nothing
                 }
             )
             (Just $ CQJourney.findByMerchantOperatingCityId merchantOpCityId)
@@ -76,7 +78,8 @@ getIncentiveJourneyList merchantShortId opCity mbLimit mbOffset mbEnabled mbDriv
               { merchantOperatingCityId = merchantOpCityId.getId,
                 journeyId = Nothing,
                 enabled = Nothing,
-                vehicleCategory = Nothing
+                vehicleCategory = Nothing,
+                vehicleVariant = Nothing
               }
           )
           (Just $ CQJourney.findByMerchantOperatingCityId merchantOpCityId)
@@ -114,6 +117,7 @@ postIncentiveJourneyCreate merchantShortId opCity req = do
             startDate = req.startDate,
             endDate = req.endDate,
             vehicleCategory = req.vehicleCategory,
+            vehicleVariant = req.vehicleVariant,
             enabled = req.enabled,
             createdAt = now,
             updatedAt = now
@@ -149,6 +153,7 @@ putIncentiveJourneyUpdate merchantShortId opCity req = do
             DIJ.startDate = startDate,
             DIJ.endDate = endDate,
             DIJ.vehicleCategory = maybe journey.vehicleCategory Just req.vehicleCategory,
+            DIJ.vehicleVariant = maybe journey.vehicleVariant Just req.vehicleVariant,
             DIJ.enabled = fromMaybe journey.enabled req.enabled
           }
   QJourney.updateByPrimaryKey updated
@@ -279,6 +284,7 @@ toJourneyListItem journey =
       startDate = journey.startDate,
       endDate = journey.endDate,
       vehicleCategory = journey.vehicleCategory,
+      vehicleVariant = journey.vehicleVariant,
       enabled = journey.enabled,
       createdAt = journey.createdAt,
       updatedAt = journey.updatedAt
