@@ -408,6 +408,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 parcelType = searchReq.parcelType,
                 parcelQuantity = searchReq.parcelQuantity,
                 driverTagScore = dpwRes.score,
+                preferenceMatchScore = Just dpwRes.preferenceMatchScore,
                 conditionalCharges = additionalChargesEligiblFor,
                 isSafetyPlus = Just isEligibleForSafetyPlusCharge,
                 coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,

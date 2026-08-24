@@ -90,6 +90,7 @@ data Booking = Booking
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    preferenceMatchScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     primaryExophone :: Kernel.Prelude.Text,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     quoteId :: Kernel.Prelude.Text,

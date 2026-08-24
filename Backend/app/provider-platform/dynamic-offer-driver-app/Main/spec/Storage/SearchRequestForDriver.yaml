@@ -80,6 +80,7 @@ SearchRequestForDriver:
     mode: Maybe DriverMode
     goHomeRequestId: Maybe (Id DriverGoHomeRequest)
     rideFrequencyScore: Maybe Double
+    preferenceMatchScore: Maybe Double
     customerCancellationDues: HighPrecMoney
     clientSdkVersion: Maybe Version
     reactBundleVersion: Maybe Text

@@ -83,6 +83,7 @@ data BookingT f = BookingT
     paymentMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pickupGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    preferenceMatchScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     primaryExophone :: B.C f Kernel.Prelude.Text,
     providerId :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f Kernel.Prelude.Text,
