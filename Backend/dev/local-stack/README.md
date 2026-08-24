@@ -1771,6 +1771,15 @@ opens that table.
 
 ### 3. The passenger picks who gets the request — one build, one line
 
+> **Status, 24 August: built, deployed, and no longer used by the app.** The
+> client removed the prices screen — the vehicle is chosen on the map already,
+> so a second list asked a question he had answered — and the driver picker was
+> the other half of that screen. Everything below is still on the box and still
+> correct: the column exists, the tag is parsed, the filter runs. The passenger
+> app simply sends no shortlist, which the provider reads as *ask everyone* —
+> the behaviour that existed before 22 August. Turning it back on is a caller
+> change in one file and no rebuild.
+
 Dispatch asks every driver the pool finds, in batches, and the first to answer
 wins. The client asked for the other thing: the passenger sees the cars near him
 and sends the request to the one, two or three he wants.
@@ -1813,12 +1822,13 @@ screen were not selectable before.
 answer, he gets no offers. Widening the search quietly would put a driver he
 specifically did not pick at his door, which is the opposite of the feature.
 
-The app says so before he commits — *"Seuls ces 2 chauffeurs recevront votre
-demande"* and *"Moins de chauffeurs, moins de chances d'avoir une réponse"* —
-and the waiting screen, which runs its own clock already, is where an "ask
-everyone instead" escape hatch belongs. **That escape hatch is not built yet:**
-a passenger who picks one driver who ignores him waits out the search with no
-way out but cancelling.
+That is the trap to remember if this is ever switched back on, and it is the
+reason it needs more than a caller change to be safe: the waiting screen, which
+runs its own clock already, is where an "ask everyone instead" escape hatch
+belongs, and **that escape hatch was never built**. A passenger who picked one
+driver who ignored him waited out the whole search with no way out but
+cancelling. Nobody is exposed to it today — no shortlist is sent — but it comes
+back with the feature.
 
 ### Deploying these — the order matters, and it is the safe order
 
