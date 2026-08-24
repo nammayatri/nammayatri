@@ -819,3 +819,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_min_saving_pct_of_rid
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_off_route_distance integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_load_suggestions_async boolean ;
