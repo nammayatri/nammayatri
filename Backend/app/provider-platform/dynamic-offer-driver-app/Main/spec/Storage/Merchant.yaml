@@ -921,21 +921,23 @@ TransporterConfig:
       enum: "REALLOCATE_RIDE,RECORD_ONLY"
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     PickupStallStage:
-      afterStallSec: Int
+      afterFaultSec: Int
       overlayKey: Text
       terminalAction: Maybe PickupStallTerminalAction
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
-    PickupStallCaseConfig:
-      stages: "[PickupStallStage]"
+    PickupDarkStage:
+      afterDarkSec: Int
+      overlayKey: Text
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     PickupStallMonitoringConfig:
       tickIntervalSec: Int
-      gracePeriodSec: Int
-      progressThresholdMeters: Int
-      badTickDebounce: Int
-      stalledConfig: Maybe PickupStallCaseConfig
-      retreatingConfig: Maybe PickupStallCaseConfig
-      locationDarkConfig: Maybe PickupStallCaseConfig
+      stages: "[PickupStallStage]"
+      darkStages: "[PickupDarkStage]"
+      progressThresholdMeters: Maybe Int
+      deviationAllowanceMeters: Maybe Int
+      detourDisplacementMeters: Maybe Int
+      detourCreditSec: Maybe Int
+      staleFixAfterSec: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int

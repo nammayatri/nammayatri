@@ -37,6 +37,14 @@ UPDATE atlas_driver_offer_bpp.coin_config
 SET active = false
 WHERE event_function IN ('BookingCancellation', 'BookingCancellationPenalisaton', 'BookingCancellationCompensation');
 
+-- RideCancel cancellation TAG RULES retired (2026-08-24): the fault verdict is the
+-- judgment now — analytics counters and the driver penalty-preview validity read it
+-- directly, and the tag computation was deleted from both cancel flows. Remove the
+-- 'DriverCancellation', 'CustomerCancellation' and 'CustomerNoShowCancellation' tag
+-- definitions per city via the NammaTag dashboard (deletion cascades chakra/rollout
+-- references, so prefer the dashboard over raw SQL). Historical ride.ride_tags values
+-- are untouched.
+
 -- Legacy per-city amount configs whose FIELDS are now removed from the code
 -- (fare_policy.driver_cancellation_penalty_amount, fare_parameters
 -- .driver_cancellation_penalty_amount, transporter_config

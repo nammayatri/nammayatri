@@ -520,20 +520,21 @@ data PayoutFeeConfig = PayoutFeeConfig
 
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PickupStallCaseConfig = PickupStallCaseConfig {stages :: [Domain.Types.TransporterConfig.PickupStallStage]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data PickupDarkStage = PickupDarkStage {afterDarkSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallMonitoringConfig = PickupStallMonitoringConfig
-  { badTickDebounce :: Kernel.Prelude.Int,
-    gracePeriodSec :: Kernel.Prelude.Int,
-    locationDarkConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
-    progressThresholdMeters :: Kernel.Prelude.Int,
-    retreatingConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
-    stalledConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallCaseConfig,
+  { darkStages :: [Domain.Types.TransporterConfig.PickupDarkStage],
+    detourCreditSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    detourDisplacementMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    deviationAllowanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    progressThresholdMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stages :: [Domain.Types.TransporterConfig.PickupStallStage],
+    staleFixAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     tickIntervalSec :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data PickupStallStage = PickupStallStage {afterStallSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text, terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction}
+data PickupStallStage = PickupStallStage {afterFaultSec :: Kernel.Prelude.Int, overlayKey :: Kernel.Prelude.Text, terminalAction :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallTerminalAction}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data PickupStallTerminalAction = REALLOCATE_RIDE | RECORD_ONLY deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

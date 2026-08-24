@@ -1786,6 +1786,37 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
     mkRefundNotificationKey =
       T.pack (show paymentServiceType) <> "_" <> T.pack (show notifCategory)
 
+-- | Rider push for a cancellation consequence, keyed by the BPP consequence-matrix
+-- row's customerNotificationKey (carried on the on_cancel order tags). No matching
+-- merchant_push_notification row for the key => silently no push (config-driven).
+notifyCancellationConsequence :: ServiceFlow m r => Id Person -> Text -> Text -> m ()
+notifyCancellationConsequence personId bookingId pnKey = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT person.merchantOperatingCityId
+  mbMerchantPN <- CPN.findMatchingMerchantPN person.merchantOperatingCityId pnKey Nothing Nothing person.language Nothing
+  whenJust mbMerchantPN \merchantPN -> do
+    when (merchantPN.shouldTrigger) $ do
+      let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
+          templateParams = [] :: [(Text, Text)]
+          title = buildTemplate templateParams merchantPN.title
+          body = buildTemplate templateParams merchantPN.body
+          notificationData =
+            Notification.NotificationReq
+              { category = Notification.CANCELLED_PRODUCT,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = Notification.Entity Notification.Product bookingId (),
+                body,
+                title,
+                dynamicParams = EmptyDynamicParam,
+                auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+                ttl = Nothing,
+                sound = notificationSound,
+                overlayNotificationData = Nothing
+              }
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do
   case booking.tripCategory of

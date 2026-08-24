@@ -326,6 +326,29 @@ Cancellation case are deleted; coin_config Cancellation rows are dead config (00
 deactivates them). A matrix coin row now fires with no coin_config prerequisite —
 consequently coin rows must not be configured in cities without the coin feature.
 
+### Final unification pass (2026-08-24): tags retired, BAP handoff, coin-city guard
+
+1. **RideCancel cancellation tags RETIRED.** `updateNammaTagsForCancelledRide` deleted;
+   `CancelRideTagData` + its NammaTag verify wiring removed (YA.RideCancel constructor
+   kept). Cancellation analytics moved into the orchestrator as `applyCancellationAnalytics`
+   (source-based, was never actually tag-based); the driver penalty preview's
+   `cancellationValidity` now maps the fault verdict — legacy convention: "Valid" means
+   the cancellation validly counts AGAINST the driver (DriverAtFault→"Valid",
+   CustomerAtFault→"Invalid"). Constants `validDriverCancellation`/`invalidDriverCancellation`
+   deleted. ride.ride_tags now carries only pickup-stall tags.
+2. **BAP handoff SHIPPED (phase 2 of the collectionMode plan).** New Beckn tag group
+   `CANCELLATION_CONSEQUENCE` with `CANCELLATION_COLLECTION_MODE` +
+   `CUSTOMER_CANCELLATION_NOTIFICATION_KEY` (beckn-spec Tags.hs). BPP on_cancel ACL reads
+   the dues row's collection mode + the matrix row's customer notification key and sets
+   them as order tags. Rider-app parses them: `collectionMode` is AUTHORITATIVE for
+   immediate-capture vs next-ride-dues when present (legacy riderConfig
+   immediateCapture* flags remain only as the fallback for old BPPs); the notification
+   key drives a rider push via merchant_push_notification (config-driven, silent when
+   the key has no row). ImmediateCapture rows are usable once both sides are deployed
+   (deploy BPP first or together; old BAP ignores the tags).
+3. **Coin-city guard**: dashboard rejects Coin rows in cities with
+   `transporterConfig.coinFeature = false` (coins fire straight from the matrix now).
+
 ## Configs this table absorbs (deprecation targets)
 
 | Today | Where | Becomes |

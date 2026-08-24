@@ -204,7 +204,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     fork "schedule pickup progress monitor" $ do
       mbMonitoringTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       whenJust (mbMonitoringTransporterConfig >>= (.pickupStallMonitoringConfig)) $ \monitoringConfig ->
-        createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.gracePeriodSec) $
+        -- no separate grace period: the first tick is a baseline (sets bestDistance, no
+        -- fault accrual), so monitoring effectively starts one tick after assignment
+        createJobIn @_ @'CheckDriverPickupProgress (Just merchantId) (Just booking.merchantOperatingCityId) (fromIntegral monitoringConfig.tickIntervalSec) $
           CheckDriverPickupProgressJobData
             { driverId = ride.driverId,
               bookingId = booking.id,
@@ -607,7 +609,10 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         sosId = Nothing,
         referralFlagReason = Nothing,
         cancellationFaultRule = Nothing,
-        cancellationFaultVerdict = Nothing
+        cancellationFaultVerdict = Nothing,
+        pickupBehaviour = Nothing,
+        pickupDarkSeconds = Nothing,
+        pickupFaultSeconds = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

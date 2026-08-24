@@ -22,9 +22,4 @@ ALTER TABLE atlas_app.white_list_org ALTER COLUMN merchant_operating_city_id SET
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.white_list_org ADD COLUMN supported_beckn_protocols text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.white_list_org ALTER COLUMN supported_beckn_protocols TYPE text[];
+ALTER TABLE atlas_app.white_list_org ADD COLUMN supported_beckn_protocols text[];

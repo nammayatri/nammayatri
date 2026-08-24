@@ -88,6 +88,7 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.CallBAPInternal
@@ -229,6 +230,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverRiderBlacklist
     applyDriverOverlayNotification
     applyDriverCoinEvent
+    applyCancellationAnalytics
     driver <- QPerson.findById ctx.ride.driverId >>= fromMaybeM (PersonNotFound ctx.ride.driverId.getId)
     applyDriverMoneyConsequence driver
     applyDriverCancellationRateCount driver
@@ -256,6 +258,11 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
       when (ctx.source == SBCR.ByUser || ctx.source == SBCR.ByDriver) $
         fork "cancellationConsequenceCoinEvent" $
           DC.driverCoinsEvent ctx.ride.driverId Nothing ctx.merchant.id ctx.booking.merchantOperatingCityId (DCT.Cancellation ctx.ride.createdAt ctx.booking.distanceToPickup ctx.decision.disToPickup ctx.decision.cancelledBy (fromMaybe (DTCR.CancellationReasonCode "OTHER") ctx.decision.reasonCode)) (Just ctx.ride.id.getId) ctx.ride.vehicleVariant (Just ctx.booking.vehicleServiceTier) (Just ctx.booking.configInExperimentVersions)
+
+    -- source-based cancellation analytics + operator dashboard counters (moved from the
+    -- retired RideCancel tag computation — the fault verdict is the judgment now)
+    applyCancellationAnalytics =
+      Analytics.updateCancellationAnalyticsAndDriverStats ctx.transporterConfig ctx.ride ctx.source
 
     -- column: driverDeduction (MoneyDeduction charges the driver via DriverFee/wallet;
     -- MoneyAddition credits them, wallet only — the adapter in CancellationConsequence

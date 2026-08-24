@@ -129,6 +129,19 @@ updatePaymentCharge paymentCharge paymentChargeBearer id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.paymentCharge paymentCharge, Se.Set Beam.paymentChargeBearer paymentChargeBearer, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePickupJourney ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.Ride.PickupBehaviour -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updatePickupJourney pickupBehaviour pickupFaultSeconds pickupDarkSeconds id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.pickupBehaviour pickupBehaviour,
+      Se.Set Beam.pickupFaultSeconds pickupFaultSeconds,
+      Se.Set Beam.pickupDarkSeconds pickupDarkSeconds,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePreviousRideTripEndPosAndTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())

@@ -302,3 +302,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN payment_charge double precisi
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fault_verdict text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fault_rule text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_fault_seconds integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_dark_seconds integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_behaviour text ;

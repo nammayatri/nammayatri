@@ -1075,13 +1075,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_scheduled_h
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_avg_speed_kmph double precision ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_scheduled_holds_per_driver integer  default 1;
-
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_daily_coin_ride_threshold integer ;
 
 
