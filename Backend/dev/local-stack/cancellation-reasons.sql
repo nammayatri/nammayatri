@@ -33,6 +33,11 @@
 -- safe and does not depend on a unique constraint existing.
 --
 -- Apply with:  ./apply-migration.sh cancellation-reasons.sql
+--
+-- APPLIED 2026-08-24. The measurement above ("answers []") was true until that
+-- afternoon and is kept as the record of why this file exists. Re-running it is
+-- safe: the DELETE names exactly these six codes, so it replaces its own rows
+-- and touches nothing else.
 
 \set ON_ERROR_STOP on
 

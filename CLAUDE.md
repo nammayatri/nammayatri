@@ -243,3 +243,9 @@ the header of that script.
   inode; the container keeps serving the old file while `nginx -t` passes.
   Use `scp`, which truncates in place.
 - **Editing a script through the Windows UNC path strips its exec bit.**
+- **A heredoc terminator does not survive the Windows→WSL hop.** `<<'PYEOF'` …
+  `PYEOF` fails with *"unexpected EOF while looking for matching `'`"* — the
+  terminator line arrives with a carriage return and never matches, so the shell
+  swallows the whole script. Write the file, then run the file. Same for
+  `python3 - <<EOF`: it may run and still no-op, because `str.replace` that
+  matches nothing is silent. **Assert `count == 1` on every scripted edit.**

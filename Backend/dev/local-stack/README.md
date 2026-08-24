@@ -629,15 +629,37 @@ registry fixture is correct for all of them and signature auth works unmodified
 ./apply-tariff.sh          # applies algeria-tariff.sql AND clears the caches
 ```
 
-| Category | Variant | Start | Per km | Pickup |
-|---|---|---|---|---|
-| Economy | HATCHBACK | 100 | 35 | 50 |
-| Comfort | SEDAN | 150 | 45 | 70 |
-| Premium | SUV | 200 | 60 | 100 |
+Re-measured 2026-08-24, on both merchants, all four variants:
+
+| App name | Variant | Start | Per km | Pickup | Max extra |
+|---|---|---|---|---|---|
+| Voiture | `SEDAN` | 150 | 45 | 70 | 300 |
+| Scooter | `AUTO_RICKSHAW` | 100 | 35 | 50 | 300 |
+| **Herbin** | `HATCHBACK` | **100** | **35** | **50** | 300 |
+| Fourgon | `SUV` | 200 | 60 | 100 | 300 |
 
 Set by the client on 2026-08-13, replacing the upstream Bangalore seed (10 / 12
 / 120) that made every vehicle cost the same 258 DZD. A 13.7 km trip is now
-**629 / 836 / 1121**.
+**629 / 836 / 1121** for hatchback / sedan / SUV.
+
+**The names in the left column are the app's, and they are not the server's.**
+The client replaced *Economy / Comfort / Premium* with four physical vehicle
+types on 2026-08-21, and two of the four carry goods rather than people. The
+enum is a compiled Haskell type with exactly four members, so each of ours is
+pinned to one existing slot and the mapping is arbitrary — `HERBIN → HATCHBACK`
+says nothing about hatchbacks. `Frontend`'s `lib/vehicle.ts` is the one place
+that mapping lives. Renaming the enum properly is a rebuild.
+
+**A herbin is priced exactly like a scooter**, because it inherited the row that
+used to be *Economy*. A flatbed pickup and a two-wheeler on the same tariff is
+not a decision anyone took; it is what the rename left behind. Raised with the
+client 2026-08-24, along with the table above so he can name an increase rather
+than guess at one. It is pure SQL — `fare_policy` is already one row per variant
+and `apply-tariff.sh` applies it — so **no rebuild**.
+
+**Both merchants carry identical rows**, checked the same day. That matters
+because a tariff applied to one leaves half the fleet quoting the old price;
+see the two-merchant note below.
 
 The driver may add an extra, capped at roughly **half the fare** and growing
 with distance — measured across three real searches:
@@ -709,6 +731,49 @@ Two more things the table alone does not tell you:
   metre and the "starting price" is a flat charge on top. The seed had it
   covering the first 3 km. If the client meant the start to include some
   distance, that is the one value to change.
+
+## The search radius — how "a car is near" is decided
+
+The client's other question of 2026-08-24. Read out of the deployed Dhall
+(`2023/Backend/dhall-configs/dev/dynamic-offer-driver-app.dhall`):
+
+```dhall
+{ minRadiusOfSearch = +5000      -- starts at 5 km
+, maxRadiusOfSearch = +7000      -- grows to 7
+, radiusStepSize    = +500       -- in 500 m steps, until it finds enough
+, driverPositionInfoExpiry = Some +36000
+}
+{ driverBatchSize = +5 }
+{ driverPoolBatchesCfg, singleBatchProcessTime = +60 }
+```
+
+So it is a plain radius that expands: 5 000 m, then 5 500, up to 7 000, taking
+`driverBatchSize` drivers per round and giving each round
+`singleBatchProcessTime` seconds to answer.
+
+**There is no per-variant dimension, and no table to add one to.** The schema
+carries `merchant_service_config`, `merchant_service_usage_config` and
+`transporter_config` — and **no `driver_pool_config`**. The pool config is
+selected by *trip distance*, not by vehicle variant. That settles the cost of
+the client's request:
+
+| | cost |
+|---|---|
+| Wider radius **for everyone** | edit the Dhall, restart — minutes, no rebuild |
+| Wider radius **for herbin and fourgon only** | **a backend rebuild**, ~45 min |
+
+**The display radius is wider than dispatch ever reaches.** `maps-shim/fleet.js`
+answers `/fleet/nearby` with `DEFAULT_RADIUS = 8000`, a kilometre past the
+7 000 m ceiling above, so a driver could appear in a list and sit outside the
+range that would actually be asked. It is **unreachable today** — that list's
+only caller was the passenger's driver picker, deleted with the prices screen on
+2026-08-24 — but it is the shape that produces *"I chose him and nothing
+happened"*, and it is one line in the shim if the picker ever comes back.
+
+Careful with `singleBatchProcessTime`: it is the driver's answer window *and*
+the batch pace. Raising it from 10 to 60 took three rounds of five drivers from
+30 s to 180 s of the rider's 300-second search. A longer window spends the
+**rider's** time.
 
 ## Driver freshness — `./drivers-keepalive.sh`
 
@@ -1148,6 +1213,29 @@ cancelled**, four by the driver and four by the rider.
 stores whatever is sent, and all four driver cancellations so far say `OTHER`.
 The list of reasons is therefore a product decision, not a technical constraint,
 and it is the only data the agency will ever have on why rides fail.
+
+**Seeded 2026-08-24.** `GET /ui/cancellationReason/list` had never returned a
+row; it now returns six, applied with
+`./apply-migration.sh cancellation-reasons.sql`:
+
+| priority | code | what the driver reads |
+|---|---|---|
+| 1 | `PASSENGER_NO_SHOW` | Le passager n'est pas venu |
+| 2 | `ADDRESS_NOT_FOUND` | Adresse introuvable |
+| 3 | `PASSENGER_CANCELLED` | Le passager a annulé sur place |
+| 4 | `VEHICLE_PROBLEM` | Problème de véhicule |
+| 5 | `TOO_FAR` | Le passager est trop loin |
+| 9 | `OTHER` | Autre — opens a free-text box in the app |
+
+These words are now the vocabulary of every report the agency will ever run, and
+changing them later cuts the history in two. `enabled = false` retires one
+without losing the rows already recorded against it.
+
+The app still ships five of its own, used only when this route answers `[]`.
+That fallback is now dead weight worth keeping — and note its third code is
+`PASSENGER_CANCELLED_ON_SITE` where the table says `PASSENGER_CANCELLED`. No
+history splits on it, because no driver cancellation has ever used either: all
+four on record say `OTHER`.
 
 ### Losing an offer — recorded by the server, exposed by nothing
 
