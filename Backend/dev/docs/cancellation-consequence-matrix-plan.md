@@ -286,6 +286,46 @@ needs per-minute-waited arithmetic belongs in the fault rules' *choice of rule n
 (e.g. `no_show_long_wait` vs `no_show`), each mapping to a different row — keeps the table
 legible, which is its whole point.
 
+## Removed legacy fields + misattribution fix (2026-08-24)
+
+**Verdict misattribution fixed** (was: most cancels showing early_customer_cancel):
+1. The soft-cancel PREVIEW persisted+cached a CancellationByCustomer verdict per ride
+   (riders opening the cancel screen froze early_customer_cancel; later real cancels —
+   even driver ones — reused it from the 1h Redis cache). getCancellationCharges is now
+   fully dry-run via previewCancellationConsequences. 0051 §1 clears the polluted ride
+   rows; pre-fix verdict data is unreliable for analysis.
+2. cancelledBy is now DERIVED from the stored BookingCancellationReason.source via
+   cancellationSourceToType (single mapping in the orchestrator) — never hardcoded per
+   flow. CancellationType gained ByMerchant/ByAllocator/ByApplication/ByFleetOwner so
+   ops cancels are no longer mislabelled as driver cancels (they fall through to
+   no_fault_default; the coin engine never sees them).
+
+**Deprecated fields removed from code/specs** (physical columns left in place; see 0051):
+- `farePolicy.driverCancellationPenaltyAmount` + its `fareParams` snapshot (domain, beam,
+  fare-policy CSV upsert/export). The pickup-stall overlay situation (FEE_APPLIES vs
+  FREE_CANCEL) now reads `cityHasDriverCancelMoneyPenalty` from the matrix. The RIDE's
+  driverCancellationPenaltyAmount (applied-penalty tracking, dashboard waive flow,
+  reconciliation) is a different field and stays.
+- `transporterConfig.cancellationFeePaymentMethodExceptions`, `.driverRiderBlacklistDurationSeconds`
+  (spec fields removed; 0050 still reads the physical blacklist column for seeding).
+- `ride.cancellationChargesLogicVersion` (spec field + both query params + all threading;
+  calc/getCancellationCharges no longer return a version).
+- LogicDomain Enumerable list no longer offers USER_CANCELLATION_DUES /
+  USER_CANCELLATION_DUES_WAIVE_OFF / CANCELLATION_COIN_POLICY for new configs
+  (constructors + Show/Read kept). 0051 §2 deletes the persisted rollout/element rows —
+  run only post-stability, it removes the binary-rollback path.
+
+### coin_config cut out of cancellation (2026-08-24)
+
+`driverCoinsEvent` intercepts `Cancellation` before the coin_config lookup and runs
+`handleCancellationCoinsFromMatrix`: amount + direction + expiry from the matrix row
+(via the once-per-ride cache, so charge and coins use the SAME row), event function
+derived from the delta's sign (penalisation vs compensation) for history/notifications,
+driver/fleet coin blacklists still applied. `hCancellation` and calculateCoins'
+Cancellation case are deleted; coin_config Cancellation rows are dead config (0051
+deactivates them). A matrix coin row now fires with no coin_config prerequisite —
+consequently coin rows must not be configured in cities without the coin feature.
+
 ## Configs this table absorbs (deprecation targets)
 
 | Today | Where | Becomes |

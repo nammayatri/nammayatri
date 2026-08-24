@@ -62,7 +62,6 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.DriverCoins.Types as DCT
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (SchedulerType)
@@ -107,7 +106,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.Vehicle as QVeh
-import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -183,7 +181,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             (cancellationDisToPickup, _mbDriverLocation) <- getDistanceToPickup booking (Just ride)
             -- ONE decision (signals → fault verdict → consequence-matrix row) feeds every
             -- consequence below through the orchestrator; nothing re-derives it.
-            decision <- decideCancellationConsequences booking ride transporterConfig DCT.CancellationByDriver bookingCReason.reasonCode cancellationDisToPickup
+            decision <- decideCancellationConsequences booking ride transporterConfig bookingCReason.source bookingCReason.reasonCode cancellationDisToPickup
             let consequenceCtx = ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCReason.source, decision = decision}
             void $ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig decision.faultVerdict
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -311,9 +309,6 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig mb
   logDebug $ "Tags for cancelled ride, rideId: " <> ride.id.getId <> " tagresults:" <> show (eitherToMaybe nammaTags) <> "| tagdata: " <> show tagData
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
-  let tags = fromMaybe [] allTags
-  when (maybe False (`elem` validCancellationPenaltyReasonCodes transporterConfig) bookingCReason.reasonCode && validUserNoShowCancellation `notElem` tags) $
-    logError $ "Customer no show tag was not applied: rideId: " <> ride.id.getId
   Analytics.updateCancellationAnalyticsAndDriverStats transporterConfig ride bookingCReason
   return $ fromMaybe [] allTags
 

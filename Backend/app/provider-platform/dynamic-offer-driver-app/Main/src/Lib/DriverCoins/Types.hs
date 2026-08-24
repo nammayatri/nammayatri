@@ -37,6 +37,13 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnumAndList)
 data CancellationType
   = CancellationByCustomer
   | CancellationByDriver
+  | -- ops/system-initiated cancels (mapped from BookingCancellationReason.source); the
+    -- coin engine never sees these — they exist so the fault verdict + consequence
+    -- matrix can distinguish ops cancels instead of mislabelling them as driver cancels
+    CancellationByMerchant
+  | CancellationByAllocator
+  | CancellationByApplication
+  | CancellationByFleetOwner
   deriving (Generic, ToJSON, FromJSON, Eq, Ord, Read)
 
 data DriverCoinsEventType
@@ -68,6 +75,10 @@ driverCoinsEventTypeToString = \case
 instance Show CancellationType where
   show CancellationByCustomer = "CancellationByCustomer"
   show CancellationByDriver = "CancellationByDriver"
+  show CancellationByMerchant = "CancellationByMerchant"
+  show CancellationByAllocator = "CancellationByAllocator"
+  show CancellationByApplication = "CancellationByApplication"
+  show CancellationByFleetOwner = "CancellationByFleetOwner"
 
 $(mkBeamInstancesForEnumAndList ''CancellationType)
 

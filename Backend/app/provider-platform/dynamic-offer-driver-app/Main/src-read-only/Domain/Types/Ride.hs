@@ -34,7 +34,6 @@ data Ride = Ride
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
-    cancellationChargesLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationCommission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFaultRule :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

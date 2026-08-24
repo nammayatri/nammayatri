@@ -203,6 +203,16 @@ driverCoinDeduction row =
     DExtra.CoinAddition {coins, expirySeconds} -> Just (abs coins, expirySeconds)
     _ -> Nothing
 
+-- | Could a driver-initiated cancel in this city cost the driver money? Used for overlay
+-- copy (FEE_APPLIES vs FREE_CANCEL) at pickup-progress time, where the fault verdict is
+-- not known yet: True when ANY active row a driver cancel could match (cancelledBy
+-- wildcard or CancellationByDriver) carries a positive MONEY driver deduction. Replaces
+-- the retired farePolicy.driverCancellationPenaltyAmount fare-params snapshot.
+cityHasDriverCancelMoneyPenalty :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> HighPrecMoney -> m Bool
+cityHasDriverCancelMoneyPenalty merchantOpCityId estimatedFare = do
+  rows <- CQCCM.findAllByMerchantOpCityId merchantOpCityId
+  pure $ any (\r -> r.active && dimMatches r.cancelledBy (Just DCT2.CancellationByDriver) && maybe False (> 0) (driverMoneyDeduction r estimatedFare)) rows
+
 -- | Driver money from the row (Nothing when the driver consequence is coins or absent).
 -- The matrix stores POSITIVE amounts with the direction in the constructor; downstream
 -- (DriverCancellationPenalty) takes a signed amount, so this adapter emits positive for

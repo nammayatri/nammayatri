@@ -125,7 +125,6 @@ Ride:
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
-    cancellationChargesLogicVersion: Maybe Int
     cancellationFaultVerdict: Maybe Text
     cancellationFaultRule: Maybe Text
     tipAmount: Maybe HighPrecMoney
@@ -311,7 +310,7 @@ Ride:
   queries:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
-      params: [cancellationFeeIfCancelled, cancellationChargesLogicVersion]
+      params: [cancellationFeeIfCancelled]
       where: id
     updateCancellationFaultVerdict:
       kvFunction: updateOneWithKV
@@ -363,7 +362,7 @@ Ride:
       where: id
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
-      params: [cancellationChargesOnCancel, cancellationChargesLogicVersion]
+      params: [cancellationChargesOnCancel]
       where: id
     updateDriverGpsTurnedOff:
       kvFunction: updateOneWithKV

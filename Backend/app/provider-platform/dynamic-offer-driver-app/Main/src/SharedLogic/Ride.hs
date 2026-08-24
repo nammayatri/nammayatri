@@ -580,7 +580,6 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         onlinePayment = onlinePayment,
         enableOtpLessRide = enableOtpLessRide,
         cancellationFeeIfCancelled = Nothing,
-        cancellationChargesLogicVersion = Nothing,
         tipAmount = Nothing,
         passedThroughDestination = Nothing,
         deliveryFileIds = Nothing,

@@ -344,17 +344,18 @@ data LogicDomain
   | INVOICE_TEMPLATE InvoiceTemplateScope
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
+-- | Dashboard-listable domains: the retired cancellation domains
+-- (USER_CANCELLATION_DUES, USER_CANCELLATION_DUES_WAIVE_OFF, CANCELLATION_COIN_POLICY —
+-- absorbed by the CancellationConsequenceMatrix) are excluded so no NEW configs can be
+-- created for them; constructors and Show/Read stay for persisted rows.
 instance Enumerable LogicDomain where
   allValues =
     [ POOLING,
       FARE_POLICY,
       DYNAMIC_PRICING_UNIFIED,
       PICKUP_ETA_CALCULATION,
-      USER_CANCELLATION_DUES,
-      USER_CANCELLATION_DUES_WAIVE_OFF,
       CANCELLATION_FAULT_VERDICT,
       FRFS_TICKET_CATEGORIES,
-      CANCELLATION_COIN_POLICY,
       CUMULATIVE_OFFER_POLICY,
       FRFS_OFFER_SEGMENT_POLICY,
       OFFERS_FRAUD_CHECKS,

@@ -41,6 +41,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (
 import SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
+import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -178,7 +179,7 @@ checkDriverPickupProgress Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
                                 stages = stagesForCase monitoringConfig activeCase'
                             case listToMaybe (drop state'.firedStageCount stages) of
                               Just stage | stallDuration >= fromIntegral stage.afterStallSec -> do
-                                let situation = rideSituation booking
+                                situation <- rideSituation booking
                                 sendStallOverlay ride.merchantOperatingCityId driverId (stage.overlayKey <> "_" <> situation)
                                 -- REALLOCATE_RIDE is controlled purely by pickupStallMonitoringConfig's
                                 -- terminalAction; the ride's cancellation situation no longer gates it.
@@ -257,8 +258,12 @@ situationFreeCancel = "FREE_CANCEL"
 
 -- Overlay copy varies by how "expensive" cancelling is for the driver on this ride;
 -- full overlay key = <stage.overlayKey>_<situation>, seeded per city and language.
-rideSituation :: DRB.Booking -> Text
+-- Whether a driver cancel can cost money comes from the consequence matrix now (any
+-- active driver-cancel row with a MONEY deduction), replacing the retired
+-- farePolicy.driverCancellationPenaltyAmount fare-params snapshot.
+rideSituation :: (CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> m Text
 rideSituation booking
-  | booking.fareParams.driverCancellationNotAllowed == Just True = situationNonCancellable
-  | isJust booking.fareParams.driverCancellationPenaltyAmount = situationFeeApplies
-  | otherwise = situationFreeCancel
+  | booking.fareParams.driverCancellationNotAllowed == Just True = pure situationNonCancellable
+  | otherwise = do
+    feeApplies <- CancellationConsequence.cityHasDriverCancelMoneyPenalty booking.merchantOperatingCityId booking.estimatedFare
+    pure $ if feeApplies then situationFeeApplies else situationFreeCancel

@@ -1698,7 +1698,6 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     disableRecompute :: Text,
     stateEntryPermitCharges :: Text,
     conditionalCharges :: Text,
-    driverCancellationPenaltyAmount :: Text,
     driverCancellationNotAllowed :: Text,
     perLuggageCharge :: Text,
     returnFee :: Text,
@@ -1811,7 +1810,6 @@ instance ToNamedRecord FarePolicyCSVRow where
           "disable_recompute" .= disableRecompute,
           "state_entry_permit_charges" .= stateEntryPermitCharges,
           "additional_charges" .= conditionalCharges,
-          "driver_cancellation_penalty_amount" .= driverCancellationPenaltyAmount,
           "driver_cancellation_not_allowed" .= driverCancellationNotAllowed,
           "per_luggage_charge" .= perLuggageCharge,
           "return_fee" .= returnFee,
@@ -1920,7 +1918,6 @@ farePolicyCSVHeader =
       "disable_recompute",
       "state_entry_permit_charges",
       "additional_charges",
-      "driver_cancellation_penalty_amount",
       "driver_cancellation_not_allowed",
       "per_luggage_charge",
       "return_fee",
@@ -2031,7 +2028,6 @@ instance FromNamedRecord FarePolicyCSVRow where
           <*> r .: "disable_recompute"
           <*> r .: "state_entry_permit_charges"
           <*> r .: "additional_charges"
-          <*> r .: "driver_cancellation_penalty_amount"
           -- optional column: old fare-policy CSV templates don't have it
           <*> (r .: "driver_cancellation_not_allowed" <|> pure "")
           <*> r .: "per_luggage_charge"
@@ -2702,7 +2698,6 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     disableRecompute = maybe "" showT fp.disableRecompute,
                     stateEntryPermitCharges = stateEntryPermit,
                     conditionalCharges = conditionalChargesJson,
-                    driverCancellationPenaltyAmount = maybe "" showT farePolicy.driverCancellationPenaltyAmount,
                     driverCancellationNotAllowed = maybe "" showT farePolicy.driverCancellationNotAllowed,
                     perLuggageCharge = maybe "" showT farePolicy.perLuggageCharge,
                     returnFee = returnFeeVal,
@@ -3069,7 +3064,6 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
-      let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
       let driverCancellationNotAllowed :: (Maybe Bool) = readMaybeCSVField idx row.driverCancellationNotAllowed "Driver Cancellation Not Allowed"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"

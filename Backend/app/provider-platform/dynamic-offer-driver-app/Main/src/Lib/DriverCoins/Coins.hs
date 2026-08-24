@@ -37,7 +37,6 @@ module Lib.DriverCoins.Coins
   )
 where
 
-import Control.Applicative ((<|>))
 import Data.List (nub)
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
@@ -191,104 +190,128 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
   let incentiveCohortFunctions = maybe [] (extractDriverIncentiveCohortFunctions . (.driverTag)) mbDriver
   if fromMaybe False transporterConfig.enableDirectWalletIncentives
     then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
-    else do
-      let baseDims =
-            CoinsConfigDimensions
-              { merchantOptCityId = merchantOpCityId.getId,
-                eventName = Just (show eventType),
-                merchantId = Just merchantId.getId,
-                active = Just True,
-                vehicleCategory = Just vehCategory,
-                tripCategoryType = Just tripCatType,
-                eventFunction = Nothing,
-                configId = Nothing,
-                serviceTierType = Nothing
-              }
-      -- Try with serviceTierType first, fall back to Nothing (mirrors old CachedQueries logic)
-      coinConfiguration <- do
-        result <- case mbServiceTierType of
-          Just stt -> do
-            res <- getConfig (baseDims {serviceTierType = Just stt}) (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) (Just stt) tripCatType))
-            if null res then pure [] else pure res
-          Nothing -> pure []
-        if null result
-          then getConfig baseDims (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) Nothing tripCatType))
-          else return result
-      let applicableCoinConfiguration =
-            if null incentiveCohortFunctions
-              then coinConfiguration
-              else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) coinConfiguration
+    else case eventType of
+      DCT.Cancellation {} ->
+        -- Cancellation coins are FULLY matrix-driven: the consequence-matrix row is both
+        -- the gate and the amount, so coin_config plays no part for this event (its
+        -- Cancellation rows are dead config). Driver/fleet coin blacklists still apply.
+        handleCancellationCoinsFromMatrix driverId merchantId merchantOpCityId eventType transporterConfig combinedBlacklist entityId vehCategory mbServiceTierType
+      _ -> do
+        let baseDims =
+              CoinsConfigDimensions
+                { merchantOptCityId = merchantOpCityId.getId,
+                  eventName = Just (show eventType),
+                  merchantId = Just merchantId.getId,
+                  active = Just True,
+                  vehicleCategory = Just vehCategory,
+                  tripCategoryType = Just tripCatType,
+                  eventFunction = Nothing,
+                  configId = Nothing,
+                  serviceTierType = Nothing
+                }
+        -- Try with serviceTierType first, fall back to Nothing (mirrors old CachedQueries logic)
+        coinConfiguration <- do
+          result <- case mbServiceTierType of
+            Just stt -> do
+              res <- getConfig (baseDims {serviceTierType = Just stt}) (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) (Just stt) tripCatType))
+              if null res then pure [] else pure res
+            Nothing -> pure []
+          if null result
+            then getConfig baseDims (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) Nothing tripCatType))
+            else return result
+        let applicableCoinConfiguration =
+              if null incentiveCohortFunctions
+                then coinConfiguration
+                else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) coinConfiguration
 
-      let filteredConfigAll =
-            if null incentiveCohortFunctions
-              then filter (\cc -> cc.eventFunction `notElem` combinedBlacklist && not (isDriverIncentiveCohortFunction cc.eventFunction)) applicableCoinConfiguration
-              else filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) applicableCoinConfiguration
+        let filteredConfigAll =
+              if null incentiveCohortFunctions
+                then filter (\cc -> cc.eventFunction `notElem` combinedBlacklist && not (isDriverIncentiveCohortFunction cc.eventFunction)) applicableCoinConfiguration
+                else filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) applicableCoinConfiguration
 
-      now <- getCurrentTime
-      let timeBoundReferenceUtc = case eventType of
-            DCT.EndRide {ride} -> rideTimeBoundReferenceUtc ride
-            _ -> now
-          localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) timeBoundReferenceUtc
-          -- Prefer configs with a real (non-Unbounded) timeBound that matches ride start time.
-          -- Fallback: unbounded/null timebound configs (preserves existing day-wide cohort flow).
-          letTimeBounds =
-            [ CoinConfigWithTimeBounds cc tb
-              | cc <- filteredConfigAll,
-                Just tb <- [cc.timeBounds],
-                tb /= TB.Unbounded
-            ]
-          wrappedTimeBoundConfigs = TB.findBoundedDomain letTimeBounds localTime
-          timeBoundConfigs = (.coinsConfig) <$> wrappedTimeBoundConfigs
-          selectedConfigs =
-            if null timeBoundConfigs
-              then filter (\cc -> fromMaybe TB.Unbounded cc.timeBounds == TB.Unbounded) filteredConfigAll
-              else timeBoundConfigs
-          metricWindow =
-            case listToMaybe wrappedTimeBoundConfigs of
-              Just wrapped -> IncentiveMetrics.mkIncentiveWindowKey localTime wrapped.timeBounds
-              _ -> IncentiveMetrics.unBoundedWindowKey
+        now <- getCurrentTime
+        let timeBoundReferenceUtc = case eventType of
+              DCT.EndRide {ride} -> rideTimeBoundReferenceUtc ride
+              _ -> now
+            localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) timeBoundReferenceUtc
+            -- Prefer configs with a real (non-Unbounded) timeBound that matches ride start time.
+            -- Fallback: unbounded/null timebound configs (preserves existing day-wide cohort flow).
+            letTimeBounds =
+              [ CoinConfigWithTimeBounds cc tb
+                | cc <- filteredConfigAll,
+                  Just tb <- [cc.timeBounds],
+                  tb /= TB.Unbounded
+              ]
+            wrappedTimeBoundConfigs = TB.findBoundedDomain letTimeBounds localTime
+            timeBoundConfigs = (.coinsConfig) <$> wrappedTimeBoundConfigs
+            selectedConfigs =
+              if null timeBoundConfigs
+                then filter (\cc -> fromMaybe TB.Unbounded cc.timeBounds == TB.Unbounded) filteredConfigAll
+                else timeBoundConfigs
+            metricWindow =
+              case listToMaybe wrappedTimeBoundConfigs of
+                Just wrapped -> IncentiveMetrics.mkIncentiveWindowKey localTime wrapped.timeBounds
+                _ -> IncentiveMetrics.unBoundedWindowKey
 
-      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll) <> ", Selected(timeBoundPrefer): " <> show (map (.eventFunction) selectedConfigs)
-      logDebug $
-        "Coin timebound selection - driverId: "
-          <> driverId.getId
-          <> ", timeBoundReferenceUtc: "
-          <> show timeBoundReferenceUtc
-          <> ", localTime: "
-          <> show localTime
-          <> ", metricWindow: "
-          <> show metricWindow
-          <> ", candidateTimeBoundConfigs: "
-          <> show (map (\c -> (c.coinsConfig.eventFunction, c.timeBounds)) letTimeBounds)
-          <> ", matchedTimeBoundConfigs: "
-          <> show (map (.eventFunction) timeBoundConfigs)
+        logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll) <> ", Selected(timeBoundPrefer): " <> show (map (.eventFunction) selectedConfigs)
+        logDebug $
+          "Coin timebound selection - driverId: "
+            <> driverId.getId
+            <> ", timeBoundReferenceUtc: "
+            <> show timeBoundReferenceUtc
+            <> ", localTime: "
+            <> show localTime
+            <> ", metricWindow: "
+            <> show metricWindow
+            <> ", candidateTimeBoundConfigs: "
+            <> show (map (\c -> (c.coinsConfig.eventFunction, c.timeBounds)) letTimeBounds)
+            <> ", matchedTimeBoundConfigs: "
+            <> show (map (.eventFunction) timeBoundConfigs)
 
-      if null selectedConfigs
-        then do
-          logInfo "All coin events blacklisted or no matching timebound/unbounded config; skipping award"
-          pure ()
+        if null selectedConfigs
+          then do
+            logInfo "All coin events blacklisted or no matching timebound/unbounded config; skipping award"
+            pure ()
+          else do
+            finalCoinsValue <-
+              sum
+                <$> forM
+                  selectedConfigs
+                  ( \cc ->
+                      calculateCoins
+                        eventType
+                        driverId
+                        merchantId
+                        merchantOpCityId
+                        cc
+                        cc.expirationAt
+                        cc.coins
+                        transporterConfig
+                        entityId
+                        vehCategory
+                        mbServiceTierType
+                        metricWindow
+                  )
+            logInfo $ "Awarding coins: " <> show finalCoinsValue
+            updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+
+-- | Matrix-only cancellation coin path (no coin_config lookup): amount + expiry come
+-- from the consequence-matrix row's CoinDeduction/CoinAddition via validateCancellation
+-- (which reads the once-per-ride cached row, so charge and coins apply the SAME row).
+-- The event function is derived from the sign of the delta purely for history/notification
+-- labelling. The direct-wallet-incentive mode keeps its own (wallet-config) path.
+handleCancellationCoinsFromMatrix :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m ()
+handleCancellationCoinsFromMatrix driverId merchantId merchantOpCityId eventType transporterConfig combinedBlacklist entityId vehCategory mbServiceTierType =
+  case eventType of
+    DCT.Cancellation {..} -> do
+      (coins, mbExpiry) <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
+      let eventFunction = if coins < 0 then DCT.BookingCancellationPenalisaton else DCT.BookingCancellationCompensation
+      if coins == 0 || eventFunction `elem` combinedBlacklist
+        then logInfo $ "Cancellation coins skipped for driver " <> driverId.getId <> ": coins=" <> show coins <> " blacklisted=" <> show (eventFunction `elem` combinedBlacklist)
         else do
-          finalCoinsValue <-
-            sum
-              <$> forM
-                selectedConfigs
-                ( \cc ->
-                    calculateCoins
-                      eventType
-                      driverId
-                      merchantId
-                      merchantOpCityId
-                      cc
-                      cc.expirationAt
-                      cc.coins
-                      transporterConfig
-                      entityId
-                      vehCategory
-                      mbServiceTierType
-                      metricWindow
-                )
-          logInfo $ "Awarding coins: " <> show finalCoinsValue
-          updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+          coinsValue <- updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbExpiry coins entityId vehCategory mbServiceTierType
+          updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
+    _ -> pure ()
 
 data CoinConfigWithTimeBounds = CoinConfigWithTimeBounds
   { coinsConfig :: DTCoinsConfig.CoinsConfig,
@@ -336,7 +359,6 @@ calculateCoins eventType driverId merchantId merchantOpCityId coinsConfig mbexpi
     DCT.Rating {..} -> hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     DCT.EndRide {..} -> hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide ride metroRideType tripCategoryType coinsConfig mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType metricWindow
     DCT.DriverToCustomerReferral {..} -> hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
-    DCT.Cancellation {..} -> hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy cancellationReason eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     DCT.LMS -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     DCT.LMSBonus -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     _ -> pure 0
@@ -580,20 +602,6 @@ validateCancellation rideId _rideStartTime initialDisToPickup cancellationDisToP
       mbExpiry = snd =<< mbCoinDeduction
   logInfo $ "Cancellation coins from consequence matrix row " <> show ((.id.getId) <$> mbRow) <> ": " <> show coins <> " expiryOverride=" <> show mbExpiry
   pure (coins, mbExpiry)
-
-hCancellation :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe Meters -> Maybe Meters -> DCT.CancellationType -> DTCR.CancellationReasonCode -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
-hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup cancelledBy cancellationReason eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType = do
-  logDebug $ "Driver Coins Handle Cancellation Event Triggered - " <> show eventFunction
-  case eventFunction of
-    DCT.BookingCancellation -> do
-      runActionWhenValidConditions [pure False] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType -- To be deprecated
-    DCT.BookingCancellationPenalisaton -> do
-      (numCoinValue, mbRowExpiry) <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
-      runActionWhenValidConditions [pure (numCoinValue < 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction (mbRowExpiry <|> mbexpirationTime) numCoinValue entityId vehCategory mbServiceTierType
-    DCT.BookingCancellationCompensation -> do
-      (numCoinValue, mbRowExpiry) <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy cancellationReason
-      runActionWhenValidConditions [pure (numCoinValue > 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction (mbRowExpiry <|> mbexpirationTime) numCoinValue entityId vehCategory mbServiceTierType
-    _ -> pure 0
 
 runActionWhenValidConditions :: EventFlow m r => [m Bool] -> m Int -> m Int
 runActionWhenValidConditions conditions action = do

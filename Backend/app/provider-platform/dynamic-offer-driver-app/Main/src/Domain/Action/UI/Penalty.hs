@@ -20,7 +20,6 @@ import qualified Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types.Application as YA
@@ -59,7 +58,7 @@ postPenaltyCheck (mbPersonId, _merchantId, _merchantOpCityId) req = do
   -- The SAME decision pipeline as a real driver cancel (signals → fault verdict →
   -- matrix row), via the orchestrator's dry-run entry: no Redis caches, no ride-row
   -- persistence — the cancellation may never happen.
-  decision <- Orchestrator.previewCancellationConsequences booking ride transporterConfig DCT.CancellationByDriver Nothing mbDriverDistToPickup
+  decision <- Orchestrator.previewCancellationConsequences booking ride transporterConfig SBCR.ByDriver Nothing mbDriverDistToPickup
   let signals = decision.signals
       mbFaultVerdict = decision.faultVerdict
       penaltyAmount = (\row -> CancellationConsequence.driverMoneyDeduction row booking.estimatedFare) =<< decision.consequenceRow

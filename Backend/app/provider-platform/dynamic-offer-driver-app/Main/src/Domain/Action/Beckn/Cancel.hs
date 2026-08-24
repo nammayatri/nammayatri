@@ -48,7 +48,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
-import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.PickupStall as PickupStall
@@ -136,7 +135,7 @@ cancel req merchant booking mbActiveSearchTry = do
     -- reallocation decision: a customer forced to cancel because of the driver must still
     -- produce the driver-side consequences even when the booking reallocates.
     mbDecision <- forM mbRide $ \ride -> do
-      decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig DCT.CancellationByCustomer bookingCR.reasonCode disToPickup
+      decision <- Orchestrator.decideCancellationConsequences booking ride transporterConfig bookingCR.source bookingCR.reasonCode disToPickup
       Orchestrator.applyImmediateConsequences (Orchestrator.ConsequenceCtx {merchant = merchant, booking = booking, ride = ride, transporterConfig = transporterConfig, source = bookingCR.source, decision = decision}) Nothing
       pure decision
 

@@ -14,8 +14,5 @@ validDriverCancellation = LYT.TagNameValue "DriverCancellation#Valid"
 invalidDriverCancellation :: LYT.TagNameValue
 invalidDriverCancellation = LYT.TagNameValue "DriverCancellation#Invalid"
 
-validUserNoShowCancellation :: LYT.TagNameValue
-validUserNoShowCancellation = LYT.TagNameValue "CustomerNoShowCancellation#Valid"
-
 acPriorityEligibleTag :: LYT.TagNameValue
 acPriorityEligibleTag = LYT.TagNameValue "ACPriorityEligible#Yes"
