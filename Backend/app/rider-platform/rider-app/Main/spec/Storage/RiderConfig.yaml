@@ -298,6 +298,11 @@ RiderConfig:
     # through the point at all, so a fresh route is resolved instead -- one map call, on a
     # path the customer is explicitly waiting on.
     betterPointMaxOffRouteDistance: Maybe Meters
+    # Off/unset: the shape we would pick is priced before /rideSearch answers, so it arrives
+    # with the estimates. On: it is dispatched with the others and collected from
+    # /alternateSuggestion/{searchId}/result instead, which keeps the provider round trip off
+    # the search's critical path at the cost of the suggestion appearing a beat later.
+    betterPointLoadSuggestionsAsync: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
