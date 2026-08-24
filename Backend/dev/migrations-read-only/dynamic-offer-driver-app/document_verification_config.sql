@@ -195,3 +195,9 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_de
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN restricted_vehicle_models text[] ;

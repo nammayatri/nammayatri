@@ -46,6 +46,7 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     onlyImageVerificationStatusLookupRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     order :: B.C f Kernel.Prelude.Int,
     rcNumberPrefixList :: B.C f [Kernel.Prelude.Text],
+    restrictedVehicleModels :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     rolesAllowedToUploadDocumentText :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     supportedVehicleClassesJSON :: B.C f Data.Aeson.Value,
     title :: B.C f Kernel.Prelude.Text,

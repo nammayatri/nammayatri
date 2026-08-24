@@ -738,6 +738,7 @@ DocumentVerificationConfig:
     documentOnboardingStage: Maybe DocumentOnboardingStage
     applicableTo: DocumentApplicableType
     documentFields: Maybe [FieldInfo]
+    restrictedVehicleModels: Maybe [Text]
     allowLicenseTransfer: Maybe Bool
     rolesAllowedToUploadDocument: Maybe [Role]
     isReminderSupported: Maybe Bool
@@ -761,6 +762,7 @@ DocumentVerificationConfig:
     supportedVehicleClassesJSON: json
     documentFieldsJSON: json
     rolesAllowedToUploadDocumentText: text[]
+    restrictedVehicleModels: text[]
   beamFields:
     supportedVehicleClasses:
       supportedVehicleClassesJSON: Value
