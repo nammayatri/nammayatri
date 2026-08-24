@@ -5,6 +5,7 @@ module Storage.Beam.FRFSSearch where
 
 import qualified BecknV2.FRFS.Enums
 import qualified Data.Aeson
+import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -28,6 +29,7 @@ data FRFSSearchT f = FRFSSearchT
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSingleMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

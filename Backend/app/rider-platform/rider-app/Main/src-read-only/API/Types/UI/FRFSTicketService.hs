@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Data.Time.Calendar
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
@@ -233,7 +234,11 @@ data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Tex
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     applicablePasses :: [FRFSPassOptionAPIEntity],
+    arrivalDate :: Data.Maybe.Maybe Data.Text.Text,
+    arrivalTime :: Data.Maybe.Maybe Data.Text.Text,
+    availableSeats :: Data.Maybe.Maybe Kernel.Prelude.Int,
     categories :: [CategoryInfoResponse],
+    departureTime :: Data.Maybe.Maybe Data.Text.Text,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
@@ -241,6 +246,10 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    providerClassId :: Data.Maybe.Maybe Data.Text.Text,
+    providerLayoutId :: Data.Maybe.Maybe Data.Text.Text,
+    providerServiceId :: Data.Maybe.Maybe Data.Text.Text,
+    providerTripCode :: Data.Maybe.Maybe Data.Text.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
@@ -249,6 +258,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
+    tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
@@ -347,6 +357,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { busLocationData :: Data.Maybe.Maybe [API.Types.UI.RiderLocation.BusLocation],
     fromStationCode :: Data.Text.Text,
+    journeyDate :: Data.Maybe.Maybe Data.Time.Calendar.Day,
     platformType :: Data.Maybe.Maybe Domain.Types.IntegratedBPPConfig.PlatformType,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
@@ -355,6 +366,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     toStationCode :: Data.Text.Text,
     tripTime :: Data.Maybe.Maybe Kernel.Prelude.UTCTime,
+    tripCategory :: Data.Maybe.Maybe Domain.Types.FRFSQuote.FRFSTripCategory,
     vehicleNumber :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)

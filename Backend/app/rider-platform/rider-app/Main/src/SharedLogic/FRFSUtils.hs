@@ -162,6 +162,7 @@ getProviderName integrationBPPConfig =
     (_, DIBC.DIRECT _) -> "Direct Multimodal Services"
     (_, DIBC.ONDC _) -> "ONDC Services"
     (_, DIBC.CRIS _) -> "CRIS Subway"
+    (_, DIBC.TNSTC _) -> "TNSTC"
 
 getQREncoding :: DIBC.IntegratedBPPConfig -> Maybe DIBC.QREncoding
 getQREncoding integratedBPPConfig = case integratedBPPConfig.providerConfig of
@@ -384,8 +385,22 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+data ProviderServiceDetails = ProviderServiceDetails
+  { providerServiceId :: Text,
+    providerLayoutId :: Text,
+    providerClassId :: Text,
+    providerTripCode :: Text,
+    departureTime :: Text,
+    arrivalTime :: Text,
+    arrivalDate :: Text,
+    availableSeats :: Maybe Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
 data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
+    providerServiceDetails :: Maybe ProviderServiceDetails,
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier,
@@ -468,7 +483,8 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
           ]
   return $
     FRFSFare
-      { farePolicyId = Just farePolicy.id,
+      { providerServiceDetails = Nothing,
+        farePolicyId = Just farePolicy.id,
         categories = categories,
         fareDetails = Nothing,
         vehicleServiceTier =
@@ -517,7 +533,8 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                 let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
                 return $
                   FRFSFare
-                    { farePolicyId = Nothing,
+                    { providerServiceDetails = Nothing,
+                      farePolicyId = Nothing,
                       categories =
                         [ FRFSTicketCategory
                             { category = ADULT,
