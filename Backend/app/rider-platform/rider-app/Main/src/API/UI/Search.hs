@@ -377,9 +377,21 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   -- collects whenever the app asks.
   whenJust mbSuggestedBuild $ \build ->
     unless (null build.backgroundSearchRes) $
-      fork "betterRoutePointAlternates" $
+      fork "betterRoutePointAlternates" $ do
         forM_ build.backgroundSearchRes $ \backgroundRes ->
-          void $ priceSuggestedSearch dSearchRes backgroundRes []
+          priceSuggestedSearch dSearchRes backgroundRes [] >>= \case
+            Just _ -> pure ()
+            -- Not an error worth failing anything over -- the app renders the shapes it has
+            -- fares for -- but it is worth knowing how often a suggestion goes unpriced.
+            Nothing ->
+              logWarning $
+                "better_route_point: no fare for background shape " <> backgroundRes.searchRequest.id.getId
+                  <> " of parent "
+                  <> dSearchRes.searchRequest.id.getId
+        -- Every shape has now been through the provider, whatever came back. Recorded so the
+        -- result endpoint can call the list final instead of leaving the app polling for a
+        -- fare that is never going to arrive.
+        BRPC.markAlternatesDispatched dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry
   -- Everything the background dispatch will answer for, which is exactly what
   -- /alternateSuggestion/:searchId/result serves.
   let hasAlternates = maybe False (not . null . (.alternates)) mbSuggestedBuild
