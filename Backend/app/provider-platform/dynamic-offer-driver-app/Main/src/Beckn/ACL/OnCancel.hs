@@ -150,7 +150,7 @@ tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReas
       orderTags = Tags.convertToTagGroup [(Tags.CANCELLATION_COLLECTION_MODE, mbCancellationDuesDetails' >>= (.cancellationCollectionMode)), (Tags.CUSTOMER_CANCELLATION_NOTIFICATION_KEY, mbCustomerNotificationKey)],
       orderStatus = Just cancelStatus,
       orderFulfillments = tfFulfillments booking driverName driverGender customerPhoneNo rideStatus mbVehicle driverPhone,
-      orderCancellation = tfCancellation cancellationSource cancellationReasonCode,
+      orderCancellation = tfCancellation (fromMaybe False becknConfig.sendOndcCancellationCodes) cancellationSource cancellationReasonCode,
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms cancellationFee,
       orderItems = tfItems booking merchant mbFarePolicy,
@@ -293,12 +293,12 @@ tfCustomer booking customerPhoneNo = do
           Just $ emptyPerson {Spec.personName = booking.riderName}
       }
 
-tfCancellation :: SBCR.CancellationSource -> Maybe Text -> Maybe Spec.Cancellation
-tfCancellation cancellationSource cancellationReasonCode =
+tfCancellation :: Bool -> SBCR.CancellationSource -> Maybe Text -> Maybe Spec.Cancellation
+tfCancellation sendOndcCodes cancellationSource cancellationReasonCode =
   Just $
     Spec.Cancellation
       { cancellationCancelledBy = castCancellatonSource cancellationSource,
-        cancellationReason = Common.mkReason cancellationReasonCode Nothing
+        cancellationReason = Common.mkCancellationReason sendOndcCodes cancellationReasonCode Nothing
       }
   where
     castCancellatonSource = \case

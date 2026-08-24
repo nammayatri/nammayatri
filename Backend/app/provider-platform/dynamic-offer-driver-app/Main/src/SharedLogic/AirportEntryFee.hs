@@ -156,7 +156,8 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
               tdsRateReason = Nothing,
               emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
               fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-              issuedToName = Nothing
+              issuedToName = Nothing,
+              buyerCounterpartyId = Nothing
             }
     result <-
       runFinance ctx $

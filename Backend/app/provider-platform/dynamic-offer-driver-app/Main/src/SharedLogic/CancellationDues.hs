@@ -51,6 +51,7 @@ data ApplyCancellationChargeReq = ApplyCancellationChargeReq
     overdueCancellationTax :: Maybe HighPrecMoney,
     cancellationCommission :: Maybe HighPrecMoney,
     overdueCancellationCommission :: Maybe HighPrecMoney,
+    carryForwardEnabled :: Bool,
     -- id of the CancellationConsequenceMatrix row that produced this charge (audit trail)
     consequenceRowId :: Maybe Text,
     -- show ConsequenceCollectionMode from the row (NextRideDues / ImmediateCapture)
@@ -64,7 +65,8 @@ applyCancellationCharge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ApplyC
 applyCancellationCharge req = do
   -- totalCharges is SIGNED: a negative value is a credit to the customer, reducing their
   -- outstanding dues; the balance never goes below zero and credits create no dues row.
-  void $ QRD.updateCancellationDues (max 0 (req.totalCharges + req.currentDues)) req.riderId
+  when req.carryForwardEnabled $
+    void $ QRD.updateCancellationDues (max 0 (req.totalCharges + req.currentDues)) req.riderId
   when (req.totalCharges > 0) $ do
     duesDetailsId <- generateGUID
     now <- getCurrentTime

@@ -171,6 +171,7 @@ mkLoyaltyFinanceCtx wallet refId =
       supplierId = Nothing,
       fromLocationAddress = Nothing,
       issuedToName = Nothing,
+      buyerCounterpartyId = Nothing,
       panOfParty = Nothing,
       panType = Nothing,
       tdsRateReason = Nothing,

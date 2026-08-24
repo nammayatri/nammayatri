@@ -93,6 +93,7 @@ import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
+import qualified SharedLogic.CancellationConfig as SCC
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationDues as SCD
 import qualified SharedLogic.CancellationFault as CancellationFault
@@ -376,7 +377,8 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   cancellationCommission = outcome.commission,
                   overdueCancellationCommission = outcome.overdueCommission,
                   consequenceRowId = outcome.consequenceRowId,
-                  collectionMode = outcome.collectionMode
+                  collectionMode = outcome.collectionMode,
+                  carryForwardEnabled = SCC.carryForwardEnabled transporterConfig
                 }
             when (ctx.source == SBCR.ByUser && totalCharges > 0) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId

@@ -20,6 +20,7 @@ module SharedLogic.Finance.Prepaid
     voidPrepaidHold,
     creditPrepaidBalance,
     debitPrepaidBalance,
+    debitPrepaidBalanceDirect,
     computeFifoSubscriptionAllocations,
     attributableRideDebitAmount,
     handleSubscriptionExpiry,
@@ -845,6 +846,80 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
     (Left err, _, _) -> pure $ Left err
     (_, Left err, _) -> pure $ Left err
     (_, _, Left err) -> pure $ Left err
+
+debitPrepaidBalanceDirect ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  CounterpartyType ->
+  Text -> -- Owner ID
+  HighPrecMoney -> -- Amount to consume (cancellation base, tax-exclusive)
+  HighPrecMoney -> -- Revenue recognition amount
+  Currency ->
+  Text -> -- Merchant ID
+  Text -> -- Merchant operating city ID
+  Text -> -- Reference ID (booking ID)
+  Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
+  m (Either FinanceError HighPrecMoney)
+debitPrepaidBalanceDirect counterpartyType ownerId debitAmount revenueAmount currency merchantId merchantOperatingCityId referenceId mbMetadata mbVehicleCategory = do
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
+  mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
+  mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
+  mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
+  case (mbOwnerAccount, mbSellerRideCredit, mbSellerLiability, mbSellerRevenue) of
+    (Right ownerAccount, Right sellerRideCredit, Right sellerLiability, Right sellerRevenue) -> do
+      existing <- getEntriesByReference prepaidRideDebitReferenceType referenceId
+      let alreadyDebited = any (\e -> e.fromAccountId == ownerAccount.id) existing
+      if alreadyDebited
+        then do
+          mbBal <- getBalance ownerAccount.id
+          pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
+        else do
+          when (debitAmount > 0) $ do
+            let debitEntry =
+                  LedgerEntryInput
+                    { fromAccountId = ownerAccount.id,
+                      toAccountId = sellerRideCredit.id,
+                      concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
+                      amount = debitAmount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                      status = SETTLED,
+                      referenceType = prepaidRideDebitReferenceType,
+                      referenceId = referenceId,
+                      entityReferenceId = Nothing,
+                      entityReferenceType = Nothing,
+                      metadata = mbMetadata,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
+                    }
+            void $ createEntryWithBalanceUpdate debitEntry
+          when (revenueAmount > 0) $ do
+            let revenueEntry =
+                  LedgerEntryInput
+                    { fromAccountId = sellerLiability.id,
+                      toAccountId = sellerRevenue.id,
+                      concernedIndividualId = Nothing,
+                      amount = revenueAmount,
+                      currency = currency,
+                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                      status = SETTLED,
+                      referenceType = subscriptionRideReferenceType,
+                      referenceId = referenceId,
+                      entityReferenceId = Nothing,
+                      entityReferenceType = Nothing,
+                      metadata = Nothing,
+                      merchantId = merchantId,
+                      merchantOperatingCityId = merchantOperatingCityId,
+                      settlementStatus = Nothing
+                    }
+            void $ createEntryWithBalanceUpdate revenueEntry
+          mbBal <- getBalance ownerAccount.id
+          pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
+    (Left err, _, _, _) -> pure $ Left err
+    (_, Left err, _, _) -> pure $ Left err
+    (_, _, Left err, _) -> pure $ Left err
+    (_, _, _, Left err) -> pure $ Left err
 
 -- | FIFO-split a ride debit across ACTIVE subscriptions (oldest first).
 -- Uses the same wallet-slice idea as exhaustion: remaining on oldest =

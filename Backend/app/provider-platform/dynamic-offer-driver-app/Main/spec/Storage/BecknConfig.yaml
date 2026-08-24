@@ -36,6 +36,7 @@ BecknConfig:
     onCancelTTLSec: Maybe Int
     networkId: Maybe Text
     becknProtocol: Maybe BecknProtocol
+    sendOndcCancellationCodes: Maybe Bool
 
   types:
     PaymentCollectedBy:
