@@ -15,6 +15,7 @@ where
 import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import Control.Applicative ((<|>))
+import qualified Data.Text as T
 import "lib-dashboard" Domain.Action.Dashboard.Registration as DDR
 import qualified "beckn-spec" Domain.Types.InitiatedBy as DIB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -114,7 +115,8 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
   runRequestValidation validateFn req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
-  let req' = req{Common.adminApprovalRequired = merchant.requireAdminApprovalForFleetOnboarding}
+  let mbNormalizedEmail = T.toLower <$> req.email
+  let req' = req{Common.adminApprovalRequired = merchant.requireAdminApprovalForFleetOnboarding, Common.email = mbNormalizedEmail}
   let requestorId = apiTokenInfo.personId.getId
 
   fleetOwner <-
@@ -129,12 +131,12 @@ postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req =
           throwError (InvalidRequest "Person should be fleet owner")
         pure person
 
-  whenJust req.email \reqEmail -> do
+  whenJust mbNormalizedEmail \normalizedEmail -> do
     fleetOwnerEmail <- forM fleetOwner.email decrypt
-    unless (req.email == fleetOwnerEmail) $
-      unlessM (isNothing <$> QP.findByEmail reqEmail) $ throwError (InvalidRequest "Email already registered")
+    unless (mbNormalizedEmail == (T.toLower <$> fleetOwnerEmail)) $
+      unlessM (isNothing <$> QP.findByEmail normalizedEmail) $ throwError (InvalidRequest "Email already registered")
 
-  encEmail <- forM req.email encrypt
+  encEmail <- forM mbNormalizedEmail encrypt
   let fleetRole = getFleetRole req.fleetType
   fleetOwnerRole <- QRole.findByDashboardAccessType fleetRole >>= fromMaybeM (RoleDoesNotExist $ show fleetRole)
 
