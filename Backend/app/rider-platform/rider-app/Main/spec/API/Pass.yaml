@@ -150,12 +150,14 @@ types:
 
   PurchasedPassTransactionAPIEntity:
     id: Id PurchasedPassPayment
+    purchasedPassPaymentId: Id PurchasedPassPayment
     passName: Maybe Text
     passCode: Text
     createdAt: UTCTime
     startDate: Day
     endDate: Day
     amount: HighPrecMoney
+    availableTripCount: Maybe Int
     status: StatusType
     passType: Maybe PassEnum
     refunds: "[RefundAPIEntity]"
