@@ -22,6 +22,7 @@ where
 import Dashboard.Common as ReExport
 import Data.Aeson
 import qualified Data.List as List
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Prelude
@@ -70,6 +71,7 @@ data DriverCoinsFunctionType
   | MetroRideCompleted MetroRideType (Maybe Kernel.Prelude.Int)
   | RidesCompleted Kernel.Prelude.Int
   | DriverIncentiveCohortRidesCompleted Kernel.Prelude.Int
+  | DriverIncentiveCohortRidesCompletedSlot Kernel.Prelude.Text Kernel.Prelude.Int
   | DriverIncentiveCohortMetrics DriverIncentiveMetrics
   | QuizQuestionCompleted
   | BonusQuizCoins
@@ -100,6 +102,8 @@ instance Show DriverCoinsFunctionType where
   show (BulkUploadFunctionV2 msg) = "BulkUploadFunctionV2 " <> show msg
   show (RidesCompleted n) = "RidesCompleted " <> show n
   show (DriverIncentiveCohortRidesCompleted n) = "DriverIncentiveCohortRidesCompleted " <> show n
+  show (DriverIncentiveCohortRidesCompletedSlot slot n) =
+    "DriverIncentiveCohortRidesCompletedSlot " <> T.unpack slot <> " " <> show n
   show (DriverIncentiveCohortMetrics metrics) = "DriverIncentiveCohortMetrics " <> show metrics
   show (CoinsRedemptionRefund) = "CoinsRedemptionRefund"
   show (FraudCoinsReversal) = "FraudCoinsReversal"
@@ -210,6 +214,11 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "RidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (DriverIncentiveCohortRidesCompletedSlot slot n, r3)
+                 | r1 <- stripPrefix "DriverIncentiveCohortRidesCompletedSlot " r,
+                   (slot, r2) <- readUnquotedSlot r1,
+                   (n, r3) <- readsPrec (app_prec + 1) r2
+               ]
             ++ [ (DriverIncentiveCohortRidesCompleted v1, r2)
                  | r1 <- stripPrefix "DriverIncentiveCohortRidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -238,6 +247,14 @@ instance Read DriverCoinsFunctionType where
     where
       app_prec = 9
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+      readUnquotedSlot :: String -> [(Text, String)]
+      readUnquotedSlot s =
+        let s' = dropWhile (== ' ') s
+            (slotStr, rest) = break (== ' ') s'
+         in [ (T.pack slotStr, rest)
+              | not (null slotStr),
+                not (null rest)
+            ]
 
 instance FromJSON DriverCoinsFunctionType where
   parseJSON = withObject "DriverCoinsFunctionType" $ \obj -> do
@@ -266,6 +283,13 @@ instance FromJSON DriverCoinsFunctionType where
       "FraudCoinsReversal" -> pure FraudCoinsReversal
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "DriverIncentiveCohortRidesCompleted" -> DriverIncentiveCohortRidesCompleted <$> obj .: "contents"
+      "DriverIncentiveCohortRidesCompletedSlot" -> do
+        contents <- obj .: "contents"
+        case contents of
+          Array arr' -> case V.toList arr' of
+            [String slot, Number n] -> pure $ DriverIncentiveCohortRidesCompletedSlot slot (round n)
+            _ -> fail $ "Expected [slot, threshold] for 'DriverIncentiveCohortRidesCompletedSlot', got: " <> show contents
+          _ -> fail "Unsupported format for 'DriverIncentiveCohortRidesCompletedSlot' contents"
       "DriverIncentiveCohortMetrics" -> DriverIncentiveCohortMetrics <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       "MetroRideCompleted" -> do

@@ -161,6 +161,9 @@ processingTranslations coinsConfig eventMessageLs = do
 -- | Timebound uniqueness for incentive cohort configs (same city/vehicle/trip):
 -- * DriverIncentiveCohortRidesCompleted N — conflict only with the exact same
 --   eventFunction (same threshold N) sharing a weekday.
+-- * DriverIncentiveCohortRidesCompletedSlot slot N — conflict only with the exact
+--   same eventFunction (same slot + N) sharing a weekday; different slots may
+--   share weekdays so Ops can run multiple same-day cohorts with target N.
 -- * DriverIncentiveCohortMetrics _ — conflict with any other Metrics config
 --   sharing a weekday (thresholds ignored; only one Metrics window per day).
 validateIncentiveCohortTimeBoundWindow ::
@@ -197,6 +200,7 @@ data IncentiveCohortConflictKind
 incentiveCohortConflictKind :: DCT.DriverCoinsFunctionType -> Maybe IncentiveCohortConflictKind
 incentiveCohortConflictKind = \case
   DCT.DriverIncentiveCohortRidesCompleted _ -> Just ExactEventFunction
+  DCT.DriverIncentiveCohortRidesCompletedSlot _ _ -> Just ExactEventFunction
   DCT.DriverIncentiveCohortMetrics _ -> Just AnyDriverIncentiveCohortMetrics
   _ -> Nothing
 
