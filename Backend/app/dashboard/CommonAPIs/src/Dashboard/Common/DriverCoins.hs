@@ -26,6 +26,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Prelude
+import Lib.Types.SpecialLocation (Area)
 import qualified Text.Show (show)
 
 data CoinMessage
@@ -70,6 +71,8 @@ data DriverCoinsFunctionType
   | BulkUploadFunctionV2 CoinMessage
   | MetroRideCompleted MetroRideType (Maybe Kernel.Prelude.Int)
   | RidesCompleted Kernel.Prelude.Int
+  | RidesCompletedOnServiceTier ServiceTierType Kernel.Prelude.Int
+  | RidesCompletedInSpecialLocation Area Kernel.Prelude.Int
   | DriverIncentiveCohortRidesCompleted Kernel.Prelude.Int
   | DriverIncentiveCohortRidesCompletedSlot Kernel.Prelude.Text Kernel.Prelude.Int
   | DriverIncentiveCohortMetrics DriverIncentiveMetrics
@@ -101,6 +104,8 @@ instance Show DriverCoinsFunctionType where
   show BonusQuizCoins = "BonusQuizCoins"
   show (BulkUploadFunctionV2 msg) = "BulkUploadFunctionV2 " <> show msg
   show (RidesCompleted n) = "RidesCompleted " <> show n
+  show (RidesCompletedOnServiceTier tier n) = "RidesCompletedOnServiceTier " <> show tier <> " " <> show n
+  show (RidesCompletedInSpecialLocation area n) = "RidesCompletedInSpecialLocation " <> show area <> " " <> show n
   show (DriverIncentiveCohortRidesCompleted n) = "DriverIncentiveCohortRidesCompleted " <> show n
   show (DriverIncentiveCohortRidesCompletedSlot slot n) =
     "DriverIncentiveCohortRidesCompletedSlot " <> T.unpack slot <> " " <> show n
@@ -214,6 +219,17 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "RidesCompleted " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (RidesCompletedOnServiceTier tier n, r3)
+                 | r1 <- stripPrefix "RidesCompletedOnServiceTier " r,
+                   (tier, r2) <- readsPrec (app_prec + 1) r1,
+                   (n, r3) <- readsPrec (app_prec + 1) r2
+               ]
+            ++ [ (RidesCompletedInSpecialLocation area n, r3)
+                 | r1 <- stripPrefix "RidesCompletedInSpecialLocation " r,
+                   (areaStr, r2) <- readUnquotedSlot r1,
+                   Just area <- [readMaybe (T.unpack areaStr) :: Maybe Area],
+                   (n, r3) <- readsPrec (app_prec + 1) r2
+               ]
             ++ [ (DriverIncentiveCohortRidesCompletedSlot slot n, r3)
                  | r1 <- stripPrefix "DriverIncentiveCohortRidesCompletedSlot " r,
                    (slot, r2) <- readUnquotedSlot r1,
@@ -282,6 +298,27 @@ instance FromJSON DriverCoinsFunctionType where
       "CoinsRedemptionRefund" -> pure CoinsRedemptionRefund
       "FraudCoinsReversal" -> pure FraudCoinsReversal
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
+      "RidesCompletedOnServiceTier" -> do
+        contents <- obj .: "contents"
+        case contents of
+          Array arr' -> case V.toList arr' of
+            [String tier, Number n] -> case readMaybe (T.unpack tier) of
+              Just tier' -> pure $ RidesCompletedOnServiceTier tier' (round n)
+              Nothing -> fail $ "Unknown service tier for 'RidesCompletedOnServiceTier': " <> T.unpack tier
+            _ -> fail $ "Expected [serviceTier, threshold] for 'RidesCompletedOnServiceTier', got: " <> show contents
+          _ -> fail "Unsupported format for 'RidesCompletedOnServiceTier' contents"
+      "RidesCompletedInSpecialLocation" -> do
+        contents <- obj .: "contents"
+        case contents of
+          -- Parse the area via Area's own FromJSON, which accepts both the
+          -- Show-string form ("Pickup_<id>") and the generic tagged-object form
+          -- ({"tag":"Pickup",...}). The latter is what DriverCoinsFunctionType's
+          -- generic ToJSON emits, so this keeps encode/decode round-tripping
+          -- (e.g. dashboard create -> forwarded to the driver app).
+          Array arr' -> case V.toList arr' of
+            [areaVal, Number n] -> RidesCompletedInSpecialLocation <$> parseJSON areaVal <*> pure (round n)
+            _ -> fail $ "Expected [area, threshold] for 'RidesCompletedInSpecialLocation', got: " <> show contents
+          _ -> fail "Unsupported format for 'RidesCompletedInSpecialLocation' contents"
       "DriverIncentiveCohortRidesCompleted" -> DriverIncentiveCohortRidesCompleted <$> obj .: "contents"
       "DriverIncentiveCohortRidesCompletedSlot" -> do
         contents <- obj .: "contents"
