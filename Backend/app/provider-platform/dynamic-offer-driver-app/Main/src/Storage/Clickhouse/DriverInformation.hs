@@ -19,7 +19,7 @@ data DriverInformationT f = DriverInformationT
     docsVerificationStatus :: C f (Maybe DDVS.DocsVerificationStatus),
     enabled :: C f Bool,
     enabledAt :: C f (Maybe UTCTime),
-    active :: C f (Maybe Text),
+    mode :: C f (Maybe Text),
     onRide :: C f (Maybe Text),
     merchantOperatingCityId :: C f (Maybe (Id DMOC.MerchantOperatingCity))
   }
@@ -35,7 +35,7 @@ driverInformationTTable =
       docsVerificationStatus = "docs_verification_status",
       enabled = "enabled",
       enabledAt = "enabled_at",
-      active = "active",
+      mode = "mode",
       onRide = "on_ride",
       merchantOperatingCityId = "merchant_operating_city_id"
     }
@@ -119,16 +119,21 @@ getStatusCountsByDriverIds driverIds =
         (\info -> info.driverId `CH.in_` driverIds)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
 
--- | `active` is a Nullable(String) in ClickHouse, not a boolean, and historical rows
--- carry mixed casing -- verified against prod: the current-state distinct set is
--- FALSE/False/TRUE/True/false, with no NULLs. Matching a single spelling undercounts
--- by up to 98% in some cities, so match every truthy spelling. `true` is not present
--- today and is listed only to stay correct if the writer changes.
-activeTruthy :: [Maybe Text]
-activeTruthy = Just <$> ["True", "TRUE", "true"]
+-- | `on_ride` is a Nullable(String) in ClickHouse, not a boolean, and historical rows
+-- carry mixed casing -- verified against prod on the sibling `active` column, whose
+-- current-state distinct set is FALSE/False/TRUE/True/false with no NULLs. Matching a
+-- single spelling undercounts by up to 98% in some cities, so match every truthy
+-- spelling. `true` is not present today and is listed only to stay correct if the
+-- writer changes.
+onRideTruthy :: [Maybe Text]
+onRideTruthy = Just <$> ["True", "TRUE", "true"]
 
--- | Drivers currently on a ride in one operating city. Same seed-only role, and the
--- same string/casing caveat as `active`.
+-- | Dispatch-eligible modes, matching SharedLogic.DriverSupplyCounter.isSupplyMode. The
+-- lowercase spellings are insurance only; the column is written from `show`.
+supplyModes :: [Maybe Text]
+supplyModes = Just <$> ["ONLINE", "SILENT", "online", "silent"]
+
+-- | Drivers currently on a ride in one operating city. Seed-only.
 countOnRideByCity ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DMOC.MerchantOperatingCity ->
@@ -138,11 +143,12 @@ countOnRideByCity merchantOpCityId = do
     CH.findAll $
       CH.select_ (\info -> CH.aggregate $ CH.count_ info.driverId) $
         CH.filter_
-          (\info -> info.merchantOperatingCityId CH.==. Just merchantOpCityId CH.&&. info.onRide `CH.in_` activeTruthy)
+          (\info -> info.merchantOperatingCityId CH.==. Just merchantOpCityId CH.&&. info.onRide `CH.in_` onRideTruthy)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
   pure $ fromMaybe 0 (listToMaybe res)
 
--- | Dispatch-eligible drivers in one operating city, for the supply gauges. Read from
+-- | Drivers online in one operating city, for the supply gauges. Keyed on `mode`, not
+-- `active`, so the seed counts the same population the counter's deltas track. Read from
 -- ClickHouse rather than Postgres: this only runs when the Redis counter key is absent,
 -- so an eventually-consistent count is fine as a seed and the counter takes over from there.
 -- Rows with a NULL or empty city are excluded, matching the per-city convention elsewhere.
@@ -155,6 +161,6 @@ countOnlineByCity merchantOpCityId = do
     CH.findAll $
       CH.select_ (\info -> CH.aggregate $ CH.count_ info.driverId) $
         CH.filter_
-          (\info -> info.merchantOperatingCityId CH.==. Just merchantOpCityId CH.&&. info.active `CH.in_` activeTruthy)
+          (\info -> info.merchantOperatingCityId CH.==. Just merchantOpCityId CH.&&. info.mode `CH.in_` supplyModes)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
   pure $ fromMaybe 0 (listToMaybe res)

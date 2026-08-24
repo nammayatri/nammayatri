@@ -18,7 +18,7 @@
 -- Both are plain Redis counters, maintained by the events that change the underlying
 -- state (SharedLogic.DriverSupplyCounter):
 --
---   * online  -- incr/decr by the writers of driver_information.active
+--   * online  -- incr/decr when a driver goes online or offline
 --   * on-ride -- incr on ride start, decr on ride completion/cancellation
 --
 -- A counter, not a set of driver ids: a set large enough to hold every online driver
@@ -62,6 +62,9 @@ seedLockSecs = 120
 seedLockKey :: Text -> Text -> Text
 seedLockKey kind cityId = "driverSupply:seed:" <> kind <> ":" <> cityId
 
+seededMarkerKey :: Text -> Text -> Text
+seededMarkerKey kind cityId = "driverSupply:seeded:" <> kind <> ":" <> cityId
+
 type CounterFlow m r =
   (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, ClickhouseFlow m r, Redis.HedisFlow m r, MonadFlow m)
 
@@ -82,7 +85,11 @@ seedCounter kind countFromCH mkKey cityId = do
       logInfo $ "seeding " <> kind <> " counter for city " <> cityId.getId <> " from ClickHouse"
       baseline <- countFromCH cityId
       void $ Redis.incrby key (fromIntegral baseline)
+      Redis.set (seededMarkerKey kind cityId.getId) True
       fromMaybe baseline <$> Redis.safeGet key
+
+isSeeded :: CounterFlow m r => Text -> Id DMOC.MerchantOperatingCity -> m Bool
+isSeeded kind cityId = fromMaybe False <$> Redis.safeGet (seededMarkerKey kind cityId.getId)
 
 -- | Redis is the only read on the tick path. safeGet, not get: incr/decr write a raw
 -- Redis integer while the seed writes JSON, so an undecodable value degrades to a
@@ -90,9 +97,10 @@ seedCounter kind countFromCH mkKey cityId = do
 currentCount :: CounterFlow m r => Text -> (Id DMOC.MerchantOperatingCity -> m Int) -> (Text -> Text) -> Id DMOC.MerchantOperatingCity -> m Int
 currentCount kind countFromCH mkKey cityId = do
   mbCount <- Redis.safeGet (mkKey cityId.getId)
+  seeded <- isSeeded kind cityId
   case mbCount of
     -- decr on a missing key creates it at -1, so "exists" is not enough.
-    Just count | count >= 0 -> pure count
+    Just count | seeded && count >= 0 -> pure count
     _ -> seedCounter kind countFromCH mkKey cityId
 
 -- | Forked once at app boot; must never die, so each tick is exception-guarded.
