@@ -824,3 +824,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_approaching_notification_tiers
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_off_route_distance integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_load_suggestions_async boolean ;

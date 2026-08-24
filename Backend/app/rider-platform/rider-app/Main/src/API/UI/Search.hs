@@ -147,7 +147,14 @@ data SearchResp = SearchResp
     -- Frontend contract: when present, render directly; when null, fall back
     -- to polling /rideSearch/:id/results (legacy behaviour).
     -- Backward-compatible: legacy clients ignore the unknown field.
-    results :: Maybe DQuote.GetQuotesRes
+    results :: Maybe DQuote.GetQuotesRes,
+    -- | Whether GET /alternateSuggestion/:searchId/result has anything to return, so the
+    -- frontend polls it only when there is something coming. False for the overwhelming
+    -- majority of searches, which produce no walk-and-save shapes at all.
+    --
+    -- Counts every shape that endpoint serves: when the city prices one inline this is the
+    -- shapes beside it, and when it loads them asynchronously it includes the default too.
+    hasAlternates :: Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -305,7 +312,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     -- TODO : remove this code after multiple search req issue get fixed from frontend
     --END
     dSearchRes <- withTimeAPI "rideSearch" "domainSearch" $ DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing mbEnableSyncSearch mbIsWhatsappRequest
-    inlineResults <- withTimeAPI "rideSearch" "dispatchSearchToBpp" $ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
+    dispatchRes <- withTimeAPI "rideSearch" "dispatchSearchToBpp" $ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
     fork "Multimodal Search" $ do
       riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
       let mbDoMultimodalSearch = getDoMultimodalSearch req
@@ -317,7 +324,8 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
         { searchId = dSearchRes.searchRequest.id,
           searchExpiry = dSearchRes.searchRequestExpiry,
           routeInfo = dSearchRes.shortestRouteInfo,
-          results = inlineResults
+          results = dispatchRes.inlineResults,
+          hasAlternates = dispatchRes.hasAlternates
         }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -331,7 +339,14 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
 syncSearchTimeoutMicros :: ET.Microseconds
 syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
-dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> Maybe Bool -> Flow (Maybe DQuote.GetQuotesRes)
+-- | The inline /rideSearch/:id/results payload when the sync path produced one, and whether
+-- any walk-and-save shape is being priced in the background for this search.
+data DispatchRes = DispatchRes
+  { inlineResults :: Maybe DQuote.GetQuotesRes,
+    hasAlternates :: Bool
+  }
+
+dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> Maybe Bool -> Flow DispatchRes
 dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   mbRiderConfig <- withTimeAPI "rideSearch" "getRiderConfigForDispatch" $ getConfig (RiderConfigDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) Nothing
   shouldSync <-
@@ -352,16 +367,21 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           logError $ "better_route_point: shadow search build failed, continuing without it: " <> T.pack (show e)
           pure Nothing
     Nothing -> pure Nothing
-  suggestedAwaitable <- traverse (dispatchSuggestedSearch dSearchRes) mbSuggestedBuild
-  -- The alternates are never waited on: their fares are for a decision the customer has
-  -- not made yet, so they must not sit in front of the estimates they are shown beside.
-  -- Each one's on_search persists its own estimates, which /alternateSuggestion/{id}/result
+  -- Only the shape the city wants priced inline is awaited, and only when it wants one.
+  suggestedAwaitable <- case mbSuggestedBuild of
+    Just build
+      | Just inlineRes <- build.inlineSearchRes ->
+        Just <$> dispatchSuggestedSearch dSearchRes inlineRes (DQuote.mkSuggestedOption <$> build.alternates)
+    _ -> pure Nothing
+  -- Everything else is never waited on: those fares are for a decision the customer has not
+  -- made yet, so they must not sit in front of the estimates they are shown beside. Each
+  -- one's on_search persists its own estimates, which /alternateSuggestion/{id}/result
   -- collects whenever the app asks.
   whenJust mbSuggestedBuild $ \build ->
-    unless (null build.alternateSearchRes) $
+    unless (null build.backgroundSearchRes) $
       fork "betterRoutePointAlternates" $
-        forM_ build.alternateSearchRes $ \alternateRes ->
-          void $ priceSuggestedSearch dSearchRes alternateRes []
+        forM_ build.backgroundSearchRes $ \backgroundRes ->
+          void $ priceSuggestedSearch dSearchRes backgroundRes []
   let dispatch reqV =
         GatewayLookup.dispatchToGateway
           dSearchRes.merchant.id
@@ -370,6 +390,9 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           reqV
           (\url r -> void $ CallBPP.searchV2 url r merchantId)
           (\url mappedAction jsonBody -> void $ CallBPP.callBecknAPIUnsigned mappedAction url jsonBody)
+  -- Everything the background dispatch will answer for, which is exactly what
+  -- /alternateSuggestion/:searchId/result serves.
+  let hasAlternates = maybe False (not . null . (.alternates)) mbSuggestedBuild
   if shouldSync
     then do
       becknTaxiReqV2 <- withTimeAPI "rideSearch" "buildBecknSearchReqV2" $ TaxiACL.buildSearchReqV2 dSearchRes
@@ -378,11 +401,12 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
       mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
       -- Both searches were dispatched together; only now do we join on the suggestion, so
       -- its latency overlaps the real search's instead of adding to it.
-      case (mbQuotesRes, suggestedAwaitable) of
+      inlineResults <- case (mbQuotesRes, suggestedAwaitable) of
         (Just quotesRes, Just awaitable) -> do
           mbSuggested <- withTimeAPI "rideSearch" "awaitBetterRoutePointSearch" $ awaitSuggestedSearch dSearchRes awaitable
           pure . Just $ quotesRes {DQuote.suggestedEstimates = mbSuggested}
         _ -> pure mbQuotesRes
+      pure DispatchRes {inlineResults, hasAlternates}
     else do
       fork "search cabs" . withShortRetry $ do
         becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
@@ -391,15 +415,17 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
         dispatch becknTaxiReqV2
       -- Async path: nothing to join on. The shadow's estimates are persisted by its inline
       -- on_search, and /rideSearch/results picks them up via parentSearchRequestId.
-      pure Nothing
+      pure DispatchRes {inlineResults = Nothing, hasAlternates}
 
 -- | Fires the shadow search at the BPP's internal sync endpoint, in parallel with the real
 -- search. Not routed through the gateway: this is a second price lookup for one customer
 -- intent, and it must not look like a second market-wide search.
-dispatchSuggestedSearch :: DSearch.SearchRes -> BRPS.SuggestedSearchBuild -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
-dispatchSuggestedSearch parentRes build =
+-- | The alternates ride along as geometry so the app can draw every marker as soon as the
+-- search answers, and match the fares that follow by search id.
+dispatchSuggestedSearch :: DSearch.SearchRes -> DSearch.SearchRes -> [DQuote.SuggestedOption] -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
+dispatchSuggestedSearch parentRes inlineRes alternates =
   awaitableFork "betterRoutePointSearchDispatch" $
-    priceSuggestedSearch parentRes build.shadowSearchRes (DQuote.mkSuggestedOption <$> build.alternates)
+    priceSuggestedSearch parentRes inlineRes alternates
 
 -- | Sends one shadow search to the BPP and reads its answer back as the customer-facing
 -- suggestion. 'Nothing' whenever the BPP does not answer with estimates: a suggestion is
@@ -1263,7 +1289,10 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
       { searchId = dSearchRes.searchRequest.id,
         searchExpiry = dSearchRes.searchRequestExpiry,
         routeInfo = dSearchRes.shortestRouteInfo,
-        results = Nothing
+        results = Nothing,
+        -- A reserved ride never gets a walk-and-save shape: its pickup is one the customer
+        -- already committed to, and this path does not dispatch suggestions at all.
+        hasAlternates = False
       }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
