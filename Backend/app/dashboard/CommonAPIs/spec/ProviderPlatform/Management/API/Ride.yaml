@@ -307,6 +307,7 @@ types:
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - rideTags: Maybe [TagNameValue]
+    - invoiceId: Maybe Text # Finance invoice id linked to the ride's booking (booking.financeInvoiceId)
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride

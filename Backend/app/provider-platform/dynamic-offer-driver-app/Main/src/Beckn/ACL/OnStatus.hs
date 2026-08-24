@@ -112,7 +112,8 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
                 state = RideCompletedOS.orderState,
                 quote,
                 payment = Just $ Common.mkRideCompletedPayment ride.currency paymentMethodInfo paymentUrl,
-                fulfillment = fulfillment
+                fulfillment = fulfillment,
+                documents = RideCompletedOS.mkInvoiceDocuments <$> mbInvoiceDocumentUrl
               }
       }
 buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {..}) = do
@@ -129,7 +130,8 @@ buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {.
               { id = booking.id.getId,
                 state = BookingCancelledOS.orderState,
                 cancellation_reason = Common.castCancellationSource cancellationSource,
-                fulfillment
+                fulfillment,
+                documents = BookingCancelledOS.mkInvoiceDocuments <$> mbInvoiceDocumentUrl
               }
       }
 buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do

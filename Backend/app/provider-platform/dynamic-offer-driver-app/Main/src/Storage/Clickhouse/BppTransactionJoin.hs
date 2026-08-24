@@ -382,7 +382,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           fleetNumber = EncryptedHashed <$> (Encrypted <$> bppTxn.fleetMobileNumberEncrypted) <*> (DbHash . encodeUtf8 <$> bppTxn.fleetMobileNumberHash),
           vehicleManufacturer = bppTxn.vehicleManufacturer,
           vehicleModel = bppTxn.vehicleModel,
-          rideTags = Yudhishthira.tagsNameValueFromTType bppTxn.rideTags
+          rideTags = Yudhishthira.tagsNameValueFromTType bppTxn.rideTags,
+          financeInvoiceId = Nothing -- clickhouse transaction join has no booking invoice linkage
         }
 
 findAllRideItemsV2 ::

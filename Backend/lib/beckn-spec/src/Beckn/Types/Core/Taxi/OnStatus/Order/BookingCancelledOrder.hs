@@ -20,6 +20,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.Agent as Reexport
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
+import Beckn.Types.Core.Taxi.Common.Document as Reexport
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport
 import Beckn.Types.Core.Taxi.OnStatus.Order.OrderState (RideBookingCancelledOrderCode (RIDE_BOOKING_CANCELLED))
 import Data.Aeson as A
@@ -31,7 +32,8 @@ data BookingCancelledOrder = BookingCancelledOrder
   { id :: Text,
     state :: RideBookingCancelledOrderCode,
     cancellation_reason :: CancellationSource,
-    fulfillment :: Maybe FulfillmentInfo
+    fulfillment :: Maybe FulfillmentInfo,
+    documents :: Maybe [Document] -- ONDC order.documents[] (e.g. cancellation INVOICE); omitted (not null) when Nothing via omitNothingFields
   }
   deriving (Generic, Show)
 
@@ -50,7 +52,10 @@ instance ToJSON BookingCancelledOrder where
 bookingCancelledOrderJSONOptions :: A.Options
 bookingCancelledOrderJSONOptions =
   defaultOptions
-    { fieldLabelModifier = \case
+    { -- Omit (not null) absent optionals — a strict ONDC schema check rejects
+      -- null on an array-typed property like documents[].
+      omitNothingFields = True,
+      fieldLabelModifier = \case
         "cancellation_reason" -> "./komn/cancellation_reason"
         a -> a
     }

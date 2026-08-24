@@ -585,7 +585,9 @@ library
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
+      SharedLogic.Finance.B2CQRCode
       SharedLogic.Finance.EInvoice
+      SharedLogic.Finance.InvoiceDocument
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation.EntitySync

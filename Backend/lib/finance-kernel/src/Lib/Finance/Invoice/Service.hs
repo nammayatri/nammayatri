@@ -82,6 +82,7 @@ invoiceToAuditValue = Aeson.toJSON . toTType' @BeamInvoice.Invoice . hideInvoice
           supplierTaxNo = SD.maskTaxNo <$> supplierTaxNo,
           irn = Nothing,
           signedQRCode = Nothing,
+          renderedInvoiceJson = Nothing, -- snapshot carries unmasked sensitive fields; drop from audit
           ..
         }
 
@@ -243,6 +244,32 @@ createInvoice input entryIds = do
       externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
       taxTotal = sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) input.lineItems
       subtotal = totalAmount - externalTotal - taxTotal
+      -- Frozen invoice JSON snapshot (system-comms / ONDC / audit), built from the same
+      -- data as the row at creation time. Masked out of the audit trail below.
+      renderedInvoiceSnapshot =
+        Aeson.object
+          [ "invoiceNumber" Aeson..= invoiceNum,
+            "invoiceType" Aeson..= input.invoiceType,
+            "invoiceDate" Aeson..= now,
+            "issuedToType" Aeson..= input.issuedToType,
+            "issuedToId" Aeson..= input.issuedToId,
+            "issuedToName" Aeson..= input.issuedToName,
+            "issuedToAddress" Aeson..= input.issuedToAddress,
+            "supplierName" Aeson..= input.supplierName,
+            "supplierAddress" Aeson..= input.supplierAddress,
+            "supplierGSTIN" Aeson..= input.supplierGSTIN,
+            "supplierTaxNo" Aeson..= input.supplierTaxNo,
+            "merchantGstin" Aeson..= input.merchantGstin,
+            "subtotal" Aeson..= subtotal,
+            "taxAmount" Aeson..= (totalAmount - subtotal),
+            "totalAmount" Aeson..= totalAmount,
+            "currency" Aeson..= input.currency,
+            "cgstAmount" Aeson..= (input.gstBreakdown >>= (.cgstAmount)),
+            "sgstAmount" Aeson..= (input.gstBreakdown >>= (.sgstAmount)),
+            "igstAmount" Aeson..= (input.gstBreakdown >>= (.igstAmount)),
+            "paymentMode" Aeson..= input.paymentMode,
+            "lineItems" Aeson..= lineItemsJson
+          ]
   logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) input.lineItems)
   let invoice =
         Invoice
@@ -286,7 +313,12 @@ createInvoice input entryIds = do
             updatedAt = now,
             irn = Nothing,
             signedQRCode = Nothing,
-            paymentMode = input.paymentMode
+            paymentMode = input.paymentMode,
+            -- JSON snapshot frozen at creation; PDF path, place of supply + B2C QR filled just after.
+            renderedInvoiceJson = Just renderedInvoiceSnapshot,
+            pdfS3Path = Nothing,
+            placeOfSupply = Nothing,
+            unsignedQRCode = Nothing
           }
 
   QInvoice.create invoice
