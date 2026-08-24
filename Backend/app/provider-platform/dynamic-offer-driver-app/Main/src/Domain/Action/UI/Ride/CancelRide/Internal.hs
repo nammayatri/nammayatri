@@ -292,9 +292,17 @@ createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
+    BeamFlow m r,
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
   ) =>
   SRB.Booking ->
   DRide.Ride ->

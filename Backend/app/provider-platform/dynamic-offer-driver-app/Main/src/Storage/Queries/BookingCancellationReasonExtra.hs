@@ -37,6 +37,7 @@ findAllCancelledByDriverId driverId = do
 
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BookingCancellationReason -> m ()
 upsert cancellationReason = do
+  now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
   if isJust res
     then
@@ -44,7 +45,9 @@ upsert cancellationReason = do
         [ Se.Set BeamBCR.bookingId (getId cancellationReason.bookingId),
           Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
           Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
-          Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
+          Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo,
+          Se.Set BeamBCR.ondcCancellationReasonId cancellationReason.ondcCancellationReasonId,
+          Se.Set BeamBCR.updatedAt (Just now)
         ]
         [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
     else createWithKV cancellationReason

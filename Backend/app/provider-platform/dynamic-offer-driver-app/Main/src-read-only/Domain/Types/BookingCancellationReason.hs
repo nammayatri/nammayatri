@@ -19,15 +19,18 @@ import qualified Tools.Beam.UtilsTH
 data BookingCancellationReason = BookingCancellationReason
   { additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverCancellationLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     driverDistToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    ondcCancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reasonCode :: Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
-    source :: Domain.Types.BookingCancellationReason.CancellationSource
+    source :: Domain.Types.BookingCancellationReason.CancellationSource,
+    updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

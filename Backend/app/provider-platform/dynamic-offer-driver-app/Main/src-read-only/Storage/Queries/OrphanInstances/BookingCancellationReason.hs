@@ -23,15 +23,18 @@ instance FromTType' Beam.BookingCancellationReason Domain.Types.BookingCancellat
         Domain.Types.BookingCancellationReason.BookingCancellationReason
           { additionalInfo = additionalInfo,
             bookingId = Kernel.Types.Id.Id bookingId,
+            createdAt = createdAt,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverCancellationLocation = Kernel.External.Maps.LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
             driverDistToPickup = driverDistToPickup,
             driverId = Kernel.Types.Id.Id <$> driverId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            ondcCancellationReasonId = ondcCancellationReasonId,
             reasonCode = Domain.Types.CancellationReason.CancellationReasonCode <$> reasonCode,
             rideId = Kernel.Types.Id.Id <$> rideId,
-            source = source
+            source = source,
+            updatedAt = updatedAt
           }
 
 instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellationReason.BookingCancellationReason where
@@ -39,6 +42,7 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
     Beam.BookingCancellationReasonT
       { Beam.additionalInfo = additionalInfo,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,
+        Beam.createdAt = createdAt,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
         Beam.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
@@ -46,7 +50,9 @@ instance ToTType' Beam.BookingCancellationReason Domain.Types.BookingCancellatio
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
+        Beam.ondcCancellationReasonId = ondcCancellationReasonId,
         Beam.reasonCode = (\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> reasonCode,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
-        Beam.source = source
+        Beam.source = source,
+        Beam.updatedAt = updatedAt
       }

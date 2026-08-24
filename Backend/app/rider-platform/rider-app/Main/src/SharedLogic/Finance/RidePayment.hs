@@ -344,7 +344,8 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       emitLedgerEntries = True,
       fromLocationAddress = fromLocationAddress,
       issuedToName = Nothing,
-      enableWalletGatedTierCheck = False -- driver-app-only concept; rider-app never reads this field
+      enableWalletGatedTierCheck = False, -- driver-app-only concept; rider-app never reads this field
+      buyerCounterpartyId = Nothing
     }
 
 applyBookingProviderFieldsToCtx :: DRB.Booking -> FinanceCtx -> FinanceCtx

@@ -161,7 +161,8 @@ deductAirportEntryFeeAtEndRide enabled ride booking = do
               emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
               fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
               issuedToName = Nothing,
-              enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
+              enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+              buyerCounterpartyId = Nothing
             }
     result <-
       runFinance ctx $

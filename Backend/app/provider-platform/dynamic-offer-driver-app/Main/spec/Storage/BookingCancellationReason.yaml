@@ -24,9 +24,12 @@ BookingCancellationReason:
     source : CancellationSource
     reasonCode : Maybe CancellationReasonCode
     additionalInfo : Maybe Text
+    ondcCancellationReasonId : Maybe Text
     driverCancellationLocation : Maybe LatLong
     driverDistToPickup : Maybe Meters
     distanceUnit : DistanceUnit
+    createdAt : Maybe UTCTime
+    updatedAt : Maybe UTCTime
 
   beamType:
     reasonCode: Maybe Text

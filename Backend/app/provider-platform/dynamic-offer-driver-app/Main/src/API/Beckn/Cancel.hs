@@ -44,12 +44,15 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
+import qualified SharedLogic.OndcCancellationReason as SOCR
 import qualified SharedLogic.SearchTryLocker as STL
 import SharedLogic.SyncRide (rideSync)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
@@ -112,13 +115,13 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                 (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
                 mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
                 fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
-                  (isReallocated, cancellationCharge, mbUpdatedRide) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+                  (isReallocated, cancellationCharge, mbUpdatedRide, resolvedReasonCode) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
                   let onCancelBuildReq =
                         OC.DBookingCancelledReqV2
                           { booking = booking,
                             cancellationSource = DBCR.ByUser,
                             cancellationFee = cancellationCharge,
-                            cancellationReasonCode = cancelRideReq.cancellationReason,
+                            cancellationReasonCode = resolvedReasonCode,
                             mbRide = mbUpdatedRide
                           }
                   unless isReallocated $ do
@@ -128,7 +131,13 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                         pure buildOnCancelMessageV2
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
-              mbChargesOutcome <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DBCR.ByUser (DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason)) mbRide
+              mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+              resolvedReasonCode <-
+                SOCR.resolveCancellationReasonCode
+                  mbTransporterConfig
+                  cancelRideReq.ondcCancellationReasonId
+                  cancelRideReq.cancellationReason
+              mbChargesOutcome <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride DBCR.ByUser (DTCR.CancellationReasonCode <$> resolvedReasonCode)) mbRide
               -- getCancellationCharges returns the base (tax-exclusive); add tax to get the total fee
               let cancellationCharges = (\base -> PriceAPIEntity {amount = base + fromMaybe 0 (mbChargesOutcome >>= (.tax)), currency = booking.currency}) <$> (mbChargesOutcome >>= (.fee))
               void $ case (cancellationCharges, mbRide) of
@@ -140,7 +149,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.with
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
                         cancellationFee = cancellationCharges,
-                        cancellationReasonCode = cancelRideReq.cancellationReason,
+                        cancellationReasonCode = resolvedReasonCode,
                         mbRide = mbRide
                       }
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
