@@ -214,8 +214,8 @@ mkItem categoryId fulfillmentId q mbVehicleDesc =
       mbVeh <- QVeh.findById driverQuote.driverId
       let vehicleDesc =
             mbVeh <&> \\veh ->
-              T.intercalate "|" [fromMaybe "" veh.make, veh.model, veh.color]""",
-        "driver: look the vehicle up when building the offer",
+              T.intercalate "|" [fromMaybe "" veh.make, veh.model, veh.color, veh.registrationNo, getId driverQuote.driverId]""",
+        "driver: look the vehicle up when building the offer (make|model|colour|plate|driverId)",
     ),
     (
         f"{DRIVER_SRC}/SharedLogic/CallBAP.hs",
@@ -616,6 +616,367 @@ prepareDriverPoolBatch ::
       -- sorting, the fill and the radius expansion at once.
       allNearbyDrivers <- onlyChosen searchReq <$> calcDriverPool radiusStep""",
         "provider: filter the pool to the passenger's shortlist",
+    ),
+    # ── The driver rates the passenger ──────────────────────────────────────
+    #
+    # The client asked for this repeatedly and it was refused three times, for
+    # a reason that was true: **this backend could not do it.** The only rating
+    # route in the whole driver API is `/beckn/{merchantId}/rating`, which is
+    # the provider *receiving* a rating from the rider app, and `rider_details`
+    # had five columns with nowhere to put one. So the app shipped a star that
+    # points one way and deliberately no "Noter" pill, because a control that
+    # cannot do anything is worse than an absent one.
+    #
+    # These patches give it somewhere to go. Everything stays on the provider
+    # side: the driver, the ride, the passenger record and the rating all live
+    # in `atlas_driver_offer_bpp`, so nothing crosses BECKN and neither the
+    # gateway nor the rider binary needs to know this happened.
+    #
+    # The migration is `dev/local-stack/passenger-rating.sql`, and it is the
+    # ordinary shape: nullable/defaulted columns first, then the image swap. The
+    # old binary ignores columns it was never told about, so rollback stays a
+    # straight image swap with nothing to undo.
+    (
+        f"{DRIVER_SRC}/Domain/Types/RiderDetails.hs",
+        24,
+        """data RiderDetailsE e = RiderDetails
+  { id :: Id RiderDetails,
+    mobileCountryCode :: Text,
+    mobileNumber :: EncryptedHashedField e Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }""",
+        """data RiderDetailsE e = RiderDetails
+  { id :: Id RiderDetails,
+    mobileCountryCode :: Text,
+    mobileNumber :: EncryptedHashedField e Text,
+    -- Algeria: what drivers have made of this passenger.
+    --
+    -- `Double` rather than the `Centesimal` the driver's own rating uses. That
+    -- type lives in Kernel.Types.Common, which this module does not import,
+    -- and adding an import to a file with two encryption instances to save a
+    -- decimal place is not a trade worth a failed build.
+    --
+    -- The running total is kept alongside the average because there is nowhere
+    -- to recompute it from: a driver's average is rebuilt by reading every row
+    -- in the ratings table, and passenger ratings have no such table. Storing
+    -- the count and the sum makes the next average one addition.
+    rating :: Maybe Double,
+    totalRatings :: Int,
+    totalRatingScore :: Int,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }""",
+        "driver: the passenger record can hold a rating",
+    ),
+    (
+        f"{DRIVER_SRC}/Storage/Tabular/RiderDetails.hs",
+        36,
+        """      mobileNumberHash DbHash
+      createdAt UTCTime
+      updatedAt UTCTime""",
+        """      mobileNumberHash DbHash
+      rating Double Maybe
+      totalRatings Int
+      totalRatingScore Int
+      createdAt UTCTime
+      updatedAt UTCTime""",
+        "driver: persist the passenger's rating",
+    ),
+    # `fromTType`/`toTType` in that file are RecordWildCards, so naming the
+    # fields above is the whole of the wiring -- the same reason the vehicle
+    # patches needed nothing further.
+    (
+        f"{DRIVER_SRC}/Storage/Queries/RiderDetails.hs",
+        34,
+        """findByMobileNumber ::
+  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+  Text ->
+  m (Maybe RiderDetails)
+findByMobileNumber mobileNumber_ = do
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  Esq.findOne $ do
+    riderDetails <- from $ table @RiderDetailsT
+    where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+    return riderDetails""",
+        """findByMobileNumber ::
+  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+  Text ->
+  m (Maybe RiderDetails)
+findByMobileNumber mobileNumber_ = do
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  Esq.findOne $ do
+    riderDetails <- from $ table @RiderDetailsT
+    where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+    return riderDetails
+
+-- | Algeria: record what a driver made of a passenger.
+--
+-- The average is passed in rather than computed here, because the caller has
+-- already read the row it is updating and a second read inside the transaction
+-- would be a read of its own write. Modelled on `Person.updateAverageRating`,
+-- which is the same shape one table over.
+--
+-- This module imports Kernel.Storage.Esqueleto unqualified as well as
+-- qualified, so `update`, `set`, `val`, `where_`, `toKey` and the field
+-- constructors are all already in scope.
+updateRating :: Id RiderDetails -> Double -> Int -> Int -> SqlDB ()
+updateRating riderId newAverage newCount newScore = do
+  now <- getCurrentTime
+  Esq.update $ \\tbl -> do
+    set
+      tbl
+      [ RiderDetailsRating =. val (Just newAverage),
+        RiderDetailsTotalRatings =. val newCount,
+        RiderDetailsTotalRatingScore =. val newScore,
+        RiderDetailsUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)""",
+        "driver: a query that writes the passenger's rating",
+    ),
+    # ── The route the driver's app calls ────────────────────────────────────
+    #
+    # Added to the existing ride API rather than given a module of its own: it
+    # is addressed by ride id, it is only legal on a ride the caller drove, and
+    # every other verb on a ride already lives here.
+    (
+        f"{DRIVER_SRC}/API/UI/Ride.hs",
+        18,
+        """    CancelRideReq (..),
+    DRide.DriverRideListRes (..),""",
+        """    CancelRideReq (..),
+    RateCustomerReq (..),
+    DRide.DriverRideListRes (..),""",
+        "driver API: export the new request type",
+    ),
+    (
+        f"{DRIVER_SRC}/API/UI/Ride.hs",
+        69,
+        """           :<|> TokenAuth
+           :> Capture "rideId" (Id Ride.Ride)
+           :> "cancel"
+           :> ReqBody '[JSON] CancelRideReq
+           :> Post '[JSON] APISuccess
+       )""",
+        """           :<|> TokenAuth
+           :> Capture "rideId" (Id Ride.Ride)
+           :> "cancel"
+           :> ReqBody '[JSON] CancelRideReq
+           :> Post '[JSON] APISuccess
+           -- Algeria: the driver rates the passenger. POST on the ride, like
+           -- every other verb here, so the ride he drove is the authorisation.
+           :<|> TokenAuth
+           :> Capture "rideId" (Id Ride.Ride)
+           :> "rateCustomer"
+           :> ReqBody '[JSON] RateCustomerReq
+           :> Post '[JSON] APISuccess
+       )""",
+        "driver API: the rateCustomer route",
+    ),
+    (
+        f"{DRIVER_SRC}/API/UI/Ride.hs",
+        94,
+        """data CancelRideReq = CancelRideReq
+  { reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)""",
+        """data CancelRideReq = CancelRideReq
+  { reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-- | Algeria: one to five, and nothing else.
+--
+-- No free-text feedback field. The passenger's side has one and it is written
+-- to a table nobody reads; a second write-only box is not worth the column.
+newtype RateCustomerReq = RateCustomerReq
+  { ratingValue :: Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)""",
+        "driver API: the request body",
+    ),
+    (
+        f"{DRIVER_SRC}/API/UI/Ride.hs",
+        109,
+        """handler :: FlowServer API
+handler =
+  listDriverRides
+    :<|> arrivedAtPickup
+    :<|> startRide
+    :<|> endRide
+    :<|> cancelRide""",
+        """handler :: FlowServer API
+handler =
+  listDriverRides
+    :<|> arrivedAtPickup
+    :<|> startRide
+    :<|> endRide
+    :<|> cancelRide
+    :<|> rateCustomer""",
+        "driver API: wire the handler",
+    ),
+    (
+        f"{DRIVER_SRC}/API/UI/Ride.hs",
+        146,
+        """arrivedAtPickup :: Id SP.Person -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtPickup _ rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req""",
+        """arrivedAtPickup :: Id SP.Person -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtPickup _ rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
+
+-- | Algeria: the driver's rating of his passenger.
+--
+-- The driver id is used, not ignored: this is the one verb here where the
+-- caller's identity is the whole authorisation, so the action checks that the
+-- ride was his before writing anything.
+rateCustomer :: Id SP.Person -> Id Ride.Ride -> RateCustomerReq -> FlowHandler APISuccess
+rateCustomer driverId rideId RateCustomerReq {ratingValue} =
+  withFlowHandlerAPI $ DRide.rateCustomer driverId rideId ratingValue""",
+        "driver API: the handler function",
+    ),
+    # ── The action behind it, and the rating on the way back out ────────────
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        15,
+        """module Domain.Action.UI.Ride
+  ( DriverRideRes (..),
+    DriverRideListRes (..),
+    listDriverRides,
+    arrivedAtPickup,
+  )
+where""",
+        """module Domain.Action.UI.Ride
+  ( DriverRideRes (..),
+    DriverRideListRes (..),
+    listDriverRides,
+    arrivedAtPickup,
+    rateCustomer,
+  )
+where""",
+        "driver: export the rating action",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        51,
+        """import qualified Storage.Queries.RideDetails as QRD
+import Tools.Error""",
+        """import qualified Storage.Queries.RideDetails as QRD
+-- Algeria: the passenger record. `QRD` above is *Ride*Details, one letter and
+-- an entirely different table, so this one is spelled out.
+import qualified Storage.Queries.RiderDetails as QRiderDetails
+import Tools.Error""",
+        "driver: import the passenger queries",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        77,
+        """    riderName :: Maybe Text,
+    tripStartTime :: Maybe UTCTime,""",
+        """    riderName :: Maybe Text,
+    -- Algeria: what drivers before him have made of this passenger, or Nothing
+    -- for someone nobody has rated yet. Never zero -- the scale starts at one,
+    -- and a 0 would tell a driver the passenger is the worst there is.
+    riderRating :: Maybe Double,
+    tripStartTime :: Maybe UTCTime,""",
+        "driver: the passenger's rating on the ride response",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        110,
+        """mkDriverRideRes ::
+  RD.RideDetails ->
+  Maybe Text ->
+  Maybe DRating.Rating ->
+  (DRide.Ride, DRB.Booking) ->
+  DriverRideRes
+mkDriverRideRes rideDetails driverNumber rideRating (ride, booking) = do""",
+        """mkDriverRideRes ::
+  RD.RideDetails ->
+  Maybe Text ->
+  Maybe DRating.Rating ->
+  Maybe Double ->
+  (DRide.Ride, DRB.Booking) ->
+  DriverRideRes
+mkDriverRideRes rideDetails driverNumber rideRating mbRiderRating (ride, booking) = do""",
+        "driver: mkDriverRideRes takes the passenger's rating",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        139,
+        """      riderName = booking.riderName,
+      tripStartTime = ride.tripStartTime,""",
+        """      riderName = booking.riderName,
+      riderRating = mbRiderRating,
+      tripStartTime = ride.tripStartTime,""",
+        "driver: put it on the response",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        105,
+        """    rideRating <- runInReplica $ QR.findRatingForRide ride.id
+    driverNumber <- RD.getDriverNumber rideDetail
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating (ride, booking)""",
+        """    rideRating <- runInReplica $ QR.findRatingForRide ride.id
+    -- Algeria: the passenger's own rating. A booking with no rider on record is
+    -- ordinary rather than an error -- `riderId` is only filled at confirm --
+    -- so this reads Nothing and the row simply shows one thing less.
+    mbRiderRating <- case booking.riderId of
+      Nothing -> pure Nothing
+      Just riderId -> do
+        mbRider <- runInReplica $ QRiderDetails.findById riderId
+        pure (mbRider >>= (.rating))
+    driverNumber <- RD.getDriverNumber rideDetail
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbRiderRating (ride, booking)""",
+        "driver: read the passenger's rating when listing rides",
+    ),
+    (
+        f"{DRIVER_SRC}/Domain/Action/UI/Ride.hs",
+        169,
+        """  pure Success
+  where
+    isValidRideStatus status = status == DRide.NEW""",
+        """  pure Success
+  where
+    isValidRideStatus status = status == DRide.NEW
+
+-- | Algeria: the driver rates his passenger, once the ride is over.
+--
+-- Everything here is on the provider side -- the driver, the ride, the
+-- passenger record and the rating -- so nothing crosses BECKN and the rider
+-- binary is not involved.
+--
+-- ── One known limitation, stated rather than hidden ─────────────────────────
+-- There is no per-ride record of a passenger rating, so a second POST for the
+-- same ride counts twice. A driver's own rating is protected by a `rating` row
+-- keyed on the ride; giving passengers the same would mean a second table, and
+-- the app disables the control once it has been used. If this is ever abused,
+-- that table is the fix -- not a flag on the ride.
+rateCustomer ::
+  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  Id DP.Person ->
+  Id DRide.Ride ->
+  Int ->
+  m APISuccess
+rateCustomer driverId rideId ratingValue = do
+  unless (ratingValue >= 1 && ratingValue <= 5) $
+    throwError $ InvalidRequest "Rating must be between 1 and 5."
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- His own ride, and a finished one. The token proves who is asking; this
+  -- proves he is asking about something that was his.
+  unless (ride.driverId == driverId) $
+    throwError $ InvalidRequest "This ride is not yours."
+  unless (ride.status == DRide.COMPLETED) $
+    throwError $ RideInvalidStatus "The ride is not finished."
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  riderId <- booking.riderId & fromMaybeM (InvalidRequest "This ride has no passenger on record.")
+  rider <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (InvalidRequest "Passenger not found.")
+  let newCount = rider.totalRatings + 1
+      newScore = rider.totalRatingScore + ratingValue
+      newAverage = fromIntegral newScore / fromIntegral newCount
+  Esq.runTransaction $ QRiderDetails.updateRating riderId newAverage newCount newScore
+  pure Success""",
+        "driver: the rating action itself",
     ),
 ]
 
