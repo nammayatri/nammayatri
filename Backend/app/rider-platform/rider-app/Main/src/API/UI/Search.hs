@@ -380,19 +380,23 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   whenJust mbSuggestedBuild $ \build ->
     unless (null build.backgroundSearchRes) $
       fork "betterRoutePointAlternates" $ do
-        forM_ build.backgroundSearchRes $ \backgroundRes ->
-          priceSuggestedSearch dSearchRes backgroundRes [] >>= \case
-            Just _ -> pure ()
-            -- Not an error worth failing anything over -- the app renders the shapes it has
-            -- fares for -- but it is worth knowing how often a suggestion goes unpriced.
-            Nothing ->
-              logWarning $
-                "better_route_point: no fare for background shape " <> backgroundRes.searchRequest.id.getId
-                  <> " of parent "
-                  <> dSearchRes.searchRequest.id.getId
-        -- Every shape has now been through the provider, whatever came back. Recorded so the
-        -- result endpoint can call the list final instead of leaving the app polling for a
-        -- fare that is never going to arrive.
+        -- Caught, not propagated: the marker below has to be written whatever happens in
+        -- here. An exception that escaped would leave the customer's app polling for fares
+        -- that are no longer coming, until the search itself expired.
+        void . withTryCatch "betterRoutePointAlternates" $
+          forM_ build.backgroundSearchRes $ \backgroundRes ->
+            priceSuggestedSearch dSearchRes backgroundRes [] >>= \case
+              Just _ -> pure ()
+              -- Not an error worth failing anything over -- the app renders the shapes it
+              -- has fares for -- but it is worth knowing how often one goes unpriced.
+              Nothing ->
+                logWarning $
+                  "better_route_point: no fare for background shape " <> backgroundRes.searchRequest.id.getId
+                    <> " of parent "
+                    <> dSearchRes.searchRequest.id.getId
+        -- Unconditional: every shape has been through the provider, or has stopped being
+        -- tried. Either way nothing further is coming, which is what the result endpoint
+        -- reports as allLoaded -- it means settled, not successful.
         BRPC.markAlternatesDispatched dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry
   let dispatch reqV =
         GatewayLookup.dispatchToGateway
