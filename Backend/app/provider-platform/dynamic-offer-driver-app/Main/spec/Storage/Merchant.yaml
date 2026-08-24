@@ -1261,6 +1261,7 @@ TransporterConfig:
     driverDistanceToPickupThresholdOnCancel: Meters
     numOfCancellationsAllowed: Int
     canAddCancellationFee: Bool
+    preferOndcCancellationReasonId: Maybe Bool
     allowDefaultPlanAllocation: Bool
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters

@@ -610,8 +610,17 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         tdsRateReason = rateReason,
         emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        buyerCounterpartyId = Just (normaliseBuyerCounterpartyId booking.bapId)
       }
+
+normaliseBuyerCounterpartyId :: Text -> Text
+normaliseBuyerCounterpartyId raw =
+  let lowered = T.toLower (T.strip raw)
+      withoutScheme = case T.stripPrefix "https://" lowered of
+        Just rest -> rest
+        Nothing -> fromMaybe lowered (T.stripPrefix "http://" lowered)
+   in T.dropWhileEnd (== '/') withoutScheme
 
 -- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
 computeTdsRateReason :: Maybe DPanCard.DriverPanCard -> Bool -> Maybe TdsRateReason
@@ -692,7 +701,8 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         tdsRateReason = rateReason,
         emitLedgerEntries = True,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
-        issuedToName = Nothing
+        issuedToName = Nothing,
+        buyerCounterpartyId = Nothing
       }
 
 -- Wallet entry delta (for topup/payout)
@@ -848,7 +858,8 @@ buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
       fromLocationAddress = Nothing,
-      issuedToName = Nothing
+      issuedToName = Nothing,
+      buyerCounterpartyId = Nothing
     }
 
 -- | Stripe payout charge Q = fixedFee + percentageRate% * amount (new model),

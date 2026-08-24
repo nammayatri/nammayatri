@@ -376,7 +376,8 @@ applyTerminalConsequences ctx createLedgerEntries = do
                   cancellationCommission = outcome.commission,
                   overdueCancellationCommission = outcome.overdueCommission,
                   consequenceRowId = outcome.consequenceRowId,
-                  collectionMode = outcome.collectionMode
+                  collectionMode = outcome.collectionMode,
+                  carryForwardEnabled = transporterConfig.canAddCancellationFee
                 }
             when (ctx.source == SBCR.ByUser && totalCharges > 0) $
               QRiderDetails.updateCancellationDueRidesCount riderId.getId

@@ -60,6 +60,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance (AccountRole (..), EntryStatus (..), FinanceCtx, InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), createReversal, getEntriesByReference, invoice, runFinance, settleEntry, transfer, transferPending, transferWithoutAttribution, transfer_, voidEntry)
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
@@ -271,6 +272,15 @@ createCancellationLedgerEntries ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
+    BeamFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
     Finance.HasActorInfo m r
   ) =>
   SRB.Booking ->
