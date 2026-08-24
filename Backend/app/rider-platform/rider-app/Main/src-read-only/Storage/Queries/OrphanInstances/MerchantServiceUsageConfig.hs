@@ -7,8 +7,6 @@ import qualified Data.Aeson
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.EventTracking
-import qualified Kernel.External.EventTracking.Types
 import qualified Kernel.External.Insurance.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types

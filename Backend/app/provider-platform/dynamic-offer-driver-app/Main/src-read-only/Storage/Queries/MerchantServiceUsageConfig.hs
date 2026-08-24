@@ -77,6 +77,58 @@ updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperat
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig -> m ())
+updateByPrimaryKey (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig {..}) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.aadhaarVerificationService aadhaarVerificationService,
+      Se.Set Beam.autoComplete autoComplete,
+      Se.Set Beam.backgroundVerification backgroundVerification,
+      Se.Set Beam.categoryBasedVerificationPriorityList (Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList),
+      Se.Set Beam.challanProvidersPriorityList challanProvidersPriorityList,
+      Se.Set Beam.createBankAccount createBankAccount,
+      Se.Set Beam.createPayoutOrder (Kernel.Prelude.Just createPayoutOrder),
+      Se.Set Beam.dashboardGstVerificationService dashboardGstVerificationService,
+      Se.Set Beam.dashboardPanVerificationService dashboardPanVerificationService,
+      Se.Set Beam.dashboardUdyamVerificationService dashboardUdyamVerificationService,
+      Se.Set Beam.driverBackgroundVerificationService driverBackgroundVerificationService,
+      Se.Set Beam.faceMatchService (Kernel.Prelude.Just faceMatchService),
+      Se.Set Beam.faceVerificationService faceVerificationService,
+      Se.Set Beam.getBankAccount getBankAccount,
+      Se.Set Beam.getDistances getDistances,
+      Se.Set Beam.getDistancesForCancelRide getDistancesForCancelRide,
+      Se.Set Beam.getDistancesForScheduledRides getDistancesForScheduledRides,
+      Se.Set Beam.getEstimatedPickupDistances getEstimatedPickupDistances,
+      Se.Set Beam.getExophone getExophone,
+      Se.Set Beam.getPickupRoutes getPickupRoutes,
+      Se.Set Beam.getPlaceDetails getPlaceDetails,
+      Se.Set Beam.getPlaceName getPlaceName,
+      Se.Set Beam.getRoutes getRoutes,
+      Se.Set Beam.getTripRoutes getTripRoutes,
+      Se.Set Beam.gstVerificationService gstVerificationService,
+      Se.Set Beam.imageExtractionProvidersPriorityList imageExtractionProvidersPriorityList,
+      Se.Set Beam.initiateCall initiateCall,
+      Se.Set Beam.issueTicketService issueTicketService,
+      Se.Set Beam.llmChatCompletion (Kernel.Prelude.Just llmChatCompletion),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.panVerificationService panVerificationService,
+      Se.Set Beam.payoutOrderStatus (Kernel.Prelude.Just payoutOrderStatus),
+      Se.Set Beam.rectifyDistantPointsFailure rectifyDistantPointsFailure,
+      Se.Set Beam.retryBankAccountLink retryBankAccountLink,
+      Se.Set Beam.sdkVerificationService sdkVerificationService,
+      Se.Set Beam.sendSearchRequestToDriver sendSearchRequestToDriver,
+      Se.Set Beam.smsProvidersPriorityList smsProvidersPriorityList,
+      Se.Set Beam.snapToRoad snapToRoad,
+      Se.Set Beam.snapToRoadProvidersList snapToRoadProvidersList,
+      Se.Set Beam.totoVerificationPriorityList totoVerificationPriorityList,
+      Se.Set Beam.udyamVerificationService udyamVerificationService,
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.verificationProvidersPriorityList verificationProvidersPriorityList,
+      Se.Set Beam.verificationService verificationService,
+      Se.Set Beam.whatsappProvidersPriorityList whatsappProvidersPriorityList
+    ]
+    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
+
 instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig where
   fromTType' (Beam.MerchantServiceUsageConfigT {..}) = do
     pure $
