@@ -154,6 +154,10 @@ data SuggestedOption = SuggestedOption
   { -- | The shadow search being priced for this shape.
     searchId :: Id SSR.SearchRequest,
     kind :: BRP.BetterPointKind,
+    -- | True for the shape we would have picked, which only happens when the operating city
+    -- loads suggestions asynchronously -- otherwise that one is priced inline and appears as
+    -- the suggestion itself rather than among these.
+    isDefault :: Bool,
     suggestedPickup :: Maybe LatLong,
     suggestedDrop :: Maybe LatLong,
     walkDistanceToPickup :: Maybe Meters,
@@ -170,6 +174,7 @@ mkSuggestedOption alternate =
    in SuggestedOption
         { searchId = alternate.searchId,
           kind = betterRoute.kind,
+          isDefault = alternate.isDefault,
           suggestedPickup = (.point) <$> betterRoute.betterPickup,
           suggestedDrop = (.point) <$> betterRoute.betterDrop,
           walkDistanceToPickup = (.walkDistance) <$> betterRoute.betterPickup,
@@ -183,6 +188,9 @@ mkSuggestedOption alternate =
 data AlternateSuggestion = AlternateSuggestion
   { searchId :: Id SSR.SearchRequest,
     kind :: BRP.BetterPointKind,
+    -- | True for the shape that would have been the suggestion, when the city loads them
+    -- asynchronously. Render this one as the recommendation.
+    isDefault :: Bool,
     estimates :: [UEstimate.EstimateAPIEntity],
     suggestedPickup :: Maybe DL.LocationAPIEntity,
     suggestedDrop :: Maybe DL.LocationAPIEntity,
@@ -286,7 +294,7 @@ getQuotes searchRequestId mbAllowMultiple = do
     -- The sync path already has the suggestion in hand and overrides this field; on the
     -- polling path the shadow search has been persisting its estimates in the background
     -- since /rideSearch, so read them here.
-    mbSuggested <- loadSuggestedEstimates searchRequest
+    mbSuggested <- loadSuggestedEstimates riderConfig searchRequest
     pure res {suggestedEstimates = mbSuggested}
 
 -- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
@@ -343,8 +351,12 @@ buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
 
 -- | The better-route-point suggestion for a search, if a shadow search was created for it
 -- and the BPP has answered. Absent is the normal case.
-loadSuggestedEstimates :: SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
-loadSuggestedEstimates searchRequest
+-- | Absent when the operating city loads suggestions asynchronously: there is then no shape
+-- priced inline, and every one of them -- the default included -- is answered by
+-- 'loadAlternateSuggestions' instead.
+loadSuggestedEstimates :: Maybe DRC.RiderConfig -> SSR.SearchRequest -> Flow (Maybe SuggestedEstimates)
+loadSuggestedEstimates mbRiderConfig searchRequest
+  | maybe False (fromMaybe False . (.betterPointLoadSuggestionsAsync)) mbRiderConfig = pure Nothing
   -- The overwhelmingly common case: no suggestion was ever found for this search, and the
   -- flag on the row we already hold says so. A shadow never has a shadow of its own, so it
   -- is out too -- either way, no lookup.
@@ -409,7 +421,7 @@ loadAlternateSuggestions parent = do
       resolved <- forM ctx.alternates $ \alternate -> runMaybeT $ do
         shadow <- MaybeT $ QSR.findById alternate.searchId
         estimateList <- lift $ QEstimate.findAllBySRId shadow.id
-        MaybeT $ mkAlternateSuggestion shadow alternate.route estimateList
+        MaybeT $ mkAlternateSuggestion shadow alternate.route alternate.isDefault estimateList
       let loaded = catMaybes resolved
       pure
         AlternateSuggestionsRes
@@ -417,8 +429,8 @@ loadAlternateSuggestions parent = do
             allLoaded = length loaded == length ctx.alternates
           }
 
-mkAlternateSuggestion :: SSR.SearchRequest -> BRP.BetterRoute -> [DEstimate.Estimate] -> Flow (Maybe AlternateSuggestion)
-mkAlternateSuggestion shadow route estimateList =
+mkAlternateSuggestion :: SSR.SearchRequest -> BRP.BetterRoute -> Bool -> [DEstimate.Estimate] -> Flow (Maybe AlternateSuggestion)
+mkAlternateSuggestion shadow route isDefault estimateList =
   case (nonEmpty estimateList, shadow.betterPointRideDistanceSaved) of
     (Just _, Just rideDistanceSaved) -> do
       person <- QP.findById shadow.riderId >>= fromMaybeM (PersonDoesNotExist shadow.riderId.getId)
@@ -432,6 +444,7 @@ mkAlternateSuggestion shadow route estimateList =
         AlternateSuggestion
           { searchId = shadow.id,
             kind = route.kind,
+            isDefault,
             estimates = apiEstimates,
             suggestedPickup = DL.makeLocationAPIEntity shadow.fromLocation <$ shadow.betterPointWalkToPickup,
             suggestedDrop = shadow.betterPointWalkFromDrop >> (DL.makeLocationAPIEntity <$> shadow.toLocation),

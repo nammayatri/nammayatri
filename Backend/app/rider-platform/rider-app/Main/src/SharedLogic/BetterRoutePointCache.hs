@@ -84,7 +84,11 @@ data SuggestedSearchCtx = SuggestedSearchCtx
 -- id instead of describing the geometry back to us.
 data AlternateShadow = AlternateShadow
   { searchId :: Id DSearchReq.SearchRequest,
-    route :: BRP.BetterRoute
+    route :: BRP.BetterRoute,
+    -- | True for the shape we would have picked. Only ever set when the operating city is
+    -- loading suggestions asynchronously, since otherwise that shape is priced inline and
+    -- never reaches this list.
+    isDefault :: Bool
   }
   deriving (Generic, ToJSON, FromJSON)
 
