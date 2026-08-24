@@ -35,10 +35,18 @@ data DriverIncentiveRideCountRes = DriverIncentiveRideCountRes
   { dayValidRideCount :: Kernel.Prelude.Int,
     progressValidRideCount :: Kernel.Prelude.Int,
     ridesCompleted :: Kernel.Prelude.Int,
+    scopedRideCounts :: [API.Types.UI.DriverIncentiveCoins.DriverIncentiveScopedRideCount],
     timeBoundValidRideCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalEarnings :: Kernel.Prelude.Int,
     totalRideTimeSeconds :: Kernel.Prelude.Int,
     totalTripDistanceMeters :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverIncentiveScopedRideCount = DriverIncentiveScopedRideCount
+  { id :: Kernel.Types.Id.Id Domain.Types.Coins.CoinsConfig.CoinsConfig,
+    rideCount :: Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -257,7 +257,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverCoinEvent =
       when (ctx.source == SBCR.ByUser || ctx.source == SBCR.ByDriver) $
         fork "cancellationConsequenceCoinEvent" $
-          DC.driverCoinsEvent ctx.ride.driverId Nothing ctx.merchant.id ctx.booking.merchantOperatingCityId (DCT.Cancellation ctx.ride.createdAt ctx.booking.distanceToPickup ctx.decision.disToPickup ctx.decision.cancelledBy (fromMaybe (DTCR.CancellationReasonCode "OTHER") ctx.decision.reasonCode)) (Just ctx.ride.id.getId) ctx.ride.vehicleVariant (Just ctx.booking.vehicleServiceTier) (Just ctx.booking.configInExperimentVersions)
+          DC.driverCoinsEvent ctx.ride.driverId Nothing ctx.merchant.id ctx.booking.merchantOperatingCityId (DCT.Cancellation ctx.ride.createdAt ctx.booking.distanceToPickup ctx.decision.disToPickup ctx.decision.cancelledBy (fromMaybe (DTCR.CancellationReasonCode "OTHER") ctx.decision.reasonCode)) (Just ctx.ride.id.getId) ctx.ride.vehicleVariant (Just ctx.booking.vehicleServiceTier) (Just ctx.booking.configInExperimentVersions) Nothing
 
     -- source-based cancellation analytics + operator dashboard counters (moved from the
     -- retired RideCancel tag computation — the fault verdict is the judgment now)

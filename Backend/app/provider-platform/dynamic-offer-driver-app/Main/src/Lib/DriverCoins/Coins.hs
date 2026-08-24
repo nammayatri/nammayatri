@@ -21,6 +21,9 @@ module Lib.DriverCoins.Coins
     getExpirationSeconds,
     incrementValidRideCount,
     incrementOTPValidRideCount,
+    incrementScopedValidRideCount,
+    incrementScopedValidRideCounts,
+    getScopedValidRideCount,
     updateDriverCoins,
     resetTodayCoinsAndAdjustLifetime,
     sendCoinsNotification,
@@ -70,6 +73,7 @@ import Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CancellationConsequence as CancellationConsequence
 import qualified SharedLogic.CancellationFault as CancellationFault
@@ -163,9 +167,16 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
     safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
     Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
-driverCoinsEvent :: (EventFlow m r, Finance.HasActorInfo m r) => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> m ()
-driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap = do
-  let vehCategory = maybe (DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient) DTVeh.castServiceTierToVehicleCategory mbServiceTierType
+-- | @mbRideArea@ is the current ride's special-zone 'SL.Area' (Nothing for a
+-- non-ride event). Its pickup / drop special-location ids are extracted here and
+-- matched per-leg against a config's 'DCT.RidesCompletedInSpecialLocation' scope:
+-- a Pickup/Drop milestone matches on that leg alone (regardless of the other),
+-- and PickupDrop requires both — so we compare the ids, not the whole Area.
+driverCoinsEvent :: (EventFlow m r, Finance.HasActorInfo m r) => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> Maybe SL.Area -> m ()
+driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap mbRideArea = do
+  let mbRidePickupSpecialLocationId = mbRideArea >>= SL.pickupSpecialZoneIdFromArea
+      mbRideDropSpecialLocationId = mbRideArea >>= SL.dropSpecialZoneIdFromArea
+      vehCategory = maybe (DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient) DTVeh.castServiceTierToVehicleCategory mbServiceTierType
       tripCatType = case eventType of
         DCT.EndRide {tripCategoryType} -> tripCategoryType
         _ -> DCT.DynamicOfferTrip
@@ -219,10 +230,22 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
           if null result
             then getConfig baseDims (Just (SQCC.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId (Just vehCategory) Nothing tripCatType))
             else return result
+        -- Self-scoped RidesCompleted variants carry their scope in the function
+        -- itself; gate them to rides that actually match, so a milestone can only
+        -- be reached (and only re-checked) on a matching ride.
+        let matchesRideScoping cc = case cc.eventFunction of
+              DCT.RidesCompletedOnServiceTier tier _ -> mbServiceTierType == Just tier
+              DCT.RidesCompletedInSpecialLocation area _ -> case area of
+                SL.Pickup slId _ -> mbRidePickupSpecialLocationId == Just slId.getId
+                SL.Drop slId -> mbRideDropSpecialLocationId == Just slId.getId
+                SL.PickupDrop pickupSlId dropSlId _ -> mbRidePickupSpecialLocationId == Just pickupSlId.getId && mbRideDropSpecialLocationId == Just dropSlId.getId
+                SL.Default -> False
+              _ -> True
+            scopedCoinConfiguration = filter matchesRideScoping coinConfiguration
         let applicableCoinConfiguration =
               if null incentiveCohortFunctions
-                then coinConfiguration
-                else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) coinConfiguration
+                then scopedCoinConfiguration
+                else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) scopedCoinConfiguration
 
         let filteredConfigAll =
               if null incentiveCohortFunctions
@@ -410,6 +433,36 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
         [ pure (validRideCount == a)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+    DCT.RidesCompletedOnServiceTier tier a -> do
+      -- Milestone counted within one vehicle service tier. matchesRideScoping (in
+      -- driverCoinsEvent) already ensures this config only reaches here on a ride
+      -- of that service tier, so the count reaches the threshold on a matching ride.
+      scopedCount <- fromMaybe 0 <$> getScopedValidRideCount tripCategoryType driverId (":ServiceTier:" <> show tier)
+      logDebug $ "RidesCompletedOnServiceTier - driverId: " <> driverId.getId <> ", serviceTier: " <> show tier <> ", count: " <> show scopedCount <> ", threshold: " <> show a
+      runActionWhenValidConditions
+        [pure (scopedCount == a)]
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+    DCT.RidesCompletedInSpecialLocation area a -> do
+      -- Milestone counted within one special location (pickup, drop, or the
+      -- pickup+drop pair, per the Area). Gated to matching rides by
+      -- matchesRideScoping, same as the variant case above. Default carries no
+      -- special location: it never matches a ride (matchesRideScoping returns
+      -- False) and has no scoped counter, so award nothing -- never fall back to
+      -- an empty suffix, which would read the driver's global ride counter and
+      -- collide with plain RidesCompleted.
+      let mbSuffix = case area of
+            SL.Pickup slId _ -> Just (":PickupSL:" <> slId.getId)
+            SL.Drop slId -> Just (":DropSL:" <> slId.getId)
+            SL.PickupDrop pickupSlId dropSlId _ -> Just (":PickupSL:" <> pickupSlId.getId <> ":DropSL:" <> dropSlId.getId)
+            SL.Default -> Nothing
+      case mbSuffix of
+        Nothing -> pure 0
+        Just suffix -> do
+          scopedCount <- fromMaybe 0 <$> getScopedValidRideCount tripCategoryType driverId suffix
+          logDebug $ "RidesCompletedInSpecialLocation - driverId: " <> driverId.getId <> ", area: " <> show area <> ", count: " <> show scopedCount <> ", threshold: " <> show a
+          runActionWhenValidConditions
+            [pure (scopedCount == a)]
+            $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortRidesCompleted a -> do
       -- Timebound config: peak-window ride count. Unbounded: existing day key.
       validRideCount <- getCohortValidRideCount driverId tripCategoryType metricWindow
@@ -895,6 +948,56 @@ incrementOTPValidRideCountInWindow driverId windowKey expirationPeriod increment
         Hedis.runInMasterCloudRedisCellWithCrossAppRedis $
           Hedis.incrby (mkOTPValidRideCountByDriverIdWindowKey driverId windowKey) (fromIntegral incrementValue)
     Nothing -> setOTPValidRideCountByDriverIdWindowKey driverId windowKey expirationPeriod incrementValue
+
+-- | Scoped valid-ride counters (vehicle variant / pickup special location / drop
+-- special location). These mirror the global DriverValidRideCount key with an
+-- extra scope suffix so a @RidesCompleted@ milestone can be counted within a
+-- scope instead of driver-globally. The base key follows the trip category (OTP
+-- vs DynamicOffer), matching the global counter's OTP/DynamicOffer split. An
+-- empty suffix resolves to the global key, so an unscoped config keeps the
+-- existing behaviour.
+mkScopedValidRideCountKey :: DCT.TripCategoryType -> Id DP.Person -> Text -> Text
+mkScopedValidRideCountKey tripCategoryType driverId scopeSuffix = baseKey <> scopeSuffix
+  where
+    baseKey = case tripCategoryType of
+      DCT.OTPRideTrip -> mkOTPValidRideCountByDriverIdKey driverId
+      _ -> mkValidRideCountByDriverIdKey driverId
+
+getScopedValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DCT.TripCategoryType -> Id DP.Person -> Text -> m (Maybe Int)
+getScopedValidRideCount tripCategoryType driverId scopeSuffix =
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkScopedValidRideCountKey tripCategoryType driverId scopeSuffix)
+
+incrementScopedValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DCT.TripCategoryType -> Id DP.Person -> Text -> Int -> Int -> m ()
+incrementScopedValidRideCount tripCategoryType driverId scopeSuffix expirationPeriod incrementValue = do
+  let key = mkScopedValidRideCountKey tripCategoryType driverId scopeSuffix
+  keyExists <- getScopedValidRideCount tripCategoryType driverId scopeSuffix
+  case keyExists of
+    Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby key (fromIntegral incrementValue)
+    Nothing -> do
+      void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby key (fromIntegral incrementValue)
+      Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire key expirationPeriod
+
+-- | Increment all scoped valid-ride counters for one completed ride:
+-- service tier, pickup SL, drop SL, and the pickup+drop pair. The trip
+-- category selects the counter namespace (OTP vs DynamicOffer), matching
+-- the global counter split.
+incrementScopedValidRideCounts ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  DCT.TripCategoryType ->
+  Id DP.Person ->
+  DTC.ServiceTierType ->
+  Maybe Text -> -- pickup special-location id
+  Maybe Text -> -- drop special-location id
+  Int -> -- expiration period
+  m ()
+incrementScopedValidRideCounts tripCat driverId serviceTier mbPickupSL mbDropSL expirationPeriod = do
+  incrementScopedValidRideCount tripCat driverId (":ServiceTier:" <> show serviceTier) expirationPeriod 1
+  whenJust mbPickupSL $ \pslId ->
+    incrementScopedValidRideCount tripCat driverId (":PickupSL:" <> pslId) expirationPeriod 1
+  whenJust mbDropSL $ \dslId ->
+    incrementScopedValidRideCount tripCat driverId (":DropSL:" <> dslId) expirationPeriod 1
+  whenJust ((,) <$> mbPickupSL <*> mbDropSL) $ \(pslId, dslId) ->
+    incrementScopedValidRideCount tripCat driverId (":PickupSL:" <> pslId <> ":DropSL:" <> dslId) expirationPeriod 1
 
 -- | Ride count used by DriverIncentiveCohortRidesCompleted.
 -- TimeBoundWindow -> peak-scoped key; DayWindow (unbounded fallback) -> existing day key.

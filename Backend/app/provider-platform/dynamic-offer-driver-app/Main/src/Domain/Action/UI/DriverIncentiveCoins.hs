@@ -29,6 +29,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import Servant (Header, Headers, addHeader)
 import qualified Storage.CachedQueries.CoinsConfig as CQCoinsConfig
@@ -129,11 +130,33 @@ getCoinsIncentiveRideCount (mbPersonId, merchantId, merchantOpCityId) = do
               IncentiveMetrics.DayWindow -> pure Nothing
           _ -> pure Nothing
   metrics <- IncentiveMetrics.getIncentiveMetricsData driverId metricWindow
+  -- Per-config progress for self-scoped milestones (variant / special location):
+  -- each reads its own scoped counter rather than the global day count.
+  -- EndRide increments the DynamicOffer- or OTP-based key by the ride's own trip
+  -- category (config-agnostic), and the award query (fetchFunctionsOnEventbasis)
+  -- matches tripCategoryType = Just <ride category>, so a category-pinned config
+  -- only ever awards on — and must be read from — that same category's counter.
+  -- Read that exact key. A NULL-category config is never awarded at EndRide, so
+  -- for the (in practice unreachable) unpinned case fall back to the larger pool.
+  scopedRideCounts <-
+    fmap catMaybes $
+      forM selectedConfigs $ \SelectedIncentiveConfig {selected} ->
+        case scopedSuffixForFunction selected.eventFunction of
+          Nothing -> pure Nothing
+          Just suffix -> do
+            cnt <- case selected.tripCategoryType of
+              Just tripCat -> fromMaybe 0 <$> Coins.getScopedValidRideCount tripCat driverId suffix
+              Nothing -> do
+                dynamicOfferCnt <- fromMaybe 0 <$> Coins.getScopedValidRideCount DCT.DynamicOfferTrip driverId suffix
+                otpCnt <- fromMaybe 0 <$> Coins.getScopedValidRideCount DCT.OTPRideTrip driverId suffix
+                pure (max dynamicOfferCnt otpCnt)
+            pure $ Just API.DriverIncentiveScopedRideCount {id = selected.id, rideCount = cnt}
   pure $
     API.DriverIncentiveRideCountRes
       { dayValidRideCount = dayValidRideCount,
         timeBoundValidRideCount = timeBoundValidRideCount,
         progressValidRideCount = fromMaybe dayValidRideCount timeBoundValidRideCount,
+        scopedRideCounts = scopedRideCounts,
         ridesCompleted = metrics.ridesCompleted,
         totalEarnings = metrics.totalEarnings,
         totalTripDistanceMeters = metrics.totalTripDistanceMeters,
@@ -288,6 +311,8 @@ computeDriverIncentiveConfigETag items =
 isRidesCompletedFunction :: DCT.DriverCoinsFunctionType -> Bool
 isRidesCompletedFunction = \case
   DCT.RidesCompleted _ -> True
+  DCT.RidesCompletedOnServiceTier _ _ -> True
+  DCT.RidesCompletedInSpecialLocation {} -> True
   _ -> False
 
 ridesThresholdFromEventFunction :: DCT.DriverCoinsFunctionType -> Maybe Int
@@ -295,6 +320,19 @@ ridesThresholdFromEventFunction = \case
   DCT.DriverIncentiveCohortRidesCompleted n -> Just n
   DCT.DriverIncentiveCohortRidesCompletedSlot _ n -> Just n
   DCT.RidesCompleted n -> Just n
+  DCT.RidesCompletedOnServiceTier _ n -> Just n
+  DCT.RidesCompletedInSpecialLocation _ n -> Just n
+  _ -> Nothing
+
+-- | The scoped valid-ride counter suffix a self-scoped milestone counts against
+-- (mirrors 'Coins.matchesRideScoping'); Nothing for unscoped / cohort functions.
+scopedSuffixForFunction :: DCT.DriverCoinsFunctionType -> Maybe Text
+scopedSuffixForFunction = \case
+  DCT.RidesCompletedOnServiceTier tier _ -> Just (":ServiceTier:" <> T.pack (show tier))
+  DCT.RidesCompletedInSpecialLocation (SL.Pickup slId _) _ -> Just (":PickupSL:" <> slId.getId)
+  DCT.RidesCompletedInSpecialLocation (SL.Drop slId) _ -> Just (":DropSL:" <> slId.getId)
+  DCT.RidesCompletedInSpecialLocation (SL.PickupDrop pickupSlId dropSlId _) _ -> Just (":PickupSL:" <> pickupSlId.getId <> ":DropSL:" <> dropSlId.getId)
+  DCT.RidesCompletedInSpecialLocation SL.Default _ -> Nothing
   _ -> Nothing
 
 -- | All DriverIncentiveCohortRidesCompleted / Slot segments after Incentive# (split on "&").
