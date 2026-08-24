@@ -31,7 +31,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverFlowStatus as SDF
-import qualified SharedLogic.DriverSupplyCounter as DSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
@@ -271,7 +270,5 @@ updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newF
       QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode (Just newFlowStatus) mbHasRideStarted lastOfflineTime driverId
       updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo
     else QDriverInformation.updateActivityWithDriverFlowStatus isActive mbNewMode Nothing mbHasRideStarted lastOfflineTime driverId
-  -- Shared doorway for eligibility changes; after the write so a failed write can't move it.
-  DSC.recordDriverActiveChange oldDriverInfo.merchantOperatingCityId oldDriverInfo.active isActive
   fork "update driver online duration" $
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode

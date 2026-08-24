@@ -117,6 +117,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
         DriverPoolData
           { driverId = did,
             active = di.active,
+            merchantOperatingCityId = di.merchantOperatingCityId,
             mode = di.mode,
             onRide = di.onRide,
             onRideTripCategory = show <$> di.onRideTripCategory,

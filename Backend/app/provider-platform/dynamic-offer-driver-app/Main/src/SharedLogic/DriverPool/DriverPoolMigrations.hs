@@ -66,7 +66,8 @@ migrations =
   [ MigrationEntry 1 backfillEffectiveBankAccount,
     MigrationEntry 2 backfillEnabled,
     MigrationEntry 3 backfillCloudType,
-    MigrationEntry 4 backfillEnableForAirport
+    MigrationEntry 4 backfillEnableForAirport,
+    MigrationEntry 5 backfillMerchantOperatingCityId
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -146,6 +147,21 @@ backfillEnableForAirport entries = do
   pure $
     map
       (\e -> e {enableForAirport = HashMap.lookupDefault e.enableForAirport (cast e.driverId :: Id Person.Person) airportMap})
+      entries
+
+-- | v5: backfill the new 'merchantOperatingCityId' field from driver_information.
+-- Without this, legacy entries would default to Nothing and the supply counter would
+-- silently skip every driver whose pool entry predates the field.
+backfillMerchantOperatingCityId ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillMerchantOperatingCityId entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let cityMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.merchantOperatingCityId)) dis
+  pure $
+    map
+      (\e -> e {merchantOperatingCityId = HashMap.lookupDefault e.merchantOperatingCityId (cast e.driverId :: Id Person.Person) cityMap})
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case

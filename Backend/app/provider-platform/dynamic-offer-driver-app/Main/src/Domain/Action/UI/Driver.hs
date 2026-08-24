@@ -274,7 +274,6 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.DriverPool as DP
-import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -1452,12 +1451,7 @@ deleteDriver admin driverId = do
   unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
-  -- Deleting the row drops the driver out of the supply count without ever clearing
-  -- `active`, so the count is corrected here.
-  mbDriverInfo <- QDriverInformation.findById (cast driverId)
   QDriverInformation.deleteById (cast driverId)
-  whenJust mbDriverInfo $ \driverInfo ->
-    DSC.recordDriverActiveChange driverInfo.merchantOperatingCityId driverInfo.active False
   QDriverStats.deleteById (cast driverId)
   QR.deleteByPersonId driverId.getId
   QVehicle.deleteById driverId

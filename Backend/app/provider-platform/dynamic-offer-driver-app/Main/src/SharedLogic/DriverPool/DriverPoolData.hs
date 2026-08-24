@@ -20,6 +20,7 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Driver, Gender (..))
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.ServiceTierType (ServiceTierType)
@@ -38,6 +39,8 @@ import qualified Lib.Yudhishthira.Types as LYT
 -- querying driver_information + vehicle + person + driver_bank_account.
 data DriverPoolData = DriverPoolData
   { driverId :: Id Driver,
+    -- | The bucket SharedLogic.DriverSupplyCounter counts this driver in.
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     -- Class 2 (session state)
     active :: Bool,
     mode :: Maybe DriverMode,
@@ -180,6 +183,7 @@ defaultDriverPoolData :: Id Driver -> DriverPoolData
 defaultDriverPoolData dId =
   DriverPoolData
     { driverId = dId,
+      merchantOperatingCityId = Nothing,
       active = False,
       mode = Nothing,
       onRide = False,

@@ -24,6 +24,7 @@ import Kernel.Types.Version (CloudType (..), Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.DriverSupplyCounter as DSC
 
 -- | Represents an optional field update.
 --   Unchanged  = don't touch this field in LTS (default in emptyUpdate)
@@ -175,6 +176,7 @@ syncDriverPoolDataToLTS driverId update = do
         let merged = applyUpdate now update existing
         cleanupOldCloudKey deploymentCloudType existing merged
         DPD.setDriverPoolDataByCloud deploymentCloudType merged
+        recordSupplyChange existing merged
       Nothing -> do
         mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
         case mbExisting' of
@@ -182,8 +184,23 @@ syncDriverPoolDataToLTS driverId update = do
             let merged = applyUpdate now update existing'
             cleanupOldCloudKey deploymentCloudType existing' merged
             DPD.setDriverPoolDataByCloud deploymentCloudType merged
+            recordSupplyChange existing' merged
           Nothing ->
             logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+
+-- | Every writer of driver_information.mode passes through here, and the pre-update
+-- entry is already in hand, so the online counter is maintained from the merge rather
+-- than from each caller. A mode-less update (a ride starting, a preference change)
+-- leaves mode unchanged and is a no-op.
+recordSupplyChange ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  DPD.DriverPoolData ->
+  DPD.DriverPoolData ->
+  m ()
+recordSupplyChange old new =
+  DSC.recordDriverModeChange new.merchantOperatingCityId old.mode new.mode
 
 -- | When a driver's cloudType changes, the key in the old cloud becomes orphaned.
 -- Delete it so reads don't return stale data.

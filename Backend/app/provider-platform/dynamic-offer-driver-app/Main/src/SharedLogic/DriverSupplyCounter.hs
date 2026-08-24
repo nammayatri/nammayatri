@@ -13,17 +13,18 @@
 -}
 
 -- | Dispatch-eligible driver count per operating city, held in Redis.
--- Deliberately a leaf: the writers of driver_information.active live in the storage
--- and consumer layers, and this lets them maintain the counter without pulling in the
--- publisher and its metrics/ClickHouse dependencies.
+-- Deliberately a leaf, so the online/offline and ride handlers can maintain the counter
+-- without pulling in the publisher and its metrics/ClickHouse dependencies.
 module SharedLogic.DriverSupplyCounter
   ( onlineCountKey,
     onRideCountKey,
-    recordDriverActiveChange,
+    isSupplyMode,
+    recordDriverModeChange,
     recordOnRideChange,
   )
 where
 
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,18 +43,23 @@ bumpCounter :: (Redis.HedisFlow m r, MonadFlow m) => (Text -> Text) -> Bool -> I
 bumpCounter mkKey up cityId =
   void $ withTryCatch "driverSupplyCounter" $ (if up then Redis.incr else Redis.decr) (mkKey cityId.getId)
 
--- | Only moves on a real change: updateDriverModeAndFlowStatus is called on every ride
--- start and end with `active` unchanged, so an unguarded incr/decr would track ride
--- volume, not supply.
-recordDriverActiveChange ::
+-- | ONLINE and SILENT are both dispatch-eligible; OFFLINE is not. A driver with no mode
+-- set has never gone online, so they do not count either.
+isSupplyMode :: Maybe DriverInfo.DriverMode -> Bool
+isSupplyMode = maybe False (`elem` [DriverInfo.ONLINE, DriverInfo.SILENT])
+
+-- | Maintained on the go-online/go-offline path only, and driven by mode rather than
+-- `active`: ride start and end also reach updateDriverModeAndFlowStatus, but with no new
+-- mode, so they are not supply changes.
+recordDriverModeChange ::
   (Redis.HedisFlow m r, MonadFlow m) =>
   Maybe (Id DMOC.MerchantOperatingCity) ->
-  Bool ->
-  Bool ->
+  Maybe DriverInfo.DriverMode ->
+  Maybe DriverInfo.DriverMode ->
   m ()
-recordDriverActiveChange mbCityId wasActive nowActive =
-  when (wasActive /= nowActive) $
-    whenJust mbCityId $ bumpCounter onlineCountKey nowActive
+recordDriverModeChange mbCityId oldMode newMode =
+  when (isSupplyMode oldMode /= isSupplyMode newMode) $
+    whenJust mbCityId $ bumpCounter onlineCountKey (isSupplyMode newMode)
 
 -- | Ride start increments, completion/cancellation decrements. Callers must only
 -- decrement for a ride that actually started, or the counter drifts below true.
