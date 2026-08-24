@@ -127,7 +127,8 @@ getFare integrationBPPConfig config _riderId fareReq = do
           logDebug $ "[CMRLV2:GetFare] Using API values - fareBeforeDiscount: " <> T.pack (show fareItem.fareBeforeDiscount) <> ", finalFare: " <> T.pack (show fareItem.finalFare) <> ", discountAmount: " <> T.pack (show fareItem.discountAmount)
           return
             [ FRFSUtils.FRFSFare
-                { categories =
+                { providerServiceDetails = Nothing,
+                  categories =
                     [ FRFSUtils.FRFSTicketCategory
                         { category = ADULT,
                           price =

@@ -20,6 +20,7 @@ imports:
   FRFSTicketBookingPaymentCategory: Domain.Types.FRFSTicketBookingPaymentCategory
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSTripCategory: Domain.Types.FRFSQuote
   FRFSRoutes: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   OverrideType: Domain.Types.FRFSTicketBooking
@@ -39,6 +40,7 @@ imports:
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
   DayOfWeek: Data.Time
+  Day: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
   RouteStopTimeTable: Domain.Types.RouteStopTimeTable
   FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
@@ -68,6 +70,7 @@ FRFSSearch:
     routeCode: Maybe Text
     quantity: Int
     vehicleType: VehicleCategory
+    journeyDate: Maybe Day
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -195,6 +198,15 @@ FRFSQuote:
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     offerSegment: Maybe Text
+    tripCategory: Maybe FRFSTripCategory
+    providerServiceId: Maybe Text
+    providerLayoutId: Maybe Text
+    providerClassId: Maybe Text
+    providerTripCode: Maybe Text
+    departureTime: Maybe Text
+    arrivalTime: Maybe Text
+    arrivalDate: Maybe Text
+    availableSeats: Maybe Int
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -221,6 +233,9 @@ FRFSQuote:
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
+    FRFSTripCategory:
+      enum: "INTRACITY, INTERCITY"
+      derive: "HttpInstance"
     FRFSFareDetails:
       providerRouteId: Text
       distance: Meters
@@ -527,7 +542,6 @@ FRFSTicketBooking:
     toStationLon: (.lon) <$> toStationPoint|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
-
 
   sqlType:
     busLocationData: "json"
@@ -1204,7 +1218,6 @@ StopFare:
 
   extraOperations:
     - GENERATE_INDEXES
-
 
 FRFSStageFare:
   tableName: frfs_stage_fare
